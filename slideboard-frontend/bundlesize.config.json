@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": ".next/static/chunks/main-app-*.js",
+      "maxSize": "1.5 MB"
+    },
+    {
+      "path": ".next/static/chunks/framework-*.js",
+      "maxSize": "1 MB"
+    },
+    {
+      "path": ".next/static/chunks/webpack-*.js",
+      "maxSize": "500 KB"
+    },
+    {
+      "path": ".next/static/chunks/main-*.js",
+      "maxSize": "800 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/(auth)/login/page-*.js",
+      "maxSize": "300 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/dashboard/page-*.js",
+      "maxSize": "500 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/orders/page-*.js",
+      "maxSize": "600 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/products/page-*.js",
+      "maxSize": "500 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/customers/page-*.js",
+      "maxSize": "500 KB"
+    },
+    {
+      "path": ".next/static/chunks/app/quotes/page-*.js",
+      "maxSize": "600 KB"
+    }
+  ]
+}

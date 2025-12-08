@@ -1,0 +1,41 @@
+// src/features/{{name}}/components/__tests__/{{properCase name}}Card.test.tsx
+/**
+ * {{properCase name}}Card Component Tests
+ * @module features/{{name}}/components/__tests__
+ */
+
+import { render, screen, fireEvent } from '@testing-library/react';
+import { {{properCase name}}Card } from '../{{properCase name}}Card';
+
+describe('{{properCase name}}Card Component', () => {
+  const mockData = {
+    id: 'test-id',
+    name: 'Test {{properCase name}}',
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-02'),
+  };
+
+  it('should render correctly', () => {
+    render(<{{properCase name}}Card data={mockData} />);
+    
+    expect(screen.getByText('Test {{properCase name}}')).toBeInTheDocument();
+    expect(screen.getByText(/Created:/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated:/)).toBeInTheDocument();
+  });
+
+  it('should call onEdit when edit button is clicked', () => {
+    const mockOnEdit = vi.fn();
+    render(<{{properCase name}}Card data={mockData} onEdit={mockOnEdit} />);
+    
+    fireEvent.click(screen.getByText('Edit'));
+    expect(mockOnEdit).toHaveBeenCalledWith('test-id');
+  });
+
+  it('should call onDelete when delete button is clicked', () => {
+    const mockOnDelete = vi.fn();
+    render(<{{properCase name}}Card data={mockData} onDelete={mockOnDelete} />);
+    
+    fireEvent.click(screen.getByText('Delete'));
+    expect(mockOnDelete).toHaveBeenCalledWith('test-id');
+  });
+});

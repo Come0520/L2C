@@ -1,0 +1,109 @@
+// src/services/__tests__/{{name}}.client.test.ts
+/**
+ * {{properCase name}} Service Tests
+ * @module services/__tests__
+ */
+
+import { {{camelCase name}}Client } from '../{{name}}.client';
+import { createClient } from '@/lib/supabase/client';
+
+// Mock the supabase client
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    })),
+  })),
+}));
+
+describe('{{properCase name}}Client', () => {
+  const mockSupabase = {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    })),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (createClient as vi.Mock).mockReturnValue(mockSupabase);
+  });
+
+  describe('getAll', () => {
+    it('should call supabase with correct parameters', async () => {
+      await {{camelCase name}}Client.getAll();
+      
+      expect(mockSupabase.from).toHaveBeenCalledWith('{{snakeCase name}}');
+      expect(mockSupabase.from().select).toHaveBeenCalledWith('*');
+      expect(mockSupabase.from().order).toHaveBeenCalledWith('created_at', { ascending: false });
+    });
+
+    it('should throw error when supabase call fails', async () => {
+      const mockError = new Error('Supabase error');
+      mockSupabase.from().select().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error: mockError }),
+        }),
+      });
+
+      await expect({{camelCase name}}Client.getAll()).rejects.toThrow('Failed to get {{name}}: Supabase error');
+    });
+  });
+
+  describe('getById', () => {
+    it('should call supabase with correct parameters', async () => {
+      await {{camelCase name}}Client.getById('test-id');
+      
+      expect(mockSupabase.from).toHaveBeenCalledWith('{{snakeCase name}}');
+      expect(mockSupabase.from().select).toHaveBeenCalledWith('*');
+      expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', 'test-id');
+      expect(mockSupabase.from().single).toHaveBeenCalled();
+    });
+  });
+
+  describe('create', () => {
+    it('should call supabase with correct parameters', async () => {
+      const mockData = { name: 'Test {{properCase name}}' };
+      await {{camelCase name}}Client.create(mockData);
+      
+      expect(mockSupabase.from).toHaveBeenCalledWith('{{snakeCase name}}');
+      expect(mockSupabase.from().insert).toHaveBeenCalledWith(mockData);
+      expect(mockSupabase.from().select).toHaveBeenCalled();
+      expect(mockSupabase.from().single).toHaveBeenCalled();
+    });
+  });
+
+  describe('update', () => {
+    it('should call supabase with correct parameters', async () => {
+      const mockData = { name: 'Updated {{properCase name}}' };
+      await {{camelCase name}}Client.update('test-id', mockData);
+      
+      expect(mockSupabase.from).toHaveBeenCalledWith('{{snakeCase name}}');
+      expect(mockSupabase.from().update).toHaveBeenCalledWith(mockData);
+      expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', 'test-id');
+      expect(mockSupabase.from().select).toHaveBeenCalled();
+      expect(mockSupabase.from().single).toHaveBeenCalled();
+    });
+  });
+
+  describe('delete', () => {
+    it('should call supabase with correct parameters', async () => {
+      await {{camelCase name}}Client.delete('test-id');
+      
+      expect(mockSupabase.from).toHaveBeenCalledWith('{{snakeCase name}}');
+      expect(mockSupabase.from().delete).toHaveBeenCalled();
+      expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', 'test-id');
+    });
+  });
+});

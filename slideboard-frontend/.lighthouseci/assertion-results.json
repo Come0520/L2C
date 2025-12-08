@@ -1,0 +1,130 @@
+[
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.9,
+    "actual": 0.89,
+    "values": [
+      0.89,
+      0.89,
+      0.89
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "accessibility",
+    "auditId": "categories",
+    "level": "error",
+    "url": "http://localhost:5173/auth/login"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/auth/login"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/login?redirectTo=%2Fdashboard"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/login?redirectTo=%2Fleads"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/login?redirectTo=%2Forders"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/login?redirectTo=%2Faccount"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.7,
+    "actual": 0.29,
+    "values": [
+      0.29,
+      0.29,
+      0.29
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "pwa",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://localhost:5173/login?redirectTo=%2Fprofile"
+  }
+]

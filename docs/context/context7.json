@@ -1,0 +1,232 @@
+{
+  "project": {
+    "name": "罗莱L2C销售管理系统",
+    "description": "支持从线索到现金的完整业务链条的L2C全流程数字化管理系统",
+    "version": "1.0.0",
+    "type": "enterprise-saas",
+    "domain": "home-furnishing-sales"
+  },
+  "architecture": {
+    "pattern": "serverless-baas",
+    "approach": "serverless-first",
+    "design_principles": [
+      "domain-driven-design",
+      "modular-design",
+      "scalability-first",
+      "security-by-design",
+      "performance-optimization",
+      "serverless-design",
+      "baas-first"
+    ],
+    "phases": {
+      "mvp": "supabase-baas",
+      "scale": "optimized-baas",
+      "mature": "enterprise-baas"
+    }
+  },
+  "tech_stack": {
+    "frontend": {
+      "web_admin": {
+        "framework": "Next.js 15+",
+        "router": "App Router",
+        "language": "TypeScript 5.0+",
+        "styling": "Tailwind CSS",
+        "ui_library": "Shadcn UI",
+        "state_management": "Zustand",
+        "data_fetching": "React Query",
+        "http_client": "Supabase SDK",
+        "charts": "Recharts"
+      },
+      "mobile_miniprogram": {
+        "framework": "Taro 3.x",
+        "language": "TypeScript",
+        "ui_library": "Taro UI",
+        "state_management": "Zustand"
+      }
+    },
+    "backend": {
+      "runtime": "Serverless",
+      "framework": "Supabase BaaS",
+      "language": "TypeScript 5.0+",
+      "authentication": "Supabase Auth",
+      "database": "Supabase Database",
+      "realtime": "Supabase Realtime",
+      "storage": "Supabase Storage",
+      "functions": "Supabase Edge Functions",
+      "api": "Supabase PostgREST API"
+    },
+    "database": {
+      "primary": "Supabase PostgreSQL 15+",
+      "cache": "Next.js Cache",
+      "file_storage": "Supabase Storage"
+    },
+    "infrastructure": {
+      "containerization": "Serverless",
+      "orchestration": "Serverless",
+      "api_gateway": "Supabase PostgREST",
+      "monitoring": "Supabase Monitoring",
+      "logging": "Supabase Logs",
+      "tracing": "Supabase Tracing"
+    }
+  },
+  "supabase_modules": {
+    "auth": {
+      "responsibilities": ["user_authentication", "authorization", "token_management", "role_management"],
+      "technology": "Supabase Auth",
+      "features": ["email_login", "phone_login", "oauth_login", "role_based_access_control"]
+    },
+    "database": {
+      "responsibilities": ["data_storage", "data_query", "data_manipulation", "row_level_security"],
+      "technology": "Supabase PostgreSQL",
+      "features": ["postgrest_api", "rls_policies", "database_triggers", "stored_functions"]
+    },
+    "realtime": {
+      "responsibilities": ["database_changes", "channel_subscriptions", "broadcast_messages"],
+      "technology": "Supabase Realtime",
+      "features": ["postgres_changes", "broadcast", "presence"]
+    },
+    "storage": {
+      "responsibilities": ["file_upload", "file_storage", "file_access_control"],
+      "technology": "Supabase Storage",
+      "features": ["object_storage", "file_management", "access_control", "image_transformation"]
+    },
+    "edge_functions": {
+      "responsibilities": ["serverless_compute", "event_handling", "third_party_integration"],
+      "technology": "Supabase Edge Functions",
+      "features": ["http_functions", "webhook_handlers", "scheduled_functions"]
+    }
+  },
+  "development_standards": {
+    "code_style": {
+      "formatter": "Prettier",
+      "linter": "ESLint",
+      "typescript": "strict mode",
+      "naming_convention": {
+        "files": "kebab-case",
+        "functions": "camelCase",
+        "classes": "PascalCase",
+        "constants": "UPPER_SNAKE_CASE",
+        "interfaces": "PascalCase"
+      }
+    },
+    "api_design": {
+      "style": "PostgREST",
+      "versioning": "API versioning via Supabase",
+      "response_format": "JSON API",
+      "error_handling": "Supabase standard error codes",
+      "pagination": "Offset-based pagination",
+      "authentication": "Supabase Auth tokens"
+    },
+    "database_design": {
+      "naming": "snake_case",
+      "migrations": "Supabase migrations",
+      "indexing": "performance-optimized indexes",
+      "constraints": "foreign key constraints",
+      "soft_delete": "deleted_at timestamp",
+      "rls": "row_level_security_policies",
+      "triggers": "database_triggers",
+      "functions": "stored_functions"
+    },
+    "security": {
+      "authentication": "Supabase Auth",
+      "authorization": "RLS (Row-Level Security) + RBAC",
+      "data_encryption": "Supabase encryption",
+      "password_hashing": "Supabase password hashing",
+      "input_validation": "Zod",
+      "sql_injection": "RLS protection",
+      "xss_protection": "input sanitization",
+      "csrf_protection": "Supabase CSRF protection"
+    },
+    "testing": {
+      "unit_tests": "Vitest",
+      "integration_tests": "Vitest + Supabase SDK",
+      "e2e_tests": "Playwright",
+      "coverage_threshold": "80%",
+      "test_data": "factory pattern with Supabase SDK"
+    }
+  },
+  "business_domains": {
+    "lead_management": {
+      "description": "线索管理，从获取到转化的全流程",
+      "key_entities": ["Lead", "Customer", "Assignment", "FollowUp"]
+    },
+    "order_management": {
+      "description": "三单体系：销售单、测量单、安装单",
+      "key_entities": ["SalesOrder", "MeasurementOrder", "InstallationOrder", "OrderStatus"]
+    },
+    "product_management": {
+      "description": "多品类商品管理：窗帘、墙布、墙咔等",
+      "key_entities": ["Product", "Category", "Inventory", "Pricing"]
+    },
+    "points_system": {
+      "description": "积分激励体系和积分商城",
+      "key_entities": ["Points", "PointsRule", "PointsTransaction", "MallItem"]
+    },
+    "service_provider": {
+      "description": "服务商生态：测量师、安装师管理",
+      "key_entities": ["ServiceProvider", "Technician", "ServiceOrder", "Rating"]
+    },
+    "partner_ecosystem": {
+      "description": "罗莱好伙伴生态协同",
+      "key_entities": ["Partner", "PartnerUser", "Collaboration", "Commission"]
+    }
+  },
+  "performance_targets": {
+    "concurrent_users": "1000+",
+    "api_response_time": "<1s",
+    "system_availability": "99.5%+",
+    "data_consistency": "99.9%+",
+    "page_load_time": "<3s",
+    "database_query_time": "<100ms"
+  },
+  "deployment": {
+    "environments": ["development", "staging", "production"],
+    "ci_cd": "GitHub Actions",
+    "containerization": "Serverless",
+    "orchestration": "Serverless",
+    "monitoring": "Supabase Monitoring + Alerting",
+    "logging": "Supabase Logs",
+    "backup_strategy": "Supabase automated backups with 30-day retention"
+  },
+  "supabase_integration": {
+    "realtime": {
+      "use_cases": ["order_status_changes", "points_changes", "realtime_notifications"],
+      "implementation": "Supabase Realtime Channels"
+    },
+    "edge_functions": {
+      "use_cases": ["email_sending", "report_generation", "data_sync", "scheduled_tasks"],
+      "implementation": "Supabase Edge Functions"
+    },
+    "webhooks": {
+      "use_cases": ["order_processing", "payment_processing", "financial_reconciliation"],
+      "implementation": "Supabase Webhooks"
+    }
+  },
+  "coding_conventions": {
+    "file_structure": {
+      "frontend": "feature-based modules with shared components",
+      "backend": "domain-driven modules with shared libraries"
+    },
+    "import_order": [
+      "external libraries",
+      "internal modules",
+      "relative imports"
+    ],
+    "error_handling": {
+      "frontend": "try-catch with user-friendly messages",
+      "backend": "global exception filters with structured logging"
+    },
+    "logging": {
+      "levels": ["error", "warn", "info", "debug"],
+      "format": "structured JSON logging",
+      "sensitive_data": "never log passwords, tokens, or PII"
+    }
+  },
+  "quality_gates": {
+    "code_review": "required for all PRs",
+    "automated_tests": "must pass before merge",
+    "security_scan": "automated security vulnerability scanning",
+    "performance_test": "load testing for critical paths",
+    "documentation": "API documentation and README updates required"
+  }
+}

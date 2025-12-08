@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/business-data",
+      "schedule": "0 8 * * *" // 每天早上8点执行（UTC时间，对应北京时间16:00）
+    }
+  ],
+  "env": {
+    "FEISHU_ACCESS_TOKEN": "${FEISHU_ACCESS_TOKEN}",
+    "FEISHU_BUSINESS_DATA_APP_TOKEN": "${FEISHU_BUSINESS_DATA_APP_TOKEN}",
+    "FEISHU_BUSINESS_DATA_TABLE_ID": "${FEISHU_BUSINESS_DATA_TABLE_ID}"
+  }
+}

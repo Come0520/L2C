@@ -1,0 +1,101 @@
+// src/services/{{name}}.client.ts
+/**
+ * {{description}}
+ * @module services/{{name}}
+ */
+
+import { createClient } from '@/lib/supabase/client';
+
+/**
+ * {{properCase name}} Service Client
+ */
+export const {{camelCase name}}Client = {
+  /**
+   * Get all {{name}}
+   */
+  async getAll() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('{{snakeCase name}}')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to get {{name}}: ${error.message}`);
+    }
+
+    return data;
+  },
+
+  /**
+   * Get {{name}} by ID
+   */
+  async getById(id: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('{{snakeCase name}}')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to get {{name}} by ID: ${error.message}`);
+    }
+
+    return data;
+  },
+
+  /**
+   * Create a new {{name}}
+   */
+  async create(data: any) {
+    const supabase = createClient();
+    const { data: new{{properCase name}}, error } = await supabase
+      .from('{{snakeCase name}}')
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create {{name}}: ${error.message}`);
+    }
+
+    return new{{properCase name}};
+  },
+
+  /**
+   * Update {{name}}
+   */
+  async update(id: string, data: any) {
+    const supabase = createClient();
+    const { data: updated{{properCase name}}, error } = await supabase
+      .from('{{snakeCase name}}')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update {{name}}: ${error.message}`);
+    }
+
+    return updated{{properCase name}};
+  },
+
+  /**
+   * Delete {{name}}
+   */
+  async delete(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('{{snakeCase name}}')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to delete {{name}}: ${error.message}`);
+    }
+
+    return true;
+  },
+};

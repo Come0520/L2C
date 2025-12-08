@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: L2C
+      - heading "销售管理系统" [level=1] [ref=e8]
+      - paragraph [ref=e9]: 暖宣纸主题 · 现代化销售管理
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - heading "欢迎回来" [level=2] [ref=e13]
+        - paragraph [ref=e14]: 请登录您的账户
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: 手机号*
+          - generic [ref=e18]:
+            - img [ref=e20]
+            - textbox "请输入手机号" [active] [ref=e22]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: 密码*
+            - generic [ref=e26]:
+              - img [ref=e28]
+              - textbox "请输入密码" [ref=e31]
+          - button "显示密码" [ref=e32]:
+            - img [ref=e33]
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - checkbox "记住我" [ref=e38]
+            - generic [ref=e39]: 记住我
+          - link "忘记密码？" [ref=e41] [cursor=pointer]:
+            - /url: "#"
+        - button "登录" [ref=e42]
+      - paragraph [ref=e44]:
+        - text: 还没有账户？
+        - link "立即注册" [ref=e45] [cursor=pointer]:
+          - /url: /auth/register
+    - paragraph [ref=e47]:
+      - text: 登录即表示您同意我们的
+      - link "服务条款" [ref=e48] [cursor=pointer]:
+        - /url: "#"
+      - text: 和
+      - link "隐私政策" [ref=e49] [cursor=pointer]:
+        - /url: "#"
+  - region "Notifications alt+T"
+  - generic [ref=e50]:
+    - img [ref=e52]
+    - button "Open Tanstack query devtools" [ref=e100] [cursor=pointer]:
+      - img [ref=e101]
+  - button "Open Next.js Dev Tools" [ref=e154] [cursor=pointer]:
+    - img [ref=e155]
+  - alert [ref=e158]
+```

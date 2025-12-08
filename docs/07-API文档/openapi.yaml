@@ -1,0 +1,398 @@
+openapi: 3.0.0
+info:
+  title: L2C Unified API
+  version: 1.0.0
+  description: Unified data model for Web and Mini-program clients.
+
+components:
+  schemas:
+    # -------------------------------------------------------------------------
+    # Enum & Shared Types
+    # -------------------------------------------------------------------------
+    ProductCategory:
+      type: string
+      enum:
+        - curtain
+        - wallcovering
+        - background-wall
+        - window-cushion
+        - standard-product
+      description: Category of the product.
+
+    OrderStatus:
+      type: string
+      enum:
+        - pending_measurement
+        - measuring_pending_assignment
+        - measuring_assigned
+        - measuring_pending_visit
+        - measuring_pending_confirmation
+        - pending_design
+        - pending_review
+        - pending_quote
+        - pending_deposit
+        - pending_production
+        - in_production
+        - pending_delivery
+        - pending_installation
+        - completed
+        - cancelled
+      description: Lifecycle status of an Order.
+
+    # -------------------------------------------------------------------------
+    # Core Entities
+    # -------------------------------------------------------------------------
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier.
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          description: Role of the user (e.g., admin, sales, designer).
+        avatar:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+      required:
+        - id
+        - email
+        - name
+        - role
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        
+        lead_number:
+          type: string
+          nullable: true
+        name:
+          type: string
+        phone:
+          type: string
+        
+        status:
+          type: string
+        
+        customer_level:
+          type: string
+        
+        project_address:
+          type: string
+          nullable: true
+        
+        assigned_to_id:
+          type: integer
+          nullable: true
+          description: ID of the user this lead is assigned to.
+
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - phone
+        - status
+
+    LeadDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        leadNumber:
+          type: string
+        customerName:
+          type: string
+        projectAddress:
+          type: string
+        phone:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: string
+        budgetMin:
+          type: number
+        budgetMax:
+          type: number
+        customerLevel:
+          type: string
+          enum: [A, B, C, D]
+        status:
+          type: string
+        businessTags:
+          type: array
+          items:
+            type: string
+        appointmentTime:
+          type: string
+        appointmentReminder:
+          type: string
+          enum: ['48h', '24h']
+          nullable: true
+        currentOwner:
+          type: object
+          properties:
+            name:
+              type: string
+            avatar:
+              type: string
+        designer:
+          type: object
+          properties:
+            name:
+              type: string
+            avatar:
+              type: string
+        shoppingGuide:
+          type: object
+          properties:
+            name:
+              type: string
+            avatar:
+              type: string
+        createdAt:
+          type: string
+        lastFollowUpAt:
+          type: string
+        source:
+          type: string
+        quoteVersions:
+          type: number
+        constructionProgress:
+          type: string
+        expectedPurchaseDate:
+          type: string
+        expectedCheckInDate:
+          type: string
+        areaSize:
+          type: number
+        quoteDetails:
+          type: object
+          properties:
+            currentVersion:
+              type: number
+            versions:
+              type: array
+              items:
+                type: object
+                properties:
+                  version:
+                    type: number
+                  quoteNo:
+                    type: string
+                  totalAmount:
+                    type: number
+                  status:
+                    type: string
+        # New fields
+        measurementCompleted:
+          type: boolean
+        installationCompleted:
+          type: boolean
+        financialStatus:
+          type: string
+        expectedMeasurementDate:
+          type: string
+        expectedInstallationDate:
+          type: string
+        totalQuoteAmount:
+          type: number
+        isCancelled:
+          type: boolean
+        isPaused:
+          type: boolean
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        order_number:
+          type: string
+        
+        customer_id:
+          type: integer
+        sales_id:
+          type: integer
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        
+        total_amount:
+          type: number
+        paid_amount:
+          type: number
+        
+        order_date:
+          type: string
+          format: date-time
+
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - order_number
+        - customer_id
+        - sales_id
+        - status
+        - total_amount
+
+    # -------------------------------------------------------------------------
+    # Complex Business Objects (Frontend View Models)
+    # -------------------------------------------------------------------------
+    CurtainItem:
+      type: object
+      properties:
+        id:
+          type: string
+        space:
+          type: string
+        product:
+          type: string
+        imageUrl:
+          type: string
+        packageTag:
+          type: string
+        isPackageItem:
+          type: boolean
+        packageType:
+          type: string
+          enum: [cloth, gauze, track]
+        unit:
+          type: string
+        width:
+          type: number
+        height:
+          type: number
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        usageAmount:
+          type: number
+        amount:
+          type: number
+        priceDifference:
+          type: number
+        differenceAmount:
+          type: number
+        remark:
+          type: string
+
+    OrderFormData:
+      type: object
+      properties:
+        # Customer Info
+        leadId:
+          type: string
+        leadNumber:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        projectAddress:
+          type: string
+        # Order Info
+        designer:
+          type: string
+        salesPerson:
+          type: string
+        createTime:
+          type: string
+        expectedDeliveryTime:
+          type: string
+        # Packages
+        spacePackages:
+          type: object
+          additionalProperties:
+            type: string
+        packageUsage:
+          type: object
+          properties:
+            cloth:
+              type: number
+            gauze:
+              type: number
+            track:
+              type: number
+        # Product Lists
+        curtains:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        wallcoverings:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        backgroundWalls:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        windowCushions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        standardProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurtainItem"
+        # Financials
+        subtotals:
+          type: object
+          additionalProperties:
+            type: number
+        packageAmount:
+          type: number
+        packageExcessAmount:
+          type: number
+        upgradeAmount:
+          type: number
+        totalAmount:
+          type: number
+
+    # Legacy simple item for completeness if needed elsewhere
+    OrderItem:
+      type: object
+      properties:
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        productName:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number

@@ -206,6 +206,10 @@ fix(payment): resolve gateway timeout issue
 docs(api): update authentication documentation
 ```
 
+#### 规范文档
+- **提交规范详细说明**: [docs/COMMIT_CONVENTION.md](docs/COMMIT_CONVENTION.md)
+- **分支管理策略**: [docs/BRANCH_STRATEGY.md](docs/BRANCH_STRATEGY.md)
+
 详细规范请参考 [Git工作流与代码提交规范](docs/03-开发实施/_规范合集/15-Git工作流代码提交规范.md)
 
 ### Supabase操作

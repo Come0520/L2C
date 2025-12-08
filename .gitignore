@@ -13,6 +13,11 @@ backup/
 
 # testing
 /coverage
+/slideboard-frontend/test-results/
+/slideboard-frontend/playwright-report/
+/slideboard-frontend/test-report/
+*.test-results/
+/slideboard-frontend/.playwright/
 
 # next.js
 /.next/
@@ -40,6 +45,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary build files
+/slideboard-frontend/.next/cache/
+/slideboard-frontend/.next/standalone/
+
+# performance test reports
+/slideboard-frontend/lighthouse-results/
+
+# Supabase temporary files
+/supabase/.temp/
+/supabase/.branches/
 
 # IDE
 .vscode/

@@ -14,19 +14,22 @@ import {
   Menu,
   X,
   CheckCircle,
-  BookOpen
+  BookOpen,
+  LogOut
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
+// import l2cLogo from '@/assets/images/l2c-logo.png'; // Removed in favor of static asset
+
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperSidebar, PaperNavItem, PaperNavGroup } from '@/components/ui/paper-nav';
 import { siteConfig } from '@/config/site';
 import { useAuth } from '@/contexts/auth-context';
 // import { useTheme } from '@/contexts/theme-context';
-import { GooeySwitch } from '@/components/ui/gooey-theme-toggle';
+import { GooeyThemeToggle } from '@/components/ui/gooey-theme-toggle';
 // import { cn } from '@/lib/utils'; // unused
 
 interface DashboardLayoutProps {
@@ -38,7 +41,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   // const { theme, setTheme } = useTheme(); // unused, moved to GooeySwitch
   const [openGroup, setOpenGroup] = React.useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  // 侧边栏状态持久化
+  React.useEffect(() => {
+    const storedState = localStorage.getItem('sidebar-collapsed');
+    if (storedState) {
+      setSidebarCollapsed(JSON.parse(storedState));
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
+  };
 
   const navGroups = React.useMemo(
     () => [
@@ -144,12 +161,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     []
   );
 
+  // 自动展开当前菜单组
   React.useEffect(() => {
+    // 侧边栏收起时不自动展开
+    if (sidebarCollapsed) return;
+
     const match = navGroups.find((g) =>
       g.items.some((it: { href: string }) => pathname.startsWith(it.href))
     );
-    setOpenGroup(match ? match.title : null);
-  }, [pathname, navGroups]);
+    // 只有当需要展开的组不同于当前展开组时才更新，避免不必要的重渲染
+    if (match && match.title !== openGroup) {
+      setOpenGroup(match.title);
+    }
+  }, [pathname, navGroups, sidebarCollapsed, openGroup]);
+
+  // 退出登录处理
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
+  };
 
   if (user?.role === 'OTHER_CUSTOMER') {
     return (
@@ -162,28 +195,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     )
   }
 
-
   return (
     <div className="flex h-screen bg-theme-bg-primary text-theme-text-primary transition-colors duration-300">
-      {/* Skip Link for Accessibility */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg"
-      >
-        跳转到主要内容
-      </a>
-
-      {/* 侧边栏 */}
+      {/* ... existing code ... */}
       <PaperSidebar
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggle={toggleSidebar}
         className="bg-theme-bg-secondary border-r border-theme-border transition-colors duration-300"
       >
-        {/* Logo区域 - 强制高度与右侧 Header 一致 */}
-        {/* 使用 border-b-transparent 确保高度一致但看起来是一体的，或者保持 border-theme-border */}
         <div className="h-[73px] px-6 flex items-center border-b border-theme-border mb-6 flex-shrink-0 box-border">
           <div className="flex items-center space-x-3 transition-all duration-300 ease-in-out">
-            {/* Logo Slot */}
             <div className="relative w-10 h-10 flex-shrink-0">
               <Image
                 src="/l2c-logo.png"
@@ -191,19 +212,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 width={40}
                 height={40}
                 className="rounded-lg object-contain"
+                priority
               />
             </div>
 
-            {!sidebarCollapsed && (
-              <div className="flex flex-col animate-in fade-in duration-300">
-                <h1 className="text-lg font-bold text-theme-text-primary tracking-tight leading-tight">
-                  {siteConfig.name}
-                </h1>
-                <p className="text-[10px] text-theme-text-secondary font-medium uppercase tracking-wider">
-                  {siteConfig.shortName} System v2.0
-                </p>
-              </div>
-            )}
+
+            <div className={`flex flex-col transition-all duration-300 origin-left ${sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden scale-90' : 'w-auto opacity-100 scale-100'}`}>
+              <h1 className="text-lg font-bold text-theme-text-primary tracking-tight leading-tight whitespace-nowrap">
+                {siteConfig.name}
+              </h1>
+              <p className="text-[10px] text-theme-text-secondary font-medium uppercase tracking-wider whitespace-nowrap">
+                {siteConfig.shortName} System v2.0
+              </p>
+            </div>
           </div>
         </div>
 
@@ -257,7 +278,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Left Side: Toggle & Breadcrumbs */}
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onClick={toggleSidebar}
                 className="p-2 text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary"
                 aria-label="Toggle Sidebar"
               >
@@ -276,7 +297,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center space-x-6">
               {/* Theme Switcher */}
               <div className="hidden md:block">
-                <GooeySwitch />
+                <GooeyThemeToggle />
               </div>
 
               {/* Notifications */}
@@ -294,8 +315,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <details className="group">
                     <summary className="list-none cursor-pointer">
                       <div className="hidden md:block">
-                        <p className="text-sm font-medium text-theme-text-primary transition-colors">Administrator</p>
-                        <p className="text-xs text-theme-text-secondary">Super Admin</p>
+                        <p className="text-sm font-medium text-theme-text-primary transition-colors">{user?.name || 'User'}</p>
+                        <p className="text-xs text-theme-text-secondary">{user?.role || 'Guest'}</p>
                       </div>
                     </summary>
                     <div className="absolute right-0 mt-2 w-56 bg-theme-bg-secondary border border-theme-border rounded-lg shadow-xl p-2 z-50">
@@ -303,7 +324,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <button className="w-full text-left px-3 py-2 rounded-md hover:bg-theme-bg-tertiary text-sm transition-colors text-theme-text-secondary">
                         Profile Settings
                       </button>
-                      <button className="w-full text-left px-3 py-2 rounded-md hover:bg-theme-bg-tertiary text-sm transition-colors text-red-500 hover:text-red-400">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-theme-bg-tertiary text-sm transition-colors text-red-500 hover:text-red-400 flex items-center"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
                         Sign Out
                       </button>
                     </div>

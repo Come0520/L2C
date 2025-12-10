@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import { motion, useMotionTemplate, useMotionValue } from 'framer-motion';
+import React from 'react';
 
-import { cn } from '@/utils/lib-utils';
+import { cn } from '@/lib/utils';
 
 interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -13,6 +14,8 @@ interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
 /**
  * Linear Style Spotlight Card
  * A card with a subtle spotlight effect that follows the cursor.
+ * 
+ * Optimized with Framer Motion to avoid re-renders.
  */
 export const SpotlightCard: React.FC<SpotlightCardProps> = ({
   children,
@@ -20,52 +23,42 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
   spotlightColor = 'rgba(59, 130, 246, 0.15)', // Default blue subtle glow
   ...props
 }) => {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const opacity = useMotionValue(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
-
-    const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-
-  const handleFocus = () => {
-    setOpacity(1);
-  };
-
-  const handleBlur = () => {
-    setOpacity(0);
+    const { left, top } = e.currentTarget.getBoundingClientRect();
+    mouseX.set(e.clientX - left);
+    mouseY.set(e.clientY - top);
   };
 
   const handleMouseEnter = () => {
-    setOpacity(1);
+    opacity.set(1);
   };
 
   const handleMouseLeave = () => {
-    setOpacity(0);
+    opacity.set(0);
   };
+
+  const background = useMotionTemplate`radial-gradient(600px circle at ${mouseX}px ${mouseY}px, ${spotlightColor}, transparent 40%)`;
 
   return (
     <div
-      ref={divRef}
       onMouseMove={handleMouseMove}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        'relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 transition-colors duration-200',
+        'relative overflow-hidden rounded-xl border border-theme-border bg-theme-bg-secondary transition-colors duration-200',
         className
       )}
       {...props}
     >
-      <div
+      <motion.div
         className="pointer-events-none absolute -inset-px transition duration-300 z-10"
         style={{
           opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
+          background,
         }}
       />
       <div className="relative z-20 h-full">{children}</div>
@@ -81,7 +74,7 @@ export const SpotlightCardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>>
 );
 
 export const SpotlightCardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ children, className, ...props }) => (
-  <h3 className={cn('text-lg font-semibold text-neutral-900 dark:text-neutral-100', className)} {...props}>
+  <h3 className={cn('text-lg font-semibold text-theme-text-primary', className)} {...props}>
     {children}
   </h3>
 );
@@ -93,10 +86,8 @@ export const SpotlightCardContent: React.FC<React.HTMLAttributes<HTMLDivElement>
 );
 
 // Compatibility wrapper to allow easy replacement
-const SpotlightCardWithStatics = Object.assign(SpotlightCard, {
+export const SpotlightCardWithStatics = Object.assign(SpotlightCard, {
   Header: SpotlightCardHeader,
   Title: SpotlightCardTitle,
   Content: SpotlightCardContent,
 });
-
-export default SpotlightCardWithStatics;

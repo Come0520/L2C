@@ -1,0 +1,58 @@
+╔═══════════════════════════════╗
+║  L2C Git快速部署               ║
+╚═══════════════════════════════╝
+[0;34m[INFO][0m 1/6 测试SSH连接...
+[0;32m[SUCCESS][0m SSH连接成功
+[0;34m[INFO][0m 2/6 安装Git和依赖...
+[0;32m[SUCCESS][0m 依赖安装完成
+[0;34m[INFO][0m 3/6 克隆代码仓库...
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-153-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Mon Dec  8 03:12:14 PM CST 2025
+
+  System load:  0.0               Processes:             115
+  Usage of /:   8.9% of 39.01GB   Users logged in:       1
+  Memory usage: 23%               IPv4 address for eth0: 172.21.224.64
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+11 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+2 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+
+1 updates could not be installed automatically. For more details,
+see /var/log/unattended-upgrades/unattended-upgrades.log
+
+*** System restart required ***
+
+Welcome to Alibaba Cloud Elastic Compute Service !
+
+Cloning into 'l2c'...
+代码克隆完成
+Host key verification failed.
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+-bash: line 4: cd: l2c: No such file or directory
+[0;32m[SUCCESS][0m 代码克隆完成
+[0;34m[INFO][0m 4/6 生成并上传环境变量...
+scp: dest open "/opt/l2c/.env.production": No such file or directory
+scp: failed to upload file /tmp/l2c.env to /opt/l2c/.env.production

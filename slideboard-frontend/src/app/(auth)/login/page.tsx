@@ -3,7 +3,7 @@
 import { Eye, EyeOff, Phone, Lock, ArrowLeft, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 
@@ -23,18 +23,28 @@ export default function LoginPage() {
   const { login, loginWithSms, sendVerificationCode, loginWithThirdParty } = useAuth();
   const router = useRouter();
 
-  // 发送验证码倒计时
+  // 修复倒计时逻辑：使用 useEffect 管理倒计时，避免内存泄漏
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [countdown]);
+
   const startCountdown = () => {
     setCountdown(60);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  };
+
+  // 辅助函数：安全获取错误信息
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    return '发生未知错误';
   };
 
   // 发送验证码
@@ -51,8 +61,8 @@ export default function LoginPage() {
       await sendVerificationCode(phone);
       startCountdown();
       setError('验证码发送成功');
-    } catch (error: any) {
-      setError(error.message || '验证码发送失败');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || '验证码发送失败');
     } finally {
       setIsSendingCode(false);
     }
@@ -65,12 +75,13 @@ export default function LoginPage() {
 
     // 手机号登录
     if (!phone || !password) {
-      setError('请填写手机号和密码');
+      setError('请填写手机号/邮箱和密码');
       return;
     }
 
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError('请输入正确的手机号');
+    // 简单检查非空即可，具体格式交给后端或 supabase
+    if (!phone) {
+      setError('请输入正确的手机号或邮箱');
       return;
     }
 
@@ -78,8 +89,8 @@ export default function LoginPage() {
 
     try {
       await login(phone, password);
-    } catch (error: any) {
-      setError(error.message || '登录失败,请检查手机号和密码');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || '登录失败,请检查手机号和密码');
     } finally {
       setIsLoading(false);
     }
@@ -109,8 +120,8 @@ export default function LoginPage() {
 
     try {
       await loginWithSms(phone, verificationCode);
-    } catch (error: any) {
-      setError(error.message || '登录失败，请检查验证码');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || '登录失败，请检查验证码');
     } finally {
       setIsLoading(false);
     }
@@ -121,8 +132,8 @@ export default function LoginPage() {
     setError('');
     try {
       loginWithThirdParty(provider);
-    } catch (error: any) {
-      setError(error.message || `${provider === 'wechat' ? '微信' : '飞书'}登录失败`);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error) || `${provider === 'wechat' ? '微信' : '飞书'}登录失败`);
     }
   };
 
@@ -178,23 +189,23 @@ export default function LoginPage() {
           {/* Password Login Form */}
           {loginMethod === 'password' && (
             <form onSubmit={handlePasswordLogin} className="space-y-6">
-              {/* Phone Input */}
+              {/* Identifier Input */}
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-theme-text-primary mb-2">
-                  手机号
+                <label htmlFor="identifier" className="block text-sm font-medium text-theme-text-primary mb-2">
+                  手机号 / 邮箱
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-theme-text-secondary" />
                   </div>
                   <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
+                    id="identifier"
+                    type="text"
+                    value={phone} // Keeping state name 'phone' for now to minimize refactor, but it holds identifier
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="请输入手机号"
+                    placeholder="请输入手机号或邮箱"
                     required
-                    maxLength={11}
+                    autoComplete="username"
                     className="block w-full pl-10 pr-3 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -216,6 +227,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="请输入密码"
                     required
+                    autoComplete="current-password"
                     className="block w-full pl-10 pr-10 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <button
@@ -290,6 +302,7 @@ export default function LoginPage() {
                     placeholder="请输入手机号"
                     required
                     maxLength={11}
+                    autoComplete="tel"
                     className="block w-full pl-10 pr-3 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -312,6 +325,7 @@ export default function LoginPage() {
                     placeholder="请输入6位验证码"
                     required
                     maxLength={6}
+                    autoComplete="one-time-code"
                     className="block w-full pl-10 pr-24 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <button
@@ -355,7 +369,7 @@ export default function LoginPage() {
                 className="flex items-center gap-2 px-4 py-2 border border-theme-border rounded-lg text-theme-text-secondary hover:bg-theme-bg-tertiary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.5 3.5c-.4-.4-1-.4-1.4 0l-16 16c-.4.4-.4 1 0 1.4s1 .4 1.4 0l1.04-1.04a9.95 9.95 0 0 0 6.02 2.17c5.52 0 10-4.48 10-10 0-2.77-.99-5.3-2.64-7.25l1.04-1.04zM13 1.99c3.87 0 7 3.13 7 7 0 3.13-2.07 5.83-5 6.71v-2.08c1.72-.86 3-2.69 3-4.63 0-2.21-1.79-4-4-4-2.21 0-4 1.79-4 4 0 1.19.63 2.27 1.58 2.83L10 14.17V17c-3.03-.89-5-3.58-5-6.71 0-3.87 3.13-7 7-7z"></path>
+                  <path d="M21.35 9.17c0-3.65-4.22-6.63-9.43-6.63-5.2 0-9.43 2.98-9.43 6.63 0 2.21 1.54 4.18 3.94 5.45l-.99 3.01 3.65-1.92c.88.23 1.82.36 2.78.36.13 0 .25 0 .38 0-.1-.48-.15-.97-.15-1.46 0-4.04 3.79-7.31 8.46-7.31.26 0 .52.01.78.04zm-3.42 2.06c-3.94 0-7.13 2.81-7.13 6.27 0 1.95 1.08 3.68 2.76 4.83l-.63 2.29 2.78-1.39c.69.19 1.42.3 2.18.3 3.94 0 7.13-2.81 7.13-6.27 0-3.46-3.19-6.27-7.13-6.27z"></path>
                 </svg>
                 微信登录
               </button>
@@ -364,7 +378,7 @@ export default function LoginPage() {
                 className="flex items-center gap-2 px-4 py-2 border border-theme-border rounded-lg text-theme-text-secondary hover:bg-theme-bg-tertiary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm3.84 16.88c-.48.32-1.04.56-1.64.72-.36.08-.72.12-1.12.12-.32 0-.64-.04-.96-.12-.64-.16-1.16-.4-1.6-.72-.16-.12-.32-.24-.48-.36-.12-.12-.24-.24-.32-.36-.08-.12-.12-.24-.16-.36-.04-.12-.04-.24-.04-.36 0-.12 0-.24.04-.36.04-.12.08-.24.16-.36.08-.12.2-.24.32-.36.16-.12.32-.24.48-.36.44-.32.96-.56 1.6-.72.64-.16 1.28-.24 2-.24.72 0 1.36.08 2 .24.64.16 1.16.4 1.6.72.16.12.32.24.48.36.12.12.24.24.32.36.08.12.12.24.16.36.04.12.04.24.04.36 0 .12 0 .24-.04.36-.04.12-.08.24-.16.36-.08.12-.2.24-.32.36-.16.12-.32.24-.48.36zm-3.84-2.4c-2.48 0-4.48 1.6-5.2 3.68h10.4c-.72-2.08-2.72-3.68-5.2-3.68zm0-4.8c-1.36 0-2.48.88-2.88 2.08H14.88c-.4-1.2-1.52-2.08-2.88-2.08zm0-4.8c-1.36 0-2.48.88-2.88 2.08H14.88c-.4-1.2-1.52-2.08-2.88-2.08z"></path>
+                  <path d="M11.64 3.53a3.57 3.57 0 0 1 4.54-.5l8.77 6.42a1.68 1.68 0 0 1 .28 2.58l-5.6 6.78a3.56 3.56 0 0 1-5.1.4l-3.27-3.2a1.07 1.07 0 0 1-.22-1.18l2.25-6.65c.34-1 .4-1.63-1.65-3.66a1.07 1.07 0 0 0-.96-.28L1.6 6.2a1.07 1.07 0 0 1-.58-1.9L9.4 1.25a3.57 3.57 0 0 1 2.24-.72z"></path>
                 </svg>
                 飞书登录
               </button>

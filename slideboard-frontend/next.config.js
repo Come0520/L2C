@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const path = require('path')
-const createNextIntlPlugin = require('next-intl/plugin');
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
@@ -30,10 +28,24 @@ const nextConfig = {
   serverExternalPackages: ['@supabase/supabase-js'],
   // 启用React Compiler实验性功能
   experimental: {
-    reactCompiler: true,
+    reactCompiler: false,
   },
   async headers() {
-    const cspHeader = `
+    const isDev = process.env.NODE_ENV === 'development'
+    const cspHeader = isDev
+      ? `
+      default-src 'self';
+      script-src 'self' 'unsafe-eval' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' blob: data:;
+      font-src 'self' data:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+      connect-src 'self' ws://localhost:* http://localhost:* https://*.supabase.co https://*.supabase.in https://*.sentry.io;
+    `
+      : `
       default-src 'self';
       script-src 'self' https://*.supabase.co 'unsafe-eval' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
@@ -85,45 +97,6 @@ const nextConfig = {
   },
 }
 
-const { withSentryConfig } = require("@sentry/nextjs");
+const withNextIntl = require('next-intl/plugin')();
 
-module.exports = withNextIntl(withSentryConfig(
-  withBundleAnalyzer(nextConfig),
-  {
-    // For all available options, see:
-    // https://github.com/getsentry/sentry-webpack-plugin#options
-
-    // Suppresses source map uploading logs during build
-    silent: true,
-    org: "trae-ai",
-    project: "l2c",
-  },
-  {
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
-
-    // Transpiles SDK to be compatible with IE11 (increases bundle size)
-    transpileClientSDK: true,
-
-    // Routes browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-    // This can increase your server load as well as your hosting bill.
-    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-    // side errors will fail.
-    tunnelRoute: "/monitoring",
-
-    // Hides source maps from generated client bundles
-    hideSourceMaps: true,
-
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    disableLogger: true,
-
-    // Enables automatic instrumentation of Vercel Cron Monitors.
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-  }
-));
+module.exports = withNextIntl(withBundleAnalyzer(nextConfig));

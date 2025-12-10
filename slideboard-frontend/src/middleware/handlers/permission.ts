@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
+import { env } from '@/config/env'
 import { isPublicRoute } from '@/config/public-routes'
 import { ROUTE_REQUIRED_PERMISSIONS, ROUTE_REQUIRED_ROLES } from '@/config/route-access'
-import { createClient } from '@/lib/supabase/server'
 import { isAdmin, isServiceRole, isFinance, isSalesRole, hasPermission } from '@/utils/permissions'
 
 import { Middleware } from '../base'
@@ -27,7 +28,21 @@ export class PermissionMiddleware implements Middleware {
     }
 
     // 获取用户信息和角色
-    const supabase = await createClient()
+    const supabase = createServerClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll() {
+            // PermissionMiddleware 只需要读取，不需要写入 Cookie
+          },
+        },
+      }
+    )
+
     const { data: { user } } = await supabase.auth.getUser()
 
     // 如果用户未登录，跳过权限检查（认证中间件会处理）

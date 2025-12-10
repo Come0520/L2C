@@ -9,8 +9,13 @@ import { SessionRefreshMiddleware } from '@/middleware/handlers/session-refresh'
 vi.mock('@supabase/ssr', () => {
   const client = {
     auth: {
-      getUser: vi.fn(async () => ({ data: { user: null } })),
+      getUser: vi.fn(async () => ({ data: { user: mockUser } })),
     },
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn(async () => ({ data: { role: mockRole } })),
+    })),
   }
   return { createServerClient: vi.fn(() => client) }
 })
@@ -34,8 +39,11 @@ vi.mock('@/lib/supabase/server', () => {
 
 function createMockRequest(pathname: string) {
   const cookieStore: Map<string, string> = new Map()
+  const nextUrl = new URL(`http://localhost${pathname}`) as any
+  nextUrl.clone = () => new URL(nextUrl.toString())
+
   return {
-    nextUrl: { pathname },
+    nextUrl,
     url: `http://localhost${pathname}`,
     headers: new Headers(),
     cookies: {

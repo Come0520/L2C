@@ -6,20 +6,28 @@ export const PUBLIC_ROUTES = [
   '/',
   '/login',
   '/register',
-  
+
   // 认证相关路由
   '/auth/*',
-  
+
   // API 路由
   '/api/*',
-  
+
   // Next.js 内部路由
   '/_next/*',
-  
+
   // 静态资源
   '/favicon.ico',
   '/robots.txt',
-  
+  '/manifest.json',
+  '/*.png',
+  '/*.jpg',
+  '/*.jpeg',
+  '/*.gif',
+  '/*.svg',
+  '/*.ico',
+  '/icons/*',
+
   // 开发相关路由
   '/_playground/*'
 ]
@@ -40,11 +48,16 @@ if (process.env.E2E_TEST === '1') {
  * @returns 是否为公共路由
  */
 export function isPublicRoute(pathname: string): boolean {
+  // 移除可能的locale前缀 (例如 /zh-CN/login -> /login)
+  const pathnameWithoutLocale = pathname.replace(/^\/[a-z]{2}-[A-Z]{2}/, '')
+
   return PUBLIC_ROUTES.some(route => {
     if (route.endsWith('/*')) {
       const prefix = route.slice(0, -2)
-      return pathname.startsWith(prefix)
+      // 检查原始路径和去除locale的路径
+      return pathname.startsWith(prefix) || pathnameWithoutLocale.startsWith(prefix)
     }
-    return pathname === route
+    // 检查原始路径和去除locale的路径
+    return pathname === route || pathnameWithoutLocale === route
   })
 }

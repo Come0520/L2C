@@ -4,13 +4,14 @@ import { motion } from 'framer-motion';
 import { MoreHorizontal, Edit, Share2, Trash2, Play } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperDialog, PaperDialogHeader, PaperDialogTitle, PaperDialogContent, PaperDialogFooter } from '@/components/ui/paper-dialog';
 import { PaperToast } from '@/components/ui/paper-toast';
 import { createClient } from '@/lib/supabase/client'
 import { logsService } from '@/services/logs.client';
+import { useAuth } from '@/contexts/auth-context';
 
 
 interface Slide {
@@ -29,9 +30,23 @@ interface SlideCardProps {
 
 export function SlideCard({ slide, onDelete }: SlideCardProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleEdit = () => {
     router.push(`/editor/${slide.id}`);
@@ -58,8 +73,8 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
       setToast({ show: true, message: '链接已复制到剪贴板', type: 'success' });
 
       await logsService.createLog({
-        userId: 'current_user_id',
-        userName: '当前用户',
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
         action: 'copy_slide_share_link',
         level: 'info',
         resourceId: slide.id,
@@ -71,8 +86,8 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
       });
     } catch (error) {
       await logsService.createLog({
-        userId: 'current_user_id',
-        userName: '当前用户',
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
         action: 'copy_slide_share_link',
         level: 'error',
         resourceId: slide.id,
@@ -100,8 +115,8 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
         setToast({ show: true, message: '幻灯片已成功删除', type: 'success' })
         onDelete?.(slide.id)
         await logsService.createLog({
-          userId: 'current_user_id',
-          userName: '当前用户',
+          userId: user?.id || 'unknown',
+          userName: user?.name || 'Unknown User',
           action: 'delete_slide',
           level: 'info',
           resourceId: slide.id,
@@ -110,8 +125,8 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
         })
       } else {
         await logsService.createLog({
-          userId: 'current_user_id',
-          userName: '当前用户',
+          userId: user?.id || 'unknown',
+          userName: user?.name || 'Unknown User',
           action: 'delete_slide',
           level: 'error',
           resourceId: slide.id,
@@ -122,8 +137,8 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
       }
     } catch (error) {
       await logsService.createLog({
-        userId: 'current_user_id',
-        userName: '当前用户',
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
         action: 'delete_slide',
         level: 'error',
         resourceId: slide.id,
@@ -142,8 +157,13 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Reset time part for accurate day comparison
+    const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffTime = d2.getTime() - d1.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
       return '今天';
@@ -158,12 +178,17 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
 
   return (
     <motion.div 
-      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-      whileHover={{ scale: 1.01, y: -2 }}
+      className={`
+        bg-white rounded-lg shadow-sm border border-gray-200 
+        hover:shadow-md transition-shadow duration-200 relative
+        ${showMenu ? 'z-20' : 'z-0'}
+      `}
+      whileHover={{ scale: 1.01, y: -2, zIndex: 10 }}
       whileTap={{ scale: 0.99 }}
+      style={{ position: 'relative' }}
     >
       {/* 缩略图区域 */}
-      <div className="aspect-video bg-gray-100 relative group">
+      <div className="aspect-video bg-gray-100 relative group rounded-t-lg overflow-hidden">
         {slide.thumbnail_url ? (
           <Image
             src={slide.thumbnail_url}
@@ -219,7 +244,7 @@ export function SlideCard({ slide, onDelete }: SlideCardProps) {
           </div>
 
           {/* 更多操作菜单 */}
-          <div className="relative ml-2">
+          <div className="relative ml-2" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="p-1 rounded-full hover:bg-gray-100 transition-colors"

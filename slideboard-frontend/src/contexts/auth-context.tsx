@@ -19,7 +19,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (phone: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   loginWithSms: (phone: string, verificationCode: string) => Promise<void>;
   sendVerificationCode: (phone: string) => Promise<void>;
   loginWithThirdParty: (provider: 'wechat' | 'feishu') => Promise<void>;
@@ -37,18 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // DEVELOPMENT ONLY: Mock user session for development
-    if (env.NODE_ENV === 'development') {
+    // 已禁用 - 使用真实 Supabase 登录
+    // 如需快速开发模式，可以设置 NEXT_PUBLIC_ENABLE_DEV_MOCK=true
+    /*
+    if (env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_DEV_MOCK === 'true') {
       const mockUser: User = {
         id: 'dev-admin-id',
         phone: '15601911921',
         name: 'Dev Admin',
-        role: 'admin', // Mock as admin
+        role: 'admin',
         avatar_url: undefined
       };
       setUser(mockUser);
       setLoading(false);
       return;
     }
+    */
 
     // E2E TEST MODE: Mock user session
     if (env.NEXT_PUBLIC_E2E_TEST === 'true') {
@@ -128,10 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  const login = async (phone: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     try {
       // E2E TEST MOCK
-      if (env.NEXT_PUBLIC_E2E_TEST === 'true' && phone === '13800138000' && password === '123456') {
+      if (env.NEXT_PUBLIC_E2E_TEST === 'true' && identifier === '13800138000' && password === '123456') {
         localStorage.setItem('e2e-test-user', 'true');
         const mockUser: User = {
           id: 'e2e-test-user-id',
@@ -145,9 +149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // 简单的邮箱格式检查
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
       // 使用Supabase Auth进行登录
       const { error } = await supabase.auth.signInWithPassword({
-        phone,
+        ...(isEmail ? { email: identifier } : { phone: identifier }),
         password
       });
 

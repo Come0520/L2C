@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 /* 自定义主题配置 */
 @theme {
@@ -114,6 +115,14 @@
 
   --color-paper-info: var(--color-info-500);
   --color-paper-info-light: var(--color-info-100);
+
+  /* Animations */
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
 }
 
 /* 自定义工具类定义 */
@@ -216,8 +225,8 @@
 .theme-linear {
   /* Text - High Contrast */
   --theme-text-primary: #ffffff;
-  --theme-text-secondary: #e5e5e5;
-  /* Boosted from #a3a3a3 to neutral-200 */
+  --theme-text-secondary: #c1c1c1;
+  /* Reverted to #a3a3a3 (neutral-400) for better hierarchy */
 
   /* Backgrounds */
   --theme-bg-primary: #000000;

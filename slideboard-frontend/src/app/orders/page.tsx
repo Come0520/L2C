@@ -9,7 +9,7 @@ import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTableToolbar, PaperTablePagination } from '@/components/ui/paper-table'
 import SpotlightCard from '@/components/ui/spotlight-card'
 import { useSalesOrders } from '@/hooks/useSalesOrders'
-import { BaseOrder } from '@/types/order'
+import { BaseOrder } from '@/shared/types/order'
 import { TRACK_PAGE_VIEW } from '@/utils/analytics'
 
 const statusLinks = [

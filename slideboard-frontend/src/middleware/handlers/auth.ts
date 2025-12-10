@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
 import { env } from '@/config/env'
 import { isPublicRoute } from '@/config/public-routes'
-import { createClient } from '@/lib/supabase/server'
 
 import { Middleware } from '../base'
 
@@ -26,20 +26,36 @@ export class AuthMiddleware implements Middleware {
     }
 
     // 检查用户是否已登录
-    // DEVELOPMENT ONLY: Bypass auth check if explicitly requested via env or constant
-    // For now, we will bypass auth check for development convenience as requested
-    if (env.NODE_ENV === 'development') {
-       return next()
-    }
+    const supabase = createServerClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll() {
+            // AuthMiddleware 只需要验证，不需要写入 Cookie
+            // Cookie 刷新由链条前面的 SessionRefreshMiddleware 处理
+          },
+        },
+      }
+    )
 
-    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     // 如果未登录，重定向到登录页
     if (!user) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('redirectTo', pathname)
-      return NextResponse.redirect(loginUrl)
+      // 使用相对路径构建登录URL，保持locale前缀（如果存在）
+      const url = request.nextUrl.clone()
+
+      // 检查当前路径是否有locale前缀
+      const localeMatch = pathname.match(/^\/([a-z]{2}-[A-Z]{2})/)
+      const loginPath = localeMatch ? `/${localeMatch[1]}/login` : '/login'
+
+      url.pathname = loginPath
+      url.searchParams.set('redirectTo', pathname)
+      return NextResponse.redirect(url)
     }
 
     // 如果用户已登录，允许继续处理

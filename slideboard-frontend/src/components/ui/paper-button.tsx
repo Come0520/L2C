@@ -1,63 +1,90 @@
+import React from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 
-import { motion } from 'framer-motion';
+// 1. 使用 CVA 管理样式
+const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-50',
+  {
+    variants: {
+      variant: {
+        primary: 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm dark:bg-blue-600 dark:hover:bg-blue-500',
+        secondary: 'bg-paper-100 text-primary-600 hover:bg-primary-100 dark:bg-neutral-800 dark:text-neutral-200',
+        outline: 'border border-paper-600 text-ink-800 hover:bg-paper-50 dark:border-neutral-700 dark:text-neutral-300',
+        ghost: 'hover:bg-paper-50 text-ink-800 dark:text-neutral-400 dark:hover:bg-neutral-800',
+        success: 'bg-success-500 text-white hover:bg-success-600',
+        warning: 'bg-warning-500 text-white hover:bg-warning-600',
+        error: 'bg-error-500 text-white hover:bg-error-600',
+        info: 'bg-info-500 text-white hover:bg-info-600',
+      },
+      size: {
+        sm: 'px-3 py-1.5 text-sm',
+        md: 'px-4 py-2 text-base',
+        lg: 'px-6 py-3 text-lg',
+        // 兼容旧的字符串
+        small: 'px-3 py-1.5 text-sm',
+        medium: 'px-4 py-2 text-base',
+        large: 'px-6 py-3 text-lg',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+      size: 'md',
+    },
+  }
+);
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'success' | 'warning' | 'error' | 'info';
-  size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
-  icon?: React.ReactNode;
+interface ButtonProps
+  extends Omit<HTMLMotionProps<'button'>, 'size'>,
+  VariantProps<typeof buttonVariants> {
+  icon?: React.ReactNode;      // 保持兼容
+  rightIcon?: React.ReactNode; // ✨ 新增右侧图标
   loading?: boolean;
+  as?: React.ElementType;
 }
 
-export const PaperButton: React.FC<ButtonProps> = ({
+export const PaperButton = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
-  variant = 'primary',
-  size = 'medium',
-  className = '',
+  variant,
+  size,
+  className,
   icon,
-  loading,
+  rightIcon,
+  loading = false,
   disabled,
+  as,
   ...props
-}) => {
-  const baseClasses = 'rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-2';
-
-  const variantClasses = {
-    primary: 'bg-primary-500 text-white hover:bg-primary-600 dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white shadow-sm dark:shadow-[0_0_15px_rgba(37,99,235,0.3)]',
-    secondary: 'bg-paper-100 text-primary-600 hover:bg-primary-100 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700',
-    outline: 'border border-paper-600 text-ink-800 hover:bg-paper-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white',
-    ghost: 'bg-transparent text-ink-800 hover:bg-paper-50 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-neutral-800',
-    success: 'bg-success-500 text-white hover:bg-success-600 dark:bg-emerald-600 dark:hover:bg-emerald-500',
-    warning: 'bg-warning-500 text-white hover:bg-warning-600 dark:bg-amber-600 dark:hover:bg-amber-500',
-    error: 'bg-error-500 text-white hover:bg-error-600 dark:bg-rose-600 dark:hover:bg-rose-500',
-    info: 'bg-info-500 text-white hover:bg-info-600 dark:bg-sky-600 dark:hover:bg-sky-500',
-  };
-
-  const sizeClasses = {
-    small: 'px-3 py-1 text-sm',
-    medium: 'px-4 py-2 text-base',
-    large: 'px-6 py-3 text-lg',
-  };
-  const resolvedSize = size === 'sm' ? 'small' : size === 'md' ? 'medium' : size === 'lg' ? 'large' : size;
-
-  // Extract animation-related props to avoid type conflicts
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { onAnimationStart: _1, onAnimationEnd: _2, onAnimationIteration: _3, ...restProps } = props;
+}, ref) => {
+  const Component = React.useMemo(() => {
+    if (as) return motion(as);
+    return motion.button;
+  }, [as]);
 
   return (
-    <motion.button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[resolvedSize as keyof typeof sizeClasses]} ${className} ${loading || disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    <Component
+      ref={ref as any}
+      layout // ✨ 自动平滑宽高度变化
+      className={cn(buttonVariants({ variant, size, className }))}
       disabled={disabled || loading}
-      whileHover={!disabled && !loading ? { scale: 1.02 } : {}}
-      whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
-      {...restProps as any}
+      aria-busy={loading} // ✨ A11y 增强
+      whileHover={!disabled && !loading ? { scale: 1.02 } : undefined}
+      whileTap={!disabled && !loading ? { scale: 0.98 } : undefined}
+      {...props}
     >
-      {loading && (
-        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+      {/* Loading 优先级最高，居中显示 */}
+      {loading ? (
+        <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />
+      ) : (
+        <>
+          {icon && <span className="flex items-center">{icon}</span>}
+          {children}
+          {rightIcon && <span className="flex items-center">{rightIcon}</span>}
+        </>
       )}
-      {!loading && icon}
-      {children}
-    </motion.button>
+    </Component>
   );
-};
+});
+
+PaperButton.displayName = 'PaperButton';

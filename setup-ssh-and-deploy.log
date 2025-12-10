@@ -1,0 +1,58 @@
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m步骤 1/2: 配置 SSH 公钥到服务器[0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+将使用旧密钥连接服务器，并添加新公钥...
+
+✅ 公钥已添加到 authorized_keys
+
+[0;32m✅ SSH 公钥配置完成[0m
+
+[0;34m测试新密钥连接...[0m
+✅ 新密钥连接成功！
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m步骤 2/2: 使用新密钥完成部署[0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+当前位置: /opt/l2c/L2C
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+使用配置文件: docker-compose.production.yml
+
+✅ 环境变量文件存在
+-rw-r--r-- 1 root root 1.5K Dec  8 17:17 .env.production
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+开始构建 Docker 镜像（约 10-15 分钟）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_ANON_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_SERVICE_ROLE_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"JWT_SECRET\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_ANON_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_SERVICE_ROLE_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"JWT_SECRET\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_ANON_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_SERVICE_ROLE_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_ANON_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SUPABASE_SERVICE_ROLE_KEY\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SMTP_USER\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SMTP_PORT\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SMTP_PASS\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"JWT_SECRET\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SMTP_HOST\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"SMTP_ADMIN_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"JWT_SECRET\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:38:59+08:00" level=warning msg="The \"POSTGRES_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-12-08T18:39:00+08:00" level=warning msg="/opt/l2c/L2C/docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+service "nginx" depends on undefined service "web-app": invalid compose project

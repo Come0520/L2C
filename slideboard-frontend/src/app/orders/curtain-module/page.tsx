@@ -10,7 +10,7 @@ import {
     PackageDefinition,
     AVAILABLE_PACKAGES,
     createEmptyItem
-} from '@/types/order'
+} from '@/shared/types/order'
 
 export default function CurtainModulePage() {
     // 选中的套餐

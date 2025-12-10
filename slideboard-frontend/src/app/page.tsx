@@ -450,24 +450,24 @@ export default function HomePage() {
         */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-ink-800">欢迎回来！{currentRoleName}</h1>
-            <p className="text-ink-700 mt-1">今天是 {new Date().toLocaleDateString('zh-CN', {
+            <h1 className="text-3xl font-bold text-theme-text-primary">开始战斗！{currentRoleName}</h1>
+            <p className="text-theme-text-secondary mt-1">今天是 {new Date().toLocaleDateString('zh-CN', {
               year: 'numeric',
               month: 'long',
               day: 'numeric',
               weekday: 'long'
             })}</p>
-            <p className="text-ink-700 mt-1">当前角色：{currentRoleName} ({currentRole})</p>
+            <p className="text-theme-text-secondary mt-1">当前角色：{currentRoleName} ({currentRole})</p>
           </div>
           <div className="flex space-x-3">
             {/* 角色切换下拉框 - 演示功能 */}
             <div className="flex items-center space-x-2">
-              <label htmlFor="roleSelect" className="text-sm text-ink-800">角色切换：</label>
+              <label htmlFor="roleSelect" className="text-sm text-theme-text-primary">角色切换：</label>
               <select
                 id="roleSelect"
                 value={currentRole}
                 onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-                className="border border-paper-600 rounded-md px-3 py-2 text-sm bg-paper-400 text-ink-900 focus:outline-none focus:ring-2 focus:ring-success-500"
+                className="border border-theme-border rounded-md px-3 py-2 text-sm bg-theme-bg-tertiary text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-success-500"
               >
                 {/* 销售类角色 */}
                 <optgroup label="销售类角色">
@@ -529,8 +529,8 @@ export default function HomePage() {
               <PaperCardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm text-ink-800">{stat.title}</p>
-                    <p className="text-2xl font-bold text-ink-800">{stat.value}</p>
+                    <p className="text-sm text-theme-text-secondary">{stat.title}</p>
+                    <p className="text-2xl font-bold text-theme-text-primary">{stat.value}</p>
                     <div className="flex items-center space-x-1">
                       <TrendingUp className={`h-4 w-4 ${stat.trend === 'up' ? 'text-success-600' : 'text-error-600 rotate-180'
                         }`} />

@@ -8,7 +8,7 @@ import DashboardLayout from '@/components/layout/dashboard-layout'
 import { toast } from '@/components/ui/toast'
 import { OrderCreateView } from '@/features/orders/components/order-create-view'
 import { salesOrderService } from '@/services/salesOrders.client'
-import { OrderFormData, CurtainItem, WallcoveringItem, BackgroundWallItem, WindowCushionItem, StandardProductItem } from '@/types/order'
+import { OrderFormData, CurtainItem, WallcoveringItem, BackgroundWallItem, WindowCushionItem, StandardProductItem } from '@/shared/types/order'
 import { TRACK_PAGE_VIEW } from '@/utils/analytics'
 import { logger } from '@/utils/logger'
 

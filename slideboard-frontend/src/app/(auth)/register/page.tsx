@@ -1,9 +1,9 @@
 'use client';
 
-import { Eye, EyeOff, Phone, Lock, User, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Phone, Lock, User, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 
@@ -16,7 +16,7 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
 
   const { register } = useAuth();
@@ -30,7 +30,31 @@ export default function RegisterPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    
+    if (typeof error === 'object' && error !== null) {
+      // 尝试解析各种常见的错误格式 (Supabase, API 等)
+      const err = error as Record<string, unknown>;
+      
+      // 标准 message 字段
+      if (typeof err.message === 'string') return err.message;
+      
+      // 常见 msg 字段
+      if (typeof err.msg === 'string') return err.msg;
+      
+      // error 字段可能是字符串也可能是对象
+      if (typeof err.error === 'string') return err.error;
+      if (typeof err.error === 'object' && err.error !== null && 'message' in err.error) {
+        return String((err.error as any).message);
+      }
+    }
+    
+    return '注册失败，请重试';
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -61,34 +85,25 @@ export default function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      await register(phone, password, name);
-      router.push('/');
-    } catch (error: any) {
-      console.error('注册错误:', error);
-      // 显示详细的错误信息
-      if (error?.message) {
-        setError(error.message);
-      } else if (typeof error === 'string') {
-        setError(error);
-      } else {
-        setError('注册失败，请重试');
+    startTransition(async () => {
+      try {
+        await register(phone, password, name);
+        router.push('/');
+      } catch (error: unknown) {
+        console.error('注册错误:', error);
+        setError(getErrorMessage(error));
       }
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-theme-bg-primary flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         {/* Back Button */}
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center text-theme-text-secondary hover:text-theme-text-primary transition-colors"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             返回
@@ -98,31 +113,31 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary-600 mb-2">Slideboard</h1>
-          <p className="text-gray-600">现代化幻灯片展示平台</p>
+          <p className="text-theme-text-secondary">现代化幻灯片展示平台</p>
         </div>
 
         {/* Register Form */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-theme-bg-secondary rounded-xl shadow-lg border border-theme-border p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">创建账户</h2>
-            <p className="text-gray-600">请填写以下信息完成注册</p>
+            <h2 className="text-2xl font-semibold text-theme-text-primary mb-2">创建账户</h2>
+            <p className="text-theme-text-secondary">请填写以下信息完成注册</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-md animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-error-600 text-sm">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Input */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-theme-text-primary mb-2">
                 姓名
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-theme-text-secondary" />
                 </div>
                 <input
                   id="name"
@@ -131,20 +146,21 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="请输入您的姓名"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 hover:border-primary-500/50 transition-all duration-200"
                   maxLength={20}
+                  autoComplete="name"
                 />
               </div>
             </div>
 
             {/* Phone Input */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-theme-text-primary mb-2">
                 手机号
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
+                  <Phone className="h-5 w-5 text-theme-text-secondary" />
                 </div>
                 <input
                   id="phone"
@@ -153,20 +169,21 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="请输入手机号"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 hover:border-primary-500/50 transition-all duration-200"
                   maxLength={11}
+                  autoComplete="tel"
                 />
               </div>
             </div>
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-theme-text-primary mb-2">
                 密码
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-theme-text-secondary" />
                 </div>
                 <input
                   id="password"
@@ -175,8 +192,9 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="请输入密码（至少6位）"
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-10 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 hover:border-primary-500/50 transition-all duration-200"
                   minLength={6}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -184,9 +202,9 @@ export default function RegisterPage() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-theme-text-secondary hover:text-theme-text-primary" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-theme-text-secondary hover:text-theme-text-primary" />
                   )}
                 </button>
               </div>
@@ -194,12 +212,12 @@ export default function RegisterPage() {
 
             {/* Confirm Password Input */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-theme-text-primary mb-2">
                 确认密码
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-theme-text-secondary" />
                 </div>
                 <input
                   id="confirmPassword"
@@ -208,8 +226,9 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="请再次输入密码"
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-10 py-3 border border-theme-border rounded-lg leading-5 bg-theme-bg-tertiary text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 hover:border-primary-500/50 transition-all duration-200"
                   minLength={6}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -217,9 +236,9 @@ export default function RegisterPage() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-theme-text-secondary hover:text-theme-text-primary" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-theme-text-secondary hover:text-theme-text-primary" />
                   )}
                 </button>
               </div>
@@ -232,17 +251,17 @@ export default function RegisterPage() {
                 name="terms"
                 type="checkbox"
                 required
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-theme-border rounded bg-theme-bg-tertiary"
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="terms" className="ml-2 block text-sm text-theme-text-secondary">
                 我同意{' '}
-                <a href="#" className="text-primary-600 hover:text-primary-500">
+                <Link href="#" className="text-primary-600 hover:text-primary-500">
                   服务条款
-                </a>{' '}
+                </Link>{' '}
                 和{' '}
-                <a href="#" className="text-primary-600 hover:text-primary-500">
+                <Link href="#" className="text-primary-600 hover:text-primary-500">
                   隐私政策
-                </a>
+                </Link>
               </label>
             </div>
 
@@ -250,17 +269,24 @@ export default function RegisterPage() {
             <div>
               <button
                 type="submit"
-                disabled={isLoading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isPending}
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all duration-200"
               >
-                {isLoading ? '注册中...' : '注册'}
+                {isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin h-5 w-5 text-white" />
+                    <span>注册中...</span>
+                  </span>
+                ) : (
+                  '立即注册'
+                )}
               </button>
             </div>
           </form>
 
           {/* Login Link */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-theme-text-secondary">
               已有账户？{' '}
               <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
                 立即登录
@@ -271,11 +297,11 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-theme-text-secondary">
             注册即表示您同意我们的{' '}
-            <a href="#" className="text-primary-600 hover:text-primary-500">服务条款</a>{' '}
+            <Link href="#" className="text-primary-600 hover:text-primary-500">服务条款</Link>{' '}
             和{' '}
-            <a href="#" className="text-primary-600 hover:text-primary-500">隐私政策</a>
+            <Link href="#" className="text-primary-600 hover:text-primary-500">隐私政策</Link>
           </p>
         </div>
       </div>

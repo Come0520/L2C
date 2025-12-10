@@ -1,0 +1,56 @@
+[0;32m
+╔═══════════════════════════════════════╗
+║  L2C ECS 环境修复（稳健版）          ║
+╚═══════════════════════════════════════╝
+[0m
+[0;34m[INFO][0m 开始环境修复...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 ECS 环境完整修复
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1/8] 清理旧版 Docker...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Package 'containerd.io' is not installed, so not removed
+Package 'docker-buildx-plugin' is not installed, so not removed
+Package 'docker-ce-cli' is not installed, so not removed
+Package 'docker-ce' is not installed, so not removed
+Package 'docker-compose-plugin' is not installed, so not removed
+The following packages were automatically installed and are no longer required:
+  libslirp0 pigz slirp4netns
+Use 'apt autoremove' to remove them.
+The following packages will be REMOVED:
+  docker-ce-rootless-extras*
+0 upgraded, 0 newly installed, 1 to remove and 21 not upgraded.
+After this operation, 14.9 MB disk space will be freed.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81479 files and directories currently installed.)
+Removing docker-ce-rootless-extras (5:29.1.2-1~ubuntu.22.04~jammy) ...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following packages will be REMOVED:
+  libslirp0 pigz slirp4netns
+0 upgraded, 0 newly installed, 3 to remove and 21 not upgraded.
+After this operation, 397 kB disk space will be freed.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81474 files and directories currently installed.)
+Removing slirp4netns (1.0.1-2) ...
+Removing libslirp0:amd64 (4.6.1-1build1) ...
+Removing pigz (2.6-1) ...
+Processing triggers for man-db (2.10.2-1) ...
+Processing triggers for libc-bin (2.35-0ubuntu3.11) ...
+✅ 清理完成
+[2/8] 配置 Docker APT 源...
+✅ APT 源配置完成
+[3/8] 安装 Docker...
+✅ Docker 安装完成
+[4/8] 配置 Docker...
+✅ Docker 配置完成
+[5/8] 验证 Docker...
+  ├─ Docker: Docker version 29.1.2, build 890dcca
+  ├─ Docker Compose: Docker Compose version v5.0.0
+  └─ Docker 测试: ⚠️  警告：测试失败但可继续
+✅ Docker 验证通过
+[6/8] 安装 Node.js...
+  └─ Node.js: v20.19.6
+bash: line 142: echo✅ Node.js 安装完成: command not found

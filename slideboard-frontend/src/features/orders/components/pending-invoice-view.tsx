@@ -191,35 +191,62 @@ export function PendingInvoiceView() {
       )}
 
       {/* 统计卡片 */}
-      <PaperCard>
-        <PaperCardContent className="p-4">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">待开票统计</h3>
-              <div className="text-3xl font-bold text-primary-600">¥{totalAmount.toFixed(2)}</div>
-              <p className="text-sm text-gray-500 mt-1">共 {filteredOrders.length} 笔对账单需要开票</p>
-            </div>
-
-            {cityStatsArray.length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">按城市分布</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {cityStatsArray.map(({ city, amount }) => (
-                    <div key={city} className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm text-gray-600">{city}</div>
-                      <div className="text-lg font-semibold">¥{amount.toFixed(2)}</div>
-                    </div>
-                  ))}
+                <div className="text-sm font-medium text-ink-500">待开票总金额</div>
+                <div className="text-3xl font-bold text-indigo-600 mt-1">
+                  ¥{totalAmount.toFixed(2)}
                 </div>
               </div>
-            )}
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+              <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <span className="text-2xl">💰</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500">待开票对账单数</div>
+                <div className="text-3xl font-bold text-ink-800 mt-1">
+                  {filteredOrders.length}
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📄</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
+
+      {/* 城市分布统计 */}
+      {cityStatsArray.length > 0 && (
+        <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+          <PaperCardContent className="p-6">
+            <h4 className="text-sm font-medium text-ink-600 mb-4">按城市分布</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {cityStatsArray.map(({ city, amount }) => (
+                <div key={city} className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-black/5 dark:border-white/5">
+                  <div className="text-sm text-ink-500 mb-1">{city}</div>
+                  <div className="text-lg font-semibold text-ink-800">¥{amount.toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      )}
 
       {/* 待开票订单列表 */}
-      <PaperCard>
-        <PaperTableToolbar className="flex items-center justify-between bg-white p-3 border-b border-gray-200">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3 w-full">
             {/* 搜索栏 */}
             <div className="flex-grow max-w-md">
@@ -228,7 +255,7 @@ export function PendingInvoiceView() {
                 placeholder="搜索对账单号"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 dark:bg-black/20"
               />
             </div>
 
@@ -237,7 +264,7 @@ export function PendingInvoiceView() {
               <select
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
-                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 dark:bg-black/20"
               >
                 <option value="">全部城市</option>
                 {cities.map((city) => (
@@ -247,7 +274,7 @@ export function PendingInvoiceView() {
             </div>
 
             {/* 订单数量统计 */}
-            <div className="text-sm text-ink-500">共 {filteredOrders.length} 条记录</div>
+            <div className="text-sm text-ink-500 ml-auto">共 {filteredOrders.length} 条记录</div>
           </div>
         </PaperTableToolbar>
         <PaperCardContent className="p-0">

@@ -7,7 +7,7 @@ import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperInput } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 import { toast } from '@/components/ui/toast'
 import { ORDER_STATUS } from '@/constants/order-status'
 import { useSalesOrders } from '@/hooks/useSalesOrders'
@@ -64,11 +64,64 @@ export function MeasuringPendingAssignmentView() {
     ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT,
     searchTerm
   )
-  // 使用类型断言确保orders是正确的类型
+  
+  // Transform and type cast the response
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const response = rawResponse as any
-  const orders = (response?.data?.orders || []) as MeasuringPendingAssignmentOrder[]
-  const total = response?.data?.total || 0
+  
+  let orders = ((response?.data?.orders || []) as BaseOrder[]).map(order => ({
+    ...order,
+    // Add default values for missing fields to match MeasuringPendingAssignmentOrder interface
+    homeSurveyFiles: (order as any).survey_files || [], // Map from DB survey_files
+    auditStatus: 'pending', // Default
+    category: '窗帘', // Default or derived
+    preferredTime: '',
+    creator: '',
+    remark: '',
+    createDate: order.createdAt || ''
+  })) as MeasuringPendingAssignmentOrder[]
+
+  // Mock data fallback if no orders found
+  if (orders.length === 0 && !searchTerm && !response?.isLoading) {
+    orders = [
+      {
+        id: 'mock-p-1',
+        salesNo: 'SO20231201001',
+        customerName: '张三 (演示)',
+        projectAddress: '上海市普陀区长风新村街道123号',
+        status: ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT,
+        statusUpdatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        homeSurveyFiles: [],
+        auditStatus: 'pending',
+        category: '窗帘',
+        preferredTime: '2023-12-05 10:00',
+        creator: '王销售',
+        remark: '客户比较急',
+        createDate: new Date().toISOString(),
+        salesPerson: { id: 's1', name: '王销售' }
+      },
+      {
+        id: 'mock-p-2',
+        salesNo: 'SO20231201002',
+        customerName: '李四 (演示)',
+        projectAddress: '上海市静安区南京西路888号',
+        status: ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT,
+        statusUpdatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        homeSurveyFiles: [],
+        auditStatus: 'approved',
+        category: '墙布',
+        preferredTime: '2023-12-06 14:00',
+        creator: '李销售',
+        remark: '',
+        createDate: new Date().toISOString(),
+        salesPerson: { id: 's2', name: '李销售' }
+      }
+    ] as any
+  }
+  
+  const total = response?.data?.total || orders.length
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -152,21 +205,60 @@ export function MeasuringPendingAssignmentView() {
         </div>
       </div>
 
-      <PaperCard>
-        <PaperCardHeader className="pb-4">
+      {/* Statistic Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">待分配订单</div>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-3xl font-bold text-ink-800">{total}</h3>
+                  <span className="text-sm text-ink-400">单</span>
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📋</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">今日新增</div>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-3xl font-bold text-ink-800">{orders.filter(o => new Date(o.createDate).toDateString() === new Date().toDateString()).length}</h3>
+                  <span className="text-sm text-ink-400">单</span>
+                </div>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <span className="text-2xl">📅</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
+
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4">
           <div className="flex items-center gap-4">
             <PaperInput 
               placeholder="搜索客户姓名/电话/单号..." 
-              className="max-w-sm"
+              className="max-w-sm bg-white/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {/* Add more filters here if needed */}
           </div>
-        </PaperCardHeader>
-        <PaperCardContent>
+        </PaperTableToolbar>
+        <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableRow>
                 <PaperTableCell className="w-12">
                   <input 

@@ -3,7 +3,6 @@
 import { MapPin, DollarSign } from 'lucide-react'
 import React from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
@@ -129,7 +128,6 @@ export default function CooperativePage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -262,6 +260,5 @@ export default function CooperativePage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

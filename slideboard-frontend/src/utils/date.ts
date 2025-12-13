@@ -66,3 +66,39 @@ export function formatRelativeTime(date: string | Date): string {
     return `${years}年前`;
   }
 }
+
+/**
+ * 格式化持续时间
+ * @param date - 开始日期
+ * @returns 格式化后的持续时间 (如: "2小时30分钟")
+ */
+export function formatDuration(date: string | Date): string {
+  if (!date) return '-'
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const now = new Date()
+  const diff = now.getTime() - dateObj.getTime()
+
+  if (diff < 0) return '0分钟'
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+  if (hours > 0) {
+    return `${hours}小时${minutes}分钟`
+  } else {
+    return `${minutes}分钟`
+  }
+}
+
+/**
+ * 计算小时差
+ * @param date - 开始日期
+ * @returns 小时数
+ */
+export function calculateHoursDifference(date: string | Date): number {
+  if (!date) return 0
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const now = new Date()
+  const diff = now.getTime() - dateObj.getTime()
+  return Math.floor(diff / (1000 * 60 * 60))
+}

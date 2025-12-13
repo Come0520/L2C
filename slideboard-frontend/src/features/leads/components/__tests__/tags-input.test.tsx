@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 
 import { leadService } from '@/services/leads.client';
 
-import { LeadTagsInput } from '../lead-tags-input';
+import { LeadTagsInput } from '../LeadTagsInput';
 
 vi.mock('sonner', () => ({
   toast: {

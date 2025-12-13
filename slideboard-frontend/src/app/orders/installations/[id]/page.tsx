@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { useInstallation } from '@/hooks/useInstallations'
@@ -68,28 +67,23 @@ export default function InstallationDetailPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
         <div className="p-6 max-w-7xl mx-auto">
           <div className="text-center py-10">加载中...</div>
         </div>
-      </DashboardLayout>
     )
   }
 
   if (error || !installation) {
     return (
-      <DashboardLayout>
         <div className="p-6 max-w-7xl mx-auto">
           <div className="text-center py-10 text-red-500">
             {error ? '加载失败，请重试' : '安装单不存在'}
           </div>
         </div>
-      </DashboardLayout>
     )
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -266,6 +260,5 @@ export default function InstallationDetailPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   )
 }

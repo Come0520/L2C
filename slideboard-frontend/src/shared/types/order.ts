@@ -74,15 +74,44 @@ export const AVAILABLE_PACKAGES: PackageDefinition[] = [
 // 导入自动生成的 API 类型
 import { components } from './api-schema'
 
+export type BaseOrder = {
+  id: string;
+  salesNo: string;
+  leadId?: string;
+  customerName: string;
+  customerPhone: string;
+  projectAddress: string;
+  status: OrderStatus | string;
+  totalAmount: number;
+  createTime?: string;
+  // Add other common fields from interface
+  surveyNo?: string
+  leadNo?: string
+  designer?: string
+  salesPerson?: string
+  draftAmount?: number
+  version?: string
+  createdAt: string
+  updatedAt: string
+  statusUpdatedAt?: string
+}
+
 // 从 API Schema 提取并重命名类型
 export type CurtainItem = Required<Omit<components['schemas']['CurtainItem'], 'packageType'>> & {
     packageType?: PackageItemType
 }
 export type OrderFormData = Omit<Required<components['schemas']['OrderFormData']>, 'spacePackages' | 'subtotals' | 'items' | 'packageUsage'> & {
+    id?: string;
+    salesNo?: string;
+    status?: string;
     spacePackages: Record<string, string>
-    subtotals: Record<ProductCategory, number>
+    subtotals: Record<ProductCategory | 'discount' | 'tax' | 'total', number>
     items?: CurtainItem[]
     packageUsage: PackageUsage
+    customerId?: string
+    discountAmount?: number
+    finalAmount?: number
+    remarks?: string
 }
 
 // 保留辅助类型别名
@@ -113,7 +142,7 @@ export const createEmptyItem = (category: ProductCategory, space: string = ''): 
     space: space, // 支持初始化指定空间
     product: '',
     imageUrl: '', // [NEW]
-    packageTag: undefined, // [NEW]
+    packageTag: '', // [NEW]
     isPackageItem: false,
     unit: '米', // [NEW]
     width: 0,
@@ -122,7 +151,9 @@ export const createEmptyItem = (category: ProductCategory, space: string = ''): 
     unitPrice: 0,
     usageAmount: 0,
     amount: 0,
-    remark: ''
+    remark: '',
+    priceDifference: 0,
+    differenceAmount: 0
 })
 
 // ========== 计算函数 ==========
@@ -246,23 +277,7 @@ export const calculateTotalAmount = (formData: OrderFormData): number => {
 // ========== 基础订单类型 ==========
 
 // 基础订单类型（所有订单共有的字段）
-export interface BaseOrder {
-    id: string
-    salesNo: string
-    surveyNo: string
-    customerName: string
-    customerPhone: string
-    projectAddress: string
-    leadNo: string
-    designer: string
-    sales: string
-    amount: number
-    draftAmount: number
-    version: string
-    status: OrderStatus
-    createDate: string
-    statusUpdatedAt: string
-}
+// export interface BaseOrder { ... } // Replaced by type above
 
 // 待测量订单类型
 export interface PendingMeasurementOrder extends BaseOrder {

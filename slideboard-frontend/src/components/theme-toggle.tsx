@@ -1,11 +1,12 @@
 'use client';
 
-import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Moon, Sun, Droplets } from 'lucide-react';
+import * as React from 'react';
+
+import { PaperTooltip } from '@/components/ui/paper-tooltip';
 import { useTheme, ThemeName } from '@/contexts/theme-context';
 import { cn } from '@/utils/lib-utils';
-import { PaperTooltip } from '@/components/ui/paper-tooltip';
 
 export function ThemeToggle() {
     const { theme, setTheme } = useTheme();

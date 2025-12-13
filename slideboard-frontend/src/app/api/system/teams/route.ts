@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import z from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
 
@@ -72,6 +73,12 @@ export async function GET(_req: NextRequest) {
   return NextResponse.json({ teams: teamsWithMembers })
 }
 
+// Define Zod schema for team creation
+export const teamSchema = z.object({
+  name: z.string().min(1, '团队名称不能为空').max(50, '团队名称不能超过50个字符'),
+  description: z.string().max(200, '团队描述不能超过200个字符').optional()
+})
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: authData } = await supabase.auth.getUser()
@@ -83,13 +90,11 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const { name, description } = await req.json()
-
-  if (!name) {
-    return NextResponse.json({ error: 'Team name is required' }, { 
-      status: 400 
-    })
-  }
+  try {
+    const body = await req.json()
+    const validatedData = teamSchema.parse(body)
+    
+    const { name, description } = validatedData
 
   // Create new team
   const { data: team, error: teamError } = await supabase
@@ -149,4 +154,14 @@ export async function POST(req: NextRequest) {
   }, { 
     status: 201 
   })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0].message }, { 
+        status: 400 
+      })
+    }
+    return NextResponse.json({ error: 'Failed to create team' }, { 
+      status: 500 
+    })
+  }
 }

@@ -1,3 +1,4 @@
+'use client';
 
 import { FileText, Edit } from 'lucide-react'
 import Image from 'next/image'
@@ -5,14 +6,18 @@ import Image from 'next/image'
 import { PaperBadge, PaperStatus } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
-import { Product } from '@/services/products.client'
+import { Product } from '@/shared/types/product'
 
 interface ProductDetailModalProps {
-  product: Product
+  product: Product | null
+  isOpen: boolean
   onClose: () => void
+  onEdit?: (product: Product) => void
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClose }) => {
+  if (!product) return null
+
   // 获取状态文本
   const getStatusText = (status: Product['status']) => {
     switch (status) {

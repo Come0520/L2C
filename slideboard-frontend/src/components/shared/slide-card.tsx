@@ -9,9 +9,9 @@ import { useState, useRef, useEffect } from 'react';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperDialog, PaperDialogHeader, PaperDialogTitle, PaperDialogContent, PaperDialogFooter } from '@/components/ui/paper-dialog';
 import { PaperToast } from '@/components/ui/paper-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client'
 import { logsService } from '@/services/logs.client';
-import { useAuth } from '@/contexts/auth-context';
 
 
 interface Slide {

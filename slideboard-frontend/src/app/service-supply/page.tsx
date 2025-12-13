@@ -4,7 +4,6 @@ import { Wrench, Ruler, Users } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperNav, PaperNavItem } from '@/components/ui/paper-nav';
@@ -13,7 +12,6 @@ export default function ServiceSupplyPage() {
   const [active, setActive] = React.useState<'overview' | 'surveyors' | 'installers'>('overview');
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -70,6 +68,5 @@ export default function ServiceSupplyPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

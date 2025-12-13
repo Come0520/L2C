@@ -1,7 +1,10 @@
-import React from 'react';
+'use client';
+
+import { cva, type VariantProps } from 'class-variance-authority';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { cva, type VariantProps } from 'class-variance-authority';
+import React from 'react';
+
 import { cn } from '@/lib/utils';
 
 // 1. 使用 CVA 管理样式

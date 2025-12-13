@@ -1,25 +1,57 @@
-'use client'
+'use client';
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
-import { PaperProgress } from '@/components/ui/paper-badge'
-import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
+import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperNav, PaperNavItem } from '@/components/ui/paper-nav'
+import { PaperProgress } from '@/components/ui/paper-badge'
 import { leadService } from '@/services/leads.client'
+import type { LeadWarnings } from '@/shared/types/lead'
+
+function WarningItem({ label, count, icon, severity = 'normal', onClick }: { label: string, count: number, icon: string, severity?: 'normal' | 'high', onClick?: () => void }) {
+  return (
+    <div
+      className={`flex items-center justify-between p-3 rounded-lg border ${severity === 'high' ? 'bg-error-50 border-error-200' : 'bg-paper-50 border-paper-200'} cursor-pointer hover:shadow-sm transition-all`}
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-xl">{icon}</span>
+        <span className={`text-sm font-medium ${severity === 'high' ? 'text-error-900' : 'text-ink-700'}`}>{label}</span>
+      </div>
+      <div className={`text-lg font-bold ${severity === 'high' ? 'text-error-600' : 'text-ink-900'}`}>
+        {count}
+      </div>
+    </div>
+  )
+}
 
 export default function LeadsAnalyticsPage() {
   const pathname = usePathname()
-  const [warnings, setWarnings] = useState({ followUpStale: 0, quotedNoDraft: 0 })
+  const [warnings, setWarnings] = useState<LeadWarnings>({
+    followUpStale: 0,
+    quotedNoDraft: 0,
+    measurementOverdue: 0,
+    noFollowUp7Days: 0,
+    highIntentStale: 0,
+    budgetExceeded: 0,
+    churnRisk: 0,
+    competitorThreat: 0,
+    total: 0,
+    generated_at: ''
+  })
   const [funnel, setFunnel] = useState({ total: 0, quoted: 0, visited: 0, drafted: 0 })
 
   useEffect(() => {
     let mounted = true
       ; (async () => {
+        // 获取预警数据
         const w = await leadService.getLeadWarnings()
         if (mounted) setWarnings(w)
+
+        // 获取线索数据用于漏斗分析
         const res = await leadService.getLeads(1, 1000, {})
+        // ... existing funnel logic ...
         const total = res.data.length
         let quoted = 0
         let visited = 0
@@ -39,7 +71,6 @@ export default function LeadsAnalyticsPage() {
   const visitedToSignedRate = funnel.visited ? Math.round((funnel.drafted / funnel.visited) * 100) : 0
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-ink-800">转化分析</h1>
@@ -58,6 +89,7 @@ export default function LeadsAnalyticsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PaperCard>
+            {/* ... Funnel Card Content ... */}
             <PaperCardHeader>
               <PaperCardTitle>转化漏斗</PaperCardTitle>
             </PaperCardHeader>
@@ -104,22 +136,60 @@ export default function LeadsAnalyticsPage() {
 
         <PaperCard>
           <PaperCardHeader>
-            <PaperCardTitle>停滞与超时预警</PaperCardTitle>
+            <div className="flex items-center justify-between">
+              <PaperCardTitle>停滞与超时预警</PaperCardTitle>
+              <span className="px-2 py-1 bg-error-50 text-error-600 text-xs font-bold rounded-full">
+                {warnings.total} 条需关注
+              </span>
+            </div>
           </PaperCardHeader>
           <PaperCardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-ink-700">跟踪超3天未更新</span>
-                <span className="text-error-600">{warnings.followUpStale}条</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-ink-700">报价后超7天未草签</span>
-                <span className="text-error-600">{warnings.quotedNoDraft}条</span>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <WarningItem
+                label="跟踪超时"
+                count={warnings.followUpStale}
+                icon="⏰"
+              />
+              <WarningItem
+                label="报价未草签"
+                count={warnings.quotedNoDraft}
+                icon="📄"
+              />
+              <WarningItem
+                label="测量超期"
+                count={warnings.measurementOverdue}
+                icon="📏"
+              />
+              <WarningItem
+                label="新线索未跟进"
+                count={warnings.noFollowUp7Days}
+                icon="🆕"
+              />
+              <WarningItem
+                label="高意向流失"
+                count={warnings.highIntentStale}
+                icon="🔥"
+                severity="high"
+              />
+              <WarningItem
+                label="预算超标"
+                count={warnings.budgetExceeded}
+                icon="💰"
+              />
+              <WarningItem
+                label="流失风险"
+                count={warnings.churnRisk}
+                icon="⚠️"
+                severity="high"
+              />
+              <WarningItem
+                label="竞品威胁"
+                count={warnings.competitorThreat}
+                icon="⚔️"
+              />
             </div>
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

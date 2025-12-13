@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import InstallationCalendar from '@/features/installations/components/calendar/installation-calendar';
+import InstallationCalendar from '@/features/installations/components/calendar/InstallationCalendar';
  
 
 const InstallationSchedulePage: React.FC = () => {

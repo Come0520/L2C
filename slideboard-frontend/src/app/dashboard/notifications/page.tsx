@@ -1,12 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import DashboardLayout from '@/components/layout/dashboard-layout';
-import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { PaperButton } from '@/components/ui/paper-button';
-import { PaperInput } from '@/components/ui/paper-input';
-import { PaperModal } from '@/components/ui/paper-modal';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Bell,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  FileText,
+  Search,
+  Filter,
+  Clock,
+  ChevronRight,
+  Download,
+  X,
+  Check,
+  ArrowRight
+} from 'lucide-react';
+import React, { useState } from 'react';
 
+import { cn } from '@/lib/utils';
+
+// --- Types (保持不变) ---
 interface Notification {
   id: string;
   title: string;
@@ -53,14 +67,202 @@ interface ApprovalRequest {
   }[];
 }
 
+// --- Visual Helpers ---
+
+const PRIORITY_STYLES = {
+  urgent: "text-rose-500 bg-rose-500/10 border-rose-500/20",
+  high: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+  medium: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+  low: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+};
+
+const STATUS_STYLES = {
+  unread: "bg-blue-500",
+  read: "bg-theme-text-secondary",
+  archived: "bg-theme-border",
+  pending: "text-amber-500",
+  approved: "text-emerald-500",
+  rejected: "text-rose-500",
+  withdrawn: "text-theme-text-secondary",
+};
+
+const getIcon = (type: string) => {
+  switch (type) {
+    case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+    case 'success': return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+    case 'error': return <AlertTriangle className="w-5 h-5 text-rose-500" />;
+    case 'system': return <Bell className="w-5 h-5 text-blue-500" />;
+    default: return <Info className="w-5 h-5 text-theme-text-secondary" />;
+  }
+};
+
+// --- Sub-Components ---
+
+// 1. Notification Item
+const NotificationItem = ({ notification }: { notification: Notification }) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className={cn(
+      "group relative p-4 rounded-lg border border-transparent transition-all duration-200",
+      "hover:bg-theme-bg-tertiary hover:border-theme-border",
+      notification.status === 'unread' ? "bg-theme-bg-secondary/50" : "bg-transparent"
+    )}
+  >
+    <div className="flex gap-4">
+      <div className="mt-1">{getIcon(notification.type)}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className={cn(
+            "text-sm font-medium truncate pr-4",
+            notification.status === 'unread' ? "text-theme-text-primary" : "text-theme-text-secondary"
+          )}>
+            {notification.title}
+          </h4>
+          <span className="text-xs text-theme-text-secondary whitespace-nowrap">{notification.createdAt}</span>
+        </div>
+        <p className="text-sm text-theme-text-secondary line-clamp-2 mb-2">{notification.content}</p>
+        
+        <div className="flex items-center gap-3 text-xs text-theme-text-secondary">
+          <span className={cn("px-2 py-0.5 rounded-full border text-[10px] font-medium uppercase", PRIORITY_STYLES[notification.priority as keyof typeof PRIORITY_STYLES])}>
+            {notification.priority === 'low' ? '低' : notification.priority === 'medium' ? '中' : notification.priority === 'high' ? '高' : '紧急'}
+          </span>
+          <span>发送者: {notification.sender}</span>
+        </div>
+      </div>
+      
+      {/* Unread Indicator Dot */}
+      {notification.status === 'unread' && (
+        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+      )}
+    </div>
+  </motion.div>
+);
+
+// 2. Approval Item (Expanded Visuals)
+const ApprovalItem = ({ approval }: { approval: ApprovalRequest }) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="p-5 rounded-xl border border-theme-border bg-theme-bg-secondary hover:bg-theme-bg-tertiary/50 transition-colors group"
+  >
+    <div className="flex justify-between items-start mb-4">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-theme-bg-tertiary text-theme-text-primary">
+          <FileText className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="text-sm font-medium text-theme-text-primary">{approval.title}</h4>
+          <p className="text-xs text-theme-text-secondary mt-0.5">
+            {approval.requester} • {approval.requesterDepartment}
+          </p>
+        </div>
+      </div>
+      <div className={cn("px-2.5 py-1 rounded text-xs font-medium border",
+        approval.status === 'pending' ? "text-amber-500 bg-amber-500/10 border-amber-500/20" :
+        approval.status === 'approved' ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" :
+        approval.status === 'rejected' ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
+        "text-theme-text-secondary bg-theme-bg-tertiary border-theme-border"
+      )}>
+        {approval.status === 'pending' ? '审批中' : approval.status === 'approved' ? '已通过' : approval.status === 'rejected' ? '已拒绝' : '已撤回'}
+      </div>
+    </div>
+
+    {/* Amount & Description */}
+    <div className="mb-4 pl-[52px]">
+      {approval.amount && (
+        <div className="text-2xl font-bold text-theme-text-primary mb-2 tracking-tight">
+          ¥{approval.amount.toLocaleString()}
+        </div>
+      )}
+      <p className="text-sm text-theme-text-secondary line-clamp-2">{approval.description}</p>
+    </div>
+
+    {/* Minimalist Timeline */}
+    <div className="pl-[52px] relative mb-4">
+      <div className="absolute left-[-28px] top-2 bottom-2 w-px bg-theme-border" />
+      <div className="space-y-4">
+        {approval.approvers.map((approver, idx) => (
+          <div key={idx} className="flex items-start gap-3">
+            <div className="absolute left-[-28px] w-6 h-6 -translate-x-1/2 rounded-full flex items-center justify-center text-[10px] font-bold border z-10" style={{ top: idx * 40 + 8 }}>
+              <div className={cn(
+                "w-full h-full rounded-full flex items-center justify-center",
+                approver.status === 'approved' ? "bg-emerald-500 border-emerald-500 text-black" :
+                approver.status === 'rejected' ? "bg-rose-500 border-rose-500 text-black" :
+                approver.status === 'pending' && approver.step === approval.currentStep ? "bg-amber-500 border-amber-500 text-black animate-pulse" :
+                "bg-theme-bg-tertiary border-theme-border text-theme-text-secondary"
+              )}>
+                {approver.status === 'approved' ? <Check className="w-3 h-3" /> : approver.step}
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className={cn("text-xs font-medium", approver.status === 'pending' && approver.step === approval.currentStep ? "text-theme-text-primary" : "text-theme-text-secondary")}>
+                  {approver.name}
+                </span>
+                <span className="text-xs text-theme-text-secondary">({approver.department})</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1 text-xs">
+                <span className={cn(
+                  "text-xs font-medium",
+                  approver.status === 'approved' ? "text-emerald-500" :
+                  approver.status === 'rejected' ? "text-rose-500" :
+                  approver.status === 'pending' ? "text-amber-500" :
+                  "text-theme-text-secondary"
+                )}>
+                  {approver.status === 'approved' ? '已批准' : approver.status === 'rejected' ? '已拒绝' : approver.status === 'pending' ? '待处理' : '未开始'}
+                </span>
+                {approver.actionAt && (
+                  <span className="text-xs text-theme-text-secondary">{approver.actionAt}</span>
+                )}
+              </div>
+              {approver.comment && (
+                <div className="mt-1 text-xs text-theme-text-secondary pl-2 border-l border-theme-border">
+                  {approver.comment}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Attachments */}
+    {approval.attachments && approval.attachments.length > 0 && (
+      <div className="mb-4 pl-[52px]">
+        <div className="text-xs text-theme-text-secondary mb-2">附件</div>
+        <div className="flex flex-wrap gap-2">
+          {approval.attachments.map((attachment, idx) => (
+            <button key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-bg-tertiary hover:bg-theme-bg-tertiary/80 border border-theme-border rounded-lg text-xs text-theme-text-secondary transition-colors">
+              <Download className="w-3 h-3" />
+              <span>{attachment.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* Actions */}
+    {approval.status === 'pending' && (
+      <div className="mt-4 pl-[52px] flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors">
+          <Check className="w-3 h-3 mr-1.5" /> 批准
+        </button>
+        <button className="flex items-center px-4 py-2 bg-theme-bg-tertiary hover:bg-rose-900/20 text-theme-text-secondary hover:text-rose-400 text-xs font-medium rounded-lg transition-colors border border-theme-border">
+          <X className="w-3 h-3 mr-1.5" /> 驳回
+        </button>
+      </div>
+    )}
+  </motion.div>
+);
+
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'notifications' | 'approvals' | 'sent'>('notifications');
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read' | 'archived'>('all');
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const notifications: Notification[] = [
@@ -248,52 +450,6 @@ export default function NotificationsPage() {
     }
   ];
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'info': return 'ℹ️';
-      case 'warning': return '⚠️';
-      case 'success': return '✅';
-      case 'error': return '❌';
-      case 'system': return '🔧';
-      default: return '📢';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'border-l-4 border-paper-error bg-paper-error-light';
-      case 'high': return 'border-l-4 border-paper-warning bg-paper-warning-light';
-      case 'medium': return 'border-l-4 border-paper-info bg-paper-info-light';
-      case 'low': return 'border-l-4 border-paper-success bg-paper-success-light';
-      default: return 'border-l-4 border-paper-border';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'unread': return 'bg-paper-primary-light text-paper-primary';
-      case 'read': return 'bg-paper-ink-light text-paper-ink-secondary';
-      case 'archived': return 'bg-paper-border text-paper-ink-secondary';
-      case 'pending': return 'bg-paper-warning-light text-paper-warning';
-      case 'approved': return 'bg-paper-success-light text-paper-success';
-      case 'rejected': return 'bg-paper-error-light text-paper-error';
-      case 'withdrawn': return 'bg-paper-ink-light text-paper-ink-secondary';
-      default: return 'bg-paper-border text-paper-ink';
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'order': return '订单';
-      case 'expense': return '费用';
-      case 'discount': return '折扣';
-      case 'contract': return '合同';
-      case 'leave': return '请假';
-      case 'procurement': return '采购';
-      default: return type;
-    }
-  };
-
   const filteredNotifications = notifications.filter(notification => {
     const matchesFilter = notificationFilter === 'all' || notification.status === notificationFilter;
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -320,520 +476,143 @@ export default function NotificationsPage() {
   const pendingApprovalCount = approvalRequests.filter(a => a.status === 'pending').length;
 
   return (
-    <DashboardLayout>
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Page Header */}
+      <div className="max-w-5xl mx-auto p-6 space-y-8 min-h-screen bg-theme-bg-primary text-theme-text-primary font-sans">
+        
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-paper-ink">通知与审批</h1>
-            <p className="text-paper-ink-secondary mt-1">查看通知消息，处理审批申请</p>
+            <h1 className="text-2xl font-bold tracking-tight">通知中心</h1>
+            <p className="text-theme-text-secondary mt-1">管理消息提醒与业务审批流</p>
           </div>
-          <div className="flex gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 bg-paper-primary-light rounded-lg">
-              <span className="text-sm text-paper-primary">未读通知</span>
-              <span className="px-2 py-1 bg-paper-primary text-white rounded-full text-xs font-bold">{unreadCount}</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-paper-warning-light rounded-lg">
-              <span className="text-sm text-paper-warning">待审批</span>
-              <span className="px-2 py-1 bg-paper-warning text-white rounded-full text-xs font-bold">{pendingApprovalCount}</span>
+          <div className="flex gap-2">
+            <button className="p-2 rounded-lg bg-theme-bg-secondary border border-theme-border text-theme-text-secondary hover:text-theme-text-primary transition-colors">
+              <Filter className="w-4 h-4" />
+            </button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-secondary" />
+              <input
+                type="text"
+                placeholder="搜索通知或审批..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-theme-bg-secondary border border-theme-border rounded-lg text-sm text-theme-text-primary focus:outline-none focus:ring-1 focus:ring-theme-text-secondary w-64"
+              />
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <PaperCard>
-          <PaperCardContent className="p-0">
-            <div className="border-b border-paper-border">
-              <nav className="flex space-x-8 px-6">
-                <button
-                  onClick={() => setActiveTab('notifications')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                    activeTab === 'notifications'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
-                >
-                  通知消息
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-paper-error text-white rounded-full text-xs flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('approvals')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                    activeTab === 'approvals'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
-                >
-                  审批申请
-                  {pendingApprovalCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-paper-warning text-white rounded-full text-xs flex items-center justify-center">
-                      {pendingApprovalCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('sent')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'sent'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
-                >
-                  已发送
-                </button>
-              </nav>
-            </div>
-          </PaperCardContent>
-        </PaperCard>
-
-        {/* Search and Filter */}
-        <div className="flex items-center gap-4">
-          <PaperInput
-            placeholder="搜索通知或审批..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-          {activeTab === 'notifications' && (
-            <div className="flex gap-2">
-              <PaperButton
-                variant={notificationFilter === 'all' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setNotificationFilter('all')}
-              >
-                全部
-              </PaperButton>
-              <PaperButton
-                variant={notificationFilter === 'unread' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setNotificationFilter('unread')}
-              >
-                未读
-              </PaperButton>
-              <PaperButton
-                variant={notificationFilter === 'read' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setNotificationFilter('read')}
-              >
-                已读
-              </PaperButton>
-            </div>
-          )}
-          {activeTab === 'approvals' && (
-            <div className="flex gap-2">
-              <PaperButton
-                variant={approvalFilter === 'all' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setApprovalFilter('all')}
-              >
-                全部
-              </PaperButton>
-              <PaperButton
-                variant={approvalFilter === 'pending' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setApprovalFilter('pending')}
-              >
-                待审批
-              </PaperButton>
-              <PaperButton
-                variant={approvalFilter === 'approved' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setApprovalFilter('approved')}
-              >
-                已批准
-              </PaperButton>
-              <PaperButton
-                variant={approvalFilter === 'rejected' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setApprovalFilter('rejected')}
-              >
-                已拒绝
-              </PaperButton>
-            </div>
-          )}
+        {/* Custom Tabs */}
+        <div className="flex space-x-1 bg-theme-bg-secondary p-1 rounded-lg border border-theme-border w-fit">
+          {(['notifications', 'approvals', 'sent'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "relative px-6 py-2 text-sm font-medium rounded-md transition-colors z-10",
+                activeTab === tab ? "text-white" : "text-theme-text-secondary hover:text-theme-text-primary"
+              )}
+            >
+              {activeTab === tab && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-theme-bg-tertiary border border-theme-border/50 rounded-md shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              {tab === 'notifications' ? '消息通知' : tab === 'approvals' ? '待办审批' : '已发送'}
+              {tab === 'notifications' && unreadCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-black">
+                  {unreadCount}
+                </span>
+              )}
+              {tab === 'approvals' && pendingApprovalCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-black">
+                  {pendingApprovalCount}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Notifications Tab */}
-        {activeTab === 'notifications' && (
-          <div className="space-y-4">
-            {filteredNotifications.map((notification) => (
-              <PaperCard key={notification.id} className={`${getPriorityColor(notification.priority)} ${notification.status === 'unread' ? 'bg-paper-background' : ''}`}>
-                <PaperCardContent>
-                  <div className="flex items-start gap-4">
-                    <div className="text-2xl">{getNotificationIcon(notification.type)}</div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className={`font-medium ${notification.status === 'unread' ? 'text-paper-ink' : 'text-paper-ink-secondary'}`}>
-                          {notification.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`}>
-                            {notification.status === 'unread' ? '未读' : notification.status === 'read' ? '已读' : '已归档'}
-                          </span>
-                          <span className="text-xs text-paper-ink-secondary">
-                            {notification.createdAt}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-paper-ink-secondary mb-3">
-                        {notification.content}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-paper-ink-secondary">
-                          <span className="mr-4">发送者: {notification.sender}</span>
-                          <span>接收者: {notification.recipient}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <PaperButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedNotification(notification);
-                              setShowNotificationModal(true);
-                            }}
-                          >
-                            查看详情
-                          </PaperButton>
-                          {notification.status === 'unread' && (
-                            <PaperButton variant="primary" size="sm">
-                              标记已读
-                            </PaperButton>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </PaperCardContent>
-              </PaperCard>
-            ))}
-          </div>
-        )}
-
-        {/* Approvals Tab */}
-        {activeTab === 'approvals' && (
-          <div className="space-y-4">
-            {filteredApprovals.map((approval) => (
-              <PaperCard key={approval.id} className={`${getPriorityColor(approval.priority)}`}>
-                <PaperCardContent>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-paper-ink">
-                          {approval.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(approval.status)}`}>
-                            {approval.status === 'pending' ? '待审批' :
-                             approval.status === 'approved' ? '已批准' :
-                             approval.status === 'rejected' ? '已拒绝' : '已撤回'}
-                          </span>
-                          <span className="text-xs text-paper-ink-secondary">
-                            {approval.submittedAt}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-paper-ink-secondary mb-3">
-                        {approval.description}
-                      </p>
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        <div className="text-sm">
-                          <span className="text-paper-ink-secondary">申请人：</span>
-                          <span className="font-medium">{approval.requester}</span>
-                          <span className="text-paper-ink-secondary ml-2">({approval.requesterDepartment})</span>
-                        </div>
-                        {approval.amount && (
-                          <div className="text-sm">
-                            <span className="text-paper-ink-secondary">金额：</span>
-                            <span className="font-medium text-paper-primary">¥{approval.amount.toLocaleString()}</span>
-                          </div>
-                        )}
-                        <div className="text-sm">
-                          <span className="text-paper-ink-secondary">类型：</span>
-                          <span className="font-medium">{getTypeLabel(approval.type)}</span>
-                        </div>
-                        <div className="text-sm">
-                          <span className="text-paper-ink-secondary">进度：</span>
-                          <span className="font-medium">{approval.currentStep}/{approval.totalSteps}</span>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-paper-ink">审批流程</span>
-                          <span className="text-xs text-paper-ink-secondary">
-                            当前步骤：第{approval.currentStep}步
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {approval.approvers.map((approver, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-paper-background rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                  approver.status === 'approved' ? 'bg-paper-success text-white' :
-                                  approver.status === 'rejected' ? 'bg-paper-error text-white' :
-                                  approver.status === 'pending' ? 'bg-paper-warning text-white' :
-                                  'bg-paper-border text-paper-ink-secondary'
-                                }`}>
-                                  {approver.step}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium">{approver.name}</div>
-                                  <div className="text-xs text-paper-ink-secondary">{approver.department}</div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className={`text-xs font-medium ${
-                                  approver.status === 'approved' ? 'text-paper-success' :
-                                  approver.status === 'rejected' ? 'text-paper-error' :
-                                  approver.status === 'pending' ? 'text-paper-warning' :
-                                  'text-paper-ink-secondary'
-                                }`}>
-                                  {approver.status === 'approved' ? '已批准' :
-                                   approver.status === 'rejected' ? '已拒绝' :
-                                   approver.status === 'pending' ? '待处理' : '未开始'}
-                                </div>
-                                {approver.actionAt && (
-                                  <div className="text-xs text-paper-ink-secondary">
-                                    {approver.actionAt}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-paper-border">
-                    <div className="flex gap-2">
-                      {approval.attachments && approval.attachments.map((attachment, index) => (
-                        <PaperButton key={index} variant="ghost" size="sm">
-                          📎 {attachment.name}
-                        </PaperButton>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <PaperButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedApproval(approval);
-                          setShowApprovalModal(true);
-                        }}
-                      >
-                        查看详情
-                      </PaperButton>
-                      {approval.status === 'pending' && (
-                        <>
-                          <PaperButton
-                            variant="success"
-                            size="sm"
-                            onClick={() => handleApprove(approval.id)}
-                          >
-                            批准
-                          </PaperButton>
-                          <PaperButton
-                            variant="error"
-                            size="sm"
-                            onClick={() => handleReject(approval.id)}
-                          >
-                            拒绝
-                          </PaperButton>
-                        </>
+        {/* Content Area */}
+        <div className="space-y-4">
+          <AnimatePresence mode="wait">
+            {activeTab === 'notifications' ? (
+              <motion.div
+                key="notifications"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-2"
+              >
+                {/* Filter Buttons */}
+                <div className="flex gap-2">
+                  {(['all', 'unread', 'read', 'archived'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setNotificationFilter(filter)}
+                      className={cn(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                        notificationFilter === filter ? "bg-theme-bg-tertiary text-theme-text-primary" : "bg-theme-bg-secondary text-theme-text-secondary hover:text-theme-text-primary"
                       )}
-                    </div>
-                  </div>
-                </PaperCardContent>
-              </PaperCard>
-            ))}
-          </div>
-        )}
-
-        {/* Sent Tab */}
-        {activeTab === 'sent' && (
-          <PaperCard>
-            <PaperCardHeader>
-              <PaperCardTitle>已发送通知</PaperCardTitle>
-            </PaperCardHeader>
-            <PaperCardContent>
-              <div className="text-center py-8 text-paper-ink-secondary">
-                <div className="text-4xl mb-4">📤</div>
-                <div className="text-lg mb-2">暂无已发送的通知</div>
-                <div className="text-sm">您发送的通知将在这里显示</div>
-              </div>
-            </PaperCardContent>
-          </PaperCard>
-        )}
-      </div>
-
-      {/* Notification Detail Modal */}
-      {showNotificationModal && selectedNotification && (
-        <PaperModal
-          isOpen={showNotificationModal}
-          onClose={() => setShowNotificationModal(false)}
-          title="通知详情"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">{getNotificationIcon(selectedNotification.type)}</div>
-              <div>
-                <h3 className="font-bold text-paper-ink">{selectedNotification.title}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedNotification.status)}`}>
-                    {selectedNotification.status === 'unread' ? '未读' : selectedNotification.status === 'read' ? '已读' : '已归档'}
-                  </span>
-                  <span className="text-xs text-paper-ink-secondary">
-                    {selectedNotification.createdAt}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-paper-background p-4 rounded-lg">
-              <p className="text-sm text-paper-ink">{selectedNotification.content}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-paper-ink-secondary">发送者：</span>
-                <span className="font-medium">{selectedNotification.sender}</span>
-              </div>
-              <div>
-                <span className="text-paper-ink-secondary">接收者：</span>
-                <span className="font-medium">{selectedNotification.recipient}</span>
-              </div>
-              <div>
-                <span className="text-paper-ink-secondary">优先级：</span>
-                <span className="font-medium">{selectedNotification.priority}</span>
-              </div>
-              <div>
-                <span className="text-paper-ink-secondary">类型：</span>
-                <span className="font-medium">{selectedNotification.type}</span>
-              </div>
-            </div>
-            
-            {selectedNotification.relatedEntity && (
-              <div className="text-sm">
-                <span className="text-paper-ink-secondary">关联：</span>
-                <span className="font-medium">{selectedNotification.relatedEntity.name}</span>
-              </div>
-            )}
-          </div>
-        </PaperModal>
-      )}
-
-      {/* Approval Detail Modal */}
-      {showApprovalModal && selectedApproval && (
-        <PaperModal
-          isOpen={showApprovalModal}
-          onClose={() => setShowApprovalModal(false)}
-          title="审批详情"
-        >
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-paper-ink mb-2">基本信息</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">申请编号：</span>{selectedApproval.id}</div>
-                  <div><span className="text-paper-ink-secondary">标题：</span>{selectedApproval.title}</div>
-                  <div><span className="text-paper-ink-secondary">类型：</span>{getTypeLabel(selectedApproval.type)}</div>
-                  <div><span className="text-paper-ink-secondary">申请人：</span>{selectedApproval.requester} ({selectedApproval.requesterDepartment})</div>
-                  {selectedApproval.amount && (
-                    <div><span className="text-paper-ink-secondary">金额：</span><span className="font-bold text-paper-primary">¥{selectedApproval.amount.toLocaleString()}</span></div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium text-paper-ink mb-2">审批信息</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">状态：</span><span className={getStatusColor(selectedApproval.status)}>{selectedApproval.status === 'pending' ? '待审批' : selectedApproval.status === 'approved' ? '已批准' : selectedApproval.status === 'rejected' ? '已拒绝' : '已撤回'}</span></div>
-                  <div><span className="text-paper-ink-secondary">优先级：</span>{selectedApproval.priority}</div>
-                  <div><span className="text-paper-ink-secondary">提交时间：</span>{selectedApproval.submittedAt}</div>
-                  <div><span className="text-paper-ink-secondary">进度：</span>{selectedApproval.currentStep}/{selectedApproval.totalSteps}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-paper-ink mb-2">申请描述</h4>
-              <div className="text-sm bg-paper-background p-3 rounded-lg">{selectedApproval.description}</div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-paper-ink mb-2">审批流程</h4>
-              <div className="space-y-3">
-                {selectedApproval.approvers.map((approver, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-paper-background rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        approver.status === 'approved' ? 'bg-paper-success text-white' :
-                        approver.status === 'rejected' ? 'bg-paper-error text-white' :
-                        approver.status === 'pending' ? 'bg-paper-warning text-white' :
-                        'bg-paper-border text-paper-ink-secondary'
-                      }`}>
-                        {approver.step}
-                      </div>
-                      <div>
-                        <div className="font-medium">{approver.name}</div>
-                        <div className="text-sm text-paper-ink-secondary">{approver.department}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-medium ${
-                        approver.status === 'approved' ? 'text-paper-success' :
-                        approver.status === 'rejected' ? 'text-paper-error' :
-                        approver.status === 'pending' ? 'text-paper-warning' :
-                        'text-paper-ink-secondary'
-                      }`}>
-                        {approver.status === 'approved' ? '已批准' :
-                         approver.status === 'rejected' ? '已拒绝' :
-                         approver.status === 'pending' ? '待处理' : '未开始'}
-                      </div>
-                      {approver.comment && (
-                        <div className="text-sm text-paper-ink-secondary mt-1">{approver.comment}</div>
-                      )}
-                      {approver.actionAt && (
-                        <div className="text-xs text-paper-ink-secondary">{approver.actionAt}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {selectedApproval.attachments && selectedApproval.attachments.length > 0 && (
-              <div>
-                <h4 className="font-medium text-paper-ink mb-2">附件</h4>
-                <div className="space-y-2">
-                  {selectedApproval.attachments.map((attachment, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-paper-background rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-paper-primary">📎</span>
-                        <span className="text-sm font-medium">{attachment.name}</span>
-                      </div>
-                      <span className="text-xs text-paper-ink-secondary">{attachment.size}</span>
-                    </div>
+                    >
+                      {filter === 'all' ? '全部' : filter === 'unread' ? '未读' : filter === 'read' ? '已读' : '已归档'}
+                    </button>
                   ))}
                 </div>
-              </div>
+                
+                {/* List Container */}
+                <div className="rounded-xl border border-theme-border bg-theme-bg-secondary/30 overflow-hidden divide-y divide-theme-border">
+                  {filteredNotifications.map(n => <NotificationItem key={n.id} notification={n} />)}
+                </div>
+              </motion.div>
+            ) : activeTab === 'approvals' ? (
+              <motion.div
+                key="approvals"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                {/* Filter Buttons */}
+                <div className="flex gap-2">
+                  {(['all', 'pending', 'approved', 'rejected'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setApprovalFilter(filter)}
+                      className={cn(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                        approvalFilter === filter ? "bg-theme-bg-tertiary text-theme-text-primary" : "bg-theme-bg-secondary text-theme-text-secondary hover:text-theme-text-primary"
+                      )}
+                    >
+                      {filter === 'all' ? '全部' : filter === 'pending' ? '审批中' : filter === 'approved' ? '已通过' : '已拒绝'}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Approvals Grid */}
+                <div className="grid gap-4">
+                  {filteredApprovals.map(a => <ApprovalItem key={a.id} approval={a} />)}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="sent"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="rounded-xl border border-theme-border bg-theme-bg-secondary p-12 text-center"
+              >
+                <div className="text-4xl mb-4 text-theme-text-secondary">📤</div>
+                <h3 className="text-lg font-medium text-theme-text-primary mb-2">暂无已发送的通知</h3>
+                <p className="text-theme-text-secondary">您发送的通知将在这里显示</p>
+              </motion.div>
             )}
-            
-            {selectedApproval.status === 'pending' && (
-              <div className="flex justify-end gap-3 pt-4">
-                <PaperButton variant="outline" onClick={() => handleReject(selectedApproval.id)}>
-                  拒绝
-                </PaperButton>
-                <PaperButton variant="primary" onClick={() => handleApprove(selectedApproval.id)}>
-                  批准
-                </PaperButton>
-              </div>
-            )}
-          </div>
-        </PaperModal>
-      )}
-    </DashboardLayout>
+          </AnimatePresence>
+        </div>
+      </div>
   );
 }

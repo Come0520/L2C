@@ -1,4 +1,4 @@
-import { NextIntlClientProvider } from 'next-intl';
+import React from 'react';
 // import { getMessages } from 'next-intl/server'; // Removed
 // import { notFound } from 'next/navigation'; // Removed
 
@@ -6,11 +6,11 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Noto_Sans_SC } from 'next/font/google';
 
-import { env } from '@/config/env';
 import PerformanceProvider from '@/components/providers/performance-provider';
 import QueryProvider from '@/components/providers/query-provider';
 import SwRegister from '@/components/pwa/sw-register';
 import { ToastProvider } from '@/components/ui/toast';
+import { env } from '@/config/env';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/contexts/theme-context';
 
@@ -18,7 +18,7 @@ import { ThemeProvider } from '@/contexts/theme-context';
 // TODO: Monitor file size. If zh-CN.json grows too large (>100KB), 
 // consider splitting namespaces or using server-side translation to avoid 
 // bloating the HTML hydration payload.
-import zhCNMessages from '@/locales/zh-CN.json';
+// import zhCNMessages from '@/locales/zh-CN.json';
 
 import { WebVitals } from './web-vitals';
 
@@ -41,13 +41,15 @@ export const metadata: Metadata = {
   description: '基于暖宣纸主题的现代化销售管理系统，提供从线索到现金的完整业务流程管理',
 };
 
+import DashboardLayout from '@/components/layout/dashboard-layout';
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const locale = 'zh-CN';
-  const messages = zhCNMessages;
+  // const messages = zhCNMessages;
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -55,7 +57,6 @@ export default async function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`bg-paper-200 text-ink-600 ${notoSansSC.variable} font-sans`}>
-        <NextIntlClientProvider messages={messages} locale={locale}>
           <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-paper-100 focus:text-ink-800 focus:px-3 focus:py-2 focus:rounded">
             跳到主要内容
           </a>
@@ -66,13 +67,14 @@ export default async function RootLayout({
             <PerformanceProvider>
               <QueryProvider>
                 <AuthProvider>
-                  {children}
+                  <DashboardLayout>
+                    {children}
+                  </DashboardLayout>
                 </AuthProvider>
                 <ToastProvider />
               </QueryProvider>
             </PerformanceProvider>
           </ThemeProvider>
-        </NextIntlClientProvider>
       </body>
     </html>
   );

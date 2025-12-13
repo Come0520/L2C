@@ -2,7 +2,6 @@
 
 import React, { useEffect } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { InboundTable } from '@/features/products/tools/components/InboundTable';
 import { InventoryTable } from '@/features/products/tools/components/InventoryTable';
 import { Loading } from '@/features/products/tools/components/loading';
@@ -34,7 +33,6 @@ export default function SalesToolsPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {isLoading ? (
           <Loading activeTab={activeTab} />
@@ -96,6 +94,5 @@ export default function SalesToolsPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
   );
 }

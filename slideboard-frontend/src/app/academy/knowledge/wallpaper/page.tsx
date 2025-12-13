@@ -1,11 +1,9 @@
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 
 export default function WallpaperKnowledgePage() {
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-ink-800">墙布知识</h1>
         <PaperCard>
@@ -17,7 +15,6 @@ export default function WallpaperKnowledgePage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }
 

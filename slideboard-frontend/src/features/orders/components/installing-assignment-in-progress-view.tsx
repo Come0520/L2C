@@ -7,7 +7,7 @@ import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperDialog, PaperDialogContent, PaperDialogHeader, PaperDialogTitle, PaperDialogFooter, PaperDialogDescription } from '@/components/ui/paper-dialog'
 import { PaperInput } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 import { toast } from '@/components/ui/toast'
 import { ORDER_STATUS } from '@/constants/order-status'
 import { createClient } from '@/lib/supabase/client'
@@ -251,61 +251,103 @@ export function InstallingAssignmentInProgressView() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      {/* 1. Top Statistics Card */}
-      <PaperCard className="bg-blue-50 border-blue-100">
-        <PaperCardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-sm text-blue-600">分配中订单统计</div>
-              <div className="text-2xl font-bold text-blue-700 mt-1">
-                {orders.length} 个订单正在分配中
+      {/* 1. Top Statistics Area */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">分配中订单</div>
+                <div className="text-3xl font-bold text-blue-700 mt-1">
+                  {orders.length}
+                </div>
               </div>
-              {/* 预警提示 */}
-              {(() => {
-                const urgentOrders = orders.filter(o => o.remainingTime <= 120); // 2小时内
-                const veryUrgentOrders = orders.filter(o => o.remainingTime <= 60); // 1小时内
-                if (veryUrgentOrders.length > 0) {
-                  return (
-                    <div className="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                      紧急：{veryUrgentOrders.length} 个订单即将超时
-                    </div>
-                  );
-                } else if (urgentOrders.length > 0) {
-                  return (
-                    <div className="flex items-center gap-1 text-orange-600 text-sm mt-1 font-medium">
-                      <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                      警告：{urgentOrders.length} 个订单接近超时
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-sm font-medium text-blue-700">待响应</div>
-                <div className="text-lg font-bold">{orders.filter(o => o.接单状态 === 'pending').length}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-blue-700">已接单</div>
-                <div className="text-lg font-bold">{orders.filter(o => o.接单状态 === 'accepted').length}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-blue-700">已拒单</div>
-                <div className="text-lg font-bold">{orders.filter(o => o.接单状态 === 'rejected').length}</div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📋</span>
               </div>
             </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+            {(() => {
+              const urgentOrders = orders.filter(o => o.remainingTime <= 120);
+              const veryUrgentOrders = orders.filter(o => o.remainingTime <= 60);
+              if (veryUrgentOrders.length > 0) {
+                return (
+                  <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                    紧急：{veryUrgentOrders.length} 单即将超时
+                  </div>
+                );
+              } else if (urgentOrders.length > 0) {
+                return (
+                  <div className="mt-2 text-xs text-orange-600 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
+                    警告：{urgentOrders.length} 单接近超时
+                  </div>
+                );
+              }
+              return <div className="mt-2 text-xs text-green-600 font-medium">运行正常</div>;
+            })()}
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent dark:from-gray-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">待响应</div>
+                <div className="text-3xl font-bold text-gray-700 mt-1">
+                  {orders.filter(o => o.接单状态 === 'pending').length}
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-xl text-gray-600 dark:bg-gray-900/30 dark:text-gray-400">
+                <span className="text-2xl">⏳</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">已接单</div>
+                <div className="text-3xl font-bold text-green-700 mt-1">
+                  {orders.filter(o => o.接单状态 === 'accepted').length}
+                </div>
+              </div>
+              <div className="p-3 bg-green-50 rounded-xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                <span className="text-2xl">✓</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">已拒单</div>
+                <div className="text-3xl font-bold text-red-700 mt-1">
+                  {orders.filter(o => o.接单状态 === 'rejected').length}
+                </div>
+              </div>
+              <div className="p-3 bg-red-50 rounded-xl text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="text-2xl">✕</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
 
       {/* 2. Order List Area */}
-      <PaperCard className="border-blue-200 shadow-sm ring-1 ring-blue-100 flex-1">
-        <div className="p-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex-1">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent p-4 flex justify-between items-center">
           <div className="flex gap-4">
-            <PaperInput placeholder="搜索销售单/安装单号" className="w-64 bg-white" />
-            <PaperInput placeholder="客户姓名/电话" className="w-48 bg-white" />
+            <PaperInput placeholder="搜索销售单/安装单号" className="w-64 bg-white/50" />
+            <PaperInput placeholder="客户姓名/电话" className="w-48 bg-white/50" />
             <PaperButton
               variant="primary"
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
@@ -316,10 +358,10 @@ export function InstallingAssignmentInProgressView() {
               查询
             </PaperButton>
           </div>
-        </div>
+        </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableCell>订单编号</PaperTableCell>
               <PaperTableCell>客户信息</PaperTableCell>
               <PaperTableCell>产品信息</PaperTableCell>

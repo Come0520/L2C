@@ -29,7 +29,7 @@ export const PaperCheckbox = React.forwardRef<HTMLInputElement, PaperCheckboxPro
             {...props}
           />
           {label && (
-            <label className="text-sm font-medium text-ink-600 mt-0.5">
+            <label htmlFor={props.id} className="text-sm font-medium text-ink-600 mt-0.5">
               {label}
               {props.required && <span className="text-error-500 ml-1">*</span>}
             </label>

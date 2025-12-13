@@ -11,7 +11,7 @@ import { useOrderCalculation } from '@/hooks/useOrderCalculation'
 import { useOrderItems } from '@/hooks/useOrderItems'
 import { useOrderPersistence } from '@/hooks/useOrderPersistence'
 import { OrderFormData, PackageDefinition, AVAILABLE_PACKAGES } from '@/shared/types/order'
-import { TRACK_EVENT } from '@/utils/analytics'
+import { TRACK_EVENT, TRACK_PAGE_VIEW } from '@/utils/analytics'
 // import { useOrderValidation } from '@/hooks/useOrderValidation' // Not used yet
 
 interface OrderCreateViewProps {
@@ -27,6 +27,15 @@ export function OrderCreateView({
     mode = 'create',
     orderId
 }: OrderCreateViewProps) {
+    // 页面访问统计
+    useEffect(() => {
+        if (mode === 'edit' && orderId) {
+            TRACK_PAGE_VIEW('Order Detail Edit', { orderId })
+        } else if (mode === 'create') {
+            TRACK_PAGE_VIEW('Order Create', { leadId: initialLeadId })
+        }
+    }, [mode, orderId, initialLeadId])
+
     // 选项卡状态
     const [activeTab, setActiveTab] = useState('summary')
 
@@ -110,7 +119,7 @@ export function OrderCreateView({
 
         setFormData(prevData => {
             // 获取当前所有有窗帘的空间
-            const spaces = Array.from(new Set(prevData.curtains.map(item => item.space).filter(Boolean)))
+            const spaces = Array.from(new Set(prevData.curtains.map(item => item.space).filter((s): s is string => !!s)))
 
             const newSpacePackages = { ...prevData.spacePackages }
 

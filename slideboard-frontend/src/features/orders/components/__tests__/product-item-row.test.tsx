@@ -243,11 +243,7 @@ describe('ProductItemRow Component', () => {
     expect(screen.getByText('轨道')).toBeInTheDocument()
   })
 
-  it('should handle package item with upgrade amount', async () => {
-    // 模拟calculateUpgradeAmount返回升级金额
-    const { calculateUpgradeAmount } = await import('@/types/order')
-    vi.mocked(calculateUpgradeAmount).mockReturnValue({ priceDifference: 50, differenceAmount: 100 })
-
+  it('should handle package item with upgrade amount', () => {
     render(
       <ProductItemRow
         {...defaultProps}

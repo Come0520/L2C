@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import React from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface MovingBorderCardProps extends React.HTMLAttributes<HTMLDivElement> {

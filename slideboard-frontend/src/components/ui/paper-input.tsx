@@ -25,7 +25,7 @@ export const PaperInput = React.forwardRef<HTMLInputElement, PaperInputProps>(
     return (
       <div className={cn('space-y-1', fullWidth && 'w-full')}>
         {label && (
-          <label className="block text-sm font-medium text-ink-600">
+          <label htmlFor={props.id} className="block text-sm font-medium text-ink-600">
             {label}
             {props.required && <span className="text-error-500 ml-1">*</span>}
           </label>
@@ -120,7 +120,7 @@ export const PaperSelect = React.forwardRef<HTMLSelectElement, PaperSelectProps>
     return (
       <div className={cn('space-y-1', fullWidth && 'w-full')}>
         {label && (
-          <label className="block text-sm font-medium text-ink-600">
+          <label htmlFor={props.id} className="block text-sm font-medium text-ink-600">
             {label}
             {props.required && <span className="text-error-500 ml-1">*</span>}
           </label>

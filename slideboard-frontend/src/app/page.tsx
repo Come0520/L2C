@@ -10,9 +10,9 @@ import {
   Package,
   BarChart3
 } from 'lucide-react';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { useAuth } from '@/contexts/auth-context';
@@ -59,6 +59,21 @@ export default function HomePage() {
   useEffect(() => {
     TRACK_PAGE_VIEW('Dashboard', { role: currentRole });
   }, [currentRole]);
+
+  // 如果认证信息正在加载，显示加载状态
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">加载中...</h2>
+          <p className="text-gray-600">正在获取您的数据</p>
+        </div>
+      </div>
+    );
+  }
 
   // ==========================================
   // 模拟数据区域 (Mock Data)
@@ -438,15 +453,11 @@ export default function HomePage() {
   };
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-theme-bg-primary">
       <main id="main" className="p-6 space-y-6" aria-label="主页">
         {/* 
-          1. 顶部欢迎区域 
-          包含：
-          - 欢迎语 (带角色名称)
-          - 当前日期
-          - 角色切换下拉框 (仅用于演示/调试)
-          - 全局搜索和快速创建按钮
+        ==========================================
+        角色切换控制台 (仅用于演示/开发)
         */}
         <div className="flex items-center justify-between">
           <div>
@@ -511,10 +522,12 @@ export default function HomePage() {
               <Search className="h-4 w-4 mr-2" />
               全局搜索
             </PaperButton>
-            <PaperButton variant="primary">
-              <Plus className="h-4 w-4 mr-2" />
-              快速创建
-            </PaperButton>
+            <Link href="/quotes/create">
+              <PaperButton variant="primary">
+                <Plus className="h-4 w-4 mr-2" />
+                快速创建
+              </PaperButton>
+            </Link>
           </div>
         </div>
 
@@ -646,6 +659,6 @@ export default function HomePage() {
           </PaperCardContent>
         </PaperCard>
       </main>
-    </DashboardLayout>
+    </div>
   );
 }

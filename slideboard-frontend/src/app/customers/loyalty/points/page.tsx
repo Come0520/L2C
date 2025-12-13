@@ -4,7 +4,6 @@ import { Gift, Coins, ShoppingCart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { pointsService } from '@/services/points.client';
@@ -33,7 +32,6 @@ export default function PointsPage() {
   }, []);
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -124,6 +122,5 @@ export default function PointsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

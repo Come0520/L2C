@@ -1,11 +1,9 @@
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 
 export default function CurtainKnowledgePage() {
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-ink-800">窗帘知识</h1>
         <PaperCard>
@@ -17,7 +15,6 @@ export default function CurtainKnowledgePage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }
 

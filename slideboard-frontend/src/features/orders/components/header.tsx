@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Menu, X, User, Settings, LogOut, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { useAuth } from '@/contexts/auth-context';
 
 export function Header() {

@@ -1,6 +1,6 @@
 // 测量报告生成器
 
-import { MeasurementRoom } from '@/types/measurement';
+import { MeasurementRoom } from '@/shared/types/measurement';
 interface MeasurementInput {
   id?: string;
   measurementNo?: string;

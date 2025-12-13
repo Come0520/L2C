@@ -11,169 +11,219 @@ import {
   Folder,
   Settings,
   UserCircle,
-  Menu,
-  X,
   CheckCircle,
   BookOpen,
-  LogOut
+  LogOut,
+  Ruler,
+  Hammer,
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React from 'react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
 // import l2cLogo from '@/assets/images/l2c-logo.png'; // Removed in favor of static asset
 
-import { PaperButton } from '@/components/ui/paper-button';
-import { PaperSidebar, PaperNavItem, PaperNavGroup } from '@/components/ui/paper-nav';
-import { siteConfig } from '@/config/site';
+import { GooeyThemeToggle } from '@/components/ui/gooey-theme-toggle';
+import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar';
+import { Tabs } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 // import { useTheme } from '@/contexts/theme-context';
-import { GooeyThemeToggle } from '@/components/ui/gooey-theme-toggle';
-// import { cn } from '@/lib/utils'; // unused
+import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  // const { theme, setTheme } = useTheme(); // unused, moved to GooeySwitch
-  const [openGroup, setOpenGroup] = React.useState<string | null>(null);
   const { user, logout } = useAuth();
 
-  // 侧边栏状态持久化
-  React.useEffect(() => {
-    const storedState = localStorage.getItem('sidebar-collapsed');
-    if (storedState) {
-      setSidebarCollapsed(JSON.parse(storedState));
-    }
-  }, []);
-
-  const toggleSidebar = () => {
-    const newState = !sidebarCollapsed;
-    setSidebarCollapsed(newState);
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
-  };
+  // Check if current page should be full screen (no sidebar/header)
+  const isFullScreenPage = React.useMemo(() => {
+    if (!pathname) return false;
+    
+    // Auth pages and error pages
+    const fullScreenPrefixes = ['/login', '/register', '/auth', '/403', '/404'];
+    return fullScreenPrefixes.some(prefix => pathname.startsWith(prefix));
+  }, [pathname]);
 
   const navGroups = React.useMemo(
     () => [
       {
         title: '工作台',
+        icon: <LayoutDashboard className="h-5 w-5 flex-shrink-0" />,
+        href: '/dashboard', // Default href for parent, though we might not use it directly for navigation if it has children
         items: [
-          { title: '总览仪表盘', icon: <LayoutDashboard className="h-5 w-5" />, href: '/dashboard' },
-          { title: '待办清单', icon: <FileText className="h-5 w-5" />, href: '/dashboard/todos' },
-          { title: '预警中心', icon: <Bell className="h-5 w-5" />, href: '/dashboard/alerts' },
-          { title: '罗莱大学', icon: <BookOpen className="h-5 w-5" />, href: '/academy' },
+          { title: '总览仪表盘', icon: <LayoutDashboard className="h-5 w-5 flex-shrink-0" />, href: '/dashboard' },
+          { title: '待办清单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/dashboard/todos' },
+          { title: '预警中心', icon: <Bell className="h-5 w-5 flex-shrink-0" />, href: '/dashboard/alerts' },
+          { title: '罗莱大学', icon: <BookOpen className="h-5 w-5 flex-shrink-0" />, href: '/academy' },
         ],
       },
       {
         title: '客户经营',
+        icon: <Users className="h-5 w-5 flex-shrink-0" />,
+        href: '/customers',
         items: [
-          { title: '已合作装企', icon: <Users className="h-5 w-5" />, href: '/customers/cooperative' },
-          { title: '潜在合作装企', icon: <Users className="h-5 w-5" />, href: '/customers/prospects' },
-          { title: '考核视图', icon: <FileText className="h-5 w-5" />, href: '/customers/assessment' },
+          { title: '已合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/cooperative' },
+          { title: '潜在合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/prospects' },
+          { title: '考核视图', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/customers/assessment' },
         ],
       },
       {
-        title: '业务管理（订单流）',
+        title: '线索管理',
+        icon: <Users className="h-5 w-5 flex-shrink-0" />,
+        href: '/leads',
         items: [
-          { title: '线索管理', icon: <Users className="h-5 w-5" />, href: '/leads' },
-          { title: '开单', icon: <FileText className="h-5 w-5" />, href: '/orders/status/draft-sign' },
-          { title: '待测量', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-survey' },
-          { title: '测量中-待分配', icon: <FileText className="h-5 w-5" />, href: '/orders/status/surveying-pending-assignment' },
-          { title: '测量中-分配中', icon: <FileText className="h-5 w-5" />, href: '/orders/status/surveying-assigning' },
-          { title: '测量中-待上门', icon: <FileText className="h-5 w-5" />, href: '/orders/status/surveying-pending-visit' },
-          { title: '测量中-待确认', icon: <FileText className="h-5 w-5" />, href: '/orders/status/surveying-pending-confirmation' },
-          { title: '方案待确认', icon: <FileText className="h-5 w-5" />, href: '/orders/status/plan-pending-confirmation' },
-          { title: '待推单', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-push' },
-          { title: '待下单', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-place-order' },
-          { title: '生产/备货中', icon: <FileText className="h-5 w-5" />, href: '/orders/status/in-production' },
-          { title: '备货完成', icon: <FileText className="h-5 w-5" />, href: '/orders/status/stock-ready' },
-          { title: '待发货', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-shipment' },
-          { title: '安装中-待分配', icon: <FileText className="h-5 w-5" />, href: '/orders/status/installing-pending-assignment' },
-          { title: '安装中-分配中', icon: <FileText className="h-5 w-5" />, href: '/orders/status/installing-assigning' },
-          { title: '安装中-待上门', icon: <FileText className="h-5 w-5" />, href: '/orders/status/installing-pending-visit' },
-          { title: '安装中-待确认', icon: <FileText className="h-5 w-5" />, href: '/orders/status/installing-pending-confirmation' },
-          { title: '待对账', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-reconciliation' },
-          { title: '待开票', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-invoice' },
-          { title: '待回款', icon: <FileText className="h-5 w-5" />, href: '/orders/status/pending-payment' },
-          { title: '已完成', icon: <CheckCircle className="h-5 w-5" />, href: '/orders/status/completed' },
+          { title: '线索管理', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/leads' },
+        ],
+      },
+      {
+        title: '测量阶段',
+        icon: <Ruler className="h-5 w-5 flex-shrink-0" />,
+        href: '/orders/status/pending-survey',
+        items: [
+          { title: '待测量', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-survey' },
+          { title: '测量中-待分配', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/surveying-pending-assignment' },
+          { title: '测量中-分配中', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/surveying-assigning' },
+          { title: '测量中-待上门', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/surveying-pending-visit' },
+          { title: '测量中-待确认', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/surveying-pending-confirmation' },
+          { title: '方案待确认', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/plan-pending-confirmation' },
+        ],
+      },
+      {
+        title: '订单处理阶段',
+        icon: <FileText className="h-5 w-5 flex-shrink-0" />,
+        href: '/orders/status/draft-sign',
+        items: [
+          { title: '开单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/draft-sign' },
+          { title: '待推单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-push' },
+          { title: '待下单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-place-order' },
+          { title: '生产/备货中', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/in-production' },
+          { title: '备货完成', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/stock-ready' },
+          { title: '待发货', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-shipment' },
+        ],
+      },
+      {
+        title: '安装阶段',
+        icon: <Hammer className="h-5 w-5 flex-shrink-0" />,
+        href: '/orders/status/installing-pending-assignment',
+        items: [
+          { title: '安装中-待分配', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/installing-pending-assignment' },
+          { title: '安装中-分配中', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/installing-assigning' },
+          { title: '安装中-待上门', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/installing-pending-visit' },
+          { title: '安装中-待确认', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/installing-pending-confirmation' },
+        ],
+      },
+      {
+        title: '财务阶段',
+        icon: <CreditCard className="h-5 w-5 flex-shrink-0" />,
+        href: '/orders/status/pending-reconciliation',
+        items: [
+          { title: '待对账', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-reconciliation' },
+          { title: '待开票', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/pending-invoice' },
+        ],
+      },
+      {
+        title: '异常状态',
+        icon: <AlertTriangle className="h-5 w-5 flex-shrink-0" />,
+        href: '/orders/status/exception',
+        items: [
+          { title: '异常订单', icon: <AlertTriangle className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/exception' },
+          { title: '已取消', icon: <AlertTriangle className="h-5 w-5 flex-shrink-0" />, href: '/orders/status/cancelled' },
         ],
       },
       {
         title: '商品与库存',
+        icon: <Package className="h-5 w-5 flex-shrink-0" />,
+        href: '/products',
         items: [
-          { title: '商品管理', icon: <Package className="h-5 w-5" />, href: '/products' },
-          { title: '销售道具管理', icon: <Package className="h-5 w-5" />, href: '/sales-tools' },
-          { title: '礼品管理', icon: <Gift className="h-5 w-5" />, href: '/gifts' },
+          { title: '商品管理', icon: <Package className="h-5 w-5 flex-shrink-0" />, href: '/products' },
+          { title: '库存管理', icon: <Package className="h-5 w-5 flex-shrink-0" />, href: '/products/inventory' },
+          { title: '供应商管理', icon: <Truck className="h-5 w-5 flex-shrink-0" />, href: '/suppliers' },
         ],
       },
       {
         title: '服务与供应链',
+        icon: <UserCircle className="h-5 w-5 flex-shrink-0" />,
+        href: '/service-supply',
         items: [
-          { title: '服务与供应链', icon: <Truck className="h-5 w-5" />, href: '/service-supply' },
-          { title: '供应商管理', icon: <Truck className="h-5 w-5" />, href: '/suppliers' },
+          { title: '测量师管理', icon: <UserCircle className="h-5 w-5 flex-shrink-0" />, href: '/service-supply/surveyors' },
+          { title: '安装师傅管理', icon: <UserCircle className="h-5 w-5 flex-shrink-0" />, href: '/service-supply/installers' },
         ],
       },
       {
         title: '积分与商城',
+        icon: <Gift className="h-5 w-5 flex-shrink-0" />,
+        href: '/mall',
         items: [
-          { title: '积分系统', icon: <Gift className="h-5 w-5" />, href: '/points' },
-          { title: '积分商城', icon: <Gift className="h-5 w-5" />, href: '/mall' },
+          { title: '积分商城', icon: <Gift className="h-5 w-5 flex-shrink-0" />, href: '/mall' },
+          { title: '积分商品', icon: <Package className="h-5 w-5 flex-shrink-0" />, href: '/customers/loyalty/gifts' },
+          { title: '积分规则', icon: <CheckCircle className="h-5 w-5 flex-shrink-0" />, href: '/points-coefficient/all-rules' },
         ],
       },
       {
         title: '通知与审批',
+        icon: <Bell className="h-5 w-5 flex-shrink-0" />,
+        href: '/notifications',
         items: [
-          { title: '通知系统', icon: <Bell className="h-5 w-5" />, href: '/notifications' },
-          { title: '审批流程', icon: <FileText className="h-5 w-5" />, href: '/approvals' },
+          { title: '消息通知', icon: <Bell className="h-5 w-5 flex-shrink-0" />, href: '/notifications' },
+          { title: '我的审批', icon: <CheckCircle className="h-5 w-5 flex-shrink-0" />, href: '/approvals' },
         ],
       },
       {
         title: '财务',
+        icon: <FileText className="h-5 w-5 flex-shrink-0" />,
+        href: '/finance',
         items: [
-          { title: '财务管理', icon: <FileText className="h-5 w-5" />, href: '/finance' },
-          { title: '报表分析', icon: <FileText className="h-5 w-5" />, href: '/finance/reports' },
-          { title: '数据分析', icon: <FileText className="h-5 w-5" />, href: '/finance/analytics' },
+          { title: '财务概览', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/finance' },
+          { title: '对账单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/finance/reconciliations' },
         ],
       },
       {
-        title: '文件',
+        title: '文件管理',
+        icon: <Folder className="h-5 w-5 flex-shrink-0" />,
+        href: '/files',
         items: [
-          { title: '文件管理', icon: <Folder className="h-5 w-5" />, href: '/files' },
-          { title: '分享功能', icon: <Folder className="h-5 w-5" />, href: '/sharing' },
+          { title: '文件中心', icon: <Folder className="h-5 w-5 flex-shrink-0" />, href: '/files' },
         ],
       },
       {
         title: '系统',
+        icon: <Settings className="h-5 w-5 flex-shrink-0" />,
+        href: '/system',
         items: [
-          { title: '系统管理', icon: <Settings className="h-5 w-5" />, href: '/system' },
-          { title: '用户认证', icon: <UserCircle className="h-5 w-5" />, href: '/system/auth' },
-          { title: '权限管理', icon: <Settings className="h-5 w-5" />, href: '/system/permissions' },
-          { title: '系统配置', icon: <Settings className="h-5 w-5" />, href: '/system/settings' },
-          { title: '状态流转规则', icon: <FileText className="h-5 w-5" />, href: '/system/status-rules' },
-          { title: '账户设置', icon: <UserCircle className="h-5 w-5" />, href: '/account' },
+          { title: '团队管理', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/system/team' },
+          { title: '系统设置', icon: <Settings className="h-5 w-5 flex-shrink-0" />, href: '/system/settings' },
+          { title: '操作日志', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/system/audit' },
         ],
       },
     ],
     []
   );
 
-  // 自动展开当前菜单组
-  React.useEffect(() => {
-    // 侧边栏收起时不自动展开
-    if (sidebarCollapsed) return;
-
-    const match = navGroups.find((g) =>
-      g.items.some((it: { href: string }) => pathname.startsWith(it.href))
+  // Find current active group
+  const activeGroup = React.useMemo(() => {
+    const group = navGroups.find(group => 
+      group.items.some(item => pathname === item.href || pathname?.startsWith(item.href))
     );
-    // 只有当需要展开的组不同于当前展开组时才更新，避免不必要的重渲染
-    if (match && match.title !== openGroup) {
-      setOpenGroup(match.title);
-    }
-  }, [pathname, navGroups, sidebarCollapsed, openGroup]);
+    return group || navGroups[0];
+  }, [pathname, navGroups]);
+
+  // Transform group items to Tabs format
+  const tabs = React.useMemo(() => {
+    if (!activeGroup) return [];
+    return activeGroup.items.map(item => ({
+      title: item.title,
+      value: item.href,
+      href: item.href,
+      content: null,
+    }));
+  }, [activeGroup]);
 
   // 退出登录处理
   const handleSignOut = async () => {
@@ -183,6 +233,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       console.error('Sign out failed:', error);
     }
   };
+
+  // If it's a full screen page, render only children
+  if (isFullScreenPage) {
+    return <>{children}</>;
+  }
 
   if (user?.role === 'OTHER_CUSTOMER') {
     return (
@@ -196,154 +251,133 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-theme-bg-primary text-theme-text-primary transition-colors duration-300">
-      {/* ... existing code ... */}
-      <PaperSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={toggleSidebar}
-        className="bg-theme-bg-secondary border-r border-theme-border transition-colors duration-300"
-      >
-        <div className="h-[73px] px-6 flex items-center border-b border-theme-border mb-6 flex-shrink-0 box-border">
-          <div className="flex items-center space-x-3 transition-all duration-300 ease-in-out">
-            <div className="relative w-10 h-10 flex-shrink-0">
+    <div className={cn("flex flex-col md:flex-row bg-theme-bg-primary w-full flex-1 mx-auto overflow-hidden", "h-screen")}>
+      <Sidebar open={open} setOpen={setOpen}>
+        <SidebarBody className="justify-between gap-10 bg-theme-bg-secondary border-r border-theme-border">
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Logo Area */}
+            <div className="flex items-center gap-2 px-1 py-2 mb-4">
               <Image
-                src="/l2c-logo.png"
+                src="/l2c-logo.svg"
                 alt="L2C Logo"
-                width={40}
-                height={40}
-                className="rounded-lg object-contain"
+                width={32}
+                height={32}
+                className="rounded-lg object-contain flex-shrink-0"
                 priority
+                unoptimized
+              />
+              <motion.span
+                animate={{
+                  display: open ? "inline-block" : "none",
+                  opacity: open ? 1 : 0,
+                }}
+                className="font-bold text-lg text-theme-text-primary whitespace-pre overflow-hidden"
+              >
+                销售管理系统
+              </motion.span>
+            </div>
+
+            {/* Navigation Groups - Only Top Level */}
+            <div className="flex flex-col gap-2">
+              {navGroups.map((group) => (
+                <SidebarLink
+                  key={group.title}
+                  link={{
+                    label: group.title,
+                    href: group.href,
+                    icon: group.icon
+                  }}
+                  className={cn(
+                    activeGroup && activeGroup.title === group.title
+                      ? "bg-theme-bg-tertiary text-primary-500 font-medium rounded-md"
+                      : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/50 rounded-md"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Footer / User Profile */}
+          <div className="flex flex-col gap-2">
+            <SidebarLink
+              link={{
+                label: user?.name || 'User',
+                href: '#',
+                icon: (
+                  <div className="h-7 w-7 rounded-full bg-theme-bg-tertiary flex items-center justify-center border border-theme-border flex-shrink-0 overflow-hidden">
+                    {user?.avatarUrl ? (
+                      <Image src={user.avatarUrl} width={28} height={28} alt="Avatar" className="rounded-full" />
+                    ) : (
+                      <UserCircle className="h-5 w-5 text-theme-text-secondary" />
+                    )}
+                  </div>
+                )
+              }}
+            />
+            {/* Logout button mimicking a link */}
+            <div onClick={handleSignOut} className="cursor-pointer">
+              <SidebarLink
+                link={{
+                  label: '退出登录',
+                  href: '#',
+                  icon: <LogOut className="h-5 w-5 text-theme-text-secondary flex-shrink-0" />
+                }}
               />
             </div>
-
-
-            <div className={`flex flex-col transition-all duration-300 origin-left ${sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden scale-90' : 'w-auto opacity-100 scale-100'}`}>
-              <h1 className="text-lg font-bold text-theme-text-primary tracking-tight leading-tight whitespace-nowrap">
-                {siteConfig.name}
-              </h1>
-              <p className="text-[10px] text-theme-text-secondary font-medium uppercase tracking-wider whitespace-nowrap">
-                {siteConfig.shortName} System v2.0
-              </p>
-            </div>
           </div>
-        </div>
+        </SidebarBody>
+      </Sidebar>
 
-        {/* 主导航 */}
-        <div>
-          {navGroups.map((group) => (
-            <PaperNavGroup
-              key={group.title}
-              title={group.title}
-              open={openGroup === group.title}
-              onOpenChange={(o) => setOpenGroup(o ? group.title : null)}
-            >
-              {group.items.map((item) => (
-                <PaperNavItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  active={pathname === item.href}
-                  className="mb-1"
-                >
-                  {!sidebarCollapsed && item.title}
-                </PaperNavItem>
-              ))}
-            </PaperNavGroup>
-          ))}
-        </div>
-
-        {/* 底部操作区 */}
-        {!sidebarCollapsed && (
-          <div className="mt-auto p-4 border-t border-theme-border">
-            <div className="space-y-3">
-              <PaperButton variant="ghost" size="sm" className="w-full justify-start text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary">
-                <Settings className="h-4 w-4 mr-2" />
-                System Settings
-              </PaperButton>
-              <PaperButton variant="ghost" size="sm" className="w-full justify-start text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary">
-                <UserCircle className="h-4 w-4 mr-2" />
-                Profile
-              </PaperButton>
-            </div>
-          </div>
-        )}
-      </PaperSidebar>
-
-      {/* 主内容区 */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-theme-bg-primary transition-colors duration-300">
-
-        {/* 顶部导航栏 */}
-        <header className="bg-theme-bg-secondary/50 backdrop-blur-md border-b border-theme-border px-6 py-4 transition-colors duration-300">
-          <div className="flex items-center justify-between">
-            {/* Left Side: Toggle & Breadcrumbs */}
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleSidebar}
-                className="p-2 text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary"
-                aria-label="Toggle Sidebar"
-              >
-                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-              </button>
-              <nav className="flex items-center space-x-2 text-sm text-theme-text-secondary">
-                <Link href="/" className="hover:text-theme-text-primary transition-colors">Home</Link>
-                <span>/</span>
-                <span className="text-theme-text-primary font-medium">
-                  {navGroups.flatMap(g => g.items).find(item => pathname === item.href)?.title || 'Page'}
-                </span>
-              </nav>
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col h-full overflow-hidden relative">
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-theme-bg-secondary/50 backdrop-blur-md border-b border-theme-border px-6 h-[73px] flex items-center transition-colors duration-300">
+          <div className="flex items-center justify-between w-full">
+            {/* Left Side: Breadcrumbs / Group Title */}
+            <div className="flex items-center gap-4">
+               <h1 className="text-xl font-bold text-theme-text-primary">{activeGroup?.title}</h1>
             </div>
 
-            {/* Right Side: Theme Toggle, Notifications, User */}
+            {/* Right Side: Theme Toggle & Notifications */}
             <div className="flex items-center space-x-6">
-              {/* Theme Switcher */}
               <div className="hidden md:block">
                 <GooeyThemeToggle />
               </div>
-
-              {/* Notifications */}
               <button className="p-2 relative text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary" aria-label="Notifications">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
               </button>
-
-              {/* 用户信息与下拉 */}
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-theme-bg-tertiary rounded-full flex items-center justify-center border border-theme-border">
-                  <UserCircle className="h-5 w-5 text-theme-text-secondary" />
-                </div>
-                <div className="relative">
-                  <details className="group">
-                    <summary className="list-none cursor-pointer">
-                      <div className="hidden md:block">
-                        <p className="text-sm font-medium text-theme-text-primary transition-colors">{user?.name || 'User'}</p>
-                        <p className="text-xs text-theme-text-secondary">{user?.role || 'Guest'}</p>
-                      </div>
-                    </summary>
-                    <div className="absolute right-0 mt-2 w-56 bg-theme-bg-secondary border border-theme-border rounded-lg shadow-xl p-2 z-50">
-                      <div className="px-2 py-1 text-xs text-theme-text-secondary uppercase tracking-wider font-semibold">Account</div>
-                      <button className="w-full text-left px-3 py-2 rounded-md hover:bg-theme-bg-tertiary text-sm transition-colors text-theme-text-secondary">
-                        Profile Settings
-                      </button>
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full text-left px-3 py-2 rounded-md hover:bg-theme-bg-tertiary text-sm transition-colors text-red-500 hover:text-red-400 flex items-center"
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </details>
-                </div>
-              </div>
             </div>
           </div>
         </header>
 
-        {/* 主内容 */}
-        <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
-          <div className="h-full">
-            {children}
-          </div>
+        {/* Tabs and Main Content */}
+        <main className="flex-1 overflow-hidden bg-theme-bg-primary p-6 pt-0">
+           <div className="h-full flex flex-col">
+              {/* Secondary Navigation Tabs */}
+               <div className="py-4">
+                  <Tabs 
+                    tabs={tabs} 
+                    activeTab={pathname || ''}
+                    layoutId="nav-tabs"
+                    containerClassName="gap-2"
+                    activeTabClassName="bg-paper-500 shadow-sm"
+                    tabClassName="text-ink-600 hover:text-ink-900 hover:bg-paper-300 transition-colors"
+                    contentClassName="hidden"
+                  />
+               </div>
+              
+              {/* Page Content */}
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="flex-1 overflow-y-auto rounded-2xl border border-theme-border bg-theme-bg-secondary/30 p-6 shadow-sm"
+              >
+                 {children}
+              </motion.div>
+           </div>
         </main>
       </div>
     </div>

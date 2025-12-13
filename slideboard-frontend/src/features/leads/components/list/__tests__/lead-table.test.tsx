@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { LeadItem } from '@/types/lead';
 
-import { LeadTable } from '../lead-table';
+import { LeadTable } from '../LeadTable';
 
 
 // Mock data for testing

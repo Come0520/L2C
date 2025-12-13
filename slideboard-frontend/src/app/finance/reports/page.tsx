@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
-import DashboardLayout from '@/components/layout/dashboard-layout';
-import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
-import { PaperSelect } from '@/components/ui/paper-input';
 import { FileBarChart } from 'lucide-react';
+import React from 'react';
+
+import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
+import { PaperSelect } from '@/components/ui/paper-input';
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
 
 export default function FinanceReportsPage() {
   const [period, setPeriod] = React.useState('month');
@@ -17,7 +17,6 @@ export default function FinanceReportsPage() {
   ];
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -63,7 +62,6 @@ export default function FinanceReportsPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }
 

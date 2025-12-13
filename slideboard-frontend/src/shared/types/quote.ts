@@ -1,72 +1,148 @@
 // 报价单主记录类型
 export interface Quote {
   id: string
-  customerId: string
-  customerName: string
+  quoteNo: string
+  leadId?: string
+  customerId?: string
+  customerName?: string // Join or Computed
   projectName: string
   projectAddress: string
   salespersonId: string
-  salespersonName: string
-  currentVersion: number
+  salespersonName?: string // Join or Computed
+  currentVersionId?: string
+  status: QuoteStatus
   createdAt: string
   updatedAt: string
-  versions: QuoteVersion[]
+  
+  // Relations
+  versions?: QuoteVersion[]
+  currentVersion?: QuoteVersion
 }
+
+export type QuoteStatus = 'draft' | 'active' | 'won' | 'lost' | 'expired' | 'confirmed' | 'closed';
 
 // 报价单版本类型
 export interface QuoteVersion {
   id: string
   quoteId: string
-  version: number
+  versionNumber: number
+  versionSuffix?: string
   quoteNo: string
   totalAmount: number
-  validUntil: string
-  status: 'draft' | 'preliminary' | 'revised' | 'confirmed' | 'cancelled'
-  convertedToOrderId?: string
-  poNumber?: string
-  homeScreenshotUrl?: string
-  createdBy: string
+  validUntil?: string
+  status: QuoteVersionStatus
+  remarks?: string
+  createdBy?: string
   createdAt: string
   updatedAt: string
+  
+  // Relations
   items: QuoteItem[]
 }
+
+export type QuoteVersionStatus = 'draft' | 'presented' | 'rejected' | 'accepted' | 'published' | 'confirmed' | 'expired' | 'cancelled';
 
 // 报价单项目类型
 export interface QuoteItem {
   id: string
   quoteVersionId: string
-  name: string
+  category: string
+  space: string
+  productName: string
+  productId?: string
+  variantId?: string
   quantity: number
   unitPrice: number
   totalPrice: number
   description?: string
-  specification?: string
+  imageUrl?: string
+  width?: number
+  height?: number
+  unit?: string
+  attributes?: Record<string, any>
+  createdAt: string
 }
-
-// 报价单版本状态类型
-export type QuoteVersionStatus = QuoteVersion['status']
 
 // 报价单创建请求类型
 export interface CreateQuoteRequest {
-  customerId: string
+  leadId?: string
+  customerId?: string
   projectName: string
-  projectAddress: string
-  salespersonId: string
-  items: Omit<QuoteItem, 'id' | 'quoteVersionId' | 'totalPrice'>[]
+  projectAddress?: string
+  items?: CreateQuoteItemRequest[]
+}
+
+export interface CreateQuoteItemRequest {
+  category?: string
+  space?: string
+  productName: string
+  productId?: string
+  variantId?: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  description?: string
+  imageUrl?: string
+  width?: number
+  height?: number
+  unit?: string
+  attributes?: Record<string, any>
+}
+
+// DTOs for Service Layer
+export interface CreateQuoteDTO {
+  leadId?: string;
+  customerId?: string;
+  projectName: string;
+  projectAddress?: string;
+  items: CreateQuoteItemDTO[];
+}
+
+export interface CreateQuoteItemDTO {
+  category: string;
+  space: string;
+  productName: string;
+  productId?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  description?: string;
+  imageUrl?: string;
+  attributes?: Record<string, any>;
+}
+
+export interface CreateQuoteVersionDTO {
+  quoteId: string;
+  versionSuffix?: string;
+  totalAmount: number;
+  remarks?: string;
+  items: CreateQuoteItemDTO[];
+}
+
+export interface UpdateQuoteVersionDTO {
+  versionId: string;
+  status?: QuoteVersionStatus;
+  remarks?: string;
+  validUntil?: string;
+  totalAmount?: number;
+  items?: CreateQuoteItemDTO[];
 }
 
 // 报价单版本创建请求类型
 export interface CreateQuoteVersionRequest {
   quoteId: string
-  baseVersionId?: string // 基于哪个版本创建
-  items: Omit<QuoteItem, 'id' | 'quoteVersionId' | 'totalPrice'>[]
+  quoteNo?: string
+  totalAmount: number
+  items: CreateQuoteItemRequest[]
 }
 
 // 报价单版本更新请求类型
 export interface UpdateQuoteVersionRequest {
-  items?: Omit<QuoteItem, 'id' | 'quoteVersionId' | 'totalPrice'>[]
+  items?: CreateQuoteItemRequest[]
+  totalAmount?: number
   validUntil?: string
   status?: QuoteVersionStatus
+  remarks?: string
 }
 
 // 报价单版本转换为销售单请求类型

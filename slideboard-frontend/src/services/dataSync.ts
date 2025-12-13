@@ -149,9 +149,6 @@ export const dataSyncService = {
   /**
    * 计算日期范围
    */
-  /**
-   * 计算日期范围
-   */
   getDateRange(startDate: string, endDate: string): string[] {
     const dates: string[] = []
     const start = new Date(startDate)
@@ -183,8 +180,15 @@ export const dataSyncService = {
   /**
    * 更新同步配置
    */
-  async updateSyncConfig(_: Partial<DataSyncConfig>) {
+  async updateSyncConfig(config: Partial<DataSyncConfig>) {
     // 实际实现中，应该将配置保存到数据库或配置文件中
-    return { success: true, message: '同步配置更新成功' }
+    // 这里使用内存存储模拟，实际项目中应该使用数据库
+    const currentConfig = await this.getSyncConfig()
+    const updatedConfig = { ...currentConfig, ...config }
+    
+    // 这里应该保存到数据库，例如：
+    // await configService.updateSystemConfig('data_sync', JSON.stringify(updatedConfig))
+    
+    return { success: true, message: '同步配置更新成功', config: updatedConfig }
   }
 }

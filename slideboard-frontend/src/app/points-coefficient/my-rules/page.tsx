@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { coefficientService } from '@/services/coefficient.client';
@@ -66,7 +65,6 @@ export default function MyRulesPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
@@ -207,6 +205,5 @@ export default function MyRulesPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }

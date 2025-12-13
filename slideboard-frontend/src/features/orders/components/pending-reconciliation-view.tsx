@@ -302,35 +302,81 @@ export function PendingReconciliationView() {
       )}
 
       {/* 搜索和统计区域 */}
-      <PaperCard className="shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500">待对账订单数</div>
+                <div className="text-3xl font-bold text-ink-800 mt-1">
+                  {filteredOrders.length}
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📄</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500">待对账总金额</div>
+                <div className="text-3xl font-bold text-indigo-600 mt-1">
+                  ¥{filteredOrders.reduce((sum, order) => sum + order.amount, 0).toFixed(2)}
+                </div>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <span className="text-2xl">💰</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500">PO号组数</div>
+                <div className="text-3xl font-bold text-purple-600 mt-1">
+                  {groupedOrders.length}
+                </div>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-xl text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                <span className="text-2xl">📦</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
+
+      {/* 搜索区域 */}
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
         <PaperCardContent className="p-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* 搜索栏 */}
             <div className="w-full md:w-1/3">
               <PaperInput
                 type="text"
                 placeholder="搜索PO号、销售单号或客户名称"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
+                className="w-full bg-white/50 dark:bg-black/20"
               />
-            </div>
-
-            {/* 统计信息 */}
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div>总订单数: <span className="font-semibold text-gray-800">{filteredOrders.length}</span></div>
-              <div>总金额: <span className="font-semibold text-gray-800">¥{filteredOrders.reduce((sum, order) => sum + order.amount, 0).toFixed(2)}</span></div>
-              <div>PO号组数: <span className="font-semibold text-gray-800">{groupedOrders.length}</span></div>
             </div>
           </div>
         </PaperCardContent>
       </PaperCard>
 
       {/* 待对账订单列表 */}
-      <PaperCard className="shadow-sm">
-        <PaperCardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-          <PaperCardTitle className="text-lg font-semibold text-gray-800">待对账订单</PaperCardTitle>
-        </PaperCardHeader>
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4">
+          <h3 className="text-lg font-semibold text-ink-800">待对账订单列表</h3>
+        </div>
         <PaperCardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">

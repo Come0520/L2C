@@ -1,17 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { ShieldAlert, ArrowLeft, Home } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 
 export default function ForbiddenPage() {
   const router = useRouter();
 
   return (
-    <DashboardLayout>
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 relative overflow-hidden">
         
         {/* 背景装饰：添加 aria-hidden 让读屏软件忽略 */}
@@ -67,6 +65,5 @@ export default function ForbiddenPage() {
           
         </div>
       </div>
-    </DashboardLayout>
   );
 }

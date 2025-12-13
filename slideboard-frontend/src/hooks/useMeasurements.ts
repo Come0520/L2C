@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 import { measurementService } from '@/services/measurements.client';
-import { CreateMeasurementRequest, UpdateMeasurementRequest } from '@/types/measurement';
+import { CreateMeasurementRequest, UpdateMeasurementRequest } from '@/shared/types/measurement';
 
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 
@@ -24,9 +24,9 @@ export function useMeasurements(page = 1, pageSize = 10, filters: MeasurementFil
     });
 
     useRealtimeSubscription({
-        table: 'measurements',
+        table: 'measurement_orders',
         event: '*',
-        channelName: 'measurements:list',
+        channelName: 'measurement_orders:list',
         handler: () => {
             queryClient.invalidateQueries({ queryKey })
         }
@@ -50,10 +50,10 @@ export function useMeasurement(id: string) {
     });
 
     useRealtimeSubscription({
-        table: 'measurements',
+        table: 'measurement_orders',
         event: '*',
         filter: id ? `id=eq.${id}` : undefined,
-        channelName: id ? `measurements:${id}` : 'measurements:detail',
+        channelName: id ? `measurement_orders:${id}` : 'measurement_orders:detail',
         handler: () => {
             queryClient.invalidateQueries({ queryKey })
         }

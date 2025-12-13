@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import z from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
 
-// Define request body types
-interface CreateRoleRequest {
-  name: string;
-  description?: string;
-  permissions: string[];
-}
+// Define Zod schema for role creation
+export const roleSchema = z.object({
+  name: z.string().min(1, '角色名称不能为空').max(50, '角色名称不能超过50个字符'),
+  description: z.string().max(200, '角色描述不能超过200个字符').optional(),
+  permissions: z.array(z.string().min(1, '权限ID不能为空'))
+})
 
 // Define database row types
 interface RoleRow {
@@ -149,12 +150,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
   }
 
-  const body: CreateRoleRequest = await req.json()
-  const { name, description, permissions } = body
-
-  if (!name) {
-    return NextResponse.json({ error: 'Role name is required' }, { status: 400 })
-  }
+  try {
+    const body = await req.json()
+    const validatedData = roleSchema.parse(body)
+    const { name, description, permissions } = validatedData
 
   // Create new role
   const { data: role, error: roleError } = await supabase
@@ -195,4 +194,14 @@ export async function POST(req: NextRequest) {
       user_count: 0
     } as RoleWithPermissions 
   }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0].message }, { 
+        status: 400 
+      })
+    }
+    return NextResponse.json({ error: 'Failed to create role' }, { 
+      status: 500 
+    })
+  }
 }

@@ -28,8 +28,10 @@ vi.mock('@/lib/supabase/client', () => {
 })
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
 import { installationScheduleService } from '@/services/installation-schedule.client'
-import InstallationCalendar from '../installation-calendar'
+
+import InstallationCalendar from '../InstallationCalendar'
 
 describe('InstallationCalendar view changes and data fetching', () => {
   it('fetches on mount with initial year/month and refetches on view change', async () => {

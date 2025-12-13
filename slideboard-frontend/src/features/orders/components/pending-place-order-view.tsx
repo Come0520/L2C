@@ -379,32 +379,44 @@ export function PendingPlaceOrderView() {
   
   return (
     <div className="space-y-6">
-      {/* 统计卡片 */}
-      <PaperCard>
-        <PaperCardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-ink-800">待下单 - 统计信息</h3>
-              <p className="text-ink-500 text-sm">按状态进行筛选与推进</p>
+      {/* 统计卡片 - Split */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-ink-500 mb-1">待下单数量</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-3xl font-bold text-ink-800">{orders.length}</h3>
+                <span className="text-sm text-ink-400">单</span>
+              </div>
+              <p className="text-xs text-ink-400 mt-2">当前处于待下单状态的订单总数</p>
             </div>
-            <div className="text-right">
-              <p className="text-ink-500 text-sm">待下单数量</p>
-              <p className="text-2xl font-bold text-ink-800">{orders.length}</p>
-              <p className="text-ink-500 text-sm mt-1">总装企采购金额</p>
-              <p className="text-2xl font-bold text-ink-800">¥{orders.reduce((sum, order) => sum + order.decorationCompanyPurchaseAmount, 0).toLocaleString()}</p>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-ink-500 mb-1">总装企采购金额</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-3xl font-bold text-ink-800">¥{orders.reduce((sum, order) => sum + order.decorationCompanyPurchaseAmount, 0).toLocaleString()}</h3>
+              </div>
+              <p className="text-xs text-ink-400 mt-2">所有待下单订单的装企采购总金额</p>
             </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
       
       {/* 待下单列表 */}
-      <PaperCard>
-        <PaperTableToolbar>
-          <div className="text-sm text-ink-500">共 {orders.length} 条待下单</div>
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4 flex justify-between items-center">
+          <div className="text-sm font-medium text-ink-600">共 {orders.length} 条待下单</div>
         </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableCell>销售单号/客户号</PaperTableCell>
               <PaperTableCell>客户姓名</PaperTableCell>
               <PaperTableCell>客户地址</PaperTableCell>

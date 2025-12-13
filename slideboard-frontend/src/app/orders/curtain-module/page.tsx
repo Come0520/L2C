@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { CurtainPackageSelector } from '@/features/orders/components/curtain-package-selector'
 import { CurtainProductTable } from '@/features/orders/components/curtain-product-table'
 import {
@@ -62,7 +61,6 @@ export default function CurtainModulePage() {
     }, [])
 
     return (
-        <DashboardLayout>
             <div className="p-6 max-w-[1600px] mx-auto space-y-6">
                 {/* 页面标题 */}
                 <div className="flex items-center justify-between">
@@ -87,6 +85,5 @@ export default function CurtainModulePage() {
                     onDeleteItem={handleDeleteItem}
                 />
             </div>
-        </DashboardLayout>
     )
 }

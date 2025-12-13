@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 interface MeasurementRecord {
   quoteNo?: string
@@ -82,6 +84,57 @@ export function exportToCSV(
     // 释放URL对象
     URL.revokeObjectURL(url)
 }
+
+/**
+ * 导出数据到PDF文件
+ * @param rows 要导出的数据数组
+ * @param filename 文件名(不含扩展名)
+ * @param columns 列配置（可选，用于指定列顺序和标题）
+ */
+export function exportToPDF(
+    rows: Array<Record<string, unknown>>,
+    filename: string,
+    columns?: { header: string; dataKey: string }[]
+): void {
+    if (rows.length === 0) {
+        return
+    }
+
+    const doc = new jsPDF()
+
+    // 准备表头和数据
+    let head: string[][] = []
+    let body: any[][] = []
+
+    if (columns) {
+        head = [columns.map(c => c.header)]
+        body = rows.map(row => columns.map(c => row[c.dataKey]))
+    } else {
+        // 如果没有提供列配置，自动从第一行获取键作为表头
+        const firstRow = rows[0]
+        if (!firstRow) return
+
+        const keys = Object.keys(firstRow)
+        head = [keys]
+        body = rows.map(row => keys.map(k => row[k]))
+    }
+
+    // 添加字体支持中文（注意：jspdf 默认不支持中文，需要加载字体，这里暂时使用默认字体，
+    // 实际生产中需要引入支持中文的 ttf 字体并 addFileToVFS）
+    // 为了防止中文乱码，建议在实际项目中配置中文字体
+    // 这里简单处理：如果包含中文，可能会显示乱码，提示用户
+
+    autoTable(doc, {
+        head: head,
+        body: body,
+        styles: { font: 'helvetica' }, // 默认字体
+        headStyles: { fillColor: [66, 66, 66] },
+    })
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    doc.save(`${filename}_${timestamp}.pdf`)
+}
+
 
 /**
  * 格式化测量单数据用于导出

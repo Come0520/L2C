@@ -3,14 +3,17 @@
 import Link from 'next/link'
 import React, { useState } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperInput } from '@/components/ui/paper-input'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
 import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_CONFIG } from '@/constants/measurement-status'
 import { useMeasurements } from '@/hooks/useMeasurements'
 import { useRealtimeMeasurements } from '@/hooks/useRealtimeMeasurement'
-import { Measurement } from '@/types/measurement'
+import { Measurement } from '@/shared/types/measurement'
+import { formatDateTime } from '@/utils/date'
+import { ExportMenu } from '@/components/ui/export-menu'
+import { useExport } from '@/hooks/useExport'
 
 // 获取状态显示配置
 const isMeasurementStatus = (s: string): s is typeof MEASUREMENT_STATUS[keyof typeof MEASUREMENT_STATUS] => {
@@ -63,8 +66,21 @@ export default function MeasurementsPage() {
     setPage(1)
   }
 
+  // 导出功能
+  const { handleExport } = useExport<Measurement>({
+    filename: '测量单列表',
+    columns: [
+      { header: '测量单号', dataKey: 'measurementNo' },
+      { header: '客户姓名', dataKey: 'customerName' },
+      { header: '联系电话', dataKey: 'customerPhone' },
+      { header: '项目地址', dataKey: 'projectAddress' },
+      { header: '状态', dataKey: 'status' },
+      { header: '测量师傅', dataKey: 'surveyorName' },
+      { header: '预约时间', dataKey: 'scheduledTime' },
+    ]
+  })
+
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -76,7 +92,10 @@ export default function MeasurementsPage() {
 
         <PaperCard>
           <PaperCardHeader>
-            <PaperCardTitle>测量单列表</PaperCardTitle>
+            <div className="flex justify-between items-center">
+              <PaperCardTitle>测量单列表</PaperCardTitle>
+              <ExportMenu onExport={(format) => handleExport(measurements, format)} />
+            </div>
           </PaperCardHeader>
           <PaperCardContent>
             {/* 筛选条件 */}
@@ -115,86 +134,73 @@ export default function MeasurementsPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">测量单号</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">客户姓名</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">项目地址</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">状态</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">测量师</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">计划测量时间</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">创建人</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">创建时间</th>
-                    <th className="text-left py-3 px-4 font-medium text-ink-600">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <PaperTable>
+                <PaperTableHeader>
+                  <PaperTableRow>
+                    <PaperTableCell>测量单号</PaperTableCell>
+                    <PaperTableCell>客户姓名</PaperTableCell>
+                    <PaperTableCell>项目地址</PaperTableCell>
+                    <PaperTableCell>状态</PaperTableCell>
+                    <PaperTableCell>测量师</PaperTableCell>
+                    <PaperTableCell>计划测量时间</PaperTableCell>
+                    <PaperTableCell>创建人</PaperTableCell>
+                    <PaperTableCell>创建时间</PaperTableCell>
+                    <PaperTableCell>操作</PaperTableCell>
+                  </PaperTableRow>
+                </PaperTableHeader>
+                <PaperTableBody>
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-ink-500">加载中...</td>
-                    </tr>
+                    <PaperTableRow>
+                      <PaperTableCell colSpan={9} className="py-10 text-center text-ink-500">加载中...</PaperTableCell>
+                    </PaperTableRow>
                   ) : error ? (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-red-500">加载失败，请重试</td>
-                    </tr>
+                    <PaperTableRow>
+                      <PaperTableCell colSpan={9} className="py-10 text-center text-red-500">加载失败，请重试</PaperTableCell>
+                    </PaperTableRow>
                   ) : measurements.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-ink-500">暂无测量单数据</td>
-                    </tr>
+                    <PaperTableRow>
+                      <PaperTableCell colSpan={9} className="py-10 text-center text-ink-500">暂无测量单数据</PaperTableCell>
+                    </PaperTableRow>
                   ) : (
                     measurements.map((measurement: Measurement) => (
-                      <tr key={measurement.id} className="border-b hover:bg-paper-100">
-                        <td className="py-3 px-4">{measurement.id.substring(0, 8)}</td>
-                        <td className="py-3 px-4">{measurement.customerName}</td>
-                        <td className="py-3 px-4">{measurement.projectAddress || '-'}</td>
-                        <td className="py-3 px-4">
+                      <PaperTableRow key={measurement.id} className="hover:bg-paper-100">
+                        <PaperTableCell>{measurement.id.substring(0, 8)}</PaperTableCell>
+                        <PaperTableCell>{measurement.customerName}</PaperTableCell>
+                        <PaperTableCell>{measurement.projectAddress || '-'}</PaperTableCell>
+                        <PaperTableCell>
                           <span className={`px-2 py-1 rounded text-sm ${getStatusConfig(measurement.status).bgColor} ${getStatusConfig(measurement.status).color}`}>
                             {getStatusConfig(measurement.status).label}
                           </span>
-                        </td>
-                        <td className="py-3 px-4">{measurement.surveyorName || '-'}</td>
-                        <td className="py-3 px-4">{measurement.scheduledAt ? new Date(measurement.scheduledAt).toLocaleString('zh-CN') : '-'}</td>
-                        <td className="py-3 px-4">{measurement.createdBy}</td>
-                        <td className="py-3 px-4">{new Date(measurement.createdAt).toLocaleString('zh-CN')}</td>
-                        <td className="py-3 px-4">
+                        </PaperTableCell>
+                        <PaperTableCell>{measurement.surveyorName || '-'}</PaperTableCell>
+                        <PaperTableCell>{measurement.scheduledAt ? formatDateTime(measurement.scheduledAt) : '-'}</PaperTableCell>
+                        <PaperTableCell>{measurement.createdBy}</PaperTableCell>
+                        <PaperTableCell>{formatDateTime(measurement.createdAt)}</PaperTableCell>
+                        <PaperTableCell>
                           <Link href={`/orders/measurements/${measurement.id}`} className="text-blue-600 hover:underline mr-2">详情</Link>
                           <button className="text-gray-600 hover:underline">编辑</button>
-                        </td>
-                      </tr>
+                        </PaperTableCell>
+                      </PaperTableRow>
                     ))
                   )}
-                </tbody>
-              </table>
+                </PaperTableBody>
+              </PaperTable>
             </div>
 
             {/* 分页控件 */}
             {total > 0 && (
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-ink-600">
-                  共 {total} 条记录，第 {page} / {totalPages} 页
-                </div>
-                <div className="flex space-x-2">
-                  <PaperButton
-                    variant="outline"
-                    disabled={page === 1}
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                  >
-                    上一页
-                  </PaperButton>
-                  <PaperButton
-                    variant="outline"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(Math.min(totalPages, page + 1))}
-                  >
-                    下一页
-                  </PaperButton>
-                </div>
+              <div className="mt-4">
+                <PaperTablePagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                  totalItems={total}
+                  itemsPerPage={pageSize}
+                />
               </div>
             )}
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
 
@@ -12,7 +11,6 @@ export default function SystemPermissionsPage() {
     { name: 'USER', perms: ['products:read'] },
   ];
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-ink-800">权限管理</h1>
         <PaperCard>
@@ -37,7 +35,6 @@ export default function SystemPermissionsPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }
 

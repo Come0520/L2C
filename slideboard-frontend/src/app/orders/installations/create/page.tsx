@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperInput } from '@/components/ui/paper-input'
@@ -102,7 +101,6 @@ export default function CreateInstallationPage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -191,6 +189,5 @@ export default function CreateInstallationPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

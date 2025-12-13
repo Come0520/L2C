@@ -11,36 +11,40 @@ import { PaperInput } from '@/components/ui/paper-input';
 import { useAuth } from '@/contexts/auth-context';
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { login } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (!phone || !password) {
-      setError('请填写手机号和密码');
+
+    if (!identifier || !password) {
+      setError('请填写手机号/邮箱和密码');
       return;
     }
 
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError('请输入正确的手机号');
+    // 验证是否为有效的邮箱或手机号
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isPhone = /^1[3-9]\d{9}$/.test(identifier);
+
+    if (!isEmail && !isPhone) {
+      setError('请输入正确的手机号或邮箱');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      await login(phone, password);
+      await login(identifier, password);
       router.push('/dashboard');
     } catch (error) {
-      setError('登录失败，请检查手机号和密码');
+      setError('登录失败，请检查手机号/邮箱和密码');
       console.error('登录错误:', error);
     } finally {
       setIsLoading(false);
@@ -76,14 +80,13 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Phone Input */}
               <PaperInput
-                id="phone"
-                type="tel"
-                label="手机号"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="请输入手机号"
+                id="identifier"
+                type="text"
+                label="手机号 / 邮箱"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="请输入手机号或邮箱"
                 required
-                maxLength={11}
                 icon={<Phone className="h-5 w-5 text-ink-400" />}
               />
 

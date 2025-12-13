@@ -1,8 +1,6 @@
 'use client'
 
 import React from 'react'
-
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
@@ -60,7 +58,7 @@ interface StocktakeRecord {
   time: string
 }
 
-export default function InventoryPage() {
+export default function ProductInventoryPage() {
   const [activeTab, setActiveTab] = React.useState<'inbound' | 'outbound' | 'transfer' | 'stocktake' | 'stats'>('inbound')
   const [store, setStore] = React.useState('一店')
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -74,25 +72,25 @@ export default function InventoryPage() {
   ]
 
   const inbound: InboundRecord[] = [
-    { id: 'IN-001', type: 'purchase', store: '一店', orderNo: 'PO-2024-001', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 50, operator: '张三', time: '2024-01-14 10:00' },
-    { id: 'IN-002', type: 'transfer_in', store: '一店', orderNo: 'TR-2024-008', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 30, operator: '张三', time: '2024-01-14 12:10' },
-    { id: 'IN-003', type: 'return_in', store: '一店', orderNo: 'RT-2024-003', sku: 'TL-003', productName: '立邦内墙涂料 18L', qty: 6, operator: '张三', time: '2024-01-15 09:15' },
+    { id: 'IN-001', type: 'purchase', store: '一店', orderNo: 'PO-2024-001', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 50, operator: 'Demo Operator', time: '2024-01-14 10:00' },
+    { id: 'IN-002', type: 'transfer_in', store: '一店', orderNo: 'TR-2024-008', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 30, operator: 'Demo Operator', time: '2024-01-14 12:10' },
+    { id: 'IN-003', type: 'return_in', store: '一店', orderNo: 'RT-2024-003', sku: 'TL-003', productName: '立邦内墙涂料 18L', qty: 6, operator: 'Demo Operator', time: '2024-01-15 09:15' },
   ]
 
   const outbound: OutboundRecord[] = [
-    { id: 'OUT-001', type: 'sales', store: '一店', relatedNo: 'ORD-2024-001', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 10, operator: '李四', time: '2024-01-15 14:10' },
-    { id: 'OUT-002', type: 'transfer_out', store: '一店', relatedNo: 'TR-2024-008', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 10, operator: '李四', time: '2024-01-14 12:00' },
-    { id: 'OUT-003', type: 'loss_out', store: '一店', relatedNo: 'LS-2024-001', sku: 'TL-003', productName: '立邦内墙涂料 18L', qty: 1, operator: '李四', time: '2024-01-12 09:00' },
+    { id: 'OUT-001', type: 'sales', store: '一店', relatedNo: 'ORD-2024-001', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 10, operator: 'Test Operator', time: '2024-01-15 14:10' },
+    { id: 'OUT-002', type: 'transfer_out', store: '一店', relatedNo: 'TR-2024-008', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 10, operator: 'Test Operator', time: '2024-01-14 12:00' },
+    { id: 'OUT-003', type: 'loss_out', store: '一店', relatedNo: 'LS-2024-001', sku: 'TL-003', productName: '立邦内墙涂料 18L', qty: 1, operator: 'Test Operator', time: '2024-01-12 09:00' },
   ]
 
   const transfers: TransferRecord[] = [
-    { id: 'TR-2024-008', fromStore: '二店', toStore: '一店', status: 'completed', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 30, operator: '库存管理员-王五', time: '2024-01-14 12:10' },
-    { id: 'TR-2024-009', fromStore: '一店', toStore: '线上店', status: 'approved', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 20, operator: '库存管理员-王五', time: '2024-01-15 11:00' },
+    { id: 'TR-2024-008', fromStore: '二店', toStore: '一店', status: 'completed', sku: 'DB-002', productName: '圣象复合地板 12mm', qty: 30, operator: 'Inventory Manager', time: '2024-01-14 12:10' },
+    { id: 'TR-2024-009', fromStore: '一店', toStore: '线上店', status: 'approved', sku: 'TL-001', productName: '马可波罗瓷砖 800x800', qty: 20, operator: 'Inventory Manager', time: '2024-01-15 11:00' },
   ]
 
   const stocktakes: StocktakeRecord[] = [
-    { id: 'ST-PLAN-01', store: '一店', planName: '一店月度盘点', status: 'executing', diffQty: -2, operator: '张三', time: '2024-01-15 10:30' },
-    { id: 'ST-PLAN-02', store: '二店', planName: '二店季度盘点', status: 'planning', diffQty: 0, operator: '李四', time: '2024-01-12 16:00' },
+    { id: 'ST-PLAN-01', store: '一店', planName: '一店月度盘点', status: 'executing', diffQty: -2, operator: 'Demo Operator', time: '2024-01-15 10:30' },
+    { id: 'ST-PLAN-02', store: '二店', planName: '二店季度盘点', status: 'planning', diffQty: 0, operator: 'Test Operator', time: '2024-01-12 16:00' },
   ]
 
   const filteredInbound = inbound.filter(r => r.store === store && (r.productName.includes(searchTerm) || r.sku.includes(searchTerm)))
@@ -115,7 +113,6 @@ export default function InventoryPage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -343,6 +340,5 @@ export default function InventoryPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

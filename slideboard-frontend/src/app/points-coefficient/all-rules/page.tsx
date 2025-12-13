@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { coefficientService } from '@/services/coefficient.client';
 import { CoefficientRule } from '@/types/points';
@@ -60,7 +59,6 @@ export default function AllRulesPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-paper-ink">全部规则</h1>
 
@@ -179,6 +177,5 @@ export default function AllRulesPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }

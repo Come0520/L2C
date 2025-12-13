@@ -1,3 +1,5 @@
+'use client';
+
 import { Search } from 'lucide-react'
 import React from 'react'
 
@@ -5,8 +7,9 @@ import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperInput } from '@/components/ui/paper-input'
 import { PaperSelect } from '@/components/ui/paper-select'
+import { CATEGORY_LEVEL1_OPTIONS, CATEGORY_LEVEL2_MAPPING, PRODUCT_STATUS_OPTIONS } from '@/constants/products'
 import ProductList from '@/features/products/components/archives/product-list'
-import { Product } from '@/services/products.client'
+import { Product } from '@/shared/types/product'
 
 interface ProductArchivesTabProps {
   products: Product[]
@@ -39,17 +42,8 @@ export const ProductArchivesTab: React.FC<ProductArchivesTabProps> = ({
   onPageChange,
   onViewProduct
 }) => {
-  // 一级分类选项
-  const categoryLevel1Options = [
-    { value: 'all', label: '全部分类' },
-    { value: '窗帘', label: '窗帘' },
-    { value: '墙布', label: '墙布' },
-    { value: '墙咔', label: '墙咔' },
-    { value: '飘窗垫', label: '飘窗垫' },
-    { value: '标品', label: '标品' },
-    { value: '礼品', label: '礼品' },
-    { value: '销售道具', label: '销售道具' }
-  ]
+  // 一级分类选项使用常量
+  const categoryLevel1Options = CATEGORY_LEVEL1_OPTIONS
 
   // 二级分类选项（根据一级分类动态生成）
   const getCategoryLevel2Options = () => {
@@ -57,81 +51,24 @@ export const ProductArchivesTab: React.FC<ProductArchivesTabProps> = ({
       { value: 'all', label: '全部子分类' }
     ]
 
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '窗帘') {
-      allOptions.push(
-        { value: '布', label: '布' },
-        { value: '纱', label: '纱' },
-        { value: '轨道', label: '轨道' },
-        { value: '电机', label: '电机' },
-        { value: '功能帘', label: '功能帘' },
-        { value: '绑带', label: '绑带' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '墙布') {
-      allOptions.push(
-        { value: '艺术漆', label: '艺术漆' },
-        { value: '提花', label: '提花' },
-        { value: '印花', label: '印花' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '墙咔') {
-      allOptions.push(
-        { value: '大板', label: '大板' },
-        { value: '小板', label: '小板' },
-        { value: '灯带', label: '灯带' },
-        { value: '金属条', label: '金属条' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '飘窗垫') {
-      allOptions.push(
-        { value: '有底板', label: '有底板' },
-        { value: '没底板', label: '没底板' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '标品') {
-      allOptions.push(
-        { value: '毛浴巾', label: '毛浴巾' },
-        { value: '四件套', label: '四件套' },
-        { value: '被芯', label: '被芯' },
-        { value: '枕芯', label: '枕芯' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '礼品') {
-      allOptions.push(
-        { value: '办公用品', label: '办公用品' },
-        { value: '家居用品', label: '家居用品' },
-        { value: '定制礼品', label: '定制礼品' },
-        { value: '促销礼品', label: '促销礼品' }
-      )
-    }
-
-    if (categoryLevel1Filter === 'all' || categoryLevel1Filter === '销售道具') {
-      allOptions.push(
-        { value: '展示器材', label: '展示器材' },
-        { value: '宣传物料', label: '宣传物料' },
-        { value: '样品', label: '样品' },
-        { value: '工具包', label: '工具包' }
-      )
+    // 如果选择了全部分类，添加所有二级分类
+    if (categoryLevel1Filter === 'all') {
+      Object.values(CATEGORY_LEVEL2_MAPPING).forEach(options => {
+        allOptions.push(...options)
+      })
+    } else {
+      // 否则只添加对应一级分类的二级分类
+      const categoryOptions = CATEGORY_LEVEL2_MAPPING[categoryLevel1Filter as keyof typeof CATEGORY_LEVEL2_MAPPING]
+      if (categoryOptions) {
+        allOptions.push(...categoryOptions)
+      }
     }
 
     return allOptions
   }
 
-  // 状态选项
-  const statusOptions = [
-    { value: 'all', label: '全部状态' },
-    { value: 'draft', label: '草稿' },
-    { value: 'pending', label: '待审核' },
-    { value: 'approved', label: '已通过' },
-    { value: 'rejected', label: '已驳回' },
-    { value: 'online', label: '已上架' },
-    { value: 'offline', label: '已下架' }
-  ]
+  // 状态选项使用常量
+  const statusOptions = PRODUCT_STATUS_OPTIONS
 
   // 筛选商品
   const filteredProducts = products.filter(product => {

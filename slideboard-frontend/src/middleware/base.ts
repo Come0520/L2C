@@ -48,6 +48,10 @@ export class MiddlewareChain {
           const result = await middleware.execute(request, currentResponse, next);
           if (result instanceof NextResponse) {
             currentResponse = result;
+            // 如果是重定向响应，立即停止后续中间件的执行
+            if (result.status >= 300 && result.status < 400) {
+              return;
+            }
           }
         }
       }

@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
+import { vi } from 'vitest'
 
 import NotificationList from '@/app/notifications/components/notification-list'
 
 // Mock dependencies
-jest.mock('@/components/ui/virtual-list', () => {
+vi.mock('@/components/ui/virtual-list', () => {
     return {
         VirtualList: ({ items, renderItem }: any) => (
             <div data-testid="virtual-list">
@@ -32,11 +33,11 @@ describe('NotificationList', () => {
         },
     ] as any[]
 
-    const mockOnNotificationClick = jest.fn()
-    const mockOnMarkAsRead = jest.fn()
+    const mockOnNotificationClick = vi.fn()
+    const mockOnMarkAsRead = vi.fn()
 
     beforeEach(() => {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
     })
 
     it('renders notification list correctly', () => {

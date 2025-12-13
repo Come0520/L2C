@@ -1,21 +1,21 @@
 import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_TRANSITIONS, MeasurementStatus } from '@/constants/measurement-status';
 import { supabase } from '@/lib/supabase/client';
-import { Measurement, CreateMeasurementRequest, UpdateMeasurementRequest } from '@/types/measurement';
-import { Database } from '@/types/supabase';
+import { Measurement, CreateMeasurementRequest, UpdateMeasurementRequest, MeasurementData } from '@/shared/types/measurement';
+import { Database } from '@/shared/types/supabase';
 
 type MeasurementOrderRow = Database['public']['Tables']['measurement_orders']['Row'];
 
 interface MeasurementOrderWithRelations extends MeasurementOrderRow {
-  sales_order?: {
-    id: string;
-    sales_order_no?: string;
-    customer?: { name: string; project_address: string } | null;
-  } | null;
-  quote_version?: {
-    id: string;
-    quote?: { id?: string; quote_no: string } | null;
-  } | null;
-  measurer?: { name: string } | null;
+    sales_order?: {
+        id: string;
+        sales_no?: string;
+        customer?: { name: string; project_address: string } | null;
+    } | null;
+    quote_version?: {
+        id: string;
+        quote?: { id?: string; quote_no: string } | null;
+    } | null;
+    measurer?: { name: string } | null;
 }
 
 
@@ -48,11 +48,11 @@ export const measurementService = {
             .from('measurement_orders')
             .insert({
                 quote_version_id: data.quoteVersionId,
-                sales_order_id: salesOrder?.id,
+                sales_order_id: (salesOrder as any)?.id,
                 scheduled_at: data.scheduledAt,
                 measurer_id: data.surveyorId,
                 status: MEASUREMENT_STATUS.PENDING_MEASUREMENT
-            })
+            } as any)
             .select(`
         *,
         sales_order:sales_orders(
@@ -77,7 +77,7 @@ export const measurementService = {
      * Update measurement order
      */
     async updateMeasurement(id: string, data: UpdateMeasurementRequest) {
-        const updateData: Database['public']['Tables']['measurement_orders']['Update'] = {};
+        const updateData: Partial<MeasurementOrderRow> = {};
         
         // Check status transition if status is being updated
         if (data.status) {
@@ -91,7 +91,8 @@ export const measurementService = {
             if (getError) throw new Error(getError.message);
             
             // Check if status transition is allowed
-            const currentStatus = currentMeasurement.status as MeasurementStatus;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const currentStatus = (currentMeasurement as any)?.status as MeasurementStatus;
             const allowedTransitions = MEASUREMENT_STATUS_TRANSITIONS[currentStatus] || [];
             
             if (!allowedTransitions.includes(data.status as MeasurementStatus)) {
@@ -104,11 +105,14 @@ export const measurementService = {
         if (data.surveyorId) updateData.measurer_id = data.surveyorId;
         if (data.scheduledAt) updateData.scheduled_at = data.scheduledAt;
         if (data.completedAt) updateData.completed_at = data.completedAt;
-        if (data.measurementData) updateData.measurement_data = data.measurementData;
+        if (data.measurementData) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            updateData.measurement_data = data.measurementData as any;
+        }
 
         const { data: measurement, error } = await supabase
             .from('measurement_orders')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', id)
             .select(`
         *,
@@ -153,7 +157,7 @@ export const measurementService = {
         
         const { data, error } = await supabase
             .from('measurement_orders')
-            .update({ status })
+            .update({ status } as any)
             .eq('id', id)
             .select(`
         *,
@@ -181,7 +185,7 @@ export const measurementService = {
     async uploadMeasurementReport(id: string, reportData: { reportUrl: string }) {
         const { data, error } = await supabase
             .from('measurement_orders')
-            .update({ measurement_report_url: reportData.reportUrl })
+            .update({ measurement_report_url: reportData.reportUrl } as any)
             .eq('id', id)
             .select(`
         *,
@@ -300,12 +304,12 @@ export const measurementService = {
             quoteNo: dbRecord.quote_version?.quote?.quote_no || '',
             customerName: dbRecord.sales_order?.customer?.name || '',
             projectAddress: dbRecord.sales_order?.customer?.project_address || '',
-            surveyorId: dbRecord.measurer_id,
+            surveyorId: dbRecord.measurer_id || undefined,
             surveyorName: dbRecord.measurer?.name,
-            status: dbRecord.status as any,
-            scheduledAt: dbRecord.scheduled_at,
-            completedAt: dbRecord.completed_at,
-            measurementData: dbRecord.measurement_data as any,
+            status: dbRecord.status as MeasurementStatus,
+            scheduledAt: dbRecord.scheduled_at || undefined,
+            completedAt: dbRecord.completed_at || undefined,
+            measurementData: (dbRecord.measurement_data as MeasurementData) || undefined,
             homeScreenshotUrl: dbRecord.measurement_photos?.[0], // Assuming first photo is screenshot for now, or we need a specific field
             createdBy: dbRecord.created_by,
             createdAt: dbRecord.created_at,
@@ -335,24 +339,24 @@ export const measurementService = {
         if (!measurements || measurements.length === 0) return;
         
         // 2. 为每个测量单创建提醒通知
-        for (const measurement of measurements) {
+        for (const m of measurements || []) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const measurement = m as any;
             // 这里可以根据实际需求发送不同类型的通知
             // 例如：发送短信、邮件、应用内通知等
             
             // 示例：创建应用内通知
-            await supabase
-                .from('notifications')
-                .insert({
-                    user_id: measurement.measurer_id,
-                    type: 'system',
-                    title: '测量提醒',
-                    content: `您有一个测量单需要处理：${measurement.quote_version?.quote?.quote_no}，预约时间：${measurement.scheduled_at}`,
-                    metadata: {
-                        measurement_id: measurement.id,
-                        quote_no: measurement.quote_version?.quote?.quote_no,
-                        scheduled_at: measurement.scheduled_at
-                    }
-                });
+            await supabase.from('notifications').insert({
+                user_id: measurement.measurer_id,
+                type: 'measurement_assigned',
+                title: '新测量单指派',
+                content: `您有一个新的测量单待处理，测量单号：${measurement.id.substring(0, 8)}`,
+                metadata: {
+                    measurement_id: measurement.id,
+                    quote_no: measurement.quote_version?.quote?.quote_no,
+                    scheduled_at: measurement.scheduled_at
+                }
+            } as any);
         }
     }
 };

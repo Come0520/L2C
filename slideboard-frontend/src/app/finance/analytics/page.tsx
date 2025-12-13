@@ -3,12 +3,10 @@
 import { BarChart3 } from 'lucide-react';
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 
 export default function FinanceAnalyticsPage() {
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-ink-800">数据分析</h1>
@@ -38,7 +36,6 @@ export default function FinanceAnalyticsPage() {
           </PaperCard>
         </div>
       </div>
-    </DashboardLayout>
   );
 }
 

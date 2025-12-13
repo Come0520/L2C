@@ -1,12 +1,10 @@
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const OrdersLoading = () => {
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* 页面标题和操作栏 */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
@@ -117,7 +115,6 @@ const OrdersLoading = () => {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 };
 

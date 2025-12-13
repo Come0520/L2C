@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
@@ -78,7 +77,6 @@ export default function CreateRulePage() {
   const finalCoefficient = formData.base_coefficient * formData.time_coefficient;
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 max-w-4xl mx-auto">
         {/* 页面标题 */}
         <div className="flex items-center gap-4">
@@ -289,6 +287,5 @@ export default function CreateRulePage() {
           </PaperButton>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

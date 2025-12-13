@@ -6,15 +6,15 @@
 /**
  * 将字符串转换为蛇形命名 (snake_case)
  */
-export function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+export function toSnakeCase(input: string): string {
+  return input.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
 /**
  * 将字符串转换为驼峰命名 (camelCase)
  */
-export function toCamelCase(str: string): string {
-  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+export function toCamelCase(input: string): string {
+  return input.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
 /**

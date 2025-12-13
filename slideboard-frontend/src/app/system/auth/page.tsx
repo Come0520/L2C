@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperBadge } from '@/components/ui/paper-badge';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { installationTeamService } from '@/services/installation-team.client'
@@ -25,7 +24,6 @@ export default function SystemAuthPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-ink-800">用户认证</h1>
         <PaperCard>
@@ -52,6 +50,5 @@ export default function SystemAuthPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }

@@ -34,7 +34,7 @@ describe('shareService', () => {
       expect(global.fetch).toHaveBeenCalledWith('/api/sharing/tokens', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ resourceType: 'quote', resourceId: 'quote1', expiresInDays: 7 })
+        body: JSON.stringify({ resourceType: 'quote', resourceId: 'quote1', expiresInDays: 7, scope: 'view' })
       })
       
       expect(result).toEqual({
@@ -44,7 +44,9 @@ describe('shareService', () => {
         token: 'abc123',
         expiresAt: null,
         isActive: true,
-        createdAt: '2023-01-01T00:00:00Z'
+        createdAt: '2023-01-01T00:00:00Z',
+        scope: 'view',
+        clicks: 0,
       })
     })
 
@@ -72,7 +74,7 @@ describe('shareService', () => {
       expect(global.fetch).toHaveBeenCalledWith('/api/sharing/tokens', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ resourceType: 'order', resourceId: 'order1', expiresInDays: 7 })
+        body: JSON.stringify({ resourceType: 'order', resourceId: 'order1', expiresInDays: 7, scope: 'view' })
       })
       
       expect(result).toEqual({
@@ -82,7 +84,9 @@ describe('shareService', () => {
         token: 'def456',
         expiresAt: '2023-01-08T00:00:00Z',
         isActive: true,
-        createdAt: '2023-01-01T00:00:00Z'
+        createdAt: '2023-01-01T00:00:00Z',
+        scope: 'view',
+        clicks: 0,
       })
     })
 
@@ -130,7 +134,9 @@ describe('shareService', () => {
         token: 'ghi789',
         expiresAt: null,
         isActive: true,
-        createdAt: '2023-01-01T00:00:00Z'
+        createdAt: '2023-01-01T00:00:00Z',
+        scope: 'view',
+        clicks: 0,
       })
     })
 

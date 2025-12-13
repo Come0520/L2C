@@ -42,23 +42,28 @@ if (!_clientEnv.success) {
 // Server-side environment variables
 // Note: We manually map these to ensure we don't accidentally leak process.env to client
 // if this file is imported there. However, checking `typeof window` is a safeguard.
-const _serverEnv = typeof window === 'undefined' ? serverSchema.safeParse({
-  FEISHU_APP_ID: process.env.FEISHU_APP_ID,
-  FEISHU_APP_SECRET: process.env.FEISHU_APP_SECRET,
-  FEISHU_WEBHOOK_URL: process.env.FEISHU_WEBHOOK_URL,
-  WECHAT_APP_ID: process.env.WECHAT_APP_ID,
-  WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET,
-  WECHAT_WEBHOOK_URL: process.env.WECHAT_WEBHOOK_URL,
-  FEISHU_BUSINESS_DATA_APP_TOKEN: process.env.FEISHU_BUSINESS_DATA_APP_TOKEN,
-  FEISHU_BUSINESS_DATA_TABLE_ID: process.env.FEISHU_BUSINESS_DATA_TABLE_ID,
-  FEISHU_ACCESS_TOKEN: process.env.FEISHU_ACCESS_TOKEN,
-  SENTRY_DSN: process.env.SENTRY_DSN,
-  CDN_URL: process.env.CDN_URL,
-}) : { success: true, data: {} } as const;
-
-if (!_serverEnv.success) {
-  console.error('❌ Invalid server environment variables:', _serverEnv.error.format())
-  // We might not want to throw here if some server vars are optional
+let _serverEnv;
+if (typeof window === 'undefined') {
+  _serverEnv = serverSchema.safeParse({
+    FEISHU_APP_ID: process.env.FEISHU_APP_ID,
+    FEISHU_APP_SECRET: process.env.FEISHU_APP_SECRET,
+    FEISHU_WEBHOOK_URL: process.env.FEISHU_WEBHOOK_URL,
+    WECHAT_APP_ID: process.env.WECHAT_APP_ID,
+    WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET,
+    WECHAT_WEBHOOK_URL: process.env.WECHAT_WEBHOOK_URL,
+    FEISHU_BUSINESS_DATA_APP_TOKEN: process.env.FEISHU_BUSINESS_DATA_APP_TOKEN,
+    FEISHU_BUSINESS_DATA_TABLE_ID: process.env.FEISHU_BUSINESS_DATA_TABLE_ID,
+    FEISHU_ACCESS_TOKEN: process.env.FEISHU_ACCESS_TOKEN,
+    SENTRY_DSN: process.env.SENTRY_DSN,
+    CDN_URL: process.env.CDN_URL,
+  });
+  
+  if (!_serverEnv.success) {
+    console.error('❌ Invalid server environment variables:', _serverEnv.error.format())
+    // We might not want to throw here if some server vars are optional
+  }
+} else {
+  _serverEnv = { success: true, data: {} };
 }
 
 export const env = {

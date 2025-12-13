@@ -9,6 +9,8 @@ import { PaperTable, PaperTableHeader, PaperTableRow, PaperTableCell } from '@/c
 import { VirtualizedTableBody } from '@/components/ui/virtualized-table-body';
 
 import { StockRecord } from '../useToolsPageState';
+import { ExportMenu } from '@/components/ui/export-menu';
+import { useExport } from '@/hooks/useExport';
 
 interface InboundTableProps {
   records: StockRecord[];
@@ -16,6 +18,19 @@ interface InboundTableProps {
 }
 
 export const InboundTable = ({ records, getRecordTypeBadge }: InboundTableProps) => {
+  // 导出功能
+  const { handleExport } = useExport<StockRecord>({
+    filename: '入库记录列表',
+    columns: [
+      { header: '类型', dataKey: 'type' },
+      { header: '关联单号', dataKey: 'relatedNo' },
+      { header: '商品', dataKey: 'productName' },
+      { header: '数量', dataKey: 'qty' },
+      { header: '操作人', dataKey: 'operator' },
+      { header: '时间', dataKey: 'time' },
+    ]
+  })
+
   const renderRow = (record: StockRecord) => {
     const badgeProps = getRecordTypeBadge(record.recordType, record.type);
     return (
@@ -43,7 +58,7 @@ export const InboundTable = ({ records, getRecordTypeBadge }: InboundTableProps)
           <PaperCardTitle>入库记录</PaperCardTitle>
           <div className="flex space-x-2">
             <PaperButton variant="outline" size="sm">导入</PaperButton>
-            <PaperButton variant="outline" size="sm">导出</PaperButton>
+            <ExportMenu onExport={(format) => handleExport(records, format)} />
             <PaperButton variant="primary" size="sm">
               <Plus className="h-3 w-3 mr-1" />
               新增入库

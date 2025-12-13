@@ -9,31 +9,7 @@ import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperSelect } from '@/components/ui/paper-input';
 import { PaperTablePagination } from '@/components/ui/paper-table';
-
-// 商品类型定义
-interface Product {
-  id: string;
-  productCode: string;
-  productName: string;
-  categoryLevel1: string;
-  categoryLevel2: string;
-  unit: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'online' | 'offline';
-  prices: {
-    costPrice: number;
-    internalCostPrice: number;
-    internalSettlementPrice: number;
-    settlementPrice: number;
-    retailPrice: number;
-  };
-  images: {
-    detailImages: string[];
-    effectImages: string[];
-    caseImages: string[];
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import { Product } from '@/shared/types/product';
 
 interface ProductListProps {
   products: Product[];

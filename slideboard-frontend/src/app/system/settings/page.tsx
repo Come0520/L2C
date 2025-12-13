@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
@@ -11,7 +10,6 @@ export default function SystemSettingsPage() {
   const [timezone, setTimezone] = React.useState('Asia/Shanghai');
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-ink-800">系统配置</h1>
         <PaperCard>
@@ -25,7 +23,6 @@ export default function SystemSettingsPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }
 

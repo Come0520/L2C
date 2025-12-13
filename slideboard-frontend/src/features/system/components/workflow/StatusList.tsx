@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useWorkflow, WorkflowDefinition } from '@/hooks/useWorkflow';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useState } from 'react';
+
+import { useWorkflow, WorkflowDefinition } from '@/hooks/useWorkflow';
 
 export function StatusList() {
     const { config, loading, error } = useWorkflow();

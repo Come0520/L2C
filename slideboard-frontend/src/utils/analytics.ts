@@ -1,6 +1,6 @@
-import * as Sentry from '@sentry/nextjs';
+// import * as Sentry from '@sentry/nextjs';
 
-import { env } from '@/config/env';
+import { env } from '../config/env';
 
 // Types for analytics
 interface AnalyticsEvent {
@@ -60,12 +60,12 @@ export const TRACK_EVENT = (category: string, action: string, label?: string, pr
 
   if (CONFIG.enabled) {
     // Add breadcrumb to Sentry
-    Sentry.addBreadcrumb({
-      category,
-      message: `${action} - ${label || ''}`,
-      data: properties,
-      level: 'info',
-    });
+    // Sentry.addBreadcrumb({
+    //   category,
+    //   message: `${action} - ${label || ''}`,
+    //   data: properties,
+    //   level: 'info',
+    // });
 
     eventQueue.push(event);
     flushEventsIfNeeded();
@@ -91,12 +91,12 @@ export const TRACK_PAGE_VIEW = (pageName: string, properties?: Record<string, un
 
   if (CONFIG.enabled) {
     // Add breadcrumb to Sentry
-    Sentry.addBreadcrumb({
-      category: 'navigation',
-      message: `Page View: ${pageName}`,
-      data: properties,
-      level: 'info',
-    });
+    // Sentry.addBreadcrumb({
+    //   category: 'navigation',
+    //   message: `Page View: ${pageName}`,
+    //   data: properties,
+    //   level: 'info',
+    // });
 
     pageViewQueue.push(pageView);
     flushEventsIfNeeded();
@@ -115,7 +115,7 @@ export const IDENTIFY_USER = (userId: string, traits?: Record<string, unknown>):
   }
 
   if (CONFIG.enabled) {
-    Sentry.setUser({ id: userId, ...traits });
+    // Sentry.setUser({ id: userId, ...traits });
   }
 };
 
@@ -129,7 +129,7 @@ export const RESET_USER = (): void => {
   }
 
   if (CONFIG.enabled) {
-    Sentry.setUser(null);
+    // Sentry.setUser(null);
   }
 };
 
@@ -191,7 +191,7 @@ export const TRACK_ERROR = (error: Error, context?: Record<string, unknown>): vo
   }
 
   if (CONFIG.enabled) {
-    Sentry.captureException(error, { extra: context });
+    // Sentry.captureException(error, { extra: context });
   }
 };
 
@@ -273,6 +273,53 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', FLUSH);
 }
 
+/**
+ * Track Web Vitals metrics
+ * @param metric Web Vitals metric object
+ */
+export const TRACK_WEB_VITALS = (metric: {
+  id: string;
+  name: string;
+  delta: number;
+  value: number;
+  rating: 'good' | 'needs-improvement' | 'poor';
+  entries: unknown[];
+  navigationType: string;
+}): void => {
+  if (CONFIG.debug) {
+    /* eslint-disable-next-line no-console */
+    console.log('Web Vitals:', metric);
+  }
+
+  if (CONFIG.enabled) {
+    // Track as an event
+    TRACK_EVENT(
+      'web-vitals',
+      metric.name,
+      metric.rating,
+      {
+        value: metric.value,
+        delta: metric.delta,
+        navigationType: metric.navigationType,
+        entries: metric.entries,
+      }
+    );
+
+    // Add breadcrumb to Sentry
+    // Sentry.addBreadcrumb({
+    //   category: 'web-vitals',
+    //   message: `${metric.name} - ${metric.rating}`,
+    //   data: {
+    //     value: metric.value,
+    //     delta: metric.delta,
+    //     rating: metric.rating,
+    //     navigationType: metric.navigationType,
+    //   },
+    //   level: metric.rating === 'poor' ? 'warning' : 'info',
+    // });
+  }
+};
+
 // Export all functions
 export default {
   TRACK_EVENT,
@@ -282,5 +329,6 @@ export default {
   START_TIMER,
   STOP_TIMER,
   TRACK_ERROR,
+  TRACK_WEB_VITALS,
   FLUSH,
 };

@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/client'
+
 export interface SystemConfig {
   id: string;
   key: string;
@@ -9,76 +11,52 @@ export interface SystemConfig {
 }
 
 class ConfigService {
-    
+  private supabase = createClient();
 
-    /**
-     * Get all system configs
-     */
-    async getSystemConfigs(): Promise<SystemConfig[]> {
-        const supabase = createClient()
-        const { data, error } = await supabase
-            .from('system_configs')
-            .select('*')
-            .order('category', { ascending: true })
-        if (error) throw new Error(error.message)
-        return (data || []) as SystemConfig[]
+  async getSystemConfigs(): Promise<SystemConfig[]> {
+    const { data, error } = await this.supabase
+      .from('system_configs')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('key', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching system configs:', error);
+      throw error;
     }
 
-    /**
-     * Update a system config
-     */
-    async updateSystemConfig(id: string, value: string): Promise<SystemConfig> {
-        const supabase = createClient()
-        const { data, error } = await supabase
-            .from('system_configs')
-            .update({ value, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .select()
-            .single()
-        if (error) throw new Error(error.message)
-        return data as SystemConfig
-    }
+    return (data || []) as SystemConfig[];
+  }
 
-    /**
-     * Create a new system config
-     */
-    async createSystemConfig(
-        key: string,
-        value: string,
-        category: string,
-        description?: string
-    ): Promise<SystemConfig> {
-        const supabase = createClient()
-        const { data, error } = await supabase
-            .from('system_configs')
-            .insert({
-                key,
-                value,
-                description,
-                category,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single()
-        if (error) throw new Error(error.message)
-        return data as SystemConfig
-    }
+  async updateSystemConfig(id: string, updates: Partial<SystemConfig>): Promise<void> {
+    const { error } = await this.supabase
+      .from('system_configs')
+      // @ts-ignore
+      .update(updates)
+      .eq('id', id);
 
-    /**
-     * Get a single config by key
-     */
-    async getConfigByKey(key: string): Promise<string | undefined> {
-        const supabase = createClient()
-        const { data, error } = await supabase
-            .from('system_configs')
-            .select('value')
-            .eq('key', key)
-            .maybeSingle()
-        if (error) throw new Error(error.message)
-        return (data as any)?.value
+    if (error) {
+      console.error('Error updating system config:', error);
+      throw error;
     }
+  }
+
+  async createSystemConfig(key: string, value: string, category: string, description?: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('system_configs')
+      // @ts-ignore
+      .insert({
+        key,
+        value,
+        category,
+        description
+      });
+
+    if (error) {
+      console.error('Error creating system config:', error);
+      throw error;
+    }
+  }
 }
 
 export const configService = new ConfigService();
-import { createClient } from '@/lib/supabase/client'

@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import PaperCard from '@/components/ui/paper-card';
 import { toast } from '@/components/ui/toast';
@@ -118,7 +117,7 @@ export default function AccountPage() {
 
   const handleLogout = () => {
     // 这里应该调用API来登出
-    window.location.href = '/auth/login';
+    window.location.href = '/login';
   };
 
   const renderProfileTab = () => (
@@ -176,7 +175,7 @@ export default function AccountPage() {
                     <input
                       type="text"
                       value={editedProfile.name}
-                      onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
                       className="paper-input w-full"
                     />
                   ) : (
@@ -189,7 +188,7 @@ export default function AccountPage() {
                     <input
                       type="email"
                       value={editedProfile.email}
-                      onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
                       className="paper-input w-full"
                     />
                   ) : (
@@ -202,7 +201,7 @@ export default function AccountPage() {
                     <input
                       type="tel"
                       value={editedProfile.phone}
-                      onChange={(e) => setEditedProfile({...editedProfile, phone: e.target.value})}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
                       className="paper-input w-full"
                     />
                   ) : (
@@ -219,7 +218,7 @@ export default function AccountPage() {
                     <input
                       type="text"
                       value={editedProfile.position}
-                      onChange={(e) => setEditedProfile({...editedProfile, position: e.target.value})}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, position: e.target.value })}
                       className="paper-input w-full"
                     />
                   ) : (
@@ -236,7 +235,7 @@ export default function AccountPage() {
                 {isEditing ? (
                   <textarea
                     value={editedProfile.bio}
-                    onChange={(e) => setEditedProfile({...editedProfile, bio: e.target.value})}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, bio: e.target.value })}
                     rows={3}
                     className="paper-input w-full"
                   />
@@ -258,9 +257,8 @@ export default function AccountPage() {
             <div>
               <label className="block text-sm font-medium text-paper-ink-secondary mb-1">账户状态</label>
               <div className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${
-                  profile.status === 'active' ? 'bg-paper-success' : 'bg-paper-error'
-                }`}></span>
+                <span className={`w-2 h-2 rounded-full ${profile.status === 'active' ? 'bg-paper-success' : 'bg-paper-error'
+                  }`}></span>
                 <span className="text-paper-ink">
                   {profile.status === 'active' ? '正常' : '已禁用'}
                 </span>
@@ -298,14 +296,12 @@ export default function AccountPage() {
                 <p className="text-sm text-paper-ink-secondary">使用手机验证码增强账户安全性</p>
               </div>
               <button
-                onClick={() => setSecurity({...security, twoFactorEnabled: !security.twoFactorEnabled})}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  security.twoFactorEnabled ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                onClick={() => setSecurity({ ...security, twoFactorEnabled: !security.twoFactorEnabled })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${security.twoFactorEnabled ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  security.twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${security.twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -314,21 +310,19 @@ export default function AccountPage() {
                 <p className="text-sm text-paper-ink-secondary">在新设备登录时发送邮件提醒</p>
               </div>
               <button
-                onClick={() => setSecurity({...security, loginAlerts: !security.loginAlerts})}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  security.loginAlerts ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                onClick={() => setSecurity({ ...security, loginAlerts: !security.loginAlerts })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${security.loginAlerts ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  security.loginAlerts ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${security.loginAlerts ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div>
               <label className="block text-sm font-medium text-paper-ink-secondary mb-2">会话超时时间</label>
-              <select 
+              <select
                 value={security.sessionTimeout}
-                onChange={(e) => setSecurity({...security, sessionTimeout: parseInt(e.target.value)})}
+                onChange={(e) => setSecurity({ ...security, sessionTimeout: parseInt(e.target.value) })}
                 className="paper-input"
               >
                 <option value={15}>15分钟</option>
@@ -408,14 +402,12 @@ export default function AccountPage() {
                 <p className="text-sm text-paper-ink-secondary">接收重要通知邮件</p>
               </div>
               <button
-                onClick={() => setNotifications({...notifications, emailNotifications: !notifications.emailNotifications})}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.emailNotifications ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                onClick={() => setNotifications({ ...notifications, emailNotifications: !notifications.emailNotifications })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.emailNotifications ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.emailNotifications ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -424,14 +416,12 @@ export default function AccountPage() {
                 <p className="text-sm text-paper-ink-secondary">浏览器推送通知</p>
               </div>
               <button
-                onClick={() => setNotifications({...notifications, pushNotifications: !notifications.pushNotifications})}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.pushNotifications ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                onClick={() => setNotifications({ ...notifications, pushNotifications: !notifications.pushNotifications })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.pushNotifications ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.pushNotifications ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.pushNotifications ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -440,14 +430,12 @@ export default function AccountPage() {
                 <p className="text-sm text-paper-ink-secondary">重要事项短信提醒</p>
               </div>
               <button
-                onClick={() => setNotifications({...notifications, smsNotifications: !notifications.smsNotifications})}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.smsNotifications ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                onClick={() => setNotifications({ ...notifications, smsNotifications: !notifications.smsNotifications })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.smsNotifications ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.smsNotifications ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.smsNotifications ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
           </div>
@@ -467,19 +455,17 @@ export default function AccountPage() {
               </div>
               <button
                 onClick={() => setNotifications({
-                  ...notifications, 
+                  ...notifications,
                   notificationTypes: {
                     ...notifications.notificationTypes,
                     orders: !notifications.notificationTypes.orders
                   }
                 })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.notificationTypes.orders ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.notificationTypes.orders ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.notificationTypes.orders ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.notificationTypes.orders ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -489,19 +475,17 @@ export default function AccountPage() {
               </div>
               <button
                 onClick={() => setNotifications({
-                  ...notifications, 
+                  ...notifications,
                   notificationTypes: {
                     ...notifications.notificationTypes,
                     approvals: !notifications.notificationTypes.approvals
                   }
                 })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.notificationTypes.approvals ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.notificationTypes.approvals ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.notificationTypes.approvals ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.notificationTypes.approvals ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -511,19 +495,17 @@ export default function AccountPage() {
               </div>
               <button
                 onClick={() => setNotifications({
-                  ...notifications, 
+                  ...notifications,
                   notificationTypes: {
                     ...notifications.notificationTypes,
                     system: !notifications.notificationTypes.system
                   }
                 })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.notificationTypes.system ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.notificationTypes.system ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.notificationTypes.system ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.notificationTypes.system ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
             <div className="flex items-center justify-between">
@@ -533,19 +515,17 @@ export default function AccountPage() {
               </div>
               <button
                 onClick={() => setNotifications({
-                  ...notifications, 
+                  ...notifications,
                   notificationTypes: {
                     ...notifications.notificationTypes,
                     reports: !notifications.notificationTypes.reports
                   }
                 })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.notificationTypes.reports ? 'bg-paper-primary' : 'bg-paper-border'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifications.notificationTypes.reports ? 'bg-paper-primary' : 'bg-paper-border'
+                  }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  notifications.notificationTypes.reports ? 'translate-x-6' : 'translate-x-1'
-                }`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifications.notificationTypes.reports ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
               </button>
             </div>
           </div>
@@ -618,8 +598,7 @@ export default function AccountPage() {
   );
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-paper-ink mb-2">账户设置</h1>
@@ -637,11 +616,10 @@ export default function AccountPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
                     ? 'border-paper-primary text-paper-primary'
                     : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -671,7 +649,7 @@ export default function AccountPage() {
                     <input
                       type="password"
                       value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                       className="paper-input w-full"
                     />
                   </div>
@@ -680,7 +658,7 @@ export default function AccountPage() {
                     <input
                       type="password"
                       value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                       className="paper-input w-full"
                     />
                   </div>
@@ -689,7 +667,7 @@ export default function AccountPage() {
                     <input
                       type="password"
                       value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                       className="paper-input w-full"
                     />
                   </div>
@@ -725,6 +703,5 @@ export default function AccountPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

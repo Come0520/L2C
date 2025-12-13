@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import React, { useState } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table'
@@ -35,7 +34,6 @@ export default function MeasurementTemplatesPage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto">
         {/* 页面头部 */}
         <div className="flex items-center justify-between mb-6">
@@ -112,6 +110,5 @@ export default function MeasurementTemplatesPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

@@ -79,7 +79,7 @@ export const notificationService = {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .ilike('metadata->installationId', `%${installationId}%`)
+      .eq('metadata->installationId', installationId)
       .order('created_at', { ascending: false })
       .limit(limit);
     

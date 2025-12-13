@@ -1,3 +1,5 @@
+'use client';
+
 import { Box, Plus } from 'lucide-react'
 import React from 'react'
 

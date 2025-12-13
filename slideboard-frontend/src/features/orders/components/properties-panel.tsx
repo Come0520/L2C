@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Palette, Layout, Settings } from 'lucide-react';
+import { useState } from 'react';
 
 interface SlideElement {
   id: string;

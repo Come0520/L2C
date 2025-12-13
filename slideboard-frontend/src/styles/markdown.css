@@ -1,0 +1,67 @@
+/* Import highlight.js theme for code blocks */
+@import 'highlight.js/styles/github-dark.css';
+
+/* Custom markdown styles */
+.markdown-content {
+  @apply text-gray-900;
+}
+
+.markdown-content h1 {
+  @apply text-3xl font-bold mt-8 mb-4 pb-2 border-b border-gray-200;
+}
+
+.markdown-content h2 {
+  @apply text-2xl font-bold mt-6 mb-3;
+}
+
+.markdown-content h3 {
+  @apply text-xl font-semibold mt-4 mb-2;
+}
+
+.markdown-content p {
+  @apply my-4 leading-relaxed;
+}
+
+.markdown-content ul {
+  @apply my-4 ml-6 list-disc;
+}
+
+.markdown-content ol {
+  @apply my-4 ml-6 list-decimal;
+}
+
+.markdown-content li {
+  @apply my-2;
+}
+
+.markdown-content a {
+  @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+.markdown-content code {
+  @apply font-mono text-sm;
+}
+
+.markdown-content pre {
+  @apply my-6 rounded-lg overflow-hidden;
+}
+
+.markdown-content table {
+  @apply w-full my-6 border-collapse;
+}
+
+.markdown-content th {
+  @apply bg-gray-100 px-4 py-2 text-left font-semibold border border-gray-300;
+}
+
+.markdown-content td {
+  @apply px-4 py-2 border border-gray-300;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 italic;
+}
+
+.markdown-content hr {
+  @apply my-8 border-gray-300;
+}

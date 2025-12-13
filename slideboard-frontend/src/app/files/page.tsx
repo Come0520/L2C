@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import PaperCard from '@/components/ui/paper-card';
 import PaperTable from '@/components/ui/paper-table';
@@ -663,7 +662,6 @@ export default function FilesPage() {
   );
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-paper-ink mb-2">文件管理</h1>
@@ -700,6 +698,5 @@ export default function FilesPage() {
           {activeTab === 'trash' && renderTrash()}
         </div>
       </div>
-    </DashboardLayout>
   );
 }

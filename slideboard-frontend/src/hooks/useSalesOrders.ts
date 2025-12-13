@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_CONFIG } from '@/config/query-config'
 import { salesOrderService } from '@/services/salesOrders.client'
 import { OrderFormData, OrderResponse, BaseOrder } from '@/shared/types/order'
+import { fromDbFields } from '@/utils/db-mapping'
 import { throttle } from '@/utils/debounce-throttle'
 
 import { useRealtimeOrder } from './useRealtimeOrders'
@@ -20,14 +21,16 @@ export function useSalesOrders(
     const queryKey = ['salesOrders', page, pageSize, status, customerName]
 
     // Fetch Sales Orders
-    const query = useQuery<any>({
+    const query = useQuery<OrderResponse<BaseOrder>>({
         queryKey,
         queryFn: async () => {
             const response = await salesOrderService.getSalesOrders(page, pageSize, status, customerName)
             if (response.code !== 0 || !response.data) {
                 throw new Error(response.message || 'Failed to fetch orders')
             }
-            return response
+            // Ensure response matches OrderResponse<BaseOrder>
+            // Ideally salesOrderService.getSalesOrders should return typed response
+            return response as unknown as OrderResponse<BaseOrder> 
         },
         staleTime: 1000 * 60 * 5 // 5 minutes
     })
@@ -42,7 +45,7 @@ export function useSalesOrders(
                 return true
             }
             let orders = old.data.orders.slice()
-            const newItem = payload.new as BaseOrder | null
+            const newItem = payload.new ? (fromDbFields(payload.new) as unknown as BaseOrder) : null
             const oldItem = payload.old as { id?: string } | null
             switch (payload.eventType) {
                 case 'INSERT':

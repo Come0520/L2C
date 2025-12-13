@@ -1,24 +1,25 @@
-import { NextResponse } from 'next/server'
-
 import { createClient } from '@/lib/supabase/server'
+import { ApiErrorCode } from '@/types/api'
+import { withApiHandler, ApiError } from '@/utils/api-error-handler'
 
-export async function GET() {
+export const GET = withApiHandler(async () => {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        throw new ApiError(
+            ApiErrorCode.UNAUTHORIZED,
+            'Unauthorized',
+            401
+        )
     }
 
-    try {
-        const { data, error } = await supabase
-            .from('approval_flows')
-            .select('*')
-            .eq('is_active', true)
+    const { data, error } = await supabase
+        .from('approval_flows')
+        .select('*')
+        .eq('is_active', true)
 
-        if (error) throw error
-        return NextResponse.json({ data })
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-}
+    if (error) throw error
+    return data
+})
+

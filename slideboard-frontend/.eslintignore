@@ -1,0 +1,8 @@
+node_modules
+.next
+.trae
+dist
+build
+out
+public
+coverage

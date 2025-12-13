@@ -1,10 +1,10 @@
 'use client'
 
 import React from 'react'
-import DashboardLayout from '@/components/layout/dashboard-layout'
-import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
+
 import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
+import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
 
 interface AlertItem {
@@ -42,7 +42,6 @@ export default function AlertsPage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -93,6 +92,5 @@ export default function AlertsPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

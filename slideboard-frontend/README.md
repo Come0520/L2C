@@ -1,5 +1,11 @@
 # Slideboard - 现代化幻灯片展示平台
 
+[![CI/CD Pipeline](https://github.com/your-username/slideboard-frontend/actions/workflows/test.yml/badge.svg)](https://github.com/your-username/slideboard-frontend/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/your-username/slideboard-frontend/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/your-username/slideboard-frontend)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![ESLint](https://img.shields.io/badge/ESLint-8.x-green.svg)](https://eslint.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 基于Next.js 15+构建的现代化幻灯片展示和管理平台，专注于提供流畅的演示体验和协作功能。
 
 ## 🚀 功能特性
@@ -120,6 +126,48 @@ refactor: 代码重构
 test: 测试相关
 chore: 构建过程或辅助工具的变动
 ```
+
+## 🧪 测试
+
+### 测试框架
+
+- **单元测试/组件测试**: Vitest + React Testing Library
+- **端到端测试**: Playwright
+- **测试覆盖率**: Codecov
+
+### 运行测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 运行单元测试和组件测试
+npm run test:unit
+
+# 运行端到端测试
+npm run test:e2e
+
+# 运行测试并生成覆盖率报告
+npm run test:coverage
+
+# 交互式测试（开发模式）
+npm run test:watch
+```
+
+### 测试覆盖率
+
+- **目标覆盖率**: ≥80%
+- **查看报告**: `npm run test:coverage && open coverage/index.html`
+- **CI集成**: 自动运行在GitHub Actions中
+
+### 测试编写指南
+
+详细的测试编写规范请参考 [TESTING_GUIDELINES.md](TESTING_GUIDELINES.md)，包括：
+- 测试文件结构
+- 测试类型与编写规范
+- Mock与Stub最佳实践
+- 测试数据管理
+- 常见问题与解决方案
 
 ## 🚀 部署
 

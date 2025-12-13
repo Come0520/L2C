@@ -345,32 +345,44 @@ export function PlanPendingConfirmationView() {
 
   return (
     <div className="space-y-6">
-      {/* 统计卡片 */}
-      <PaperCard>
-        <PaperCardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-ink-800">方案待确认 - 报价单统计</h3>
-              <p className="text-ink-500 text-sm">根据您的权限显示相关报价单</p>
+      {/* 统计卡片 - Split into two */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-ink-500 mb-1">待确认报价单</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-3xl font-bold text-ink-800">{quotes.length}</h3>
+                <span className="text-sm text-ink-400">单</span>
+              </div>
+              <p className="text-xs text-ink-400 mt-2">当前处于方案待确认状态的所有报价单</p>
             </div>
-            <div className="text-right">
-              <p className="text-ink-500 text-sm">待确认报价单</p>
-              <p className="text-2xl font-bold text-ink-800">{quotes.length}</p>
-              <p className="text-ink-500 text-sm mt-1">草签金额</p>
-              <p className="text-2xl font-bold text-ink-800">¥{quotes.reduce((sum, quote) => sum + quote.draftAmount, 0).toLocaleString()}</p>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-ink-500 mb-1">草签金额</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-3xl font-bold text-ink-800">¥{quotes.reduce((sum, quote) => sum + quote.draftAmount, 0).toLocaleString()}</h3>
+              </div>
+              <p className="text-xs text-ink-400 mt-2">所有待确认报价单的预估总额</p>
             </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
 
       {/* 报价单列表 */}
-      <PaperCard>
-        <PaperTableToolbar>
-          <div className="text-sm text-ink-500">共 {quotes.length} 条报价单</div>
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4 flex justify-between items-center">
+          <div className="text-sm font-medium text-ink-600">共 {quotes.length} 条报价单</div>
         </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableCell>线索号</PaperTableCell>
               <PaperTableCell>客户</PaperTableCell>
               <PaperTableCell>设计师</PaperTableCell>

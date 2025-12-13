@@ -3,7 +3,6 @@
 import { Calculator } from 'lucide-react';
 import React, { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput, PaperSelect } from '@/components/ui/paper-input';
@@ -119,7 +118,6 @@ export default function ProductCalculatePage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -346,6 +344,5 @@ export default function ProductCalculatePage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   );
 }

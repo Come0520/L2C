@@ -6,13 +6,13 @@ import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 
 import { toast } from '@/components/ui/toast';
-import { PropertiesPanel } from '@/features/editor/components/properties-panel';
-import { SlideThumbnailList } from '@/features/editor/components/slide-thumbnail-list';
-import { Toolbar } from '@/features/editor/components/toolbar';
+import { PropertiesPanel } from '@/features/editor/components/PropertiesPanel';
+import { SlideThumbnailList } from '@/features/editor/components/SlideThumbnailList';
+import { Toolbar } from '@/features/editor/components/Toolbar';
 import { callRpc } from '@/lib/api/supabase-helpers';
 import { createClient } from '@/lib/supabase/client'
 
-const SlideEditor = dynamic(() => import('@/features/editor/components/slide-editor').then(mod => ({ default: mod.SlideEditor })), {
+const SlideEditor = dynamic(() => import('@/features/editor/components/SlideEditor').then(mod => ({ default: mod.SlideEditor })), {
   ssr: false,
   loading: () => <div className="h-[600px] w-full flex items-center justify-center bg-white border border-gray-300 rounded-lg shadow-sm">加载编辑器中...</div>
 });

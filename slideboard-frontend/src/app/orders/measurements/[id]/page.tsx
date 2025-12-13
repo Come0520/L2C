@@ -3,14 +3,17 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table'
 import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_CONFIG } from '@/constants/measurement-status'
+import { MeasurementStatusModal } from '@/features/orders/components/measurements/measurement-status-modal'
 import { useMeasurement } from '@/hooks/useMeasurements'
 import { useRealtimeMeasurement } from '@/hooks/useRealtimeMeasurement'
+import { MeasurementRoom } from '@/shared/types/measurement'
+import { formatDateTime } from '@/utils/date'
 import { ReportGenerator, ReportGeneratorOptions } from '@/utils/report-generator'
 
 // 状态流转步骤配置
@@ -35,15 +38,6 @@ export default function MeasurementDetailPage() {
 
   // 状态更新模态框
   const [showStatusModal, setShowStatusModal] = useState(false)
-  const [newStatus, setNewStatus] = useState<string>('')
-  const [isUpdating, setIsUpdating] = useState(false)
-
-  // 初始化状态
-  useEffect(() => {
-    if (measurement) {
-      setNewStatus(measurement.status)
-    }
-  }, [measurement])
 
   // 获取当前状态在步骤中的索引
   const getCurrentStepIndex = () => {
@@ -51,36 +45,31 @@ export default function MeasurementDetailPage() {
     return statusSteps.findIndex(step => step.status === measurement.status)
   }
 
-// 获取状态显示配置
-const isMeasurementStatus = (s: string): s is typeof MEASUREMENT_STATUS[keyof typeof MEASUREMENT_STATUS] => {
-  return (Object.values(MEASUREMENT_STATUS) as readonly string[]).includes(s)
-}
+  // 获取状态显示配置
+  const isMeasurementStatus = (s: string): s is typeof MEASUREMENT_STATUS[keyof typeof MEASUREMENT_STATUS] => {
+    return (Object.values(MEASUREMENT_STATUS) as readonly string[]).includes(s)
+  }
 
-const getStatusConfig = (status: string) => {
-  if (isMeasurementStatus(status)) {
-    return MEASUREMENT_STATUS_CONFIG[status]
+  const getStatusConfig = (status: string) => {
+    if (isMeasurementStatus(status)) {
+      return MEASUREMENT_STATUS_CONFIG[status]
+    }
+    return {
+      label: status,
+      color: '#9E9E9E',
+      bgColor: 'bg-gray-100',
+      borderColor: 'border-gray-200'
+    }
   }
-  return {
-    label: status,
-    color: '#9E9E9E',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-200'
-  }
-}
 
   // 处理状态更新
-  const handleUpdateStatus = async () => {
-    if (!newStatus) return
-
-    setIsUpdating(true)
+  const handleUpdateStatus = async (newStatus: string) => {
     try {
       await updateStatus(newStatus)
-      setShowStatusModal(false)
-      // setStatusRemark('')
+      // Modal will be closed by the component or we can close it here explicitly if needed
+      // But updateStatus is async, so we wait for it.
     } catch (_err) {
-      // 这里可以添加错误提示
-    } finally {
-      setIsUpdating(false)
+      // Error handling is done in the modal or hook
     }
   }
 
@@ -103,28 +92,23 @@ const getStatusConfig = (status: string) => {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
         <div className="p-6 max-w-7xl mx-auto">
           <div className="text-center py-10">加载中...</div>
         </div>
-      </DashboardLayout>
     )
   }
 
   if (error || !measurement) {
     return (
-      <DashboardLayout>
         <div className="p-6 max-w-7xl mx-auto">
           <div className="text-center py-10 text-red-500">
             {error ? '加载失败，请重试' : '测量单不存在'}
           </div>
         </div>
-      </DashboardLayout>
     )
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -152,14 +136,17 @@ const getStatusConfig = (status: string) => {
         {/* 状态流转进度条 */}
         <PaperCard>
           <PaperCardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 pt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-ink-800">测量流程进度</h3>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusConfig(measurement.status).bgColor} text-ink-700`}>
+                <span 
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusConfig(measurement.status).bgColor}`}
+                  style={{ color: getStatusConfig(measurement.status).color }}
+                >
                   {getStatusConfig(measurement.status).label}
                 </span>
               </div>
-              <div className="relative">
+              <div className="relative pb-4">
                 {/* 进度条背景 */}
                 <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 transform -translate-y-1/2"></div>
                 
@@ -173,7 +160,10 @@ const getStatusConfig = (status: string) => {
                     return (
                       <div key={index} className="flex flex-col items-center">
                         <div className={`relative z-20 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 ${isCompleted ? config.bgColor : 'bg-gray-200'} ${isCurrent ? 'scale-110 ring-4 ring-white' : ''}`}>
-                          <div className={`w-3 h-3 rounded-full ${isCompleted ? config.color : 'bg-gray-400'}`}></div>
+                          <div 
+                            className={`w-3 h-3 rounded-full ${!isCompleted ? 'bg-gray-400' : ''}`}
+                            style={isCompleted ? { backgroundColor: config.color } : undefined}
+                          ></div>
                         </div>
                         <span className={`mt-2 text-xs font-medium transition-colors ${isCompleted ? 'text-ink-800' : 'text-gray-500'}`}>
                           {step.title}
@@ -213,7 +203,10 @@ const getStatusConfig = (status: string) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-ink-600 font-medium">状态</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusConfig(measurement.status).bgColor} ${getStatusConfig(measurement.status).color}`}>
+                  <span 
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusConfig(measurement.status).bgColor}`}
+                    style={{ color: getStatusConfig(measurement.status).color }}
+                  >
                     {getStatusConfig(measurement.status).label}
                   </span>
                 </div>
@@ -226,13 +219,13 @@ const getStatusConfig = (status: string) => {
                 <div className="flex justify-between items-center">
                   <span className="text-ink-600 font-medium">计划测量时间</span>
                   <span className="text-ink-800">
-                    {measurement.scheduledAt ? new Date(measurement.scheduledAt).toLocaleString('zh-CN') : '-'}
+                    {formatDateTime(measurement.scheduledAt)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-ink-600 font-medium">实际测量时间</span>
                   <span className="text-ink-800">
-                    {measurement.completedAt ? new Date(measurement.completedAt).toLocaleString('zh-CN') : '-'}
+                    {formatDateTime(measurement.completedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -241,7 +234,7 @@ const getStatusConfig = (status: string) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-ink-600 font-medium">创建时间</span>
-                  <span className="text-ink-800">{new Date(measurement.createdAt).toLocaleString('zh-CN')}</span>
+                  <span className="text-ink-800">{formatDateTime(measurement.createdAt)}</span>
                 </div>
               </div>
             </div>
@@ -285,20 +278,20 @@ const getStatusConfig = (status: string) => {
                 <div className="space-y-4">
                   <h3 className="text-ink-700 font-semibold text-lg">房间详情</h3>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">房间名称</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">房间类型</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">长 × 宽 × 高</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">面积</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">窗户数量</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">门数量</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-ink-600 uppercase tracking-wider">备注</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {measurement.measurementData.rooms.map((room: any, index: number) => {
+                    <PaperTable>
+                      <PaperTableHeader>
+                        <PaperTableRow>
+                          <PaperTableCell>房间名称</PaperTableCell>
+                          <PaperTableCell>房间类型</PaperTableCell>
+                          <PaperTableCell>长 × 宽 × 高</PaperTableCell>
+                          <PaperTableCell>面积</PaperTableCell>
+                          <PaperTableCell>窗户数量</PaperTableCell>
+                          <PaperTableCell>门数量</PaperTableCell>
+                          <PaperTableCell>备注</PaperTableCell>
+                        </PaperTableRow>
+                      </PaperTableHeader>
+                      <PaperTableBody>
+                        {measurement.measurementData.rooms.map((room: MeasurementRoom, index: number) => {
                           const roomTypeLabelMap: Record<string, string> = {
                             'living-room': '客厅',
                             'bedroom': '卧室',
@@ -309,21 +302,21 @@ const getStatusConfig = (status: string) => {
                           const roomTypeLabel = roomTypeLabelMap[room.type] || room.type
                           
                           return (
-                            <tr key={index}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink-800">{room.name}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-700">{roomTypeLabel}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-700">
+                            <PaperTableRow key={index}>
+                              <PaperTableCell className="font-medium text-ink-800">{room.name}</PaperTableCell>
+                              <PaperTableCell className="text-ink-700">{roomTypeLabel}</PaperTableCell>
+                              <PaperTableCell className="text-ink-700">
                                 {room.measurements?.length?.toFixed(2) ?? '0.00'} × {room.measurements?.width?.toFixed(2) ?? '0.00'} × {room.measurements?.height?.toFixed(2) ?? '0.00'} m
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-700">{room.area?.toFixed(2) ?? '0.00'} m²</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-700">{room.windows?.count ?? '0'}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-700">{room.doors?.count ?? '0'}</td>
-                              <td className="px-6 py-4 text-sm text-ink-700">{room.notes || '-'}</td>
-                            </tr>
+                              </PaperTableCell>
+                              <PaperTableCell className="text-ink-700">{room.area?.toFixed(2) ?? '0.00'} m²</PaperTableCell>
+                              <PaperTableCell className="text-ink-700">{room.windows?.count ?? '0'}</PaperTableCell>
+                              <PaperTableCell className="text-ink-700">{room.doors?.count ?? '0'}</PaperTableCell>
+                              <PaperTableCell className="text-ink-700">{room.notes || '-'}</PaperTableCell>
+                            </PaperTableRow>
                           )
                         })}
-                      </tbody>
-                    </table>
+                      </PaperTableBody>
+                    </PaperTable>
                   </div>
                 </div>
               )}
@@ -368,60 +361,12 @@ const getStatusConfig = (status: string) => {
         )}
 
         {/* 状态更新模态框 */}
-        {showStatusModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-ink-800 mb-4">更新测量单状态</h2>
-
-                <div className="space-y-4">
-                  {/* 状态选择 */}
-                  <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-1">新状态</label>
-                  <select
-                    value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Object.values(MEASUREMENT_STATUS).map((status) => (
-                      <option key={status} value={status}>
-                        {MEASUREMENT_STATUS_CONFIG[status].label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                  {/* 状态备注 - 暂时隐藏，因为后端暂不支持 */}
-                  {/* <div>
-                    <label className="block text-sm font-medium text-ink-700 mb-1">备注</label>
-                    <PaperInput
-                      type="textarea"
-                      value={statusRemark}
-                      onChange={(e) => setStatusRemark(e.target.value)}
-                      placeholder="请输入状态变更备注"
-                      className="min-h-[100px]"
-                    />
-                  </div> */}
-
-                  {/* 操作按钮 */}
-                  <div className="flex justify-end space-x-2">
-                    <PaperButton variant="outline" onClick={() => setShowStatusModal(false)}>
-                      取消
-                    </PaperButton>
-                    <PaperButton
-                      variant="primary"
-                      onClick={handleUpdateStatus}
-                      disabled={isUpdating}
-                    >
-                      {isUpdating ? '更新中...' : '确认更新'}
-                    </PaperButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <MeasurementStatusModal 
+          isOpen={showStatusModal}
+          onClose={() => setShowStatusModal(false)}
+          currentStatus={measurement.status}
+          onUpdate={handleUpdateStatus}
+        />
       </div>
-    </DashboardLayout>
   )
 }

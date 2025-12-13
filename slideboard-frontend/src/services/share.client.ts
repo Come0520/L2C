@@ -11,6 +11,8 @@ export interface ShareToken {
     expiresAt: string | null;
     isActive: boolean;
     createdAt: string;
+    scope: 'view' | 'comment' | 'edit';
+    clicks: number;
 }
 
 const mapDbTokenToShareToken = (row: any): ShareToken => ({
@@ -21,17 +23,29 @@ const mapDbTokenToShareToken = (row: any): ShareToken => ({
     expiresAt: row.expires_at,
     isActive: row.is_active,
     createdAt: row.created_at,
+    scope: row.scope || 'view',
+    clicks: row.usage_count || 0,
 })
 
 export const shareService = {
     /**
+     * Get all shared links created by the current user
+     */
+    async getMySharedLinks(): Promise<ShareToken[]> {
+        const res = await fetch('/api/sharing/tokens', { method: 'GET' })
+        if (!res.ok) throw new Error('Failed to get shared links')
+        const json = await res.json()
+        return (json.tokens || []).map(mapDbTokenToShareToken)
+    },
+
+    /**
      * Generate a new share token for a resource
      */
-    async generateToken(resourceType: 'quote' | 'order', resourceId: string, expiresInDays: number = 7) {
+    async generateToken(resourceType: 'quote' | 'order', resourceId: string, expiresInDays: number = 7, scope: string = 'view') {
         const res = await fetch('/api/sharing/tokens', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ resourceType, resourceId, expiresInDays }),
+            body: JSON.stringify({ resourceType, resourceId, expiresInDays, scope }),
         })
         if (!res.ok) throw new Error('Failed to generate token')
         const json = await res.json()

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
@@ -161,35 +160,22 @@ export default function SuppliersPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-paper-ink">服务与供应链管理</h1>
-            <p className="text-paper-ink-secondary mt-1">管理供应商和服务商，优化供应链流程</p>
-          </div>
-          <div className="flex gap-3">
-            <PaperButton variant="primary">
-              新增供应商
-            </PaperButton>
-            <PaperButton variant="secondary">
-              新增服务商
-            </PaperButton>
-          </div>
-        </div>
+    <>
+      <div className="space-y-6 p-6 max-w-7xl mx-auto">
+        {/* Page Header - Removed to avoid duplication with DashboardLayout breadcrumb */}
+
 
         {/* Tab Navigation */}
-        <PaperCard>
+        <PaperCard className="bg-theme-bg-secondary border-theme-border">
           <PaperCardContent className="p-0">
-            <div className="border-b border-paper-border">
+            <div className="border-b border-theme-border">
               <nav className="flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('suppliers')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'suppliers'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
+                      ? 'border-theme-primary text-theme-text-primary'
+                      : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
                   }`}
                 >
                   供应商管理
@@ -198,8 +184,8 @@ export default function SuppliersPage() {
                   onClick={() => setActiveTab('services')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'services'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
+                      ? 'border-theme-primary text-theme-text-primary'
+                      : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
                   }`}
                 >
                   服务商管理
@@ -210,39 +196,50 @@ export default function SuppliersPage() {
         </PaperCard>
 
         {/* Search and Filter */}
-        <PaperCard>
+        <PaperCard className="bg-theme-bg-secondary border-theme-border">
           <PaperCardContent>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 justify-between">
               <PaperInput
                 placeholder={`搜索${activeTab === 'suppliers' ? '供应商' : '服务商'}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
+                className="flex-1 max-w-md"
               />
-              <PaperButton variant="outline">
-                高级筛选
-              </PaperButton>
+              <div className="flex gap-3">
+                <PaperButton variant="outline">
+                  高级筛选
+                </PaperButton>
+                {activeTab === 'suppliers' ? (
+                  <PaperButton variant="primary">
+                    新增供应商
+                  </PaperButton>
+                ) : (
+                  <PaperButton variant="secondary">
+                    新增服务商
+                  </PaperButton>
+                )}
+              </div>
             </div>
           </PaperCardContent>
         </PaperCard>
 
         {/* Suppliers Tab */}
         {activeTab === 'suppliers' && (
-          <PaperCard>
+          <PaperCard className="bg-theme-bg-secondary border-theme-border">
             <PaperCardHeader>
-              <PaperCardTitle>供应商列表</PaperCardTitle>
+              <PaperCardTitle className="text-theme-text-primary">供应商列表</PaperCardTitle>
             </PaperCardHeader>
             <PaperCardContent>
               <PaperTable>
                 <PaperTableHeader>
                   <tr>
-                    <th className="text-left">供应商信息</th>
-                    <th className="text-left">类型</th>
-                    <th className="text-left">联系方式</th>
-                    <th className="text-left">评级</th>
-                    <th className="text-left">合作状态</th>
-                    <th className="text-left">合同到期</th>
-                    <th className="text-left">操作</th>
+                    <th className="text-left text-theme-text-secondary">供应商信息</th>
+                    <th className="text-left text-theme-text-secondary">类型</th>
+                    <th className="text-left text-theme-text-secondary">联系方式</th>
+                    <th className="text-left text-theme-text-secondary">评级</th>
+                    <th className="text-left text-theme-text-secondary">合作状态</th>
+                    <th className="text-left text-theme-text-secondary">合同到期</th>
+                    <th className="text-left text-theme-text-secondary">操作</th>
                   </tr>
                 </PaperTableHeader>
                 <PaperTableBody>
@@ -250,8 +247,8 @@ export default function SuppliersPage() {
                     <PaperTableRow key={supplier.id}>
                       <PaperTableCell>
                         <div>
-                          <div className="font-medium text-paper-ink">{supplier.name}</div>
-                          <div className="text-sm text-paper-ink-secondary">{supplier.contactPerson}</div>
+                          <div className="font-medium text-theme-text-primary">{supplier.name}</div>
+                          <div className="text-sm text-theme-text-secondary">{supplier.contactPerson}</div>
                         </div>
                       </PaperTableCell>
                       <PaperTableCell>
@@ -262,7 +259,7 @@ export default function SuppliersPage() {
                       <PaperTableCell>
                         <div className="text-sm">
                           <div>{supplier.phone}</div>
-                          <div className="text-paper-ink-secondary">{supplier.email}</div>
+                          <div className="text-theme-text-secondary">{supplier.email}</div>
                         </div>
                       </PaperTableCell>
                       <PaperTableCell>
@@ -284,7 +281,7 @@ export default function SuppliersPage() {
                       <PaperTableCell>
                         <div className="text-sm">
                           <div>{supplier.contractExpiry}</div>
-                          <div className="text-paper-ink-secondary">
+                          <div className="text-theme-text-secondary">
                             {Math.ceil((new Date(supplier.contractExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}天后到期
                           </div>
                         </div>
@@ -316,23 +313,23 @@ export default function SuppliersPage() {
 
         {/* Services Tab */}
         {activeTab === 'services' && (
-          <PaperCard>
+          <PaperCard className="bg-theme-bg-secondary border-theme-border">
             <PaperCardHeader>
-              <PaperCardTitle>服务商列表</PaperCardTitle>
+              <PaperCardTitle className="text-theme-text-primary">服务商列表</PaperCardTitle>
             </PaperCardHeader>
             <PaperCardContent>
               <PaperTable>
                 <PaperTableHeader>
                   <tr>
-                    <th className="text-left">服务商信息</th>
-                    <th className="text-left">服务类型</th>
-                    <th className="text-left">专业领域</th>
-                    <th className="text-left">资质等级</th>
-                    <th className="text-left">评级</th>
-                    <th className="text-left">项目数</th>
-                    <th className="text-left">状态</th>
-                    <th className="text-left">价格区间</th>
-                    <th className="text-left">操作</th>
+                    <th className="text-left text-theme-text-secondary">服务商信息</th>
+                    <th className="text-left text-theme-text-secondary">服务类型</th>
+                    <th className="text-left text-theme-text-secondary">专业领域</th>
+                    <th className="text-left text-theme-text-secondary">资质等级</th>
+                    <th className="text-left text-theme-text-secondary">评级</th>
+                    <th className="text-left text-theme-text-secondary">项目数</th>
+                    <th className="text-left text-theme-text-secondary">状态</th>
+                    <th className="text-left text-theme-text-secondary">价格区间</th>
+                    <th className="text-left text-theme-text-secondary">操作</th>
                   </tr>
                 </PaperTableHeader>
                 <PaperTableBody>
@@ -340,8 +337,8 @@ export default function SuppliersPage() {
                     <PaperTableRow key={provider.id}>
                       <PaperTableCell>
                         <div>
-                          <div className="font-medium text-paper-ink">{provider.name}</div>
-                          <div className="text-sm text-paper-ink-secondary">{provider.contactPerson}</div>
+                          <div className="font-medium text-theme-text-primary">{provider.name}</div>
+                          <div className="text-sm text-theme-text-secondary">{provider.contactPerson}</div>
                         </div>
                       </PaperTableCell>
                       <PaperTableCell>
@@ -350,7 +347,7 @@ export default function SuppliersPage() {
                         </span>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <div className="text-sm text-paper-ink">{provider.specialty}</div>
+                        <div className="text-sm text-theme-text-primary">{provider.specialty}</div>
                       </PaperTableCell>
                       <PaperTableCell>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -410,66 +407,66 @@ export default function SuppliersPage() {
 
         {/* Supply Chain Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <PaperCard>
+          <PaperCard className="bg-theme-bg-secondary border-theme-border">
             <PaperCardHeader>
-              <PaperCardTitle>供应链概览</PaperCardTitle>
+              <PaperCardTitle className="text-theme-text-primary">供应链概览</PaperCardTitle>
             </PaperCardHeader>
             <PaperCardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">活跃供应商</span>
+                  <span className="text-theme-text-secondary">活跃供应商</span>
                   <span className="font-bold text-paper-success">12</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">待审核供应商</span>
+                  <span className="text-theme-text-secondary">待审核供应商</span>
                   <span className="font-bold text-paper-warning">3</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">本月新增</span>
+                  <span className="text-theme-text-secondary">本月新增</span>
                   <span className="font-bold text-paper-info">2</span>
                 </div>
               </div>
             </PaperCardContent>
           </PaperCard>
 
-          <PaperCard>
+          <PaperCard className="bg-theme-bg-secondary border-theme-border">
             <PaperCardHeader>
-              <PaperCardTitle>服务质量</PaperCardTitle>
+              <PaperCardTitle className="text-theme-text-primary">服务质量</PaperCardTitle>
             </PaperCardHeader>
             <PaperCardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">平均评级</span>
+                  <span className="text-theme-text-secondary">平均评级</span>
                   <span className="font-bold text-paper-warning">4.6</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">A级服务商</span>
+                  <span className="text-theme-text-secondary">A级服务商</span>
                   <span className="font-bold text-paper-success">8</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">本月完成项目</span>
+                  <span className="text-theme-text-secondary">本月完成项目</span>
                   <span className="font-bold text-paper-info">45</span>
                 </div>
               </div>
             </PaperCardContent>
           </PaperCard>
 
-          <PaperCard>
+          <PaperCard className="bg-theme-bg-secondary border-theme-border">
             <PaperCardHeader>
-              <PaperCardTitle>合同管理</PaperCardTitle>
+              <PaperCardTitle className="text-theme-text-primary">合同管理</PaperCardTitle>
             </PaperCardHeader>
             <PaperCardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">即将到期</span>
+                  <span className="text-theme-text-secondary">即将到期</span>
                   <span className="font-bold text-paper-error">2</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">已续约</span>
+                  <span className="text-theme-text-secondary">已续约</span>
                   <span className="font-bold text-paper-success">5</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-paper-ink-secondary">合同总额</span>
+                  <span className="text-theme-text-secondary">合同总额</span>
                   <span className="font-bold text-paper-primary">¥2.3M</span>
                 </div>
               </div>
@@ -488,26 +485,26 @@ export default function SuppliersPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium text-paper-ink mb-2">基本信息</h4>
+                <h4 className="font-medium text-theme-text-primary mb-2">基本信息</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">供应商名称：</span>{selectedSupplier.name}</div>
-                  <div><span className="text-paper-ink-secondary">类型：</span>{getTypeLabel(selectedSupplier.type)}</div>
-                  <div><span className="text-paper-ink-secondary">联系人：</span>{selectedSupplier.contactPerson}</div>
-                  <div><span className="text-paper-ink-secondary">地址：</span>{selectedSupplier.address}</div>
+                  <div><span className="text-theme-text-secondary">供应商名称：</span>{selectedSupplier.name}</div>
+                  <div><span className="text-theme-text-secondary">类型：</span>{getTypeLabel(selectedSupplier.type)}</div>
+                  <div><span className="text-theme-text-secondary">联系人：</span>{selectedSupplier.contactPerson}</div>
+                  <div><span className="text-theme-text-secondary">地址：</span>{selectedSupplier.address}</div>
                 </div>
               </div>
               <div>
-                <h4 className="font-medium text-paper-ink mb-2">合作信息</h4>
+                <h4 className="font-medium text-theme-text-primary mb-2">合作信息</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">评级：</span>★ {selectedSupplier.rating}</div>
-                  <div><span className="text-paper-ink-secondary">合作状态：</span>{selectedSupplier.cooperationStatus === 'active' ? '合作中' : selectedSupplier.cooperationStatus === 'pending' ? '待审核' : '已暂停'}</div>
-                  <div><span className="text-paper-ink-secondary">合同到期：</span>{selectedSupplier.contractExpiry}</div>
-                  <div><span className="text-paper-ink-secondary">月产能：</span>{selectedSupplier.monthlyCapacity.toLocaleString()}</div>
+                  <div><span className="text-theme-text-secondary">评级：</span>★ {selectedSupplier.rating}</div>
+                  <div><span className="text-theme-text-secondary">合作状态：</span>{selectedSupplier.cooperationStatus === 'active' ? '合作中' : selectedSupplier.cooperationStatus === 'pending' ? '待审核' : '已暂停'}</div>
+                  <div><span className="text-theme-text-secondary">合同到期：</span>{selectedSupplier.contractExpiry}</div>
+                  <div><span className="text-theme-text-secondary">月产能：</span>{selectedSupplier.monthlyCapacity.toLocaleString()}</div>
                 </div>
               </div>
             </div>
             <div>
-              <h4 className="font-medium text-paper-ink mb-2">服务范围</h4>
+              <h4 className="font-medium text-theme-text-primary mb-2">服务范围</h4>
               <div className="flex flex-wrap gap-2">
                 {selectedSupplier.serviceScope.map((scope, index) => (
                   <span key={index} className="px-2 py-1 bg-paper-primary-light text-paper-primary rounded text-sm">
@@ -530,21 +527,21 @@ export default function SuppliersPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium text-paper-ink mb-2">基本信息</h4>
+                <h4 className="font-medium text-theme-text-primary mb-2">基本信息</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">服务商名称：</span>{selectedService.name}</div>
-                  <div><span className="text-paper-ink-secondary">服务类型：</span>{getTypeLabel(selectedService.serviceType)}</div>
-                  <div><span className="text-paper-ink-secondary">专业领域：</span>{selectedService.specialty}</div>
-                  <div><span className="text-paper-ink-secondary">联系人：</span>{selectedService.contactPerson}</div>
+                  <div><span className="text-theme-text-secondary">服务商名称：</span>{selectedService.name}</div>
+                  <div><span className="text-theme-text-secondary">服务类型：</span>{getTypeLabel(selectedService.serviceType)}</div>
+                  <div><span className="text-theme-text-secondary">专业领域：</span>{selectedService.specialty}</div>
+                  <div><span className="text-theme-text-secondary">联系人：</span>{selectedService.contactPerson}</div>
                 </div>
               </div>
               <div>
-                <h4 className="font-medium text-paper-ink mb-2">业务能力</h4>
+                <h4 className="font-medium text-theme-text-primary mb-2">业务能力</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="text-paper-ink-secondary">资质等级：</span>{selectedService.qualificationLevel}级</div>
-                  <div><span className="text-paper-ink-secondary">评级：</span>★ {selectedService.rating}</div>
-                  <div><span className="text-paper-ink-secondary">完成项目：</span>{selectedService.projectCount}个</div>
-                  <div><span className="text-paper-ink-secondary">价格区间：</span>{selectedService.priceRange}</div>
+                  <div><span className="text-theme-text-secondary">资质等级：</span>{selectedService.qualificationLevel}级</div>
+                  <div><span className="text-theme-text-secondary">评级：</span>★ {selectedService.rating}</div>
+                  <div><span className="text-theme-text-secondary">完成项目：</span>{selectedService.projectCount}个</div>
+                  <div><span className="text-theme-text-secondary">价格区间：</span>{selectedService.priceRange}</div>
                 </div>
               </div>
             </div>
@@ -559,6 +556,6 @@ export default function SuppliersPage() {
           </div>
         </PaperModal>
       )}
-    </DashboardLayout>
+    </>
   );
 }

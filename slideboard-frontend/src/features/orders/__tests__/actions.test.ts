@@ -112,9 +112,10 @@ describe('Order Actions', () => {
     it('should throw error when update fails', async () => {
       const supabaseClient = await createClient();
       
-      (supabaseClient.from as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ data: null, error: new Error('Update error') }),
+      (supabaseClient.from as vi.Mock).mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: null, error: new Error('Update error') }),
+      })
       });
       
       await expect(submitDifferenceReconciliation(['order-1'], '差异原因')).rejects.toThrow();
@@ -126,9 +127,19 @@ describe('Order Actions', () => {
       const supabaseClient = await createClient();
       const mockOrder = {
         id: 'order-1',
-        measurement_order: {
-          measurer: { id: 'measurer-1', name: 'Test Measurer' }
-        }
+        customer_name: '测试客户',
+        project_address: '测试地址',
+        measurement_order: [
+          {
+            assigned_at: new Date().toISOString(),
+            measurer: [
+              {
+                id: 'measurer-1',
+                name: '测试测量师'
+              }
+            ]
+          }
+        ]
       };
       
       (supabaseClient.from as any)
@@ -142,7 +153,8 @@ describe('Order Actions', () => {
         })
         .mockReturnValueOnce({
           update: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
         });
       
       const result = await urgeOrder('order-1');
@@ -157,7 +169,12 @@ describe('Order Actions', () => {
       const supabaseClient = await createClient();
       const mockOrder = {
         id: 'order-1',
-        measurement_order: null
+        measurement_order: [
+          {
+            assigned_at: new Date().toISOString(),
+            measurer: null
+          }
+        ]
       };
       
       (supabaseClient.from as any).mockReturnValue({

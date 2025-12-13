@@ -1,9 +1,10 @@
 'use client';
 
+import { LayoutDashboard, Network } from 'lucide-react';
 import { useState } from 'react';
+
 import { StatusList } from '@/features/system/components/workflow/StatusList';
 import { TransitionManagement } from '@/features/system/components/workflow/TransitionManagement';
-import { LayoutDashboard, Network } from 'lucide-react';
 
 export default function WorkflowAdminPage() {
     const [activeTab, setActiveTab] = useState<'statuses' | 'transitions'>('statuses');

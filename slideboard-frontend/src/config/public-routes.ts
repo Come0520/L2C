@@ -3,7 +3,6 @@
 
 export const PUBLIC_ROUTES = [
   // 基础路由
-  '/',
   '/login',
   '/register',
 

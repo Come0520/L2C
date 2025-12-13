@@ -1,38 +1,11 @@
-import { createClient } from '@/lib/supabase/client'
-import { LeadItem, LeadFilter } from '@/types/lead'
-import { Database } from '@/types/supabase'
-import { toDbFields, fromDbFields } from '@/utils/db-mapping'
+import { supabase } from '@/lib/supabase/client'
+import { Lead, LeadFilter, UpdateLeadRequest, CreateLeadRequest, LeadStatus, LeadDuplicateRecord, LeadWarnings, WarningType } from '@/shared/types/lead'
+import { Database } from '@/shared/types/supabase'
+import { CreateCustomerRequest } from '@/shared/types/customer'
 
-type LeadRow = Database['public']['Tables']['leads']['Row'];
-
-// 数据库线索记录类型
-export interface LeadFromDB extends LeadRow {}
-
-// 线索更新请求类型
-export interface UpdateLeadRequest {
-    customerName?: string;
-    phone?: string;
-    projectAddress?: string;
-    customerLevel?: string;
-    budgetMin?: number;
-    budgetMax?: number;
-    requirements?: string[];
-    businessTags?: string[];
-    appointmentTime?: string;
-    appointmentReminder?: '48h' | '24h' | null;
-    constructionProgress?: 'just-signed' | 'plumbing' | 'masonry' | 'painting' | 'installation' | 'stalled';
-    expectedPurchaseDate?: string;
-    expectedCheckInDate?: string;
-    areaSize?: number;
-}
-
-// 线索导入行类型
-export interface LeadImportRow {
-    customer_name: string;
-    phone: string;
-    project_address: string;
-    source?: string;
-}
+type LeadRow = Database['public']['Tables']['leads']['Row']
+type LeadInsert = Database['public']['Tables']['leads']['Insert']
+type LeadUpdate = Database['public']['Tables']['leads']['Update']
 
 // 测量记录类型
 export interface MeasurementRecord {
@@ -71,13 +44,19 @@ export interface ApprovalRecord {
     [key: string]: string | number | boolean | null | undefined;
 }
 
+// 线索导入行类型
+export interface LeadImportRow {
+    customer_name: string;
+    phone: string;
+    project_address: string;
+    source?: string;
+}
+
 export const leadService = {
     /**
      * 获取线索列表
      */
-    async getLeads(_page: number, pageSize: number, filters: Partial<LeadFilter>, cursor?: string) {
-        const supabase = createClient()
-
+    async getLeads(page: number, pageSize: number, filters: Partial<LeadFilter>, cursor?: string) {
         let query = supabase
             .from('leads')
             .select(`
@@ -125,12 +104,12 @@ export const leadService = {
 
         // 排序和分页
         query = query.order('created_at', { ascending: false })
-        
+
         // 基于游标的分页
         if (cursor) {
             query = query.lt('created_at', cursor)
         }
-        
+
         // 限制返回数量，获取比请求多一条用于检测是否有下一页
         query = query.limit(pageSize + 1)
 
@@ -141,7 +120,7 @@ export const leadService = {
         }
 
         const leads = (data || []).map(mapDbToLead)
-        
+
         // 检测是否有下一页
         const hasNextPage = leads.length > pageSize
         // 如果有下一页，移除最后一条（额外获取的那条）
@@ -161,8 +140,6 @@ export const leadService = {
      * 获取单个线索详情
      */
     async getLeadById(id: string) {
-        const supabase = createClient()
-
         const { data, error } = await supabase
             .from('leads')
             .select(`
@@ -183,26 +160,39 @@ export const leadService = {
             throw new Error(error.message)
         }
 
-        return mapDbToLead(data as LeadFromDB)
+        return mapDbToLead(data)
     },
 
     /**
      * 创建线索
      */
-    async createLead(data: Partial<LeadItem>) {
-        const supabase = createClient()
-
+    async createLead(data: CreateLeadRequest) {
         // 获取当前用户作为创建者
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
 
-        const dbData = {
-            ...toDbFields(data, {
-                customerName: 'name',
-            }),
-            status: data.status || 'PENDING_ASSIGNMENT',
-            customer_level: data.customerLevel || 'C',
+        const dbData: LeadInsert = {
+            name: data.name,
+            phone: data.phone,
+            project_address: data.projectAddress,
+            source: data.source,
+            status: 'new', // 默认状态
+            customer_level: 'C', // 默认等级
+            budget_min: data.budgetMin,
+            budget_max: data.budgetMax,
+            requirements: data.requirements,
+            business_tags: data.businessTags,
+            appointment_time: data.appointmentTime,
+            appointment_reminder: data.appointmentReminder,
+            construction_progress: data.constructionProgress,
+            expected_purchase_date: data.expectedPurchaseDate,
+            expected_check_in_date: data.expectedCheckInDate,
+            area_size: data.areaSize,
+            assigned_to_id: data.assignedToId,
+            designer_id: data.designerId,
+            shopping_guide_id: data.shoppingGuideId,
             created_by_id: user.id,
+            lead_number: `L${Date.now()}` // 简单生成一个编号，实际业务可能需要更复杂的逻辑
         }
 
         const { data: newLead, error } = await supabase
@@ -219,8 +209,6 @@ export const leadService = {
      * 分配线索
      */
     async assignLead(leadId: string, assigneeId: string, reason?: string) {
-        const supabase = createClient()
-
         // 使用 RPC 调用以保证原子性 (更新 leads 表并插入 assignment 记录)
         // 需要在数据库创建 assign_lead 函数
         const { error } = await supabase.rpc('assign_lead', {
@@ -235,24 +223,22 @@ export const leadService = {
     /**
      * 更新线索状态
      */
-    async updateLeadStatus(id: string, status: string, comment?: string, _attachedFiles?: any[]) {
-        const supabase = createClient()
-        
+    async updateLeadStatus(id: string, status: LeadStatus, comment?: string, _attachedFiles?: any[]) {
         // 获取当前用户ID
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         // 获取当前线索状态
         const { data: currentLead, error: getError } = await supabase
             .from('leads')
             .select('status')
             .eq('id', id)
             .single()
-        
+
         if (getError) {
             throw new Error('Failed to get current lead status: ' + getError.message)
         }
-        
+
         // 验证状态流转是否合法
         const { data: validationResult, error: validationError } = await supabase
             .rpc('validate_lead_status_transition', {
@@ -260,15 +246,15 @@ export const leadService = {
                 new_status: status,
                 current_user_id: user.id
             })
-        
+
         if (validationError) {
             throw new Error('Status transition validation failed: ' + validationError.message)
         }
-        
+
         if (validationResult && !validationResult[0]?.is_valid) {
             throw new Error('Invalid status transition: ' + (validationResult[0]?.error_message || 'Unknown error'))
         }
-        
+
         // 更新线索状态，同时设置last_status_change_by_id
         const updateResult = await supabase
             .from('leads')
@@ -281,7 +267,7 @@ export const leadService = {
             .select()
 
         if (updateResult.error) throw new Error('Failed to update lead status: ' + updateResult.error.message)
-        
+
         // 手动记录状态变更历史，以便支持自定义注释
         if (currentLead.status !== status) {
             const { error: historyError } = await supabase.from('lead_status_history').insert({
@@ -292,7 +278,7 @@ export const leadService = {
                 changed_at: new Date().toISOString(),
                 comment: comment || 'Status updated via API'
             })
-            
+
             if (historyError) {
                 console.error('Failed to record status change history:', historyError)
                 // Don't throw error here, as the main status update was successful
@@ -304,13 +290,31 @@ export const leadService = {
      * 更新线索信息
      */
     async patchLead(id: string, data: UpdateLeadRequest) {
-        const supabase = createClient()
-
-        // 转换字段名为 snake_case
-        const dbData: Partial<LeadFromDB> = toDbFields(data, {
-            customerName: 'name',
-            // 其他字段由 toDbFields 自动处理 (e.g. projectAddress -> project_address)
-        });
+        const dbData: LeadUpdate = {}
+        
+        if (data.name) dbData.name = data.name
+        if (data.phone) dbData.phone = data.phone
+        if (data.projectAddress) dbData.project_address = data.projectAddress
+        if (data.source) dbData.source = data.source
+        if (data.status) dbData.status = data.status
+        if (data.customerLevel) dbData.customer_level = data.customerLevel
+        if (data.budgetMin !== undefined) dbData.budget_min = data.budgetMin
+        if (data.budgetMax !== undefined) dbData.budget_max = data.budgetMax
+        if (data.requirements) dbData.requirements = data.requirements
+        if (data.businessTags) dbData.business_tags = data.businessTags
+        if (data.appointmentTime) dbData.appointment_time = data.appointmentTime
+        if (data.appointmentReminder) dbData.appointment_reminder = data.appointmentReminder
+        if (data.constructionProgress) dbData.construction_progress = data.constructionProgress
+        if (data.expectedPurchaseDate) dbData.expected_purchase_date = data.expectedPurchaseDate
+        if (data.expectedCheckInDate) dbData.expected_check_in_date = data.expectedCheckInDate
+        if (data.areaSize !== undefined) dbData.area_size = data.areaSize
+        if (data.assignedToId) dbData.assigned_to_id = data.assignedToId
+        if (data.designerId) dbData.designer_id = data.designerId
+        if (data.shoppingGuideId) dbData.shopping_guide_id = data.shoppingGuideId
+        if (data.isCancelled !== undefined) dbData.is_cancelled = data.isCancelled
+        if (data.cancellationReason) dbData.cancellation_reason = data.cancellationReason
+        if (data.isPaused !== undefined) dbData.is_paused = data.isPaused
+        if (data.pauseReason) dbData.pause_reason = data.pauseReason
 
         const { data: updated, error } = await supabase
             .from('leads')
@@ -327,17 +331,17 @@ export const leadService = {
      * 批量导入线索
      */
     async importLeads(rows: LeadImportRow[]) {
-        const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
 
-        const leadsToInsert = rows.map(row => ({
+        const leadsToInsert: LeadInsert[] = rows.map(row => ({
             name: row.customer_name,
             phone: row.phone,
             project_address: row.project_address,
             source: row.source || 'import',
             status: 'new',
-            created_by_id: user.id
+            created_by_id: user.id,
+            lead_number: `L${Date.now()}_${Math.floor(Math.random() * 1000)}`
         }))
 
         const { error } = await supabase
@@ -351,41 +355,174 @@ export const leadService = {
         return { success: rows.length, failed: 0 }
     },
 
-    // 占位方法，后续实现
-    async getLeadAssignments(_leadId: string) { void _leadId; return [] },
-    async findDuplicateGroups(_limit = 1000) { void _limit; return [] },
-    async mergeLeads(_primaryId: string, _duplicateIds: string[]) { void _primaryId; void _duplicateIds; },
-    async getLeadWarnings() { return { followUpStale: 0, quotedNoDraft: 0 } },
-    subscribeToLeads(_callback: () => void) { void _callback; return { unsubscribe: () => { } } },
+    /**
+     * 获取线索分配历史
+     */
+    async getLeadAssignments(leadId: number | string) {
+        const { data, error } = await supabase
+            .from('lead_assignments')
+            .select(`
+                id, assigned_to_id, assigned_by_id,
+                assignment_method, reason, created_at
+            `)
+            .eq('lead_id', leadId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Failed to get lead assignments:', error)
+            return []
+        }
+
+        return data || []
+    },
+
+    /**
+     * 查找重复线索（按手机号）
+     */
+    async findDuplicateGroups(limit = 1000) {
+        const { data, error } = await supabase
+            .rpc('find_duplicate_leads_by_phone', { p_limit: limit })
+
+        if (error) {
+            console.error('Failed to find duplicate groups:', error)
+            return []
+        }
+
+        return data as unknown as LeadDuplicateRecord[][] || []
+    },
+
+    /**
+     * 合并重复线索
+     */
+    async mergeLeads(primaryId: number | string, duplicateIds: (number | string)[], notes?: string) {
+        // 获取当前用户
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('User not authenticated')
+
+        // 确保ID是数字类型
+        const primaryIdNum = typeof primaryId === 'string' ? parseInt(primaryId) : primaryId
+        const duplicateIdsNum = duplicateIds.map(id => typeof id === 'string' ? parseInt(id) : id)
+
+        const { data, error } = await supabase.rpc('merge_leads', {
+            p_primary_id: primaryIdNum,
+            p_duplicate_ids: duplicateIdsNum,
+            p_merged_by_id: parseInt(user.id),
+            p_notes: notes || null
+        })
+
+        if (error) {
+            throw new Error('Merge failed: ' + error.message)
+        }
+
+        return data
+    },
+
+    /**
+     * 获取线索预警统计
+     */
+    async getLeadWarnings(): Promise<LeadWarnings> {
+        const { data, error } = await supabase.rpc('get_lead_warnings')
+
+        if (error) {
+            console.error('Failed to get lead warnings:', error)
+            return {
+                followUpStale: 0,
+                quotedNoDraft: 0,
+                measurementOverdue: 0,
+                noFollowUp7Days: 0,
+                highIntentStale: 0,
+                budgetExceeded: 0,
+                churnRisk: 0,
+                competitorThreat: 0,
+                total: 0,
+                generated_at: new Date().toISOString()
+            }
+        }
+
+        return data as LeadWarnings || {
+            followUpStale: 0,
+            quotedNoDraft: 0,
+            measurementOverdue: 0,
+            noFollowUp7Days: 0,
+            highIntentStale: 0,
+            budgetExceeded: 0,
+            churnRisk: 0,
+            competitorThreat: 0,
+            total: 0,
+            generated_at: new Date().toISOString()
+        }
+    },
+
+    /**
+     * 获取预警线索列表
+     */
+    async getWarningLeads(warningType: WarningType = 'all', limit = 100) {
+        const { data, error } = await supabase.rpc('get_warning_leads', {
+            p_warning_type: warningType,
+            p_limit: limit
+        })
+
+        if (error) {
+            console.error('Failed to get warning leads:', error)
+            return []
+        }
+
+        return data || []
+    },
+
+    /**
+     * 订阅线索实时变更
+     */
+    subscribeToLeads(callback: (payload: any) => void) {
+        const channel = supabase
+            .channel('leads-realtime-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // 监听 INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'leads'
+                },
+                (payload) => {
+                    console.log('Lead realtime change:', payload)
+                    callback(payload)
+                }
+            )
+            .subscribe((status) => {
+                console.log('Realtime subscription status:', status)
+            })
+
+        return {
+            unsubscribe: () => {
+                supabase.removeChannel(channel)
+            }
+        }
+    },
     async getLeadsForKanban() {
         // 复用 getLeads 但 pageSize 大一点
         const res = await this.getLeads(1, 100, {})
         return res.data
     },
-    
+
     /**
      * 获取线索状态历史
      */
     async getLeadStatusHistory(leadId: string) {
-        const supabase = createClient()
-        
         // 调用数据库函数获取状态历史
         const { data, error } = await supabase
             .rpc('get_lead_status_history', { lead_id: leadId })
-        
+
         if (error) {
             return []
         }
-        
+
         return data || []
     },
-    
+
     /**
      * 获取线索跟进记录
      */
     async getLeadFollowUps(leadId: string) {
-        const supabase = createClient()
-        
         const { data, error } = await supabase
             .from('lead_follow_up_records')
             .select(`
@@ -395,24 +532,22 @@ export const leadService = {
             `)
             .eq('lead_id', leadId)
             .order('created_at', { ascending: false })
-        
+
         if (error) {
             return []
         }
-        
+
         return data || []
     },
-    
+
     // 测量记录相关方法
     /**
      * 创建测量记录
      */
     async createMeasurementRecord(leadId: string, data: MeasurementRecord) {
-        const supabase = createClient()
-        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         const { data: newRecord, error } = await supabase
             .from('lead_measurement_records')
             .insert({
@@ -423,17 +558,15 @@ export const leadService = {
             })
             .select()
             .single()
-        
+
         if (error) throw new Error('Failed to create measurement record: ' + error.message)
         return newRecord
     },
-    
+
     /**
      * 获取测量记录
      */
     async getMeasurementRecord(leadId: string) {
-        const supabase = createClient()
-        
         const { data, error } = await supabase
             .from('lead_measurement_records')
             .select('id, lead_id, measurement_time, measurement_person, measurement_address, notes, created_at, updated_at')
@@ -441,24 +574,22 @@ export const leadService = {
             .order('created_at', { ascending: false })
             .limit(1)
             .single()
-        
+
         if (error) {
             if (error.code === 'PGRST116') return null // 没有找到记录
             throw new Error('Failed to get measurement record: ' + error.message)
         }
         return data
     },
-    
+
     // 报价记录相关方法
     /**
      * 创建报价记录
      */
     async createQuoteRecord(leadId: string, data: QuoteRecord) {
-        const supabase = createClient()
-        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         const { data: newRecord, error } = await supabase
             .from('lead_quote_records')
             .insert({
@@ -469,37 +600,33 @@ export const leadService = {
             })
             .select()
             .single()
-        
+
         if (error) throw new Error('Failed to create quote record: ' + error.message)
         return newRecord
     },
-    
+
     /**
      * 获取报价记录
      */
     async getQuoteRecords(leadId: string) {
-        const supabase = createClient()
-        
         const { data, error } = await supabase
             .from('lead_quote_records')
             .select('id, lead_id, quote_number, quote_amount, quote_time, quote_status, created_at, updated_at')
             .eq('lead_id', leadId)
             .order('created_at', { ascending: false })
-        
+
         if (error) throw new Error('Failed to get quote records: ' + error.message)
         return data || []
     },
-    
+
     // 安装记录相关方法
     /**
      * 创建安装记录
      */
     async createInstallationRecord(leadId: string, data: InstallationRecord) {
-        const supabase = createClient()
-        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         const { data: newRecord, error } = await supabase
             .from('lead_installation_records')
             .insert({
@@ -510,17 +637,15 @@ export const leadService = {
             })
             .select()
             .single()
-        
+
         if (error) throw new Error('Failed to create installation record: ' + error.message)
         return newRecord
     },
-    
+
     /**
      * 获取安装记录
      */
     async getInstallationRecord(leadId: string) {
-        const supabase = createClient()
-        
         const { data, error } = await supabase
             .from('lead_installation_records')
             .select('id, lead_id, installation_time, installation_person, installation_address, notes, created_at, updated_at')
@@ -528,42 +653,40 @@ export const leadService = {
             .order('created_at', { ascending: false })
             .limit(1)
             .single()
-        
+
         if (error) {
             if (error.code === 'PGRST116') return null // 没有找到记录
             throw new Error('Failed to get installation record: ' + error.message)
         }
         return data
     },
-    
+
     // 附件记录相关方法
     /**
      * 上传附件
      */
     async uploadAttachment(leadId: string, file: File, attachmentType: string) {
-        const supabase = createClient()
-        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         // 生成唯一文件名
         const fileName = `${Date.now()}_${file.name}`
         const filePath = `${leadId}/${fileName}`
-        
+
         // 上传文件到存储
         const { error: uploadError } = await supabase
             .storage
             .from('lead-attachments')
             .upload(filePath, file)
-        
+
         if (uploadError) throw new Error('Failed to upload file: ' + uploadError.message)
-        
+
         // 获取文件URL
         const { data: publicUrl } = supabase
             .storage
             .from('lead-attachments')
             .getPublicUrl(filePath)
-        
+
         // 保存附件记录
         const { data: newRecord, error: dbError } = await supabase
             .from('lead_attachment_records')
@@ -578,42 +701,38 @@ export const leadService = {
             })
             .select()
             .single()
-        
+
         if (dbError) throw new Error('Failed to create attachment record: ' + dbError.message)
         return newRecord
     },
-    
+
     /**
      * 获取附件记录
      */
     async getAttachments(leadId: string, attachmentType?: string) {
-        const supabase = createClient()
-        
         let query = supabase
             .from('lead_attachment_records')
             .select('id, lead_id, file_name, file_path, file_type, file_size, uploaded_by_id, uploaded_at, attachment_type')
             .eq('lead_id', leadId)
             .order('uploaded_at', { ascending: false })
-        
+
         if (attachmentType) {
             query = query.eq('attachment_type', attachmentType)
         }
-        
+
         const { data, error } = await query
         if (error) throw new Error('Failed to get attachments: ' + error.message)
         return data || []
     },
-    
+
     // 审批记录相关方法
     /**
      * 创建审批记录
      */
     async createApprovalRecord(leadId: string, data: ApprovalRecord) {
-        const supabase = createClient()
-        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
-        
+
         const { data: newRecord, error } = await supabase
             .from('lead_approval_records')
             .insert({
@@ -624,30 +743,26 @@ export const leadService = {
             })
             .select()
             .single()
-        
+
         if (error) throw new Error('Failed to create approval record: ' + error.message)
         return newRecord
     },
-    
+
     /**
      * 获取审批记录
      */
     async getApprovalRecords(leadId: string) {
-        const supabase = createClient()
-        
         const { data, error } = await supabase
             .from('lead_approval_records')
             .select('*')
             .eq('lead_id', leadId)
             .order('created_at', { ascending: false })
-        
+
         if (error) throw new Error('Failed to get approval records: ' + error.message)
         return data || []
     },
 
     async getAvailableLeadTags(filters?: { category?: string; isActive?: boolean; isSystem?: boolean }) {
-        const supabase = createClient()
-
         let query = supabase
             .from('lead_tags')
             .select('*')
@@ -670,14 +785,12 @@ export const leadService = {
     },
 
     async getLeadTags(leadId: string) {
-        const supabase = createClient()
         const { data, error } = await supabase.rpc('get_lead_tags', { p_lead_id: leadId })
         if (error) throw new Error('Failed to fetch lead tags: ' + error.message)
         return data || []
     },
 
     async assignTagsToLead(leadId: string, tagIds: string[], assignedById: string) {
-        const supabase = createClient()
         if (!Array.isArray(tagIds) || tagIds.length === 0) {
             throw new Error('tagIds must be a non-empty array')
         }
@@ -695,7 +808,6 @@ export const leadService = {
     },
 
     async removeTagFromLead(leadId: string, tagId: string, removedById: string) {
-        const supabase = createClient()
         const { data, error } = await supabase.rpc('remove_tag_from_lead', {
             p_lead_id: leadId,
             p_tag_id: tagId,
@@ -707,7 +819,6 @@ export const leadService = {
     },
 
     async createLeadTag(input: { name: string; tag_category: string; color: string; description?: string }) {
-        const supabase = createClient()
         const { data, error } = await supabase
             .from('lead_tags')
             .insert({
@@ -725,133 +836,113 @@ export const leadService = {
     },
 
     async deleteLeadTag(id: string) {
-        const supabase = createClient()
         const { error } = await supabase
             .from('lead_tags')
             .delete()
             .eq('id', id)
         if (error) throw new Error('Failed to delete tag: ' + error.message)
         return true
+    },
+
+    /**
+     * 将线索转化为客户
+     */
+    async convertToCustomer(leadId: string): Promise<string> {
+        // 1. 获取线索详情
+        const lead = await this.getLeadById(leadId);
+        
+        // 2. 检查是否已经存在客户 (根据手机号)
+        const { data: existingCustomer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('phone', lead.phone)
+            .single();
+
+        if (existingCustomer) {
+            throw new Error('Customer with this phone number already exists.');
+        }
+
+        // 3. 创建客户
+        const customerData: CreateCustomerRequest = {
+            name: lead.name,
+            phone: lead.phone,
+            projectAddress: lead.projectAddress,
+            leadId: lead.id,
+            customerType: 'individual', // 默认为个人客户
+            // 可以添加更多字段映射
+        };
+
+        const { data: newCustomer, error: createError } = await supabase
+            .from('customers')
+            .insert({
+                name: customerData.name,
+                phone: customerData.phone,
+                project_address: customerData.projectAddress,
+                lead_id: customerData.leadId,
+                customer_type: customerData.customerType,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (createError) {
+            throw new Error('Failed to create customer: ' + createError.message);
+        }
+
+        // 4. 更新线索状态为 'won' (成交)
+        await this.updateLeadStatus(leadId, 'won', 'Converted to customer');
+
+        return newCustomer.id;
     }
 }
 
 // 数据库对象映射到前端类型
-function mapDbToLead(dbRecord: LeadFromDB): LeadItem {
-    // 1. 自动映射基础字段
-    const base = fromDbFields<Partial<LeadItem>>(dbRecord, {
-        name: 'customerName',
-        lead_number: 'leadNumber',
-        // 跳过需要特殊处理的字段
-        status: null,
-        customer_level: null,
-        business_tags: null,
-        updated_at: null, // 映射到 lastFollowUpAt
-        designer_id: null,
-        shopping_guide_id: null,
-        last_status_change_by_id: null,
-        created_by_id: null, // LeadItem seems not to have createdBy relation loaded here
-        assigned_to_id: null,
-        quote_versions: null, // mapped manually with default
-    });
-
-    // 2. 手动组装复杂结构和默认值
+function mapDbToLead(dbRecord: LeadRow): Lead {
     return {
-        ...base,
-        leadNumber: dbRecord.lead_number || dbRecord.id.slice(0, 8),
-        quoteVersions: dbRecord.quote_versions || 0,
-        budgetMin: dbRecord.budget_min || 0,
-        budgetMax: dbRecord.budget_max || 0,
-        projectAddress: dbRecord.project_address || '',
+        id: dbRecord.id,
+        leadNumber: dbRecord.lead_number,
+        name: dbRecord.name,
+        phone: dbRecord.phone,
+        projectAddress: dbRecord.project_address || undefined,
+        source: dbRecord.source || undefined,
+        status: dbRecord.status as LeadStatus,
+        customerLevel: dbRecord.customer_level || undefined,
+        budgetMin: dbRecord.budget_min || undefined,
+        budgetMax: dbRecord.budget_max || undefined,
         requirements: dbRecord.requirements || [],
-        customerLevel: normalizeCustomerLevel(dbRecord.customer_level),
-        status: normalizeLeadStatus(dbRecord.status),
-        businessTags: normalizeBusinessTags(dbRecord.business_tags),
-        lastFollowUpAt: dbRecord.updated_at, // 暂用 updated_at
+        businessTags: dbRecord.business_tags || [],
+        appointmentTime: dbRecord.appointment_time || undefined,
+        appointmentReminder: dbRecord.appointment_reminder || undefined,
+        constructionProgress: dbRecord.construction_progress || undefined,
+        expectedPurchaseDate: dbRecord.expected_purchase_date || undefined,
+        expectedCheckInDate: dbRecord.expected_check_in_date || undefined,
+        areaSize: dbRecord.area_size || undefined,
         
-        // 布尔值默认处理
+        // Stats
+        quoteVersions: dbRecord.quote_versions || 0,
         measurementCompleted: dbRecord.measurement_completed || false,
         installationCompleted: dbRecord.installation_completed || false,
-        financialStatus: dbRecord.financial_status || 'pending',
+        financialStatus: dbRecord.financial_status || undefined,
+        expectedMeasurementDate: dbRecord.expected_measurement_date || undefined,
+        expectedInstallationDate: dbRecord.expected_installation_date || undefined,
         totalQuoteAmount: dbRecord.total_quote_amount || 0,
-        isCancelled: dbRecord.is_cancelled || false,
-        isPaused: dbRecord.is_paused || false,
-
-        // 简化关联数据，只使用ID，不依赖JOIN
-        currentOwner: {
-            name: 'Loading...', // 将通过单独查询获取
-            avatar: undefined
-        },
-        designer: dbRecord.designer_id ? {
-            name: 'Loading...', // 将通过单独查询获取
-            avatar: undefined
-        } : undefined,
-        shoppingGuide: dbRecord.shopping_guide_id ? {
-            name: 'Loading...', // 将通过单独查询获取
-            avatar: undefined
-        } : undefined,
-        lastStatusChangeBy: dbRecord.last_status_change_by_id ? {
-            name: 'Loading...', // 将通过单独查询获取
-            avatar: undefined
-        } : undefined,
         
-        // 报价详情映射 (需要从lead_quote_records表查询)
-        quoteDetails: undefined // 将在后续通过单独查询填充
-    } as LeadItem
-}
-const ALLOWED_LEAD_STATUSES = [
-    'PENDING_ASSIGNMENT',
-    'PENDING_FOLLOW_UP',
-    'FOLLOWING_UP',
-    'DRAFT_SIGNED',
-    'EXPIRED',
-    'PENDING_MEASUREMENT',
-    'MEASURING_PENDING_ASSIGNMENT',
-    'MEASURING_ASSIGNING',
-    'MEASURING_PENDING_VISIT',
-    'MEASURING_PENDING_CONFIRMATION',
-    'PLAN_PENDING_CONFIRMATION',
-    'PENDING_PUSH',
-    'PENDING_ORDER',
-    'IN_PRODUCTION',
-    'STOCK_PREPARED',
-    'PENDING_SHIPMENT',
-    'INSTALLING_PENDING_ASSIGNMENT',
-    'INSTALLING_ASSIGNING',
-    'INSTALLING_PENDING_VISIT',
-    'INSTALLING_PENDING_CONFIRMATION',
-    'PENDING_RECONCILIATION',
-    'PENDING_INVOICE',
-    'PENDING_PAYMENT',
-    'COMPLETED',
-    'CANCELLED',
-    'PAUSED',
-    'ABNORMAL'
-] as const
-
-const ALLOWED_CUSTOMER_LEVELS = ['A', 'B', 'C', 'D'] as const
-
-const ALLOWED_BUSINESS_TAGS = ['quoted', 'arrived', 'appointment', 'high-intent', 'measured'] as const
-
-function isAllowedLeadStatus(value: string | undefined): value is import('@/types/lead').LeadItem['status'] {
-    return !!value && (ALLOWED_LEAD_STATUSES as readonly string[]).includes(value)
-}
-
-function normalizeLeadStatus(input: string | undefined): import('@/types/lead').LeadItem['status'] {
-    if (isAllowedLeadStatus(input)) return input
-    const s = (input || '').toUpperCase()
-    if (s === 'NEW') return 'PENDING_ASSIGNMENT'
-    if (s === 'CLOSED') return 'EXPIRED'
-    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED'
-    if (s === 'PAUSED') return 'PAUSED'
-    return 'PENDING_ASSIGNMENT'
-}
-
-function normalizeCustomerLevel(input: string | undefined): import('@/types/lead').LeadItem['customerLevel'] {
-    const upper = (input || '').toUpperCase()
-    return ((ALLOWED_CUSTOMER_LEVELS as readonly string[]).includes(upper) ? upper : 'C') as import('@/types/lead').LeadItem['customerLevel']
-}
-
-function normalizeBusinessTags(input: string[] | undefined): import('@/types/lead').LeadItem['businessTags'] {
-    const tags = input || []
-    return tags.filter(t => (ALLOWED_BUSINESS_TAGS as readonly string[]).includes(t)) as import('@/types/lead').LeadItem['businessTags']
+        // Status Tracking
+        lastStatusChangeAt: dbRecord.last_status_change_at || undefined,
+        lastStatusChangeById: dbRecord.last_status_change_by_id || undefined,
+        isCancelled: dbRecord.is_cancelled || false,
+        cancellationReason: dbRecord.cancellation_reason || undefined,
+        isPaused: dbRecord.is_paused || false,
+        pauseReason: dbRecord.pause_reason || undefined,
+        
+        // Relations
+        assignedToId: dbRecord.assigned_to_id || undefined,
+        designerId: dbRecord.designer_id || undefined,
+        shoppingGuideId: dbRecord.shopping_guide_id || undefined,
+        createdById: dbRecord.created_by_id || undefined,
+        
+        createdAt: dbRecord.created_at,
+        updatedAt: dbRecord.updated_at
+    }
 }

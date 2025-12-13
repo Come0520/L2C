@@ -1,37 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
 import { quoteCollaborationService } from '@/services/quote-collaboration.client';
+
+// Validation schema for collaboration invite
+const collaborationInviteSchema = z.object({
+  slide_id: z.string().min(1, 'slide_id is required'),
+  phone: z.string().regex(/^1[3-9]\d{9}$/, 'Invalid phone number format'),
+  permission: z.enum(['view', 'edit', 'admin'], { message: 'Invalid permission type' })
+});
 
 // POST /api/collaboration/invite - 邀请协作者
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { slide_id, phone, permission } = body;
+    const validationResult = collaborationInviteSchema.safeParse(body);
 
-    if (!slide_id || !phone || !permission) {
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: '缺少必填参数' },
+        { 
+          error: 'Invalid request data', 
+          details: validationResult.error.format() 
+        },
         { status: 400 }
       );
     }
 
-    // 验证权限类型
-    const validPermissions = ['view', 'edit', 'admin'];
-    if (!validPermissions.includes(permission)) {
-      return NextResponse.json(
-        { error: '无效的权限类型' },
-        { status: 400 }
-      );
-    }
-
-    // 验证手机号格式
-    if (!/^1[3-9]\\d{9}$/.test(phone)) {
-      return NextResponse.json(
-        { error: '手机号格式不正确' },
-        { status: 400 }
-      );
-    }
+    const { slide_id, phone, permission } = validationResult.data;
 
     // Invite collaborator via service
     const collaborator = await quoteCollaborationService.inviteCollaborator(

@@ -2,12 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import CategoryFilter from '@/components/points/category-filter';
 import PointsHeader from '@/components/points/points-header';
 import ProductCard from '@/components/points/product-card';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { pointsService } from '@/services/points.client';
 import { PointsAccount, MallProduct, MallProductCategory } from '@/types/points';
 
@@ -54,12 +55,15 @@ export default function PointsMallPage() {
   }, [activeCategory, loadProducts]);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* 页面标题 */}
-        <div className="flex items-center justify-between">
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between"
+        >
           <h1 className="text-3xl font-bold text-paper-ink">积分商城</h1>
-        </div>
+        </motion.div>
 
         {/* 积分信息 */}
         <PointsHeader account={account} loading={!account && loading} />
@@ -69,7 +73,7 @@ export default function PointsMallPage() {
           <PaperCardHeader>
             <PaperCardTitle>精选商品</PaperCardTitle>
           </PaperCardHeader>
-          <PaperCardContent className="space-y-4">
+          <PaperCardContent className="space-y-6">
             {/* 分类筛选 */}
             <CategoryFilter
               activeCategory={activeCategory}
@@ -77,53 +81,81 @@ export default function PointsMallPage() {
             />
 
             {/* 商品网格 */}
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="aspect-square bg-paper-background rounded-lg mb-3"></div>
-                    <div className="h-4 bg-paper-background rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-paper-background rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">❌</div>
-                <p className="text-paper-ink-secondary">{error}</p>
-              </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">🎁</div>
-                <p className="text-paper-ink-secondary">暂无商品</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
+            <AnimatePresence mode='wait'>
+                {loading ? (
+                <motion.div 
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                >
+                    {[...Array(8)].map((_, i) => (
+                    <div key={i} className="space-y-3">
+                        <Skeleton className="aspect-square rounded-xl" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                        </div>
+                    </div>
+                    ))}
+                </motion.div>
+                ) : error ? (
+                <motion.div 
+                    key="error"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-12"
+                >
+                    <div className="text-4xl mb-4">❌</div>
+                    <p className="text-paper-ink-secondary">{error}</p>
+                </motion.div>
+                ) : products.length === 0 ? (
+                <motion.div 
+                    key="empty"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-12"
+                >
+                    <div className="text-4xl mb-4">🎁</div>
+                    <p className="text-paper-ink-secondary">暂无商品</p>
+                </motion.div>
+                ) : (
+                <motion.div 
+                    key="list"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                >
+                    {products.map((product, index) => (
+                    <ProductCard key={product.id} product={product} index={index} />
+                    ))}
+                </motion.div>
+                )}
+            </AnimatePresence>
           </PaperCardContent>
         </PaperCard>
 
         {/* 兑换说明 */}
-        <PaperCard className="bg-paper-info-light">
-          <PaperCardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">ℹ️</span>
-              <div className="flex-1">
-                <h3 className="font-medium text-paper-ink mb-2">兑换说明</h3>
-                <ul className="text-sm text-paper-ink-secondary space-y-1">
-                  <li>• 积分兑换后不可退还,请谨慎选择</li>
-                  <li>• 兑换成功后7个工作日内发货</li>
-                  <li>• 如有问题请联系客服</li>
-                </ul>
-              </div>
-            </div>
-          </PaperCardContent>
-        </PaperCard>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+        >
+            <PaperCard className="bg-paper-info-light border-paper-info-border">
+            <PaperCardContent className="p-4">
+                <div className="flex items-start gap-3">
+                <span className="text-2xl">ℹ️</span>
+                <div className="flex-1">
+                    <h3 className="font-medium text-paper-ink mb-2">兑换说明</h3>
+                    <ul className="text-sm text-paper-ink-secondary space-y-1">
+                    <li>• 积分兑换后不可退还,请谨慎选择</li>
+                    <li>• 兑换成功后7个工作日内发货</li>
+                    <li>• 如有问题请联系客服</li>
+                    </ul>
+                </div>
+                </div>
+            </PaperCardContent>
+            </PaperCard>
+        </motion.div>
       </div>
-    </DashboardLayout>
   );
 }

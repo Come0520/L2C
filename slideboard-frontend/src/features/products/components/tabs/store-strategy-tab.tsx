@@ -1,3 +1,5 @@
+'use client';
+
 import { Search } from 'lucide-react'
 import React from 'react'
 
@@ -6,7 +8,7 @@ import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/
 import { PaperInput } from '@/components/ui/paper-input'
 import { PaperSelect } from '@/components/ui/paper-select'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table'
-import { Product } from '@/services/products.client'
+import { Product } from '@/shared/types/product'
 
 interface StoreStrategyTabProps {
   products: Product[]

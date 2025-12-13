@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { BaseMiddleware } from '../base';
-import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { BaseMiddleware } from '../base';
 
 // Fallback in-memory store for development/testing when Redis is not configured
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -55,7 +56,7 @@ export class RateLimitMiddleware extends BaseMiddleware {
     // Prioritize x-forwarded-for as it is standard in Vercel/Edge environments
     const forwardedFor = request.headers.get('x-forwarded-for');
     // Note: request.ip is available in Next.js Middleware but might be missing in some type definitions
-    let ip = forwardedFor ? (forwardedFor.split(',')[0] || '').trim() : (request as any).ip || 'unknown';
+    const ip = forwardedFor ? (forwardedFor.split(',')[0] || '').trim() : (request as any).ip || 'unknown';
 
     // Skip rate limiting if IP cannot be determined (dev/test safety)
     if (ip === 'unknown') {

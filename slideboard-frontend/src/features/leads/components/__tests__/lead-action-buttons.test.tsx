@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { LEAD_STATUS_CONFIG } from '@/constants/lead-status';
 import { LeadItem } from '@/types/lead';
 
-import LeadActionButtons from '../lead-action-buttons';
+import LeadActionButtons from '../LeadActionButtons';
 
 
 // Mock data for testing

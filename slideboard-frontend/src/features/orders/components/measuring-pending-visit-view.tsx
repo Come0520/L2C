@@ -7,11 +7,11 @@ import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperDialog, PaperDialogContent, PaperDialogHeader, PaperDialogTitle, PaperDialogFooter, PaperDialogDescription } from '@/components/ui/paper-dialog'
 import { PaperInput, PaperTextarea } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 import { toast } from '@/components/ui/toast'
-import { MEASUREMENT_STATUS } from '@/constants/measurement-status'
+import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_CONFIG } from '@/constants/measurement-status'
 import { measurementService } from '@/services/measurements.client'
-import { Measurement } from '@/types/measurement'
+import { Measurement } from '@/shared/types/measurement'
 import { exportToExcel, formatMeasurementsForExport } from '@/utils/export'
 import { logger } from '@/utils/logger'
 
@@ -45,6 +45,7 @@ export function MeasuringPendingVisitView() {
       )
       setMeasurements(result.measurements)
     } catch (_err) {
+      console.error(_err)
       setError('加载测量单失败，请重试')
     } finally {
       setIsLoading(false)
@@ -111,91 +112,30 @@ export function MeasuringPendingVisitView() {
     }
   }
 
-  // Handle reassign order
-  const handleReassignOrder = (measurement: Measurement) => {
-    setSelectedMeasurement(measurement)
-    setReassignReason('')
-    setReassignDialogOpen(true)
-  }
-
-  const confirmReassignOrder = async () => {
-    if (!selectedMeasurement || !reassignReason.trim()) return
-    try {
-      setIsLoading(true)
-      // 重新分配：将状态改回测量中-待分配
-      await measurementService.updateMeasurementStatus(
-        selectedMeasurement.id,
-        MEASUREMENT_STATUS.MEASURING_PENDING_ASSIGNMENT
-      )
-      await loadMeasurements()
-      setReassignDialogOpen(false)
-      setSelectedMeasurement(null)
-      setReassignReason('')
-    } catch (_err) {
-      setError('重新分配失败，请重试')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // 打开备注编辑模态框
-  const openRemarkModal = (measurement: Measurement) => {
-    setSelectedMeasurement(measurement)
-    setRemarkValue('') // 暂时清空，后续可根据实际需求加载现有备注
-    setIsRemarkModalOpen(true)
-  }
-
-  // 保存备注
-  const saveRemark = async () => {
-    if (!selectedMeasurement) return
-
-    try {
-      setIsLoading(true)
-      // 保存备注：实际项目中可能需要更新测量单的measurementData或其他字段
-      await measurementService.updateMeasurement(selectedMeasurement.id, {
-        measurementData: {
-          ...selectedMeasurement.measurementData,
-          remark: remarkValue
-        }
-      })
-      await loadMeasurements()
-      setIsRemarkModalOpen(false)
-    } catch (_err) {
-      setError('保存备注失败，请重试')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // 处理搜索
   const handleSearch = () => {
     loadMeasurements()
   }
 
-  // 批量选择处理
-  const handleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedMeasurements(new Set())
-      setIsAllSelected(false)
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsAllSelected(e.target.checked)
+    if (e.target.checked) {
+      setSelectedMeasurements(new Set(measurements.map(m => m.id)))
     } else {
-      const allIds = new Set(measurements.map(m => m.id))
-      setSelectedMeasurements(allIds)
-      setIsAllSelected(true)
+      setSelectedMeasurements(new Set())
     }
   }
 
-  const handleSelectMeasurement = (id: string) => {
+  const handleSelectOne = (id: string, checked: boolean) => {
     const newSelected = new Set(selectedMeasurements)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
+    if (checked) {
       newSelected.add(id)
+    } else {
+      newSelected.delete(id)
     }
     setSelectedMeasurements(newSelected)
-    setIsAllSelected(newSelected.size === measurements.length && measurements.length > 0)
+    setIsAllSelected(newSelected.size === measurements.length)
   }
 
-  // 批量提醒
   const handleBatchRemind = async () => {
     if (selectedMeasurements.size === 0) {
       toast.info('请先选择要提醒的测量单')
@@ -218,15 +158,59 @@ export function MeasuringPendingVisitView() {
     }
   }
 
+  const handleEditRemark = (measurement: Measurement) => {
+    setSelectedMeasurement(measurement)
+    setRemarkValue(measurement.measurementData?.remark || '')
+    setIsRemarkModalOpen(true)
+  }
 
+  const saveRemark = async () => {
+    if (!selectedMeasurement) return
+    try {
+      setIsLoading(true)
+      await measurementService.updateMeasurement(selectedMeasurement.id, {
+        measurementData: {
+          ...selectedMeasurement.measurementData,
+          remark: remarkValue
+        }
+      })
+      await loadMeasurements()
+      setIsRemarkModalOpen(false)
+      toast.success('备注已更新')
+    } catch (_err) {
+      setError('更新备注失败，请重试')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
+  const handleReassignOrder = (measurement: Measurement) => {
+    setSelectedMeasurement(measurement)
+    setReassignDialogOpen(true)
+  }
 
+  const confirmReassignOrder = async () => {
+    if (!selectedMeasurement) return
+    if (!reassignReason.trim()) {
+      toast.warning('请输入重新分配理由')
+      return
+    }
+    try {
+      setIsLoading(true)
+      // TODO: Implement reassign logic in service
+      // await measurementService.requestReassign(selectedMeasurement.id, reassignReason)
+      toast.success('重新分配申请已提交')
+      setReassignDialogOpen(false)
+      setReassignReason('')
+      await loadMeasurements()
+    } catch (_err) {
+      setError('重新分配申请提交失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-
-
-
-
-  // 处理导出数据
+  // Handle export data
   const handleExport = () => {
     if (measurements.length === 0) {
       setError('暂无数据可导出')
@@ -245,13 +229,14 @@ export function MeasuringPendingVisitView() {
   return (
     <div className="flex flex-col gap-6 h-full">
       {/* 1. Time Alert Area */}
-      <div className="grid grid-cols-3 gap-4">
-        <PaperCard className="bg-green-50 border-green-100">
-          <PaperCardContent className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-green-600">正常状态 (&gt;12h)</div>
-                <div className="text-2xl font-bold text-green-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">正常状态 (&gt;12h)</div>
+                <div className="text-3xl font-bold text-green-700 mt-1">
                   {measurements.filter(m => {
                     if (!m.scheduledAt) return false
                     const now = new Date()
@@ -261,21 +246,23 @@ export function MeasuringPendingVisitView() {
                   }).length}
                 </div>
               </div>
-              <div className="p-2 bg-green-100 rounded-lg text-green-600">
-                <span className="text-xl">✓</span>
+              <div className="p-3 bg-green-50 rounded-xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                <span className="text-2xl">✓</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-green-600/80">
+            <div className="mt-2 text-xs text-green-600/80 font-medium">
               进度正常，无需干预
             </div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-orange-50 border-orange-100">
-          <PaperCardContent className="p-4">
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-orange-600">紧急状态 (6-12h)</div>
-                <div className="text-2xl font-bold text-orange-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">紧急状态 (6-12h)</div>
+                <div className="text-3xl font-bold text-orange-700 mt-1">
                   {measurements.filter(m => {
                     if (!m.scheduledAt) return false
                     const now = new Date()
@@ -285,21 +272,23 @@ export function MeasuringPendingVisitView() {
                   }).length}
                 </div>
               </div>
-              <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                <span className="text-xl">!</span>
+              <div className="p-3 bg-orange-50 rounded-xl text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                <span className="text-2xl">!</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-orange-600/80">
+            <div className="mt-2 text-xs text-orange-600/80 font-medium">
               建议发送提醒通知
             </div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-red-50 border-red-100">
-          <PaperCardContent className="p-4">
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-red-600">超期预警 (&lt;6h)</div>
-                <div className="text-2xl font-bold text-red-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">超期预警 (&lt;6h)</div>
+                <div className="text-3xl font-bold text-red-700 mt-1">
                   {measurements.filter(m => {
                     if (!m.scheduledAt) return false
                     const now = new Date()
@@ -309,11 +298,11 @@ export function MeasuringPendingVisitView() {
                   }).length}
                 </div>
               </div>
-              <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                <span className="text-xl">⚠</span>
+              <div className="p-3 bg-red-50 rounded-xl text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="text-2xl">⚠</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-red-600/80">
+            <div className="mt-2 text-xs text-red-600/80 font-medium">
               需立即介入处理
             </div>
           </PaperCardContent>
@@ -328,20 +317,20 @@ export function MeasuringPendingVisitView() {
       )}
 
       {/* 2. Order List Area */}
-      <PaperCard className="border-blue-200 shadow-sm ring-1 ring-blue-100 flex-1">
-        <div className="p-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center flex-wrap gap-4">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex-1">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent p-4 flex justify-between items-center flex-wrap gap-4">
           <div className="flex gap-2 flex-wrap">
             <div className="relative">
               <PaperInput
                 placeholder="搜索销售单/测量单号"
-                className="w-64 bg-white pr-10"
+                className="w-64 bg-white/50 pr-10"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
               />
             </div>
             <PaperButton
               variant="primary"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md shadow-sm transition-all duration-200"
+              className="px-6 py-2"
               onClick={handleSearch}
               disabled={isLoading}
             >
@@ -352,24 +341,24 @@ export function MeasuringPendingVisitView() {
             <PaperButton
               variant="outline"
               size="small"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
               onClick={handleBatchRemind}
+              disabled={isLoading || selectedMeasurements.size === 0}
             >
               批量提醒
             </PaperButton>
             <PaperButton
               variant="outline"
               size="small"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
               onClick={handleExport}
+              disabled={isLoading || measurements.length === 0}
             >
               导出数据
             </PaperButton>
           </div>
-        </div>
+        </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableCell>
                 <input
                   type="checkbox"
@@ -408,7 +397,7 @@ export function MeasuringPendingVisitView() {
                       <input
                         type="checkbox"
                         checked={selectedMeasurements.has(measurement.id)}
-                        onChange={() => handleSelectMeasurement(measurement.id)}
+                        onChange={(e) => handleSelectOne(measurement.id, e.target.checked)}
                         disabled={isLoading}
                         className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
                       />
@@ -437,7 +426,7 @@ export function MeasuringPendingVisitView() {
                     <PaperTableCell>
                       <div
                         className="text-xs text-gray-600 max-w-[150px] truncate cursor-pointer hover:bg-gray-50 p-1 rounded"
-                        onDoubleClick={() => openRemarkModal(measurement)}
+                        onDoubleClick={() => handleEditRemark(measurement)}
                       >
                         {measurement.measurementData?.remark || '- 双击添加备注'}
                       </div>

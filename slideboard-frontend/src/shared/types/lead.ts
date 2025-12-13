@@ -1,41 +1,141 @@
-// 导入自动生成的 API 类型
-import { components } from './api-schema'
+import { Database } from './supabase';
 
-export type LeadDetail = Required<components['schemas']['LeadDetail']>
+export type LeadStatus =
+  | 'new'
+  | 'contacted'
+  | 'following'
+  | 'high_intent'
+  | 'quote_sent'
+  | 'negotiating'
+  | 'won'
+  | 'lost'
+  | 'invalid'
+  | 'PENDING_ASSIGNMENT'
+  | 'PENDING_FOLLOW_UP'
+  | 'FOLLOWING_UP'
+  | 'DRAFT_SIGNED'
+  | 'EXPIRED'
+  | 'PENDING_MEASUREMENT'
+  | 'MEASURING_PENDING_ASSIGNMENT'
+  | 'MEASURING_ASSIGNING'
+  | 'MEASURING_PENDING_VISIT'
+  | 'MEASURING_PENDING_CONFIRMATION'
+  | 'PLAN_PENDING_CONFIRMATION'
+  | 'PENDING_PUSH'
+  | 'PENDING_ORDER'
+  | 'IN_PRODUCTION'
+  | 'STOCK_PREPARED'
+  | 'PENDING_SHIPMENT'
+  | 'INSTALLING_PENDING_ASSIGNMENT'
+  | 'INSTALLING_ASSIGNING'
+  | 'INSTALLING_PENDING_VISIT'
+  | 'INSTALLING_PENDING_CONFIRMATION'
+  | 'PENDING_RECONCILIATION'
+  | 'PENDING_INVOICE'
+  | 'PENDING_PAYMENT'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'PAUSED'
+  | 'ABNORMAL';
 
-export interface LeadItem extends Omit<LeadDetail, 'customerLevel' | 'status' | 'businessTags' | 'appointmentReminder' | 'constructionProgress'> {
-  customerLevel: 'A' | 'B' | 'C' | 'D'
-  status:
-  | 'PENDING_ASSIGNMENT' // 待分配
-  | 'PENDING_FOLLOW_UP' // 待跟踪
-  | 'FOLLOWING_UP' // 跟踪中
-  | 'DRAFT_SIGNED' // 草签
-  | 'EXPIRED' // 已失效
-  | 'PENDING_MEASUREMENT' // 待测量
-  | 'MEASURING_PENDING_ASSIGNMENT' // 测量中-待分配
-  | 'MEASURING_ASSIGNING' // 测量中-分配中
-  | 'MEASURING_PENDING_VISIT' // 测量中-待上门
-  | 'MEASURING_PENDING_CONFIRMATION' // 测量中-待确认
-  | 'PLAN_PENDING_CONFIRMATION' // 方案待确认
-  | 'PENDING_PUSH' // 待推单
-  | 'PENDING_ORDER' // 待下单
-  | 'IN_PRODUCTION' // 生产中
-  | 'STOCK_PREPARED' // 备货完成
-  | 'PENDING_SHIPMENT' // 待发货
-  | 'INSTALLING_PENDING_ASSIGNMENT' // 安装中-待分配
-  | 'INSTALLING_ASSIGNING' // 安装中-分配中
-  | 'INSTALLING_PENDING_VISIT' // 安装中-待上门
-  | 'INSTALLING_PENDING_CONFIRMATION' // 安装中-待确认
-  | 'PENDING_RECONCILIATION' // 待对账
-  | 'PENDING_INVOICE' // 待开发票
-  | 'PENDING_PAYMENT' // 待回款
-  | 'COMPLETED' // 已完成
-  | 'CANCELLED' // 已取消
-  | 'PAUSED' // 暂停
-  | 'ABNORMAL' // 异常
-  businessTags: Array<'quoted' | 'arrived' | 'appointment' | 'high-intent' | 'measured'>
-  appointmentReminder?: '48h' | '24h' | null
-  constructionProgress?: 'just-signed' | 'plumbing' | 'masonry' | 'painting' | 'installation' | 'stalled'
+export type CustomerLevel = 'A' | 'B' | 'C' | 'D';
+export type BusinessTag = 'quoted' | 'arrived' | 'appointment' | 'high-intent' | 'measured';
+
+export interface Lead {
+  id: string;
+  leadNumber: string;
+  name: string;
+  phone: string;
+  projectAddress?: string;
+  source?: string;
+  status: LeadStatus;
+  customerLevel?: CustomerLevel;
+  budgetMin?: number;
+  budgetMax?: number;
+  requirements?: string[];
+  businessTags?: BusinessTag[];
+  appointmentTime?: string;
+  appointmentReminder?: string;
+  constructionProgress?: string;
+  expectedPurchaseDate?: string;
+  expectedCheckInDate?: string;
+  areaSize?: number;
+  
+  // Stats
+  quoteVersions: number;
+  measurementCompleted: boolean;
+  installationCompleted: boolean;
+  financialStatus?: string;
+  expectedMeasurementDate?: string;
+  expectedInstallationDate?: string;
+  totalQuoteAmount?: number;
+  
+  // Status Tracking
+  lastStatusChangeAt?: string;
+  lastStatusChangeById?: string;
+  isCancelled: boolean;
+  cancellationReason?: string;
+  isPaused: boolean;
+  pauseReason?: string;
+  
+  // Relations
+  assignedToId?: string;
+  assignedToName?: string;
+  designerId?: string;
+  designerName?: string;
+  shoppingGuideId?: string;
+  shoppingGuideName?: string;
+  createdById?: string;
+  createdByName?: string;
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLeadRequest {
+  name: string;
+  phone: string;
+  projectAddress?: string;
+  source?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  requirements?: string[];
+  businessTags?: string[];
+  appointmentTime?: string;
+  appointmentReminder?: string;
+  constructionProgress?: string;
+  expectedPurchaseDate?: string;
+  expectedCheckInDate?: string;
+  areaSize?: number;
+  assignedToId?: string;
+  designerId?: string;
+  shoppingGuideId?: string;
+}
+
+export interface UpdateLeadRequest {
+  name?: string;
+  phone?: string;
+  projectAddress?: string;
+  source?: string;
+  status?: LeadStatus;
+  customerLevel?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  requirements?: string[];
+  businessTags?: string[];
+  appointmentTime?: string;
+  appointmentReminder?: string;
+  constructionProgress?: string;
+  expectedPurchaseDate?: string;
+  expectedCheckInDate?: string;
+  areaSize?: number;
+  assignedToId?: string;
+  designerId?: string;
+  shoppingGuideId?: string;
+  isCancelled?: boolean;
+  cancellationReason?: string;
+  isPaused?: boolean;
+  pauseReason?: string;
 }
 
 export interface LeadStatusConfig {
@@ -110,3 +210,27 @@ export interface LeadDuplicateRecord {
   lead_number: string
   created_at: string
 }
+
+export interface LeadWarnings {
+  followUpStale: number
+  quotedNoDraft: number
+  measurementOverdue: number
+  noFollowUp7Days: number
+  highIntentStale: number
+  budgetExceeded: number
+  churnRisk: number
+  competitorThreat: number
+  total: number
+  generated_at: string
+}
+
+export type WarningType =
+  | 'all'
+  | 'follow_up_stale'
+  | 'quoted_no_draft'
+  | 'measurement_overdue'
+  | 'no_follow_up_7days'
+  | 'high_intent_stale'
+  | 'budget_exceeded'
+  | 'churn_risk'
+  | 'competitor_threat'

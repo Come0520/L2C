@@ -561,23 +561,50 @@ export function PendingShipmentView() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <PaperCard>
-        <PaperCardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-ink-800">待发货 - 订单管理</h3>
-              <p className="text-ink-500 text-sm">客服团队处理已经发出的销售订单，更新物流信息，确认发货完成</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-bold text-ink-800 mb-2">待发货 - 订单管理</h3>
+                <p className="text-sm text-ink-500 leading-relaxed max-w-[80%]">
+                  客服团队处理已经发出的销售订单，更新物流信息，确认发货完成
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                  <span className="text-xs font-medium px-2 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full">
+                    待处理
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-xl text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                <span className="text-2xl">🚚</span>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-ink-500 text-sm">待发货订单</p>
-              <p className="text-2xl font-bold text-ink-800">{pagination.total}</p>
+          </PaperCardContent>
+        </PaperCard>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-ink-500 mb-1">待发货订单</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-3xl font-bold text-ink-800">{pagination.total}</h3>
+                  <span className="text-sm text-ink-400">单</span>
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📦</span>
+              </div>
             </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
 
       {/* 筛选和搜索区域 */}
-      <PaperCard>
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
         <PaperCardContent className="p-4">
           <div className="grid grid-cols-1 gap-4">
             <PaperInput
@@ -591,9 +618,9 @@ export function PendingShipmentView() {
       </PaperCard>
 
       {/* 订单列表 */}
-      <PaperCard>
-        <PaperTableToolbar className="flex justify-between items-center">
-          <div className="text-sm text-ink-500">共 {pagination.total} 条订单</div>
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4 flex justify-between items-center">
+          <div className="text-sm font-medium text-ink-600">共 {pagination.total} 条订单</div>
           <PaperButton variant="outline" onClick={handleRefresh} disabled={refreshing}>
             {refreshing ? '刷新中...' : '刷新'}
           </PaperButton>
@@ -601,7 +628,7 @@ export function PendingShipmentView() {
         <PaperCardContent className="p-0">
           <PaperTable>
             <PaperTableHeader>
-              <PaperTableCell>销售单号</PaperTableCell>
+              <PaperTableCell className="pl-6">销售单号</PaperTableCell>
               <PaperTableCell>客户姓名</PaperTableCell>
               <PaperTableCell>客户地址</PaperTableCell>
               <PaperTableCell>发货进度</PaperTableCell>
@@ -626,7 +653,7 @@ export function PendingShipmentView() {
               ) : (
                 orders.map((order) => (
                   <PaperTableRow key={order.id}>
-                    <PaperTableCell>{order.salesOrderNo}</PaperTableCell>
+                    <PaperTableCell className="pl-6">{order.salesOrderNo}</PaperTableCell>
                     <PaperTableCell>{order.customerName}</PaperTableCell>
                     <PaperTableCell>{order.customerAddress}</PaperTableCell>
                     <PaperTableCell>

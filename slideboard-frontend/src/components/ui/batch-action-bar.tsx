@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import React from 'react';
+
 import { cn } from '@/lib/utils';
+
 import { PaperButton } from './paper-button';
 
 interface BatchAction {

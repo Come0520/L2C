@@ -79,8 +79,8 @@ describe('Permissions', () => {
     phone: '000-0000',
     role: 'admin' as UserRole,
     name: 'Admin User',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   };
 
   const mockSalesUser = {
@@ -88,8 +88,8 @@ describe('Permissions', () => {
     phone: '000-0001',
     role: 'SALES_STORE' as UserRole,
     name: 'Sales User',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   };
 
   const mockServiceUser = {
@@ -97,8 +97,8 @@ describe('Permissions', () => {
     phone: '000-0002',
     role: 'SERVICE_DISPATCH' as UserRole,
     name: 'Service User',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   };
 
   const mockFinanceUser = {
@@ -106,8 +106,8 @@ describe('Permissions', () => {
     phone: '000-0003',
     role: 'OTHER_FINANCE' as UserRole,
     name: 'Finance User',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   };
 
   describe('checkPermission', () => {
@@ -329,32 +329,32 @@ describe('Permissions', () => {
     it('should correctly handle role-specific permissions', () => {
       // 测试门店销售权限
       expect(checkPermission(
-        { id: 'store-sales', phone: '000-0100', role: 'SALES_STORE', name: 'Store Sales', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'store-sales', phone: '000-0100', role: 'SALES_STORE', name: 'Store Sales', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'lead_create'
       )).toBe(true);
       
       // 测试远程销售权限
       expect(checkPermission(
-        { id: 'remote-sales', phone: '000-0101', role: 'SALES_REMOTE', name: 'Remote Sales', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'remote-sales', phone: '000-0101', role: 'SALES_REMOTE', name: 'Remote Sales', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'lead_create'
       )).toBe(false);
       
       // 测试测量师权限
       expect(checkPermission(
-        { id: 'measurer', phone: '000-0102', role: 'SERVICE_MEASURE', name: 'Measurer', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'measurer', phone: '000-0102', role: 'SERVICE_MEASURE', name: 'Measurer', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'service_measure'
       )).toBe(true);
       
       // 测试安装师权限
       expect(checkPermission(
-        { id: 'installer', phone: '000-0103', role: 'SERVICE_INSTALL', name: 'Installer', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'installer', phone: '000-0103', role: 'SERVICE_INSTALL', name: 'Installer', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'service_confirm'
       )).toBe(true);
     });
 
     it('should correctly handle admin permissions', () => {
       // 管理员应该拥有所有权限
-      const adminUser = { id: 'admin', phone: '000-9999', role: 'admin' as UserRole, name: 'Admin', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' };
+      const adminUser = { id: 'admin', phone: '000-9999', role: 'admin' as UserRole, name: 'Admin', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' };
       
       expect(checkPermission(adminUser, 'lead_create')).toBe(true);
       expect(checkPermission(adminUser, 'service_install')).toBe(true);
@@ -365,13 +365,13 @@ describe('Permissions', () => {
     it('should correctly handle role hierarchies', () => {
       // 销售负责人应该能管理线索
       expect(checkPermission(
-        { id: 'sales-lead', phone: '000-0200', role: 'LEAD_SALES', name: 'Sales Lead', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'sales-lead', phone: '000-0200', role: 'LEAD_SALES', name: 'Sales Lead', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'lead_manage'
       )).toBe(true);
       
       // 普通销售应该不能管理线索
       expect(checkPermission(
-        { id: 'store-sales', phone: '000-0100', role: 'SALES_STORE', name: 'Store Sales', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { id: 'store-sales', phone: '000-0100', role: 'SALES_STORE', name: 'Store Sales', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
         'lead_manage'
       )).toBe(false);
     });

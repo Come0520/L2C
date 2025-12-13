@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent, PaperCardFooter } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
@@ -43,7 +42,7 @@ interface UserPoints {
   currentMonthEarn: number;
 }
 
-export default function MallPage() {
+export default function ProductMallPage() {
   const [activeTab, setActiveTab] = useState<'mall' | 'records' | 'ranking'>('mall');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -228,7 +227,7 @@ export default function MallPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -649,6 +648,6 @@ export default function MallPage() {
           </div>
         </PaperModal>
       )}
-    </DashboardLayout>
+    </>
   );
 }

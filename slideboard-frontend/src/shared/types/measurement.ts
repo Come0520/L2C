@@ -32,7 +32,16 @@ export interface MeasurementItem {
 export interface MeasurementRoom {
   id: string;
   name: string;
+  type: string;
   area: number;
+  measurements?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  windows?: { count: number };
+  doors?: { count: number };
+  notes?: string;
   items: MeasurementItem[];
 }
 

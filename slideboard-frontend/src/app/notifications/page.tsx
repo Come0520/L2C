@@ -1,19 +1,12 @@
-
 import { Suspense } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { createClient } from '@/lib/supabase/server';
 
-import ApprovalList from './components/approval-list';
-import { ApprovalRequest } from './components/approval-list';
-import NotificationList from './components/notification-list';
-import { Notification } from './components/notification-list';
+import { ApprovalRequest } from './components/ApprovalList';
+import { Notification } from './components/NotificationList';
+import NotificationsView from './components/NotificationsView';
 import NotificationsLoading from './loading';
 
-// 独立的异步数据获取函数
-
-
-// 独立的异步数据获取函数
 async function getNotifications(): Promise<Notification[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,29 +24,29 @@ async function getNotifications(): Promise<Notification[]> {
     return [];
   }
 
-  // 映射数据库字段到UI组件需要的格式
   return data.map((item: any) => ({
     id: item.id,
     title: item.title,
     content: item.content,
-    type: item.type as any, // casting to match UI expected types 'info'|'warning' etc
-    priority: 'medium' as const, // Default priority as DB doesn't have it yet
+    type: item.type as any,
+    priority: 'medium' as const,
     sender: '系统',
     recipient: '我',
     createdAt: item.created_at,
     status: item.is_read ? 'read' : 'unread',
-    readAt: undefined, // Fix: Changed from null to undefined to match optional type
+    readAt: undefined,
     relatedEntity: {
       type: item.related_entity_type,
       id: item.related_entity_id,
       name: '详情'
     }
-  } as any)); // Temporary bypass to fix build, will refine type mapping next
+  } as any));
 }
 
 async function getApprovals(): Promise<ApprovalRequest[]> {
   // Simulate network delay for streaming demonstration
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  // await new Promise(resolve => setTimeout(resolve, 1500)); 
+  // Commented out delay to improve perceived performance since we are blocking
 
   return [
     {
@@ -171,53 +164,19 @@ async function getApprovals(): Promise<ApprovalRequest[]> {
   ] as ApprovalRequest[];
 }
 
-// 异步组件：通知列表
-async function NotificationsSection() {
-  const notifications = await getNotifications();
-  return (
-    <NotificationList
-      notifications={notifications}
-      onNotificationClick={(notification) => console.log('Notification clicked:', notification.id)}
-      onMarkAsRead={(id) => console.log('Mark as read:', id)}
-    />
-  );
-}
-
-// 异步组件：审批列表
-async function ApprovalsSection() {
-  const approvals = await getApprovals();
-  return (
-    <ApprovalList
-      approvals={approvals}
-      onApprovalClick={(approval) => console.log('Approval clicked:', approval.id)}
-      onApprove={(id) => console.log('Approve:', id)}
-      onReject={(id) => console.log('Reject:', id)}
-    />
-  );
-}
-
 export default async function NotificationsPage() {
+  const [notifications, approvals] = await Promise.all([
+    getNotifications(),
+    getApprovals()
+  ]);
+
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">通知中心</h1>
-
-        {/* 通知列表 - 高优先级，优先渲染 */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">通知消息</h2>
-          <Suspense fallback={<NotificationsLoading type="notifications" />}>
-            <NotificationsSection />
-          </Suspense>
-        </section>
-
-        {/* 审批列表 - 次要优先级，延迟渲染 */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">审批请求</h2>
-          <Suspense fallback={<NotificationsLoading type="approvals" />}>
-            <ApprovalsSection />
-          </Suspense>
-        </section>
+        <NotificationsView 
+          notifications={notifications} 
+          approvals={approvals} 
+        />
       </div>
-    </DashboardLayout>
   );
 }

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
-export function GET() {
-  return NextResponse.json({ status: 'ok' })
-}
+import { withApiHandler, createSuccessResponse } from '@/utils/api-error-handler'
+
+export const GET = withApiHandler(async () => {
+  return createSuccessResponse({ status: 'ok' })
+})
+

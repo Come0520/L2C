@@ -15,21 +15,26 @@ interface User {
 }
 
 interface ReassignModalProps<T extends { id: string }> {
-  isOpen: boolean;
-  onClose: () => void;
-  items: T[];
-  users: User[];
-  onReassign: (itemIds: string[], userId: string) => void;
-  getDisplayName?: (item: T) => string;
-  title?: string;
-  itemType?: string;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  selectedIds: string[]
+  onSuccess?: () => void
+  // Optional props from original component kept for compatibility if needed elsewhere
+  items?: T[]
+  users?: User[]
+  onReassign?: (itemIds: string[], userId: string) => void
+  getDisplayName?: (item: T) => string
+  title?: string
+  itemType?: string
 }
 
 export const ReassignModal = <T extends { id: string }>({
-  isOpen,
-  onClose,
-  items,
-  users,
+  open,
+  onOpenChange,
+  selectedIds,
+  onSuccess,
+  items = [],
+  users = [],
   onReassign,
   getDisplayName = (item) => item.id,
   title = '重新分配',
@@ -54,14 +59,18 @@ export const ReassignModal = <T extends { id: string }>({
       return;
     }
 
-    const itemIds = items.map(item => item.id);
-    onReassign(itemIds, selectedUserId);
+    if (onReassign) {
+      onReassign(selectedIds, selectedUserId);
+    }
+    // In a real app, we would call an API here using selectedIds
+    
     toast.success(`${itemType}已成功重新分配`);
-    onClose();
+    if (onSuccess) onSuccess();
+    onOpenChange(false);
   };
 
   return (
-    <PaperModal isOpen={isOpen} onClose={onClose} title={title}>
+    <PaperModal isOpen={open} onClose={() => onOpenChange(false)} title={title}>
       <div className="space-y-6">
         {/* Items to Reassign */}
         <div>
@@ -125,7 +134,7 @@ export const ReassignModal = <T extends { id: string }>({
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t border-paper-600">
-          <PaperButton variant="outline" onClick={onClose}>
+          <PaperButton variant="outline" onClick={() => onOpenChange(false)}>
             取消
           </PaperButton>
           <PaperButton

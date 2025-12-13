@@ -168,11 +168,19 @@ export interface CreateInstallationRequest {
 export interface UpdateInstallationRequest {
   status?: InstallationStatus
   acceptanceStatus?: AcceptanceStatus
+  installationType?: InstallationType
+  installationContact?: string
+  installationPhone?: string
+  installationAddress?: string
   installerId?: string
   installationTeamId?: string
   scheduledAt?: string
   appointmentTimeSlot?: string
   estimatedDuration?: number
+  environmentRequirements?: EnvironmentRequirements
+  requiredTools?: string[]
+  requiredMaterials?: string[]
+  specialInstructions?: string
   installationData?: InstallationResult
   installationPhotos?: string[]
   beforePhotos?: string[]

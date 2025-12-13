@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperModal } from '@/components/ui/paper-modal';
@@ -64,7 +63,6 @@ export default function PendingApprovalsPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-paper-ink">待我审批</h1>
 
@@ -179,6 +177,5 @@ export default function PendingApprovalsPage() {
           </PaperModal>
         )}
       </div>
-    </DashboardLayout>
   );
 }

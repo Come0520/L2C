@@ -1,12 +1,26 @@
-import { supabase } from '@/lib/supabase/client';
-
 import { MeasurementTemplatesClient } from '../measurement-templates.client';
 
-vi.mock('@/lib/supabase/client');
+// 模拟@/lib/supabase/client模块
+const mockSupabase = {
+  from: vi.fn(),
+  rpc: vi.fn(),
+};
+
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: mockSupabase,
+  createClient: vi.fn(() => mockSupabase),
+}));
+
+// 模拟window对象
+global.window = {
+  location: {
+    origin: 'http://localhost:3000',
+  },
+} as any;
 
 describe('MeasurementTemplatesClient', () => {
-  // Get the mocked supabase instance
-  const mockedSupabase = vi.mocked(supabase);
+  // 使用我们创建的mockSupabase实例
+  const mockedSupabase = mockSupabase;
 
   // Helper function to reset mock client for each test
   beforeEach(() => {

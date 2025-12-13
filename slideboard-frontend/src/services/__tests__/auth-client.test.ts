@@ -103,7 +103,7 @@ describe('authService', () => {
     it('should send verification code to valid phone', async () => {
       const supabaseClient = createClient();
       
-      (supabaseClient.auth.signInWithOtp as jest.Mock).mockResolvedValue({
+      (supabaseClient.auth.signInWithOtp as vi.Mock).mockResolvedValue({
         data: { session: null, user: null },
         error: null,
       });
@@ -121,7 +121,7 @@ describe('authService', () => {
     it('should throw error when supabase returns error', async () => {
       const supabaseClient = createClient();
       
-      (supabaseClient.auth.signInWithOtp as jest.Mock).mockResolvedValue({
+      (supabaseClient.auth.signInWithOtp as vi.Mock).mockResolvedValue({
         data: null,
         error: { message: 'Failed to send OTP', code: 'OTP_SEND_FAILED' },
       });

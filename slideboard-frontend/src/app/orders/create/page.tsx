@@ -3,7 +3,6 @@
 import { useSearchParams } from 'next/navigation'
 import React, { Suspense, useEffect } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { OrderCreateView } from '@/features/orders/components/order-create-view'
 import { TRACK_PAGE_VIEW } from '@/utils/analytics'
 
@@ -24,10 +23,8 @@ function OrderCreatePageContent() {
 
 export default function OrderCreatePage() {
     return (
-        <DashboardLayout>
             <Suspense fallback={<div>Loading...</div>}>
                 <OrderCreatePageContent />
             </Suspense>
-        </DashboardLayout>
     )
 }

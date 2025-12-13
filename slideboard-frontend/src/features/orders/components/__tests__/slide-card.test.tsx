@@ -45,6 +45,22 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
+// Mock useAuth hook
+vi.mock('@/contexts/auth-context', () => {
+  return {
+    useAuth: vi.fn(() => ({
+      user: { id: 'test-user', name: 'Test User', role: 'admin', phone: '13800138000' },
+      loading: false,
+      login: vi.fn(),
+      loginWithSms: vi.fn(),
+      sendVerificationCode: vi.fn(),
+      loginWithThirdParty: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn()
+    }))
+  }
+})
+
 // Mock clipboard API
 Object.assign(navigator, {
   clipboard: {

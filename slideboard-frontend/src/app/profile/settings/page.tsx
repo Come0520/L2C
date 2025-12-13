@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
+import { Tabs } from '@/components/ui/tabs';
 import PaperCard from '@/components/ui/paper-card';
 import { toast } from '@/components/ui/toast';
 
@@ -83,13 +83,6 @@ export default function AccountPage() {
     newPassword: '',
     confirmPassword: ''
   });
-
-  const tabs = [
-    { id: 'profile', label: '个人资料' },
-    { id: 'security', label: '安全设置' },
-    { id: 'notifications', label: '通知设置' },
-    { id: 'privacy', label: '隐私设置' }
-  ];
 
   const handleSaveProfile = () => {
     setProfile(editedProfile);
@@ -571,8 +564,46 @@ export default function AccountPage() {
     </div>
   );
 
+  const tabs = [
+    {
+      title: '个人资料',
+      value: 'profile',
+      content: (
+        <div className="h-full overflow-y-auto p-1">
+          {renderProfileTab()}
+        </div>
+      )
+    },
+    {
+      title: '安全设置',
+      value: 'security',
+      content: (
+        <div className="h-full overflow-y-auto p-1">
+          {renderSecurityTab()}
+        </div>
+      )
+    },
+    {
+      title: '通知设置',
+      value: 'notifications',
+      content: (
+        <div className="h-full overflow-y-auto p-1">
+          {renderNotificationsTab()}
+        </div>
+      )
+    },
+    {
+      title: '隐私设置',
+      value: 'privacy',
+      content: (
+        <div className="h-full overflow-y-auto p-1">
+          {renderPrivacyTab()}
+        </div>
+      )
+    }
+  ];
+
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -584,32 +615,12 @@ export default function AccountPage() {
           </PaperButton>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-paper-border">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-paper-primary text-paper-primary'
-                    : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div>
-          {activeTab === 'profile' && renderProfileTab()}
-          {activeTab === 'security' && renderSecurityTab()}
-          {activeTab === 'notifications' && renderNotificationsTab()}
-          {activeTab === 'privacy' && renderPrivacyTab()}
-        </div>
+        {/* Tab Navigation & Content */}
+        <Tabs 
+          tabs={tabs} 
+          containerClassName="mt-6"
+          contentClassName="h-[40rem] lg:h-[50rem] mt-8" // Add margin-top for separation
+        />
 
         {/* Password Change Modal */}
         {showPasswordModal && (
@@ -679,6 +690,5 @@ export default function AccountPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

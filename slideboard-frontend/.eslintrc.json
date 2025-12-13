@@ -1,11 +1,10 @@
 {
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
-  "parser": "@typescript-eslint/parser",
+  "extends": ["next/core-web-vitals", "prettier"],
   "plugins": ["@typescript-eslint", "import"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "rules": {
     "@typescript-eslint/no-unused-vars": [
       "error",
@@ -97,77 +96,14 @@
     },
     {
       "files": ["src/app/api/**/*.ts"],
-      "rules": {
-        "id-denylist": "off"
-      }
+      "rules": {}
     },
     {
-      "files": ["src/utils/__tests__/*.test.ts", "src/**/__tests__/*.test.ts", "src/**/__tests__/*.test.tsx"],
+      "files": ["src/shared/types/api-schema.ts"],
       "rules": {
         "@typescript-eslint/naming-convention": "off",
-        "@typescript-eslint/no-explicit-any": "off",
-        "id-length": "off",
-        "@typescript-eslint/no-unused-vars": "off"
-      }
-    },
-    {
-      "files": ["src/utils/report-generator.ts"],
-      "rules": {
         "@typescript-eslint/no-explicit-any": "off"
       }
-    },
-    {
-      "files": ["src/utils/debounce-throttle.ts"],
-      "rules": {
-        "@typescript-eslint/no-explicit-any": "off",
-        "no-restricted-syntax": "off"
-      }
-    },
-    {
-      "files": ["src/utils/logger.ts"],
-      "rules": {
-        "@typescript-eslint/naming-convention": "off",
-        "id-denylist": "off",
-        "no-console": "off"
-      }
-    },
-    {
-      "files": ["src/utils/db-mapping.ts"],
-      "rules": {
-        "id-denylist": "off",
-        "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/naming-convention": "off"
-      }
-    },
-    {
-      "files": ["src/services/**/*.ts"],
-      "rules": {
-         "id-denylist": "off",
-         "@typescript-eslint/no-explicit-any": "off",
-         "@typescript-eslint/naming-convention": "off",
-         "id-length": "off"
-      }
-    },
-    {
-      "files": ["src/types/logs.ts"],
-      "rules": {
-         "id-denylist": "off"
-      }
-    },
-    {
-      "files": ["src/hooks/**/*.ts"],
-      "rules": {
-         "@typescript-eslint/no-explicit-any": "off",
-         "id-length": "off"
-      }
-    },
-    {
-      "files": ["src/features/**/*.tsx", "src/features/**/*.ts"],
-      "rules": {
-         "id-length": "off",
-         "@typescript-eslint/no-empty-object-type": "off"
-      }
     }
-  ],
-  "ignorePatterns": ["next-env.d.ts", ".next/", "node_modules/", "src_backup_*"]
+  ]
 }

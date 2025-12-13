@@ -63,7 +63,7 @@ export const PaperNavItem: React.FC<PaperNavItemProps> = ({
       onClick={handleClick}
       {...props}
     >
-      {icon && <span className="mr-3 h-5 w-5 flex-shrink-0">{icon}</span>}
+      {icon && <span className={cn("h-5 w-5 flex-shrink-0", children ? "mr-3" : "")}>{icon}</span>}
       <span className="truncate">{children}</span>
     </Link>
   );
@@ -99,7 +99,12 @@ export const PaperNavGroup: React.FC<PaperNavGroupProps> = ({
   return (
     <div className={cn('space-y-1', className)}>
       <button
-        onClick={toggle}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggle();
+        }}
         className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary rounded-md transition-all duration-200"
         aria-expanded={isOpen}
         aria-controls={`nav-group-${title}`}
@@ -116,7 +121,7 @@ export const PaperNavGroup: React.FC<PaperNavGroupProps> = ({
       </button>
       <div 
         id={`nav-group-${title}`}
-        className={cn('ml-4 space-y-1', !isOpen && 'hidden')}
+        className={cn('ml-4 space-y-1 overflow-hidden transition-all duration-300 ease-in-out', !isOpen ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100')}
       >
         {children}
       </div>

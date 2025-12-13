@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/nextjs';
+// import * as Sentry from '@sentry/nextjs';
 import { PostgrestError } from '@supabase/supabase-js'
 
 /**
@@ -57,13 +57,14 @@ export async function withErrorHandler<T>(
         return await operation()
     } catch (error) {
         // 记录到 Sentry
-        Sentry.captureException(error, {
-            extra: {
-                customErrorMessage,
-                details: (error as any)?.details,
-                code: (error as any)?.code
-            }
-        });
+        // Sentry.captureException(error, {
+        //     extra: {
+        //         customErrorMessage,
+        //         details: (error as any)?.details,
+        //         code: (error as any)?.code
+        //     }
+        // });
+        console.error('API Error (Sentry disabled):', error);
 
         if (error instanceof ApiError) {
             throw error

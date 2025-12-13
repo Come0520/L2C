@@ -52,5 +52,8 @@ export class SessionRefreshMiddleware implements Middleware {
 
     // 继续执行下一个中间件
     await next()
+
+    // 关键修复：返回 response 以确保 cookie 被正确发送
+    return response
   }
 }

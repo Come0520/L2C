@@ -12,10 +12,10 @@ interface UserProfile {
   id: string;
   name: string;
   phone: string;
-  avatar_url?: string;
+  avatarUrl?: string;
   role: UserRole;
-  created_at: string;
-  plan_expires_at?: string;
+  createdAt: string;
+  planExpiresAt?: string;
 }
 
 export default function ProfilePage() {
@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
-    avatar_url: '',
+    avatarUrl: '',
     phone: '',
   });
 
@@ -39,20 +39,21 @@ export default function ProfilePage() {
     const fetchUserProfile = async () => {
       try {
         setIsLoading(true);
+        // Map user from context (which is already camelCase User type) to local UserProfile
         const mockProfile: UserProfile = {
           id: user!.id,
           name: user!.name,
           phone: user!.phone,
-          avatar_url: user!.avatar_url,
+          avatarUrl: user!.avatarUrl,
           role: user!.role,
-          created_at: '2024-01-01T00:00:00Z',
-          plan_expires_at: '2024-12-31T23:59:59Z',
+          createdAt: user!.createdAt,
+          planExpiresAt: '2024-12-31T23:59:59Z',
         };
 
         setProfile(mockProfile);
         setFormData({
           name: mockProfile.name,
-          avatar_url: mockProfile.avatar_url || '',
+          avatarUrl: mockProfile.avatarUrl || '',
           phone: mockProfile.phone || '',
         });
       } catch (error) {
@@ -78,7 +79,7 @@ export default function ProfilePage() {
         .from('users')
         .update({
           name: formData.name,
-          avatar_url: formData.avatar_url || null,
+          avatar_url: formData.avatarUrl || null,
         })
         .eq('id', user!.id);
 
@@ -90,7 +91,7 @@ export default function ProfilePage() {
       setProfile(prev => prev ? {
         ...prev,
         name: formData.name,
-        avatar_url: formData.avatar_url,
+        avatarUrl: formData.avatarUrl,
       } : null);
 
       setSuccess('资料保存成功!');
@@ -110,7 +111,7 @@ export default function ProfilePage() {
     if (profile) {
       setFormData({
         name: profile.name,
-        avatar_url: profile.avatar_url || '',
+        avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
       });
       setIsEditing(false);
@@ -166,7 +167,7 @@ export default function ProfilePage() {
         .getPublicUrl(filePath);
 
       // 更新formData
-      setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+      setFormData(prev => ({ ...prev, avatarUrl: publicUrl }));
       setSuccess('头像上传成功!');
 
       setTimeout(() => setSuccess(null), 3000);
@@ -218,8 +219,8 @@ export default function ProfilePage() {
                 <div className="text-xs text-gray-500">{profile.role === 'pro' ? 'Pro用户' : '普通用户'}</div>
               </div>
               <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                {profile.avatar_url ? (
-                  <Image src={profile.avatar_url} alt={profile.name} width={40} height={40} className="rounded-full" unoptimized />
+                {profile.avatarUrl ? (
+                  <Image src={profile.avatarUrl} alt={profile.name} width={40} height={40} className="rounded-full" unoptimized />
                 ) : (
                   <User className="h-5 w-5 text-primary-600" />
                 )}
@@ -297,8 +298,8 @@ export default function ProfilePage() {
                   {/* 头像 */}
                   <div className="flex items-center space-x-6">
                     <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center">
-                      {profile.avatar_url ? (
-                        <Image src={profile.avatar_url} alt={profile.name} width={80} height={80} className="rounded-full" unoptimized />
+                      {profile.avatarUrl ? (
+                        <Image src={profile.avatarUrl} alt={profile.name} width={80} height={80} className="rounded-full" unoptimized />
                       ) : (
                         <User className="h-8 w-8 text-primary-600" />
                       )}
@@ -347,7 +348,7 @@ export default function ProfilePage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">注册时间</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                      {new Date(profile.created_at).toLocaleDateString('zh-CN')}
+                      {new Date(profile.createdAt).toLocaleDateString('zh-CN')}
                     </div>
                   </div>
 
@@ -506,9 +507,9 @@ export default function ProfilePage() {
                         <div className="text-sm font-medium text-gray-900">
                           {profile.role === 'pro' ? '¥99/月' : '免费'}
                         </div>
-                        {profile.plan_expires_at && (
+                        {profile.planExpiresAt && (
                           <div className="text-xs text-gray-500">
-                            到期时间: {new Date(profile.plan_expires_at).toLocaleDateString('zh-CN')}
+                            到期时间: {new Date(profile.planExpiresAt).toLocaleDateString('zh-CN')}
                           </div>
                         )}
                       </div>

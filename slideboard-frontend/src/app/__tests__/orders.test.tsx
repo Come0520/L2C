@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
+import { vi } from 'vitest'
 
 import OrdersOverviewPage from '@/app/orders/page'
 // Don't import the real hook, just use the mocked one from the factory
@@ -10,9 +11,9 @@ import { useSalesOrders } from '@/hooks/useSalesOrders'
 
 // Mock dependencies
 // The factory needs to return the mock function that we can control
-const mockUseSalesOrders = jest.fn()
+const mockUseSalesOrders = vi.fn()
 
-jest.mock('@/hooks/useSalesOrders', () => {
+vi.mock('@/hooks/useSalesOrders', () => {
     return {
         useSalesOrders: () => mockUseSalesOrders()
     }
@@ -22,7 +23,7 @@ jest.mock('@/hooks/useSalesOrders', () => {
 // it means `DashboardLayout` (even mocked?) is trying to use theme context.
 // Wait, I mocked `DashboardLayout` at the top:
 /*
-jest.mock('@/components/layout/dashboard-layout', () => {
+vi.mock('@/components/layout/dashboard-layout', () => {
     return function MockDashboardLayout({ children }: { children: React.ReactNode }) {
         return <div data-testid="dashboard-layout">{children}</div>
     }
@@ -40,13 +41,13 @@ jest.mock('@/components/layout/dashboard-layout', () => {
 // In `src/app/orders/page.tsx`: `import DashboardLayout from '@/components/layout/dashboard-layout'`
 // So the path is correct.
 // Why is the mock not taking effect?
-// Maybe because `jest.mock` is hoisted but the implementation needs `React` which might not be in scope?
+// Maybe because `vi.mock` is hoisted but the implementation needs `React` which might not be in scope?
 // Or maybe because it's a default export?
 
 // Let's try to add ThemeProvider to the wrapper anyway to be safe.
 
-jest.mock('@/utils/analytics', () => ({
-    TRACK_PAGE_VIEW: jest.fn(),
+vi.mock('@/utils/analytics', () => ({
+    TRACK_PAGE_VIEW: vi.fn(),
 }))
 
 // Extend expect
@@ -62,14 +63,14 @@ const createTestQueryClient = () => new QueryClient({
 })
 
 describe('OrdersOverviewPage', () => {
-    const mockCreateSalesOrder = jest.fn()
-    const mockUpdateSalesOrder = jest.fn()
-    const mockDeleteSalesOrder = jest.fn()
-    const mockBatchUpdateStatus = jest.fn()
-    // const mockUseSalesOrders = jest.fn() // Removed local variable
+    const mockCreateSalesOrder = vi.fn()
+    const mockUpdateSalesOrder = vi.fn()
+    const mockDeleteSalesOrder = vi.fn()
+    const mockBatchUpdateStatus = vi.fn()
+    // const mockUseSalesOrders = vi.fn() // Removed local variable
 
     beforeEach(() => {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
         // No need to mockImplementation on useSalesOrders itself, 
         // just configure the mock function that the factory returns
         mockUseSalesOrders.mockReturnValue({
@@ -85,6 +86,8 @@ describe('OrdersOverviewPage', () => {
                                 projectAddress: '123 Test St',
                                 sales: 'Sales Person',
                                 status: 'pending',
+                                totalAmount: 1000,
+                                updatedAt: new Date().toISOString(),
                                 statusUpdatedAt: new Date().toISOString(),
                             },
                         ],

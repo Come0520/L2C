@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
@@ -38,7 +37,7 @@ interface ServiceProvider {
   priceRange: string;
 }
 
-export default function SuppliersPage() {
+export default function SupplierManagementPage() {
   const [activeTab, setActiveTab] = useState<'suppliers' | 'services'>('suppliers');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -53,7 +52,7 @@ export default function SuppliersPage() {
       type: 'material',
       contactPerson: '张经理',
       phone: '138-0000-1001',
-      email: 'zhang@goldbuilding.com',
+      email: 'demoSupplier@goldbuilding.com',
       address: '北京市朝阳区建材大厦A座',
       rating: 4.8,
       cooperationStatus: 'active',
@@ -67,7 +66,7 @@ export default function SuppliersPage() {
       type: 'service',
       contactPerson: '李总监',
       phone: '139-0000-1002',
-      email: 'li@greenhome.com',
+      email: 'testSupplier@greenhome.com',
       address: '上海市浦东新区环保园区',
       rating: 4.6,
       cooperationStatus: 'active',
@@ -161,7 +160,7 @@ export default function SuppliersPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -555,6 +554,6 @@ export default function SuppliersPage() {
           </div>
         </PaperModal>
       )}
-    </DashboardLayout>
+    </>
   );
 }

@@ -30,10 +30,11 @@ export interface User {
   id: string;
   phone: string;
   name: string;
-  avatar_url?: string;
+  email?: string;
+  avatarUrl?: string;
   role: UserRole;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthResponse {

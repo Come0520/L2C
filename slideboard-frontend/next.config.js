@@ -1,12 +1,14 @@
 /** @type {import('next').NextConfig} */
 const path = require('path')
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
+// 暂时注释掉 bundle-analyzer - 依赖缺失
+// const withBundleAnalyzer = require('@next/bundle-analyzer')({
+//   enabled: process.env.ANALYZE === 'true',
+// })
 
 const nextConfig = {
-  outputFileTracingRoot: path.join(__dirname, '..'),
+  // 修复：指向当前项目根目录，而不是父目录
+  outputFileTracingRoot: __dirname,
   output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
@@ -14,6 +16,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'example.com' },
       { protocol: 'http', hostname: 'localhost' },
     ],
@@ -24,11 +27,16 @@ const nextConfig = {
   assetPrefix: process.env.CDN_URL || undefined,
   // 启用严格模式
   reactStrictMode: true,
-  // 服务器组件外部包配置（Next.js 15中移到顶层）
-  serverExternalPackages: ['@supabase/supabase-js'],
-  // 启用React Compiler实验性功能
-  experimental: {
-    reactCompiler: false,
+  // 服务器组件外部包配置
+  serverExternalPackages: [
+    '@supabase/supabase-js',
+    // 'import-in-the-middle', // 暂时注释掉，导致启动报错
+    // '@opentelemetry/instrumentation',
+    // '@sentry/profiling-node',
+  ],
+  // Turbopack 配置 - Next.js 16 顶层配置（必须与 outputFileTracingRoot 一致）
+  turbopack: {
+    root: __dirname,
   },
   async headers() {
     const isDev = process.env.NODE_ENV === 'development'
@@ -37,7 +45,7 @@ const nextConfig = {
       default-src 'self';
       script-src 'self' 'unsafe-eval' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
-      img-src 'self' blob: data:;
+      img-src 'self' blob: data: https://images.unsplash.com;
       font-src 'self' data:;
       object-src 'none';
       base-uri 'self';
@@ -49,7 +57,7 @@ const nextConfig = {
       default-src 'self';
       script-src 'self' https://*.supabase.co 'unsafe-eval' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
-      img-src 'self' blob: data: https://*.supabase.co;
+      img-src 'self' blob: data: https://*.supabase.co https://images.unsplash.com;
       font-src 'self' data:;
       object-src 'none';
       base-uri 'self';
@@ -99,4 +107,5 @@ const nextConfig = {
 
 const withNextIntl = require('next-intl/plugin')();
 
-module.exports = withNextIntl(withBundleAnalyzer(nextConfig));
+// 暂时不使用 bundle-analyzer
+module.exports = withNextIntl(nextConfig);

@@ -2,7 +2,6 @@
 
 import React from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { PaperProgress } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card'
@@ -30,7 +29,6 @@ export default function AssessmentPage() {
   const avgOnTime = Math.round((teamMetrics.reduce((sum, t) => sum + t.onTimeRate, 0) / teamMetrics.length) * 10) / 10
 
   return (
-    <DashboardLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -108,6 +106,5 @@ export default function AssessmentPage() {
           </PaperCardContent>
         </PaperCard>
       </div>
-    </DashboardLayout>
   )
 }

@@ -2,7 +2,7 @@
 # 多阶段构建，优化镜像体积和安全性
 
 # ==================== 阶段1: 依赖安装 ====================
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --only=production
 
 # ==================== 阶段2: 构建应用 ====================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 从依赖阶段复制node_modules
@@ -26,7 +26,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # ==================== 阶段3: 运行时环境 ====================
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

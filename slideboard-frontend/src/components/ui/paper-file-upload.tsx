@@ -6,10 +6,21 @@ import { cn } from '@/utils/lib-utils'
 
 import { PaperButton } from './paper-button'
 
-// 附件类型枚举
+/**
+ * 附件类型枚举
+ * @typedef {('image'|'document'|'other')} AttachmentType
+ */
 export type AttachmentType = 'image' | 'document' | 'other'
 
-// 附件要求配置
+/**
+ * 附件配置接口
+ * @interface AttachmentConfig
+ * @property {AttachmentType} type - 附件类型
+ * @property {string} accept - 允许的文件类型
+ * @property {number} maxSizeMB - 最大文件大小（MB）
+ * @property {boolean} [compress] - 是否压缩文件
+ * @property {Function} [namingRule] - 文件命名规则函数
+ */
 interface AttachmentConfig {
   type: AttachmentType
   accept: string
@@ -18,7 +29,10 @@ interface AttachmentConfig {
   namingRule?: (params: { date: string; orderNo?: string; type: string; index: number }) => string
 }
 
-// 预设附件配置
+/**
+ * 预设附件配置
+ * @constant {Record<AttachmentType, AttachmentConfig>}
+ */
 export const ATTACHMENT_CONFIGS: Record<AttachmentType, AttachmentConfig> = {
   image: {
     type: 'image',
@@ -40,6 +54,25 @@ export const ATTACHMENT_CONFIGS: Record<AttachmentType, AttachmentConfig> = {
   }
 }
 
+/**
+ * 纸张文件上传组件属性接口
+ * @interface PaperFileUploadProps
+ * @property {Function} [onUpload] - 文件上传成功回调函数
+ * @property {number} [maxFiles=5] - 最大文件数量
+ * @property {string} [accept] - 允许的文件类型
+ * @property {string} [className=''] - 自定义类名
+ * @property {boolean} [multiple=true] - 是否允许选择多个文件
+ * @property {number} [maxSizeMB] - 最大文件大小（MB）
+ * @property {Function} [onValidateError] - 文件验证错误回调函数
+ * @property {AttachmentType} [attachmentType='other'] - 附件类型
+ * @property {string} [orderNo] - 订单号，用于文件命名
+ * @property {string} [label] - 组件标签
+ * @property {string} [error] - 错误信息
+ * @property {Function} [onUploadProgress] - 上传进度回调函数
+ * @property {Function} [onUploadError] - 上传错误回调函数
+ * @property {Function} [onUploadSuccess] - 上传成功回调函数
+ * @property {number} [retryCount=3] - 上传失败重试次数
+ */
 interface PaperFileUploadProps {
   onUpload?: (files: File[]) => void
   maxFiles?: number
@@ -57,6 +90,29 @@ interface PaperFileUploadProps {
   onUploadSuccess?: (files: File[]) => void
   retryCount?: number
 }
+
+/**
+ * 纸张文件上传组件
+ * 
+ * @description
+ * 用于上传文件的组件，支持拖拽上传、文件验证、压缩和重命名功能
+ * 支持多种文件类型，并提供友好的用户交互体验
+ * 
+ * @param {PaperFileUploadProps} props - 组件属性
+ * @returns {JSX.Element} 纸张文件上传组件
+ * 
+ * @example
+ * ```typescript
+ * <PaperFileUpload
+ *   onUpload={handleFileUpload}
+ *   accept="image/*"
+ *   maxFiles={5}
+ *   label="上传图片"
+ *   onUploadProgress={handleUploadProgress}
+ *   onUploadSuccess={handleUploadSuccess}
+ * />
+ * ```
+ */
 
 export function PaperFileUpload({
   onUpload,

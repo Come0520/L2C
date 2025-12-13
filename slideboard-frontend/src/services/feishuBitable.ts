@@ -116,7 +116,7 @@ export const feishuBitableService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
         },
         body: JSON.stringify({
           table: {
@@ -145,7 +145,7 @@ export const feishuBitableService = {
     try {
       const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables`, {
         headers: {
-          'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
         }
       });
 
@@ -169,7 +169,7 @@ export const feishuBitableService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
         },
         body: JSON.stringify({
           fields
@@ -204,7 +204,7 @@ export const feishuBitableService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+            'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
           },
           body: JSON.stringify({
             records: batch.map(fields => ({ fields }))
@@ -234,7 +234,7 @@ export const feishuBitableService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
         },
         body: JSON.stringify({
           filter,
@@ -263,7 +263,7 @@ export const feishuBitableService = {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.FEISHU_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${env.FEISHU_ACCESS_TOKEN}`
         },
         body: JSON.stringify({
           fields

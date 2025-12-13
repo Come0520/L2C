@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { X, Plus, Palette, FileText } from 'lucide-react';
+import { useState } from 'react';
+
 import { toast } from '@/components/ui/toast';
 
 interface CreateSlideModalProps {

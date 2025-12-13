@@ -7,7 +7,7 @@ import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperTimeEditComponent } from '@/components/ui/paper-date-time-picker'
 import { PaperInput } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 import { toast } from '@/components/ui/toast'
 import { ORDER_STATUS } from '@/constants/order-status'
 import { createClient } from '@/lib/supabase/client'
@@ -185,67 +185,84 @@ export function InstallingPendingAssignmentView() {
   return (
     <div className="flex flex-col gap-6 h-full">
       {/* 1. Time Alert Area (Top) */}
-      <div className="grid grid-cols-3 gap-4">
-        <PaperCard className="bg-green-50 border-green-100">
-          <PaperCardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-green-600">正常状态 (&gt;2h)</div>
-              <div className="text-2xl font-bold text-green-700">5</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">正常状态 (&gt;2h)</div>
+                <div className="text-3xl font-bold text-green-700 mt-1">5</div>
+              </div>
+              <div className="p-3 bg-green-50 rounded-xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                <span className="text-2xl">✓</span>
+              </div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-green-200 flex items-center justify-center text-green-700">✓</div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-orange-50 border-orange-100">
-          <PaperCardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-orange-600">紧急状态 (1-2h)</div>
-              <div className="text-2xl font-bold text-orange-700">2</div>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">紧急状态 (1-2h)</div>
+                <div className="text-3xl font-bold text-orange-700 mt-1">2</div>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-xl text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                <span className="text-2xl">!</span>
+              </div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-orange-200 flex items-center justify-center text-orange-700">!</div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-red-50 border-red-100">
-          <PaperCardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-red-600">超期预警 (&lt;1h)</div>
-              <div className="text-2xl font-bold text-red-700">1</div>
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500 mb-1">超期预警 (&lt;1h)</div>
+                <div className="text-3xl font-bold text-red-700 mt-1">1</div>
+              </div>
+              <div className="p-3 bg-red-50 rounded-xl text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="text-2xl">⚠</span>
+              </div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-red-200 flex items-center justify-center text-red-700">⚠</div>
           </PaperCardContent>
         </PaperCard>
       </div>
 
       {/* 2. Order List Area (Middle - Blue Area) */}
-      <PaperCard className="border-blue-200 shadow-sm ring-1 ring-blue-100 flex-1">
-        <div className="p-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex-1">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent p-4 flex justify-between items-center">
             <div className="flex gap-4">
                 <PaperInput 
                   placeholder="搜索销售单/安装单号" 
-                  className="w-64 bg-white" 
+                  className="w-64 bg-white/50" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 <PaperInput 
                   placeholder="客户姓名/电话" 
-                  className="w-48 bg-white" 
+                  className="w-48 bg-white/50" 
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                 />
                 <PaperInput 
                   placeholder="搜索地址" 
-                  className="w-48 bg-white" 
+                  className="w-48 bg-white/50" 
                   value={addressSearch}
                   onChange={(e) => setAddressSearch(e.target.value)}
                 />
-                <PaperButton variant="outline" className="bg-white hover:bg-gray-50">查询</PaperButton>
+                <PaperButton variant="outline">查询</PaperButton>
             </div>
-            <div className="text-sm text-blue-600 font-medium">
+            <div className="text-sm font-medium text-ink-600">
                 待分配订单: {filteredOrders.length}
             </div>
-        </div>
+        </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
+            <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
               <PaperTableCell>销售单编号</PaperTableCell>
               <PaperTableCell>安装单编号</PaperTableCell>
               <PaperTableCell>客户信息</PaperTableCell>

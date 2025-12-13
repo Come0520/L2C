@@ -9,7 +9,7 @@ import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle, PaperCard
 import { PaperDialog, PaperDialogContent, PaperDialogHeader, PaperDialogTitle, PaperDialogFooter } from '@/components/ui/paper-dialog'
 import { PaperInput } from '@/components/ui/paper-input'
 import { PaperTextarea } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 
 
 // Mock data types
@@ -350,61 +350,76 @@ export function ProductionPreparationView() {
       </div>
       
       {/* 1. Summary and Alert Area */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PaperCard className="bg-green-50 border-green-100">
-          <PaperCardContent className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-green-600">备货中总单数</div>
-                <div className="flex flex-col gap-1">
-                  <div className="text-2xl font-bold text-green-700">
-                    {totalOrders}
-                  </div>
-                  <div className="text-xl font-bold text-green-700">
-                    ¥{totalAmount.toLocaleString()}
-                  </div>
+                <div className="text-sm font-medium text-ink-500">备货中总单数</div>
+                <div className="text-3xl font-bold text-ink-800 mt-1">
+                  {totalOrders}
                 </div>
               </div>
-              <div className="p-2 bg-green-100 rounded-lg text-green-600">
-                <span className="text-xl">📋</span>
+              <div className="p-3 bg-green-50 rounded-xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                <span className="text-2xl">📋</span>
               </div>
             </div>
           </PaperCardContent>
         </PaperCard>
         
-        <PaperCard className="bg-red-50 border-red-100">
-          <PaperCardContent className="p-4">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-red-600">超期单数</div>
-                <div className="text-2xl font-bold text-red-700 mt-1">
+                <div className="text-sm font-medium text-ink-500">备货中总金额</div>
+                <div className="text-3xl font-bold text-emerald-600 mt-1">
+                  ¥{totalAmount.toLocaleString()}
+                </div>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <span className="text-2xl">💰</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+        
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-ink-500">超期单数</div>
+                <div className="text-3xl font-bold text-red-600 mt-1">
                   {overdueOrders}
                 </div>
               </div>
-              <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                <span className="text-xl">⚠️</span>
+              <div className="p-3 bg-red-50 rounded-xl text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="text-2xl">⚠️</span>
               </div>
             </div>
           </PaperCardContent>
         </PaperCard>
         
-        <PaperCard className={`${overdueOrders > 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
-          <PaperCardContent className="p-4">
+        <PaperCard className="relative overflow-hidden group">
+          <div className={`absolute inset-0 bg-gradient-to-br ${overdueOrders > 0 ? 'from-red-50/50 dark:from-red-900/20' : 'from-orange-50/50 dark:from-orange-900/20'} to-transparent pointer-events-none`} />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className={`text-sm ${overdueOrders > 0 ? 'text-red-600' : 'text-orange-600'}`}>
+                <div className="text-sm font-medium text-ink-500">
                   平均停留时长
                 </div>
-                <div className={`text-2xl font-bold mt-1 ${overdueOrders > 0 ? 'text-red-700' : 'text-orange-700'}`}>
+                <div className={`text-3xl font-bold mt-1 ${overdueOrders > 0 ? 'text-red-600' : 'text-orange-600'}`}>
                   {averageStayDuration.toFixed(1)}天
                 </div>
               </div>
-              <div className={`p-2 rounded-lg ${overdueOrders > 0 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                <span className="text-xl">⏱️</span>
+              <div className={`p-3 rounded-xl ${overdueOrders > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                <span className="text-2xl">⏱️</span>
               </div>
             </div>
             {overdueOrders > 0 && (
-              <div className="mt-2 text-xs text-red-600">
+              <div className="mt-2 text-xs text-red-600 font-medium">
                 有 {overdueOrders} 个订单停留时间超过7天
               </div>
             )}
@@ -413,7 +428,7 @@ export function ProductionPreparationView() {
       </div>
       
       {/* 2. Filter and Search Area */}
-      <PaperCard className="border-gray-200 shadow-sm">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
         <PaperCardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-center">
             {/* Search */}
@@ -486,11 +501,14 @@ export function ProductionPreparationView() {
       )}
       
       {/* 4. Order List Area */}
-      <PaperCard className="border-blue-200 shadow-sm ring-1 ring-blue-100 flex-1">
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex-1">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4 flex justify-between items-center">
+          <div className="text-sm font-medium text-ink-600">共 {filteredOrders.length} 条备货中订单</div>
+        </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
             <PaperTableHeader>
-              <PaperTableCell>销售单号</PaperTableCell>
+              <PaperTableCell className="pl-6">销售单号</PaperTableCell>
               <PaperTableCell>客户信息</PaperTableCell>
               <PaperTableCell>收货地址</PaperTableCell>
               <PaperTableCell>停留时长</PaperTableCell>
@@ -502,7 +520,7 @@ export function ProductionPreparationView() {
             <PaperTableBody>
               {filteredOrders.map(order => (
                 <PaperTableRow key={order.id} className={order.stayDuration > 7 || order.shipReminderStatus !== 'none' ? 'bg-red-50/30' : ''}>
-                  <PaperTableCell>
+                  <PaperTableCell className="pl-6">
                     <div className="font-mono text-xs text-gray-900">{order.salesNo}</div>
                   </PaperTableCell>
                   <PaperTableCell>

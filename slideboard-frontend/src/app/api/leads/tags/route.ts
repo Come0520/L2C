@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
 
+export const runtime = 'edge';
+
+const createTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required'),
+  tag_category: z.string().default('custom'),
+  tag_type: z.string().nullable().optional(),
+  color: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i).default('#3B82F6'),
+  description: z.string().nullable().optional(),
+  sort_order: z.number().int().default(0),
+});
 
 /**
  * GET /api/leads/tags
@@ -60,24 +71,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
-        const body = await request.json();
+        const json = await request.json();
 
-        const {
-            name,
-            tag_category = 'custom',
-            tag_type,
-            color = '#3B82F6',
-            description,
-            sort_order = 0,
-        } = body;
+        // Validate request body with Zod
+        const result = createTagSchema.safeParse(json);
 
-        // Validation
-        if (!name || name.trim() === '') {
+        if (!result.success) {
             return NextResponse.json(
-                { error: 'Tag name is required' },
+                { error: 'Invalid request data', details: result.error.format() },
                 { status: 400 }
             );
         }
+
+        const { name, tag_category, tag_type, color, description, sort_order } = result.data;
 
         // Check if tag name already exists
         const { data: existingTag } = await supabase
@@ -103,9 +109,8 @@ export async function POST(request: NextRequest) {
                 color,
                 description,
                 sort_order,
-                is_system: false, // Custom tags are never system tags
-                is_auto: false,
                 is_active: true,
+                is_system: false, // Default to false for user-created tags
             })
             .select()
             .single();

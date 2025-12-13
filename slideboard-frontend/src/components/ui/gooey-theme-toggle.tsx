@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useId } from 'react';
 import { motion } from 'framer-motion';
 import { Moon, Sun, Droplets } from 'lucide-react';
+import React, { useId } from 'react';
+
 import { useTheme, ThemeName } from '@/contexts/theme-context';
 import { cn } from '@/utils/lib-utils';
 

@@ -1,63 +1,31 @@
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
+import { 
+    Quote, 
+    QuoteVersion, 
+    QuoteItem, 
+    CreateQuoteRequest, 
+    CreateQuoteVersionRequest, 
+    UpdateQuoteVersionRequest,
+    QuoteStatus,
+    QuoteVersionStatus
+} from '@/shared/types/quote';
+import { Database } from '@/shared/types/supabase';
 
-export interface QuoteItem {
-    id: string
-    quoteId: string
-    versionId?: string // Optional in DB for now, but good to keep in type
-    category: string
-    space: string
-    productName: string
-    productId?: string
-    variantId?: string
-    quantity: number
-    unitPrice: number
-    totalPrice: number
-    description?: string
-    imageUrl?: string
-    width?: number
-    height?: number
-    unit?: string
-}
-
-export interface QuoteVersion {
-    id: string
-    quoteId: string
-    version: number
-    quoteNo: string
-    totalAmount: number
-    status: 'draft' | 'published' | 'confirmed' | 'expired' | 'cancelled'
-    validUntil?: string
-    items: QuoteItem[]
-    createdAt: string
-    updatedAt: string
-}
-
-export interface Quote {
-    id: string
-    leadId: string
-    customerId?: string
-    projectName: string
-    projectAddress: string
-    salesPerson: string
-    status: 'draft' | 'active' | 'confirmed' | 'closed'
-    versions: QuoteVersion[]
-    currentVersion?: QuoteVersion
-    createdAt: string
-    updatedAt: string
-    type: 'budget' | 'formal'
-}
+type QuoteRow = Database['public']['Tables']['quotes']['Row'];
+type QuoteVersionRow = Database['public']['Tables']['quote_versions']['Row'];
+type QuoteItemRow = Database['public']['Tables']['quote_items']['Row'];
 
 /**
  * Derive quote status from its versions
  */
-const deriveQuoteStatus = (versions: QuoteVersion[]): Quote['status'] => {
+const deriveQuoteStatus = (versions: QuoteVersion[]): QuoteStatus => {
     if (!versions || versions.length === 0) {
         return 'draft';
     }
 
     // Sort versions by version number (descending)
-    const sortedVersions = [...versions].sort((a, b) => b.version - a.version);
-    const latestVersion = sortedVersions[0] as QuoteVersion; // Type assertion since we checked versions.length > 0
+    const sortedVersions = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+    const latestVersion = sortedVersions[0];
     const latestVersionStatus = latestVersion.status;
 
     // Check if any version is confirmed
@@ -73,7 +41,7 @@ const deriveQuoteStatus = (versions: QuoteVersion[]): Quote['status'] => {
         return 'confirmed';
     }
     
-    if (latestVersionStatus === 'published') {
+    if (latestVersionStatus === 'published' || latestVersionStatus === 'presented') {
         return 'active';
     }
     
@@ -81,43 +49,118 @@ const deriveQuoteStatus = (versions: QuoteVersion[]): Quote['status'] => {
         return 'closed';
     }
     
+    if (latestVersionStatus === 'accepted') {
+        return 'won';
+    }
+
+    if (latestVersionStatus === 'rejected') {
+        return 'lost';
+    }
+    
     return 'draft';
 };
+
+// Map DB Row to Frontend Type
+function mapDbToQuoteItem(row: QuoteItemRow): QuoteItem {
+    return {
+        id: row.id,
+        quoteVersionId: row.quote_version_id,
+        category: row.category,
+        space: row.space,
+        productName: row.product_name,
+        productId: row.product_id || undefined,
+        quantity: row.quantity || 0,
+        unitPrice: row.unit_price || 0,
+        totalPrice: row.total_price || 0,
+        description: row.description || undefined,
+        imageUrl: row.image_url || undefined,
+        attributes: (row.attributes as Record<string, any>) || undefined,
+        createdAt: row.created_at
+    };
+}
+
+function mapDbToQuoteVersion(row: QuoteVersionRow & { items?: QuoteItemRow[] }): QuoteVersion {
+    return {
+        id: row.id,
+        quoteId: row.quote_id,
+        versionNumber: row.version_number,
+        versionSuffix: row.version_suffix || undefined,
+        quoteNo: row.quote_id, // TODO: Fix quote_no mapping if it exists on version level
+        totalAmount: row.total_amount,
+        status: row.status as QuoteVersionStatus,
+        validUntil: row.valid_until || undefined,
+        remarks: row.remarks || undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        items: row.items ? row.items.map(mapDbToQuoteItem) : []
+    };
+}
+
+function mapDbToQuote(row: QuoteRow & { versions?: (QuoteVersionRow & { items?: QuoteItemRow[] })[], current_version?: QuoteVersionRow }): Quote {
+    const versions = row.versions ? row.versions.map(mapDbToQuoteVersion) : [];
+    
+    // Determine current version
+    let currentVersion: QuoteVersion | undefined;
+    if (row.current_version_id && versions.length > 0) {
+        currentVersion = versions.find(v => v.id === row.current_version_id);
+    }
+    if (!currentVersion && versions.length > 0) {
+        // Fallback to latest version
+        currentVersion = [...versions].sort((a, b) => b.versionNumber - a.versionNumber)[0];
+    }
+
+    // Determine derived status if not set in DB
+    const derivedStatus = versions.length > 0 ? deriveQuoteStatus(versions) : (row.status as QuoteStatus || 'draft');
+
+    return {
+        id: row.id,
+        quoteNo: row.quote_no,
+        leadId: row.lead_id || undefined,
+        customerId: row.customer_id || undefined,
+        projectName: row.project_name || '',
+        projectAddress: row.project_address || '',
+        salespersonId: row.salesperson_id || '',
+        currentVersionId: row.current_version_id || undefined,
+        status: derivedStatus,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        versions: versions,
+        currentVersion: currentVersion
+    };
+}
 
 export const quoteService = {
     /**
      * Create a new quote (budget quote)
      */
-    async createBudgetQuote(leadId: string, data: Partial<Quote> & { items?: Partial<QuoteItem>[] }) {
-        const supabase = createClient();
-
+    async createBudgetQuote(data: CreateQuoteRequest) {
         // Get current user ID
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // 1. Create Quote
+        // 1. Create Quote Header
         const { data: quote, error: quoteError } = await supabase
             .from('quotes')
             .insert({
-                lead_id: leadId,
+                lead_id: data.leadId,
+                customer_id: data.customerId,
                 project_name: data.projectName,
                 project_address: data.projectAddress,
-                type: 'budget',
-                customer_id: data.customerId,
-                salesperson_id: user.id
+                salesperson_id: user.id,
+                quote_no: `Q${Date.now()}`, // Temporary ID generation
+                status: 'draft'
             })
             .select()
             .single();
 
         if (quoteError) throw new Error(quoteError.message);
 
-        // 2. Create Initial Version
+        // 2. Create Initial Version (v1)
         const { data: version, error: versionError } = await supabase
             .from('quote_versions')
             .insert({
                 quote_id: quote.id,
-                version: 1,
-                quote_no: `Q${Date.now()}`, // Simple generation for now
+                version_number: 1,
                 total_amount: data.items ? data.items.reduce((sum, i) => sum + (i.totalPrice || 0), 0) : 0,
                 status: 'draft'
             })
@@ -133,10 +176,13 @@ export const quoteService = {
                 category: item.category || 'standard',
                 space: item.space || 'default',
                 product_name: item.productName,
+                product_id: item.productId,
                 quantity: item.quantity,
                 unit_price: item.unitPrice,
                 total_price: item.totalPrice,
                 description: item.description,
+                image_url: item.imageUrl,
+                attributes: item.attributes as any // Cast for JSONB
             }));
 
             const { error: itemsError } = await supabase
@@ -146,7 +192,13 @@ export const quoteService = {
             if (itemsError) throw new Error(itemsError.message);
         }
 
-        return { ...quote, currentVersion: version };
+        // 4. Update quote current version
+        await supabase
+            .from('quotes')
+            .update({ current_version_id: version.id })
+            .eq('id', quote.id);
+
+        return this.getQuote(quote.id);
     },
 
     /**
@@ -160,7 +212,6 @@ export const quoteService = {
      * Get quotes with filters
      */
     async getQuotes(filters: { leadId?: string, customerId?: string, status?: string } = {}) {
-        const supabase = createClient();
         let query = supabase
             .from('quotes')
             .select(`
@@ -184,66 +235,13 @@ export const quoteService = {
 
         if (error) throw new Error(error.message);
 
-        return data.map(q => {
-            // Transform versions
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const transformedVersions = (q.versions as unknown as any[]).map((v: any) => ({
-                id: v.id,
-                quoteId: v.quote_id,
-                version: v.version,
-                quoteNo: v.quote_no,
-                totalAmount: v.total_amount,
-                status: v.status,
-                validUntil: v.valid_until,
-                items: v.items.map((i: any) => ({
-                    id: i.id,
-                    quoteId: i.quote_id,
-                    category: i.category,
-                    space: i.space,
-                    productName: i.product_name,
-                    productId: i.product_id,
-                    variantId: i.variant_id,
-                    quantity: i.quantity,
-                    unitPrice: i.unit_price,
-                    totalPrice: i.total_price,
-                    description: i.description,
-                    imageUrl: i.image_url,
-                    width: i.width,
-                    height: i.height,
-                    unit: i.unit
-                })),
-                createdAt: v.created_at,
-                updatedAt: v.updated_at
-            }));
-
-            // Derive quote status from versions
-            const quoteStatus = deriveQuoteStatus(transformedVersions);
-
-            return {
-            id: q.id,
-            leadId: q.lead_id,
-            customerId: q.customer_id,
-            customerName: q.customer_name,
-            projectName: q.project_name,
-            projectAddress: q.project_address,
-            salesPerson: q.salesperson_name || '',
-            salespersonId: q.salesperson_id,
-            salespersonName: q.salesperson_name,
-            status: quoteStatus,
-            versions: transformedVersions,
-            currentVersion: q.current_version ? transformedVersions.find((v: QuoteVersion) => v.version === q.current_version) : transformedVersions[0],
-            createdAt: q.created_at,
-            updatedAt: q.updated_at,
-            type: q.type
-            };
-        });
+        return (data || []).map(row => mapDbToQuote(row as any));
     },
 
     /**
      * Get quote detail
      */
     async getQuote(id: string) {
-        const supabase = createClient();
         const { data, error } = await supabase
             .from('quotes')
             .select(`
@@ -258,80 +256,35 @@ export const quoteService = {
 
         if (error) throw new Error(error.message);
 
-        // Transform to frontend model
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const versions = (data.versions as unknown as any[]).map((v: any) => ({
-            id: v.id,
-            quoteId: v.quote_id,
-            version: v.version,
-            quoteNo: v.quote_no,
-            totalAmount: v.total_amount,
-            status: v.status,
-            validUntil: v.valid_until,
-            items: v.items.map((i: any) => ({
-                id: i.id,
-                quoteId: i.quote_id, // Note: quote_items links to quote_id in schema, but logically belongs to version? 
-                category: i.category,
-                space: i.space,
-                productName: i.product_name,
-                productId: i.product_id,
-                variantId: i.variant_id,
-                quantity: i.quantity,
-                unitPrice: i.unit_price,
-                totalPrice: i.total_price,
-                description: i.description,
-                imageUrl: i.image_url,
-                width: i.width,
-                height: i.height,
-                unit: i.unit
-            })),
-            createdAt: v.created_at,
-            updatedAt: v.updated_at
-        }));
-
-        // Derive quote status from versions
-        const quoteStatus = deriveQuoteStatus(versions);
-
-        return {
-            id: data.id,
-            leadId: data.lead_id,
-            customerId: data.customer_id,
-            customerName: data.customer_name,
-            projectName: data.project_name,
-            projectAddress: data.project_address,
-            salesPerson: data.salesperson_name || '',
-            salespersonId: data.salesperson_id,
-            salespersonName: data.salesperson_name,
-            status: quoteStatus,
-            versions: versions,
-            currentVersion: versions.find((v: any) => v.version === data.current_version) || versions[0],
-            createdAt: data.created_at,
-            updatedAt: data.updated_at,
-            type: data.type
-        };
+        return mapDbToQuote(data as any);
     },
 
     /**
      * Create a new version for a quote
      */
-    async createVersion(quoteId: string, data: Partial<QuoteVersion>) {
-        const supabase = createClient();
-
+    async createVersion(data: CreateQuoteVersionRequest) {
         // Get current max version
         const { data: currentQuote } = await supabase
             .from('quotes')
-            .select('current_version')
-            .eq('id', quoteId)
+            .select(`
+                id,
+                versions:quote_versions(version_number)
+            `)
+            .eq('id', data.quoteId)
             .single();
 
-        const nextVersion = (currentQuote?.current_version || 0) + 1;
+        const versions = currentQuote?.versions || [];
+        const maxVersion = versions.length > 0 
+            ? Math.max(...versions.map((v: any) => v.version_number)) 
+            : 0;
+        const nextVersionNumber = maxVersion + 1;
 
+        // Create new version
         const { data: version, error } = await supabase
             .from('quote_versions')
             .insert({
-                quote_id: quoteId,
-                version: nextVersion,
-                quote_no: data.quoteNo,
+                quote_id: data.quoteId,
+                version_number: nextVersionNumber,
                 total_amount: data.totalAmount,
                 status: 'draft'
             })
@@ -347,10 +300,13 @@ export const quoteService = {
                 category: item.category || 'standard',
                 space: item.space || 'default',
                 product_name: item.productName,
+                product_id: item.productId,
                 quantity: item.quantity,
                 unit_price: item.unitPrice,
                 total_price: item.totalPrice,
                 description: item.description,
+                image_url: item.imageUrl,
+                attributes: item.attributes as any
             }));
 
             const { error: itemsError } = await supabase
@@ -361,7 +317,10 @@ export const quoteService = {
         }
 
         // Update quote current version
-        await supabase.from('quotes').update({ current_version: nextVersion }).eq('id', quoteId);
+        await supabase
+            .from('quotes')
+            .update({ current_version_id: version.id })
+            .eq('id', data.quoteId);
 
         return version;
     },
@@ -369,67 +328,79 @@ export const quoteService = {
     /**
      * Update a quote version (items and total amount)
      */
-    async updateVersion(versionId: string, data: { items: Partial<QuoteItem>[], totalAmount: number }) {
-        const supabase = createClient();
-        
+    async updateVersion(versionId: string, data: UpdateQuoteVersionRequest) {
         // 1. Update version details
+        const updateData: any = {
+            updated_at: new Date().toISOString()
+        };
+        if (data.totalAmount !== undefined) updateData.total_amount = data.totalAmount;
+        if (data.status) updateData.status = data.status;
+        if (data.validUntil) updateData.valid_until = data.validUntil;
+        if (data.remarks) updateData.remarks = data.remarks;
+
         const { error: versionError } = await supabase
             .from('quote_versions')
-            .update({
-                total_amount: data.totalAmount,
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('id', versionId);
 
         if (versionError) throw new Error(versionError.message);
 
         // 2. Update items (Delete all and re-insert for simplicity)
-        const { error: deleteError } = await supabase
-            .from('quote_items')
-            .delete()
-            .eq('quote_version_id', versionId);
-            
-        if (deleteError) throw new Error(deleteError.message);
-
-        // Insert new items
-        if (data.items && data.items.length > 0) {
-            const itemsToInsert = data.items.map(item => ({
-                quote_version_id: versionId,
-                category: item.category || 'standard',
-                space: item.space || 'default',
-                product_name: item.productName,
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-                total_price: item.totalPrice,
-                description: item.description,
-            }));
-
-            const { error: insertError } = await supabase
+        if (data.items) {
+            const { error: deleteError } = await supabase
                 .from('quote_items')
-                .insert(itemsToInsert);
+                .delete()
+                .eq('quote_version_id', versionId);
+            
+            if (deleteError) throw new Error(deleteError.message);
 
-            if (insertError) throw new Error(insertError.message);
+            if (data.items.length > 0) {
+                const itemsToInsert = data.items.map(item => ({
+                    quote_version_id: versionId,
+                    category: item.category || 'standard',
+                    space: item.space || 'default',
+                    product_name: item.productName,
+                    product_id: item.productId,
+                    quantity: item.quantity,
+                    unit_price: item.unitPrice,
+                    total_price: item.totalPrice,
+                    description: item.description,
+                    image_url: item.imageUrl,
+                    attributes: item.attributes as any
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('quote_items')
+                    .insert(itemsToInsert);
+
+                if (insertError) throw new Error(insertError.message);
+            }
         }
     },
 
     /**
      * Confirm a quote version
      */
-    async confirmVersion(_quoteId: string, versionId: string) {
-        const supabase = createClient();
+    async confirmVersion(quoteId: string, versionId: string) {
         const { error } = await supabase
             .from('quote_versions')
             .update({ status: 'confirmed' })
             .eq('id', versionId);
 
         if (error) throw new Error(error.message);
+        
+        // Also update quote status to active/won based on business logic
+        // For now, let's keep it simple
+        await supabase
+            .from('quotes')
+            .update({ status: 'confirmed', current_version_id: versionId })
+            .eq('id', quoteId);
     },
 
     /**
      * Publish a quote version
      */
-    async publishVersion(_quoteId: string, versionId: string) {
-        const supabase = createClient();
+    async publishVersion(quoteId: string, versionId: string) {
         const { error } = await supabase
             .from('quote_versions')
             .update({ status: 'published' })
@@ -441,8 +412,7 @@ export const quoteService = {
     /**
      * Update version status
      */
-    async updateVersionStatus(versionId: string, status: string) {
-        const supabase = createClient();
+    async updateVersionStatus(versionId: string, status: QuoteVersionStatus) {
         const { error } = await supabase
             .from('quote_versions')
             .update({ status })
@@ -450,4 +420,4 @@ export const quoteService = {
 
         if (error) throw new Error(error.message);
     }
-}
+};

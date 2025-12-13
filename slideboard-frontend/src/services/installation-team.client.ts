@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { Database } from '@/shared/types/supabase';
 import {
     InstallationTeam,
     Installer,
@@ -9,7 +10,6 @@ import {
     CreateInstallerRequest,
     UpdateInstallerRequest
 } from '@/types/installation-team';
-import { Database } from '@/shared/types/supabase';
 
 type InstallationTeamRow = Database['public']['Tables']['installation_teams']['Row'];
 type InstallerRow = Database['public']['Tables']['installers']['Row'];

@@ -1,3 +1,5 @@
+'use client';
+
 import { Layers, Edit, Plus } from 'lucide-react'
 import React from 'react'
 

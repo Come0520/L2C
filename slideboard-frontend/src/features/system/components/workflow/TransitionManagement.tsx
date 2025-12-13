@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useWorkflow } from '@/hooks/useWorkflow';
 import { Check, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+
+import { useWorkflow } from '@/hooks/useWorkflow';
 
 export function TransitionManagement() {
     const { config, loading, error } = useWorkflow();

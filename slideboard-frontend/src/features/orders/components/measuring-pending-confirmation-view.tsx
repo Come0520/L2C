@@ -5,7 +5,7 @@ import React, { useState, useMemo, useCallback, useDeferredValue } from 'react'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperInput } from '@/components/ui/paper-input'
-import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination } from '@/components/ui/paper-table'
+import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
 import { toast } from '@/components/ui/toast'
 import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_PERMISSIONS } from '@/constants/measurement-status'
 
@@ -249,57 +249,62 @@ export function MeasuringPendingConfirmationView() {
   return (
     <div className="flex flex-col gap-6 h-full">
       {/* 1. Time Alert Area */}
-      <div className="grid grid-cols-3 gap-4">
-        <PaperCard className="bg-green-50 border-green-100">
-          <PaperCardContent className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-green-600">正常状态 (&gt;24h)</div>
-                <div className="text-2xl font-bold text-green-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">正常状态 (&gt;24h)</div>
+                <div className="text-3xl font-bold text-green-700">
                   {orders.filter(o => o.remainingTime > 24 * 60).length}
                 </div>
               </div>
-              <div className="p-2 bg-green-100 rounded-lg text-green-600">
-                <span className="text-xl">✓</span>
+              <div className="p-3 bg-green-50 rounded-xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                <span className="text-2xl">✓</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-green-600/80">
+            <div className="mt-2 text-xs text-green-600/80 font-medium">
               时效正常，按序处理
             </div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-orange-50 border-orange-100">
-          <PaperCardContent className="p-4">
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-orange-600">紧急状态 (12-24h)</div>
-                <div className="text-2xl font-bold text-orange-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">紧急状态 (12-24h)</div>
+                <div className="text-3xl font-bold text-orange-700">
                   {orders.filter(o => o.remainingTime > 12 * 60 && o.remainingTime <= 24 * 60).length}
                 </div>
               </div>
-              <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                <span className="text-xl">!</span>
+              <div className="p-3 bg-orange-50 rounded-xl text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                <span className="text-2xl">!</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-orange-600/80">
+            <div className="mt-2 text-xs text-orange-600/80 font-medium">
               请优先处理，即将超时
             </div>
           </PaperCardContent>
         </PaperCard>
-        <PaperCard className="bg-red-50 border-red-100">
-          <PaperCardContent className="p-4">
+
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm text-red-600">超期预警 (&lt;12h)</div>
-                <div className="text-2xl font-bold text-red-700 mt-1">
+                <div className="text-sm font-medium text-ink-500 mb-1">超期预警 (&lt;12h)</div>
+                <div className="text-3xl font-bold text-red-700">
                   {orders.filter(o => o.remainingTime <= 12 * 60).length}
                 </div>
               </div>
-              <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                <span className="text-xl">⚠</span>
+              <div className="p-3 bg-red-50 rounded-xl text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                <span className="text-2xl">⚠</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-red-600/80">
+            <div className="mt-2 text-xs text-red-600/80 font-medium">
               需立即处理，已通知主管
             </div>
           </PaperCardContent>
@@ -308,25 +313,25 @@ export function MeasuringPendingConfirmationView() {
 
       {/* 2. Order List Area */}
       {!isDetailOpen && (
-        <PaperCard className="border-blue-200 shadow-sm ring-1 ring-blue-100 flex-1">
-            <div className="p-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center">
+        <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex-1">
+            <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent p-4 flex justify-between items-center">
                 <div className="flex gap-4">
                     <PaperInput 
                       placeholder="搜索销售单/测量单号" 
-                      className="w-64 bg-white" 
+                      className="w-64 bg-white/50" 
                       onChange={(e) => handleSearch(e.target.value)}
                     />
                     <PaperInput 
                       placeholder="客户姓名/电话" 
-                      className="w-48 bg-white" 
+                      className="w-48 bg-white/50" 
                       onChange={(e) => handleCustomerSearch(e.target.value)}
                     />
-                    <PaperButton variant="outline" className="bg-white hover:bg-gray-50">查询</PaperButton>
+                    <PaperButton variant="outline">查询</PaperButton>
                 </div>
-            </div>
+            </PaperTableToolbar>
             <PaperCardContent className="p-0">
               <PaperTable>
-                <PaperTableHeader>
+                <PaperTableHeader className="bg-gray-50/50 dark:bg-white/5">
                   <PaperTableCell>测量单号</PaperTableCell>
                   <PaperTableCell>客户信息</PaperTableCell>
                   <PaperTableCell>品类</PaperTableCell>

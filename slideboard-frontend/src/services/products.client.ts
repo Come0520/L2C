@@ -1,187 +1,169 @@
-import { withErrorHandler } from '@/lib/api/error-handler';
-import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/shared/types/supabase';
-import { fromDbFields, toDbFields } from '@/utils/db-mapping';
+import { supabase } from '@/lib/supabase/client';
+import { Product, CreateProductRequest, UpdateProductRequest, ProductStatus, ProductPrices, ProductImages, ProductTags, ProductFilter } from '@/shared/types/product';
+import { Database } from '@/shared/types/supabase';
 
 type ProductRow = Database['public']['Tables']['products']['Row'];
-// type ProductInsert = Database['public']['Tables']['products']['Insert'];
+type ProductInsert = Database['public']['Tables']['products']['Insert'];
 type ProductUpdate = Database['public']['Tables']['products']['Update'];
 
-// 商品类型定义
-export interface Product {
-    id: string;
-    productCode: string;
-    productName: string;
-    categoryLevel1: string;
-    categoryLevel2: string;
-    unit: string;
-    status: 'draft' | 'pending' | 'approved' | 'rejected' | 'online' | 'offline';
-    prices: {
-        costPrice: number;
-        internalCostPrice: number;
-        internalSettlementPrice: number;
-        settlementPrice: number;
-        retailPrice: number;
-    };
-    images: {
-        detailImages: string[];
-        effectImages: string[];
-        caseImages: string[];
-    };
-    createdAt: string;
-    updatedAt: string;
-}
-
-// 数据库字段映射工具函数
-function mapDbToProduct(item: ProductRow): Product {
-    // 1. 自动映射基础字段
-    const base = fromDbFields<Partial<Product>>(item, {
-        category_level1_id: 'categoryLevel1',
-        category_level2_id: 'categoryLevel2',
-        // 忽略价格字段，后续手动处理
-        cost_price: null,
-        internal_cost_price: null,
-        internal_settlement_price: null,
-        settlement_price: null,
-        retail_price: null,
-        // images 字段虽然名字一样，但需要处理默认值
-        images: null
-    });
-
-    // 2. 手动组装复杂结构
+function mapDbToProduct(row: ProductRow): Product {
     return {
-        ...base,
-        prices: {
-            costPrice: item.cost_price,
-            internalCostPrice: item.internal_cost_price,
-            internalSettlementPrice: item.internal_settlement_price,
-            settlementPrice: item.settlement_price,
-            retailPrice: item.retail_price,
+        id: row.id,
+        productCode: row.product_code,
+        productName: row.product_name,
+        categoryLevel1: row.category_level1 || '',
+        categoryLevel2: row.category_level2 || '',
+        unit: row.unit,
+        status: row.status as ProductStatus,
+        prices: (row.prices as unknown as ProductPrices) || { 
+            costPrice: 0, 
+            internalCostPrice: 0, 
+            internalSettlementPrice: 0, 
+            settlementPrice: 0, 
+            retailPrice: 0 
         },
-        images: {
-            detailImages: item.images?.detailImages || [],
-            effectImages: item.images?.effectImages || [],
-            caseImages: item.images?.caseImages || [],
+        attributes: (row.attributes as unknown as Record<string, string>) || {},
+        images: (row.images as unknown as ProductImages) || { 
+            detailImages: [], 
+            effectImages: [], 
+            caseImages: [] 
         },
-    } as Product;
+        tags: (row.tags as unknown as ProductTags) || { 
+            styleTags: [], 
+            packageTags: [], 
+            activityTags: [], 
+            seasonTags: [], 
+            demographicTags: [] 
+        },
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+    };
 }
 
-function mapProductToDb(productData: Partial<Product>): Partial<ProductUpdate> {
-    // 1. 自动映射基础字段
-    const dbData = toDbFields(productData, {
-        categoryLevel1: 'category_level1_id',
-        categoryLevel2: 'category_level2_id',
-        // 忽略复杂对象，手动处理
-        prices: null,
-        images: null // 手动赋值以确保正确
-    });
-
-    // 2. 手动处理价格字段 (打平)
-    if (productData.prices) {
-        const priceMap = toDbFields(productData.prices);
-        Object.assign(dbData, priceMap);
-    }
-
-    // 3. 手动处理图片
-    if (productData.images) {
-        dbData.images = productData.images;
-    }
-
-    return dbData;
-}
-
-// 商品API服务 (Supabase 版本)
 export const productsService = {
     // 获取所有商品
-    async getAllProducts(): Promise<Product[]> {
-        return withErrorHandler(async () => {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .order('created_at', { ascending: false });
+    async getAllProducts(filter?: ProductFilter): Promise<Product[]> {
+        // 暂时移除分类字段查询，避免报错
+        let query = supabase
+            .from('products')
+            .select(`
+                id, product_code, product_name, 
+                unit, status, prices, attributes, images, tags,
+                created_at, updated_at
+            `);
 
-            if (error) throw error;
+        if (filter) {
+            if (filter.searchTerm) {
+                query = query.or(`product_name.ilike.%${filter.searchTerm}%,product_code.ilike.%${filter.searchTerm}%`);
+            }
+            // 暂时移除分类筛选
+            // if (filter.categoryLevel1 && filter.categoryLevel1 !== 'all') {
+            //    query = query.eq('category_level1', filter.categoryLevel1);
+            // }
+            // if (filter.categoryLevel2 && filter.categoryLevel2 !== 'all') {
+            //    query = query.eq('category_level2', filter.categoryLevel2);
+            // }
+            if (filter.status && filter.status !== 'all') {
+                query = query.eq('status', filter.status);
+            }
+        }
 
-            // 映射数据库字段到前端类型
-            return (data || []).map(mapDbToProduct);
-        });
+        const { data, error } = await query;
+
+        if (error) throw new Error(error.message);
+
+        return (data || []).map(mapDbToProduct);
     },
 
     // 获取单个商品
     async getProductById(id: string): Promise<Product | null> {
-        return withErrorHandler(async () => {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', id)
-                .single();
+        // 暂时移除分类字段查询，避免报错
+        const { data, error } = await supabase
+            .from('products')
+            .select(`
+                id, product_code, product_name, 
+                unit, status, prices, attributes, images, tags,
+                created_at, updated_at
+            `)
+            .eq('id', id)
+            .single();
 
-            if (error) throw error;
+        if (error) {
+            if (error.code === 'PGRST116') return null;
+            throw new Error(error.message);
+        }
 
-            return mapDbToProduct(data);
-        });
+        return mapDbToProduct(data);
     },
 
     // 创建商品
-    async createProduct(productData: Partial<Product>): Promise<Product | null> {
-        return withErrorHandler(async () => {
-            const supabase = createClient();
+    async createProduct(productData: CreateProductRequest): Promise<Product> {
+        const dbData: ProductInsert = {
+            product_code: productData.productCode,
+            product_name: productData.productName,
+            category_level1: productData.categoryLevel1,
+            category_level2: productData.categoryLevel2,
+            unit: productData.unit,
+            status: productData.status,
+            prices: productData.prices as unknown as any, // Cast to any/Json for Supabase
+            attributes: productData.attributes as unknown as any,
+            images: productData.images as unknown as any,
+            tags: productData.tags as unknown as any,
+        };
 
-            // 转换前端驼峰命名到数据库蛇形命名
-            const dbData = mapProductToDb(productData);
+        const { data, error } = await supabase
+            .from('products')
+            .insert(dbData)
+            .select()
+            .single();
 
-            const { data, error } = await supabase
-                .from('products')
-                .insert([dbData])
-                .select()
-                .single();
+        if (error) throw new Error(error.message);
 
-            if (error) throw error;
-
-            return mapDbToProduct(data);
-        });
+        return mapDbToProduct(data);
     },
 
     // 更新商品
-    async updateProduct(id: string, productData: Partial<Product>): Promise<Product | null> {
-        return withErrorHandler(async () => {
-            const supabase = createClient();
+    async updateProduct(id: string, productData: UpdateProductRequest): Promise<Product> {
+        const dbData: ProductUpdate = {};
+        if (productData.productCode) dbData.product_code = productData.productCode;
+        if (productData.productName) dbData.product_name = productData.productName;
+        if (productData.categoryLevel1) dbData.category_level1 = productData.categoryLevel1;
+        if (productData.categoryLevel2) dbData.category_level2 = productData.categoryLevel2;
+        if (productData.unit) dbData.unit = productData.unit;
+        if (productData.status) dbData.status = productData.status;
+        if (productData.prices) dbData.prices = productData.prices as unknown as any;
+        if (productData.attributes) dbData.attributes = productData.attributes as unknown as any;
+        if (productData.images) dbData.images = productData.images as unknown as any;
+        if (productData.tags) dbData.tags = productData.tags as unknown as any;
+        
+        dbData.updated_at = new Date().toISOString();
 
-            const dbData = mapProductToDb(productData);
+        const { data, error } = await supabase
+            .from('products')
+            .update(dbData)
+            .eq('id', id)
+            .select()
+            .single();
 
-            const { data, error } = await supabase
-                .from('products')
-                .update(dbData)
-                .eq('id', id)
-                .select()
-                .single();
+        if (error) throw new Error(error.message);
 
-            if (error) throw error;
-
-            return mapDbToProduct(data);
-        });
+        return mapDbToProduct(data);
     },
 
     // 删除商品
     async deleteProduct(id: string): Promise<boolean> {
-        return withErrorHandler(async () => {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', id);
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
 
-            if (error) throw error;
+        if (error) throw new Error(error.message);
 
-            return true;
-        });
+        return true;
     },
 
     // 获取商品分类
     async getProductCategories() {
-        // 暂时返回静态数据，后续可迁移至数据库字典表
         return [
             { value: 'all', label: '全部分类' },
             { value: '窗帘', label: '窗帘' },

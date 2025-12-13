@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 
 import { QUERY_CONFIG } from '@/config/query-config';
 import { installationService } from '@/services/installations.client';
-import { CreateInstallationRequest, UpdateInstallationRequest } from '@/types/installation';
+import { CreateInstallationRequest, UpdateInstallationRequest } from '@/shared/types/installation';
 
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 

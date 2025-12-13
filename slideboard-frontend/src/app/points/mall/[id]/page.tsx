@@ -3,14 +3,16 @@
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperInput } from '@/components/ui/paper-input';
 import { PaperModal } from '@/components/ui/paper-modal';
+import { Skeleton } from '@/components/ui/skeleton';
 import { pointsService } from '@/services/points.client';
-import { MallProduct, PointsAccount, CreateMallOrderParams } from '@/types/points';
+import { MallProduct, PointsAccount } from '@/types/points';
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -39,6 +41,7 @@ export default function ProductDetailPage() {
       setAccount(accountData);
     } catch (err) {
       console.error('Failed to load data:', err);
+      toast.error('加载商品信息失败');
     } finally {
       setLoading(false);
     }
@@ -52,32 +55,42 @@ export default function ProductDetailPage() {
     if (!product || !account) return;
 
     if (!shippingAddress || !contactPhone) {
-      alert('请填写收货地址和联系电话');
+      toast.warning('请填写收货地址和联系电话');
       return;
     }
 
     if (account.available_points < product.points_required) {
-      alert('积分不足,无法兑换');
+      toast.error('积分不足,无法兑换');
       return;
     }
 
     try {
       setExchanging(true);
-      const params: CreateMallOrderParams = {
-        product_id: product.id,
-        shipping_address: shippingAddress,
-        contact_phone: contactPhone,
-        remark: remark || undefined,
-      };
+      
+      // Use API for secure transaction
+      const response = await fetch('/api/points/mall/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            product_id: product.id,
+            shipping_address: shippingAddress,
+            contact_phone: contactPhone,
+            remark: remark || undefined,
+        })
+      });
 
-      await pointsService.createOrder(params);
+      const result = await response.json();
+
+      if (!response.ok) {
+          throw new Error(result.error || 'Redemption failed');
+      }
       
       setShowExchangeModal(false);
-      alert('兑换成功!您可以在"兑换记录"中查看订单详情');
+      toast.success('兑换成功! 您可以在"兑换记录"中查看订单详情');
       router.push('/points/orders');
     } catch (err: any) {
       console.error('Exchange failed:', err);
-      alert(err.message || '兑换失败,请稍后重试');
+      toast.error(err.message || '兑换失败,请稍后重试');
     } finally {
       setExchanging(false);
     }
@@ -96,18 +109,27 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-paper-background rounded w-32"></div>
-          <div className="h-96 bg-paper-background rounded"></div>
+        <div className="space-y-6 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+          <Skeleton className="h-8 w-32" />
+          <PaperCard>
+            <PaperCardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Skeleton className="aspect-square rounded-lg w-full" />
+                    <div className="space-y-6">
+                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-10 w-3/4" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </div>
+                </div>
+            </PaperCardContent>
+          </PaperCard>
         </div>
-      </DashboardLayout>
     );
   }
 
   if (!product) {
     return (
-      <DashboardLayout>
         <div className="text-center py-12">
           <div className="text-4xl mb-4">❌</div>
           <p className="text-paper-ink-secondary mb-4">商品不存在或已下架</p>
@@ -115,124 +137,139 @@ export default function ProductDetailPage() {
             返回商城
           </PaperButton>
         </div>
-      </DashboardLayout>
     );
   }
 
   const canExchange = account && account.available_points >= product.points_required && product.stock_quantity > 0;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* 返回按钮 */}
-        <PaperButton
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push('/points/mall')}
+        <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
         >
-          ← 返回商城
-        </PaperButton>
+            <PaperButton
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/points/mall')}
+            >
+            ← 返回商城
+            </PaperButton>
+        </motion.div>
 
         {/* 商品详情 */}
-        <PaperCard>
-          <PaperCardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* 左侧:商品图片 */}
-              <div className="aspect-square bg-paper-background rounded-lg flex items-center justify-center overflow-hidden">
-                {product.image_url ? (
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    width={500}
-                    height={500}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-9xl">🎁</div>
-                )}
-              </div>
-
-              {/* 右侧:商品信息 */}
-              <div className="space-y-6">
-                <div>
-                  <span className="text-sm text-paper-ink-secondary bg-paper-background px-3 py-1 rounded">
-                    {getCategoryLabel(product.category)}
-                  </span>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+        >
+            <PaperCard>
+            <PaperCardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* 左侧:商品图片 */}
+                <div className="aspect-square bg-paper-background rounded-lg flex items-center justify-center overflow-hidden">
+                    {product.image_url ? (
+                    <Image
+                        src={product.image_url}
+                        alt={product.name}
+                        width={500}
+                        height={500}
+                        className="w-full h-full object-cover"
+                    />
+                    ) : (
+                    <div className="text-9xl">🎁</div>
+                    )}
                 </div>
 
-                <div>
-                  <h1 className="text-3xl font-bold text-paper-ink mb-2">
-                    {product.name}
-                  </h1>
-                  {product.description && (
-                    <p className="text-paper-ink-secondary">
-                      {product.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-baseline gap-2 py-4 border-y border-paper-border">
-                  <span className="text-sm text-paper-ink-secondary">所需积分:</span>
-                  <span className="text-4xl font-bold text-paper-primary">
-                    {product.points_required}
-                  </span>
-                  <span className="text-lg text-paper-ink-secondary">分</span>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-paper-ink-secondary">库存:</span>
-                    <span className="font-medium text-paper-ink">
-                      {product.stock_quantity} 件
+                {/* 右侧:商品信息 */}
+                <div className="space-y-6">
+                    <div>
+                    <span className="text-sm text-paper-ink-secondary bg-paper-background px-3 py-1 rounded">
+                        {getCategoryLabel(product.category)}
                     </span>
-                  </div>
-                  {account && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-paper-ink-secondary">我的积分:</span>
-                      <span className={`font-medium ${canExchange ? 'text-paper-success' : 'text-paper-error'}`}>
-                        {account.available_points.toLocaleString()} 分
-                      </span>
                     </div>
-                  )}
+
+                    <div>
+                    <h1 className="text-3xl font-bold text-paper-ink mb-2">
+                        {product.name}
+                    </h1>
+                    {product.description && (
+                        <p className="text-paper-ink-secondary leading-relaxed">
+                        {product.description}
+                        </p>
+                    )}
+                    </div>
+
+                    <div className="flex items-baseline gap-2 py-4 border-y border-paper-border">
+                    <span className="text-sm text-paper-ink-secondary">所需积分:</span>
+                    <span className="text-4xl font-bold text-paper-primary">
+                        {product.points_required}
+                    </span>
+                    <span className="text-lg text-paper-ink-secondary">分</span>
+                    </div>
+
+                    <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-paper-ink-secondary">库存:</span>
+                        <span className="font-medium text-paper-ink">
+                        {product.stock_quantity} 件
+                        </span>
+                    </div>
+                    {account && (
+                        <div className="flex justify-between text-sm">
+                        <span className="text-paper-ink-secondary">我的积分:</span>
+                        <span className={`font-medium ${canExchange ? 'text-paper-success' : 'text-paper-error'}`}>
+                            {account.available_points.toLocaleString()} 分
+                        </span>
+                        </div>
+                    )}
+                    </div>
+
+                    <PaperButton
+                    variant="primary"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => setShowExchangeModal(true)}
+                    disabled={!canExchange}
+                    >
+                    {!account ? '请先登录' :
+                    product.stock_quantity <= 0 ? '已售罄' :
+                    account.available_points < product.points_required ? '积分不足' :
+                    '立即兑换'}
+                    </PaperButton>
+
+                    {!account && (
+                    <div className="text-sm text-paper-ink-secondary text-center">
+                        兑换商品需要登录并激活积分账户
+                    </div>
+                    )}
                 </div>
-
-                <PaperButton
-                  variant="primary"
-                  size="lg"
-                  className="w-full"
-                  onClick={() => setShowExchangeModal(true)}
-                  disabled={!canExchange}
-                >
-                  {!account ? '请先登录' :
-                   product.stock_quantity <= 0 ? '已售罄' :
-                   account.available_points < product.points_required ? '积分不足' :
-                   '立即兑换'}
-                </PaperButton>
-
-                {!account && (
-                  <div className="text-sm text-paper-ink-secondary text-center">
-                    兑换商品需要登录并激活积分账户
-                  </div>
-                )}
-              </div>
-            </div>
-          </PaperCardContent>
-        </PaperCard>
+                </div>
+            </PaperCardContent>
+            </PaperCard>
+        </motion.div>
 
         {/* 兑换说明 */}
-        <PaperCard className="bg-paper-info-light">
-          <PaperCardHeader>
-            <PaperCardTitle>兑换说明</PaperCardTitle>
-          </PaperCardHeader>
-          <PaperCardContent>
-            <ul className="text-sm text-paper-ink-secondary space-y-2">
-              <li>• 积分兑换后将立即扣除,不可退还</li>
-              <li>• 兑换成功后7个工作日内发货</li>
-              <li>• 请填写正确的收货地址和联系电话</li>
-              <li>• 如有疑问请联系客服咨询</li>
-            </ul>
-          </PaperCardContent>
-        </PaperCard>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+        >
+            <PaperCard className="bg-paper-info-light border-paper-info-border">
+            <PaperCardHeader>
+                <PaperCardTitle>兑换说明</PaperCardTitle>
+            </PaperCardHeader>
+            <PaperCardContent>
+                <ul className="text-sm text-paper-ink-secondary space-y-2">
+                <li>• 积分兑换后将立即扣除,不可退还</li>
+                <li>• 兑换成功后7个工作日内发货</li>
+                <li>• 请填写正确的收货地址和联系电话</li>
+                <li>• 如有疑问请联系客服咨询</li>
+                </ul>
+            </PaperCardContent>
+            </PaperCard>
+        </motion.div>
 
         {/* 兑换确认Modal */}
         <PaperModal
@@ -241,7 +278,7 @@ export default function ProductDetailPage() {
           title="确认兑换"
         >
           <div className="space-y-4">
-            <div className="bg-paper-background p-4 rounded-lg">
+            <div className="bg-paper-background p-4 rounded-lg border border-paper-border">
               <h3 className="font-medium text-paper-ink mb-2">{product.name}</h3>
               <p className="text-paper-ink-secondary text-sm mb-3">
                 需要扣除 <span className="font-bold text-paper-primary">{product.points_required}</span> 积分
@@ -295,6 +332,5 @@ export default function ProductDetailPage() {
           </div>
         </PaperModal>
       </div>
-    </DashboardLayout>
   );
 }

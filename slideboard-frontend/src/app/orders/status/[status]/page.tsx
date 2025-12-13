@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
-import DashboardLayout from '@/components/layout/dashboard-layout'
 import { BatchActionBar } from '@/components/ui/batch-action-bar'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
@@ -376,9 +375,9 @@ export default function OrderStatusPage() {
 
   if (status === 'draft-sign') {
     return (
-      <DashboardLayout>
+      <div className="bg-theme-bg-primary min-h-screen">
         <OrderCreateView />
-      </DashboardLayout>
+      </div>
     )
   }
 
@@ -405,7 +404,7 @@ export default function OrderStatusPage() {
   if (status === 'surveying-pending-visit') {
     return (
       <StatePage title={title}>
-        <MeasurerOnly>
+        <MeasurerOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅测量师或管理员可查看此页面。</div>}>
           <MeasuringPendingVisitView />
         </MeasurerOnly>
       </StatePage>
@@ -478,15 +477,15 @@ export default function OrderStatusPage() {
 
   if (status === 'installing-pending-assignment') {
     return (
-      <StatePage title={title}>
-        <ServiceDispatchOnly>
-          <InstallingPendingAssignmentView />
-        </ServiceDispatchOnly>
-      </StatePage>
-    )
-  }
+        <StatePage title={title}>
+          <ServiceDispatchOnly>
+            <InstallingPendingAssignmentView />
+          </ServiceDispatchOnly>
+        </StatePage>
+      )
+    }
 
-  if (status === 'installing-assigning') {
+    if (status === 'installing-assigning') {
     return (
       <StatePage title={title}>
         <ServiceDispatchOnly>
@@ -665,8 +664,9 @@ export default function OrderStatusPage() {
         onClearSelection={() => setSelectedOrders([])}
       />
       <ReassignModal
-        isOpen={isReassignOpen}
-        onClose={() => setIsReassignOpen(false)}
+        open={isReassignOpen}
+        onOpenChange={setIsReassignOpen}
+        selectedIds={selectedOrders}
         items={orders.filter((o) => selectedOrders.includes(o.id))}
         users={users}
         onReassign={handleDoReassign}

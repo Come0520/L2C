@@ -22,9 +22,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setThemeState(saved);
       applyTheme(saved);
     } else {
-      // Default to Linear
-      applyTheme('linear');
-      setThemeState('linear');
+      // Default to Warm Rice Paper (Light mode) to avoid dark mode issues
+      applyTheme('warmRicePaper');
+      setThemeState('warmRicePaper');
     }
   }, []);
 
@@ -48,18 +48,17 @@ function applyTheme(name: ThemeName) {
   const body = document.body;
   body.classList.remove('theme-warm', 'theme-glass', 'theme-linear');
   
+  // Remove dark mode class by default
+  document.documentElement.classList.remove('dark');
+  
   if (name === 'warmRicePaper') {
     body.classList.add('theme-warm');
   } else if (name === 'liquidGlass') {
     body.classList.add('theme-glass');
   } else {
     body.classList.add('theme-linear');
-    // Linear usually implies dark mode in this context
-    document.documentElement.classList.add('dark');
-  }
-
-  if (name !== 'linear') {
-     document.documentElement.classList.remove('dark');
+    // Only enable dark mode if explicitly supported
+    // document.documentElement.classList.add('dark');
   }
 }
 

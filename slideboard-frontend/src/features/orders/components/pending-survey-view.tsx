@@ -246,25 +246,52 @@ export function PendingSurveyView() {
 
   // 确认去测量
   const confirmGoSurvey = async () => {
-    // 实际应调用API更新订单状态
-    setShowGoSurveyDialog(false)
-    // 更新订单状态为测量中
-    if (currentOrder) {
-      setOrders(prev => prev.map(order =>
-        order.id === currentOrder.id
-          ? { ...order, status: ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT }
-          : order
-      ))
+    if (!currentOrder) return
 
-      const { error } = await supabase
+    setShowGoSurveyDialog(false)
+    
+    // Optimistic update
+    setOrders(prev => prev.filter(order => order.id !== currentOrder.id))
+    setTotalAmount(prev => prev - currentOrder.amount)
+
+    try {
+      // 1. Update order status
+      const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT })
+        .update({ 
+          status: ORDER_STATUS.MEASURING_PENDING_ASSIGNMENT,
+          status_updated_at: new Date().toISOString()
+        })
         .eq('id', currentOrder.id)
 
-      if (error) {
-        logger.error('更新订单状态失败', { resourceType: 'order', resourceId: currentOrder.id, details: { error } })
-        setToast({ message: '更新状态失败', type: 'error' })
+      if (updateError) throw updateError
+
+      // 2. Create measurement task record (if needed by business logic)
+      // Assuming 'measurement_tasks' table exists, or maybe 'measurement_orders'
+      const { error: createError } = await supabase
+        .from('measurement_orders')
+        .insert({
+          order_id: currentOrder.id,
+          status: 'pending_assignment', // Initial status for measurement
+          created_at: new Date().toISOString()
+        })
+      
+      if (createError) {
+        console.warn('Failed to create measurement order record:', createError)
+        // Non-blocking error? Or should we rollback?
+        // For now, let's assume order status update is primary.
       }
+
+      setToast({ message: '订单已转入测量阶段', type: 'success' })
+      
+      // Optionally refresh list from server to ensure consistency
+      // refetch() 
+    } catch (error) {
+      console.error('Failed to transition order:', error)
+      setToast({ message: '更新状态失败', type: 'error' })
+      // Rollback optimistic update?
+      // For simplicity in this demo, we just show error. 
+      // Ideally we should reload data.
     }
   }
 
@@ -316,36 +343,79 @@ export function PendingSurveyView() {
   }
 
   // 确认上传测量单
-  const confirmUploadSurvey = () => {
+  const confirmUploadSurvey = async () => {
     if (!currentOrder) return
 
-    setOrders(prev => prev.map(order =>
-      order.id === currentOrder.id
-        ? { ...order, surveyFiles: [...uploadedFiles] }
-        : order
-    ))
+    try {
+      // Update order in Supabase
+      // Assuming 'homeSurveyFiles' or similar field exists in your DB schema for storing file metadata
+      // Since PendingSurveyOrder defines surveyFiles?: UploadedFile[], we'll store it as JSONB
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          // @ts-ignore: Assuming metadata or specific field exists to store file info.
+          // Adjust this field based on your actual DB schema (e.g., 'survey_files', 'metadata', etc.)
+          survey_files: uploadedFiles
+        } as any)
+        .eq('id', currentOrder.id)
 
-    setToast({
-      message: `已成功上传${uploadedFiles.length}个测量单文件`,
-      type: 'success'
-    })
+      if (error) throw error
 
-    setShowUploadDialog(false)
-    setUploadedFiles([])
+      setOrders(prev => prev.map(order =>
+        order.id === currentOrder.id
+          ? { ...order, surveyFiles: [...uploadedFiles] }
+          : order
+      ))
+
+      setToast({
+        message: `已成功上传${uploadedFiles.length}个测量单文件`,
+        type: 'success'
+      })
+
+      setShowUploadDialog(false)
+      setUploadedFiles([])
+    } catch (error) {
+      console.error('Update order failed:', error)
+      setToast({ message: '保存测量单信息失败', type: 'error' })
+    }
   }
 
   // 处理文件上传
-  const handleFileUpload = (files: File[]) => {
-    const newFiles = files.map(file => ({
-      id: Math.random().toString(36).slice(2, 11),
-      name: file.name,
-      url: URL.createObjectURL(file),
-      type: file.type,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: user?.name || 'Unknown'
-    }))
-    setUploadedFiles(prev => [...prev, ...newFiles])
+  const handleFileUpload = async (files: File[]) => {
+    try {
+      const newFiles: UploadedFile[] = []
+
+      for (const file of files) {
+        // 1. Upload to Supabase Storage
+        const filePath = `survey-files/${currentOrder?.id}/${Date.now()}_${file.name}`
+        const { data, error: uploadError } = await supabase.storage
+          .from('order-files') // Ensure this bucket exists
+          .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        // 2. Get Public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('order-files')
+          .getPublicUrl(filePath)
+
+        newFiles.push({
+          id: Math.random().toString(36).slice(2, 11), // Temporary ID for UI
+          name: file.name,
+          url: publicUrlData.publicUrl,
+          type: file.type,
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: user?.name || 'Unknown'
+        })
+      }
+
+      setUploadedFiles(prev => [...prev, ...newFiles])
+      setToast({ message: '文件上传成功', type: 'success' })
+    } catch (error) {
+      console.error('Upload failed:', error)
+      setToast({ message: '文件上传失败', type: 'error' })
+    }
   }
 
 
@@ -449,39 +519,63 @@ export function PendingSurveyView() {
 
   return (
     <div className="space-y-6">
-      {/* 统计卡片 */}
-      <PaperCard>
-        <PaperCardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-ink-800">待测量订单统计</h3>
-              <p className="text-ink-500 text-sm">根据您的权限显示相关订单</p>
+      {/* 统计卡片区域 - 一分为二 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-ink-500 mb-1">待测量订单数</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-3xl font-bold text-ink-800">{orders.length}</h3>
+                  <span className="text-sm text-ink-400">单</span>
+                </div>
+                <p className="text-xs text-ink-400 mt-2">当前处于待测量状态的所有订单</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="text-2xl">📋</span>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-ink-500 text-sm">总金额</p>
-              <p className="text-2xl font-bold text-ink-800">¥{totalAmount.toLocaleString()}</p>
-            </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+          </PaperCardContent>
+        </PaperCard>
 
-      {/* 订单列表 */}
-      <PaperCard>
-        <PaperTableToolbar>
-          <div className="text-sm text-ink-500">共 {orders.length} 条，总金额：¥{totalAmount.toLocaleString()}</div>
+        <PaperCard className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-900/20 pointer-events-none" />
+          <PaperCardContent className="p-6 relative z-10">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-ink-500 mb-1">待测量总金额</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-3xl font-bold text-ink-800">¥{totalAmount.toLocaleString()}</h3>
+                </div>
+                <p className="text-xs text-ink-400 mt-2">所有待测量订单的预估总额</p>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <span className="text-2xl">💰</span>
+              </div>
+            </div>
+          </PaperCardContent>
+        </PaperCard>
+      </div>
+
+      {/* 订单列表 - 宣纸/液态风格 */}
+      <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <PaperTableToolbar className="border-b border-black/5 dark:border-white/5 bg-transparent px-6 py-4">
+          <div className="text-sm text-ink-600 font-medium">订单明细列表</div>
         </PaperTableToolbar>
         <PaperCardContent className="p-0">
           <PaperTable>
-            <PaperTableHeader>
-              <PaperTableCell>报价单单号</PaperTableCell>
-              <PaperTableCell>客户</PaperTableCell>
-              <PaperTableCell>地址</PaperTableCell>
-              <PaperTableCell>设计师</PaperTableCell>
-              <PaperTableCell>导购</PaperTableCell>
-              <PaperTableCell>金额</PaperTableCell>
-              <PaperTableCell>等待时长</PaperTableCell>
-              <PaperTableCell>报价单</PaperTableCell>
-              <PaperTableCell>操作</PaperTableCell>
+            <PaperTableHeader className="bg-theme-bg-tertiary/50">
+              <PaperTableCell className="font-semibold text-theme-text-primary">报价单单号</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">客户</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">地址</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">设计师</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">导购</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">金额</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">等待时长</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">报价单</PaperTableCell>
+              <PaperTableCell className="font-semibold text-theme-text-primary">操作</PaperTableCell>
             </PaperTableHeader>
             <PaperTableBody>
               {loading ? (

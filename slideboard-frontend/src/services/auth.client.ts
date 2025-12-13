@@ -1,5 +1,23 @@
 import { handleSupabaseError, ApiError } from '@/lib/api/error-handler'
 import { createClient } from '@/lib/supabase/client'
+import { User, UserRole } from '@/shared/types/auth'
+import { User as SupabaseUser, Session } from '@supabase/supabase-js'
+
+/**
+ * 映射 Supabase 用户到应用用户
+ */
+function mapSupabaseUserToUser(supabaseUser: SupabaseUser): User {
+    return {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        phone: supabaseUser.phone,
+        name: supabaseUser.user_metadata?.name || '',
+        avatarUrl: supabaseUser.user_metadata?.avatar_url,
+        role: (supabaseUser.user_metadata?.role as UserRole) || 'user',
+        createdAt: supabaseUser.created_at,
+        updatedAt: supabaseUser.updated_at,
+    }
+}
 
 /**
  * 认证服务
@@ -7,27 +25,44 @@ import { createClient } from '@/lib/supabase/client'
  */
 export const authService = {
     /**
-     * 手机号登录
+     * 手机号或邮箱登录
      */
-    async loginWithPhone(phone: string, password: string) {
+    async loginWithPhone(identifier: string, password: string) {
         const supabase = createClient()
 
-        // 验证手机号格式
-        if (!/^1[3-9]\d{9}$/.test(phone)) {
-            throw new ApiError('手机号格式不正确', 'INVALID_PHONE', 400)
+        // 判断是手机号还是邮箱
+        const isEmail = identifier.includes('@');
+        
+        // 如果是手机号，且看起来像手机号（纯数字且11位），则验证格式
+        // 否则直接尝试登录，交给 Supabase 判断
+        if (!isEmail && /^\d+$/.test(identifier) && identifier.length === 11) {
+            if (!/^1[3-9]\d{9}$/.test(identifier)) {
+                throw new ApiError('手机号格式不正确', 'INVALID_PHONE', 400)
+            }
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            phone,
-            password,
-        })
+        let result;
+        
+        if (isEmail) {
+             result = await supabase.auth.signInWithPassword({
+                email: identifier,
+                password,
+            })
+        } else {
+             result = await supabase.auth.signInWithPassword({
+                phone: identifier,
+                password,
+            })
+        }
+
+        const { data, error } = result;
 
         if (error) {
             throw new ApiError(error.message || '登录失败', error.code || 'AUTH_ERROR', 401)
         }
 
         return {
-            user: data.user,
+            user: data.user ? mapSupabaseUserToUser(data.user) : null,
             session: data.session,
         }
     },
@@ -42,10 +77,11 @@ export const authService = {
         if (error) {
             throw new ApiError(error.message || '验证码登录失败', error.code || 'AUTH_ERROR', 400)
         }
-        return { user: data?.user, session: data?.session }
+        return { 
+            user: data.user ? mapSupabaseUserToUser(data.user) : null,
+            session: data.session 
+        }
     },
-
-
 
     /**
      * 手机号注册
@@ -67,7 +103,10 @@ export const authService = {
             phone,
             password,
             options: {
-                data: metadata,
+                data: {
+                    ...metadata,
+                    role: 'user', // Default role
+                },
             },
         })
 
@@ -77,7 +116,7 @@ export const authService = {
         }
 
         return {
-            user: data.user,
+            user: data.user ? mapSupabaseUserToUser(data.user) : null,
             session: data.session,
         }
     },
@@ -86,8 +125,6 @@ export const authService = {
         const result = await authService.registerWithPhone(phone, password, name ? { name } : undefined)
         return { user: result.user }
     },
-
-
 
     /**
      * 登出
@@ -106,16 +143,17 @@ export const authService = {
     /**
      * 获取当前用户
      */
-    async getCurrentUser() {
+    async getCurrentUser(): Promise<User | null> {
         const supabase = createClient()
 
         const { data: { user }, error } = await supabase.auth.getUser()
 
         if (error) {
-            handleSupabaseError(error as any)
+            // Don't throw on get user, just return null if not found
+            return null
         }
 
-        return user
+        return user ? mapSupabaseUserToUser(user) : null
     },
 
     /**
@@ -164,10 +202,8 @@ export const authService = {
             handleSupabaseError(error as any)
         }
 
-        return data.user
+        return data.user ? mapSupabaseUserToUser(data.user) : null
     },
-
-
 
     /**
      * 验证 OTP（一次性密码）
@@ -186,7 +222,7 @@ export const authService = {
         }
 
         return {
-            user: data.user,
+            user: data.user ? mapSupabaseUserToUser(data.user) : null,
             session: data.session,
         }
     },
@@ -218,10 +254,13 @@ export const authService = {
     /**
      * 监听认证状态变化
      */
-    onAuthStateChange(callback: (event: string, session: any) => void) {
+    onAuthStateChange(callback: (event: string, session: Session | null, user: User | null) => void) {
         const supabase = createClient()
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(callback)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            const user = session?.user ? mapSupabaseUserToUser(session.user) : null
+            callback(event, session, user)
+        })
 
         return {
             unsubscribe: () => subscription.unsubscribe(),

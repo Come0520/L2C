@@ -1,6 +1,6 @@
 import { withErrorHandler } from '@/lib/api/error-handler';
 import { ReconciliationRuleEngine, ReconciliationItem, ReconciliationResult, ReconciliationRule } from '@/lib/reconciliation/ruleEngine';
-import { ApiResponse } from '@/shared/types/api';
+import { ApiResponse } from '@/shared/types/integrations';
 
 import { reconciliationRules } from './reconciliationRules.client';
 

@@ -1,6 +1,6 @@
 import { withErrorHandler } from '@/lib/api/error-handler';
 import { ReconciliationRule, ReconciliationRuleEngine, ReconciliationItem, ReconciliationResult } from '@/lib/reconciliation/ruleEngine';
-import { ApiResponse } from '@/shared/types/api';
+import { ApiResponse } from '@/shared/types/integrations';
 
 interface ReconciliationRequest {
   systemItems: ReconciliationItem[];

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/config/env'
-import type { FeishuReportData, FeishuSendResponse } from '@/shared/types/api'
+import type { FeishuReportData, FeishuSendResponse } from '@/shared/types/integrations'
 
 
 // Edge Runtime 配置

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/config/env'
-import type { WechatNotificationData, WechatSendResponse } from '@/shared/types/api'
+import type { WechatNotificationData, WechatSendResponse } from '@/shared/types/integrations'
 
 // Edge Runtime 配置
 export const runtime = 'edge'

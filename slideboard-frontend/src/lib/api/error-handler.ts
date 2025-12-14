@@ -1,5 +1,5 @@
 // import * as Sentry from '@sentry/nextjs';
-import { PostgrestError } from '@supabase/supabase-js'
+import { PostgrestError, AuthError } from '@supabase/supabase-js'
 
 /**
  * API 错误类
@@ -20,8 +20,12 @@ export class ApiError extends Error {
     }
 }
 
-export function handleSupabaseError(error: PostgrestError): never {
+export function handleSupabaseError(error: PostgrestError | AuthError): never {
     console.error('Supabase Error:', error)
+
+    if (error instanceof AuthError) {
+        throw new ApiError(error.message || '认证失败', 'AUTH_ERROR', error.status || 400, error)
+    }
 
     // RLS error
     if (error.code === '42501') {

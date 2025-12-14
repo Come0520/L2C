@@ -1,8 +1,8 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card';

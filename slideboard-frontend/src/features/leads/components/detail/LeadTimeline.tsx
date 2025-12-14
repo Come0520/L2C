@@ -7,6 +7,24 @@ interface LeadTimelineProps {
     leadId: string
 }
 
+// Define file type for attachments
+interface TimelineFile {
+    id: string;
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+    createdAt: string;
+}
+
+// Define required attachment type
+interface RequiredAttachment {
+    id: string;
+    name: string;
+    description: string;
+    isCompleted: boolean;
+}
+
 interface TimelineEvent {
     id: string
     type: 'follow_up' | 'status_change' | 'appointment' | 'note' | 'measurement' | 'installation' | 'financial'
@@ -16,8 +34,8 @@ interface TimelineEvent {
     user: string
     oldStatus?: string
     newStatus?: string
-    requiredAttachments?: any[]
-    attachedFiles?: any[]
+    requiredAttachments?: RequiredAttachment[]
+    attachedFiles?: TimelineFile[]
 }
 
 export function LeadTimeline({ leadId }: LeadTimelineProps) {
@@ -36,9 +54,29 @@ export function LeadTimeline({ leadId }: LeadTimelineProps) {
                 // 合并并排序事件
                 const allEvents: TimelineEvent[] = []
                 
+                // Define status history item type
+                interface StatusHistoryItem {
+                    id: string;
+                    old_status: string;
+                    new_status: string;
+                    comment?: string;
+                    changed_at: string;
+                    changed_by_name?: string;
+                    required_attachments?: RequiredAttachment[];
+                    attached_files?: TimelineFile[];
+                }
+
+                // Define follow up item type
+                interface FollowUpItem {
+                    id: string;
+                    content: string;
+                    created_at: string;
+                    creator?: { name: string };
+                }
+
                 // 添加状态变更事件
                 if (statusHistory && Array.isArray(statusHistory)) {
-                    statusHistory.forEach((historyItem: any) => {
+                    statusHistory.forEach((historyItem: StatusHistoryItem) => {
                         // 获取中文状态名称
                         const oldStatusLabel = LEAD_STATUS_CONFIG[historyItem.old_status]?.label || historyItem.old_status
                         const newStatusLabel = LEAD_STATUS_CONFIG[historyItem.new_status]?.label || historyItem.new_status
@@ -60,7 +98,7 @@ export function LeadTimeline({ leadId }: LeadTimelineProps) {
                 
                 // 添加跟进记录事件
                 if (followUps && Array.isArray(followUps)) {
-                    followUps.forEach((followUp: any) => {
+                    followUps.forEach((followUp: FollowUpItem) => {
                         allEvents.push({
                             id: followUp.id,
                             type: 'follow_up',
@@ -180,7 +218,7 @@ export function LeadTimeline({ leadId }: LeadTimelineProps) {
                                         <div className="mt-2">
                                             <p className="text-xs text-ink-500 mb-1">附件:</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {event.attachedFiles.map((file: any, index: number) => (
+                                                {event.attachedFiles.map((file: TimelineFile, index: number) => (
                                                     <span key={index} className="text-xs bg-blue-100 px-2 py-1 rounded">
                                                         {file.file_name || `文件${index + 1}`}
                                                     </span>

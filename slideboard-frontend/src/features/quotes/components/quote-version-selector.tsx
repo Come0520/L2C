@@ -3,7 +3,6 @@
 import React from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
-
 import { QuoteVersion } from '@/shared/types/quote';
 
 interface QuoteVersionSelectorProps {

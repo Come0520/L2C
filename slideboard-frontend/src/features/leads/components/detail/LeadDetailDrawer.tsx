@@ -25,9 +25,19 @@ type LeadAssignmentRecord = {
 }
 
 export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawerProps) {
+    // Define status history item type
+    interface StatusHistoryItem {
+        id: string;
+        old_status: string;
+        new_status: string;
+        comment?: string;
+        changed_by: string;
+        changed_at: string;
+    }
+
     const [lead, setLead] = useState<Lead | null>(null)
     const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'quotes' | 'assignments' | 'status-history'>('overview')
-    const [statusHistory, setStatusHistory] = useState<any[]>([])
+    const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [assignments, setAssignments] = useState<LeadAssignmentRecord[]>([])
 
@@ -131,8 +141,8 @@ export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawe
                     <div className="flex items-center gap-4">
                         <div className="text-xl font-bold text-ink-900">{lead.name || '未命名客户'}</div>
                         <LeadStatusBadge status={lead.status} />
-                        <BusinessTagsList tags={lead.businessTags as any[]} />
-                        <CustomerLevelTag level={lead.customerLevel as any} />
+                        <BusinessTagsList tags={lead.businessTags || []} />
+                        <CustomerLevelTag level={lead.customerLevel || 'C'} />
                     </div>
                     <div className="flex items-center gap-2">
                         <PaperButton variant="ghost" onClick={() => onOpenChange(false)}>关闭</PaperButton>
@@ -182,7 +192,7 @@ export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawe
                                 <div>
                                     <label className="text-sm text-ink-500">客户等级</label>
                                     <div className="mt-1">
-                                        <CustomerLevelTag level={lead.customerLevel as any} />
+                                        <CustomerLevelTag level={lead.customerLevel || 'C'} />
                                     </div>
                                 </div>
                                 <div>
@@ -198,7 +208,7 @@ export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawe
                                 <div>
                                     <label className="text-sm text-ink-500">业务标签</label>
                                     <div className="mt-1">
-                                        <BusinessTagsList tags={lead.businessTags as any[]} />
+                                        <BusinessTagsList tags={lead.businessTags || []} />
                                     </div>
                                 </div>
                             </div>
@@ -317,8 +327,8 @@ export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawe
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center space-x-4">
                                                 <div className="bg-primary-50 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                    {record.from_status ? `从 ${record.from_status} 到 ${record.to_status}` : `初始状态: ${record.to_status}`}
-                                                </div>
+                                    {record.old_status ? `从 ${record.old_status} 到 ${record.new_status}` : `初始状态: ${record.new_status}`}
+                                </div>
                                             </div>
                                             <div className="text-sm text-ink-500">
                                                 {new Date(record.changed_at).toLocaleString('zh-CN')}
@@ -327,9 +337,9 @@ export function LeadDetailDrawer({ open, onOpenChange, leadId }: LeadDetailDrawe
                                         <div className="text-sm text-ink-700">
                                             {record.comment || '无备注'}
                                         </div>
-                                        {record.changed_by_id && (
+                                        {record.changed_by && (
                                             <div className="text-xs text-ink-500 mt-1">
-                                                操作人: {record.changed_by_id}
+                                                操作人: {record.changed_by}
                                             </div>
                                         )}
                                     </div>

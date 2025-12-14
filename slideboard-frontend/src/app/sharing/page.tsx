@@ -1,8 +1,8 @@
 'use client';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Trash2, ExternalLink, Shield, Clock, Eye, AlertCircle, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import { PaperBadge } from '@/components/ui/paper-badge';
 import { PaperButton } from '@/components/ui/paper-button';
@@ -14,8 +14,8 @@ import {
   PaperTableHeader,
   PaperTableRow,
 } from '@/components/ui/paper-table';
-import { toast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { ShareAccessLogViewer, AccessLog } from '@/features/sharing/components/access-log-viewer';
 import { shareService, ShareToken } from '@/services/share.client';
 

@@ -1,10 +1,10 @@
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trash2 
+import {
+  Search,
+  Filter,
+  Plus,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Users, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import React from 'react';
@@ -17,9 +17,11 @@ import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTable
 import { getAllCustomers, getCustomerStats, getCustomerById, Customer } from '@/services/customers.server';
 
 // 动态导入客户详情模态框，支持客户端交互
-const CustomerDetailModal = React.lazy(() => 
+const CustomerDetailModal = React.lazy(() =>
   import('@/features/customers/components/CustomerDetailModal').then(module => ({ default: module.CustomerDetailModal }))
 );
+
+import { CustomerSearch } from './components/customer-search';
 
 export default async function CustomerManagementPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const resolvedSearchParams = await searchParams;
@@ -89,20 +91,7 @@ export default async function CustomerManagementPage({ searchParams }: { searchP
         <PaperCard>
           <PaperCardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="flex-1">
-                <PaperInput
-                  placeholder="搜索客户名称、公司或手机号..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    const newSearchTerm = e.target.value;
-                    const params = new URLSearchParams();
-                    if (newSearchTerm) params.set('q', newSearchTerm);
-                    params.set('page', '1');
-                    window.location.search = params.toString();
-                  }}
-                  className="w-full"
-                />
-              </div>
+              <CustomerSearch />
               <PaperButton>
                 <Search className="h-4 w-4 mr-2" />
                 搜索
@@ -126,7 +115,7 @@ export default async function CustomerManagementPage({ searchParams }: { searchP
               </div>
             </PaperCardContent>
           </PaperCard>
-          
+
           <PaperCard hover>
             <PaperCardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -140,7 +129,7 @@ export default async function CustomerManagementPage({ searchParams }: { searchP
               </div>
             </PaperCardContent>
           </PaperCard>
-          
+
           <PaperCard hover>
             <PaperCardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -154,7 +143,7 @@ export default async function CustomerManagementPage({ searchParams }: { searchP
               </div>
             </PaperCardContent>
           </PaperCard>
-          
+
           <PaperCard hover>
             <PaperCardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -215,7 +204,7 @@ export default async function CustomerManagementPage({ searchParams }: { searchP
                       </PaperBadge>
                     </PaperTableCell>
                     <PaperTableCell>
-                      <PaperStatus 
+                      <PaperStatus
                         status={getStatusColor(customer.status)}
                         text={getStatusText(customer.status)}
                       />

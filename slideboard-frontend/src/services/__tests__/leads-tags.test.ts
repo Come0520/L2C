@@ -1,32 +1,23 @@
-import { createClient } from '@/lib/supabase/client';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { leadService } from '../leads.client';
 
+const { mockSupabase } = vi.hoisted(() => {
+  return {
+    mockSupabase: {
+      from: vi.fn(),
+      rpc: vi.fn(),
+      auth: {
+        getUser: vi.fn(),
+      },
+    }
+  };
+});
+
 // Mock the supabase client
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn().mockReturnThis(),
-        contains: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        single: vi.fn(),
-        count: vi.fn().mockReturnThis(),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-      })),
-      insert: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn().mockReturnThis(),
-      })),
-    })),
-    rpc: vi.fn(),
-  })),
+  createClient: vi.fn(() => mockSupabase),
+  supabase: mockSupabase,
 }));
 
 describe('leadsService - Business Tags', () => {
@@ -36,11 +27,6 @@ describe('leadsService - Business Tags', () => {
 
   describe('getLeads with businessTags filter', () => {
     it('should filter leads by business tags', async () => {
-      const supabaseClient = {
-        from: vi.fn(),
-        rpc: vi.fn(),
-      } as any;
-      (createClient as any).mockReturnValue(supabaseClient);
       const mockLeads = [
         {
           id: 'lead-1',
@@ -52,7 +38,7 @@ describe('leadsService - Business Tags', () => {
         },
       ];
       
-      (supabaseClient.from as any).mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -66,20 +52,14 @@ describe('leadsService - Business Tags', () => {
       const result = await leadService.getLeads(1, 10, { businessTags: ['quoted'] });
       
       expect(result).toBeDefined();
-      expect(supabaseClient.from).toHaveBeenCalledWith('leads');
-      expect(((supabaseClient.from as any).mock.results[0].value.contains)).toHaveBeenCalledWith('business_tags', ['quoted']);
+      expect(mockSupabase.from).toHaveBeenCalledWith('leads');
+      expect(((mockSupabase.from as any).mock.results[0].value.contains)).toHaveBeenCalledWith('business_tags', ['quoted']);
     });
   });
 
   describe('createLead with businessTags', () => {
     it('should create lead with business tags', async () => {
-      const supabaseClient = {
-        from: vi.fn(),
-        auth: {
-          getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
-        },
-      } as any;
-      (createClient as any).mockReturnValue(supabaseClient);
+      mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
       const mockLead = {
         id: 'lead-1',
         name: 'Test Lead 1',
@@ -88,7 +68,7 @@ describe('leadsService - Business Tags', () => {
         // 其他必要字段...
       };
       
-      (supabaseClient.from as any).mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({ data: mockLead, error: null }),
@@ -108,16 +88,12 @@ describe('leadsService - Business Tags', () => {
       });
       
       expect(result).toBeDefined();
-      expect(((supabaseClient.from as any).mock.results[0].value.insert)).toHaveBeenCalled();
+      expect(((mockSupabase.from as any).mock.results[0].value.insert)).toHaveBeenCalled();
     });
   });
 
   describe('updateLead with businessTags', () => {
     it('should update lead business tags', async () => {
-      const supabaseClient = {
-        from: vi.fn(),
-      } as any;
-      (createClient as any).mockReturnValue(supabaseClient);
       const mockLead = {
         id: 'lead-1',
         name: 'Test Lead 1',
@@ -126,7 +102,7 @@ describe('leadsService - Business Tags', () => {
         // 其他必要字段...
       };
       
-      (supabaseClient.from as any).mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnThis(),
           select: vi.fn().mockReturnValue({
@@ -140,7 +116,7 @@ describe('leadsService - Business Tags', () => {
       });
       
       expect(result).toBeDefined();
-      expect(((supabaseClient.from as any).mock.results[0].value.update)).toHaveBeenCalled();
+      expect(((mockSupabase.from as any).mock.results[0].value.update)).toHaveBeenCalled();
     });
   });
 });

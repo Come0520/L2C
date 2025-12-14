@@ -1,4 +1,4 @@
-import { Database } from './supabase';
+
 
 export interface Customer {
   id: string;

@@ -1,9 +1,12 @@
 'use client'
 
+import { motion, AnimatePresence } from 'framer-motion'
+import { Upload, File as FileIcon, X, Check } from 'lucide-react'
 import * as React from 'react'
 
 import { cn } from '@/utils/lib-utils'
 
+import { GridPattern } from './grid-pattern'
 import { PaperButton } from './paper-button'
 
 /**
@@ -56,22 +59,6 @@ export const ATTACHMENT_CONFIGS: Record<AttachmentType, AttachmentConfig> = {
 
 /**
  * 纸张文件上传组件属性接口
- * @interface PaperFileUploadProps
- * @property {Function} [onUpload] - 文件上传成功回调函数
- * @property {number} [maxFiles=5] - 最大文件数量
- * @property {string} [accept] - 允许的文件类型
- * @property {string} [className=''] - 自定义类名
- * @property {boolean} [multiple=true] - 是否允许选择多个文件
- * @property {number} [maxSizeMB] - 最大文件大小（MB）
- * @property {Function} [onValidateError] - 文件验证错误回调函数
- * @property {AttachmentType} [attachmentType='other'] - 附件类型
- * @property {string} [orderNo] - 订单号，用于文件命名
- * @property {string} [label] - 组件标签
- * @property {string} [error] - 错误信息
- * @property {Function} [onUploadProgress] - 上传进度回调函数
- * @property {Function} [onUploadError] - 上传错误回调函数
- * @property {Function} [onUploadSuccess] - 上传成功回调函数
- * @property {number} [retryCount=3] - 上传失败重试次数
  */
 interface PaperFileUploadProps {
   onUpload?: (files: File[]) => void
@@ -89,31 +76,16 @@ interface PaperFileUploadProps {
   onUploadError?: (error: Error) => void
   onUploadSuccess?: (files: File[]) => void
   retryCount?: number
+  showFileList?: boolean
 }
 
 /**
  * 纸张文件上传组件
  * 
  * @description
- * 用于上传文件的组件，支持拖拽上传、文件验证、压缩和重命名功能
- * 支持多种文件类型，并提供友好的用户交互体验
- * 
- * @param {PaperFileUploadProps} props - 组件属性
- * @returns {JSX.Element} 纸张文件上传组件
- * 
- * @example
- * ```typescript
- * <PaperFileUpload
- *   onUpload={handleFileUpload}
- *   accept="image/*"
- *   maxFiles={5}
- *   label="上传图片"
- *   onUploadProgress={handleUploadProgress}
- *   onUploadSuccess={handleUploadSuccess}
- * />
- * ```
+ * Aceternity UI 风格的文件上传组件，完全主题化
+ * 支持拖拽上传、文件验证、压缩和重命名功能
  */
-
 export function PaperFileUpload({
   onUpload,
   maxFiles = 5,
@@ -129,9 +101,11 @@ export function PaperFileUpload({
   onUploadProgress,
   onUploadError,
   onUploadSuccess,
-  retryCount = 3
+  retryCount = 3,
+  showFileList = false
 }: PaperFileUploadProps) {
   const [dragActive, setDragActive] = React.useState(false)
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
@@ -192,6 +166,7 @@ export function PaperFileUpload({
     const name = file.name.toLowerCase()
     const type = file.type.toLowerCase()
     return types.some((t) => {
+      if (t === '*') return true
       if (t.endsWith('/*')) {
         const base = t.replace('/*', '')
         return type.startsWith(base)
@@ -249,7 +224,7 @@ export function PaperFileUpload({
               resolve(compressedFile)
             },
             file.type,
-            0.8 // 压缩质量
+            0.8
           )
         }
       }
@@ -287,34 +262,31 @@ export function PaperFileUpload({
 
     if (validFiles.length === 0) return
 
+    setSelectedFiles(validFiles)
     setUploading(true)
     setProgress(0)
     setRetryAttempts(0)
 
     try {
-      // 处理文件：压缩 + 重命名
       const processedFiles: File[] = []
       for (let i = 0; i < validFiles.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+
         let file = validFiles[i]
         if (!file) continue
 
-        // 压缩图片
         if (config && config.compress) {
           file = await compressImage(file)
         }
 
-        // 重命名文件
         file = renameFile(file, i)
-
         processedFiles.push(file)
 
-        // 更新进度
         const currentProgress = Math.round(((i + 1) / validFiles.length) * 100)
         setProgress(currentProgress)
         onUploadProgress?.(currentProgress)
       }
 
-      // 调用上传回调
       onUpload?.(processedFiles)
       onUploadSuccess?.(processedFiles)
     } catch (error) {
@@ -324,28 +296,39 @@ export function PaperFileUpload({
     }
   }
 
-  // 处理上传错误，支持重试
   const handleUploadError = (error: Error) => {
     onUploadError?.(error)
 
     if (retryAttempts < retryCount) {
-      // 自动重试
       setTimeout(() => {
         setRetryAttempts(prev => prev + 1)
-        // 重新上传，需要重新获取文件，这里简化处理
-      }, 1000 * (retryAttempts + 1)) // 指数退避
+      }, 1000 * (retryAttempts + 1))
     }
+  }
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   return (
     <div className={cn('space-y-4', className)}>
-      {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
-      <div
+      {label && (
+        <label className="text-sm font-medium text-theme-text-primary">
+          {label}
+        </label>
+      )}
+
+      <motion.div
+        animate={{
+          scale: dragActive ? 1.02 : 1,
+        }}
+        whileHover={{ scale: uploading ? 1 : 1.01 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
         className={cn(
-          'relative flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed transition-colors',
+          'relative flex flex-col items-center justify-center w-full h-40 rounded-lg border-2 border-dashed transition-all duration-300 overflow-hidden',
           dragActive
-            ? 'border-primary bg-primary/5'
-            : 'border-gray-300 hover:bg-gray-50',
+            ? 'border-primary-500 bg-primary-500/10'
+            : 'border-theme-border hover:bg-theme-bg-secondary',
           uploading && 'opacity-50 cursor-not-allowed'
         )}
         onDragEnter={handleDrag}
@@ -353,6 +336,9 @@ export function PaperFileUpload({
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
+        {/* 背景网格 */}
+        <GridPattern className="opacity-50" />
+
         <input
           ref={inputRef}
           type="file"
@@ -362,43 +348,141 @@ export function PaperFileUpload({
           onChange={handleChange}
           disabled={uploading}
         />
-        <div className="flex flex-col items-center justify-center text-sm text-gray-600">
-          <p className="mb-2">拖拽文件到此处 或</p>
+
+        <div className="relative z-10 flex flex-col items-center justify-center text-sm">
+          {/* 上传图标 */}
+          <motion.div
+            animate={{
+              y: dragActive ? -8 : 0,
+              scale: dragActive ? 1.1 : 1
+            }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <Upload className="h-10 w-10 text-theme-text-secondary mb-4" />
+          </motion.div>
+
+          <p className="mb-2 text-theme-text-primary font-medium">
+            拖拽文件到此处 或
+          </p>
+
           <PaperButton
             variant="outline"
-            size="small"
+            size="sm"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
           >
             点击上传
           </PaperButton>
-          <p className="mt-2 text-xs text-gray-500">
-            支持文件类型：{finalAccept.split(',').map(t => t.split('/')[1] || t).join(', ')}
-            • 最大大小：{finalMaxSizeMB}MB
+
+          <p className="mt-3 text-xs text-theme-text-secondary text-center px-4">
+            支持: {finalAccept.split(',').map(t => t.split('/')[1] || t).join(', ')}
+            {' • '}
+            最大: {finalMaxSizeMB}MB
           </p>
         </div>
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      </motion.div>
+
+      {error && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-error-600"
+        >
+          {error}
+        </motion.p>
+      )}
+
+      {/* 文件列表 */}
+      {showFileList && selectedFiles.length > 0 && !uploading && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2"
+          >
+            {selectedFiles.map((file, index) => (
+              <motion.div
+                key={`${file.name}-${index}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex items-center justify-between p-3 bg-theme-bg-secondary rounded-lg border border-theme-border"
+              >
+                <div className="flex items-center gap-3">
+                  <FileIcon className="h-5 w-5 text-theme-text-secondary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-theme-text-primary truncate">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-theme-text-secondary">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => removeFile(index)}
+                  className="p-1.5 hover:bg-theme-bg-tertiary rounded transition-colors"
+                  aria-label="移除文件"
+                >
+                  <X className="h-4 w-4 text-theme-text-secondary" />
+                </motion.button>
+              </motion.div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* 上传进度 */}
       {uploading && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>上传进度</span>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
+        >
+          <div className="flex justify-between text-sm text-theme-text-primary">
+            <span className="font-medium">上传进度</span>
             <span>{progress}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="relative w-full bg-theme-bg-secondary rounded-full h-2.5 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-primary-500 to-primary-600 relative"
+            >
+              {/* 光泽效果 */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                style={{ width: '50%' }}
+              />
+            </motion.div>
           </div>
           {retryAttempts > 0 && (
-            <div className="text-xs text-orange-600">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-warning-600"
+            >
               已重试 {retryAttempts}/{retryCount} 次
-            </div>
+            </motion.div>
           )}
-        </div>
+          {progress === 100 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-2 text-sm text-success-600"
+            >
+              <Check className="h-4 w-4" />
+              <span>上传完成</span>
+            </motion.div>
+          )}
+        </motion.div>
       )}
     </div>
   )

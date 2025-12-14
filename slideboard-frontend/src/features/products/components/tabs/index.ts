@@ -1,5 +1,5 @@
-export { ProductArchivesTab } from './product-archives-tab';
-export { CategoryManagementTab } from './category-management-tab';
-export { StoreStrategyTab } from './store-strategy-tab';
-export { SpecialCraftsTab } from './special-crafts-tab';
-export { ApprovalsTab } from './approvals-tab';
+export { ProductArchivesTab } from './ProductArchivesTab';
+export { CategoryManagementTab } from './CategoryManagementTab';
+export { StoreStrategyTab } from './StoreStrategyTab';
+export { SpecialCraftsTab } from './SpecialCraftsTab';
+export { ApprovalsTab } from './ApprovalsTab';

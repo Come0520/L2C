@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { Product, CreateProductRequest, UpdateProductRequest, ProductStatus, ProductPrices, ProductImages, ProductTags, ProductFilter } from '@/shared/types/product';
-import { Database } from '@/shared/types/supabase';
+import { Database } from '@/types/supabase';
 
 type ProductRow = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
@@ -56,13 +56,12 @@ export const productsService = {
             if (filter.searchTerm) {
                 query = query.or(`product_name.ilike.%${filter.searchTerm}%,product_code.ilike.%${filter.searchTerm}%`);
             }
-            // 暂时移除分类筛选
-            // if (filter.categoryLevel1 && filter.categoryLevel1 !== 'all') {
-            //    query = query.eq('category_level1', filter.categoryLevel1);
-            // }
-            // if (filter.categoryLevel2 && filter.categoryLevel2 !== 'all') {
-            //    query = query.eq('category_level2', filter.categoryLevel2);
-            // }
+            if (filter.categoryLevel1 && filter.categoryLevel1 !== 'all') {
+               query = query.eq('category_level1', filter.categoryLevel1);
+            }
+            if (filter.categoryLevel2 && filter.categoryLevel2 !== 'all') {
+               query = query.eq('category_level2', filter.categoryLevel2);
+            }
             if (filter.status && filter.status !== 'all') {
                 query = query.eq('status', filter.status);
             }

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { dashboardService } from '../dashboard.client';
 
 // Mock the entire supabase module

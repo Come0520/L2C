@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LogsClient, logsService, logMeasurementOperation } from '../logs.client';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { LogsClient, logsService, logMeasurementOperation } from '../logs.client';
 
 // 模拟依赖
 vi.mock('@/lib/supabase/client');

@@ -73,8 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
 
     // 监听认证状态变化
-    const { unsubscribe } = authService.onAuthStateChange((_event, session, currentUser) => {
-      // console.log('Auth State Change:', _event, currentUser);
+    const { unsubscribe } = authService.onAuthStateChange((event, session, currentUser) => {
+      // console.log('Auth State Change:', event, currentUser);
       if (currentUser) {
         setUser(currentUser);
         // Identify user in analytics
@@ -83,6 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         //   phone: currentUser.phone || '',
         //   name: currentUser.name
         // });
+        
+        // 当用户登录成功(SIGNED_IN事件)且不是E2E测试模式时，执行重定向
+        if (event === 'SIGNED_IN' && env.NEXT_PUBLIC_E2E_TEST !== 'true') {
+          // 确保只在客户端执行，因为window在服务器端不可用
+          if (typeof window !== 'undefined') {
+            // 尝试从URL中获取redirectTo参数，如果没有则默认跳转到首页
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectTo = urlParams.get('redirectTo') || '/';
+            router.replace(redirectTo);
+          } else {
+            // 服务器端默认跳转到首页
+            router.replace('/');
+          }
+        }
       } else {
         setUser(null);
         RESET_USER();
@@ -141,20 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 第三方登录
   const loginWithThirdParty = async (provider: 'wechat' | 'feishu') => {
-    // TODO: Move this logic to authService as well if possible, or keep simple wrapping
-    // For now keeping implementation in service is better but this method used specific window logic
-    // Let's rely on what we have or just mock it as before but cleaner
     try {
-        // Since authService doesn't have loginWithThirdParty with specific redirects fully exposed in the simplified version above (it has signInWithOAuth but generalized), 
-        // we might need to add it to authService or keep it here using createClient directly?
-        // Actually, let's just throw error as not implemented fully or use the direct supabase call if needed, 
-        // BUT the best practice is to move it to authService.
-        // Let's check authService again. It does NOT have loginWithThirdParty exposed in the previous step's read.
-        // I should have added it. For now I will leave a placeholder or implementation using direct client if I can't change service now.
-        // Wait, I can't use createClient here if I want to be pure. 
-        // Let's assume for now we won't fix third party login in this pass or I'll add it to service.
-        // I'll skip detailed implementation here to focus on core auth.
-        console.warn('Third party login not fully refactored yet');
+      await authService.loginWithThirdParty(provider);
+      // 第三方登录会跳转到外部页面，所以这里不需要额外的状态更新
     } catch (_error) {
       throw _error;
     }

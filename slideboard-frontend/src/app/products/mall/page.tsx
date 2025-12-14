@@ -5,9 +5,9 @@ import { useState } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent, PaperCardFooter } from '@/components/ui/paper-card';
-import { PaperInput } from '@/components/ui/paper-input';
 import { PaperModal } from '@/components/ui/paper-modal';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
+import { VanishInput } from '@/components/ui/vanish-input';
 
 interface Product {
   id: string;
@@ -184,7 +184,7 @@ export default function ProductMallPage() {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+      product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -215,7 +215,7 @@ export default function ProductMallPage() {
   const handleExchange = (product: Product) => {
     if (product.status === 'sold_out') return;
     if (userPoints.available < product.points) return;
-    
+
     setSelectedProduct(product);
     setShowExchangeModal(true);
   };
@@ -272,8 +272,8 @@ export default function ProductMallPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-paper-ink-secondary">升级到下一级还需 {userPoints.nextLevelPoints.toLocaleString()} 积分</span>
                 <div className="w-32 bg-paper-border rounded-full h-2">
-                  <div 
-                    className="bg-paper-primary h-2 rounded-full" 
+                  <div
+                    className="bg-paper-primary h-2 rounded-full"
                     style={{ width: `${((userPoints.total % 1000) / 1000) * 100}%` }}
                   ></div>
                 </div>
@@ -289,31 +289,28 @@ export default function ProductMallPage() {
               <nav className="flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('mall')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'mall'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'mall'
+                    ? 'border-paper-primary text-paper-primary'
+                    : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
+                    }`}
                 >
                   积分商城
                 </button>
                 <button
                   onClick={() => setActiveTab('records')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'records'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'records'
+                    ? 'border-paper-primary text-paper-primary'
+                    : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
+                    }`}
                 >
                   积分记录
                 </button>
                 <button
                   onClick={() => setActiveTab('ranking')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'ranking'
-                      ? 'border-paper-primary text-paper-primary'
-                      : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'ranking'
+                    ? 'border-paper-primary text-paper-primary'
+                    : 'border-transparent text-paper-ink-secondary hover:text-paper-ink'
+                    }`}
                 >
                   积分排行
                 </button>
@@ -348,10 +345,10 @@ export default function ProductMallPage() {
             <PaperCard>
               <PaperCardContent>
                 <div className="flex items-center gap-4">
-                  <PaperInput
-                    placeholder="搜索商品..."
+                  <VanishInput
+                    placeholders={["搜索商品...", "输入兑换商品...", "查找优惠券..."]}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(value) => setSearchTerm(value)}
                     className="flex-1"
                   />
                   <PaperButton variant="outline">
@@ -372,8 +369,8 @@ export default function ProductMallPage() {
                     </div>
                   </PaperCardHeader>
                   <PaperCardContent className="text-center">
-                    <Image 
-                      src={product.image} 
+                    <Image
+                      src={product.image}
                       alt={product.name}
                       width={640}
                       height={256}
@@ -411,8 +408,8 @@ export default function ProductMallPage() {
                       onClick={() => handleExchange(product)}
                       disabled={product.status === 'sold_out' || userPoints.available < product.points}
                     >
-                      {product.status === 'sold_out' ? '已售罄' : 
-                       userPoints.available < product.points ? '积分不足' : '兑换'}
+                      {product.status === 'sold_out' ? '已售罄' :
+                        userPoints.available < product.points ? '积分不足' : '兑换'}
                     </PaperButton>
                   </PaperCardFooter>
                 </PaperCard>
@@ -445,16 +442,14 @@ export default function ProductMallPage() {
                         <div className="text-sm">{record.timestamp}</div>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          record.type === 'earn' ? 'bg-paper-success-light text-paper-success' : 'bg-paper-error-light text-paper-error'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.type === 'earn' ? 'bg-paper-success-light text-paper-success' : 'bg-paper-error-light text-paper-error'
+                          }`}>
                           {record.type === 'earn' ? '获得' : '消耗'}
                         </span>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <span className={`font-medium ${
-                          record.type === 'earn' ? 'text-paper-success' : 'text-paper-error'
-                        }`}>
+                        <span className={`font-medium ${record.type === 'earn' ? 'text-paper-success' : 'text-paper-error'
+                          }`}>
                           {record.type === 'earn' ? '+' : ''}{record.points}
                         </span>
                       </PaperTableCell>
@@ -544,8 +539,8 @@ export default function ProductMallPage() {
         >
           <div className="space-y-6">
             <div className="text-center">
-              <Image 
-                src={selectedProduct.image} 
+              <Image
+                src={selectedProduct.image}
                 alt={selectedProduct.name}
                 width={768}
                 height={384}
@@ -555,7 +550,7 @@ export default function ProductMallPage() {
               <h3 className="text-xl font-bold text-paper-ink mb-2">{selectedProduct.name}</h3>
               <p className="text-paper-ink-secondary mb-4">{selectedProduct.description}</p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium text-paper-ink mb-2">基本信息</h4>
@@ -582,7 +577,7 @@ export default function ProductMallPage() {
                 )}
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-3 pt-4">
               <PaperButton variant="outline" onClick={() => setShowDetailModal(false)}>
                 关闭
@@ -595,8 +590,8 @@ export default function ProductMallPage() {
                 }}
                 disabled={selectedProduct.status === 'sold_out' || userPoints.available < selectedProduct.points}
               >
-                {selectedProduct.status === 'sold_out' ? '已售罄' : 
-                 userPoints.available < selectedProduct.points ? '积分不足' : '立即兑换'}
+                {selectedProduct.status === 'sold_out' ? '已售罄' :
+                  userPoints.available < selectedProduct.points ? '积分不足' : '立即兑换'}
               </PaperButton>
             </div>
           </div>
@@ -615,7 +610,7 @@ export default function ProductMallPage() {
               <h3 className="text-lg font-bold text-paper-ink mb-2">{selectedProduct.name}</h3>
               <p className="text-paper-ink-secondary mb-4">{selectedProduct.description}</p>
             </div>
-            
+
             <div className="bg-paper-background p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-paper-ink-secondary">所需积分：</span>
@@ -630,13 +625,13 @@ export default function ProductMallPage() {
                 <span className="font-medium">{(userPoints.available - selectedProduct.points).toLocaleString()}</span>
               </div>
             </div>
-            
+
             {selectedProduct.validityPeriod && (
               <div className="text-sm text-paper-ink-secondary">
                 有效期：{selectedProduct.validityPeriod}
               </div>
             )}
-            
+
             <div className="flex justify-end gap-3 pt-4">
               <PaperButton variant="outline" onClick={() => setShowExchangeModal(false)}>
                 取消

@@ -4,20 +4,31 @@ import React from 'react';
 
 import { cn } from '@/utils/lib-utils';
 
-interface PaperCheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface PaperCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   label?: string;
   error?: string;
   helperText?: string;
   fullWidth?: boolean;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onCheckedChange?: (checked: boolean) => void;
 }
 
 export const PaperCheckbox = React.forwardRef<HTMLInputElement, PaperCheckboxProps>(
-  ({ className, label, error, helperText, fullWidth = true, ...props }, ref) => {
+  ({ className, label, error, helperText, fullWidth = true, onChange, onCheckedChange, ...props }, ref) => {
     const checkboxClasses = cn(
       'paper-checkbox',
       error && 'border-error-500 focus:ring-error-400 focus:border-error-400',
       className
     );
+    
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (onChange) {
+        onChange(event);
+      }
+      if (onCheckedChange) {
+        onCheckedChange(event.target.checked);
+      }
+    };
     
     return (
       <div className={cn(fullWidth && 'w-full')}>
@@ -26,6 +37,7 @@ export const PaperCheckbox = React.forwardRef<HTMLInputElement, PaperCheckboxPro
             type="checkbox"
             ref={ref}
             className={checkboxClasses}
+            onChange={handleChange}
             {...props}
           />
           {label && (

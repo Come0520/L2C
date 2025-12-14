@@ -5,11 +5,30 @@ export interface CreateApprovalRequestParams {
     requesterId: string
     entityType: string
     entityId: string
+    timeoutMinutes?: number
+    autoEscalate?: boolean
 }
 
 export const approvalService = {
     async createRequest(params: CreateApprovalRequestParams) {
         const supabase = await createClient()
+        
+        // 获取审批流程配置，包括默认超时时间
+        const { data: flowData, error: flowError } = await supabase
+            .from('approval_flows')
+            .select('default_timeout_minutes, auto_escalate')
+            .eq('id', params.flowId)
+            .single()
+        
+        if (flowError) throw flowError
+        
+        // 设置超时时间，优先使用请求参数，否则使用流程默认值
+        const timeoutMinutes = params.timeoutMinutes ?? flowData.default_timeout_minutes ?? 24 * 60 // 默认24小时
+        const autoEscalate = params.autoEscalate ?? flowData.auto_escalate ?? true
+        
+        // 计算超时时间
+        const dueAt = new Date()
+        dueAt.setMinutes(dueAt.getMinutes() + timeoutMinutes)
 
         const { data, error } = await supabase
             .from('approval_requests')
@@ -19,7 +38,10 @@ export const approvalService = {
                 entity_type: params.entityType,
                 entity_id: params.entityId,
                 status: 'pending',
-                current_step_order: 1
+                current_step_order: 1,
+                due_at: dueAt.toISOString(),
+                auto_escalate: autoEscalate,
+                timeout_minutes: timeoutMinutes
             })
             .select()
             .single()

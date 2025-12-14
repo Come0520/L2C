@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { installationTeamService } from '../installation-team.client';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { installationTeamService } from '../installation-team.client';
 
 // Mock dependencies
 vi.mock('@/lib/supabase/client', () => ({

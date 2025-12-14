@@ -1,12 +1,12 @@
 import { withErrorHandler } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase/client';
-import { Database } from '@/shared/types/supabase';
 import {
     Installation,
     InstallationListItem,
     CreateInstallationRequest,
     UpdateInstallationRequest
 } from '@/shared/types/installation';
+import { Database } from '@/types/supabase';
 
 type InstallationOrderRow = Database['public']['Tables']['installation_orders']['Row'];
 

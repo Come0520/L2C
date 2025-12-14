@@ -38,8 +38,9 @@ vi.mock('@/lib/supabase/client', () => {
 });
 
 // 然后导入服务和mock模块
-import { quoteCollaborationService } from '../quote-collaboration.client';
 import * as supabaseModule from '@/lib/supabase/client';
+
+import { quoteCollaborationService } from '../quote-collaboration.client';
 
 // 创建一个辅助函数，用于获取mock对象
 const getMockObjects = () => {

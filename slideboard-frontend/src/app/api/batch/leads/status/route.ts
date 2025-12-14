@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server';
-import { withApiHandler, ApiError, validateRequest } from '@/utils/api-error-handler';
 import { withAuth } from '@/middleware/auth';
+import { withApiHandler, ApiError, validateRequest } from '@/utils/api-error-handler';
 
 export const runtime = 'edge';
 

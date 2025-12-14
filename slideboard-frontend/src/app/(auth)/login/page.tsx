@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 import { siteConfig } from '@/config/site';
-import { LoginView } from '@/features/auth/components/login-view';
+import { LoginView } from '@/features/auth/components/LoginView';
 
 export const metadata: Metadata = {
   title: `登录 - ${siteConfig.name}`,

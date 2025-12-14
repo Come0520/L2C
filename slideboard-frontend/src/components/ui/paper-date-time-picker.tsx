@@ -122,7 +122,7 @@ export function PaperDateTimePicker({
           value={inputValue}
           onChange={handleDateChange}
           disabled={disabled}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-500' : 'border-gray-300'} ${className}`}
+          className={`w-full px-3 py-2 border rounded-md bg-theme-bg-secondary text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${error ? 'border-rose-500' : 'border-theme-border'} ${className}`}
           min={minDate ? minDate.toISOString().split('T')[0] : undefined}
           max={maxDate ? maxDate.toISOString().split('T')[0] : undefined}
         />
@@ -134,7 +134,7 @@ export function PaperDateTimePicker({
           value={inputValue}
           onChange={handleTimeChange}
           disabled={disabled}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-500' : 'border-gray-300'} ${className}`}
+          className={`w-full px-3 py-2 border rounded-md bg-theme-bg-secondary text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${error ? 'border-rose-500' : 'border-theme-border'} ${className}`}
         />
       )
     } else {
@@ -144,7 +144,7 @@ export function PaperDateTimePicker({
           value={inputValue}
           onChange={handleDateChange}
           disabled={disabled}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-500' : 'border-gray-300'} ${className}`}
+          className={`w-full px-3 py-2 border rounded-md bg-theme-bg-secondary text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${error ? 'border-rose-500' : 'border-theme-border'} ${className}`}
           min={minDate ? minDate.toISOString().slice(0, 16) : undefined}
           max={maxDate ? maxDate.toISOString().slice(0, 16) : undefined}
         />
@@ -154,11 +154,11 @@ export function PaperDateTimePicker({
 
   return (
     <div className="space-y-1">
-      {label && <label className="block text-sm font-medium text-gray-700">{label}</label>}
+      {label && <label className="block text-sm font-medium text-theme-text-primary">{label}</label>}
       <div className="relative">
         {renderInput()}
       </div>
-      {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
+      {error && <p className="text-sm text-rose-500 mt-1">{error}</p>}
     </div>
   )
 }
@@ -224,7 +224,7 @@ export function PaperTimeEditComponent({
 
   return (
     <div className={`${className}`}>
-      {label && <div className="text-sm font-medium text-gray-700 mb-1">{label}</div>}
+      {label && <div className="text-sm font-medium text-theme-text-primary mb-1">{label}</div>}
       <div className="flex items-center justify-between">
         {isEditing ? (
           <div className="flex items-center gap-2 w-full">
@@ -240,7 +240,7 @@ export function PaperTimeEditComponent({
         ) : (
           <>
             <div className="text-sm">{formatChineseTime(value)}</div>
-            <PaperButton size="sm" variant="outline" onClick={() => setIsEditing(true)} className="h-8 px-2 text-blue-600">编辑</PaperButton>
+            <PaperButton size="sm" variant="outline" onClick={() => setIsEditing(true)} className="h-8 px-2 text-primary-600">编辑</PaperButton>
           </>
         )}
       </div>

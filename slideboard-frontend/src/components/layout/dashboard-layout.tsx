@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
@@ -20,9 +21,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 
 // import l2cLogo from '@/assets/images/l2c-logo.png'; // Removed in favor of static asset
 
@@ -32,6 +32,7 @@ import { Tabs } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 // import { useTheme } from '@/contexts/theme-context';
 import { cn } from '@/lib/utils';
+import { notificationService } from '@/services/notifications';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -39,13 +40,34 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
+
+  // 获取未读消息数量
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await notificationService.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Failed to fetch unread notification count:', error);
+    }
+  };
+
+  // 组件挂载时获取未读消息数量
+  React.useEffect(() => {
+    fetchUnreadCount();
+
+    // 定期刷新未读消息数量（每30秒）
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Check if current page should be full screen (no sidebar/header)
   const isFullScreenPage = React.useMemo(() => {
     if (!pathname) return false;
-    
+
     // Auth pages and error pages
     const fullScreenPrefixes = ['/login', '/register', '/auth', '/403', '/404'];
     return fullScreenPrefixes.some(prefix => pathname.startsWith(prefix));
@@ -59,21 +81,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         href: '/dashboard', // Default href for parent, though we might not use it directly for navigation if it has children
         items: [
           { title: '总览仪表盘', icon: <LayoutDashboard className="h-5 w-5 flex-shrink-0" />, href: '/dashboard' },
+          { title: '订单总览', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/orders' },
           { title: '待办清单', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/dashboard/todos' },
           { title: '预警中心', icon: <Bell className="h-5 w-5 flex-shrink-0" />, href: '/dashboard/alerts' },
           { title: '罗莱大学', icon: <BookOpen className="h-5 w-5 flex-shrink-0" />, href: '/academy' },
         ],
       },
-      {
-        title: '客户经营',
-        icon: <Users className="h-5 w-5 flex-shrink-0" />,
-        href: '/customers',
-        items: [
-          { title: '已合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/cooperative' },
-          { title: '潜在合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/prospects' },
-          { title: '考核视图', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/customers/assessment' },
-        ],
-      },
+      // {
+      //   title: '客户经营',
+      //   icon: <Users className="h-5 w-5 flex-shrink-0" />,
+      //   href: '/customers',
+      //   items: [
+      //     { title: '已合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/cooperative' },
+      //     { title: '潜在合作装企', icon: <Users className="h-5 w-5 flex-shrink-0" />, href: '/customers/prospects' },
+      //     { title: '考核视图', icon: <FileText className="h-5 w-5 flex-shrink-0" />, href: '/customers/assessment' },
+      //   ],
+      // },
       {
         title: '线索管理',
         icon: <Users className="h-5 w-5 flex-shrink-0" />,
@@ -208,22 +231,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Find current active group
   const activeGroup = React.useMemo(() => {
-    const group = navGroups.find(group => 
+    const group = navGroups.find(group =>
       group.items.some(item => pathname === item.href || pathname?.startsWith(item.href))
     );
     return group || navGroups[0];
   }, [pathname, navGroups]);
 
-  // Transform group items to Tabs format
+  // Transform group items to Tabs format (without href for new Tabs API)
   const tabs = React.useMemo(() => {
     if (!activeGroup) return [];
     return activeGroup.items.map(item => ({
       title: item.title,
       value: item.href,
-      href: item.href,
-      content: null,
+      content: null, // Content is rendered separately via children
     }));
   }, [activeGroup]);
+
+  // Handle tab change - navigate to the selected route
+  const handleTabChange = (value: string) => {
+    router.push(value);
+  };
 
   // 退出登录处理
   const handleSignOut = async () => {
@@ -289,7 +316,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   }}
                   className={cn(
                     activeGroup && activeGroup.title === group.title
-                      ? "bg-theme-bg-tertiary text-primary-500 font-medium rounded-md"
+                      ? "bg-primary-500/10 text-primary-500 font-medium rounded-md"
                       : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/50 rounded-md"
                   )}
                 />
@@ -335,7 +362,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center justify-between w-full">
             {/* Left Side: Breadcrumbs / Group Title */}
             <div className="flex items-center gap-4">
-               <h1 className="text-xl font-bold text-theme-text-primary">{activeGroup?.title}</h1>
+              <h1 className="text-xl font-bold text-theme-text-primary">{activeGroup?.title}</h1>
             </div>
 
             {/* Right Side: Theme Toggle & Notifications */}
@@ -345,7 +372,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <button className="p-2 relative text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary" aria-label="Notifications">
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 min-w-[18px] h-5 bg-primary-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-[0_0_8px] shadow-primary-500/50">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -353,31 +384,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Tabs and Main Content */}
         <main className="flex-1 overflow-hidden bg-theme-bg-primary p-6 pt-0">
-           <div className="h-full flex flex-col">
-              {/* Secondary Navigation Tabs */}
-               <div className="py-4">
-                  <Tabs 
-                    tabs={tabs} 
-                    activeTab={pathname || ''}
-                    layoutId="nav-tabs"
-                    containerClassName="gap-2"
-                    activeTabClassName="bg-paper-500 shadow-sm"
-                    tabClassName="text-ink-600 hover:text-ink-900 hover:bg-paper-300 transition-colors"
-                    contentClassName="hidden"
-                  />
-               </div>
-              
-              {/* Page Content */}
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="flex-1 overflow-y-auto rounded-2xl border border-theme-border bg-theme-bg-secondary/30 p-6 shadow-sm"
-              >
-                 {children}
-              </motion.div>
-           </div>
+          <div className="h-full flex flex-col">
+            {/* Secondary Navigation Tabs */}
+            <div className="py-4">
+              <Tabs
+                tabs={tabs}
+                defaultValue={pathname || ''}
+                onTabChange={handleTabChange}
+                containerClassName="gap-2"
+                activeTabClassName="bg-theme-bg-secondary shadow-md"
+                tabClassName="text-theme-text-secondary hover:text-theme-text-primary"
+                contentClassName="hidden"
+              />
+            </div>
+
+            {/* Page Content */}
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex-1 overflow-y-auto rounded-2xl border border-theme-border bg-theme-bg-secondary/30 p-6 shadow-sm"
+            >
+              {children}
+            </motion.div>
+          </div>
         </main>
       </div>
     </div>

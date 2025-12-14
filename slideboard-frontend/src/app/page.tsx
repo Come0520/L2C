@@ -11,12 +11,13 @@ import {
   BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { useAuth } from '@/contexts/auth-context';
-import TodoCategories from '@/features/dashboard/components/todo-categories';
+import TodoCategories from '@/features/dashboard/components/TodoCategories';
 import { TodoCategory } from '@/shared/types/todo';
 import { UserRole } from '@/shared/types/user';
 import { TRACK_PAGE_VIEW } from '@/utils/analytics';
@@ -45,10 +46,13 @@ interface QuickStat {
  * 4. 常用功能的快速导航入口
  * 5. 基于当前用户角色的待办事项列表
  */
+// 导入 router
+
 export default function HomePage() {
-  // 从认证上下文获取加载状态
-  const { loading } = useAuth();
-  
+  // 从认证上下文获取加载状态和用户
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
   // 状态：当前选中的角色
   // 注意：这是一个用于演示的功能，允许用户在不重新登录的情况下切换不同角色的视图
   // 默认角色为 'SALES_STORE' (驻店销售)
@@ -59,6 +63,13 @@ export default function HomePage() {
   useEffect(() => {
     TRACK_PAGE_VIEW('Dashboard', { role: currentRole });
   }, [currentRole]);
+
+  // 登录检查，如果未登录则跳转到登录页
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   // 如果认证信息正在加载，显示加载状态
   if (loading) {
@@ -261,7 +272,7 @@ export default function HomePage() {
     {
       id: 'pending-measurement-assignment',
       name: '测量中-待分配',
-      count: 2,
+      count: 1,
       items: [
         {
           id: 'dispatcher-todo-1',
@@ -286,7 +297,7 @@ export default function HomePage() {
     {
       id: 'installing-pending-assignment',
       name: '安装中-待分配',
-      count: 3,
+      count: 1,
       items: [
         {
           id: 'dispatcher-todo-2',
@@ -327,9 +338,9 @@ export default function HomePage() {
   }
 
   // 开发阶段允许未登录用户访问
-  // if (!user) {
-  //   return null;
-  // }
+  if (!user) {
+    return null;
+  }
 
   // 模拟快速统计数据 (KPIs)
   // 包含：本月销售额、新增客户、订单数量、转化率
@@ -403,7 +414,7 @@ export default function HomePage() {
 
   // 获取当前角色的中文名称
   const currentRoleName = roleMap[currentRole];
-  
+
   // 角色待办数据映射表
   // 定义了不同角色应该看到哪一套待办事项数据
   const roleTodoData: Record<UserRole, TodoCategory[]> = {

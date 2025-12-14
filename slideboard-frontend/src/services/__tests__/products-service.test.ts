@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+
 import { productsService, Product } from '../products.client';
 
 // Simplified mock for supabase client
@@ -129,6 +130,38 @@ describe('Products Service', () => {
       const result = await productsService.getAllProducts();
 
       expect(result).toEqual([]);
+    });
+
+    it('should handle filter with categoryLevel1', async () => {
+      // Setup mock response
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        async then(resolve: any) {
+          resolve({ data: [mockDbProduct], error: null });
+        }
+      };
+      
+      (supabase.from as vi.Mock).mockReturnValue(mockQuery);
+
+      await productsService.getAllProducts({ categoryLevel1: 'Category 1' });
+      expect(mockQuery.eq).toHaveBeenCalledWith('category_level1', 'Category 1');
+    });
+
+    it('should handle filter with categoryLevel2', async () => {
+      // Setup mock response
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        async then(resolve: any) {
+          resolve({ data: [mockDbProduct], error: null });
+        }
+      };
+      
+      (supabase.from as vi.Mock).mockReturnValue(mockQuery);
+
+      await productsService.getAllProducts({ categoryLevel2: 'Category 2' });
+      expect(mockQuery.eq).toHaveBeenCalledWith('category_level2', 'Category 2');
     });
   });
 
@@ -354,5 +387,6 @@ describe('Products Service', () => {
 
       expect(result?.status).toBe('offline');
     });
-  });
+});
+
 });

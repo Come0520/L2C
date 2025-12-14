@@ -52,7 +52,7 @@ export const getClientIp = (request: Request): string | undefined => {
   // 从X-Forwarded-For头获取真实IP（如果存在）
   const xForwardedFor = request.headers.get('x-forwarded-for');
   if (xForwardedFor) {
-    return xForwardedFor.split(',')[0].trim();
+    return xForwardedFor.split(',')[0]?.trim();
   }
   
   // 从X-Real-IP头获取（如果存在）

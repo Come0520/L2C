@@ -6,8 +6,9 @@ import React from 'react';
 import { PaperBadge } from '@/components/ui/paper-badge';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { PaperInput, PaperSelect } from '@/components/ui/paper-input';
+import { PaperSelect } from '@/components/ui/paper-input';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
+import { VanishInput } from '@/components/ui/vanish-input';
 
 interface Installer {
   id: string;
@@ -37,63 +38,67 @@ export default function InstallersPage() {
   const statusBadge = (st: Installer['status']) => st === 'idle' ? 'info' : st === 'assigned' ? 'warning' : 'success';
 
   return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-ink-800">安装师管理</h1>
-            <p className="text-ink-500 mt-1">施工排期与质检回访</p>
-          </div>
-          <PaperButton variant="outline"><Calendar className="h-4 w-4 mr-2" /> 施工日程</PaperButton>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-ink-800">安装师管理</h1>
+          <p className="text-ink-500 mt-1">施工排期与质检回访</p>
         </div>
-
-        <PaperCard>
-          <PaperCardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <PaperInput placeholder="搜索姓名/手机号" value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <div className="w-48">
-                <PaperSelect value={team} onChange={(e) => setTeam(e.target.value)} options={[
-                  { value: 'all', label: '全部班组' },
-                  { value: 'A组', label: 'A组' },
-                  { value: 'B组', label: 'B组' },
-                ]} />
-              </div>
-              <PaperButton><Wrench className="h-4 w-4 mr-2" /> 新增安装师</PaperButton>
-            </div>
-          </PaperCardContent>
-        </PaperCard>
-
-        <PaperCard>
-          <PaperCardHeader>
-            <PaperCardTitle>人员列表</PaperCardTitle>
-          </PaperCardHeader>
-          <PaperCardContent>
-            <PaperTable>
-              <PaperTableHeader>
-                <PaperTableCell>姓名</PaperTableCell>
-                <PaperTableCell>电话</PaperTableCell>
-                <PaperTableCell>班组</PaperTableCell>
-                <PaperTableCell>今日工单</PaperTableCell>
-                <PaperTableCell>状态</PaperTableCell>
-              </PaperTableHeader>
-              <PaperTableBody>
-                {filtered.map(s => (
-                  <PaperTableRow key={s.id}>
-                    <PaperTableCell>{s.name}</PaperTableCell>
-                    <PaperTableCell>{s.phone}</PaperTableCell>
-                    <PaperTableCell>{s.team}</PaperTableCell>
-                    <PaperTableCell>{s.jobsToday}</PaperTableCell>
-                    <PaperTableCell>
-                      <PaperBadge variant={statusBadge(s.status)}>{statusText(s.status)}</PaperBadge>
-                    </PaperTableCell>
-                  </PaperTableRow>
-                ))}
-              </PaperTableBody>
-            </PaperTable>
-          </PaperCardContent>
-        </PaperCard>
+        <PaperButton variant="outline"><Calendar className="h-4 w-4 mr-2" /> 施工日程</PaperButton>
       </div>
+
+      <PaperCard>
+        <PaperCardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <VanishInput
+                placeholders={["搜索姓名...", "搜索手机号...", "输入关键词..."]}
+                value={search}
+                onChange={(value) => setSearch(value)}
+              />
+            </div>
+            <div className="w-48">
+              <PaperSelect value={team} onChange={(e) => setTeam(e.target.value)} options={[
+                { value: 'all', label: '全部班组' },
+                { value: 'A组', label: 'A组' },
+                { value: 'B组', label: 'B组' },
+              ]} />
+            </div>
+            <PaperButton><Wrench className="h-4 w-4 mr-2" /> 新增安装师</PaperButton>
+          </div>
+        </PaperCardContent>
+      </PaperCard>
+
+      <PaperCard>
+        <PaperCardHeader>
+          <PaperCardTitle>人员列表</PaperCardTitle>
+        </PaperCardHeader>
+        <PaperCardContent>
+          <PaperTable>
+            <PaperTableHeader>
+              <PaperTableCell>姓名</PaperTableCell>
+              <PaperTableCell>电话</PaperTableCell>
+              <PaperTableCell>班组</PaperTableCell>
+              <PaperTableCell>今日工单</PaperTableCell>
+              <PaperTableCell>状态</PaperTableCell>
+            </PaperTableHeader>
+            <PaperTableBody>
+              {filtered.map(s => (
+                <PaperTableRow key={s.id}>
+                  <PaperTableCell>{s.name}</PaperTableCell>
+                  <PaperTableCell>{s.phone}</PaperTableCell>
+                  <PaperTableCell>{s.team}</PaperTableCell>
+                  <PaperTableCell>{s.jobsToday}</PaperTableCell>
+                  <PaperTableCell>
+                    <PaperBadge variant={statusBadge(s.status)}>{statusText(s.status)}</PaperBadge>
+                  </PaperTableCell>
+                </PaperTableRow>
+              ))}
+            </PaperTableBody>
+          </PaperTable>
+        </PaperCardContent>
+      </PaperCard>
+    </div>
   );
 }
 

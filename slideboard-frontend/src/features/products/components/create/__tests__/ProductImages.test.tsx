@@ -8,27 +8,34 @@ import { ProductImages } from '../ProductImages';
 // 模拟Product数据
 const mockProduct: Product = {
   id: 'test-product',
-  name: 'Test Product',
-  images: {
-    main: [],
-    detail: [],
-    gallery: []
-  },
-  // 其他Product必填字段
-  description: '',
-  category: '',
-  price: 0,
-  stock: 0,
+  productCode: 'SKU001',
+  productName: 'Test Product',
+  categoryLevel1: 'Category 1',
+  categoryLevel2: 'Category 2',
+  unit: 'PCS',
   status: 'draft',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  sku: '',
-  weight: 0,
-  dimensions: { length: 0, width: 0, height: 0 },
-  variants: [],
-  tags: [],
+  prices: {
+    costPrice: 0,
+    internalCostPrice: 0,
+    internalSettlementPrice: 0,
+    settlementPrice: 0,
+    retailPrice: 0,
+  },
   attributes: {},
-  metadata: {}
+  images: {
+    detailImages: [],
+    effectImages: [],
+    caseImages: []
+  },
+  tags: {
+    styleTags: [],
+    packageTags: [],
+    activityTags: [],
+    seasonTags: [],
+    demographicTags: []
+  },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 describe('ProductImages Component', () => {
@@ -50,9 +57,9 @@ describe('ProductImages Component', () => {
     expect(screen.getByText('产品图片')).toBeInTheDocument();
     
     // 检查不同类型图片的标题
-    expect(screen.getByText('主图')).toBeInTheDocument();
-    expect(screen.getByText('详情图')).toBeInTheDocument();
-    expect(screen.getByText('画廊图')).toBeInTheDocument();
+    expect(screen.getByText('产品细节图')).toBeInTheDocument();
+    expect(screen.getByText('效果展示图')).toBeInTheDocument();
+    expect(screen.getByText('案例效果图')).toBeInTheDocument();
   });
 
   it('should handle image upload correctly', async () => {
@@ -65,7 +72,9 @@ describe('ProductImages Component', () => {
 
     // 模拟文件上传
     const file = new File(['test-image'], 'test-image.jpg', { type: 'image/jpeg' });
-    const fileInput = screen.getByLabelText(/上传主图/i).closest('input[type="file"]');
+    // Find the first file input (for product details images)
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const fileInput = fileInputs[0];
     
     expect(fileInput).toBeInTheDocument();
     
@@ -74,17 +83,18 @@ describe('ProductImages Component', () => {
     
     // 检查是否调用了onProductChange
     await waitFor(() => {
+      // Because upload is simulated with setTimeout(1000), we need to wait
       expect(mockOnProductChange).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
   });
 
   it('should display uploaded images correctly', () => {
     const productWithImages: Product = {
       ...mockProduct,
       images: {
-        main: ['https://example.com/image1.jpg'],
-        detail: [],
-        gallery: []
+        detailImages: ['https://example.com/image1.jpg'],
+        effectImages: [],
+        caseImages: []
       }
     };
 
@@ -100,13 +110,13 @@ describe('ProductImages Component', () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
-  it('should handle image removal correctly', () => {
-    const productWithImages: Product = {
+  it('should handle image removal correctly', async () => {
+     const productWithImages: Product = {
       ...mockProduct,
       images: {
-        main: ['https://example.com/image1.jpg'],
-        detail: [],
-        gallery: []
+        detailImages: ['https://example.com/image1.jpg'],
+        effectImages: [],
+        caseImages: []
       }
     };
 
@@ -121,7 +131,6 @@ describe('ProductImages Component', () => {
     const deleteButton = screen.getByLabelText('删除图片');
     fireEvent.click(deleteButton);
     
-    // 检查是否调用了onProductChange
     expect(mockOnProductChange).toHaveBeenCalled();
   });
 
@@ -134,7 +143,8 @@ describe('ProductImages Component', () => {
     );
 
     // 检查是否有多个文件上传组件
-    const fileUploads = screen.getAllByRole('button', { name: /点击上传|拖拽文件到此处/i });
-    expect(fileUploads.length).toBeGreaterThan(1);
+    // Note: PaperFileUpload renders a button with text "点击上传"
+    const fileUploadButtons = screen.getAllByText('点击上传');
+    expect(fileUploadButtons.length).toBeGreaterThan(1);
   });
 });

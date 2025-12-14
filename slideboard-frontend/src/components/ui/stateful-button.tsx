@@ -63,11 +63,21 @@ export function StatefulButton({
       disabled={disabled || isLoading}
       variant={getVariant()}
       onClick={onClick}
+      layout
+      // 传递交互动画效果
+      whileHover={!disabled && !isLoading ? {
+        scale: 1.02,
+        transition: { type: "spring", stiffness: 400, damping: 10 }
+      } : undefined}
+      whileTap={!disabled && !isLoading ? {
+        scale: 0.98,
+        transition: { type: "spring", stiffness: 400, damping: 10 }
+      } : undefined}
       {...props}
     >
       <AnimatePresence mode="wait" initial={false}>
         {isLoading && (
-          <motion.div
+          <motion.span
             key="loading"
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -77,11 +87,11 @@ export function StatefulButton({
           >
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>{loadingText}</span>
-          </motion.div>
+          </motion.span>
         )}
 
         {isSuccess && (
-          <motion.div
+          <motion.span
             key="success"
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -91,11 +101,11 @@ export function StatefulButton({
           >
             <CheckCircle className="h-4 w-4" />
             <span>{successText}</span>
-          </motion.div>
+          </motion.span>
         )}
 
         {isError && (
-          <motion.div
+          <motion.span
             key="error"
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -105,20 +115,19 @@ export function StatefulButton({
           >
             <XCircle className="h-4 w-4" />
             <span>{errorText}</span>
-          </motion.div>
+          </motion.span>
         )}
 
         {internalStatus === 'idle' && (
-          <motion.div
+          <motion.span
             key="idle"
             initial={{ opacity: 0, y: -15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 15 }}
             transition={{ duration: 0.2 }}
-            className="flex items-center gap-2"
           >
             {children}
-          </motion.div>
+          </motion.span>
         )}
       </AnimatePresence>
     </PaperButton>

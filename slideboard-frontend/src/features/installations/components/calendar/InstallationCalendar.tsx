@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+
 import { installationScheduleService } from '@/services/installation-schedule.client';
 
 // 定义 CalendarView 类型
@@ -325,7 +326,7 @@ const InstallationCalendar: React.FC<InstallationCalendarProps> = ({
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
     
     // 生成当前周的7天
-    const weekDays = [];
+    const weekDays: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
@@ -333,8 +334,8 @@ const InstallationCalendar: React.FC<InstallationCalendarProps> = ({
     }
     
     // 根据日期查找对应的安装任务
-    const getInstallationsForDate = (date: Date) => {
-      const dateStr = date.toISOString().split('T')[0];
+    const getInstallationsForDate = (date: Date): CalendarItem => {
+      const dateStr = date.toISOString().split('T')[0] as string;
       const dayData = calendarData.find(item => item.date === dateStr);
       return dayData || { date: dateStr, installations: [], totalInstallations: 0 };
     };
@@ -343,6 +344,7 @@ const InstallationCalendar: React.FC<InstallationCalendarProps> = ({
       <div className="grid grid-cols-7 gap-px bg-gray-200">
         {['日', '一', '二', '三', '四', '五', '六'].map((dayName, index) => {
           const date = weekDays[index];
+          if (!date) return null;
           const dayData = getInstallationsForDate(date);
           const day = date.getDate();
           const isToday = new Date().toDateString() === date.toDateString();
@@ -442,7 +444,7 @@ const InstallationCalendar: React.FC<InstallationCalendarProps> = ({
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-900">
-          {renderDateTitle()}
+          {renderDateTitle}
         </h2>
         {renderNavigationButtons()}
       </div>

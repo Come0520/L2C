@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 import { siteConfig } from '@/config/site';
-import { RegisterView } from '@/features/auth/components/register-view';
+import { RegisterView } from '@/features/auth/components/RegisterView';
 
 export const metadata: Metadata = {
   title: `注册 - ${siteConfig.name}`,

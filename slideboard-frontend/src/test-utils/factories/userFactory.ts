@@ -1,10 +1,12 @@
 import { faker } from '@faker-js/faker';
+
 import type { User, Team } from '@/types';
 
 export const createUser = (overrides?: Partial<User>): User => {
   const baseUser: User = {
     id: faker.string.uuid(),
     email: faker.internet.email(),
+    name: faker.person.fullName(),
     password: faker.internet.password(),
     full_name: faker.person.fullName(),
     phone: faker.phone.number(),
@@ -168,7 +170,7 @@ export const createUserWithTeam = (overrides?: Partial<User> & { team?: Partial<
   const user = createUser(userOverrides);
   
   const baseTeam: Team = {
-    id: user.team_id,
+    id: user.team_id || faker.string.uuid(),
     name: faker.company.name() + ' 团队',
     description: faker.lorem.paragraph(),
     manager_id: faker.string.uuid(),
@@ -179,8 +181,8 @@ export const createUserWithTeam = (overrides?: Partial<User> & { team?: Partial<
   };
   
   return {
-    ...user,
-    team: { ...baseTeam, ...team },
+    user,
+    team: { ...baseTeam, ...team }
   };
 };
 

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Product, ProductStatus, ProductPrices, ProductImages, ProductTags, ProductFilter } from '@/shared/types/product'
-import { Database } from '@/shared/types/supabase'
+import { Database } from '@/types/supabase'
 
 type ProductRow = Database['public']['Tables']['products']['Row']
 
@@ -16,13 +16,12 @@ export async function getAllProducts(filter?: ProductFilter): Promise<Product[]>
         if (filter.searchTerm) {
             query = query.or(`product_name.ilike.%${filter.searchTerm}%,product_code.ilike.%${filter.searchTerm}%`)
         }
-        // 暂时移除分类筛选，因为数据库结构变更导致 category_level1 列不存在
-        // if (filter.categoryLevel1 && filter.categoryLevel1 !== 'all') {
-        //    query = query.eq('category_level1', filter.categoryLevel1)
-        // }
-        // if (filter.categoryLevel2 && filter.categoryLevel2 !== 'all') {
-        //    query = query.eq('category_level2', filter.categoryLevel2)
-        // }
+        if (filter.categoryLevel1 && filter.categoryLevel1 !== 'all') {
+            query = query.eq('category_level1', filter.categoryLevel1)
+        }
+        if (filter.categoryLevel2 && filter.categoryLevel2 !== 'all') {
+            query = query.eq('category_level2', filter.categoryLevel2)
+        }
         if (filter.status && filter.status !== 'all') {
             query = query.eq('status', filter.status)
         }

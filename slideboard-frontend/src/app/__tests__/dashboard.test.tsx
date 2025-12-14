@@ -42,6 +42,20 @@ vi.mock('@/contexts/auth-context', () => ({
 }));
 
 // Mock data fetching functions
+vi.mock('@/features/dashboard/hooks/useDashboard', () => ({
+  useDashboard: vi.fn(() => ({
+    stats: [
+      { label: '本月销售额', value: '¥100,000', change: '+12%', trend: 'up' },
+      { label: '新增客户', value: '100', change: '+5%', trend: 'up' },
+      { label: '订单数量', value: '30', change: '-2%', trend: 'down' },
+      { label: '转化率', value: '25%', change: '+1%', trend: 'up' },
+    ],
+    recentActivities: [],
+    pendingTasks: [],
+    isLoading: false,
+  })),
+}));
+
 vi.mock('@/hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(() => ({
     dashboardStats: {

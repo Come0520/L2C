@@ -13,8 +13,9 @@ import {
 import { PaperBadge, PaperStatus } from '@/components/ui/paper-badge';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { CustomerDetailSkeleton } from './skeletons/customer-detail-skeleton';
 import { Customer } from '@/services/customers.server';
+
+import { CustomerDetailSkeleton } from './skeletons/customer-detail-skeleton';
 
 interface CustomerDetailModalProps {
   customer: Customer;

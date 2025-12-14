@@ -3,8 +3,9 @@ import React, { Suspense } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { getInstallationTasks } from '@/services/installation.server';
 import { InstallationTaskList } from '@/features/installations/components/list/InstallationTaskList';
+import { getInstallationTasks } from '@/services/installation.server';
+
 import { InstallationTaskPageClient } from './client';
 
 export const metadata: Metadata = {

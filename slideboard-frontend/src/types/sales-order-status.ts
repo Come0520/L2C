@@ -83,7 +83,7 @@ export const STATUS_METADATA: Record<SalesOrderStatus, StatusMetadata> = {
         order: 1,
         color: '#94A3B8',
         description: '线索待分配给销售人员',
-        nextStatuses: [SalesOrderStatus.PENDING_FOLLOW_UP, SalesOrderStatus.CANCELLED, SalesOrderStatus.EXPIRED],
+        nextStatuses: [SalesOrderStatus.PENDING_FOLLOW_UP, SalesOrderStatus.CANCELLED, SalesOrderStatus.EXPIRED, SalesOrderStatus.SUSPENDED],
     },
 
     [SalesOrderStatus.PENDING_FOLLOW_UP]: {
@@ -97,6 +97,7 @@ export const STATUS_METADATA: Record<SalesOrderStatus, StatusMetadata> = {
             SalesOrderStatus.FOLLOWING_UP,
             SalesOrderStatus.CANCELLED,
             SalesOrderStatus.EXPIRED,
+            SalesOrderStatus.SUSPENDED,
         ],
     },
 
@@ -111,6 +112,7 @@ export const STATUS_METADATA: Record<SalesOrderStatus, StatusMetadata> = {
             SalesOrderStatus.DRAFT_SIGNED,
             SalesOrderStatus.CANCELLED,
             SalesOrderStatus.EXPIRED,
+            SalesOrderStatus.SUSPENDED,
         ],
     },
 
@@ -121,7 +123,7 @@ export const STATUS_METADATA: Record<SalesOrderStatus, StatusMetadata> = {
         order: 4,
         color: '#8B5CF6',
         description: '完成草签，准备进入订单阶段',
-        nextStatuses: [SalesOrderStatus.PENDING_MEASUREMENT, SalesOrderStatus.CANCELLED, SalesOrderStatus.EXPIRED],
+        nextStatuses: [SalesOrderStatus.PENDING_MEASUREMENT, SalesOrderStatus.CANCELLED, SalesOrderStatus.EXPIRED, SalesOrderStatus.SUSPENDED],
     },
 
     [SalesOrderStatus.EXPIRED]: {

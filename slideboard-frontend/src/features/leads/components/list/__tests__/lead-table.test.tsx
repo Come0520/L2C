@@ -1,17 +1,18 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-import { LeadItem } from '@/types/lead';
+import { Lead } from '@/shared/types/lead';
 
 import { LeadTable } from '../LeadTable';
 
 
 // Mock data for testing
-const mockLeads: LeadItem[] = [
+const mockLeads: Lead[] = [
   {
     id: '1',
     leadNumber: 'LD-2024-0001',
-    customerName: '张三',
+    name: '张三',
+    phone: '13800138001',
     projectAddress: '北京市朝阳区',
     requirements: ['整体定制', '全屋定制'],
     areaSize: 120,
@@ -22,18 +23,23 @@ const mockLeads: LeadItem[] = [
     appointmentTime: '2024-01-15T10:00:00Z',
     appointmentReminder: '24h',
     businessTags: ['quoted', 'high-intent'],
-    currentOwner: { name: '李四', avatar: '' },
-    designer: { name: '王五', avatar: '' },
-    shoppingGuide: { name: '赵六', avatar: '' },
+    assignedToName: '李四',
+    designerName: '王五',
+    shoppingGuideName: '赵六',
     createdAt: '2024-01-10T08:00:00Z',
-    lastFollowUpAt: '2024-01-10T08:00:00Z',
+    updatedAt: '2024-01-10T08:00:00Z',
     source: 'online',
-    phone: '13800138001',
+    quoteVersions: 0,
+    measurementCompleted: false,
+    installationCompleted: false,
+    isCancelled: false,
+    isPaused: false
   },
   {
     id: '2',
     leadNumber: 'LD-2024-0002',
-    customerName: '李四',
+    name: '李四',
+    phone: '13800138002',
     projectAddress: '上海市浦东新区',
     requirements: ['厨房定制', '衣柜定制'],
     areaSize: 80,
@@ -44,13 +50,16 @@ const mockLeads: LeadItem[] = [
     appointmentTime: '2024-01-16T14:00:00Z',
     appointmentReminder: '48h',
     businessTags: ['arrived'],
-    currentOwner: { name: '钱七', avatar: '' },
-    designer: undefined,
-    shoppingGuide: { name: '孙八', avatar: '' },
+    assignedToName: '钱七',
+    shoppingGuideName: '孙八',
     createdAt: '2024-01-11T09:30:00Z',
-    lastFollowUpAt: '2024-01-11T09:30:00Z',
+    updatedAt: '2024-01-11T09:30:00Z',
     source: 'offline',
-    phone: '13800138002',
+    quoteVersions: 0,
+    measurementCompleted: false,
+    installationCompleted: false,
+    isCancelled: false,
+    isPaused: false
   },
 ];
 

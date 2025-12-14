@@ -35,7 +35,7 @@ describe('PaperFileUpload Component', () => {
   });
 
   it('should handle file selection via button click', async () => {
-    render(
+    const { container } = render(
       <PaperFileUpload
         onUpload={mockOnUpload}
         onUploadSuccess={mockOnUploadSuccess}
@@ -50,7 +50,7 @@ describe('PaperFileUpload Component', () => {
     fireEvent.click(screen.getByRole('button', { name: '点击上传' }));
     
     // 获取文件输入框并触发文件选择
-    const fileInput = screen.getByRole('textbox').closest('input[type="file"]');
+    const fileInput = container.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
     
     fireEvent.change(fileInput!, { target: { files: [file] } });
@@ -100,7 +100,7 @@ describe('PaperFileUpload Component', () => {
   });
 
   it('should validate file size correctly', async () => {
-    render(
+    const { container } = render(
       <PaperFileUpload
         onUpload={mockOnUpload}
         onValidateError={mockOnValidateError}
@@ -114,7 +114,7 @@ describe('PaperFileUpload Component', () => {
     
     // 点击上传按钮并选择文件
     fireEvent.click(screen.getByRole('button', { name: '点击上传' }));
-    const fileInput = screen.getByRole('textbox').closest('input[type="file"]');
+    const fileInput = container.querySelector('input[type="file"]');
     fireEvent.change(fileInput!, { target: { files: [largeFile] } });
     
     // 检查是否触发了验证错误
@@ -125,7 +125,7 @@ describe('PaperFileUpload Component', () => {
   });
 
   it('should validate file type correctly', async () => {
-    render(
+    const { container } = render(
       <PaperFileUpload
         onUpload={mockOnUpload}
         onValidateError={mockOnValidateError}
@@ -138,7 +138,7 @@ describe('PaperFileUpload Component', () => {
     
     // 点击上传按钮并选择文件
     fireEvent.click(screen.getByRole('button', { name: '点击上传' }));
-    const fileInput = screen.getByRole('textbox').closest('input[type="file"]');
+    const fileInput = container.querySelector('input[type="file"]');
     fireEvent.change(fileInput!, { target: { files: [invalidFile] } });
     
     // 检查是否触发了验证错误
@@ -149,7 +149,7 @@ describe('PaperFileUpload Component', () => {
   });
 
   it('should display upload progress correctly', async () => {
-    render(
+    const { container } = render(
       <PaperFileUpload
         onUpload={mockOnUpload}
         onUploadProgress={mockOnUploadProgress}
@@ -162,7 +162,7 @@ describe('PaperFileUpload Component', () => {
     
     // 点击上传按钮并选择文件
     fireEvent.click(screen.getByRole('button', { name: '点击上传' }));
-    const fileInput = screen.getByRole('textbox').closest('input[type="file"]');
+    const fileInput = container.querySelector('input[type="file"]');
     fireEvent.change(fileInput!, { target: { files: [file] } });
     
     // 检查上传进度是否显示
@@ -172,7 +172,7 @@ describe('PaperFileUpload Component', () => {
   });
 
   it('should handle uploading state correctly', async () => {
-    render(
+    const { container } = render(
       <PaperFileUpload
         onUpload={mockOnUpload}
         accept="image/*"
@@ -184,7 +184,7 @@ describe('PaperFileUpload Component', () => {
     
     // 点击上传按钮并选择文件
     fireEvent.click(screen.getByRole('button', { name: '点击上传' }));
-    const fileInput = screen.getByRole('textbox').closest('input[type="file"]');
+    const fileInput = container.querySelector('input[type="file"]');
     fireEvent.change(fileInput!, { target: { files: [file] } });
     
     // 检查按钮是否禁用
@@ -205,7 +205,7 @@ describe('PaperFileUpload Component', () => {
     );
 
     // 检查文件类型提示
-    expect(screen.getByText(/支持文件类型:/i)).toBeInTheDocument();
+    expect(screen.getByText(/支持文件类型/i)).toBeInTheDocument();
   });
 
   it('should display error messages', () => {

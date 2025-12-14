@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { PaperButton } from '@/components/ui/paper-button';
 import { SpotlightCard, SpotlightCardHeader, SpotlightCardTitle, SpotlightCardContent } from '@/components/ui/spotlight-card';
 import { OrderListClient } from '@/features/orders/components/OrderListClient';
-import { getSalesOrders } from '@/services/salesOrders.server';
+import { getSalesOrders, getSalesUsers } from '@/services/salesOrders.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +55,7 @@ export default async function OrdersOverviewPage({ searchParams }: OrdersOvervie
   
   // Prefetch data on server
   const { orders, total } = await getSalesOrders(page, pageSize);
+  const salesUsers = await getSalesUsers();
 
   return (
       <div className="min-h-screen bg-theme-bg-primary text-theme-text-primary p-6 font-sans">
@@ -105,6 +106,7 @@ export default async function OrdersOverviewPage({ searchParams }: OrdersOvervie
                 initialTotal={total}
                 initialPage={page}
                 initialPageSize={pageSize}
+                salesUsers={salesUsers}
              />
           </Suspense>
         </div>

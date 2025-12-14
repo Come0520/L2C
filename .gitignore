@@ -67,3 +67,17 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# 日志文件
+*.log
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 测试报告
+test-results*.json
+
+# 归档目录
+archive/

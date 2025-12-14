@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { coefficientService } from '../coefficient.client';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { coefficientService } from '../coefficient.client';
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({

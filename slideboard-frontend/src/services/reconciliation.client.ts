@@ -1,7 +1,7 @@
 import { withErrorHandler } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase/client';
 import { ReconciliationStatement, CreateStatementRequest, StatementType } from '@/shared/types/reconciliation';
-import { Database } from '@/shared/types/supabase';
+import { Database } from '@/types/supabase';
 
 type ReconciliationStatementRow = Database['public']['Tables']['reconciliation_statements']['Row'];
 type ReconciliationItemRow = Database['public']['Tables']['reconciliation_items']['Row'];
@@ -30,7 +30,7 @@ export const reconciliationService = {
    */
   async getStatements(type: StatementType) {
     return withErrorHandler(async () => {
-      let query = supabase
+      const query = supabase
         .from('reconciliation_statements')
         .select(`
           *,

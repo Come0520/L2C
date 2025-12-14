@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { Notification } from '@/types/notification'
+import { Notification } from '@/shared/types/notification'
 
 const supabase = createClient()
 
@@ -23,6 +23,15 @@ export const notificationService = {
     return data || []
   },
   
+  async getUnreadCount() {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false)
+    if (error) throw error
+    return count || 0
+  },
+  
   async markRead(id: string) {
     const { error } = await supabase
       .from('notifications')
@@ -36,6 +45,14 @@ export const notificationService = {
       .from('notifications')
       .update({ is_read: true })
       .eq('is_read', false)
+    if (error) throw error
+  },
+
+  async markBatchRead(ids: string[]) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .in('id', ids)
     if (error) throw error
   },
   

@@ -39,10 +39,10 @@ test.describe('测量到安装流程', () => {
     await page.selectOption('select[name="measurementStatus"]', 'completed');
     
     // 填写测量结果
-    await page.fill('input[name="length"]', faker.number.float({ min: 10, max: 50, precision: 0.1 }).toString());
-    await page.fill('input[name="width"]', faker.number.float({ min: 5, max: 30, precision: 0.1 }).toString());
-    await page.fill('input[name="height"]', faker.number.float({ min: 2, max: 10, precision: 0.1 }).toString());
-    await page.fill('input[name="area"]', faker.number.float({ min: 50, max: 500, precision: 1 }).toString());
+    await page.fill('input[name="length"]', faker.number.float({ min: 10, max: 50, fractionDigits: 1 }).toString());
+    await page.fill('input[name="width"]', faker.number.float({ min: 5, max: 30, fractionDigits: 1 }).toString());
+    await page.fill('input[name="height"]', faker.number.float({ min: 2, max: 10, fractionDigits: 1 }).toString());
+    await page.fill('input[name="area"]', faker.number.float({ min: 50, max: 500, fractionDigits: 0 }).toString());
     await page.fill('textarea[name="measurementNotes"]', faker.lorem.paragraph());
     
     // 保存测量记录

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+
 import type { Order, OrderItem } from '@/types';
 
 export const createOrderItem = (overrides?: Partial<OrderItem>): OrderItem => {
@@ -7,9 +8,12 @@ export const createOrderItem = (overrides?: Partial<OrderItem>): OrderItem => {
     order_id: faker.string.uuid(),
     product_id: faker.string.uuid(),
     product_name: faker.commerce.productName(),
+    product_code: faker.string.alphanumeric(8).toUpperCase(),
+    product_category: faker.commerce.department(),
     quantity: faker.number.int({ min: 1, max: 100 }),
-    unit_price: faker.number.float({ min: 100, max: 10000, precision: 10 }),
-    total_price: faker.number.float({ min: 100, max: 100000, precision: 100 }),
+    price: faker.number.float({ min: 100, max: 10000, fractionDigits: 0 }),
+    unit_price: faker.number.float({ min: 100, max: 10000, fractionDigits: 0 }),
+    total_price: faker.number.float({ min: 100, max: 100000, fractionDigits: 0 }),
     notes: faker.lorem.sentence(),
     created_at: faker.date.recent().toISOString(),
     updated_at: faker.date.recent().toISOString(),
@@ -33,10 +37,10 @@ export const createOrder = (overrides?: Partial<Order>): Order => {
     billing_address: faker.location.streetAddress() + ', ' + faker.location.city(),
     contact_person: faker.person.fullName(),
     contact_phone: faker.phone.number(),
-    total_amount: faker.number.float({ min: 5000, max: 1000000, precision: 100 }),
-    discount_amount: faker.number.float({ min: 0, max: 100000, precision: 100 }),
-    tax_amount: faker.number.float({ min: 0, max: 50000, precision: 100 }),
-    final_amount: faker.number.float({ min: 5000, max: 1000000, precision: 100 }),
+    total_amount: faker.number.float({ min: 5000, max: 1000000, fractionDigits: 0 }),
+    discount_amount: faker.number.float({ min: 0, max: 100000, fractionDigits: 0 }),
+    tax_amount: faker.number.float({ min: 0, max: 50000, fractionDigits: 0 }),
+    final_amount: faker.number.float({ min: 5000, max: 1000000, fractionDigits: 0 }),
     payment_status: faker.helpers.arrayElement(['unpaid', 'partially_paid', 'paid', 'overpaid', 'refunded']),
     payment_method: faker.helpers.arrayElement(['bank_transfer', 'credit_card', 'cash', 'check', 'other']),
     assigned_to: faker.string.uuid(),
@@ -87,10 +91,10 @@ export const createOrderWithMeasurement = (overrides?: Partial<Order>) => {
       measured_by: faker.string.uuid(),
       measurement_status: faker.helpers.arrayElement(['scheduled', 'completed', 'rejected', 'pending']),
       measurements: {
-        length: faker.number.float({ min: 10, max: 100, precision: 0.1 }),
-        width: faker.number.float({ min: 10, max: 100, precision: 0.1 }),
-        height: faker.number.float({ min: 2, max: 10, precision: 0.1 }),
-        area: faker.number.float({ min: 100, max: 10000, precision: 1 }),
+        length: faker.number.float({ min: 10, max: 100, fractionDigits: 1 }),
+        width: faker.number.float({ min: 10, max: 100, fractionDigits: 1 }),
+        height: faker.number.float({ min: 2, max: 10, fractionDigits: 1 }),
+        area: faker.number.float({ min: 100, max: 10000, fractionDigits: 0 }),
       },
       notes: faker.lorem.paragraph(),
       created_at: faker.date.recent().toISOString(),

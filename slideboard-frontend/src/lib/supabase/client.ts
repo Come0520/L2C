@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 import { env } from '@/config/env'
-import { Database } from '@/shared/types/supabase'
+import { Database } from '@/types/supabase'
 
 // Cookie 安全配置
 const cookieOptions = {

@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
+import { PaperProgress } from '@/components/ui/paper-badge'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
 import { PaperNav, PaperNavItem } from '@/components/ui/paper-nav'
-import { PaperProgress } from '@/components/ui/paper-badge'
 import { leadService } from '@/services/leads.client'
 import type { LeadWarnings } from '@/shared/types/lead'
 

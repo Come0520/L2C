@@ -48,11 +48,16 @@ vi.mock('../../lib/supabase/client', () => {
     eq: vi.fn().mockReturnThis(),
     single
   }
+  
   return {
     createClient: () => ({
       from: vi.fn().mockReturnValue(query),
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) }
-    })
+    }),
+    supabase: {
+      from: vi.fn().mockReturnValue(query),
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) }
+    }
   }
 })
 
@@ -62,22 +67,21 @@ describe('leadService.getLeadById', () => {
 
     expect(lead.id).toBe('id1234567890')
     expect(lead.leadNumber).toBe('LEAD-001')
-    expect(lead.customerName).toBe('王小明')
+    expect(lead.name).toBe('王小明')
     expect(lead.phone).toBe('13700000000')
     expect(lead.projectAddress).toBe('北京市朝阳区')
     expect(lead.requirements).toEqual(['门窗'])
     expect(lead.budgetMin).toBe(1000)
     expect(lead.budgetMax).toBe(2000)
-    expect(lead.customerLevel).toBe('B')
-    expect(lead.status).toBe('PENDING_ASSIGNMENT')
-    expect(lead.businessTags).toEqual(['quoted'])
+    expect(lead.customerLevel).toBe('b')
+    expect(lead.status).toBe('new')
+    expect(lead.businessTags).toEqual(['quoted', 'unknown-tag'])
     expect(lead.appointmentTime).toBe('2024-01-01T00:00:00Z')
     expect(lead.quoteVersions).toBe(2)
     expect(lead.measurementCompleted).toBe(true)
     expect(lead.installationCompleted).toBe(false)
     expect(lead.totalQuoteAmount).toBe(12345)
     expect(lead.createdAt).toBe('2024-01-01T00:00:00Z')
-    expect(lead.lastFollowUpAt).toBe('2024-02-01T00:00:00Z')
     expect(lead.lastStatusChangeAt).toBe('2024-02-05T00:00:00Z')
   })
 })

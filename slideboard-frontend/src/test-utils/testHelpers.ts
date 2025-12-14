@@ -78,8 +78,9 @@ export const expectToThrow = async <T>(fn: () => Promise<T>, errorMessage?: stri
     expect(true).toBe(false); // 如果没有抛出错误，测试失败
   } catch (error) {
     if (errorMessage) {
-      expect(error instanceof Error).toBe(true);
-      expect(error?.message).toContain(errorMessage);
+      const err = error as Error;
+      expect(err instanceof Error).toBe(true);
+      expect(err.message).toContain(errorMessage);
     }
   }
 };
@@ -93,8 +94,9 @@ export const expectToThrowSync = <T>(fn: () => T, errorMessage?: string): void =
     expect(true).toBe(false); // 如果没有抛出错误，测试失败
   } catch (error) {
     if (errorMessage) {
-      expect(error instanceof Error).toBe(true);
-      expect(error?.message).toContain(errorMessage);
+      const err = error as Error;
+      expect(err instanceof Error).toBe(true);
+      expect(err.message).toContain(errorMessage);
     }
   }
 };
@@ -105,7 +107,7 @@ export const expectToThrowSync = <T>(fn: () => T, errorMessage?: string): void =
 export const expectObjectToContainProperties = <T extends object>(obj: T, properties: (keyof T)[]): void => {
   expect(obj).toBeDefined();
   properties.forEach(prop => {
-    expect(obj).toHaveProperty(prop);
+    expect(obj).toHaveProperty(String(prop));
   });
 };
 

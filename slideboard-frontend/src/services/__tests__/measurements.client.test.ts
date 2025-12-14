@@ -3,44 +3,43 @@ import { MEASUREMENT_STATUS } from '@/constants/measurement-status';
 import { measurementService } from '../measurements.client';
 
 // Mock the supabase client
-// Create a function that returns a new mock query object for each call
-const createMockQuery = () => {
-  const query = {
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    ilike: vi.fn().mockReturnThis(),
-    range: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    single: vi.fn(),
-    // Add a then method to support promise chaining
-    then: vi.fn((onFulfilled) => onFulfilled({ data: null, error: null })),
-    // Add catch method for error handling
-    catch: vi.fn()
+const { mockSupabaseClient, createMockQuery } = vi.hoisted(() => {
+  const createMockQuery = () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      then: vi.fn((onFulfilled) => onFulfilled({ data: null, error: null })),
+      catch: vi.fn()
+    };
+    return query;
   };
-  return query;
-};
 
-// Create separate mock clients for different test scenarios
-const createMockSupabaseClient = () => ({
-  from: vi.fn((..._args: any[]) => createMockQuery()),
-  rpc: vi.fn(),
+  const mockSupabaseClient = {
+    from: vi.fn((...args: any[]) => createMockQuery()),
+    rpc: vi.fn(),
+  };
+
+  return { mockSupabaseClient, createMockQuery };
 });
-
-const mockSupabaseClient = createMockSupabaseClient();
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn(() => mockSupabaseClient),
+  supabase: mockSupabaseClient,
 }));
 
 // Helper function to reset mock client for each test
 beforeEach(() => {
   vi.clearAllMocks();
-  // Recreate mock client to ensure fresh mocks for each test
-  Object.assign(mockSupabaseClient, createMockSupabaseClient());
+  // Reset default implementation
+  mockSupabaseClient.from.mockImplementation(() => createMockQuery());
 });
 
 describe('measurementService', () => {

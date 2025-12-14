@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { businessDataService } from '../businessData.client';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { businessDataService } from '../businessData.client';
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({

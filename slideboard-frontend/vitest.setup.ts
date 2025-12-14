@@ -1,45 +1,23 @@
-import { vi } from 'vitest';
-import { JSDOM } from 'jsdom';
+// @ts-ignore
+import { toHaveNoViolations } from 'jest-axe';
+import { vi, expect } from 'vitest';
 import '@testing-library/jest-dom';
 
-// 设置简化的JSDOM环境，仅包含必要的功能
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  url: 'http://localhost:3000',
-  pretendToBeVisual: false, // 禁用视觉模拟以提高性能
-  resources: 'none', // 禁用资源加载
-  runScripts: 'dangerously'
+expect.extend(toHaveNoViolations);
+
+// Mock navigator with clipboard
+Object.defineProperty(window.navigator, 'clipboard', {
+  value: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+  },
+  writable: true,
+  configurable: true
 });
-
-// 一次性设置全局window和document
-global.window = {
-  ...dom.window,
-  location: {
-    origin: 'http://localhost:3000',
-    href: 'http://localhost:3000',
-    pathname: '/',
-    search: '',
-    hash: '',
-  },
-  localStorage: dom.window.localStorage,
-  sessionStorage: dom.window.sessionStorage,
-  navigator: {
-    ...dom.window.navigator,
-    clipboard: {
-      writeText: vi.fn().mockResolvedValue(undefined),
-    },
-  },
-  DOMRect: dom.window.DOMRect,
-  getComputedStyle: dom.window.getComputedStyle,
-  HTMLElement: dom.window.HTMLElement,
-  HTMLInputElement: dom.window.HTMLInputElement,
-} as any;
-
-global.document = dom.window.document;
 
 // 设置测试环境变量
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-key';
-process.env.NODE_ENV = 'test';
+(process.env as any).NODE_ENV = 'test';
 
 // 模拟fetch
 global.fetch = vi.fn().mockResolvedValue({
@@ -66,9 +44,10 @@ const mockAuth = {
   signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
   signUp: vi.fn().mockResolvedValue({ error: null }),
   signOut: vi.fn().mockResolvedValue({ error: null }),
-  onAuthStateChange: vi.fn((cb: any) => {
+  onAuthStateChange: vi.fn((_cb: any) => {
     return { data: { subscription: { unsubscribe: vi.fn() } } };
   }),
+
   getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
   getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
 };
@@ -100,10 +79,16 @@ vi.mock('@/hooks/useWorkflow', () => {
           { code: 'offline', name: '已下线' }
         ]
       },
-      getStatusMetadata: vi.fn().mockReturnValue({
-        name: '草稿',
-        color: 'gray',
-        icon: 'file-text'
+      getStatusMetadata: vi.fn((code) => {
+        const definitions = [
+          { code: 'draft', name: '草稿', color: 'gray', icon: 'file-text' },
+          { code: 'pending', name: '待审核', color: 'blue', icon: 'clock' },
+          { code: 'approved', name: '已审核', color: 'green', icon: 'check' },
+          { code: 'rejected', name: '已拒绝', color: 'red', icon: 'x' },
+          { code: 'online', name: '已发布', color: 'green', icon: 'globe' },
+          { code: 'offline', name: '已下线', color: 'gray', icon: 'cloud-off' }
+        ];
+        return definitions.find(d => d.code === code);
       })
     })
   };

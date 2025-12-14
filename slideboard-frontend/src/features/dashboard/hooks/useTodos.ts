@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { supabase } from '@/lib/supabase/client';
+
 // Types remain the same
 export interface TodoItem {
   id: string;
@@ -11,18 +13,75 @@ export interface TodoItem {
   priority: 'high' | 'medium' | 'low';
 }
 
-// 模拟 API 调用函数
+// 真实 API 调用函数
 const fetchTodos = async (): Promise<TodoItem[]> => {
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return [
-    { id: 't1', title: '报价审批', role: 'LEAD_SALES', dueDate: '2024-01-16', status: 'pending', priority: 'high' },
-    { id: 't2', title: '线索分配与复核', role: 'LEAD_SALES', dueDate: '2024-01-17', status: 'in-progress', priority: 'medium' },
-    { id: 't3', title: '测量预约安排', role: 'SALES_STORE', dueDate: '2024-01-15', status: 'pending', priority: 'high' },
-    { id: 't4', title: '远程报价发送', role: 'SALES_REMOTE', dueDate: '2024-01-18', status: 'in-progress', priority: 'medium' },
-    { id: 't5', title: '发票开具与回款确认', role: 'OTHER_FINANCE', dueDate: '2024-01-20', status: 'pending', priority: 'high' },
-    { id: 't6', title: '安装派单与进度确认', role: 'SERVICE_DISPATCH', dueDate: '2024-01-15', status: 'completed', priority: 'low' },
-  ];
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // 1. Fetch assigned leads that need follow-up
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('id, name, status, last_status_change_at')
+    .eq('assigned_to_id', user.id)
+    .in('status', ['PENDING_FOLLOW_UP', 'FOLLOWING_UP'])
+    .order('last_status_change_at', { ascending: true })
+    .limit(5);
+
+  // 2. Fetch assigned measurement tasks
+  const { data: measurements } = await supabase
+    .from('measurement_orders')
+    .select('id, status, scheduled_at, sales_orders(customer:customers(name))')
+    .eq('measurer_id', user.id)
+    .in('status', ['pending_measurement', 'measuring_pending_visit'])
+    .limit(5);
+
+  // 3. Fetch assigned installation tasks
+  const { data: installations } = await supabase
+    .from('installation_orders')
+    .select('id, status, scheduled_at, sales_orders(customer:customers(name))')
+    .eq('installer_id', user.id)
+    .in('status', ['pending_installation', 'installing_pending_visit'])
+    .limit(5);
+
+  const todoItems: TodoItem[] = [];
+
+  // Map leads to todos
+  leads?.forEach((lead: any) => {
+    todoItems.push({
+      id: `lead-${lead.id}`,
+      title: `跟进线索: ${lead.name}`,
+      role: 'SALES', // Generalized role
+      dueDate: lead.last_status_change_at ? new Date(new Date(lead.last_status_change_at).getTime() + 48 * 60 * 60 * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: 'pending',
+      priority: 'high'
+    });
+  });
+
+  // Map measurements to todos
+  measurements?.forEach((m: any) => {
+    todoItems.push({
+      id: `measure-${m.id}`,
+      title: `测量任务: ${m.sales_orders?.customer?.name || '未知客户'}`,
+      role: 'MEASURER',
+      dueDate: m.scheduled_at ? m.scheduled_at.split('T')[0] : '待定',
+      status: 'pending',
+      priority: 'medium'
+    });
+  });
+
+  // Map installations to todos
+  installations?.forEach((i: any) => {
+    todoItems.push({
+      id: `install-${i.id}`,
+      title: `安装任务: ${i.sales_orders?.customer?.name || '未知客户'}`,
+      role: 'INSTALLER',
+      dueDate: i.scheduled_at ? i.scheduled_at.split('T')[0] : '待定',
+      status: 'pending',
+      priority: 'medium'
+    });
+  });
+
+  return todoItems;
 };
 
 export const ROLE_MAP: Record<string, string> = {

@@ -1,6 +1,6 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, X } from 'lucide-react';
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import {
     PaperTable,

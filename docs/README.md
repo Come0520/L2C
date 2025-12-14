@@ -293,16 +293,16 @@
 ```
 技术架构层次
 ├── 前端层
-│   ├── PC端：Next.js 15+ + Tailwind CSS
-│   ├── 移动端：Taro 3.x + React
-│   └── 管理端：Next.js 15+ + Ant Design
+│   ├── PC端：Next.js 16.0 + React 19 + Tailwind CSS 4.0
+│   ├── 移动端：规划中 (Taro 3.x + React)
+│   └── 管理端：Next.js 16.0 + Shadcn UI
 ├── 网关层
 │   ├── API网关：Kong/Nginx
 │   ├── 负载均衡：Nginx
 │   └── 安全防护：WAF
 ├── 应用层
-│   ├── 业务服务：Node.js + Express
-│   ├── 认证服务：JWT + Redis
+│   ├── BaaS 平台：Supabase (PostgreSQL + GoTrue + PostgREST)
+│   ├── 认证服务：Supabase Auth (JWT)
 │   └── 文件服务：OSS + CDN
 ├── 数据层
 │   ├── 关系数据库：PostgreSQL 15+
@@ -413,26 +413,28 @@
 
 ### 前端技术栈
 ```
-Next.js 15+ + TypeScript + Tailwind CSS
-Ant Design UI框架
-Zustand状态管理
-Taro 3.x + React (小程序)
+Next.js 16.0 + React 19.0 + TypeScript 5.0
+Tailwind CSS 4.0 + Shadcn UI 模式
+TanStack React Query 5.0 (状态管理)
+Taro 3.x + React (小程序 - 规划中)
 ```
 
-### 后端技术栈
+### 后端技术栈 (BaaS)
 ```
-Node.js + NestJS
-PostgreSQL + Redis
-JWT认证 + RBAC权限
-Docker容器化部署
+Supabase BaaS 平台
+PostgreSQL 17.6 + Row Level Security
+Supabase Auth (JWT 认证)
+Upstash Redis (限流与缓存)
+Docker Compose 容器化部署
 ```
 
 ### 开发工具
 ```
-Git版本控制
-ESLint + Prettier代码规范
-Jest单元测试
-Grafana监控面板
+Git 版本控制 + Husky Git Hooks
+ESLint + Prettier + Stylelint 代码规范
+Vitest 4.0 单元测试 + Playwright 1.57 E2E测试
+Sentry 错误追踪与性能监控
+Lighthouse CI 性能测试
 ```
 
 ---

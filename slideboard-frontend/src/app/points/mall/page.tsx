@@ -1,8 +1,8 @@
 'use client';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import CategoryFilter from '@/components/points/category-filter';
 import PointsHeader from '@/components/points/points-header';

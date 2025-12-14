@@ -19,11 +19,11 @@ const PaperDialog = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className={cn("bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200", className)}>
+      <div className={cn("bg-theme-bg-secondary rounded-lg shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200", className)}>
         {children}
       </div>
-      <div 
-        className="absolute inset-0 -z-10" 
+      <div
+        className="absolute inset-0 -z-10"
         onClick={() => onOpenChange?.(false)}
       />
     </div>
@@ -36,7 +36,7 @@ const PaperDialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('relative', className)}
+    className={cn('relative px-6 py-4', className)}
     {...props}
   >
     {children}

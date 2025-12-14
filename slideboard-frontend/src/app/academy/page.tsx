@@ -35,8 +35,8 @@ export default async function AcademyPage({ searchParams }: AcademyPageProps) {
     <div className="p-6 max-w-7xl mx-auto space-y-12">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900">L2C 学院</h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold tracking-tight text-theme-text-primary">L2C 学院</h1>
+        <p className="text-xl text-theme-text-secondary max-w-2xl mx-auto">
           系统学习中心 - 掌握 L2C 的每个功能，深入了解罗莱产品知识
         </p>
       </div>

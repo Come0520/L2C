@@ -7,8 +7,8 @@ export async function getReconciliationOrders() {
   const supabase = await createClient()
 
   try {
-    const { data, error } = await supabase
-      .from('orders')
+    const { data, error } = await (supabase as any)
+      .from('sales_orders')
       .select(`*
         , customer:customers(*)
         , sales:sales(*)
@@ -31,8 +31,8 @@ export async function completeReconciliation(orderIds: string[]) {
   const supabase = await createClient()
 
   try {
-    const { error } = await supabase
-      .from('orders')
+    const { error } = await (supabase as any)
+      .from('sales_orders')
       .update({ status: 'pending_invoice' })
       .in('id', orderIds)
 
@@ -53,8 +53,8 @@ export async function submitDifferenceReconciliation(orderIds: string[], reason:
   try {
     // 这里可以根据实际需求实现差异对账逻辑
     // 例如：创建差异对账记录，更新订单状态等
-    const { error } = await supabase
-      .from('orders')
+    const { error } = await (supabase as any)
+      .from('sales_orders')
       .update({
         status: 'reconciliation_difference',
         reconciliation_notes: reason
@@ -77,8 +77,8 @@ export async function urgeOrder(orderId: string) {
 
   try {
     // 1. 获取订单信息，包括测量师信息
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
+    const { data: order, error: orderError } = await (supabase as any)
+      .from('sales_orders')
       .select(`*
         , measurement_order:measurement_orders(*
           , measurer:measurers(*)
@@ -91,29 +91,26 @@ export async function urgeOrder(orderId: string) {
       throw orderError
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orderAny = order as any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const measurementOrder = orderAny.measurement_order?.[0] as any
+    const measurementOrder = order?.measurement_order?.[0]
     const measurer = measurementOrder?.measurer?.[0]
 
-    if (!measurer) {
+    if (!measurer || !measurementOrder) {
       throw new Error('订单未分配测量师')
     }
 
     // 2. 发送催单消息给测量师
-    const { error: notificationError } = await supabase
+    const { error: notificationError } = await (supabase as any)
       .from('notifications')
       .insert({
         user_id: measurer.id,
         title: '催单提醒',
-        content: `订单 ${orderAny.id} 需要尽快处理，客户 ${orderAny.customer_name} 的测量任务等待中`,
+        content: `订单 ${order.id} 需要尽快处理，客户 ${order.customer_name} 的测量任务等待中`,
         type: 'urge_order',
-        data: {
-          orderId: orderAny.id,
-          customerName: orderAny.customer_name,
-          address: orderAny.project_address,
-          waitingTime: calculateWaitingTime(measurementOrder.assigned_at)
+        metadata: {
+          orderId: order.id,
+          customerName: order.customer_name,
+          address: order.project_address,
+          waitingTime: calculateWaitingTime(measurementOrder.assigned_at || new Date().toISOString())
         }
       })
 
@@ -122,7 +119,7 @@ export async function urgeOrder(orderId: string) {
     }
 
     // 3. 更新测量订单的催单记录
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('measurement_orders')
       .update({
         last_urged_at: new Date().toISOString()
@@ -157,14 +154,14 @@ function calculateWaitingTime(assignedAt: string): string {
 
 export async function createOrder(orderData: Record<string, unknown>) {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('create_order', { order_data: orderData as any })
+  const { data, error } = await (supabase as any).rpc('create_order', { order_data: orderData })
   if (error) throw error
   return { id: data }
 }
 
 export async function updateOrder(orderId: string) {
   const supabase = await createClient()
-  const { error } = await supabase.rpc('update_order_status', { p_order_id: orderId, p_new_status: 'updated', p_changed_by_id: null } as any)
+  const { error } = await (supabase as any).rpc('update_order_status', { p_order_id: orderId, p_new_status: 'updated', p_changed_by_id: null })
   if (error) throw error
   return { success: true }
 }

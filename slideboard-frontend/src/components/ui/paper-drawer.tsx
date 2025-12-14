@@ -52,7 +52,7 @@ export const PaperDrawer: React.FC<PaperDrawerProps> = ({
             {/* Drawer */}
             <div
                 className={cn(
-                    'fixed top-0 bottom-0 bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out w-full',
+                    'fixed top-0 bottom-0 bg-theme-bg-secondary shadow-xl z-50 transition-transform duration-300 ease-in-out w-full',
                     positionClasses[position],
                     widthClasses[width],
                     transformClasses[position]

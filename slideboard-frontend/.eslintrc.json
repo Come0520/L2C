@@ -1,6 +1,12 @@
 {
-  "extends": ["next/core-web-vitals", "prettier"],
-  "plugins": ["@typescript-eslint", "import"],
+  "extends": [
+    "next/core-web-vitals",
+    "prettier"
+  ],
+  "plugins": [
+    "@typescript-eslint",
+    "import"
+  ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "project": "./tsconfig.json"
@@ -25,84 +31,216 @@
     "import/order": [
       "error",
       {
-        "groups": ["builtin", "external", "internal", ["parent", "sibling", "index"]],
-        "pathGroups": [{ "pattern": "@/**", "group": "internal" }],
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          [
+            "parent",
+            "sibling",
+            "index"
+          ]
+        ],
+        "pathGroups": [
+          {
+            "pattern": "@/**",
+            "group": "internal"
+          }
+        ],
         "newlines-between": "always",
-        "alphabetize": { "order": "asc", "caseInsensitive": true }
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        }
       }
     ],
     "@typescript-eslint/naming-convention": [
       "error",
-      { "selector": "variableLike", "format": ["camelCase", "PascalCase", "UPPER_CASE"], "leadingUnderscore": "allow" },
-      { "selector": "function", "format": ["camelCase", "PascalCase"] },
-      { "selector": "class", "format": ["PascalCase"] },
-      { "selector": "typeLike", "format": ["PascalCase"] },
-      { "selector": "enumMember", "format": ["PascalCase", "UPPER_CASE"] },
-      { "selector": "variable", "modifiers": ["const", "exported"], "format": ["camelCase", "PascalCase", "UPPER_CASE"] },
-      { "selector": "property", "format": ["camelCase", "snake_case", "UPPER_CASE", "PascalCase"], "filter": { "regex": "^[a-zA-Z_][a-zA-Z0-9_]*$", "match": true } }
+      {
+        "selector": "variableLike",
+        "format": [
+          "camelCase",
+          "PascalCase",
+          "UPPER_CASE"
+        ],
+        "leadingUnderscore": "allow"
+      },
+      {
+        "selector": "function",
+        "format": [
+          "camelCase",
+          "PascalCase"
+        ]
+      },
+      {
+        "selector": "class",
+        "format": [
+          "PascalCase"
+        ]
+      },
+      {
+        "selector": "typeLike",
+        "format": [
+          "PascalCase"
+        ]
+      },
+      {
+        "selector": "enumMember",
+        "format": [
+          "PascalCase",
+          "UPPER_CASE"
+        ]
+      },
+      {
+        "selector": "variable",
+        "modifiers": [
+          "const",
+          "exported"
+        ],
+        "format": [
+          "camelCase",
+          "PascalCase",
+          "UPPER_CASE"
+        ]
+      },
+      {
+        "selector": "property",
+        "format": [
+          "camelCase",
+          "snake_case",
+          "UPPER_CASE",
+          "PascalCase"
+        ],
+        "filter": {
+          "regex": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+          "match": true
+        }
+      }
     ],
     "id-denylist": [
       "error",
-      "temp", "str", "num", "flag"
+      "temp",
+      "str",
+      "num",
+      "flag"
     ],
-    "id-length": ["error", { 
-      "min": 2, 
-      "exceptions": [
-        "i", "j", "k", "x", "y", "_", 
-        "e", "r", "p", "q", "v", "c", "s", "t", "m", "n", "d", "a", "b", "l", "f", "h", "o", "w", "z", "g", "u",
-        "A", "B", "C", "D"
-      ] 
-    }]
+    "id-length": [
+      "error",
+      {
+        "min": 2,
+        "exceptions": [
+          "i",
+          "j",
+          "k",
+          "x",
+          "y",
+          "_",
+          "e",
+          "r",
+          "p",
+          "q",
+          "v",
+          "c",
+          "s",
+          "t",
+          "m",
+          "n",
+          "d",
+          "a",
+          "b",
+          "l",
+          "f",
+          "h",
+          "o",
+          "w",
+          "z",
+          "g",
+          "u",
+          "A",
+          "B",
+          "C",
+          "D"
+        ]
+      }
+    ]
   },
   "overrides": [
     {
-      "files": ["src/app/**/route.ts", "src/app/**/route.tsx"],
+      "files": [
+        "src/app/**/route.ts",
+        "src/app/**/route.tsx"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off"
       }
     },
     {
-      "files": ["src/types/supabase.ts"],
+      "files": [
+        "src/types/supabase.ts"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off",
         "@typescript-eslint/no-explicit-any": "off"
       }
     },
     {
-      "files": ["src/app/layout.tsx"],
+      "files": [
+        "src/app/layout.tsx"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off"
       }
     },
     {
-      "files": ["src/app/**/loading.tsx"],
+      "files": [
+        "src/app/**/loading.tsx"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off",
         "id-length": "off"
       }
     },
     {
-      "files": ["src/components/ui/virtualized-table-body.tsx"],
+      "files": [
+        "src/components/ui/virtualized-table-body.tsx"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off"
       }
     },
     {
-      "files": ["vitest.config.ts"],
+      "files": [
+        "vitest.config.ts"
+      ],
       "rules": {
         "import/order": "off",
         "@typescript-eslint/naming-convention": "off"
       }
     },
     {
-      "files": ["src/app/api/**/*.ts"],
+      "files": [
+        "src/app/api/**/*.ts"
+      ],
       "rules": {}
     },
     {
-      "files": ["src/shared/types/api-schema.ts"],
+      "files": [
+        "src/shared/types/api-schema.ts"
+      ],
       "rules": {
         "@typescript-eslint/naming-convention": "off",
         "@typescript-eslint/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": [
+        "e2e/**/*.ts"
+      ],
+      "parserOptions": {
+        "project": null
+      },
+      "rules": {
+        "@typescript-eslint/naming-convention": "off"
       }
     }
   ]

@@ -39,13 +39,25 @@ export function LeadTagsInput({
         setIsLoading(true);
         try {
             const allTags = await leadService.getAvailableLeadTags({ isActive: true });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setAvailableTags((allTags || []) as any[]);
+            setAvailableTags((allTags || []) as Tag[]);
 
             const leadTags = await leadService.getLeadTags(leadId);
 
+            // Define the expected structure of leadTags items
+            interface LeadTagItem {
+                id?: string;
+                tag_id?: string;
+                name?: string;
+                tag_name?: string;
+                tag_category?: string;
+                color?: string;
+                tag_color?: string;
+                is_system?: boolean;
+                is_auto?: boolean;
+            }
+
             // Map lead tags to Tag objects (leadTags structure might be different based on join)
-            const mappedAssignedTags = (leadTags || []).map((item: any) => ({
+            const mappedAssignedTags = (leadTags || []).map((item: LeadTagItem) => ({
                 id: item.id ?? item.tag_id ?? '',
                 name: item.name ?? item.tag_name ?? '',
                 tag_category: item.tag_category ?? 'custom',
@@ -78,9 +90,9 @@ export function LeadTagsInput({
             // Optimistic update or refetch
             setAssignedTags(prev => [...prev, tag]);
             onTagsChanged?.();
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error assigning tag:', error);
-            toast.error('添加标签失败', { description: error.message });
+            toast.error('添加标签失败', { description: (error as Error).message });
         } finally {
             setIsUpdating(false);
         }
@@ -100,9 +112,9 @@ export function LeadTagsInput({
             toast.success(`已移除标签: ${tagToRemove?.name ?? ''}`);
             setAssignedTags(prev => prev.filter(t => t.id !== tagId));
             onTagsChanged?.();
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error removing tag:', error);
-            toast.error('移除标签失败', { description: error.message });
+            toast.error('移除标签失败', { description: (error as Error).message });
         } finally {
             setIsUpdating(false);
         }

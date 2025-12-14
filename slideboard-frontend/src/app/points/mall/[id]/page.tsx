@@ -1,9 +1,9 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 import { PaperButton } from '@/components/ui/paper-button';

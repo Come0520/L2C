@@ -6,6 +6,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Noto_Sans_SC } from 'next/font/google';
 
+import DashboardLayout from '@/components/layout/dashboard-layout';
 import PerformanceProvider from '@/components/providers/performance-provider';
 import QueryProvider from '@/components/providers/query-provider';
 import SwRegister from '@/components/pwa/sw-register';
@@ -41,7 +42,6 @@ export const metadata: Metadata = {
   description: '基于暖宣纸主题的现代化销售管理系统，提供从线索到现金的完整业务流程管理',
 };
 
-import DashboardLayout from '@/components/layout/dashboard-layout';
 
 export default async function RootLayout({
   children,

@@ -118,29 +118,46 @@ export async function POST(request: NextRequest) {
        $$ LANGUAGE plpgsql;
     */
 
-    // Since I cannot create RPC functions directly via file editing, I will implement optimistic locking or just sequential steps with error handling (rollback is hard without RPC).
-    // I will try to use the `redeem_product` RPC call if it exists, otherwise fallback to sequential.
-    // Given I don't know if RPC exists, I'll write the sequential logic but add a TODO for the user or RPC.
+    // Attempt to use RPC for atomic transaction first (preferred method for financial operations)
+    let order;
+    let rpcError = null;
     
-    // Attempt to call RPC first
-    // const { data: rpcData, error: rpcError } = await supabase.rpc('redeem_product', {
-    //     p_user_id: user.id,
-    //     p_product_id: product_id,
-    //     p_points_required: product.points_required,
-    //     p_shipping_address: shipping_address,
-    //     p_contact_phone: contact_phone,
-    //     p_remark: remark
-    // });
-
-    // if (!rpcError) {
-    //     return NextResponse.json({ success: true, orderId: rpcData });
-    // }
+    try {
+        // Try to call the RPC function if it exists
+        const { data: rpcData, error } = await supabase.rpc('redeem_product', {
+            p_user_id: user.id,
+            p_product_id: product_id,
+            p_points_required: product.points_required,
+            p_shipping_address: shipping_address,
+            p_contact_phone: contact_phone,
+            p_remark: remark
+        });
+        
+        if (error) {
+            rpcError = error;
+            throw new Error('RPC call failed');
+        }
+        
+        // If RPC succeeds, return the result
+        return NextResponse.json({ 
+            success: true, 
+            orderId: rpcData.order_id,
+            message: 'Order created successfully via RPC'
+        });
+    } catch (err) {
+        // RPC call failed, fallback to sequential operations with optimistic locking
+        console.log('RPC call failed, falling back to sequential operations:', rpcError?.message);
+        
+        // Only proceed if the error is about the RPC not existing (code 42883 means function not found)
+        if (rpcError && rpcError.code !== '42883') {
+            return NextResponse.json({ 
+                error: 'Transaction failed', 
+                details: rpcError.message 
+            }, { status: 500 });
+        }
+    }
     
-    // If RPC fails (likely doesn't exist), we could fallback OR return error telling user to add RPC.
-    // For "best practice", relying on client-side or non-transactional server-side code for financial/points ops is bad.
-    // I will return the RPC error for now, as implementing unsafe fallback is not "best practice".
-    // Wait, I should probably provide the SQL for the RPC to the user or assume I can't change DB schema easily.
-    // I'll try to do a safe sequential update:
+    // Safe sequential update with optimistic locking (fallback method)
     
     // 1. Deduct points (Atomic check)
     const { error: deductError } = await (supabase
@@ -175,7 +192,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Create Order
-    const { data: order, error: orderError } = await (supabase
+    const { data: createdOrder, error: orderError } = await (supabase
         .from('mall_orders') as any)
         .insert({
             user_id: user.id,
@@ -203,11 +220,11 @@ export async function POST(request: NextRequest) {
         amount: -product.points_required,
         type: 'spend',
         source_type: 'mall_order',
-        source_id: order.id,
+        source_id: createdOrder.id,
         description: `Redeem product: ${product.name}`
     });
 
-    return NextResponse.json({ success: true, order });
+    return NextResponse.json({ success: true, order: createdOrder });
 
   } catch (err) {
     console.error('Unexpected error:', err);

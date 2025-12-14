@@ -1,21 +1,21 @@
 import { MEASUREMENT_STATUS, MEASUREMENT_STATUS_TRANSITIONS, MeasurementStatus } from '@/constants/measurement-status';
 import { supabase } from '@/lib/supabase/client';
 import { Measurement, CreateMeasurementRequest, UpdateMeasurementRequest, MeasurementData } from '@/shared/types/measurement';
-import { Database } from '@/shared/types/supabase';
+import { Database, Json } from '@/types/supabase';
 
 type MeasurementOrderRow = Database['public']['Tables']['measurement_orders']['Row'];
 
 interface MeasurementOrderWithRelations extends MeasurementOrderRow {
-    sales_order?: {
+    sales_order: {
         id: string;
-        sales_no?: string;
-        customer?: { name: string; project_address: string } | null;
+        sales_no: string;
+        customer: { name: string; project_address: string | null } | null;
     } | null;
-    quote_version?: {
+    quote_version: {
         id: string;
-        quote?: { id?: string; quote_no: string } | null;
+        quote: { quote_no: string } | null;
     } | null;
-    measurer?: { name: string } | null;
+    measurer: { name: string | null } | null;
 }
 
 
@@ -48,29 +48,24 @@ export const measurementService = {
             .from('measurement_orders')
             .insert({
                 quote_version_id: data.quoteVersionId,
-                sales_order_id: (salesOrder as any)?.id,
+                sales_order_id: salesOrder?.id,
                 scheduled_at: data.scheduledAt,
                 measurer_id: data.surveyorId,
                 status: MEASUREMENT_STATUS.PENDING_MEASUREMENT
-            } as any)
+            })
             .select(`
-        *,
+        *, 
         sales_order:sales_orders(
           id,
-          sales_order_no,
+          sales_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `)
             .single();
 
         if (error) throw new Error(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.mapToMeasurement(measurement as any);
+        return this.mapToMeasurement(measurement as MeasurementOrderWithRelations);
     },
 
     /**
@@ -92,7 +87,7 @@ export const measurementService = {
             
             // Check if status transition is allowed
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const currentStatus = (currentMeasurement as any)?.status as MeasurementStatus;
+            const currentStatus = currentMeasurement.status as MeasurementStatus;
             const allowedTransitions = MEASUREMENT_STATUS_TRANSITIONS[currentStatus] || [];
             
             if (!allowedTransitions.includes(data.status as MeasurementStatus)) {
@@ -107,31 +102,26 @@ export const measurementService = {
         if (data.completedAt) updateData.completed_at = data.completedAt;
         if (data.measurementData) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            updateData.measurement_data = data.measurementData as any;
+            updateData.measurement_data = data.measurementData as unknown as Json;
         }
 
         const { data: measurement, error } = await supabase
             .from('measurement_orders')
-            .update(updateData as any)
+            .update(updateData)
             .eq('id', id)
             .select(`
-        *,
+        *, 
         sales_order:sales_orders(
           id,
-          sales_order_no,
+          sales_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `)
             .single();
 
         if (error) throw new Error(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.mapToMeasurement(measurement as any);
+        return this.mapToMeasurement(measurement as MeasurementOrderWithRelations);
     },
 
     /**
@@ -157,26 +147,21 @@ export const measurementService = {
         
         const { data, error } = await supabase
             .from('measurement_orders')
-            .update({ status } as any)
+            .update({ status })
             .eq('id', id)
             .select(`
-        *,
+        *, 
         sales_order:sales_orders(
           id,
-          sales_order_no,
+          sales_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `)
             .single();
 
         if (error) throw new Error(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.mapToMeasurement(data as any);
+        return this.mapToMeasurement(data as MeasurementOrderWithRelations);
     },
 
     /**
@@ -188,23 +173,18 @@ export const measurementService = {
             .update({ measurement_report_url: reportData.reportUrl } as any)
             .eq('id', id)
             .select(`
-        *,
+        *, 
         sales_order:sales_orders(
           id,
           sales_order_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `)
             .single();
 
         if (error) throw new Error(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.mapToMeasurement(data as any);
+        return this.mapToMeasurement(data as MeasurementOrderWithRelations);
     },
 
     /**
@@ -212,17 +192,13 @@ export const measurementService = {
      */
     async getMeasurements(page: number = 1, pageSize: number = 10, status?: string, salesOrderId?: string, _customerName?: string, measurementNo?: string) {
         let query = supabase
-            .from('measurement_orders')
-            .select(`
-        *,
+        .from('measurement_orders')
+        .select(`
+        *, 
         sales_order:sales_orders(
           id,
           sales_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `, { count: 'exact' });
@@ -250,8 +226,7 @@ export const measurementService = {
         if (error) throw new Error(error.message);
 
         return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            measurements: (data || []).map((item: any) => this.mapToMeasurement(item)),
+            measurements: (data || []).map((item: MeasurementOrderWithRelations) => this.mapToMeasurement(item)),
             total: count || 0
         };
     },
@@ -263,15 +238,11 @@ export const measurementService = {
         const { data, error } = await supabase
             .from('measurement_orders')
             .select(`
-        *,
+        *, 
         sales_order:sales_orders(
           id,
           sales_no,
           customer:customers(name, project_address)
-        ),
-        quote_version:quote_versions(
-          id,
-          quote:quotes(quote_no)
         ),
         measurer:users!measurer_id(name)
       `)
@@ -279,8 +250,7 @@ export const measurementService = {
             .single();
 
         if (error) throw new Error(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return this.mapToMeasurement(data as any);
+        return this.mapToMeasurement(data as MeasurementOrderWithRelations);
     },
 
     /**
@@ -300,8 +270,8 @@ export const measurementService = {
         return {
             id: dbRecord.id,
             quoteVersionId: dbRecord.quote_version_id,
-            quoteId: dbRecord.quote_version?.quote?.id || '', // We might not have quote id directly if not selected
-            quoteNo: dbRecord.quote_version?.quote?.quote_no || '',
+            quoteId: '', // We might not have quote id directly if not selected
+            quoteNo: '',
             customerName: dbRecord.sales_order?.customer?.name || '',
             projectAddress: dbRecord.sales_order?.customer?.project_address || '',
             surveyorId: dbRecord.measurer_id || undefined,
@@ -326,7 +296,7 @@ export const measurementService = {
         const { data: measurements, error: fetchError } = await supabase
             .from('measurement_orders')
             .select(`
-                *, 
+                *,
                 sales_order:sales_orders(
                     customer:customers(name)
                 ),
@@ -340,8 +310,7 @@ export const measurementService = {
         
         // 2. 为每个测量单创建提醒通知
         for (const m of measurements || []) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const measurement = m as any;
+            const measurement = m as MeasurementOrderWithRelations;
             // 这里可以根据实际需求发送不同类型的通知
             // 例如：发送短信、邮件、应用内通知等
             
@@ -356,7 +325,79 @@ export const measurementService = {
                     quote_no: measurement.quote_version?.quote?.quote_no,
                     scheduled_at: measurement.scheduled_at
                 }
-            } as any);
+            });
         }
+    },
+
+    /**
+     * Request reassign measurement
+     */
+    async requestReassign(measurementId: string, reason: string) {
+        // 1. Update measurement status to measuring_assigning
+        // 2. Add reassign reason to measurement_data
+        // 3. Create notification for service dispatch team
+
+        // First, get current measurement to update
+        const { data: currentMeasurement, error: fetchError } = await supabase
+            .from('measurement_orders')
+            .select('id, measurement_data')
+            .eq('id', measurementId)
+            .single();
+
+        if (fetchError) throw new Error(fetchError.message);
+
+        // Update measurement status and add reassign reason
+        const { data: updatedMeasurement, error: updateError } = await supabase
+            .from('measurement_orders')
+            .update({
+                status: MEASUREMENT_STATUS.MEASURING_ASSIGNING,
+                measurement_data: {
+                    ...(currentMeasurement.measurement_data || {}),
+                    reassignReason: reason,
+                    reassignAt: new Date().toISOString()
+                } as Json
+            })
+            .eq('id', measurementId)
+            .select(`
+                *,
+                sales_order:sales_orders(
+                    id,
+                    sales_no,
+                    customer:customers(name, project_address)
+                ),
+                quote_version:quote_versions(
+                    id,
+                    quote:quotes(quote_no)
+                ),
+                measurer:users!measurer_id(name)
+            `)
+            .single();
+
+        if (updateError) throw new Error(updateError.message);
+
+        // Find dispatchers and admins to notify
+        const { data: dispatchers } = await supabase
+            .from('users')
+            .select('id')
+            .in('role', ['SERVICE_DISPATCH', 'admin']);
+
+        if (dispatchers && dispatchers.length > 0) {
+            const notifications = dispatchers.map(user => ({
+                user_id: user.id,
+                type: 'measurement_reassign_request',
+                title: '测量单重新分配请求',
+                content: `测量单号 ${updatedMeasurement.measurement_no} 需要重新分配`,
+                metadata: {
+                    measurement_id: measurementId,
+                    reason: reason,
+                    measurement_no: updatedMeasurement.measurement_no
+                },
+                is_read: false
+            }));
+
+            await supabase.from('notifications').insert(notifications);
+        }
+
+        return this.mapToMeasurement(updatedMeasurement as MeasurementOrderWithRelations);
     }
 };

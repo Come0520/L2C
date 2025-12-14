@@ -1,4 +1,4 @@
-import { Database } from './supabase';
+
 
 export type LeadStatus =
   | 'new'

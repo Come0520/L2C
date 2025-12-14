@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+
 import { toast } from '@/components/ui/toast';
 import { teamService } from '@/services/teams.client';
 import { Team } from '@/types/teams';

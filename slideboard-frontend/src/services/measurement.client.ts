@@ -2,83 +2,169 @@ import { MeasurementAssignFormData, MeasurementCompleteFormData } from '@/featur
 import { MeasurementTask } from '@/features/measurement/types';
 import { createClient } from '@/lib/supabase/client';
 
+const supabase = createClient();
+
 export const measurementService = {
   /**
    * 获取测量任务列表
    */
   async getTasks(filters?: { status?: string; assignedTo?: string }) {
-    // Mock implementation until backend is ready
-    // In real implementation:
-    // const supabase = createClient();
-    // let query = supabase.from('measurement_tasks').select('*');
-    // if (filters?.status) query = query.eq('status', filters.status);
-    // ...
+    let query = supabase
+      .from('measurement_orders')
+      .select(`
+        id,
+        status,
+        scheduled_at,
+        created_at,
+        measurer_id,
+        sales_order_id,
+        measurement_no,
+        sales_orders (
+            id,
+            sales_no,
+            customer:customers (
+                name,
+                phone,
+                project_address
+            )
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
     
-    // Returning mock data for now
-    return Promise.resolve([
-      {
-        id: 'MT20240101',
-        orderId: 'SO20240101',
-        customerName: '张三',
-        customerPhone: '13800138000',
-        address: '北京市朝阳区某小区',
-        status: 'pending',
-        createdAt: '2024-01-01T10:00:00Z',
-      },
-      {
-        id: 'MT20240102',
-        orderId: 'SO20240102',
-        customerName: '李四',
-        customerPhone: '13900139000',
-        address: '上海市浦东新区某小区',
-        status: 'assigned',
-        assignedTo: 'USER001',
-        assignedToName: '王师傅',
-        appointmentTime: '2024-01-05T14:00:00Z',
-        createdAt: '2024-01-02T11:00:00Z',
-      }
-    ] as MeasurementTask[]);
+    if (filters?.assignedTo) {
+      query = query.eq('measurer_id', filters.assignedTo);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching measurement tasks:', error);
+      throw error;
+    }
+
+    return data.map((item: any) => ({
+      id: item.id,
+      orderId: item.sales_orders?.sales_no || item.sales_order_id || '', 
+      customerName: item.sales_orders?.customer?.name || '未知客户',
+      customerPhone: item.sales_orders?.customer?.phone || '', 
+      address: item.sales_orders?.customer?.project_address || '', 
+      status: item.status,
+      assignedTo: item.measurer_id,
+      appointmentTime: item.scheduled_at,
+      createdAt: item.created_at,
+    })) as MeasurementTask[];
   },
 
   /**
    * 获取单个测量任务详情
    */
   async getTaskById(id: string) {
-    // Mock
-    return Promise.resolve({
-      id,
-      orderId: 'SO20240101',
-      customerName: '张三',
-      customerPhone: '13800138000',
-      address: '北京市朝阳区某小区',
-      status: 'pending',
-      createdAt: '2024-01-01T10:00:00Z',
-    } as MeasurementTask);
+    const { data, error } = await supabase
+      .from('measurement_orders')
+      .select(`
+        *,
+        sales_orders (
+            id,
+            sales_no,
+            customer:customers (
+                name,
+                phone,
+                project_address
+            )
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    
+    const item = data as any;
+
+    return {
+      id: item.id,
+      orderId: item.sales_orders?.sales_no || item.sales_order_id,
+      customerName: item.sales_orders?.customer?.name || '未知客户',
+      customerPhone: item.sales_orders?.customer?.phone || '',
+      address: item.sales_orders?.customer?.project_address || '',
+      status: item.status,
+      createdAt: item.created_at,
+      assignedTo: item.measurer_id,
+      appointmentTime: item.scheduled_at,
+    } as MeasurementTask;
   },
 
   /**
    * 分配测量任务
    */
   async assignTask(id: string, data: MeasurementAssignFormData) {
-    console.log('Assigning task', id, data);
-    // Mock
-    return Promise.resolve(true);
+    const { error } = await (supabase
+      .from('measurement_orders') as any)
+      .update({
+        measurer_id: data.assignedTo,
+        scheduled_at: data.appointmentTime,
+        status: 'measuring_pending_visit',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
   },
 
   /**
    * 完成测量任务
    */
   async completeTask(id: string, data: MeasurementCompleteFormData) {
-    console.log('Completing task', id, data);
-    // Mock
-    return Promise.resolve(true);
+    const { error } = await (supabase
+      .from('measurement_orders') as any)
+      .update({
+        status: 'measuring_pending_confirmation',
+        completed_at: data.completedTime,
+        measurement_data: data as any,
+        measurement_photos: data.images,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
   },
   
   /**
    * 取消测量任务
    */
-  async cancelTask(id: string, reason?: string) {
-      console.log('Cancelling task', id, reason);
-      return Promise.resolve(true);
+  async cancelTask(id: string, _reason?: string) {
+      const { error } = await (supabase
+      .from('measurement_orders') as any)
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+      if (error) throw error;
+      return true;
+  },
+  
+  /**
+   * 申请重新分配测量任务
+   */
+  async requestReassign(id: string, reason: string) {
+      const { error } = await (supabase
+      .from('measurement_orders') as any)
+      .update({
+        status: 'measuring_pending_assignment',
+        reassignment_reason: reason,
+        measurer_id: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+      if (error) throw error;
+      return true;
   }
 };

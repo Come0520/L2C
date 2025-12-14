@@ -1,119 +1,187 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 
 export type Tab = {
   title: string;
   value: string;
-  href?: string;
-  content?: string | React.ReactNode | any;
+  content?: React.ReactNode;
 };
 
+interface TabsProps {
+  tabs: Tab[];
+  containerClassName?: string;
+  activeTabClassName?: string;
+  tabClassName?: string;
+  contentClassName?: string;
+  defaultValue?: string;
+  onTabChange?: (value: string) => void;
+}
+
+/**
+ * Animated Tabs 组件
+ * 基于 Aceternity UI 设计，实现页面内内容切换和滑动动画效果
+ */
 export const Tabs = ({
   tabs: propTabs,
   containerClassName,
   activeTabClassName,
   tabClassName,
   contentClassName,
-  activeTab,
-  layoutId,
-}: {
-  tabs: Tab[];
-  containerClassName?: string;
-  activeTabClassName?: string;
-  tabClassName?: string;
-  contentClassName?: string;
-  activeTab?: string;
-  layoutId?: string;
-}) => {
-  const [active, setActive] = useState<Tab>(propTabs[0]!);
-  const [tabs, setTabs] = useState<Tab[]>(propTabs);
-  const [hovering, setHovering] = useState(false);
-  const uniqueLayoutId = layoutId || "clickedbutton";
-
-  // Determine the effective active tab
-  // Prioritize exact match, then prefix match (longest prefix first to avoid short prefix shadowing)
-  const effectiveActive = activeTab
-    ? propTabs.find((tab) => tab.value === activeTab) || 
-      propTabs
-        .filter((tab) => tab.href && activeTab?.startsWith(tab.href))
-        .sort((a, b) => (b.href?.length || 0) - (a.href?.length || 0))[0] || 
-      propTabs[0]
-    : active;
-
-  // Sync internal active state with prop if needed (optional, but good for consistency)
-  useEffect(() => {
-    if (activeTab && effectiveActive) {
-      setActive(effectiveActive);
+  defaultValue,
+  onTabChange,
+}: TabsProps) => {
+  const getInitialTab = (): Tab => {
+    if (defaultValue) {
+      const found = propTabs.find(t => t.value === defaultValue);
+      if (found) return found;
     }
-  }, [activeTab, effectiveActive]);
+    return propTabs[0] || { title: '', value: '', content: null };
+  };
+
+  const [active, setActive] = useState<Tab>(getInitialTab);
+  const [tabs, setTabs] = useState<Tab[]>(propTabs);
+
+  // Sync tabs when propTabs change
+  useEffect(() => {
+    setTabs(propTabs);
+    // If current active tab is not in new tabs, select first one
+    const stillExists = propTabs.find(t => t.value === active.value);
+    if (!stillExists && propTabs.length > 0) {
+      const firstTab = propTabs[0];
+      if (firstTab) {
+        setActive(firstTab);
+      }
+    }
+  }, [propTabs]);
+
+  // Sync with defaultValue
+  useEffect(() => {
+    if (defaultValue) {
+      const tab = propTabs.find(t => t.value === defaultValue);
+      if (tab && tab.value !== active.value) {
+        setActive(tab);
+      }
+    }
+  }, [defaultValue, propTabs]);
 
   const moveSelectedTabToTop = (idx: number) => {
-    // Deprecated for navigation tabs, but kept for simple content switching if needed
-    if (propTabs[idx]) {
-      setActive(propTabs[idx]);
-    }
+    const selectedTab = propTabs[idx];
+    if (!selectedTab) return;
+
+    const newTabs = [...propTabs];
+    newTabs.splice(idx, 1);
+    newTabs.unshift(selectedTab);
+    setTabs(newTabs);
+    setActive(selectedTab);
+    onTabChange?.(selectedTab.value);
   };
 
   return (
     <div className={cn("flex flex-col w-full", containerClassName)}>
-      <div className="flex flex-row items-center justify-start [perspective:1000px] relative overflow-auto sm:overflow-visible no-visible-scrollbar max-w-full w-full mb-8">
-        {propTabs.map((tab, idx) => {
-          const Component = tab.href ? Link : "button";
-          
-          return (
-            <Component
-              key={tab.title}
-              href={tab.href || "#"}
-              onClick={(e: any) => {
-                if (!tab.href) {
-                  e.preventDefault();
-                  moveSelectedTabToTop(idx);
-                }
-                // If it is a link, let default behavior happen or Next.js Link handle it
-              }}
-              className={cn(
-                "relative px-4 py-2 rounded-full text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
-                tabClassName
-              )}
-              style={{
-                transformStyle: "preserve-3d",
-              }}
-            >
-              {effectiveActive?.value === tab.value && (
-                <motion.div
-                  layoutId={uniqueLayoutId}
-                  transition={{ type: "spring", bounce: 0.3, duration: 1 }}
-                  className={cn(
-                    "absolute inset-0 rounded-full",
-                    "bg-paper-500 shadow-sm",
-                    activeTabClassName
-                  )}
-                />
-              )}
-
-              <span
+      {/* Tab buttons with animated indicator */}
+      <div
+        className="flex flex-row items-center justify-start relative overflow-auto sm:overflow-visible no-visible-scrollbar max-w-full w-full"
+        style={{ perspective: "1000px" }}
+      >
+        {propTabs.map((tab, idx) => (
+          <button
+            key={tab.value}
+            onClick={() => moveSelectedTabToTop(idx)}
+            className={cn(
+              "relative px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200",
+              "outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
+              tabClassName
+            )}
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            {/* Animated active indicator - this is the key to the sliding animation */}
+            {active.value === tab.value && (
+              <motion.div
+                layoutId="active-tab-indicator"
+                transition={{
+                  type: "spring",
+                  bounce: 0.25,
+                  duration: 0.5,
+                }}
                 className={cn(
-                  "relative block z-10",
-                  effectiveActive?.value === tab.value
-                    ? "text-ink-900 font-semibold"
-                    : "text-ink-500 hover:text-ink-900"
+                  "absolute inset-0 rounded-full",
+                  "bg-theme-bg-secondary shadow-md",
+                  activeTabClassName
                 )}
-              >
-                {tab.title}
-              </span>
-            </Component>
-          );
-        })}
+                style={{ zIndex: 0 }}
+              />
+            )}
+            {/* Tab text */}
+            <span
+              className={cn(
+                "relative z-10 block transition-colors duration-200",
+                active.value === tab.value
+                  ? "text-theme-text-primary font-semibold"
+                  : "text-theme-text-secondary hover:text-theme-text-primary"
+              )}
+            >
+              {tab.title}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* Simplified content rendering without 3D stack */}
-      <div className={cn("relative w-full", contentClassName)}>
-         {effectiveActive?.content}
-      </div>
+      {/* Content with fade animation */}
+      <FadeInDiv
+        tabs={tabs}
+        active={active}
+        className={cn("mt-8", contentClassName)}
+      />
     </div>
   );
 };
+
+/**
+ * FadeInDiv - 内容切换动画组件
+ * 实现淡入淡出和轻微位移的过渡效果
+ */
+interface FadeInDivProps {
+  className?: string;
+  tabs: Tab[];
+  active: Tab;
+  hovering?: boolean;
+}
+
+export const FadeInDiv = ({
+  className,
+  tabs,
+  active,
+}: FadeInDivProps) => {
+  const isActive = (tab: Tab) => tab.value === active.value;
+
+  return (
+    <div className={cn("relative w-full h-full", className)}>
+      <AnimatePresence mode="wait">
+        {tabs.map((tab) => {
+          if (!isActive(tab)) return null;
+          return (
+            <motion.div
+              key={tab.value}
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{
+                duration: 0.3,
+                ease: "easeInOut",
+              }}
+              className="w-full"
+            >
+              {tab.content}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default Tabs;

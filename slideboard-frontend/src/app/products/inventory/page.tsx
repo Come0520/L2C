@@ -1,13 +1,15 @@
 'use client'
 
 import React from 'react'
+
 import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
-import { PaperInput, PaperSelect } from '@/components/ui/paper-input'
+import { PaperSelect } from '@/components/ui/paper-input'
 import { PaperNav, PaperNavItem } from '@/components/ui/paper-nav'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTableToolbar, PaperTablePagination } from '@/components/ui/paper-table'
- 
+import { VanishInput } from '@/components/ui/vanish-input'
+
 
 type InboundType = 'purchase' | 'transfer_in' | 'return_in' | 'stocktake_gain'
 type OutboundType = 'sales' | 'transfer_out' | 'loss_out' | 'stocktake_loss'
@@ -113,232 +115,236 @@ export default function ProductInventoryPage() {
   }
 
   return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-ink-800">库存管理（门店）</h1>
-            <p className="text-ink-500 mt-1">各门店独立库存中心，支持入库/出库/调拨/盘点与统计</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <PaperSelect label="门店" options={stores} value={store} onChange={(e) => setStore(e.target.value)} />
-            <PaperButton variant="primary">新建单据</PaperButton>
-          </div>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-ink-800">库存管理（门店）</h1>
+          <p className="text-ink-500 mt-1">各门店独立库存中心，支持入库/出库/调拨/盘点与统计</p>
         </div>
-
-        <PaperCard>
-          <PaperCardContent>
-            <PaperNav vertical={false}>
-              <PaperNavItem href="#" active={activeTab === 'inbound'} onClick={() => setActiveTab('inbound')}>入库管理</PaperNavItem>
-              <PaperNavItem href="#" active={activeTab === 'outbound'} onClick={() => setActiveTab('outbound')}>出库管理</PaperNavItem>
-              <PaperNavItem href="#" active={activeTab === 'transfer'} onClick={() => setActiveTab('transfer')}>调拨管理</PaperNavItem>
-              <PaperNavItem href="#" active={activeTab === 'stocktake'} onClick={() => setActiveTab('stocktake')}>盘点管理</PaperNavItem>
-              <PaperNavItem href="#" active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>库存查询与统计</PaperNavItem>
-            </PaperNav>
-          </PaperCardContent>
-        </PaperCard>
-
-        <PaperCard>
-          <PaperTableToolbar>
-            <div className="flex items-center space-x-2">
-              <PaperInput placeholder="搜索商品/编码" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <PaperButton variant="outline">导入</PaperButton>
-              <PaperButton variant="outline">导出</PaperButton>
-            </div>
-            <div className="text-sm text-ink-500">{store}</div>
-          </PaperTableToolbar>
-          <PaperCardContent className="p-0">
-            {activeTab === 'inbound' && (
-              <>
-                <PaperTable>
-                  <PaperTableHeader>
-                    <PaperTableCell>类型</PaperTableCell>
-                    <PaperTableCell>单号</PaperTableCell>
-                    <PaperTableCell>商品</PaperTableCell>
-                    <PaperTableCell>数量</PaperTableCell>
-                    <PaperTableCell>操作人</PaperTableCell>
-                    <PaperTableCell>时间</PaperTableCell>
-                    <PaperTableCell>操作</PaperTableCell>
-                  </PaperTableHeader>
-                  <PaperTableBody>
-                    {filteredInbound.map((r) => (
-                      <PaperTableRow key={r.id}>
-                        <PaperTableCell>{renderInboundType(r.type)}</PaperTableCell>
-                        <PaperTableCell>{r.orderNo}</PaperTableCell>
-                        <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
-                        <PaperTableCell>{r.qty}</PaperTableCell>
-                        <PaperTableCell>{r.operator}</PaperTableCell>
-                        <PaperTableCell>{r.time}</PaperTableCell>
-                        <PaperTableCell>
-                          <div className="flex space-x-2">
-                            <PaperButton size="sm" variant="ghost">查看</PaperButton>
-                            <PaperButton size="sm" variant="outline">编辑</PaperButton>
-                          </div>
-                        </PaperTableCell>
-                      </PaperTableRow>
-                    ))}
-                  </PaperTableBody>
-                </PaperTable>
-                <PaperTablePagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(filteredInbound.length / itemsPerPage)}
-                  totalItems={filteredInbound.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                />
-              </>
-            )}
-
-            {activeTab === 'outbound' && (
-              <>
-                <PaperTable>
-                  <PaperTableHeader>
-                    <PaperTableCell>类型</PaperTableCell>
-                    <PaperTableCell>关联单</PaperTableCell>
-                    <PaperTableCell>商品</PaperTableCell>
-                    <PaperTableCell>数量</PaperTableCell>
-                    <PaperTableCell>操作人</PaperTableCell>
-                    <PaperTableCell>时间</PaperTableCell>
-                    <PaperTableCell>操作</PaperTableCell>
-                  </PaperTableHeader>
-                  <PaperTableBody>
-                    {filteredOutbound.map((r) => (
-                      <PaperTableRow key={r.id}>
-                        <PaperTableCell>{renderOutboundType(r.type)}</PaperTableCell>
-                        <PaperTableCell>{r.relatedNo}</PaperTableCell>
-                        <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
-                        <PaperTableCell>{r.qty}</PaperTableCell>
-                        <PaperTableCell>{r.operator}</PaperTableCell>
-                        <PaperTableCell>{r.time}</PaperTableCell>
-                        <PaperTableCell>
-                          <div className="flex space-x-2">
-                            <PaperButton size="sm" variant="ghost">查看</PaperButton>
-                            <PaperButton size="sm" variant="outline">编辑</PaperButton>
-                          </div>
-                        </PaperTableCell>
-                      </PaperTableRow>
-                    ))}
-                  </PaperTableBody>
-                </PaperTable>
-                <PaperTablePagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(filteredOutbound.length / itemsPerPage)}
-                  totalItems={filteredOutbound.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                />
-              </>
-            )}
-
-            {activeTab === 'transfer' && (
-              <>
-                <PaperTable>
-                  <PaperTableHeader>
-                    <PaperTableCell>单号</PaperTableCell>
-                    <PaperTableCell>出库门店</PaperTableCell>
-                    <PaperTableCell>入库门店</PaperTableCell>
-                    <PaperTableCell>商品</PaperTableCell>
-                    <PaperTableCell>数量</PaperTableCell>
-                    <PaperTableCell>状态</PaperTableCell>
-                    <PaperTableCell>操作人</PaperTableCell>
-                    <PaperTableCell>时间</PaperTableCell>
-                    <PaperTableCell>操作</PaperTableCell>
-                  </PaperTableHeader>
-                  <PaperTableBody>
-                    {filteredTransfers.map((r) => (
-                      <PaperTableRow key={r.id}>
-                        <PaperTableCell>{r.id}</PaperTableCell>
-                        <PaperTableCell>{r.fromStore}</PaperTableCell>
-                        <PaperTableCell>{r.toStore}</PaperTableCell>
-                        <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
-                        <PaperTableCell>{r.qty}</PaperTableCell>
-                        <PaperTableCell><PaperBadge variant={r.status === 'completed' ? 'success' : r.status === 'approved' ? 'info' : r.status === 'executing' ? 'warning' : 'outline'}>{r.status}</PaperBadge></PaperTableCell>
-                        <PaperTableCell>{r.operator}</PaperTableCell>
-                        <PaperTableCell>{r.time}</PaperTableCell>
-                        <PaperTableCell>
-                          <div className="flex space-x-2">
-                            <PaperButton size="sm" variant="outline">审批</PaperButton>
-                            <PaperButton size="sm" variant="outline">执行</PaperButton>
-                            <PaperButton size="sm" variant="ghost">跟踪</PaperButton>
-                          </div>
-                        </PaperTableCell>
-                      </PaperTableRow>
-                    ))}
-                  </PaperTableBody>
-                </PaperTable>
-                <PaperTablePagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(filteredTransfers.length / itemsPerPage)}
-                  totalItems={filteredTransfers.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                />
-              </>
-            )}
-
-            {activeTab === 'stocktake' && (
-              <>
-                <PaperTable>
-                  <PaperTableHeader>
-                    <PaperTableCell>计划</PaperTableCell>
-                    <PaperTableCell>门店</PaperTableCell>
-                    <PaperTableCell>状态</PaperTableCell>
-                    <PaperTableCell>差异数量</PaperTableCell>
-                    <PaperTableCell>操作人</PaperTableCell>
-                    <PaperTableCell>时间</PaperTableCell>
-                    <PaperTableCell>操作</PaperTableCell>
-                  </PaperTableHeader>
-                  <PaperTableBody>
-                    {filteredStocktakes.map((r) => (
-                      <PaperTableRow key={r.id}>
-                        <PaperTableCell>{r.planName}</PaperTableCell>
-                        <PaperTableCell>{r.store}</PaperTableCell>
-                        <PaperTableCell><PaperBadge variant={r.status === 'reported' ? 'success' : r.status === 'reconciled' ? 'info' : r.status === 'executing' ? 'warning' : 'outline'}>{r.status}</PaperBadge></PaperTableCell>
-                        <PaperTableCell>{r.diffQty}</PaperTableCell>
-                        <PaperTableCell>{r.operator}</PaperTableCell>
-                        <PaperTableCell>{r.time}</PaperTableCell>
-                        <PaperTableCell>
-                          <div className="flex space-x-2">
-                            <PaperButton size="sm" variant="outline">执行</PaperButton>
-                            <PaperButton size="sm" variant="outline">差异处理</PaperButton>
-                            <PaperButton size="sm" variant="ghost">生成报告</PaperButton>
-                          </div>
-                        </PaperTableCell>
-                      </PaperTableRow>
-                    ))}
-                  </PaperTableBody>
-                </PaperTable>
-                <PaperTablePagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(filteredStocktakes.length / itemsPerPage)}
-                  totalItems={filteredStocktakes.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                />
-              </>
-            )}
-
-            {activeTab === 'stats' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-                <div className="text-center p-6 bg-paper-300 rounded-lg">
-                  <div className="text-3xl font-bold text-ink-800 mb-1">182</div>
-                  <div className="text-sm text-ink-500">实时库存品项数</div>
-                </div>
-                <div className="text-center p-6 bg-paper-300 rounded-lg">
-                  <div className="text-3xl font-bold text-ink-800 mb-1">12</div>
-                  <div className="text-sm text-ink-500">库存预警（低于安全库存）</div>
-                </div>
-                <div className="text-center p-6 bg-paper-300 rounded-lg">
-                  <div className="text-3xl font-bold text-ink-800 mb-1">86%</div>
-                  <div className="text-sm text-ink-500">批次成本核算完成率</div>
-                </div>
-                <div className="text-center p-6 bg-paper-300 rounded-lg">
-                  <div className="text-3xl font-bold text-ink-800 mb-1">24</div>
-                  <div className="text-sm text-ink-500">本月调拨次数</div>
-                </div>
-              </div>
-            )}
-          </PaperCardContent>
-        </PaperCard>
+        <div className="flex items-center space-x-3">
+          <PaperSelect label="门店" options={stores} value={store} onChange={(e) => setStore(e.target.value)} />
+          <PaperButton variant="primary">新建单据</PaperButton>
+        </div>
       </div>
+
+      <PaperCard>
+        <PaperCardContent>
+          <PaperNav vertical={false}>
+            <PaperNavItem href="#" active={activeTab === 'inbound'} onClick={() => setActiveTab('inbound')}>入库管理</PaperNavItem>
+            <PaperNavItem href="#" active={activeTab === 'outbound'} onClick={() => setActiveTab('outbound')}>出库管理</PaperNavItem>
+            <PaperNavItem href="#" active={activeTab === 'transfer'} onClick={() => setActiveTab('transfer')}>调拨管理</PaperNavItem>
+            <PaperNavItem href="#" active={activeTab === 'stocktake'} onClick={() => setActiveTab('stocktake')}>盘点管理</PaperNavItem>
+            <PaperNavItem href="#" active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>库存查询与统计</PaperNavItem>
+          </PaperNav>
+        </PaperCardContent>
+      </PaperCard>
+
+      <PaperCard>
+        <PaperTableToolbar>
+          <div className="flex items-center space-x-2">
+            <VanishInput
+              placeholders={["搜索商品...", "搜索编码...", "输入关键词..."]}
+              value={searchTerm}
+              onChange={(value) => setSearchTerm(value)}
+            />
+            <PaperButton variant="outline">导入</PaperButton>
+            <PaperButton variant="outline">导出</PaperButton>
+          </div>
+          <div className="text-sm text-ink-500">{store}</div>
+        </PaperTableToolbar>
+        <PaperCardContent className="p-0">
+          {activeTab === 'inbound' && (
+            <>
+              <PaperTable>
+                <PaperTableHeader>
+                  <PaperTableCell>类型</PaperTableCell>
+                  <PaperTableCell>单号</PaperTableCell>
+                  <PaperTableCell>商品</PaperTableCell>
+                  <PaperTableCell>数量</PaperTableCell>
+                  <PaperTableCell>操作人</PaperTableCell>
+                  <PaperTableCell>时间</PaperTableCell>
+                  <PaperTableCell>操作</PaperTableCell>
+                </PaperTableHeader>
+                <PaperTableBody>
+                  {filteredInbound.map((r) => (
+                    <PaperTableRow key={r.id}>
+                      <PaperTableCell>{renderInboundType(r.type)}</PaperTableCell>
+                      <PaperTableCell>{r.orderNo}</PaperTableCell>
+                      <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
+                      <PaperTableCell>{r.qty}</PaperTableCell>
+                      <PaperTableCell>{r.operator}</PaperTableCell>
+                      <PaperTableCell>{r.time}</PaperTableCell>
+                      <PaperTableCell>
+                        <div className="flex space-x-2">
+                          <PaperButton size="sm" variant="ghost">查看</PaperButton>
+                          <PaperButton size="sm" variant="outline">编辑</PaperButton>
+                        </div>
+                      </PaperTableCell>
+                    </PaperTableRow>
+                  ))}
+                </PaperTableBody>
+              </PaperTable>
+              <PaperTablePagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredInbound.length / itemsPerPage)}
+                totalItems={filteredInbound.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+
+          {activeTab === 'outbound' && (
+            <>
+              <PaperTable>
+                <PaperTableHeader>
+                  <PaperTableCell>类型</PaperTableCell>
+                  <PaperTableCell>关联单</PaperTableCell>
+                  <PaperTableCell>商品</PaperTableCell>
+                  <PaperTableCell>数量</PaperTableCell>
+                  <PaperTableCell>操作人</PaperTableCell>
+                  <PaperTableCell>时间</PaperTableCell>
+                  <PaperTableCell>操作</PaperTableCell>
+                </PaperTableHeader>
+                <PaperTableBody>
+                  {filteredOutbound.map((r) => (
+                    <PaperTableRow key={r.id}>
+                      <PaperTableCell>{renderOutboundType(r.type)}</PaperTableCell>
+                      <PaperTableCell>{r.relatedNo}</PaperTableCell>
+                      <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
+                      <PaperTableCell>{r.qty}</PaperTableCell>
+                      <PaperTableCell>{r.operator}</PaperTableCell>
+                      <PaperTableCell>{r.time}</PaperTableCell>
+                      <PaperTableCell>
+                        <div className="flex space-x-2">
+                          <PaperButton size="sm" variant="ghost">查看</PaperButton>
+                          <PaperButton size="sm" variant="outline">编辑</PaperButton>
+                        </div>
+                      </PaperTableCell>
+                    </PaperTableRow>
+                  ))}
+                </PaperTableBody>
+              </PaperTable>
+              <PaperTablePagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredOutbound.length / itemsPerPage)}
+                totalItems={filteredOutbound.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+
+          {activeTab === 'transfer' && (
+            <>
+              <PaperTable>
+                <PaperTableHeader>
+                  <PaperTableCell>单号</PaperTableCell>
+                  <PaperTableCell>出库门店</PaperTableCell>
+                  <PaperTableCell>入库门店</PaperTableCell>
+                  <PaperTableCell>商品</PaperTableCell>
+                  <PaperTableCell>数量</PaperTableCell>
+                  <PaperTableCell>状态</PaperTableCell>
+                  <PaperTableCell>操作人</PaperTableCell>
+                  <PaperTableCell>时间</PaperTableCell>
+                  <PaperTableCell>操作</PaperTableCell>
+                </PaperTableHeader>
+                <PaperTableBody>
+                  {filteredTransfers.map((r) => (
+                    <PaperTableRow key={r.id}>
+                      <PaperTableCell>{r.id}</PaperTableCell>
+                      <PaperTableCell>{r.fromStore}</PaperTableCell>
+                      <PaperTableCell>{r.toStore}</PaperTableCell>
+                      <PaperTableCell>{r.sku} - {r.productName}</PaperTableCell>
+                      <PaperTableCell>{r.qty}</PaperTableCell>
+                      <PaperTableCell><PaperBadge variant={r.status === 'completed' ? 'success' : r.status === 'approved' ? 'info' : r.status === 'executing' ? 'warning' : 'outline'}>{r.status}</PaperBadge></PaperTableCell>
+                      <PaperTableCell>{r.operator}</PaperTableCell>
+                      <PaperTableCell>{r.time}</PaperTableCell>
+                      <PaperTableCell>
+                        <div className="flex space-x-2">
+                          <PaperButton size="sm" variant="outline">审批</PaperButton>
+                          <PaperButton size="sm" variant="outline">执行</PaperButton>
+                          <PaperButton size="sm" variant="ghost">跟踪</PaperButton>
+                        </div>
+                      </PaperTableCell>
+                    </PaperTableRow>
+                  ))}
+                </PaperTableBody>
+              </PaperTable>
+              <PaperTablePagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredTransfers.length / itemsPerPage)}
+                totalItems={filteredTransfers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+
+          {activeTab === 'stocktake' && (
+            <>
+              <PaperTable>
+                <PaperTableHeader>
+                  <PaperTableCell>计划</PaperTableCell>
+                  <PaperTableCell>门店</PaperTableCell>
+                  <PaperTableCell>状态</PaperTableCell>
+                  <PaperTableCell>差异数量</PaperTableCell>
+                  <PaperTableCell>操作人</PaperTableCell>
+                  <PaperTableCell>时间</PaperTableCell>
+                  <PaperTableCell>操作</PaperTableCell>
+                </PaperTableHeader>
+                <PaperTableBody>
+                  {filteredStocktakes.map((r) => (
+                    <PaperTableRow key={r.id}>
+                      <PaperTableCell>{r.planName}</PaperTableCell>
+                      <PaperTableCell>{r.store}</PaperTableCell>
+                      <PaperTableCell><PaperBadge variant={r.status === 'reported' ? 'success' : r.status === 'reconciled' ? 'info' : r.status === 'executing' ? 'warning' : 'outline'}>{r.status}</PaperBadge></PaperTableCell>
+                      <PaperTableCell>{r.diffQty}</PaperTableCell>
+                      <PaperTableCell>{r.operator}</PaperTableCell>
+                      <PaperTableCell>{r.time}</PaperTableCell>
+                      <PaperTableCell>
+                        <div className="flex space-x-2">
+                          <PaperButton size="sm" variant="outline">执行</PaperButton>
+                          <PaperButton size="sm" variant="outline">差异处理</PaperButton>
+                          <PaperButton size="sm" variant="ghost">生成报告</PaperButton>
+                        </div>
+                      </PaperTableCell>
+                    </PaperTableRow>
+                  ))}
+                </PaperTableBody>
+              </PaperTable>
+              <PaperTablePagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredStocktakes.length / itemsPerPage)}
+                totalItems={filteredStocktakes.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+
+          {activeTab === 'stats' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+              <div className="text-center p-6 bg-paper-300 rounded-lg">
+                <div className="text-3xl font-bold text-ink-800 mb-1">182</div>
+                <div className="text-sm text-ink-500">实时库存品项数</div>
+              </div>
+              <div className="text-center p-6 bg-paper-300 rounded-lg">
+                <div className="text-3xl font-bold text-ink-800 mb-1">12</div>
+                <div className="text-sm text-ink-500">库存预警（低于安全库存）</div>
+              </div>
+              <div className="text-center p-6 bg-paper-300 rounded-lg">
+                <div className="text-3xl font-bold text-ink-800 mb-1">86%</div>
+                <div className="text-sm text-ink-500">批次成本核算完成率</div>
+              </div>
+              <div className="text-center p-6 bg-paper-300 rounded-lg">
+                <div className="text-3xl font-bold text-ink-800 mb-1">24</div>
+                <div className="text-sm text-ink-500">本月调拨次数</div>
+              </div>
+            </div>
+          )}
+        </PaperCardContent>
+      </PaperCard>
+    </div>
   )
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { marked } from 'marked';
+import { useState, useMemo } from 'react';
 
 interface MarkdownRendererProps {
     content: string;

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import {
     Link as LinkIcon,
     Clock,
@@ -9,7 +10,7 @@ import {
     Loader2
 } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 import { PaperBadge } from '@/components/ui/paper-badge';
 import { PaperButton } from '@/components/ui/paper-button';
@@ -19,8 +20,6 @@ import {
     PaperCardTitle,
     PaperCardContent
 } from '@/components/ui/paper-card';
-import { toast } from 'sonner';
-
 import { ShareToken } from '@/services/share.client';
 
 interface ShareLinkManagerProps {

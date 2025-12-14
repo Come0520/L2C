@@ -119,7 +119,7 @@ export const ReassignModal = <T extends { id: string }>({
                           {user.role && <span>{user.role}</span>}
                         </div>
                       </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${selectedUserId === user.id ? 'border-blue-600 bg-blue-600' : 'border-paper-600'}`}>
+                      <div className={`w-4 h-4 rounded-full border-2 ${selectedUserId === user.id ? 'border-primary-600 bg-primary-600' : 'border-paper-600'}`}>
                         {selectedUserId === user.id && (
                           <div className="w-2 h-2 rounded-full bg-white mx-auto my-auto"></div>
                         )}

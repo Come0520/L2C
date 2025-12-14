@@ -1,3 +1,5 @@
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
+
 import { createClient } from '@/lib/supabase/server';
 
 import { getReconciliationOrders, completeReconciliation, submitDifferenceReconciliation, urgeOrder } from '../actions';
@@ -112,10 +114,9 @@ describe('Order Actions', () => {
     it('should throw error when update fails', async () => {
       const supabaseClient = await createClient();
       
-      (supabaseClient.from as vi.Mock).mockReturnValue({
+      (supabaseClient.from as Mock).mockReturnValue({
         update: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: null, error: new Error('Update error') }),
-      })
       });
       
       await expect(submitDifferenceReconciliation(['order-1'], '差异原因')).rejects.toThrow();

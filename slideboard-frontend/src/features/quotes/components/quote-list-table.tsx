@@ -1,11 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Quote } from '../types'
+
+import { ExportMenu } from '@/components/ui/export-menu'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperTable, PaperTableBody, PaperTableCell, PaperTableHeader, PaperTableRow, PaperTableToolbar } from '@/components/ui/paper-table'
-import { ExportMenu } from '@/components/ui/export-menu'
 import { useExport } from '@/hooks/useExport'
+
+import { Quote } from '../types'
 
 interface QuoteListTableProps {
     quotes: Quote[]
@@ -34,13 +36,13 @@ export function QuoteListTable({ quotes }: QuoteListTableProps) {
 
     const getStatusBadgeClass = (status: string) => {
         const statusMap: Record<string, string> = {
-            draft: 'bg-gray-100 text-gray-800',
-            active: 'bg-blue-100 text-blue-800',
-            won: 'bg-green-100 text-green-800',
-            lost: 'bg-red-100 text-red-800',
-            expired: 'bg-yellow-100 text-yellow-800',
+            draft: 'bg-theme-bg-tertiary text-theme-text-secondary',
+            active: 'bg-primary-100 text-primary-800',
+            won: 'bg-success-100 text-success-800',
+            lost: 'bg-rose-100 text-rose-800',
+            expired: 'bg-warning-100 text-warning-800',
         }
-        return statusMap[status] || 'bg-gray-100 text-gray-800'
+        return statusMap[status] || 'bg-theme-bg-tertiary text-theme-text-secondary'
     }
 
     // 导出功能
@@ -61,53 +63,53 @@ export function QuoteListTable({ quotes }: QuoteListTableProps) {
                 <ExportMenu onExport={(format) => handleExport(quotes, format)} />
             </div>
             <PaperTable>
-            <PaperTableHeader>
-                <PaperTableRow>
-                    <PaperTableCell>报价单号</PaperTableCell>
-                    <PaperTableCell>客户名称</PaperTableCell>
-                    <PaperTableCell>项目名称</PaperTableCell>
-                    <PaperTableCell>当前版本</PaperTableCell>
-                    <PaperTableCell>状态</PaperTableCell>
-                    <PaperTableCell>创建时间</PaperTableCell>
-                    <PaperTableCell>操作</PaperTableCell>
-                </PaperTableRow>
-            </PaperTableHeader>
-            <PaperTableBody>
-                {quotes.map((quote) => {
-                    const versionNo = quote.currentVersion?.versionNumber
-                    const versionSuffix = quote.currentVersion?.versionSuffix
+                <PaperTableHeader>
+                    <PaperTableRow>
+                        <PaperTableCell>报价单号</PaperTableCell>
+                        <PaperTableCell>客户名称</PaperTableCell>
+                        <PaperTableCell>项目名称</PaperTableCell>
+                        <PaperTableCell>当前版本</PaperTableCell>
+                        <PaperTableCell>状态</PaperTableCell>
+                        <PaperTableCell>创建时间</PaperTableCell>
+                        <PaperTableCell>操作</PaperTableCell>
+                    </PaperTableRow>
+                </PaperTableHeader>
+                <PaperTableBody>
+                    {quotes.map((quote) => {
+                        const versionNo = quote.currentVersion?.versionNumber
+                        const versionSuffix = quote.currentVersion?.versionSuffix
 
-                    return (
-                        <PaperTableRow key={quote.id} onClick={() => handleQuoteClick(quote.id)} className="cursor-pointer hover:bg-gray-50">
-                            <PaperTableCell>{quote.quoteNo}</PaperTableCell>
-                            {/* Note: customer_id is available, but customer name needs join or separate fetch if not joined. 
+                        return (
+                            <PaperTableRow key={quote.id} onClick={() => handleQuoteClick(quote.id)} className="cursor-pointer hover:bg-theme-bg-tertiary transition-colors">
+                                <PaperTableCell>{quote.quoteNo}</PaperTableCell>
+                                {/* Note: customer_id is available, but customer name needs join or separate fetch if not joined. 
                   My SQL didn't join customer name. For now showing ID or placeholder if name missing.
                   Wait, old code had customerName property which was likely joined. 
                   My schema assumes customer table. 
                   I should probably join customer in getQuotes later. 
                   For now I'll just show 'N/A' or Customer ID if needed.
               */}
-                            <PaperTableCell>{quote.customerId || '-'}</PaperTableCell>
-                            <PaperTableCell>{quote.projectName}</PaperTableCell>
-                            <PaperTableCell>{versionSuffix || (versionNo ? `V${versionNo}` : '-')}</PaperTableCell>
-                            <PaperTableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(quote.status)}`}>
-                                    {getStatusLabel(quote.status)}
-                                </span>
-                            </PaperTableCell>
-                            <PaperTableCell>{new Date(quote.createdAt).toLocaleDateString()}</PaperTableCell>
-                            <PaperTableCell>
-                                <PaperButton variant="outline" size="sm" onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleQuoteClick(quote.id)
-                                }}>
-                                    查看详情
-                                </PaperButton>
-                            </PaperTableCell>
-                        </PaperTableRow>
-                    )
-                })}
-            </PaperTableBody>
+                                <PaperTableCell>{quote.customerId || '-'}</PaperTableCell>
+                                <PaperTableCell>{quote.projectName}</PaperTableCell>
+                                <PaperTableCell>{versionSuffix || (versionNo ? `V${versionNo}` : '-')}</PaperTableCell>
+                                <PaperTableCell>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(quote.status)}`}>
+                                        {getStatusLabel(quote.status)}
+                                    </span>
+                                </PaperTableCell>
+                                <PaperTableCell>{new Date(quote.createdAt).toLocaleDateString()}</PaperTableCell>
+                                <PaperTableCell>
+                                    <PaperButton variant="outline" size="sm" onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleQuoteClick(quote.id)
+                                    }}>
+                                        查看详情
+                                    </PaperButton>
+                                </PaperTableCell>
+                            </PaperTableRow>
+                        )
+                    })}
+                </PaperTableBody>
             </PaperTable>
         </div>
     )

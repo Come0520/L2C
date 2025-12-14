@@ -13,7 +13,7 @@ interface PaperInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const PaperInput = React.forwardRef<HTMLInputElement, PaperInputProps>(
-  ({ className, label, error, helperText, fullWidth = true, icon, ...props }, ref) => {
+  ({ className, label, error, helperText, fullWidth = true, icon, children, dangerouslySetInnerHTML, ...props }, ref) => {
     const inputClasses = cn(
       'paper-input',
       fullWidth && 'w-full',

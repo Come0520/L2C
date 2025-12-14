@@ -3,8 +3,9 @@ import React, { Suspense } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { getMeasurementTasks } from '@/services/measurement.server';
 import { MeasurementTaskList } from '@/features/measurement/components/measurement-task-list';
+import { getMeasurementTasks } from '@/services/measurement.server';
+
 import { MeasurementTaskPageClient } from './client';
 
 export const metadata: Metadata = {

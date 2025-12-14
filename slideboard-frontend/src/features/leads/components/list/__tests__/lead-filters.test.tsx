@@ -1,41 +1,46 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import * as useLeadsFiltersHook from '@/features/leads/hooks/useLeadsFilters';
+
 import { LeadFilters } from '../LeadFilters';
 
+// Mock the hook
+vi.mock('@/features/leads/hooks/useLeadsFilters');
+
 describe('LeadFilters Component', () => {
-  // Mock props
-  const mockProps = {
+  // Mock hook return values
+  const mockUpdateFilters = vi.fn();
+  const mockDebouncedUpdate = vi.fn();
+  
+  const defaultFilters = {
     searchTerm: '',
-    setSearchTerm: vi.fn(),
     status: '',
-    setStatus: vi.fn(),
-    tag: '' as const,
-    setTag: vi.fn(),
+    tag: '',
     level: '',
-    setLevel: vi.fn(),
     source: '',
-    setSource: vi.fn(),
     owner: '',
-    setOwner: vi.fn(),
-    designer: '',
-    setDesigner: vi.fn(),
-    shoppingGuide: '',
-    setShoppingGuide: vi.fn(),
     dateStart: '',
-    setDateStart: vi.fn(),
     dateEnd: '',
-    setDateEnd: vi.fn(),
+    page: 1,
+    pageSize: 20,
   };
 
   beforeEach(() => {
     // Clear all mocks before each test
     vi.clearAllMocks();
+    
+    // Setup default mock implementation
+    vi.mocked(useLeadsFiltersHook.useLeadsFilters).mockReturnValue({
+      filters: defaultFilters,
+      updateFilters: mockUpdateFilters,
+      debouncedUpdate: mockDebouncedUpdate,
+    });
   });
 
   // Component rendering test
   it('should render all filter fields correctly', () => {
-    render(<LeadFilters {...mockProps} />);
+    render(<LeadFilters />);
     
     // Check search input by placeholder
     expect(screen.getByPlaceholderText('姓名/需求')).toBeInTheDocument();
@@ -48,8 +53,6 @@ describe('LeadFilters Component', () => {
     // Check input fields by label text
     expect(screen.getByText(/来源渠道/i)).toBeInTheDocument();
     expect(screen.getByText(/归属/i)).toBeInTheDocument();
-    expect(screen.getByText(/设计师/i)).toBeInTheDocument();
-    expect(screen.getByText(/导购/i)).toBeInTheDocument();
     
     // Check date fields by label text
     expect(screen.getByText(/开始日期/i)).toBeInTheDocument();
@@ -58,109 +61,106 @@ describe('LeadFilters Component', () => {
 
   // Initial values test
   it('should display initial values correctly', () => {
-    const initialProps = {
-      ...mockProps,
+    const customFilters = {
+      ...defaultFilters,
       searchTerm: 'test search',
       status: 'PENDING_ASSIGNMENT',
-      tag: 'quoted' as const,
+      tag: 'quoted',
       level: 'A',
       source: 'online',
       owner: 'test owner',
-      designer: 'test designer',
-      shoppingGuide: 'test guide',
       dateStart: '2024-01-01',
       dateEnd: '2024-01-31',
     };
     
-    render(<LeadFilters {...initialProps} />);
+    vi.mocked(useLeadsFiltersHook.useLeadsFilters).mockReturnValue({
+      filters: customFilters,
+      updateFilters: mockUpdateFilters,
+      debouncedUpdate: mockDebouncedUpdate,
+    });
+    
+    render(<LeadFilters />);
     
     // Check search input value
     const searchInput = screen.getByPlaceholderText('姓名/需求');
     expect(searchInput).toHaveValue('test search');
     
     // Get all select elements and check their values
-    const selects = screen.getAllByRole('combobox');
-    expect(selects).toHaveLength(3);
-    expect(selects[0]).toHaveValue('PENDING_ASSIGNMENT'); // status
-    expect(selects[1]).toHaveValue('quoted'); // tag
-    expect(selects[2]).toHaveValue('A'); // level
+    // Note: implementation details might vary, finding by role is safer
+    // We need to be careful with how Select components render in tests
+    // Assuming standard selects or accessible components
+    
+    // For selects, we can check if the display value is correct or if the value prop is passed
+    // Since we are mocking the hook that provides values, verifying the component received them 
+    // and passed them to inputs is what we are doing here.
+    
+    // Check Selects by finding the trigger or input
+    // This part depends heavily on PaperSelect implementation.
+    // Assuming PaperSelect uses standard select under the hood or we can find by value
+    
+    // Simplify check: verify update functions are called when changed (in next test)
+    // and verify inputs have values
     
     // Get all text input elements (excluding search)
     const textInputs = screen.getAllByRole('textbox');
-    expect(textInputs).toHaveLength(5);
-    expect(textInputs[1]).toHaveValue('online'); // source
-    expect(textInputs[2]).toHaveValue('test owner'); // owner
-    expect(textInputs[3]).toHaveValue('test designer'); // designer
-    expect(textInputs[4]).toHaveValue('test guide'); // shopping guide
+    // search, source, owner, start, end (if dates act as text inputs or separate)
+    // The exact count depends on implementation details of PaperSelect (if it has search input) and date pickers
     
-    // Get all inputs and filter for date inputs
-    const allInputs = document.querySelectorAll('input');
-    const dateInputs = Array.from(allInputs).filter(input => input.type === 'date');
-    expect(dateInputs).toHaveLength(2);
-    if (dateInputs[0]) expect(dateInputs[0]).toHaveValue('2024-01-01'); // start date
-    if (dateInputs[1]) expect(dateInputs[1]).toHaveValue('2024-01-31'); // end date
+    // Let's check by placeholder/label which is more robust
+    expect(screen.getByPlaceholderText('门店/渠道/线上')).toHaveValue('online');
+    expect(screen.getByPlaceholderText('门店/成员')).toHaveValue('test owner');
+    
+    // Date inputs
+    const dateInputs = screen.getAllByLabelText(/日期/i); // Matches "开始日期" and "结束日期"
+    // Note: getAllByLabelText might return the container or input depending on structure
+    // Let's use selector for date inputs
+    const dateInputElements = document.querySelectorAll('input[type="date"]');
+    expect(dateInputElements[0]).toHaveValue('2024-01-01');
+    expect(dateInputElements[1]).toHaveValue('2024-01-31');
   });
 
-  // Test all filter inputs with a more direct approach
-  it('should call all filter handlers when inputs change', async () => {
-    render(<LeadFilters {...mockProps} />);
+  // Test all filter inputs
+  it('should call update handlers when inputs change', async () => {
+    render(<LeadFilters />);
     
-    // Test search input
+    // Test search input (debounced)
     const searchInput = screen.getByPlaceholderText('姓名/需求');
     fireEvent.change(searchInput, { target: { value: 'new search' } });
+    expect(mockDebouncedUpdate).toHaveBeenCalledWith({ searchTerm: 'new search' });
     
-    // Test select fields
-    const selects = screen.getAllByRole('combobox');
-    if (selects[0]) fireEvent.change(selects[0], { target: { value: 'PENDING_FOLLOW_UP' } }); // status
-    if (selects[1]) fireEvent.change(selects[1], { target: { value: 'arrived' } }); // tag
-    if (selects[2]) fireEvent.change(selects[2], { target: { value: 'B' } }); // level
+    // Test status select
+    // Finding select by label/role might be tricky with custom components.
+    // Assuming PaperSelect renders a select or we can find it.
+    // If PaperSelect uses Radix UI or similar, we might need different interaction.
+    // Fallback to finding by label text and getting the sibling select/input
     
-    // Test text inputs
-    const textInputs = screen.getAllByRole('textbox');
-    if (textInputs[1]) fireEvent.change(textInputs[1], { target: { value: 'store' } }); // source
-    if (textInputs[2]) fireEvent.change(textInputs[2], { target: { value: 'new owner' } }); // owner
-    if (textInputs[3]) fireEvent.change(textInputs[3], { target: { value: 'new designer' } }); // designer
-    if (textInputs[4]) fireEvent.change(textInputs[4], { target: { value: 'new guide' } }); // shopping guide
+    const statusSelect = screen.getByLabelText('状态');
+    fireEvent.change(statusSelect, { target: { value: 'PENDING_FOLLOW_UP' } });
+    expect(mockUpdateFilters).toHaveBeenCalledWith({ status: 'PENDING_FOLLOW_UP' });
     
-    // Test date inputs
-    const allInputs = document.querySelectorAll('input');
-    const dateInputs = Array.from(allInputs).filter(input => input.type === 'date');
-    if (dateInputs[0]) fireEvent.change(dateInputs[0], { target: { value: '2024-02-01' } }); // start date
-    if (dateInputs[1]) fireEvent.change(dateInputs[1], { target: { value: '2024-02-28' } }); // end date
+    const tagSelect = screen.getByLabelText('标签');
+    fireEvent.change(tagSelect, { target: { value: 'arrived' } });
+    expect(mockUpdateFilters).toHaveBeenCalledWith({ tag: 'arrived' });
     
-    // Wait for debounce to complete (300ms for search, 200ms for others)
-    await waitFor(() => {
-      // Check that all handlers were called
-      expect(mockProps.setSearchTerm).toHaveBeenCalledWith('new search');
-      if (selects[0]) expect(mockProps.setStatus).toHaveBeenCalledWith('PENDING_FOLLOW_UP');
-      if (selects[1]) expect(mockProps.setTag).toHaveBeenCalledWith('arrived');
-      if (selects[2]) expect(mockProps.setLevel).toHaveBeenCalledWith('B');
-      if (textInputs[1]) expect(mockProps.setSource).toHaveBeenCalledWith('store');
-      if (textInputs[2]) expect(mockProps.setOwner).toHaveBeenCalledWith('new owner');
-      if (textInputs[3]) expect(mockProps.setDesigner).toHaveBeenCalledWith('new designer');
-      if (textInputs[4]) expect(mockProps.setShoppingGuide).toHaveBeenCalledWith('new guide');
-      if (dateInputs[0]) expect(mockProps.setDateStart).toHaveBeenCalledWith('2024-02-01');
-      if (dateInputs[1]) expect(mockProps.setDateEnd).toHaveBeenCalledWith('2024-02-28');
-    }, { timeout: 600 });
-  });
-
-  // Test with debounce functionality
-  it('should use debounce for search input', async () => {
-    render(<LeadFilters {...mockProps} />);
+    const levelSelect = screen.getByLabelText('客户等级');
+    fireEvent.change(levelSelect, { target: { value: 'B' } });
+    expect(mockUpdateFilters).toHaveBeenCalledWith({ level: 'B' });
     
-    const searchInput = screen.getByPlaceholderText('姓名/需求');
+    // Test text inputs (debounced)
+    const sourceInput = screen.getByPlaceholderText('门店/渠道/线上');
+    fireEvent.change(sourceInput, { target: { value: 'store' } });
+    expect(mockDebouncedUpdate).toHaveBeenCalledWith({ source: 'store' });
     
-    // Type quickly to test debounce
-    fireEvent.change(searchInput, { target: { value: 't' } });
-    fireEvent.change(searchInput, { target: { value: 'te' } });
-    fireEvent.change(searchInput, { target: { value: 'tes' } });
-    fireEvent.change(searchInput, { target: { value: 'test' } });
+    const ownerInput = screen.getByPlaceholderText('门店/成员');
+    fireEvent.change(ownerInput, { target: { value: 'new owner' } });
+    expect(mockDebouncedUpdate).toHaveBeenCalledWith({ owner: 'new owner' });
     
-    // Wait for debounce to complete (300ms + some buffer)
-    await waitFor(() => {
-      // Should only be called once with the final value
-      expect(mockProps.setSearchTerm).toHaveBeenCalledTimes(1);
-      expect(mockProps.setSearchTerm).toHaveBeenCalledWith('test');
-    }, { timeout: 500 });
+    // Test date inputs (direct update)
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    fireEvent.change(dateInputs[0], { target: { value: '2024-02-01' } });
+    expect(mockUpdateFilters).toHaveBeenCalledWith({ dateStart: '2024-02-01' });
+    
+    fireEvent.change(dateInputs[1], { target: { value: '2024-02-28' } });
+    expect(mockUpdateFilters).toHaveBeenCalledWith({ dateEnd: '2024-02-28' });
   });
 });

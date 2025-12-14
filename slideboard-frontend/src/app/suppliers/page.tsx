@@ -4,9 +4,9 @@ import { useState } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
-import { PaperInput } from '@/components/ui/paper-input';
 import { PaperModal } from '@/components/ui/paper-modal';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
+import { VanishInput } from '@/components/ui/vanish-input';
 
 interface Supplier {
   id: string;
@@ -132,7 +132,7 @@ export default function SuppliersPage() {
     }
   ];
 
-  const filteredSuppliers = suppliers.filter(supplier => 
+  const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
     supplier.serviceScope.some(scope => scope.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -144,7 +144,7 @@ export default function SuppliersPage() {
     provider.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  
+
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -172,21 +172,19 @@ export default function SuppliersPage() {
               <nav className="flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('suppliers')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'suppliers'
-                      ? 'border-theme-primary text-theme-text-primary'
-                      : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'suppliers'
+                    ? 'border-theme-primary text-theme-text-primary'
+                    : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
+                    }`}
                 >
                   供应商管理
                 </button>
                 <button
                   onClick={() => setActiveTab('services')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'services'
-                      ? 'border-theme-primary text-theme-text-primary'
-                      : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'services'
+                    ? 'border-theme-primary text-theme-text-primary'
+                    : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary'
+                    }`}
                 >
                   服务商管理
                 </button>
@@ -199,10 +197,12 @@ export default function SuppliersPage() {
         <PaperCard className="bg-theme-bg-secondary border-theme-border">
           <PaperCardContent>
             <div className="flex items-center gap-4 justify-between">
-              <PaperInput
-                placeholder={`搜索${activeTab === 'suppliers' ? '供应商' : '服务商'}...`}
+              <VanishInput
+                placeholders={activeTab === 'suppliers'
+                  ? ["搜索供应商名称...", "搜索联系人...", "搜索服务范围..."]
+                  : ["搜索服务商名称...", "搜索专业领域...", "搜索联系人..."]}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(value) => setSearchTerm(value)}
                 className="flex-1 max-w-md"
               />
               <div className="flex gap-3">
@@ -269,13 +269,12 @@ export default function SuppliersPage() {
                         </div>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          supplier.cooperationStatus === 'active' ? 'bg-paper-success-light text-paper-success' :
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${supplier.cooperationStatus === 'active' ? 'bg-paper-success-light text-paper-success' :
                           supplier.cooperationStatus === 'pending' ? 'bg-paper-warning-light text-paper-warning' :
-                          'bg-paper-error-light text-paper-error'
-                        }`}>
+                            'bg-paper-error-light text-paper-error'
+                          }`}>
                           {supplier.cooperationStatus === 'active' ? '合作中' :
-                           supplier.cooperationStatus === 'pending' ? '待审核' : '已暂停'}
+                            supplier.cooperationStatus === 'pending' ? '待审核' : '已暂停'}
                         </span>
                       </PaperTableCell>
                       <PaperTableCell>
@@ -350,11 +349,10 @@ export default function SuppliersPage() {
                         <div className="text-sm text-theme-text-primary">{provider.specialty}</div>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          provider.qualificationLevel === 'A' ? 'bg-paper-success-light text-paper-success' :
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${provider.qualificationLevel === 'A' ? 'bg-paper-success-light text-paper-success' :
                           provider.qualificationLevel === 'B' ? 'bg-paper-warning-light text-paper-warning' :
-                          'bg-paper-error-light text-paper-error'
-                        }`}>
+                            'bg-paper-error-light text-paper-error'
+                          }`}>
                           {provider.qualificationLevel}级资质
                         </span>
                       </PaperTableCell>
@@ -368,13 +366,12 @@ export default function SuppliersPage() {
                         <div className="font-medium">{provider.projectCount}</div>
                       </PaperTableCell>
                       <PaperTableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          provider.status === 'available' ? 'bg-paper-success-light text-paper-success' :
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${provider.status === 'available' ? 'bg-paper-success-light text-paper-success' :
                           provider.status === 'busy' ? 'bg-paper-warning-light text-paper-warning' :
-                          'bg-paper-error-light text-paper-error'
-                        }`}>
+                            'bg-paper-error-light text-paper-error'
+                          }`}>
                           {provider.status === 'available' ? '可接单' :
-                           provider.status === 'busy' ? '忙碌中' : '离线'}
+                            provider.status === 'busy' ? '忙碌中' : '离线'}
                         </span>
                       </PaperTableCell>
                       <PaperTableCell>

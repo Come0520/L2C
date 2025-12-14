@@ -1,6 +1,8 @@
 import { Plus, Settings, Crown } from 'lucide-react';
 import Image from 'next/image';
+
 import { getUserTeams } from '@/services/teams.server';
+
 import TeamManagementClient from './TeamManagementClient';
 
 export default async function TeamPage() {

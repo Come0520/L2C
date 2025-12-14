@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { Database } from '@/shared/types/supabase';
+import { Database } from '@/types/supabase';
 import {
     InstallationTeam,
     Installer,

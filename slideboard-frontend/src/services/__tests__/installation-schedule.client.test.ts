@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { installationScheduleService, CreateInstallationScheduleRequest } from '../installation-schedule.client';
+
 import { createClient } from '@/lib/supabase/client';
+
+import { installationScheduleService, CreateInstallationScheduleRequest } from '../installation-schedule.client';
 
 // Mock dependencies
 vi.mock('@/lib/supabase/client', () => ({

@@ -28,7 +28,7 @@ async function confirmEmail(email) {
 
     try {
         // 使用 admin API 更新用户
-        const { data, error } = await supabase.auth.admin.updateUserById(
+        const { error } = await supabase.auth.admin.updateUserById(
             email, // 实际上需要 user ID，这里先尝试查找
             { email_confirm: true }
         );

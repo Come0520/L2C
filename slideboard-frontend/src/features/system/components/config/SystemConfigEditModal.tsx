@@ -1,11 +1,11 @@
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import PaperCard from '@/components/ui/paper-card';
-import { SystemConfig } from '@/services/config.client';
 import { systemConfigSchema, SystemConfigFormValues } from '@/features/system/schemas/config';
+import { SystemConfig } from '@/services/config.client';
 
 interface SystemConfigEditModalProps {
   config: SystemConfig | null;

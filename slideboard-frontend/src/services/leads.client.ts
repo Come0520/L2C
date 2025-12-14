@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
-import { Lead, LeadFilter, UpdateLeadRequest, CreateLeadRequest, LeadStatus, LeadDuplicateRecord, LeadWarnings, WarningType } from '@/shared/types/lead'
-import { Database } from '@/shared/types/supabase'
 import { CreateCustomerRequest } from '@/shared/types/customer'
+import { Lead, LeadFilter, UpdateLeadRequest, CreateLeadRequest, LeadStatus, LeadDuplicateRecord, LeadWarnings, WarningType } from '@/shared/types/lead'
+import { Database } from '@/types/supabase'
 
 type LeadRow = Database['public']['Tables']['leads']['Row']
 type LeadInsert = Database['public']['Tables']['leads']['Insert']
@@ -894,6 +894,43 @@ export const leadService = {
         await this.updateLeadStatus(leadId, 'won', 'Converted to customer');
 
         return newCustomer.id;
+    },
+
+    /**
+     * 获取线索状态统计
+     */
+    async getLeadStats() {
+        const statuses = [
+            'PENDING_ASSIGNMENT',
+            'PENDING_FOLLOW_UP',
+            'FOLLOWING_UP',
+            'DRAFT_SIGNED',
+            'PENDING_MEASUREMENT',
+            'PLAN_PENDING_CONFIRMATION'
+        ];
+
+        // Execute queries in parallel
+        const promises = statuses.map(status => 
+            supabase
+                .from('leads')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', status)
+        );
+
+        const results = await Promise.all(promises);
+        
+        const stats: Record<string, number> = {};
+        
+        statuses.forEach((status, index) => {
+            const { count, error } = results[index];
+            if (!error && count !== null) {
+                stats[status] = count;
+            } else {
+                stats[status] = 0;
+            }
+        });
+
+        return stats;
     }
 }
 

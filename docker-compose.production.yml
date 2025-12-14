@@ -17,7 +17,8 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./nginx/logs:/var/log/nginx
     depends_on:
-      - web-app
+      - web-app-blue
+      - web-app-green
       - supabase-kong
     networks:
       - l2c-network
@@ -25,7 +26,7 @@ services:
   # ==================== Next.js 应用 - Blue/Green 部署 ====================
   # Blue 环境（当前生产环境）
   web-app-blue:
-    image: registry.cn-shanghai.aliyuncs.com/l2c-production/l2c-frontend:latest
+    image: ${REGISTRY}/${REPOSITORY}/${IMAGE_NAME_FRONTEND}:${IMAGE_TAG}
     container_name: l2c-web-app-blue
     restart: unless-stopped
     environment:
@@ -48,7 +49,7 @@ services:
 
   # Green 环境（新版本环境）
   web-app-green:
-    image: registry.cn-shanghai.aliyuncs.com/l2c-production/l2c-frontend:latest
+    image: ${REGISTRY}/${REPOSITORY}/${IMAGE_NAME_FRONTEND}:${IMAGE_TAG}
     container_name: l2c-web-app-green
     restart: unless-stopped
     environment:

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import React from 'react'
 
-import { SalesOrderDetail } from '@/features/orders/components/sales-orders/sales-order-detail'
+import { SalesOrderDetail } from '@/features/orders/components/sales-orders/SalesOrderDetail'
 import { getSalesOrderById } from '@/services/salesOrders.server'
 
 interface PageProps {
@@ -16,19 +16,19 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
     if (!orderData) {
         return (
-                <div className="flex h-full flex-col items-center justify-center gap-4 pt-20">
-                    <p className="text-lg text-gray-500">未找到订单信息</p>
-                    <Link
-                        href="/orders"
-                        className="text-primary hover:underline"
-                    >
-                        返回订单列表
-                    </Link>
-                </div>
+            <div className="flex h-full flex-col items-center justify-center gap-4 pt-20">
+                <p className="text-lg text-gray-500">未找到订单信息</p>
+                <Link
+                    href="/orders"
+                    className="text-primary hover:underline"
+                >
+                    返回订单列表
+                </Link>
+            </div>
         )
     }
 
     return (
-            <SalesOrderDetail initialOrder={orderData} />
+        <SalesOrderDetail initialOrder={orderData} />
     )
 }

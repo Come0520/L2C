@@ -1,8 +1,9 @@
 import Link from 'next/link'
+
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card'
-import { getQuotes } from '@/features/quotes/services/quote.service'
 import { QuoteListTable } from '@/features/quotes/components/quote-list-table'
+import { getQuotes } from '@/features/quotes/services/quote.service'
 
 export default async function QuotesPage() {
     const quotes = await getQuotes()

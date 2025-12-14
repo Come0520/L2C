@@ -10,18 +10,10 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['e2e/**/*', 'node_modules/**/*'],
     setupFiles: ['./vitest.setup.ts'],
-    // 添加测试超时时间设置
-    timeout: 10000,
-    // 添加测试并行度设置
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        minThreads: 2,
-        maxThreads: 6,
-      },
-    },
     coverage: {
       provider: 'v8',
       // 添加lcov报告格式

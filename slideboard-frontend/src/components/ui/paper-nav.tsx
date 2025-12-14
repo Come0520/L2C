@@ -45,7 +45,7 @@ export const PaperNavItem: React.FC<PaperNavItemProps> = ({
     'text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary',
     // Active state: Primary text, highlight background (Linear style: glowy border/bg)
     active 
-      ? 'bg-blue-500/10 text-blue-500 dark:text-blue-400 border-l-2 border-blue-500 font-medium shadow-[0_0_10px_rgba(59,130,246,0.1)]' 
+      ? 'bg-primary-500/10 text-primary-500 dark:text-primary-400 border-l-2 border-primary-500 font-medium shadow-[0_0_10px] shadow-primary-500/10' 
       : 'border-l-2 border-transparent',
     className
   );

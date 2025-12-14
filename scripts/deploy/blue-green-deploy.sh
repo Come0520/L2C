@@ -8,6 +8,11 @@ APP_NAME="l2c-web-app"
 COMPOSE_FILE="docker-compose.production.yml"
 NGINX_CONF="nginx/nginx.conf"
 CURRENT_ENV_FILE=".current-env"
+ACTION="${1:-deploy}"
+IMAGE_TAG="${2:-latest}"
+REGISTRY="${REGISTRY:-ghcr.io}"
+REPOSITORY="${REPOSITORY:-${GITHUB_REPOSITORY}}"
+IMAGE_NAME_FRONTEND="${IMAGE_NAME_FRONTEND:-luolai-l2c-frontend}"
 
 # 颜色定义
 BLUE="blue"
@@ -60,10 +65,11 @@ deploy_new_version() {
   
   # 拉取最新镜像
   log "拉取最新镜像..."
-  docker pull registry.cn-shanghai.aliyuncs.com/l2c-production/l2c-frontend:latest || error "镜像拉取失败"
+  docker pull "$REGISTRY/$REPOSITORY/$IMAGE_NAME_FRONTEND:$IMAGE_TAG" || error "镜像拉取失败"
   
   # 更新目标环境的镜像
   log "部署 $target_env 环境..."
+  export IMAGE_TAG
   docker-compose -f "$COMPOSE_FILE" up -d "web-app-$target_env" || error "部署失败"
   
   # 等待服务启动
@@ -160,4 +166,27 @@ show_status() {
   current_env=$(get_current_env)
   target_env=$(get_target_env)
   
-  log "===== 部署状态 =====
+  log "===== 部署状态 ====="
+  log "当前活动环境: $current_env"
+  log "目标环境: $target_env"
+}
+
+# 主入口
+case "$ACTION" in
+  deploy)
+    deploy_new_version && switch_traffic
+    ;;
+  rollback)
+    rollback
+    ;;
+  finalize)
+    cleanup_old_version
+    ;;
+  status)
+    show_status
+    ;;
+  *)
+    echo "用法: $0 [deploy|rollback|finalize|status] [image_tag]"
+    exit 1
+    ;;
+esac

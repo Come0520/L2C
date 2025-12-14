@@ -27,9 +27,10 @@ export const createMockSupabase = () => {
     verifyOtp: vi.fn().mockResolvedValue({ error: null }),
     signInWithOAuth: vi.fn().mockResolvedValue({ error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),
-    onAuthStateChange: vi.fn((cb: any) => {
+    onAuthStateChange: vi.fn((_cb: any) => {
       return { data: { subscription: { unsubscribe: vi.fn() } } };
     }),
+
     getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
     getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
   };

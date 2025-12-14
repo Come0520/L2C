@@ -1,7 +1,7 @@
 'use client';
 
 import { PaperButton } from '@/components/ui/paper-button';
-import { PaperInput } from '@/components/ui/paper-input';
+import { VanishInput } from '@/components/ui/vanish-input';
 
 interface NotificationFiltersProps {
   activeTab: 'notifications' | 'approvals' | 'sent';
@@ -29,10 +29,11 @@ export default function NotificationFilters({
   return (
     <div className="flex items-center gap-4">
       {/* 搜索框 */}
-      <PaperInput
-        placeholder="搜索通知或审批..."
+      {/* 搜索框 */}
+      <VanishInput
+        placeholders={["搜索通知...", "搜索审批...", "输入关键词搜索..."]}
         value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
+        onChange={(value) => onSearchChange(value)}
         className="flex-1"
       />
 

@@ -55,6 +55,25 @@ export async function getSalesOrderById(id: string): Promise<OrderFormData | nul
     return mapDbToSalesOrder(data)
 }
 
+export async function getSalesUsers(): Promise<Array<{ id: string; name: string }>> {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('role', ['sales', 'sales_manager', 'admin']) 
+        .order('name')
+    
+    if (error) {
+        console.error('Error fetching sales users:', error)
+        return []
+    }
+    
+    return (data as any[] || []).map(u => ({
+        id: String(u.id),
+        name: u.name || 'Unknown'
+    }))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDbToSalesOrder(dbRecord: Record<string, any>): OrderFormData {
     const base = fromDbFields<OrderFormData>(dbRecord)

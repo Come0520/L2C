@@ -4,8 +4,9 @@ import { Search } from 'lucide-react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard } from '@/components/ui/paper-card';
-import { PaperInput, PaperSelect } from '@/components/ui/paper-input';
+import { PaperSelect } from '@/components/ui/paper-input';
 import { PaperTableToolbar } from '@/components/ui/paper-table';
+import { VanishInput } from '@/components/ui/vanish-input';
 
 
 interface ToolsSearchBarProps {
@@ -33,22 +34,21 @@ export const ToolsSearchBar = ({
     <PaperCard>
       <PaperTableToolbar>
         <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <PaperInput 
-              placeholder="搜索商品名称、SKU..." 
-              value={searchTerm} 
-              onChange={(e) => onSearchTermChange(e.target.value)} 
-              className="w-full" 
-              icon={<Search className="h-4 w-4" />} 
+          <div className="flex-1 w-full max-w-sm">
+            <VanishInput
+              placeholders={["搜索商品名称...", "搜索SKU...", "输入关键词..."]}
+              value={searchTerm}
+              onChange={(value) => onSearchTermChange(value)}
+              className="w-full"
             />
           </div>
           {activeTab === 'inventory' && (
             <div className="w-48">
-              <PaperSelect 
-                value={statusFilter} 
-                onChange={(e) => onStatusFilterChange(e.target.value)} 
-                options={statusOptions} 
-                placeholder="选择状态" 
+              <PaperSelect
+                value={statusFilter}
+                onChange={(e) => onStatusFilterChange(e.target.value)}
+                options={statusOptions}
+                placeholder="选择状态"
               />
             </div>
           )}

@@ -2,9 +2,9 @@ import { Suspense } from 'react';
 
 import { createClient } from '@/lib/supabase/server';
 
-import { ApprovalRequest } from './components/ApprovalList';
-import { Notification } from './components/NotificationList';
-import NotificationsView from './components/NotificationsView';
+import { ApprovalRequest } from './components/approval-list';
+import { Notification } from './components/notification-list';
+import NotificationsView from './components/notifications-view';
 import NotificationsLoading from './loading';
 
 async function getNotifications(): Promise<Notification[]> {
@@ -171,11 +171,10 @@ export default async function NotificationsPage() {
   ]);
 
   return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">通知中心</h1>
+      <div className="container mx-auto py-6">
         <NotificationsView 
-          notifications={notifications} 
-          approvals={approvals} 
+          initialNotifications={notifications} 
+          initialApprovals={approvals} 
         />
       </div>
   );

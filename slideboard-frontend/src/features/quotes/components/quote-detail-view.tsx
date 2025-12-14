@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Quote, QuoteVersion } from '@/shared/types/quote';
+
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card';
 import { PaperTable, PaperTableBody, PaperTableCell, PaperTableHeader, PaperTableRow } from '@/components/ui/paper-table';
+import { Quote, QuoteVersion } from '@/shared/types/quote';
+
 import { QuoteVersionSelector } from './quote-version-selector';
 
 interface QuoteDetailViewProps {

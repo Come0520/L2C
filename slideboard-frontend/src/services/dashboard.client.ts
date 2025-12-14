@@ -1,7 +1,8 @@
-import { supabase } from '@/lib/supabase/client';
-import { DashboardData, DashboardStats, RecentActivity, PendingTask } from '@/shared/types/dashboard';
 import { startOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+
+import { supabase } from '@/lib/supabase/client';
+import { DashboardData, DashboardStats, RecentActivity, PendingTask } from '@/shared/types/dashboard';
 
 export const dashboardService = {
   async getDashboardOverview(): Promise<DashboardData> {

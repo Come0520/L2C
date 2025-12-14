@@ -1,219 +1,0 @@
-╔════════════════════════════════════╗
-║  L2C 部署（国内镜像源优化版）      ║
-╚════════════════════════════════════╝
-[0;34m[INFO][0m 测试 SSH 连接...
-[0;32m[SUCCESS][0m SSH 连接成功
-[0;34m[INFO][0m 安装 Docker（使用国内镜像源）...
-开始安装 Docker...
-Hit:1 http://mirrors.cloud.aliyuncs.com/ubuntu jammy InRelease
-Get:2 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-updates InRelease [128 kB]
-Get:3 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-backports InRelease [127 kB]
-Get:4 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-security InRelease [129 kB]
-Fetched 384 kB in 1s (281 kB/s)
-Reading package lists...
-Reading package lists...
-Building dependency tree...
-Reading state information...
-ca-certificates is already the newest version (20240203~22.04.1).
-ca-certificates set to manually installed.
-curl is already the newest version (7.81.0-1ubuntu1.21).
-software-properties-common is already the newest version (0.99.22.9).
-software-properties-common set to manually installed.
-The following NEW packages will be installed:
-  apt-transport-https
-0 upgraded, 1 newly installed, 0 to remove and 21 not upgraded.
-Need to get 1,510 B of archives.
-After this operation, 170 kB of additional disk space will be used.
-Get:1 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-updates/universe amd64 apt-transport-https all 2.4.14 [1,510 B]
-debconf: unable to initialize frontend: Dialog
-debconf: (TERM is not set, so the dialog frontend is not usable.)
-debconf: falling back to frontend: Readline
-debconf: unable to initialize frontend: Readline
-debconf: (This frontend requires a controlling tty.)
-debconf: falling back to frontend: Teletype
-dpkg-preconfigure: unable to re-open stdin: 
-Fetched 1,510 B in 0s (27.2 kB/s)
-Selecting previously unselected package apt-transport-https.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81057 files and directories currently installed.)
-Preparing to unpack .../apt-transport-https_2.4.14_all.deb ...
-Unpacking apt-transport-https (2.4.14) ...
-Setting up apt-transport-https (2.4.14) ...
-
-Running kernel seems to be up-to-date.
-
-Services to be restarted:
- systemctl restart aegis.service
- systemctl restart atd.service
- systemctl restart chrony.service
- systemctl restart cron.service
- systemctl restart multipathd.service
- systemctl restart packagekit.service
- systemctl restart polkit.service
- systemctl restart rsyslog.service
- systemctl restart serial-getty@ttyS0.service
- systemctl restart systemd-journald.service
- /etc/needrestart/restart.d/systemd-manager
- systemctl restart systemd-networkd.service
- systemctl restart systemd-resolved.service
- systemctl restart systemd-udevd.service
- systemctl restart tuned.service
- systemctl restart udisks2.service
-
-Service restarts being deferred:
- systemctl restart ModemManager.service
- /etc/needrestart/restart.d/dbus.service
- systemctl restart getty@tty1.service
- systemctl restart networkd-dispatcher.service
- systemctl restart systemd-logind.service
- systemctl restart unattended-upgrades.service
- systemctl restart user@0.service
-
-No containers need to be restarted.
-
-No user sessions are running outdated binaries.
-
-No VM guests are running outdated hypervisor (qemu) binaries on this host.
-Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead (see apt-key(8)).
-OK
-Hit:1 http://mirrors.cloud.aliyuncs.com/ubuntu jammy InRelease
-Hit:2 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-updates InRelease
-Hit:3 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-backports InRelease
-Hit:4 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-security InRelease
-Get:5 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy InRelease [48.5 kB]
-Get:6 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 Packages [65.0 kB]
-Fetched 113 kB in 2s (68.2 kB/s)
-Reading package lists...
-W: https://mirrors.aliyun.com/docker-ce/linux/ubuntu/dists/jammy/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
-Repository: 'deb [arch=amd64] https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy stable'
-Description:
-Archive for codename: jammy components: stable
-More info: https://mirrors.aliyun.com/docker-ce/linux/ubuntu
-Adding repository.
-Adding deb entry to /etc/apt/sources.list.d/archive_uri-https_mirrors_aliyun_com_docker-ce_linux_ubuntu-jammy.list
-Adding disabled deb-src entry to /etc/apt/sources.list.d/archive_uri-https_mirrors_aliyun_com_docker-ce_linux_ubuntu-jammy.list
-Hit:1 http://mirrors.cloud.aliyuncs.com/ubuntu jammy InRelease
-Hit:2 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-updates InRelease
-Hit:3 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-backports InRelease
-Hit:4 http://mirrors.cloud.aliyuncs.com/ubuntu jammy-security InRelease
-Hit:5 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy InRelease
-Reading package lists...
-W: https://mirrors.aliyun.com/docker-ce/linux/ubuntu/dists/jammy/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
-Reading package lists...
-Building dependency tree...
-Reading state information...
-The following additional packages will be installed:
-  docker-buildx-plugin docker-ce-rootless-extras docker-compose-plugin
-  libslirp0 pigz slirp4netns
-Suggested packages:
-  cgroupfs-mount | cgroup-lite docker-model-plugin
-The following NEW packages will be installed:
-  containerd.io docker-buildx-plugin docker-ce docker-ce-cli
-  docker-ce-rootless-extras docker-compose-plugin libslirp0 pigz slirp4netns
-0 upgraded, 9 newly installed, 0 to remove and 21 not upgraded.
-Need to get 91.2 MB of archives.
-After this operation, 363 MB of additional disk space will be used.
-Get:1 http://mirrors.cloud.aliyuncs.com/ubuntu jammy/universe amd64 pigz amd64 2.6-1 [63.6 kB]
-Get:2 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 containerd.io amd64 2.2.0-2~ubuntu.22.04~jammy [23.3 MB]
-Get:3 http://mirrors.cloud.aliyuncs.com/ubuntu jammy/main amd64 libslirp0 amd64 4.6.1-1build1 [61.5 kB]
-Get:4 http://mirrors.cloud.aliyuncs.com/ubuntu jammy/universe amd64 slirp4netns amd64 1.0.1-2 [28.2 kB]
-Get:5 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 docker-ce-cli amd64 5:29.1.2-1~ubuntu.22.04~jammy [16.3 MB]
-Get:6 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 docker-ce amd64 5:29.1.2-1~ubuntu.22.04~jammy [21.0 MB]
-Get:7 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 docker-buildx-plugin amd64 0.30.1-1~ubuntu.22.04~jammy [16.4 MB]
-Get:8 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 docker-ce-rootless-extras amd64 5:29.1.2-1~ubuntu.22.04~jammy [6,384 kB]
-Get:9 https://mirrors.aliyun.com/docker-ce/linux/ubuntu jammy/stable amd64 docker-compose-plugin amd64 5.0.0-1~ubuntu.22.04~jammy [7,709 kB]
-debconf: unable to initialize frontend: Dialog
-debconf: (TERM is not set, so the dialog frontend is not usable.)
-debconf: falling back to frontend: Readline
-debconf: unable to initialize frontend: Readline
-debconf: (This frontend requires a controlling tty.)
-debconf: falling back to frontend: Teletype
-dpkg-preconfigure: unable to re-open stdin: 
-Fetched 91.2 MB in 6s (14.5 MB/s)
-Selecting previously unselected package containerd.io.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81061 files and directories currently installed.)
-Preparing to unpack .../0-containerd.io_2.2.0-2~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking containerd.io (2.2.0-2~ubuntu.22.04~jammy) ...
-Selecting previously unselected package docker-ce-cli.
-Preparing to unpack .../1-docker-ce-cli_5%3a29.1.2-1~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking docker-ce-cli (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Selecting previously unselected package docker-ce.
-Preparing to unpack .../2-docker-ce_5%3a29.1.2-1~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking docker-ce (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Selecting previously unselected package pigz.
-Preparing to unpack .../3-pigz_2.6-1_amd64.deb ...
-Unpacking pigz (2.6-1) ...
-Selecting previously unselected package docker-buildx-plugin.
-Preparing to unpack .../4-docker-buildx-plugin_0.30.1-1~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking docker-buildx-plugin (0.30.1-1~ubuntu.22.04~jammy) ...
-Selecting previously unselected package docker-ce-rootless-extras.
-Preparing to unpack .../5-docker-ce-rootless-extras_5%3a29.1.2-1~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking docker-ce-rootless-extras (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Selecting previously unselected package docker-compose-plugin.
-Preparing to unpack .../6-docker-compose-plugin_5.0.0-1~ubuntu.22.04~jammy_amd64.deb ...
-Unpacking docker-compose-plugin (5.0.0-1~ubuntu.22.04~jammy) ...
-Selecting previously unselected package libslirp0:amd64.
-Preparing to unpack .../7-libslirp0_4.6.1-1build1_amd64.deb ...
-Unpacking libslirp0:amd64 (4.6.1-1build1) ...
-Selecting previously unselected package slirp4netns.
-Preparing to unpack .../8-slirp4netns_1.0.1-2_amd64.deb ...
-Unpacking slirp4netns (1.0.1-2) ...
-Setting up docker-buildx-plugin (0.30.1-1~ubuntu.22.04~jammy) ...
-Setting up containerd.io (2.2.0-2~ubuntu.22.04~jammy) ...
-Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.
-Setting up docker-compose-plugin (5.0.0-1~ubuntu.22.04~jammy) ...
-Setting up docker-ce-cli (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Setting up libslirp0:amd64 (4.6.1-1build1) ...
-Setting up pigz (2.6-1) ...
-Setting up docker-ce-rootless-extras (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Setting up slirp4netns (1.0.1-2) ...
-Setting up docker-ce (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /lib/systemd/system/docker.service.
-Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /lib/systemd/system/docker.socket.
-Processing triggers for man-db (2.10.2-1) ...
-Processing triggers for libc-bin (2.35-0ubuntu3.11) ...
-
-Running kernel seems to be up-to-date.
-
-Services to be restarted:
- systemctl restart aegis.service
- systemctl restart atd.service
- systemctl restart chrony.service
- systemctl restart cron.service
- systemctl restart multipathd.service
- systemctl restart packagekit.service
- systemctl restart polkit.service
- systemctl restart rsyslog.service
- systemctl restart serial-getty@ttyS0.service
- systemctl restart systemd-journald.service
- /etc/needrestart/restart.d/systemd-manager
- systemctl restart systemd-networkd.service
- systemctl restart systemd-resolved.service
- systemctl restart systemd-udevd.service
- systemctl restart tuned.service
- systemctl restart udisks2.service
-
-Service restarts being deferred:
- systemctl restart ModemManager.service
- /etc/needrestart/restart.d/dbus.service
- systemctl restart getty@tty1.service
- systemctl restart networkd-dispatcher.service
- systemctl restart systemd-logind.service
- systemctl restart unattended-upgrades.service
- systemctl restart user@0.service
-
-No containers need to be restarted.
-
-No user sessions are running outdated binaries.
-
-No VM guests are running outdated hypervisor (qemu) binaries on this host.
-Synchronizing state of docker.service with SysV service script with /lib/systemd/systemd-sysv-install.
-Executing: /lib/systemd/systemd-sysv-install enable docker
-Docker 安装完成
-bash: line 47: /usr/local/bin/docker-compose: Permission denied
-Docker Compose 已安装: 
-[0;32m[SUCCESS][0m Docker 环境准备完成
-[0;34m[INFO][0m 创建目录结构...
-[0;32m[SUCCESS][0m 目录创建完成
-[0;34m[INFO][0m 生成环境变量...
-[0;32m[SUCCESS][0m 环境变量生成完成
-[0;34m[INFO][0m 压缩并上传项目文件...

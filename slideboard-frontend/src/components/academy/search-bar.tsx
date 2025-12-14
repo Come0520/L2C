@@ -1,9 +1,10 @@
 
 'use client';
 
-import { Search } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+import { VanishInput } from '@/components/ui/vanish-input';
 
 export function AcademySearch() {
   const searchParams = useSearchParams();
@@ -27,22 +28,17 @@ export function AcademySearch() {
   }, [inputValue, pathname, replace, searchParams]);
 
   return (
-    <div className="relative max-w-xl mx-auto mb-8">
-      <label htmlFor="search" className="sr-only">
-        搜索文档
-      </label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-gray-400" />
-        </div>
-        <input
-          id="search"
-          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm shadow-sm transition-all"
-          placeholder="搜索文档标题、描述..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-      </div>
+    <div className="max-w-2xl mx-auto mb-8">
+      <VanishInput
+        placeholders={[
+          "搜索文档标题...",
+          "搜索产品知识...",
+          "搜索系统功能...",
+          "试试输入关键词"
+        ]}
+        value={inputValue}
+        onChange={setInputValue}
+      />
     </div>
   );
 }

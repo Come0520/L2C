@@ -1,20 +1,40 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { getAllProducts, getProductById, getProductCategories } from '../products.server';
 
-// Mock the supabase server client
+const mockProductRow = {
+  id: 'product-123',
+  product_code: 'CODE123',
+  product_name: 'Test Product',
+  category_level1: 'Category 1',
+  category_level2: 'Category 2',
+  unit: 'PCS',
+  status: 'online',
+  prices: {},
+  attributes: {},
+  images: {},
+  tags: {},
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+};
+
+const { mockQuery, mockSingle } = vi.hoisted(() => {
+  const mockSingle = vi.fn();
+  const mockQuery = {
+    select: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: mockSingle,
+    then: vi.fn((resolve) => resolve({ data: [], error: null }))
+  };
+  return { mockQuery, mockSingle };
+});
+
 vi.mock('@/lib/supabase/server', () => {
   return {
     createClient: vi.fn().mockResolvedValue({
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: null
-        })
-      })
+      from: vi.fn().mockReturnValue(mockQuery)
     })
   };
 });
@@ -22,77 +42,77 @@ vi.mock('@/lib/supabase/server', () => {
 describe('products.server', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSingle.mockResolvedValue({
+      data: mockProductRow,
+      error: null
+    });
+    // Reset then behavior for getAllProducts (which awaits the query chain)
+    mockQuery.then.mockImplementation((resolve) => resolve({ data: [mockProductRow], error: null }));
   });
 
   describe('getAllProducts', () => {
     it('should retrieve all products successfully', async () => {
-      // Act
       const result = await getAllProducts();
-      
-      // Assert
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe(mockProductRow.id);
     });
 
     it('should handle filter with search term correctly', async () => {
-      // Act
       const result = await getAllProducts({ searchTerm: 'test' });
-      
-      // Assert
       expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
+      expect(mockQuery.or).toHaveBeenCalledWith('product_name.ilike.%test%,product_code.ilike.%test%');
     });
 
     it('should handle filter with status correctly', async () => {
-      // Act
-      const result = await getAllProducts({ status: 'active' });
-      
-      // Assert
+      const result = await getAllProducts({ status: 'online' });
       expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
+      expect(mockQuery.eq).toHaveBeenCalledWith('status', 'online');
+    });
+
+    it('should handle filter with categoryLevel1 correctly', async () => {
+      const result = await getAllProducts({ categoryLevel1: 'Category 1' });
+      expect(result).toBeDefined();
+      expect(mockQuery.eq).toHaveBeenCalledWith('category_level1', 'Category 1');
+    });
+
+    it('should handle filter with categoryLevel2 correctly', async () => {
+      const result = await getAllProducts({ categoryLevel2: 'Category 2' });
+      expect(result).toBeDefined();
+      expect(mockQuery.eq).toHaveBeenCalledWith('category_level2', 'Category 2');
     });
   });
 
   describe('getProductById', () => {
     it('should retrieve a single product by id successfully', async () => {
-      // Act
       const result = await getProductById('product-123');
-      
-      // Assert
       expect(result).toBeDefined();
+      expect(result?.id).toBe(mockProductRow.id);
     });
 
     it('should return null for non-existent product id', async () => {
-      // Act
-      const result = await getProductById('non-existent-id');
+      // Mock not found error
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'Not found' }
+      });
       
-      // Assert
+      const result = await getProductById('non-existent-id');
       expect(result).toBeNull();
     });
   });
 
   describe('getProductCategories', () => {
     it('should retrieve product categories successfully', async () => {
-      // Act
       const result = await getProductCategories();
-      
-      // Assert
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
-      result.forEach(category => {
-        expect(category).toHaveProperty('value');
-        expect(category).toHaveProperty('label');
-      });
     });
 
     it('should include "all" category as first item', async () => {
-      // Act
       const result = await getProductCategories();
-      
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
       expect(result[0]).toEqual({ value: 'all', label: '全部分类' });
     });
   });

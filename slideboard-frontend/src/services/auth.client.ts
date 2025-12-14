@@ -1,7 +1,8 @@
+import { User as SupabaseUser, Session, AuthError, PostgrestError } from '@supabase/supabase-js'
+
 import { handleSupabaseError, ApiError } from '@/lib/api/error-handler'
 import { createClient } from '@/lib/supabase/client'
 import { User, UserRole } from '@/shared/types/auth'
-import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 
 /**
  * 映射 Supabase 用户到应用用户
@@ -10,12 +11,12 @@ function mapSupabaseUserToUser(supabaseUser: SupabaseUser): User {
     return {
         id: supabaseUser.id,
         email: supabaseUser.email,
-        phone: supabaseUser.phone,
+        phone: supabaseUser.phone || '',
         name: supabaseUser.user_metadata?.name || '',
         avatarUrl: supabaseUser.user_metadata?.avatar_url,
         role: (supabaseUser.user_metadata?.role as UserRole) || 'user',
         createdAt: supabaseUser.created_at,
-        updatedAt: supabaseUser.updated_at,
+        updatedAt: supabaseUser.updated_at || supabaseUser.created_at,
     }
 }
 
@@ -111,8 +112,7 @@ export const authService = {
         })
 
         if (error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
 
         return {
@@ -135,8 +135,7 @@ export const authService = {
         const { error } = await supabase.auth.signOut()
 
         if (error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
     },
 
@@ -165,7 +164,7 @@ export const authService = {
         const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
 
         return session
@@ -180,7 +179,7 @@ export const authService = {
         const { data, error } = await supabase.auth.refreshSession()
 
         if (error) {
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
 
         return data.session
@@ -199,7 +198,7 @@ export const authService = {
         const { data, error } = await supabase.auth.updateUser(attributes)
 
         if (error) {
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
 
         return data.user ? mapSupabaseUserToUser(data.user) : null
@@ -218,7 +217,7 @@ export const authService = {
         })
 
         if (error) {
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
 
         return {
@@ -243,7 +242,7 @@ export const authService = {
         })
 
         if (error) {
-            handleSupabaseError(error as any)
+            handleSupabaseError(error as AuthError)
         }
     },
 
@@ -265,5 +264,29 @@ export const authService = {
         return {
             unsubscribe: () => subscription.unsubscribe(),
         }
+    },
+
+    /**
+     * 第三方登录
+     */
+    async loginWithThirdParty(provider: 'wechat' | 'feishu') {
+        const supabase = createClient()
+        
+        // Map our provider to Supabase provider names
+        const supabaseProvider = provider === 'wechat' ? 'wechat' : 'feishu'
+        
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: supabaseProvider as any, // Supabase types might not include these providers by default
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+                scopes: provider === 'wechat' ? 'snsapi_userinfo' : '',
+            },
+        })
+        
+        if (error) {
+            throw new ApiError(error.message || '第三方登录失败', error.code || 'AUTH_ERROR', 401)
+        }
+        
+        return data
     },
 }

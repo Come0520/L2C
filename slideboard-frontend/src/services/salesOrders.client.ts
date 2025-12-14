@@ -54,13 +54,13 @@ export const salesOrderService = {
   /**
    * 获取销售单列表
    */
-  async getSalesOrders(page: number = 1, pageSize: number = 10, status?: string, customerName?: string): Promise<SalesOrderListResponse> {
+  async getSalesOrders(page: number = 1, pageSize: number = 10, status?: string, _customerName?: string): Promise<SalesOrderListResponse> {
     return withErrorHandler(async () => {
       const supabase = createClient()
     // 尝试同时查询 sales_no 和 order_no，通过别名来兼容可能的字段名差异
     // 注意：这只是一个探测性的修复，用于确定数据库到底有什么字段
     // 如果数据库真的没有这两个字段，那么我们需要检查数据库表结构
-    let selectString = `
+    const selectString = `
       id, 
       status, 
       total_amount,
@@ -68,13 +68,11 @@ export const salesOrderService = {
       updated_at, 
       customer_id, 
       sales_id,
+      sales_no,
+      order_no,
       customer:users!customer_id(name, phone), 
       sales:users!sales_id(name)
     `;
-    
-    // 我们暂时移除显式的 order_no/sales_no 查询，让它先跑通，或者通过 * 来查看所有字段
-    // 但为了保持兼容性，我们先不查这个编号字段，看看是否能解决报错
-    // 只要 id 能查出来，页面应该就能渲染（虽然编号可能会空）
     
       let query = supabase
         .from('orders')
@@ -105,6 +103,7 @@ export const salesOrderService = {
         .select(`
         id, status, total_amount,
         created_at, updated_at, customer_id, sales_id,
+        sales_no, order_no,
         customer:users!customer_id(name, phone), 
         sales:users!sales_id(name), 
         items:order_items(id, order_id, product_id, quantity, unit_price)
@@ -123,8 +122,29 @@ export const salesOrderService = {
   async updateSalesOrder(id: string, orderData: Partial<OrderFormData> & { status?: string }, changedById?: string): Promise<OrderIdResponse> {
     return withErrorHandler(async () => {
       const supabase = createClient()
+      
+      // 获取订单当前状态和版本，用于状态验证和并发控制
+      const { data: currentOrder, error: orderError } = await supabase
+        .from('orders')
+        .select('status, version')
+        .eq('id', id)
+        .single()
+      
+      if (orderError) throw orderError
+      
       if (orderData.status) {
-        const { error } = await supabase.rpc('update_order_status', {
+        // 验证状态转换是否有效
+        const { data: isValid, error: validationError } = await (supabase as any).rpc('is_valid_status_transition', {
+          p_from_status: currentOrder.status,
+          p_to_status: orderData.status
+        })
+        
+        if (validationError) throw validationError
+        if (!isValid) {
+          throw new Error(`无效的状态转换: ${currentOrder.status} → ${orderData.status}`)
+        }
+        
+        const { error } = await (supabase as any).rpc('update_order_status', {
           p_order_id: id,
           p_new_status: orderData.status,
           p_changed_by_id: changedById ?? null,
@@ -133,6 +153,17 @@ export const salesOrderService = {
         return { code: 0, message: 'success', data: { id } }
       }
 
+      // 验证订单是否处于可修改状态
+      const { data: canModify, error: modifyValidationError } = await (supabase as any).rpc('can_modify_order', {
+        p_order_id: id,
+        p_current_status: currentOrder.status
+      })
+      
+      if (modifyValidationError) throw modifyValidationError
+      if (!canModify) {
+        throw new Error(`订单当前状态 ${currentOrder.status} 不允许修改`)
+      }
+      
       // Use toDbFields for content update
       const dbData = toDbFields(orderData, {
         customerName: 'customer_name',
@@ -143,15 +174,24 @@ export const salesOrderService = {
         expectedDeliveryTime: 'expected_delivery_time'
       })
 
+      // 添加版本检查，处理并发修改冲突
       const { error } = await supabase
         .from('orders')
         .update({
           ...dbData,
           updated_at: new Date().toISOString(),
+          version: currentOrder.version + 1
         } as any)
         .eq('id', id)
+        .eq('version', currentOrder.version) // 乐观锁：确保只有预期版本才能被更新
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505' || error.message?.includes('version')) {
+          throw new Error('订单已被其他用户修改，请刷新后重试')
+        }
+        throw error
+      }
+      
       return { code: 0, message: 'success', data: { id } }
     })
   },
@@ -163,16 +203,18 @@ export const salesOrderService = {
     id: string,
     newStatus: string,
     changedById: string,
-    options?: { expectedVersion?: number; comment?: string }
-  ): Promise<ServiceResponse<{ newVersion: number; fromStatus: string; toStatus: string }>> {
+    options?: { expectedVersion?: number; comment?: string; reasonCategory?: string; metadata?: Record<string, unknown> }
+  ): Promise<ServiceResponse<{ newVersion: number; fromStatus: string; toStatus: string; transitionId: string }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('update_order_status_v2', {
+      const { data, error } = await (supabase as any).rpc('update_order_status_v2', {
         p_order_id: id,
         p_new_status: newStatus,
         p_changed_by_id: changedById,
         p_expected_version: options?.expectedVersion ?? null,
         p_comment: options?.comment ?? null,
+        p_reason_category: options?.reasonCategory ?? null,
+        p_metadata: options?.metadata ?? null,
       })
       if (error) throw error
       return {
@@ -181,7 +223,8 @@ export const salesOrderService = {
         data: {
           newVersion: data.new_version,
           fromStatus: data.from_status,
-          toStatus: data.to_status
+          toStatus: data.to_status,
+          transitionId: data.transition_id // 添加流转ID，用于追踪完整的状态变更记录
         }
       }
     })
@@ -197,12 +240,51 @@ export const salesOrderService = {
   ): Promise<ServiceResponse<{ cancelledMeasurements: number; cancelledInstallations: number }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('cancel_order', {
+      
+      // 获取订单当前状态，验证是否可以取消
+      const { data: currentOrder, error: orderError } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', id)
+        .single()
+      
+      if (orderError) throw orderError
+      
+      // 验证订单是否可以取消
+      const { data: canCancel, error: cancelValidationError } = await (supabase as any).rpc('can_cancel_order', {
+        p_order_status: currentOrder.status
+      })
+      
+      if (cancelValidationError) throw cancelValidationError
+      if (!canCancel) {
+        throw new Error(`订单当前状态 ${currentOrder.status} 不允许取消`)
+      }
+      
+      // 执行取消操作，包括回滚相关测量单和安装单
+      const { data, error } = await (supabase as any).rpc('cancel_order', {
         p_order_id: id,
         p_cancelled_by_id: cancelledById,
         p_cancellation_reason: cancellationReason,
       })
-      if (error) throw error
+      
+      if (error) {
+        // 记录取消失败的详细信息
+        console.error('取消订单失败:', error)
+        // 检查是否是部分失败（测量单或安装单取消失败）
+        if (error.message?.includes('部分操作失败')) {
+          // 即使部分失败，也返回已成功的部分
+          return {
+            code: 206, // Partial Content
+            message: '订单取消成功，但相关测量单或安装单取消失败',
+            data: {
+              cancelledMeasurements: data?.cancelled_measurements || 0,
+              cancelledInstallations: data?.cancelled_installations || 0
+            }
+          }
+        }
+        throw error
+      }
+      
       return {
         code: 0,
         message: 'success',
@@ -220,7 +302,7 @@ export const salesOrderService = {
   async deleteSalesOrder(id: string): Promise<ServiceResponse> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { error } = await supabase.rpc('delete_order', { p_order_id: id })
+      const { error } = await (supabase as any).rpc('delete_order', { p_order_id: id })
       if (error) throw error
       return { code: 0, message: 'success', data: null }
     })
@@ -267,7 +349,7 @@ export const salesOrderService = {
   async getSalesOrderStatusHistory(id: string): Promise<StatusHistoryResponse> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('get_order_status_history', { p_order_id: id })
+      const { data, error } = await (supabase as any).rpc('get_order_status_history', { p_order_id: id })
       if (error) throw error
       return { code: 0, message: 'success', data: data || [] }
     })
@@ -296,7 +378,7 @@ export const salesOrderService = {
   }>>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('get_order_status_history_enhanced', {
+      const { data, error } = await (supabase as any).rpc('get_order_status_history_enhanced', {
         p_order_id: id,
         p_limit: options?.limit ?? 50,
         p_offset: options?.offset ?? 0,
@@ -339,7 +421,7 @@ export const salesOrderService = {
   }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('get_order_status_statistics', { p_order_id: id })
+      const { data, error } = await (supabase as any).rpc('get_order_status_statistics', { p_order_id: id })
       if (error) throw error
       const stats = data?.[0] || {}
       return {
@@ -373,7 +455,7 @@ export const salesOrderService = {
   }>>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('get_order_status_timeline', { p_order_id: id })
+      const { data, error } = await (supabase as any).rpc('get_order_status_timeline', { p_order_id: id })
       if (error) throw error
       return {
         code: 0,
@@ -397,31 +479,35 @@ export const salesOrderService = {
   async batchUpdateSalesOrderStatus(ids: string[], newStatus: string): Promise<BatchUpdateResponse> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('batch_update_order_status', { p_order_ids: ids, p_new_status: newStatus })
+      const { data, error } = await (supabase as any).rpc('batch_update_order_status', { p_order_ids: ids, p_new_status: newStatus })
       if (error) throw error
       return { code: 0, message: 'success', data: { updatedCount: data ?? 0 } }
     })
   },
 
   /**
-   * 批量更新销售单状态（增强版，带详细错误报告）
+   * 批量更新销售单状态（增强版，带详细错误报告和完整审计日志）
    */
   async batchUpdateSalesOrderStatusV2(
     ids: string[],
     newStatus: string,
-    options?: { changedById?: string; skipValidation?: boolean }
+    options?: { changedById?: string; skipValidation?: boolean; comment?: string; reasonCategory?: string }
   ): Promise<ServiceResponse<{
     successCount: number;
     failedCount: number;
-    failedOrders: Array<{ orderId: string; reason: string }>
+    failedOrders: Array<{ orderId: string; reason: string }>;
+    transitionIds: Array<string>; // 新增：记录每个成功更新的流转ID，用于审计
+    auditLogSummary: { totalProcessed: number; successWithLog: number; failedWithLog: number } // 新增：审计日志摘要
   }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('batch_update_order_status_v2', {
+      const { data, error } = await (supabase as any).rpc('batch_update_order_status_v2', {
         p_order_ids: ids,
         p_new_status: newStatus,
         p_changed_by_id: options?.changedById ?? null,
-        p_skip_validation: options?.skipValidation ?? false
+        p_skip_validation: options?.skipValidation ?? false,
+        p_comment: options?.comment ?? null,
+        p_reason_category: options?.reasonCategory ?? null
       })
       if (error) throw error
       return {
@@ -430,7 +516,9 @@ export const salesOrderService = {
         data: {
           successCount: data.success_count,
           failedCount: data.failed_count,
-          failedOrders: data.failed_orders
+          failedOrders: data.failed_orders,
+          transitionIds: data.transition_ids || [], // 新增：返回每个成功更新的流转ID
+          auditLogSummary: data.audit_log_summary || { totalProcessed: 0, successWithLog: 0, failedWithLog: 0 } // 新增：审计日志摘要
         }
       }
     })
@@ -442,7 +530,7 @@ export const salesOrderService = {
   async getAllowedNextStatuses(currentStatus: string): Promise<ServiceResponse<string[]>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('get_allowed_next_statuses', { p_current_status: currentStatus })
+      const { data, error } = await (supabase as any).rpc('get_allowed_next_statuses', { p_current_status: currentStatus })
       if (error) throw error
       return { code: 0, message: 'success', data: data || [] }
     })
@@ -454,7 +542,7 @@ export const salesOrderService = {
   async isValidStatusTransition(fromStatus: string, toStatus: string): Promise<ServiceResponse<boolean>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('is_valid_status_transition', {
+      const { data, error } = await (supabase as any).rpc('is_valid_status_transition', {
         p_from_status: fromStatus,
         p_to_status: toStatus
       })
@@ -469,12 +557,14 @@ export const salesOrderService = {
   async batchAssignSalesPerson(
     orderIds: string[],
     salesPersonId: string,
-    options?: { reason?: string }
+    options?: { reason?: string; reasonCategory?: string; skipValidation?: boolean }
   ): Promise<ServiceResponse<{
     successCount: number;
     failedCount: number;
     total: number;
     failedOrders: Array<{ orderId: string; orderNo: string; reason: string }>;
+    assignmentIds: Array<string>; // 新增：记录每个成功分配的ID，用于审计
+    auditLogSummary: { totalProcessed: number; successWithLog: number; failedWithLog: number } // 新增：审计日志摘要
   }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
@@ -488,6 +578,8 @@ export const salesOrderService = {
         p_sales_person_id: salesPersonId,
         p_assigned_by_id: user.id,
         p_reason: options?.reason ?? null,
+        p_reason_category: options?.reasonCategory ?? null,
+        p_skip_validation: options?.skipValidation ?? false
       } as any)
 
       if (error) throw error
@@ -502,10 +594,12 @@ export const salesOrderService = {
           failedCount: result.failed_count || 0,
           total: result.total || 0,
           failedOrders: (result.failed_orders || []).map((item: any) => ({
-            orderId: item.orderId,
-            orderNo: item.orderNo,
+            orderId: item.orderId || item.order_id,
+            orderNo: item.orderNo || item.order_no,
             reason: item.reason,
           })),
+          assignmentIds: result.assignment_ids || [], // 新增：返回每个成功分配的ID
+          auditLogSummary: result.audit_log_summary || { totalProcessed: 0, successWithLog: 0, failedWithLog: 0 } // 新增：审计日志摘要
         },
       }
     })
@@ -590,12 +684,16 @@ export const salesOrderService = {
    */
   async exportOrders(
     orderIds: string[],
-    format: 'csv' | 'excel' | 'pdf' = 'csv',
+    format: 'csv' | 'excel' | 'pdf' | 'json' = 'csv',
     options?: {
       includeFields?: string[];
+      excludeFields?: string[];
       fileName?: string;
+      withAuditLog?: boolean;
+      dateRange?: { startDate?: string; endDate?: string };
+      grouping?: 'by_status' | 'by_sales_person' | 'by_customer';
     }
-  ): Promise<ServiceResponse<{ downloadUrl: string; fileName: string; recordCount: number }>> {
+  ): Promise<ServiceResponse<{ downloadUrl: string; fileName: string; recordCount: number; exportId: string }>> {
     return withErrorHandler(async () => {
       const supabase = createClient()
 
@@ -605,7 +703,11 @@ export const salesOrderService = {
           orderIds,
           format,
           includeFields: options?.includeFields,
+          excludeFields: options?.excludeFields,
           fileName: options?.fileName,
+          withAuditLog: options?.withAuditLog ?? false,
+          dateRange: options?.dateRange,
+          grouping: options?.grouping,
         },
       })
 
@@ -621,6 +723,7 @@ export const salesOrderService = {
           downloadUrl: data.url,
           fileName: data.fileName,
           recordCount: data.recordCount,
+          exportId: data.exportId || '', // 新增：导出ID，用于追踪导出任务
         },
       }
     })

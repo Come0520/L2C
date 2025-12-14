@@ -4,8 +4,8 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
-import { Tabs } from '@/components/ui/tabs';
 import PaperCard from '@/components/ui/paper-card';
+import { Tabs } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
 
 interface UserProfile {

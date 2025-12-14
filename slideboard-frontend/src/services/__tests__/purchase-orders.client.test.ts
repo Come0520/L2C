@@ -88,9 +88,10 @@ vi.mock('@/lib/api/error-handler', () => ({
 }));
 
 // 然后导入服务和依赖
-import { purchaseOrderService } from '../purchase-orders.client';
-import { supabase } from '@/lib/supabase/client';
 import { withErrorHandler } from '@/lib/api/error-handler';
+import { supabase } from '@/lib/supabase/client';
+
+import { purchaseOrderService } from '../purchase-orders.client';
 
 describe('Purchase Orders Client Service', () => {
   beforeEach(() => {

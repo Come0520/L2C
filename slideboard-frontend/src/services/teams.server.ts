@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import type { Team } from '@/types/teams'
 
 export async function getUserTeams() {
   const supabase = await createClient()
@@ -13,7 +14,7 @@ export async function getUserTeams() {
   const { data: teams, error } = await supabase
     .from('teams')
     .select(`
-      *,
+      *, 
       team_members (
         count
       )
@@ -25,41 +26,41 @@ export async function getUserTeams() {
   }
 
   // Get members for each team
-    const teamsWithMembers = await Promise.all(
-        (teams || []).map(async (team: typeof teams[0]) => {
-            const { data: membersData, error: membersError } = await supabase
-                .from('team_members')
-                .select(`
-                  *, 
-                  users (
-                    id,
-                    raw_user_meta_data
-                  )
-                `)
-                .eq('team_id', team.id)
+  const teamsWithMembers = await Promise.all(
+    (teams || []).map(async (team: Team) => {
+      const { data: membersData, error: membersError } = await supabase
+        .from('team_members')
+        .select(`
+          *, 
+          users (
+            id,
+            raw_user_meta_data
+          )
+        `)
+        .eq('team_id', team.id)
 
-            if (membersError) {
-                throw membersError
-            }
+      if (membersError) {
+        throw membersError
+      }
 
-            const members = (membersData || []).map((member: typeof membersData[0]) => ({
-                id: member.id,
-                team_id: member.team_id,
-                user_id: member.user_id,
-                role: member.role,
-                joined_at: member.joined_at,
-                name: member.users?.raw_user_meta_data?.name || 'Unknown',
-                avatar_url: member.users?.raw_user_meta_data?.avatar_url,
-                is_online: false, // Would need real-time presence tracking
-            }))
+      const members = (membersData || []).map((member: any) => ({
+        id: member.id,
+        team_id: member.team_id,
+        user_id: member.user_id,
+        role: member.role,
+        joined_at: member.joined_at,
+        name: member.users?.raw_user_meta_data?.name || 'Unknown',
+        avatar_url: member.users?.raw_user_meta_data?.avatar_url,
+        is_online: false, // Would need real-time presence tracking
+      }))
 
-            return {
-                ...team,
-                member_count: members.length,
-                members,
-            }
-        })
-    )
+      return {
+        ...team,
+        member_count: members.length,
+        members,
+      }
+    })
+  )
 
   return teamsWithMembers
 }
@@ -77,7 +78,7 @@ export async function getTeamById(teamId: string) {
   const { data: teams, error } = await supabase
     .from('teams')
     .select(`
-      *,
+      *, 
       team_members (
         count
       )
@@ -110,7 +111,7 @@ export async function getTeamById(teamId: string) {
     throw membersError
   }
 
-  const members = (membersData || []).map((member: typeof membersData[0]) => ({
+  const members = (membersData || []).map((member: any) => ({
     id: member.id,
     team_id: member.team_id,
     user_id: member.user_id,
@@ -122,7 +123,7 @@ export async function getTeamById(teamId: string) {
   }))
 
   return {
-    ...teams,
+    ...teams as Team,
     member_count: members.length,
     members,
   }

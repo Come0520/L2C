@@ -5,7 +5,6 @@ import React from 'react';
 import { PaperBadge } from '@/components/ui/paper-badge';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
-
 import { ReconciliationStatement } from '@/shared/types/reconciliation';
 
 interface StatementListProps {

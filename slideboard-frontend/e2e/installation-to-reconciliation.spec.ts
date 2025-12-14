@@ -60,7 +60,7 @@ test.describe('安装到对账流程', () => {
     
     // 填写对账表单
     const reconciliationNumber = faker.string.alphanumeric(10).toUpperCase();
-    const totalAmount = faker.number.float({ min: 5000, max: 1000000, precision: 100 });
+    const totalAmount = faker.number.float({ min: 5000, max: 1000000, fractionDigits: 0 });
     
     await page.fill('input[name="reconciliationNumber"]', reconciliationNumber);
     await page.fill('input[name="reconciliationDate"]', new Date().toISOString().split('T')[0]);

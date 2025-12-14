@@ -1,7 +1,7 @@
 # L2C 线索管理系统
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -27,17 +27,17 @@ git clone <repository-url>
 cd L2C
 
 # 安装依赖
-cd slideboard-frontend && npm install
+cd slideboard-frontend && pnpm install
 
 # 安装Supabase CLI
-npm install -g supabase
+pnpm install -g supabase
 
 # 启动Supabase本地开发环境
 cd ..
 supabase start
 
 # 启动前端开发服务 (Port: 3000)
-cd slideboard-frontend && npm run dev
+cd slideboard-frontend && pnpm run dev
 ```
 
 访问 http://localhost:3000 开始使用！
@@ -47,7 +47,7 @@ cd slideboard-frontend && npm run dev
 ## 技术架构
 
 ### 前端技术栈
-- **框架**: Next.js 15 (App Router) + TypeScript
+- **框架**: Next.js 16 (App Router) + TypeScript
 - **样式**: Tailwind CSS
 - **图标**: Lucide React
 - **UI组件**: Shadcn UI / Custom Components
@@ -95,7 +95,7 @@ L2C/
 
 ### 环境要求
 
-- Node.js 18.0+
+- Node.js 20.0+
 - Docker & Docker Compose (仅用于本地开发)
 - Supabase CLI
 

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { permissionsService } from '../permissions.client';
+
 import { ROLE_PERMISSIONS, USER_ROLES } from '@/shared/types/user';
+
+import { permissionsService } from '../permissions.client';
 
 // 模拟依赖
 vi.mock('@/shared/types/user', () => ({

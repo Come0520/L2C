@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assignmentService } from '../assignment.client';
-import { createClient } from '@/lib/supabase/client';
+
 import { ApiError } from '@/lib/api/error-handler';
+import { createClient } from '@/lib/supabase/client';
+
+import { assignmentService } from '../assignment.client';
 
 // 模拟依赖
 vi.mock('@/lib/supabase/client');

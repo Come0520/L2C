@@ -1,7 +1,7 @@
 import { withErrorHandler } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase/client';
 import { PurchaseOrder, CreatePurchaseOrderRequest, UpdatePurchaseOrderRequest } from '@/shared/types/purchase-order';
-import { Database } from '@/shared/types/supabase';
+import { Database } from '@/types/supabase';
 
 type PurchaseOrderRow = Database['public']['Tables']['purchase_orders']['Row'];
 type PurchaseOrderItemRow = Database['public']['Tables']['purchase_order_items']['Row'];

@@ -5,57 +5,14 @@ import { useState } from 'react';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperModal } from '@/components/ui/paper-modal';
+import { toast } from '@/components/ui/toast';
+import { approvalClientService } from '@/services/approval.client';
+import { notificationService } from '@/services/notifications';
 
-import ApprovalList from './approval-list';
+import ApprovalList, { ApprovalRequest } from './approval-list';
 import NotificationFilters from './notification-filters';
-import NotificationList from './notification-list';
+import NotificationList, { Notification } from './notification-list';
 
-// Types (exported for use in page.tsx)
-export interface Notification {
-    id: string;
-    title: string;
-    content: string;
-    type: 'info' | 'warning' | 'success' | 'error' | 'system';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    sender: string;
-    recipient: string;
-    createdAt: string;
-    readAt?: string;
-    status: 'unread' | 'read' | 'archived';
-    relatedEntity?: {
-        type: 'order' | 'invoice' | 'customer' | 'project';
-        id: string;
-        name: string;
-    };
-}
-
-export interface ApprovalRequest {
-    id: string;
-    title: string;
-    description: string;
-    type: 'order' | 'expense' | 'discount' | 'contract' | 'leave' | 'procurement';
-    requester: string;
-    requesterDepartment: string;
-    amount?: number;
-    submittedAt: string;
-    status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    currentStep: number;
-    totalSteps: number;
-    approvers: {
-        step: number;
-        name: string;
-        department: string;
-        status: 'pending' | 'approved' | 'rejected';
-        comment?: string;
-        actionAt?: string;
-    }[];
-    attachments?: {
-        name: string;
-        url: string;
-        size: string;
-    }[];
-}
 
 interface NotificationsViewProps {
     initialNotifications: Notification[];
@@ -71,10 +28,8 @@ export default function NotificationsView({ initialNotifications, initialApprova
     const [showNotificationModal, setShowNotificationModal] = useState(false);
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Use props as initial data, but in a real app we might want to update this state via server actions or revalidation
-    const notifications = initialNotifications;
-    const approvalRequests = initialApprovals;
+    const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+    const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>(initialApprovals);
 
     const filteredNotifications = notifications.filter(notification => {
         const matchesFilter = notificationFilter === 'all' || notification.status === notificationFilter;
@@ -90,14 +45,97 @@ export default function NotificationsView({ initialNotifications, initialApprova
         return matchesFilter && matchesSearch;
     });
 
-    const handleApprove = (approvalId: string) => {
-        // 处理审批通过逻辑
-        console.log('批准审批:', approvalId);
+    const handleApprove = async (approvalId: string) => {
+        try {
+            await approvalClientService.action(approvalId, 'approve');
+            toast.success('审批已通过');
+            setApprovalRequests(prev => prev.filter(a => a.id !== approvalId));
+        } catch (error) {
+            console.error('Approval failed:', error);
+            toast.error('操作失败');
+        }
     };
 
-    const handleReject = (approvalId: string) => {
-        // 处理审批拒绝逻辑
-        console.log('拒绝审批:', approvalId);
+    const handleReject = async (approvalId: string) => {
+        try {
+            await approvalClientService.action(approvalId, 'reject');
+            toast.success('审批已拒绝');
+            setApprovalRequests(prev => prev.filter(a => a.id !== approvalId));
+        } catch (error) {
+            console.error('Rejection failed:', error);
+            toast.error('操作失败');
+        }
+    };
+
+    // Mark single notification as read
+    const markAsRead = async (id: string) => {
+        try {
+            await notificationService.markRead(id);
+            setNotifications(prev => prev.map(notification => {
+                if (notification.id === id && notification.status === 'unread') {
+                    return {
+                        ...notification,
+                        status: 'read',
+                        readAt: new Date().toISOString()
+                    };
+                }
+                return notification;
+            }));
+        } catch (error) {
+            console.error('Failed to mark notification as read:', error);
+            toast.error('标记已读失败');
+        }
+    };
+
+    // Mark all notifications as read
+    const markAllAsRead = async () => {
+        try {
+            await notificationService.markAllRead();
+            setNotifications(prev => prev.map(notification => {
+                if (notification.status === 'unread') {
+                    return {
+                        ...notification,
+                        status: 'read',
+                        readAt: new Date().toISOString()
+                    };
+                }
+                return notification;
+            }));
+            toast.success('已全部标记为已读');
+        } catch (error) {
+            console.error('Failed to mark all as read:', error);
+            toast.error('全部标记已读失败');
+        }
+    };
+
+    // Mark selected notifications as read
+    const markSelectedAsRead = async (ids: string[]) => {
+        try {
+            await notificationService.markBatchRead(ids);
+            setNotifications(prev => prev.map(notification => {
+                if (ids.includes(notification.id) && notification.status === 'unread') {
+                    return {
+                        ...notification,
+                        status: 'read',
+                        readAt: new Date().toISOString()
+                    };
+                }
+                return notification;
+            }));
+            toast.success('已标记选中项为已读');
+        } catch (error) {
+            console.error('Failed to mark selected as read:', error);
+            toast.error('批量标记已读失败');
+        }
+    };
+
+    // Auto-mark as read when opening details
+    const handleNotificationClick = (notification: Notification) => {
+        if (notification.status === 'unread') {
+            markAsRead(notification.id);
+        }
+        setSelectedNotification(notification);
+        setShowNotificationModal(true);
     };
 
     const unreadCount = notifications.filter(n => n.status === 'unread').length;
@@ -183,17 +221,25 @@ export default function NotificationsView({ initialNotifications, initialApprova
 
             {/* Notifications Tab */}
             {activeTab === 'notifications' && (
-                <NotificationList
-                    notifications={filteredNotifications}
-                    onNotificationClick={(notification) => {
-                        setSelectedNotification(notification);
-                        setShowNotificationModal(true);
-                    }}
-                    onMarkAsRead={(id) => {
-                        // TODO: 实现标记已读逻辑
-                        console.log('标记已读:', id);
-                    }}
-                />
+                <>
+                    {/* Mark All as Read Button */}
+                    {unreadCount > 0 && (
+                        <div className="flex justify-end mb-2">
+                            <PaperButton 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={markAllAsRead}
+                            >
+                                标记所有已读
+                            </PaperButton>
+                        </div>
+                    )}
+                    <NotificationList
+                        notifications={filteredNotifications}
+                        onNotificationClick={handleNotificationClick}
+                        onMarkAsRead={markAsRead}
+                    />
+                </>
             )}
 
             {/* Approvals Tab */}

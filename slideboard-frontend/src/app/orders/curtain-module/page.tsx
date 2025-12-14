@@ -2,8 +2,8 @@
 
 import React, { useState, useCallback } from 'react'
 
-import { CurtainPackageSelector } from '@/features/orders/components/curtain-package-selector'
-import { CurtainProductTable } from '@/features/orders/components/curtain-product-table'
+import { CurtainPackageSelector } from '@/features/orders/components/CurtainPackageSelector'
+import { CurtainProductTable } from '@/features/orders/components/CurtainProductTable'
 import {
     CurtainItem,
     PackageDefinition,
@@ -61,29 +61,29 @@ export default function CurtainModulePage() {
     }, [])
 
     return (
-            <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-                {/* 页面标题 */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-ink-800">窗帘模块</h1>
-                        <p className="text-ink-500 mt-1">窗帘商品管理与套餐配置</p>
-                    </div>
+        <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+            {/* 页面标题 */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-ink-800">窗帘模块</h1>
+                    <p className="text-ink-500 mt-1">窗帘商品管理与套餐配置</p>
                 </div>
-
-                {/* 套餐选择区域 */}
-                <CurtainPackageSelector
-                    selectedPackage={selectedPackage}
-                    onPackageChange={handlePackageChange}
-                />
-
-                {/* 商品表格 */}
-                <CurtainProductTable
-                    items={items}
-                    selectedPackage={selectedPackage}
-                    onAddItem={handleAddItem}
-                    onUpdateItem={handleUpdateItem}
-                    onDeleteItem={handleDeleteItem}
-                />
             </div>
+
+            {/* 套餐选择区域 */}
+            <CurtainPackageSelector
+                selectedPackage={selectedPackage}
+                onPackageChange={handlePackageChange}
+            />
+
+            {/* 商品表格 */}
+            <CurtainProductTable
+                items={items}
+                selectedPackage={selectedPackage}
+                onAddItem={handleAddItem}
+                onUpdateItem={handleUpdateItem}
+                onDeleteItem={handleDeleteItem}
+            />
+        </div>
     )
 }

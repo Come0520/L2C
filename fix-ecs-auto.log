@@ -1,43 +1,0 @@
-[0;32m
-╔═══════════════════════════════════════╗
-║  L2C ECS 环境自动修复（无交互）      ║
-╚═══════════════════════════════════════╝
-[0m
-[0;34m[INFO][0m 步骤 1/3: 等待服务器恢复在线...
-[0;32m[SUCCESS][0m 服务器已在线
-
-[0;34m[INFO][0m 步骤 2/3: 修复 Docker 环境...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔧 Docker 环境修复
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[1/6] 清理旧版 Docker...
-Reading package lists...
-Building dependency tree...
-Reading state information...
-The following packages were automatically installed and are no longer required:
-  docker-ce-rootless-extras libslirp0 pigz slirp4netns
-Use 'apt autoremove' to remove them.
-The following packages will be REMOVED:
-  containerd.io* docker-buildx-plugin* docker-ce* docker-ce-cli*
-  docker-compose-plugin*
-0 upgraded, 0 newly installed, 5 to remove and 21 not upgraded.
-After this operation, 348 MB disk space will be freed.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81702 files and directories currently installed.)
-Removing docker-ce (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Removing containerd.io (2.2.0-2~ubuntu.22.04~jammy) ...
-Removing docker-buildx-plugin (0.30.1-1~ubuntu.22.04~jammy) ...
-Removing docker-ce-cli (5:29.1.2-1~ubuntu.22.04~jammy) ...
-Removing docker-compose-plugin (5.0.0-1~ubuntu.22.04~jammy) ...
-Processing triggers for man-db (2.10.2-1) ...
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 81484 files and directories currently installed.)
-Purging configuration files for docker-ce (5:29.1.2-1~ubuntu.22.04~jammy) ...
-dpkg: warning: while removing docker-ce, directory '/etc/docker' not empty so not removed
-Purging configuration files for containerd.io (2.2.0-2~ubuntu.22.04~jammy) ...
-✅ 旧版清理完成
-[2/6] 安装 Docker（阿里云镜像）...
-✅ Docker 安装完成
-[3/6] 配置 Docker 守护进程...
-✅ 配置完成
-[4/6] 启动 Docker 服务...
-curl: (35) OpenSSL SSL_connect: Connection reset by peer in connection to get.docker.com:443 
-Failed to restart docker.service: Unit docker.service not found.

@@ -29,6 +29,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.production
 
 # vercel
 .vercel
@@ -81,3 +82,5 @@ public/worker-*.js
 public/fallback-*.js
 public/precache.*.*.js.map
 public/precache.*.*.js
+# Sentry Config File
+.env.sentry-build-plugin

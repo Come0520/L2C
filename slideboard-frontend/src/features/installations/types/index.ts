@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 export type InstallationStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
 
+// 安装项目类型
+interface InstallationItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  description?: string;
+  completed?: boolean;
+}
+
 export interface InstallationTask {
   id: string;
   orderId: string; // 关联的销售单ID
@@ -14,7 +24,7 @@ export interface InstallationTask {
   appointmentTime?: string; // 预约安装时间
   completedTime?: string;
   remarks?: string;
-  items?: any[]; // 安装项目清单
+  items?: InstallationItem[]; // 安装项目清单
   createdAt?: string; // Add createdAt to match mock data
   updatedAt?: string;
 }

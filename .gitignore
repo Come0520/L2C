@@ -6,7 +6,10 @@
 node_modules_backup/
 *_backup/
 *_backup
-backup/
+*_backup/
+*_backup
+/backup/
+/backups/
 /.pnp
 .pnp.js
 .yarn/install-state.gz

@@ -29,13 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // E2E TEST MODE: Mock user session
     if (env.NEXT_PUBLIC_E2E_TEST === 'true') {
-      const isTestUserLoggedIn = typeof window !== 'undefined' && localStorage.getItem('e2e-test-user');
-      if (isTestUserLoggedIn) {
+      const storedUser = typeof window !== 'undefined' ? localStorage.getItem('e2e-test-user') : null;
+      if (storedUser) {
+        let role = 'admin';
+        let name = 'E2E Test User';
+        try {
+          const parsed = JSON.parse(storedUser);
+          if (parsed.role) role = parsed.role;
+          if (parsed.name) name = parsed.name;
+        } catch (e) {
+          // fallback to default if simple string
+        }
+
         const mockUser: User = {
-          id: 'e2e-test-user-id',
-          phone: '13800138000',
-          name: 'E2E Test User',
-          role: 'admin',
+          id: `e2e-test-user-${role}`,
+          phone: '13800138000', // Dummy phone
+          name: name,
+          role: role as UserRole,
           avatarUrl: undefined,
           email: 'test@example.com',
           createdAt: new Date().toISOString(),
@@ -83,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         //   phone: currentUser.phone || '',
         //   name: currentUser.name
         // });
-        
+
         // 当用户登录成功(SIGNED_IN事件)且不是E2E测试模式时，执行重定向
         if (event === 'SIGNED_IN' && env.NEXT_PUBLIC_E2E_TEST !== 'true') {
           // 确保只在客户端执行，因为window在服务器端不可用
@@ -110,25 +120,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (identifier: string, password: string) => {
     try {
       // E2E TEST MOCK
-      if (env.NEXT_PUBLIC_E2E_TEST === 'true' && identifier === '13800138000' && password === '123456') {
-        localStorage.setItem('e2e-test-user', 'true');
-        const mockUser: User = {
-          id: 'e2e-test-user-id',
-          phone: '13800138000',
-          name: 'E2E Test User',
-          role: 'admin',
-          avatarUrl: undefined,
-          email: 'test@example.com',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+      if (env.NEXT_PUBLIC_E2E_TEST === 'true') {
+        const mockUsers: Record<string, Partial<User>> = {
+          '13800138000': { role: 'admin', name: 'E2E Admin' },
+          '13800138001': { role: 'SERVICE_INSTALL', name: 'E2E Installer' },
+          '13800138002': { role: 'SERVICE_MEASURE', name: 'E2E Measurer' },
+          '13800138003': { role: 'SALES_STORE', name: 'E2E Sales' },
         };
-        setUser(mockUser);
-        router.push('/');
-        return;
+
+        const mockUserBase = mockUsers[identifier];
+
+        if (mockUserBase && password === '123456') {
+          localStorage.setItem('e2e-test-user', JSON.stringify(mockUserBase)); // 存储角色信息以便恢复
+          const mockUser: User = {
+            id: `e2e-test-${mockUserBase.role}`,
+            phone: identifier,
+            name: mockUserBase.name || 'Test User',
+            role: mockUserBase.role as UserRole,
+            avatarUrl: undefined,
+            email: `${mockUserBase.role}@example.com`,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setUser(mockUser);
+          // router.push('/'); // Remove this push, let the onAuthStateChange simulation handle it or the component
+          // Actually, since we are mocking, authService.onAuthStateChange won't trigger unless we mock it too.
+          // But here login just sets user.
+          // Let's just return to mimic success.
+          return;
+        }
       }
 
       await authService.loginWithPhone(identifier, password);
-      
+
       // 不在这里直接跳转，让 onAuthStateChange 更新用户状态
     } catch (_error) {
       throw _error;

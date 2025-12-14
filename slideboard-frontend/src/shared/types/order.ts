@@ -75,38 +75,44 @@ export const AVAILABLE_PACKAGES: PackageDefinition[] = [
 import { components } from './api-schema'
 
 export type BaseOrder = {
-  id: string;
-  salesNo: string;
-  leadId?: string;
-  customerName: string;
-  customerPhone: string;
-  projectAddress: string;
-  status: OrderStatus | string;
-  totalAmount: number;
-  createTime?: string;
-  // Add other common fields from interface
-  surveyNo?: string
-  leadNo?: string
-  designer?: string
-  salesPerson?: string
-  draftAmount?: number
-  version?: string
-  createdAt: string
-  updatedAt: string
-  statusUpdatedAt?: string
+    id: string;
+    salesNo: string;
+    leadId?: string;
+    customerName: string;
+    customerPhone: string;
+    projectAddress: string;
+    status: OrderStatus | string;
+    totalAmount: number;
+    createTime?: string;
+    // Add other common fields from interface
+    surveyNo?: string
+    leadNo?: string
+    designer?: string
+    salesPerson?: string
+    draftAmount?: number
+    version?: string
+    createdAt: string
+    updatedAt: string
+    statusUpdatedAt?: string
 }
 
 // 从 API Schema 提取并重命名类型
 export type CurtainItem = Required<Omit<components['schemas']['CurtainItem'], 'packageType'>> & {
     packageType?: PackageItemType
+    specifications?: string[]
 }
-export type OrderFormData = Omit<Required<components['schemas']['OrderFormData']>, 'spacePackages' | 'subtotals' | 'items' | 'packageUsage'> & {
+export type OrderFormData = Omit<Required<components['schemas']['OrderFormData']>, 'spacePackages' | 'subtotals' | 'items' | 'packageUsage' | 'curtains' | 'wallcoverings' | 'backgroundWalls' | 'windowCushions' | 'standardProducts'> & {
     id?: string;
     salesNo?: string;
     status?: string;
     spacePackages: Record<string, string>
     subtotals: Record<ProductCategory | 'discount' | 'tax' | 'total', number>
     items?: CurtainItem[]
+    curtains?: CurtainItem[]
+    wallcoverings?: CurtainItem[]
+    backgroundWalls?: CurtainItem[]
+    windowCushions?: CurtainItem[]
+    standardProducts?: CurtainItem[]
     packageUsage: PackageUsage
     customerId?: string
     discountAmount?: number

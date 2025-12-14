@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # 配置信息
-ECS_IP="101.132.152.132"
+ECS_IP="139.196.78.237"
 SSH_KEY="/Users/laichangcheng/Downloads/罗莱-圣都.pem"
 SSH_USER="root"
 SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
@@ -58,6 +58,9 @@ echo "当前分支: $CURRENT_BRANCH"
 
 # 拉取最新代码
 git fetch --all --tags
+
+# 强制重置本地更改
+git reset --hard origin/main
 
 # 切换到 main 分支并拉取
 git checkout main

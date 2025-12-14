@@ -6,9 +6,12 @@ import React from 'react';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
+import { useAuth } from '@/contexts/auth-context';
+import { RoleGuard } from '@/features/orders/components/permissions/RoleGuard';
 import { StatusBadge } from '@/features/orders/components/sales-orders/StatusBadge';
 import { useSalesOrder } from '@/hooks/useSalesOrders';
 import { OrderFormData, BaseOrder, CurtainItem } from '@/shared/types/order';
+import { UserRole } from '@/shared/types/user';
 import { SalesOrderStatus } from '@/types/sales-order-status';
 
 interface SalesOrderDetailProps {
@@ -23,11 +26,18 @@ interface ExtendedOrderData extends OrderFormData {
 
 export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const { salesOrder, isLoading } = useSalesOrder(initialOrder.id as string);
 
   // Use realtime data if available, otherwise initial data
   const order = ((salesOrder as unknown as ExtendedOrderData) || initialOrder) as ExtendedOrderData;
+
+  // 权限检查：是否为需要隐藏金额的角色
+  const isRestrictedRole = ([
+    'SERVICE_INSTALL',
+    'SERVICE_MEASURE'
+  ] as UserRole[]).includes(user?.role as UserRole);
 
   const handleBack = () => {
     router.push('/orders');
@@ -58,7 +68,9 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
         </div>
         <div className="space-x-2">
           <PaperButton variant="outline" onClick={handleBack}>返回列表</PaperButton>
-          <PaperButton variant="primary" onClick={handleEdit}>编辑订单</PaperButton>
+          <RoleGuard roles={['admin', 'APPROVER_BUSINESS', 'LEAD_SALES', 'SERVICE_DISPATCH']}>
+            <PaperButton variant="primary" onClick={handleEdit}>编辑订单</PaperButton>
+          </RoleGuard>
         </div>
       </div>
 
@@ -120,8 +132,9 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
                 <PaperTableCell isHeader>空间/商品</PaperTableCell>
                 <PaperTableCell isHeader>规格/描述</PaperTableCell>
                 <PaperTableCell isHeader>数量</PaperTableCell>
-                <PaperTableCell isHeader>单价</PaperTableCell>
-                <PaperTableCell isHeader>金额</PaperTableCell>
+                {/* 仅非受限角色可见单价和金额 */}
+                {!isRestrictedRole && <PaperTableCell isHeader>单价</PaperTableCell>}
+                {!isRestrictedRole && <PaperTableCell isHeader>金额</PaperTableCell>}
                 <PaperTableCell isHeader>备注</PaperTableCell>
               </PaperTableRow>
             </PaperTableHeader>
@@ -135,7 +148,7 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
                 ...(order.standardProducts || [])
               ].length === 0 ? (
                 <PaperTableRow>
-                  <PaperTableCell colSpan={7} className="text-center py-8 text-ink-400">
+                  <PaperTableCell colSpan={isRestrictedRole ? 5 : 7} className="text-center py-8 text-ink-400">
                     暂无商品
                   </PaperTableCell>
                 </PaperTableRow>
@@ -146,8 +159,8 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
                   ...(order.backgroundWalls || []).map(i => ({ ...i, _category: '背景墙' })),
                   ...(order.windowCushions || []).map(i => ({ ...i, _category: '飘窗垫' })),
                   ...(order.standardProducts || []).map(i => ({ ...i, _category: '标品' }))
-                ].map((item: CurtainItem & { _category: string }, index) => (
-                  <PaperTableRow key={item.id || index}>
+                ].map((item, index) => (
+                  <PaperTableRow key={item.id || `item-${index}`}>
                     <PaperTableCell>
                       <span className="px-2 py-1 bg-paper-bg-light rounded text-xs text-ink-600">
                         {item._category}
@@ -165,14 +178,14 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
                       </div>
                     </PaperTableCell>
                     <PaperTableCell>
-                      {item.width > 0 && item.height > 0 ? (
+                      {(item.width || 0) > 0 && (item.height || 0) > 0 ? (
                         <span>{item.width} x {item.height} (x{item.quantity})</span>
                       ) : (
                         <span>{item.quantity} {item.unit}</span>
                       )}
                     </PaperTableCell>
-                    <PaperTableCell>¥{item.unitPrice}</PaperTableCell>
-                    <PaperTableCell className="font-medium">¥{item.amount}</PaperTableCell>
+                    {!isRestrictedRole && <PaperTableCell>¥{item.unitPrice}</PaperTableCell>}
+                    {!isRestrictedRole && <PaperTableCell className="font-medium">¥{item.amount}</PaperTableCell>}
                     <PaperTableCell className="text-ink-400 text-sm max-w-xs truncate">{item.remark || '-'}</PaperTableCell>
                   </PaperTableRow>
                 ))
@@ -182,37 +195,39 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
         </PaperCardContent>
       </PaperCard>
 
-      {/* Financial Info */}
-      <PaperCard>
-        <PaperCardHeader>
-          <PaperCardTitle>费用汇总</PaperCardTitle>
-        </PaperCardHeader>
-        <PaperCardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-4 bg-paper-bg-light rounded-lg">
-              <div className="text-sm text-ink-500 mb-1">套餐总额</div>
-              <div className="text-xl font-bold text-ink-800">¥{order.packageAmount?.toLocaleString() || 0}</div>
-            </div>
-            <div className="p-4 bg-paper-bg-light rounded-lg">
-              <div className="text-sm text-ink-500 mb-1">套餐超额/升级</div>
-              <div className="text-xl font-bold text-ink-800">¥{((order.packageExcessAmount || 0) + (order.upgradeAmount || 0)).toLocaleString()}</div>
-            </div>
-            <div className="p-4 bg-paper-bg-light rounded-lg">
-              <div className="text-sm text-ink-500 mb-1">非套餐商品</div>
-              <div className="text-xl font-bold text-ink-800">
-                ¥{Object.values(order.subtotals || {})
-                  .filter((v, i, arr) => typeof v === 'number' && Object.keys(order.subtotals)[i] !== 'total' && Object.keys(order.subtotals)[i] !== 'discount' && Object.keys(order.subtotals)[i] !== 'tax')
-                  .reduce((a: number, b: number) => a + b, 0)
-                  .toLocaleString()}
+      {/* Financial Info - 仅非受限角色可见 */}
+      {!isRestrictedRole && (
+        <PaperCard>
+          <PaperCardHeader>
+            <PaperCardTitle>费用汇总</PaperCardTitle>
+          </PaperCardHeader>
+          <PaperCardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="p-4 bg-paper-bg-light rounded-lg">
+                <div className="text-sm text-ink-500 mb-1">套餐总额</div>
+                <div className="text-xl font-bold text-ink-800">¥{order.packageAmount?.toLocaleString() || 0}</div>
+              </div>
+              <div className="p-4 bg-paper-bg-light rounded-lg">
+                <div className="text-sm text-ink-500 mb-1">套餐超额/升级</div>
+                <div className="text-xl font-bold text-ink-800">¥{((order.packageExcessAmount || 0) + (order.upgradeAmount || 0)).toLocaleString()}</div>
+              </div>
+              <div className="p-4 bg-paper-bg-light rounded-lg">
+                <div className="text-sm text-ink-500 mb-1">非套餐商品</div>
+                <div className="text-xl font-bold text-ink-800">
+                  ¥{Object.values(order.subtotals || {})
+                    .filter((v, i, arr) => typeof v === 'number' && Object.keys(order.subtotals)[i] !== 'total' && Object.keys(order.subtotals)[i] !== 'discount' && Object.keys(order.subtotals)[i] !== 'tax')
+                    .reduce((a: number, b: number) => a + b, 0)
+                    .toLocaleString()}
+                </div>
+              </div>
+              <div className="p-4 bg-primary-50 border border-primary-100 rounded-lg">
+                <div className="text-sm text-primary-700 mb-1">订单总金额</div>
+                <div className="text-2xl font-bold text-primary-700">¥{order.totalAmount?.toLocaleString() || 0}</div>
               </div>
             </div>
-            <div className="p-4 bg-primary-50 border border-primary-100 rounded-lg">
-              <div className="text-sm text-primary-700 mb-1">订单总金额</div>
-              <div className="text-2xl font-bold text-primary-700">¥{order.totalAmount?.toLocaleString() || 0}</div>
-            </div>
-          </div>
-        </PaperCardContent>
-      </PaperCard>
+          </PaperCardContent>
+        </PaperCard>
+      )}
     </div>
   );
 }

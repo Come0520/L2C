@@ -12,8 +12,8 @@ interface VanishInputProps {
     onSubmit?: (value: string) => void;
     className?: string;
     value?: string;
-    autoFocus?: boolean;
-    disabled?: boolean;
+    onFocus?: React.FocusEventHandler<HTMLInputElement>;
+    onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 /**
@@ -39,7 +39,9 @@ export function VanishInput({
     className,
     value: controlledValue,
     autoFocus = false,
-    disabled = false
+    disabled = false,
+    onFocus,
+    onBlur
 }: VanishInputProps) {
     const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
     const [internalValue, setInternalValue] = useState('');
@@ -130,6 +132,8 @@ export function VanishInput({
                     type="text"
                     value={value}
                     onChange={handleChange}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                     disabled={disabled}
                     animate={animating ? {
                         opacity: 0,

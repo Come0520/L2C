@@ -207,11 +207,37 @@
 /* Base Component Styles using @apply */
 @layer components {
   .btn--primary {
-    @apply text-white bg-primary-500 px-4 py-2 rounded-md font-medium transition-colors duration-150 ease-in-out hover:bg-primary-600 cursor-pointer;
+    @apply text-white bg-primary-500 px-4 py-2 font-medium cursor-pointer shadow-sm;
+    border-radius: var(--radius-md, 0.5rem);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn--primary:hover {
+    @apply bg-primary-600;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn--primary:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   .btn--secondary {
-    @apply text-primary-600 bg-primary-50 px-4 py-2 rounded-md font-medium transition-colors duration-150 ease-in-out hover:bg-primary-100 cursor-pointer;
+    @apply text-primary-600 bg-primary-50 px-4 py-2 font-medium cursor-pointer border border-primary-100;
+    border-radius: var(--radius-md, 0.5rem);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn--secondary:hover {
+    @apply bg-primary-100 border-primary-200;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn--secondary:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   .card {
@@ -329,7 +355,8 @@
   --color-primary-200: oklch(0.89 0.06 35);
   --color-primary-300: oklch(0.82 0.10 35);
   --color-primary-400: oklch(0.74 0.14 35);
-  --color-primary-500: oklch(0.65 0.18 35); /* 主色 */
+  --color-primary-500: oklch(0.65 0.18 35);
+  /* 主色 */
   --color-primary-600: oklch(0.56 0.17 35);
   --color-primary-700: oklch(0.48 0.15 35);
   --color-primary-800: oklch(0.41 0.12 35);
@@ -639,7 +666,8 @@
   --color-primary-200: oklch(0.90 0.08 220);
   --color-primary-300: oklch(0.84 0.12 220);
   --color-primary-400: oklch(0.76 0.16 220);
-  --color-primary-500: oklch(0.68 0.19 220); /* 主色 */
+  --color-primary-500: oklch(0.68 0.19 220);
+  /* 主色 */
   --color-primary-600: oklch(0.58 0.19 220);
   --color-primary-700: oklch(0.48 0.18 220);
   --color-primary-800: oklch(0.40 0.15 220);
@@ -835,6 +863,31 @@ body {
   outline: none;
 }
 
+/* ============================================
+   Paper Input & Select 统一现代样式
+   与 VanishInput 保持一致的设计语言
+   ============================================ */
+
+/* 基础样式 - 适用于所有主题 */
+.paper-input input,
+.paper-select select {
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.paper-input input:hover,
+.paper-select select:hover {
+  transform: translateY(-1px);
+}
+
+.paper-input input:focus,
+.paper-select select:focus {
+  transform: translateY(0);
+}
+
 .no-visible-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -844,6 +897,7 @@ body {
 .no-visible-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 
 /* ============================================
    批量操作进度组件 - 主题化样式

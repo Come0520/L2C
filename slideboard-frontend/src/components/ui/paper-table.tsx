@@ -153,18 +153,16 @@ export const PaperTableBody: React.FC<{ children: React.ReactNode; className?: s
 };
 
 // Row (核心修改：添加交互动画) 
-interface PaperTableRowProps {
+interface PaperTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
   selected?: boolean;
 }
 
 export const PaperTableRow: React.FC<PaperTableRowProps> = ({
   children,
   className,
-  onClick,
-  selected = false
+  selected = false,
+  ...props
 }) => {
   return (
     <motion.tr
@@ -173,13 +171,13 @@ export const PaperTableRow: React.FC<PaperTableRowProps> = ({
       initial="hidden"
       animate="visible"
       exit="exit"
-      onClick={onClick}
       className={cn(
         'group transition-colors duration-200 border-l-4 border-transparent',
-        onClick && 'cursor-pointer hover:bg-theme-bg-tertiary',
+        (props.onClick || props.onMouseEnter) && 'cursor-pointer hover:bg-theme-bg-tertiary',
         selected ? 'bg-primary-50/50 border-l-primary-500' : '',
         className
       )}
+      {...(props as any)}
     >
       {children}
     </motion.tr>

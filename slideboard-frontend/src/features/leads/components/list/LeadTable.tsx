@@ -116,7 +116,7 @@ export function LeadTable({
 
         if (diffHours > threshold) {
             return (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">
                     <svg className="mr-1 h-3 w-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -146,19 +146,21 @@ export function LeadTable({
                         />
                     </div>
                     <div className="flex items-center space-x-4">
-                        <select
-                            className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                onItemsPerPageChange(Number(e.target.value))
-                                onPageChange(1)
-                            }}
-                        >
-                            <option value={10}>每页 10 条</option>
-                            <option value={20}>每页 20 条</option>
-                            <option value={50}>每页 50 条</option>
-                            <option value={100}>每页 100 条</option>
-                        </select>
+                        <div className="paper-select">
+                            <select
+                                className="text-sm border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    onItemsPerPageChange(Number(e.target.value))
+                                    onPageChange(1)
+                                }}
+                            >
+                                <option value={10}>每页 10 条</option>
+                                <option value={20}>每页 20 条</option>
+                                <option value={50}>每页 50 条</option>
+                                <option value={100}>每页 100 条</option>
+                            </select>
+                        </div>
                         <div className="text-sm text-ink-500">共 {totalItems} 条</div>
                     </div>
                 </PaperTableToolbar>

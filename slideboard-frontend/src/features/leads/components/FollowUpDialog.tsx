@@ -7,6 +7,7 @@ import { PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/
 import { PaperDateTimePicker } from '@/components/ui/paper-date-time-picker'
 import { PaperTextarea } from '@/components/ui/paper-input'
 import { toast } from '@/components/ui/toast'
+import { VoiceInput } from '@/components/ui/VoiceInput'
 import { FollowUpRecord } from '@/types/lead'
 
 interface FollowUpDialogProps {
@@ -34,7 +35,8 @@ export default function FollowUpDialog({ isOpen, onClose, lead, onSave }: Follow
   const [result, setResult] = useState<'interested' | 'follow-up'>('follow-up')
   const [nextFollowUpTime, setNextFollowUpTime] = useState('')
   const [appointmentTime, setAppointmentTime] = useState('')
-  
+  const [inputType, setInputType] = useState<'text' | 'voice'>('text')
+
   // 模拟历史跟进记录
   const [historyRecords] = useState<FollowUpRecord[]>([
     {
@@ -107,7 +109,7 @@ export default function FollowUpDialog({ isOpen, onClose, lead, onSave }: Follow
 
     onSave({
       leadId: lead.id,
-      type: 'text', // 默认使用文字类型
+      type: inputType,
       content: content.trim(),
       result,
       note: note.trim(),
@@ -138,7 +140,7 @@ export default function FollowUpDialog({ isOpen, onClose, lead, onSave }: Follow
             ✕
           </button>
         </PaperCardHeader>
-        
+
         <PaperCardContent className="space-y-6">
           {/* 客户基本信息 */}
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -211,13 +213,32 @@ export default function FollowUpDialog({ isOpen, onClose, lead, onSave }: Follow
 
           {/* 跟踪内容 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              跟踪内容
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                跟踪内容
+              </label>
+              <VoiceInput
+                onTranscript={(text) => {
+                  setContent(prev => {
+                    // 如果之前有内容且不以后缀标点结尾，添加句号
+                    const prefix = prev && !/[。！？.!?]$/.test(prev) ? prev + '，' : prev;
+                    return prefix + text;
+                  });
+                  setInputType('voice'); // 标记为语音输入
+                }}
+              />
+            </div>
             <PaperTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="请输入跟踪内容..."
+              onChange={(e) => {
+                setContent(e.target.value);
+                // 如果用户手动修改了，且原来是语音且修改量大，可能还是保留 voice 标记或者改为 text？
+                // 暂时简单的保留最后一次输入方式，或者一旦手动输入就变为 text? 
+                // 为了简单，手动输入不强制改回 text，除非清空。
+                // 如果用户清空了，应该重置吗？
+                if (!e.target.value) setInputType('text');
+              }}
+              placeholder="请输入跟踪内容... (支持点击右上方麦克风语音输入)"
               rows={6}
             />
             <div className="text-xs text-gray-500 mt-1">

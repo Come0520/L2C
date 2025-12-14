@@ -1,10 +1,10 @@
--- 创建预警表
+-- 创建预警表（修复版：使用 INTEGER 类型）
 CREATE TABLE IF NOT EXISTS warnings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id SERIAL PRIMARY KEY,
     type TEXT NOT NULL,
     severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
-    lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
-    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+    lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
     action_required TEXT NOT NULL,
     metadata JSONB,
@@ -42,7 +42,7 @@ USING (
 );
 
 -- 创建函数：标记预警已解决
-CREATE OR REPLACE FUNCTION resolve_warning(warning_id UUID)
+CREATE OR REPLACE FUNCTION resolve_warning(warning_id INTEGER)
 RETURNS VOID AS $$
 BEGIN
     UPDATE warnings

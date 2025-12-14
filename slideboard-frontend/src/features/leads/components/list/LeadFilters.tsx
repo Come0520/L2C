@@ -87,9 +87,8 @@ export function LeadFilters() {
             </PaperCardHeader>
             <PaperCardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {/* 增强的搜索框 - 带历史记录 */}
-                    <div className="flex flex-col space-y-1.5 relative" ref={searchWrapperRef}>
-                        <label htmlFor="filter-search" className="text-sm font-medium text-theme-text-primary">搜索</label>
+                    {/* 增强的搜索框 - 带历史记录，占两列宽度 */}
+                    <div className="relative lg:col-span-2" ref={searchWrapperRef}>
                         <VanishInput
                             placeholders={[
                                 "搜索姓名...",

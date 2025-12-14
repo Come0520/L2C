@@ -11,6 +11,8 @@ import { StatefulButton } from '@/components/ui/stateful-button';
 import { ActivityList } from '@/features/dashboard/components/ActivityList';
 import { StatsCard } from '@/features/dashboard/components/StatsCard';
 import { TaskList } from '@/features/dashboard/components/TaskList';
+import { SalesFunnelChart } from '@/features/dashboard/components/SalesFunnelChart';
+import { WarningCenter } from '@/app/dashboard/components/WarningCenter';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
 
 export default function DashboardPage() {
@@ -74,6 +76,25 @@ export default function DashboardPage() {
               <StatsCard stat={stat} />
             </div>
           ))}
+        </div>
+
+        {/* 预警中心 */}
+        <div className="mt-8">
+          <WarningCenter />
+        </div>
+
+        {/* 销售漏斗图 */}
+        <div className="mt-8">
+          <SalesFunnelChart
+            data={[
+              { name: '新增线索', value: 1000, fill: '#8884d8' },
+              { name: '跟进中', value: 650, fill: '#83a6ed' },
+              { name: '已报价', value: 420, fill: '#8dd1e1' },
+              { name: '已下单', value: 230, fill: '#82ca9d' },
+              { name: '已交付', value: 200, fill: '#a4de6c' },
+            ]}
+            onStageClick={(stage) => console.log('点击漏斗层级:', stage)}
+          />
         </div>
       </div>
     </div>

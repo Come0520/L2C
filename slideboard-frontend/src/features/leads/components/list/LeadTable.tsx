@@ -2,6 +2,7 @@ import { cva } from 'class-variance-authority'
 import { X } from 'lucide-react'
 import React, { useState } from 'react'
 
+import { ExportMenu, type ExportFormat } from '@/components/ui/export-menu'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
@@ -138,19 +139,11 @@ export function LeadTable({
                         {['sales_manager', 'business_manager'].includes(currentUserRole || '') && (
                             <PaperButton variant="outline" onClick={() => onToolbarAction && onToolbarAction('batch_assign')}>批量分配</PaperButton>
                         )}
-                        <div className="relative">
-                            <button className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                <span>导出当前页</span>
-                                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
-                                <button onClick={() => onToolbarAction && onToolbarAction('export_csv')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">CSV</button>
-                                <button onClick={() => onToolbarAction && onToolbarAction('export_excel')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Excel</button>
-                                <button onClick={() => onToolbarAction && onToolbarAction('export_pdf')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">PDF</button>
-                            </div>
-                        </div>
+                        <ExportMenu
+                            onExport={(format: ExportFormat) => {
+                                onToolbarAction && onToolbarAction(`export_${format}`)
+                            }}
+                        />
                     </div>
                     <div className="flex items-center space-x-4">
                         <select

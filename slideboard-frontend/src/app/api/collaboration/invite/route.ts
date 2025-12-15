@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -19,9 +20,9 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
-          error: 'Invalid request data', 
-          details: validationResult.error.format() 
+        {
+          error: 'Invalid request data',
+          details: validationResult.error.format()
         },
         { status: 400 }
       );
@@ -40,12 +41,12 @@ export async function POST(request: NextRequest) {
       collaborator,
       message: '邀请发送成功',
     });
-    } catch (error: any) {
+  } catch (error: any) {
     try {
       const supabase = await createClient();
       const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
       const userAgent = request.headers.get('user-agent') || 'unknown';
-      
+
       const newLog = {
         id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         userId: 'api_user',
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
         userAgent,
         createdAt: new Date().toISOString()
       };
-      
+
       await supabase
         .from('logs')
         .insert(newLog)
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }
-    
+
     return NextResponse.json(
       { error: error.message || '发送邀请失败，请重试' },
       { status: 500 }

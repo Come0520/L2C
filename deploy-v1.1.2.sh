@@ -94,17 +94,12 @@ set -e
 
 cd /opt/l2c/L2C/slideboard-frontend
 
-echo "检查 package.json 变更..."
-if git diff HEAD~1 HEAD --name-only | grep -q "package.json"; then
-    echo "检测到 package.json 变更，重新安装依赖..."
-    npm install --legacy-peer-deps
+    echo "强制安装依赖..."
+    npm install --legacy-peer-deps --loglevel=verbose
     echo "✅ 依赖安装完成"
-else
-    echo "✅ package.json 未变更，跳过依赖安装"
-fi
 ENDSSH
 
-success "依赖检查完成"
+success "依赖安装完成"
 
 #############################################
 # 步骤 3: 构建应用

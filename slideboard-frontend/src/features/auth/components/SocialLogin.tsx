@@ -2,30 +2,11 @@
 
 import { useState } from 'react';
 
-import { useAuth } from '@/contexts/auth-context';
-
 import { FeishuQRLogin } from './feishu-qr-login';
 
 export function SocialLogin() {
-  const { loginWithThirdParty } = useAuth();
   const [error, setError] = useState('');
   const [showFeishuQR, setShowFeishuQR] = useState(false);
-
-  const handleThirdPartyLogin = async (provider: 'wechat' | 'feishu') => {
-    setError('');
-    try {
-      if (provider === 'feishu') {
-        // 显示飞书扫码登录弹窗
-        setShowFeishuQR(true);
-      } else {
-        // 微信登录仍使用原有的重定向方式
-        await loginWithThirdParty(provider);
-      }
-    } catch (err: any) {
-      console.error('Third party login failed:', err);
-      setError(`${provider === 'wechat' ? '微信' : '飞书'}登录失败`);
-    }
-  };
 
   const handleFeishuLoginSuccess = () => {
     // 飞书扫码登录成功，关闭弹窗
@@ -45,7 +26,7 @@ export function SocialLogin() {
         <span className="px-4 text-theme-text-secondary text-sm">或使用第三方登录</span>
         <div className="flex-grow h-px bg-theme-border"></div>
       </div>
-      
+
       {error && (
         <div className="mb-4 text-center">
           <p className="text-error-600 text-sm">{error}</p>
@@ -54,16 +35,7 @@ export function SocialLogin() {
 
       <div className="flex justify-center gap-4">
         <button
-          onClick={() => handleThirdPartyLogin('wechat')}
-          className="flex items-center gap-2 px-4 py-2 border border-theme-border rounded-lg text-theme-text-secondary hover:bg-theme-bg-tertiary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M21.35 9.17c0-3.65-4.22-6.63-9.43-6.63-5.2 0-9.43 2.98-9.43 6.63 0 2.21 1.54 4.18 3.94 5.45l-.99 3.01 3.65-1.92c.88.23 1.82.36 2.78.36.13 0 .25 0 .38 0-.1-.48-.15-.97-.15-1.46 0-4.04 3.79-7.31 8.46-7.31.26 0 .52.01.78.04zm-3.42 2.06c-3.94 0-7.13 2.81-7.13 6.27 0 1.95 1.08 3.68 2.76 4.83l-.63 2.29 2.78-1.39c.69.19 1.42.3 2.18.3 3.94 0 7.13-2.81 7.13-6.27 0-3.46-3.19-6.27-7.13-6.27z"></path>
-          </svg>
-          微信登录
-        </button>
-        <button
-          onClick={() => handleThirdPartyLogin('feishu')}
+          onClick={() => setShowFeishuQR(true)}
           className="flex items-center gap-2 px-4 py-2 border border-theme-border rounded-lg text-theme-text-secondary hover:bg-theme-bg-tertiary focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

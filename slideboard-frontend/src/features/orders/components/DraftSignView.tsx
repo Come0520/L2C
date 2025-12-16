@@ -1,12 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
+import { useSalesOrders } from '@/hooks/useSalesOrders'
+import { ORDER_STATUS } from '@/constants/order-status'
 
 // 草稿/待签约订单类型定义
 interface DraftOrder {
@@ -24,31 +26,29 @@ interface DraftOrder {
 export function DraftSignView() {
   const router = useRouter()
   
-  // 模拟数据
-  const [orders] = useState<DraftOrder[]>([
-    {
-      id: '1',
-      salesNo: 'SO20241214001',
-      customerName: '张三',
-      customerPhone: '13800138000',
-      address: '北京市朝阳区某某小区1号楼101',
-      totalAmount: 12000,
-      updatedAt: '2024-12-14 10:00',
-      status: 'draft',
-      salesPerson: '李销售'
-    },
-    {
-      id: '2',
-      salesNo: 'SO20241213002',
-      customerName: '李四',
-      customerPhone: '13900139000',
-      address: '上海市浦东新区某某公寓',
-      totalAmount: 25000,
-      updatedAt: '2024-12-13 15:30',
-      status: 'pending_sign',
-      salesPerson: '王销售'
+  // 使用hook获取数据
+  const { data: rawResponse, isLoading } = useSalesOrders(1, 10, ORDER_STATUS.DRAFT_SIGNED)
+  const [orders, setOrders] = useState<DraftOrder[]>([])
+  
+  // 更新订单数据
+  useEffect(() => {
+    if (rawResponse?.data?.orders) {
+      const mappedOrders = rawResponse.data.orders.map(order => ({
+        id: order.id,
+        salesNo: order.sales_no || order.order_no || `SO-${order.id}`,
+        customerName: order.customerName || order.customer?.name || '测试客户',
+        customerPhone: order.customerPhone || order.customer?.phone || '13800138000',
+        address: order.address || order.projectAddress || '测试地址',
+        totalAmount: order.total_amount || order.amount || 0,
+        updatedAt: order.updated_at || order.updatedAt || new Date().toISOString(),
+        status: order.status === 'draft_signed' ? 'pending_sign' : 'draft',
+        salesPerson: order.salesName || order.sales?.name || '测试销售'
+      }))
+      setOrders(mappedOrders as DraftOrder[])
+    } else {
+      setOrders([])
     }
-  ])
+  }, [rawResponse])
 
   const handleCreateOrder = () => {
     // 假设有一个专门的创建页面路由，或者我们可以重用 OrderCreateView 但需要调整路由配置

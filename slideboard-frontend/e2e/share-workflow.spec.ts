@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
+import { test, expect } from '@playwright/test';
 
 test.describe('分享工作流测试', () => {
   let shareLink: string;

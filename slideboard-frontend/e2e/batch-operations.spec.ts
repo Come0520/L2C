@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { loginAsSalesManager, loginAsAdmin, logout } from '../tests/utils/auth';
 import { gotoPage, clickWhenVisible, waitForResponse, fillFormField, selectDropdownOption } from '../tests/utils/navigation';
 import { TestDataGenerator } from '../tests/utils/testFixtures';

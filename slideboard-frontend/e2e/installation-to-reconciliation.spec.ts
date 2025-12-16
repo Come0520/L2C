@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
+import { test, expect } from '@playwright/test';
 
 test.describe('安装到对账流程', () => {
   let installationId: string;

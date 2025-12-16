@@ -1,7 +1,7 @@
 'use client';
 
-import { Calendar, Eye, FileText, MessageSquare, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Eye, FileText, MessageSquare, MoreHorizontal } from 'lucide-react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { Lead } from '@/shared/types/lead';

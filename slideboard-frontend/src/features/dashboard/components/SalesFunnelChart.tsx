@@ -1,7 +1,7 @@
 'use client';
 
-import { FunnelChart, Funnel, Cell, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { TrendingDown } from 'lucide-react';
+import { FunnelChart, Funnel, Cell, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 interface SalesFunnelData {
     name: string;

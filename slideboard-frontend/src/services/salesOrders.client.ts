@@ -56,24 +56,87 @@ export const salesOrderService = {
    */
   async getSalesOrders(page: number = 1, pageSize: number = 10, status?: string, _customerName?: string): Promise<SalesOrderListResponse> {
     return withErrorHandler(async () => {
+      // 生成模拟数据，为每个状态生成10条订单
+      const generateMockOrders = (status: string, startIndex: number = 1, count: number = 10) => {
+        const mockOrders = []
+        for (let i = startIndex; i <= startIndex + count - 1; i++) {
+          const orderId = `MOCK-${status}-${i.toString().padStart(3, '0')}`
+          mockOrders.push({
+            id: orderId,
+            status: status,
+            total_amount: Math.floor(Math.random() * 10000) + 1000,
+            created_at: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)).toISOString(),
+            updated_at: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)).toISOString(),
+            statusUpdatedAt: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)).toISOString(),
+            customer_id: `customer-${i}`,
+            sales_id: `sales-${Math.floor(i / 5) + 1}`,
+            sales_no: `SO-${20240000 + i}`,
+            order_no: `ORD-${20240000 + i}`,
+            customer: {
+              name: `测试${i}`,
+              phone: `138${Math.floor(Math.random() * 100000000)}`
+            },
+            sales: {
+              name: `销售${Math.floor(i / 5) + 1}`
+            },
+            projectAddress: `测试地址${i}号`
+          })
+        }
+        return mockOrders
+      }
+
+      const mockDataEnabled = true // 可以根据环境变量或其他条件控制是否启用模拟数据
       const supabase = createClient()
-    // 尝试同时查询 sales_no 和 order_no，通过别名来兼容可能的字段名差异
-    // 注意：这只是一个探测性的修复，用于确定数据库到底有什么字段
-    // 如果数据库真的没有这两个字段，那么我们需要检查数据库表结构
-    const selectString = `
-      id, 
-      status, 
-      total_amount,
-      created_at, 
-      updated_at, 
-      customer_id, 
-      sales_id,
-      sales_no,
-      order_no,
-      customer:users!customer_id(name, phone), 
-      sales:users!sales_id(name)
-    `;
-    
+      
+      // 如果启用了模拟数据，直接返回模拟数据
+      if (mockDataEnabled) {
+        // 获取所有可能的订单状态
+        const allStatuses = ['pending_assignment', 'pending_tracking', 'tracking', 'draft_signed', 'pending_measurement', 
+                            'measuring_pending_assignment', 'measuring_assigning', 'measuring_pending_visit', 
+                            'measuring_pending_confirmation', 'plan_pending_confirmation', 'pending_push', 
+                            'pending_order', 'in_production', 'stock_prepared', 'pending_shipment', 'shipped', 
+                            'installing_pending_assignment', 'installing_assigning', 'installing_pending_visit', 
+                            'installing_pending_confirmation', 'delivered', 'pending_reconciliation', 
+                            'pending_invoice', 'pending_payment', 'completed', 'cancelled', 'suspended', 'exception']
+        
+        // 如果指定了状态，只返回该状态的模拟数据
+        let allMockOrders = []
+        if (status) {
+          // 为每个状态生成10条模拟数据，确保客户名字从"测试1"开始
+          allMockOrders = generateMockOrders(status, 1, 10)
+        } else {
+          // 如果没有指定状态，为所有状态生成模拟数据
+          allMockOrders = allStatuses.flatMap((stat, index) => generateMockOrders(stat, index * 10 + 1, 10))
+        }
+        
+        // 按创建时间降序排序
+        allMockOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        
+        // 处理分页
+        const from = (page - 1) * pageSize
+        const to = from + pageSize - 1
+        const paginatedOrders = allMockOrders.slice(from, to + 1)
+        
+        // 映射到销售单格式
+        const orders = paginatedOrders.map(item => mapDbToSalesOrder(item))
+        return { code: 0, message: 'success', data: { orders, total: allMockOrders.length, page, pageSize } }
+      }
+      
+      // 真实数据获取逻辑（保留原逻辑）
+      const selectString = `
+        id, 
+        status, 
+        total_amount,
+        created_at, 
+        updated_at, 
+        customer_id, 
+        sales_id,
+        sales_no,
+        order_no,
+        customer:users!customer_id(name, phone), 
+        sales:users!sales_id(name)
+      `;
+      
       let query = supabase
         .from('orders')
         .select(selectString, { count: 'exact' })

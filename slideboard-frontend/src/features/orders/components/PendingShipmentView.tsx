@@ -6,6 +6,7 @@ import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperDialog, PaperDialogContent, PaperDialogHeader, PaperDialogTitle, PaperDialogFooter } from '@/components/ui/paper-dialog'
 import { PaperInput } from '@/components/ui/paper-input'
+import { VanishInput } from '@/components/ui/vanish-input'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTableToolbar } from '@/components/ui/paper-table'
 import { PaperToast } from '@/components/ui/paper-toast'
 import { StatefulButton } from '@/components/ui/stateful-button'
@@ -608,10 +609,10 @@ export function PendingShipmentView() {
       <PaperCard className="backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/20 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
         <PaperCardContent className="p-4">
           <div className="grid grid-cols-1 gap-4">
-            <PaperInput
-              placeholder="搜索销售单号、客户姓名、地址、设计师或导购员"
+            <VanishInput
+              placeholders={["搜索销售单号...", "搜索客户姓名...", "搜索地址...", "搜索设计师或导购员..."]}
               value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
+              onChange={(value) => handleFilterChange('search', value)}
               className="mb-2"
             />
           </div>

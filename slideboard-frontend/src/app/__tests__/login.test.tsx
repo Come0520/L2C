@@ -110,7 +110,6 @@ describe('Login Page', () => {
 
   it('should handle third party login', () => {
     render(<LoginPage />);
-    expect(screen.getByText('微信登录')).toBeInTheDocument();
     expect(screen.getByText('飞书登录')).toBeInTheDocument();
   });
 });

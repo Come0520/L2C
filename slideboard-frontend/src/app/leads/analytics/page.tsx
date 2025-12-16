@@ -27,7 +27,6 @@ function WarningItem({ label, count, icon, severity = 'normal', onClick }: { lab
 }
 
 export default function LeadsAnalyticsPage() {
-  const pathname = usePathname()
   const [warnings, setWarnings] = useState<LeadWarnings>({
     followUpStale: 0,
     quotedNoDraft: 0,
@@ -71,21 +70,7 @@ export default function LeadsAnalyticsPage() {
   const visitedToSignedRate = funnel.visited ? Math.round((funnel.drafted / funnel.visited) * 100) : 0
 
   return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-ink-800">转化分析</h1>
-          <p className="text-ink-500 mt-1">漏斗与来源分析、停滞与超时预警</p>
-        </div>
-
-        <PaperCard>
-          <PaperCardContent>
-            <PaperNav vertical={false}>
-              <PaperNavItem href="/leads" active={pathname === '/leads'}>列表视图</PaperNavItem>
-              <PaperNavItem href="/leads/kanban" active={pathname === '/leads/kanban'}>看板视图</PaperNavItem>
-              <PaperNavItem href="/leads/analytics" active={pathname === '/leads/analytics'}>转化分析</PaperNavItem>
-            </PaperNav>
-          </PaperCardContent>
-        </PaperCard>
+      <div className="max-w-7xl mx-auto space-y-6">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PaperCard>

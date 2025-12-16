@@ -17,7 +17,7 @@ import { loginSchema, type LoginFormData } from '../schemas/login';
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [globalError, setGlobalError] = useState('');
-  
+
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,13 +39,13 @@ export function LoginForm() {
     setGlobalError('');
     try {
       await login(data.identifier, data.password);
-      
+
       // 登录成功后，如果 auth-context 或 onAuthStateChange 没有自动触发跳转
       // 我们可以手动尝试跳转，或者依靠 LoginView 中的 useEffect 来处理
       // 但为了更好的用户体验，这里可以不做额外操作，依赖 LoginView 的 useEffect
       // 如果需要手动跳转，可以取消注释下面这行，但要注意避免重复跳转
       // router.push(searchParams.get('redirectTo') || '/dashboard');
-      
+
     } catch (error: any) {
       console.error('Login failed:', error);
       if (error instanceof Error) {
@@ -128,13 +128,13 @@ export function LoginForm() {
         </div>
 
         <PaperButton
-            type="submit"
-            className="w-full"
-            loading={isSubmitting}
-            size="lg"
-          >
-            登录
-          </PaperButton>
+          type="submit"
+          className="w-full"
+          loading={isSubmitting}
+          size="lg"
+        >
+          登录
+        </PaperButton>
       </form>
     </motion.div>
   );

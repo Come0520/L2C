@@ -33,7 +33,7 @@ export const authService = {
 
         // 判断是手机号还是邮箱
         const isEmail = identifier.includes('@');
-        
+
         // 如果是手机号，且看起来像手机号（纯数字且11位），则验证格式
         // 否则直接尝试登录，交给 Supabase 判断
         if (!isEmail && /^\d+$/.test(identifier) && identifier.length === 11) {
@@ -43,14 +43,14 @@ export const authService = {
         }
 
         let result;
-        
+
         if (isEmail) {
-             result = await supabase.auth.signInWithPassword({
+            result = await supabase.auth.signInWithPassword({
                 email: identifier,
                 password,
             })
         } else {
-             result = await supabase.auth.signInWithPassword({
+            result = await supabase.auth.signInWithPassword({
                 phone: identifier,
                 password,
             })
@@ -78,9 +78,9 @@ export const authService = {
         if (error) {
             throw new ApiError(error.message || '验证码登录失败', error.code || 'AUTH_ERROR', 400)
         }
-        return { 
+        return {
             user: data.user ? mapSupabaseUserToUser(data.user) : null,
-            session: data.session 
+            session: data.session
         }
     },
 
@@ -271,10 +271,10 @@ export const authService = {
      */
     async loginWithThirdParty(provider: 'wechat' | 'feishu') {
         const supabase = createClient()
-        
+
         // Map our provider to Supabase provider names
         const supabaseProvider = provider === 'wechat' ? 'wechat' : 'feishu'
-        
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: supabaseProvider as any, // Supabase types might not include these providers by default
             options: {
@@ -282,11 +282,11 @@ export const authService = {
                 scopes: provider === 'wechat' ? 'snsapi_userinfo' : '',
             },
         })
-        
+
         if (error) {
             throw new ApiError(error.message || '第三方登录失败', error.code || 'AUTH_ERROR', 401)
         }
-        
+
         return data
     },
 }

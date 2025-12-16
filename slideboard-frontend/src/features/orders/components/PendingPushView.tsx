@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
@@ -11,6 +11,8 @@ import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTable
 import { PaperToast } from '@/components/ui/paper-toast'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/utils/logger'
+import { useSalesOrders } from '@/hooks/useSalesOrders'
+import { ORDER_STATUS } from '@/constants/order-status'
 
 // 待推单订单类型定义
 interface PendingPushOrder {
@@ -60,41 +62,31 @@ export function PendingPushView() {
   // 提示消息
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
 
-  // 模拟数据 - 实际应从API获取
-  React.useEffect(() => {
-    const mockOrders: PendingPushOrder[] = [
-      {
-        id: '1',
-        salesOrderNo: 'SO20241126001',
-        customerNo: 'CUST001',
-        customerName: '张三',
-        customerAddress: '北京市朝阳区建国路88号',
-        designer: '王五',
-        sales: '赵六',
-        confirmedAmount: 5500
-      },
-      {
-        id: '2',
-        salesOrderNo: 'SO20241125002',
-        customerNo: 'CUST002',
-        customerName: '李四',
-        customerAddress: '上海市浦东新区陆家嘴金融中心',
-        designer: '钱七',
-        sales: '孙八',
-        confirmedAmount: 6000,
-        purchaseOrderScreenshot: {
-          id: 'ss1',
-          name: '采购单截图.png',
-          url: 'https://example.com/screenshot.png',
-          type: 'image'
-        },
-        purchaseAmount: 5800
-      }
-    ]
+  // 使用useSalesOrders hook获取待推单订单
+  const { data: rawResponse, isLoading } = useSalesOrders(1, 10, ORDER_STATUS.PENDING_PUSH)
 
-    setOrders(mockOrders)
-    setLoading(false)
-  }, [])
+  // 更新订单数据
+  useEffect(() => {
+    if (rawResponse?.data?.orders) {
+      const mappedOrders = rawResponse.data.orders.map(order => ({
+        id: order.id,
+        salesOrderNo: order.sales_no || order.order_no || `SO-${order.id}`,
+        customerNo: order.customer_id || `CUST-${order.id}`,
+        customerName: order.customerName || order.customer?.name || '测试客户',
+        customerAddress: order.address || order.projectAddress || '测试地址',
+        designer: order.designer || '测试设计师',
+        sales: order.salesName || order.sales?.name || '测试销售',
+        confirmedAmount: order.total_amount || order.amount || 0,
+        purchaseOrderScreenshot: order.purchase_order_screenshot || undefined,
+        purchaseAmount: order.purchase_amount || undefined
+      }))
+      setOrders(mappedOrders as PendingPushOrder[])
+      setLoading(isLoading)
+    } else {
+      setOrders([])
+      setLoading(isLoading)
+    }
+  }, [rawResponse, isLoading])
 
   // 打开上传采购单截图对话框
   const handleOpenUploadDialog = (order: PendingPushOrder) => {

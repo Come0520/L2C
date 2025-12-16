@@ -111,7 +111,6 @@ const nextConfig = {
 }
 
 const { withSentryConfig } = require('@sentry/nextjs');
-
 const withNextIntl = require('next-intl/plugin')();
 
 // 暂时不使用 bundle-analyzer

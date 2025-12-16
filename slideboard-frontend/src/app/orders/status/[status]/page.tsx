@@ -243,7 +243,7 @@ export default function OrderStatusPage() {
   if (status === 'surveying-pending-assignment') {
     return (
       <StatePage title={title}>
-        <ServiceDispatchOnly>
+        <ServiceDispatchOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅派单员或管理员可查看此页面。</div>}>
           <MeasuringPendingAssignmentView />
         </ServiceDispatchOnly>
       </StatePage>
@@ -253,7 +253,7 @@ export default function OrderStatusPage() {
   if (status === 'surveying-assigning') {
     return (
       <StatePage title={title} actions={actionsForStatus.map(a => ({ ...a, onClick: handleAction }))}>
-        <ServiceDispatchOnly>
+        <ServiceDispatchOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅派单员或管理员可查看此页面。</div>}>
           <MeasuringAssignedView />
         </ServiceDispatchOnly>
       </StatePage>
@@ -337,7 +337,7 @@ export default function OrderStatusPage() {
   if (status === 'installing-pending-assignment') {
     return (
       <StatePage title={title}>
-        <ServiceDispatchOnly>
+        <ServiceDispatchOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅派单员或管理员可查看此页面。</div>}>
           <InstallingPendingAssignmentView />
         </ServiceDispatchOnly>
       </StatePage>
@@ -347,7 +347,7 @@ export default function OrderStatusPage() {
   if (status === 'installing-assigning') {
     return (
       <StatePage title={title}>
-        <ServiceDispatchOnly>
+        <ServiceDispatchOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅派单员或管理员可查看此页面。</div>}>
           <InstallingAssignmentInProgressView />
         </ServiceDispatchOnly>
       </StatePage>
@@ -357,7 +357,7 @@ export default function OrderStatusPage() {
   if (status === 'installing-pending-visit') {
     return (
       <StatePage title={title}>
-        <InstallerOnly>
+        <InstallerOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅安装师或管理员可查看此页面。</div>}>
           <InstallingPendingVisitView />
         </InstallerOnly>
       </StatePage>
@@ -375,7 +375,7 @@ export default function OrderStatusPage() {
   if (status === 'pending-reconciliation') {
     return (
       <StatePage title={title}>
-        <FinanceOnly>
+        <FinanceOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅财务人员或管理员可查看此页面。</div>}>
           <PendingReconciliationView />
         </FinanceOnly>
       </StatePage>
@@ -385,7 +385,7 @@ export default function OrderStatusPage() {
   if (status === 'pending-invoice') {
     return (
       <StatePage title={title}>
-        <FinanceOnly>
+        <FinanceOnly fallback={<div className="p-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">您当前账号权限不足，仅财务人员或管理员可查看此页面。</div>}>
           <PendingInvoiceView />
         </FinanceOnly>
       </StatePage>

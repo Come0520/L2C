@@ -3,16 +3,16 @@
 import { Layout, TrendingUp } from 'lucide-react';
 import React from 'react';
 
+import { WarningCenter } from '@/app/dashboard/components/WarningCenter';
 import { MovingBorderCard } from '@/components/ui/moving-border-card';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { StatefulButton } from '@/components/ui/stateful-button';
 
 // 导入提取的组件
 import { ActivityList } from '@/features/dashboard/components/ActivityList';
+import { SalesFunnelChart } from '@/features/dashboard/components/SalesFunnelChart';
 import { StatsCard } from '@/features/dashboard/components/StatsCard';
 import { TaskList } from '@/features/dashboard/components/TaskList';
-import { SalesFunnelChart } from '@/features/dashboard/components/SalesFunnelChart';
-import { WarningCenter } from '@/app/dashboard/components/WarningCenter';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
 
 export default function DashboardPage() {

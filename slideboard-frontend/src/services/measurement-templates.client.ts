@@ -1,7 +1,6 @@
 // 测量模板客户端服务
 
 import { supabase } from '@/lib/supabase/client';
-import { Database } from '@/types/supabase';
 import {
   MeasurementTemplate,
   CreateMeasurementTemplateRequest,
@@ -10,6 +9,7 @@ import {
   CalculationFormula,
   QualityStandard
 } from '@/types/measurement-template';
+import { Database } from '@/types/supabase';
 
 type MeasurementTemplateRow = Database['public']['Tables']['measurement_templates']['Row'];
 

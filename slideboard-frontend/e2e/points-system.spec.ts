@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
+import { test, expect } from '@playwright/test';
 
 test.describe('积分系统测试', () => {
   let userId: string;

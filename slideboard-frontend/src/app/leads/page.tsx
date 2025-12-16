@@ -130,133 +130,125 @@ export default function LeadsPage() {
   const totalItems = serverData?.total || 0
 
   return (
-    <div className="space-y-6 p-6">
-      <LeadsPageHeader
-        onNotificationsClick={(list) => {
-            setNotifications(list)
-            setNotificationsOpen(true)
-          }}
-          onNotificationsOpenChange={setNotificationsOpen}
-        />
+    <>
+      {/* 预约日历区域 */}
+      <AppointmentCalendar />
 
-        {/* 预约日历区域 */}
-        <AppointmentCalendar />
+      {/* 统计卡片区域 */}
+      <LeadStatsCards useServerData={!!serverData} filteredLeads={[]} />
 
-        {/* 统计卡片区域 */}
-        <LeadStatsCards useServerData={!!serverData} filteredLeads={[]} />
+      {/* 预约提醒区域 */}
+      <AppointmentReminders leads={pageData} onFollowUp={(lead) => handleAction('followUp', lead)} />
 
-        {/* 预约提醒区域 */}
-        <AppointmentReminders leads={pageData} onFollowUp={(lead) => handleAction('followUp', lead)} />
+      {/* 筛选卡片 */}
+      <LeadFilters />
 
-        {/* 筛选卡片 */}
-        <LeadFilters />
+      {/* 线索列表 */}
+      <LeadTable
+        leads={pageData}
+        totalItems={totalItems}
+        currentPage={filters.page}
+        totalPages={totalPages}
+        itemsPerPage={filters.pageSize}
+        onPageChange={(page) => updateFilters({ page })}
+        onItemsPerPageChange={(pageSize) => updateFilters({ pageSize, page: 1 })}
+        onAction={handleAction}
+        isLoading={isLoading}
+        currentUserRole={currentUserRole}
+        onToolbarAction={handleToolbarAction}
+        selectedIds={selection.selectedLeads}
+        onSelectionChange={selection.setSelectedLeads}
+      />
 
-        {/* 线索列表 */}
-        <LeadTable
-          leads={pageData}
-          totalItems={totalItems}
-          currentPage={filters.page}
-          totalPages={totalPages}
-          itemsPerPage={filters.pageSize}
-          onPageChange={(page) => updateFilters({ page })}
-          onItemsPerPageChange={(pageSize) => updateFilters({ pageSize, page: 1 })}
-          onAction={handleAction}
-          isLoading={isLoading}
-          currentUserRole={currentUserRole}
-          onToolbarAction={handleToolbarAction}
-          selectedIds={selection.selectedLeads}
-          onSelectionChange={selection.setSelectedLeads}
-        />
-
-        {/* 批量操作栏 */}
-        <BatchActionBar
-          selectedCount={selection.selectedLeads.length}
-          actions={[
-            {
-              id: 'export',
-              label: '导出所选',
-              variant: 'outline',
-              onClick: async () => {
-                try {
-                  const { blob, filename } = await batchService.exportData('leads', selection.selectedLeads, 'csv')
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = filename
-                  document.body.appendChild(a)
-                  a.click()
-                  document.body.removeChild(a)
-                  URL.revokeObjectURL(url)
-                  toast.success('导出成功')
-                  selection.setSelectedLeads([])
-                } catch {
-                  toast.error('导出失败')
-                }
+      {/* 批量操作栏 */}
+      <BatchActionBar
+        selectedCount={selection.selectedLeads.length}
+        actions={[
+          {
+            id: 'export',
+            label: '导出所选',
+            variant: 'outline',
+            onClick: async () => {
+              try {
+                const { blob, filename } = await batchService.exportData('leads', selection.selectedLeads, 'csv')
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = filename
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(url)
+                toast.success('导出成功')
+                selection.setSelectedLeads([])
+              } catch {
+                toast.error('导出失败')
               }
-            },
-            {
-              id: 'batch_assign',
-              label: '批量分配',
-              variant: 'primary',
-              onClick: () => setIsReassignOpen(true)
             }
-          ]}
-          onClearSelection={() => selection.setSelectedLeads([])}
-        />
+          },
+          {
+            id: 'batch_assign',
+            label: '批量分配',
+            variant: 'primary',
+            onClick: () => setIsReassignOpen(true)
+          }
+        ]}
+        onClearSelection={() => selection.setSelectedLeads([])}
+      />
 
-        {/* Dialogs and Drawers */}
-        {currentLead && (
-          <>
-            <LeadDetailDrawer
-              leadId={currentLead.id}
-              open={dialogStates.detailDrawerOpen}
-              onOpenChange={dialogStates.setDetailDrawerOpen}
-            />
-            <LeadAssignmentController
-              lead={currentLead}
-              isOpen={dialogStates.assignmentDialogOpen}
-              onOpenChange={dialogStates.setAssignmentDialogOpen}
-            />
-            <LeadFollowUpController
-              lead={currentLead}
-              isOpen={dialogStates.followUpDialogOpen}
-              onOpenChange={dialogStates.setFollowUpDialogOpen}
-            />
-            <LeadTrackingController
-              lead={currentLead}
-              isOpen={dialogStates.confirmTrackingDialogOpen}
-              onOpenChange={dialogStates.setConfirmTrackingDialogOpen}
-            />
-          </>
-        )}
+      {/* Dialogs and Drawers */}
+      {currentLead && (
+        <>
+          <LeadDetailDrawer
+            leadId={currentLead.id}
+            open={dialogStates.detailDrawerOpen}
+            onOpenChange={dialogStates.setDetailDrawerOpen}
+          />
+          <LeadAssignmentController
+            lead={currentLead}
+            isOpen={dialogStates.assignmentDialogOpen}
+            onOpenChange={dialogStates.setAssignmentDialogOpen}
+          />
+          <LeadFollowUpController
+            lead={currentLead}
+            isOpen={dialogStates.followUpDialogOpen}
+            onOpenChange={dialogStates.setFollowUpDialogOpen}
+          />
+          <LeadTrackingController
+            lead={currentLead}
+            isOpen={dialogStates.confirmTrackingDialogOpen}
+            onOpenChange={dialogStates.setConfirmTrackingDialogOpen}
+          />
+        </>
+      )}
 
-        <CreateLeadDialog
-          open={createLeadDialogOpen}
-          onOpenChange={setCreateLeadDialogOpen}
-          onSuccess={async () => { queryClient.invalidateQueries({ queryKey: ['leads'] }); return Promise.resolve(); }}
-        />
+      <CreateLeadDialog
+        open={createLeadDialogOpen}
+        onOpenChange={setCreateLeadDialogOpen}
+        onSuccess={async () => { queryClient.invalidateQueries({ queryKey: ['leads'] }); return Promise.resolve(); }}
+      />
 
-        <LeadImportDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-          onSuccess={async () => { queryClient.invalidateQueries({ queryKey: ['leads'] }); return Promise.resolve(); }}
-        />
+      <LeadImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onSuccess={async () => { queryClient.invalidateQueries({ queryKey: ['leads'] }); return Promise.resolve(); }}
+      />
 
-        <LeadDedupeDialog
-          open={dedupeDialogOpen}
-          onOpenChange={setDedupeDialogOpen}
-        />
+      <LeadDedupeDialog
+        open={dedupeDialogOpen}
+        onOpenChange={setDedupeDialogOpen}
+      />
 
-        <ReassignModal
-          open={isReassignOpen}
-          onOpenChange={setIsReassignOpen}
-          onSuccess={() => {
-            // Implement batch reassign logic
-            setIsReassignOpen(false)
-            queryClient.invalidateQueries({ queryKey: ['leads'] })
-          }}
-          selectedIds={selection.selectedLeads}
-        />
-      </div>
+      <ReassignModal
+        open={isReassignOpen}
+        onOpenChange={setIsReassignOpen}
+        onSuccess={() => {
+          // Implement batch reassign logic
+          setIsReassignOpen(false)
+          queryClient.invalidateQueries({ queryKey: ['leads'] })
+        }}
+        selectedIds={selection.selectedLeads}
+      />
+    </>
   )
 }

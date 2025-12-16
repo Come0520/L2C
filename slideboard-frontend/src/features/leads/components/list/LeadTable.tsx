@@ -131,13 +131,15 @@ export function LeadTable({
     return (
         <>
             <PaperCard>
-                <PaperTableToolbar>
+                <PaperTableToolbar className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                         <PaperButton variant="primary" onClick={() => onToolbarAction && onToolbarAction('create')}>新建线索</PaperButton>
                         <PaperButton variant="outline" onClick={() => onToolbarAction && onToolbarAction('import')}>导入</PaperButton>
                         <PaperButton variant="outline" onClick={() => onToolbarAction && onToolbarAction('dedupe')}>去重/合并</PaperButton>
                         {['sales_manager', 'business_manager'].includes(currentUserRole || '') && (
-                            <PaperButton variant="outline" onClick={() => onToolbarAction && onToolbarAction('batch_assign')}>批量分配</PaperButton>
+                            <PaperButton variant="outline" onClick={() => onToolbarAction && onToolbarAction('batch_assign')}>
+                                批量分配
+                            </PaperButton>
                         )}
                         <ExportMenu
                             onExport={(format: ExportFormat) => {

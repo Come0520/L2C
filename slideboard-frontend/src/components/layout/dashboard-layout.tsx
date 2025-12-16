@@ -231,10 +231,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Find current active group
   const activeGroup = React.useMemo(() => {
-    const group = navGroups.find(group =>
-      group.items.some(item => pathname === item.href || pathname?.startsWith(item.href))
-    );
-    return group || navGroups[0];
+    // Find all matching groups and their best matching items
+    const matchingGroups = navGroups.map(group => {
+      const matchingItems = group.items.filter(item => 
+        pathname === item.href || pathname?.startsWith(`${item.href}/`) || pathname?.startsWith(item.href)
+      );
+      if (matchingItems.length === 0) return null;
+      
+      // Find the best (longest) matching item in this group
+      const bestMatchingItem = matchingItems.reduce((best, current) => {
+        return current.href.length > best.href.length ? current : best;
+      }, matchingItems[0]);
+      
+      return { group, bestMatchingItem };
+    }).filter(Boolean) as Array<{ group: typeof navGroups[0]; bestMatchingItem: typeof navGroups[0]['items'][0] }>;
+    
+    if (matchingGroups.length === 0) return navGroups[0];
+    
+    // Find the group with the longest matching item href
+    const bestMatch = matchingGroups.reduce((best, current) => {
+      return current.bestMatchingItem.href.length > best.bestMatchingItem.href.length ? current : best;
+    }, matchingGroups[0]);
+    
+    return bestMatch.group;
   }, [pathname, navGroups]);
 
   // Transform group items to Tabs format (without href for new Tabs API)
@@ -370,7 +389,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="hidden md:block">
                 <GooeyThemeToggle />
               </div>
-              <button className="p-2 relative text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary" aria-label="Notifications">
+              <button className="p-2 relative text-theme-text-secondary hover:text-theme-text-primary transition-colors rounded-md hover:bg-theme-bg-tertiary" aria-label="Notifications" onClick={() => router.push('/notifications')}>
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 min-w-[18px] h-5 bg-primary-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-[0_0_8px] shadow-primary-500/50">

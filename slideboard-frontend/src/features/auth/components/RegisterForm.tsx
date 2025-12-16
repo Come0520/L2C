@@ -19,7 +19,7 @@ export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [globalError, setGlobalError] = useState('');
-  
+
   const { register: registerUser } = useAuth();
   const router = useRouter();
 
@@ -31,7 +31,7 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
-      phone: '',
+      email: '',
       password: '',
       confirmPassword: '',
       terms: false,
@@ -41,7 +41,7 @@ export function RegisterForm() {
   const getErrorMessage = (error: unknown): string => {
     if (error instanceof Error) return error.message;
     if (typeof error === 'string') return error;
-    
+
     if (typeof error === 'object' && error !== null) {
       const err = error as Record<string, unknown>;
       if (typeof err.message === 'string') return err.message;
@@ -51,14 +51,14 @@ export function RegisterForm() {
         return String((err.error as any).message);
       }
     }
-    
+
     return '注册失败，请重试';
   };
 
   const onSubmit = async (data: RegisterFormData) => {
     setGlobalError('');
     try {
-      await registerUser(data.phone, data.password, data.name);
+      await registerUser(data.email, data.password, data.name);
       router.push('/');
     } catch (error: any) {
       console.error('Registration failed:', error);
@@ -94,14 +94,13 @@ export function RegisterForm() {
         />
 
         <PaperInput
-          label="手机号"
-          type="tel"
-          placeholder="请输入手机号"
-          icon={<Phone className="h-5 w-5" />}
-          error={errors.phone?.message}
-          {...register('phone')}
-          maxLength={11}
-          autoComplete="tel"
+          label="邮箱"
+          type="email"
+          placeholder="请输入邮箱"
+          icon={<User className="h-5 w-5" />}
+          error={errors.email?.message}
+          {...register('email')}
+          autoComplete="email"
         />
 
         <div className="relative">
@@ -178,7 +177,7 @@ export function RegisterForm() {
 
         <PaperButton
           type="submit"
-          fullWidth
+          className="w-full"
           loading={isSubmitting}
           size="lg"
         >

@@ -1,32 +1,32 @@
 export interface Permission {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Role {
-  id: string;
-  name: string;
-  description: string;
-  permissions: string[];
-  user_count: number;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    name: string;
+    description: string;
+    permissions: string[];
+    user_count: number;
+    created_at: string;
+    updated_at: string;
 }
 
-import { ROLE_PERMISSIONS, USER_ROLES } from '@/shared/types/user'
+import { ROLE_PERMISSIONS, ROLE_LABELS } from '@/shared/types/user'
 
 class PermissionsService {
     async getRolesAndPermissions(): Promise<{ roles: Role[]; permissions: Permission[] }> {
         const now = new Date().toISOString()
-        const roleEntries = Object.entries(USER_ROLES)
-        const roles: Role[] = roleEntries.map(([_, roleName]) => ({
-            id: roleName,
-            name: roleName,
-            description: roleName,
-            permissions: (ROLE_PERMISSIONS as any)[roleName] || [],
+        const roleEntries = Object.entries(ROLE_LABELS)
+        const roles: Role[] = roleEntries.map(([roleKey, roleLabel]) => ({
+            id: roleKey,
+            name: roleLabel,
+            description: roleLabel,
+            permissions: (ROLE_PERMISSIONS as any)[roleKey] || [],
             user_count: 0,
             created_at: now,
             updated_at: now,

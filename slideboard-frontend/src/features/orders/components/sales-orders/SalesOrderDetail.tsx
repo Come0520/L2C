@@ -7,7 +7,6 @@ import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
 import { useAuth } from '@/contexts/auth-context';
-import { RoleGuard } from '@/features/orders/components/permissions/RoleGuard';
 import { StatusBadge } from '@/features/orders/components/sales-orders/StatusBadge';
 import { useSalesOrder } from '@/hooks/useSalesOrders';
 import { OrderFormData, BaseOrder, CurtainItem } from '@/shared/types/order';
@@ -68,9 +67,7 @@ export function SalesOrderDetail({ initialOrder }: SalesOrderDetailProps) {
         </div>
         <div className="space-x-2">
           <PaperButton variant="outline" onClick={handleBack}>返回列表</PaperButton>
-          <RoleGuard roles={['admin', 'APPROVER_BUSINESS', 'LEAD_SALES', 'SERVICE_DISPATCH']}>
-            <PaperButton variant="primary" onClick={handleEdit}>编辑订单</PaperButton>
-          </RoleGuard>
+          <PaperButton variant="primary" onClick={handleEdit}>编辑订单</PaperButton>
         </div>
       </div>
 

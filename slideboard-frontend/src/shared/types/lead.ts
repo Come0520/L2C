@@ -60,7 +60,7 @@ export interface Lead {
   expectedPurchaseDate?: string;
   expectedCheckInDate?: string;
   areaSize?: number;
-  
+
   // Stats
   quoteVersions: number;
   measurementCompleted: boolean;
@@ -69,7 +69,7 @@ export interface Lead {
   expectedMeasurementDate?: string;
   expectedInstallationDate?: string;
   totalQuoteAmount?: number;
-  
+
   // Status Tracking
   lastStatusChangeAt?: string;
   lastStatusChangeById?: string;
@@ -77,7 +77,7 @@ export interface Lead {
   cancellationReason?: string;
   isPaused: boolean;
   pauseReason?: string;
-  
+
   // Relations
   assignedToId?: string;
   assignedToName?: string;
@@ -87,7 +87,7 @@ export interface Lead {
   shoppingGuideName?: string;
   createdById?: string;
   createdByName?: string;
-  
+
   createdAt: string;
   updatedAt: string;
 }
@@ -209,6 +209,14 @@ export interface LeadDuplicateRecord {
   project_address?: string
   lead_number: string
   created_at: string
+  status?: string // Added status field that is used in LeadDedupeDialog
+}
+
+export interface LeadDuplicateGroup {
+  phone: string
+  lead_ids: number[]
+  lead_count: number
+  lead_details: LeadDuplicateRecord[]
 }
 
 export interface LeadWarnings {

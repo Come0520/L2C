@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { CreateCustomerRequest } from '@/shared/types/customer'
-import { Lead, LeadFilter, UpdateLeadRequest, CreateLeadRequest, LeadStatus, LeadDuplicateRecord, LeadWarnings, WarningType } from '@/shared/types/lead'
+import { Lead, LeadFilter, UpdateLeadRequest, CreateLeadRequest, LeadStatus, LeadDuplicateGroup, LeadWarnings, WarningType } from '@/shared/types/lead'
 import { Database } from '@/types/supabase'
 
 type LeadRow = Database['public']['Tables']['leads']['Row']
@@ -291,7 +291,7 @@ export const leadService = {
      */
     async patchLead(id: string, data: UpdateLeadRequest) {
         const dbData: LeadUpdate = {}
-        
+
         if (data.name) dbData.name = data.name
         if (data.phone) dbData.phone = data.phone
         if (data.projectAddress) dbData.project_address = data.projectAddress
@@ -388,7 +388,7 @@ export const leadService = {
             return []
         }
 
-        return data as unknown as LeadDuplicateRecord[][] || []
+        return data as unknown as LeadDuplicateGroup[] || []
     },
 
     /**
@@ -850,7 +850,7 @@ export const leadService = {
     async convertToCustomer(leadId: string): Promise<string> {
         // 1. 获取线索详情
         const lead = await this.getLeadById(leadId);
-        
+
         // 2. 检查是否已经存在客户 (根据手机号)
         const { data: existingCustomer } = await supabase
             .from('customers')
@@ -910,7 +910,7 @@ export const leadService = {
         ];
 
         // Execute queries in parallel
-        const promises = statuses.map(status => 
+        const promises = statuses.map(status =>
             supabase
                 .from('leads')
                 .select('*', { count: 'exact', head: true })
@@ -918,9 +918,9 @@ export const leadService = {
         );
 
         const results = await Promise.all(promises);
-        
+
         const stats: Record<string, number> = {};
-        
+
         statuses.forEach((status, index) => {
             const { count, error } = results[index];
             if (!error && count !== null) {
@@ -955,7 +955,7 @@ function mapDbToLead(dbRecord: LeadRow): Lead {
         expectedPurchaseDate: dbRecord.expected_purchase_date || undefined,
         expectedCheckInDate: dbRecord.expected_check_in_date || undefined,
         areaSize: dbRecord.area_size || undefined,
-        
+
         // Stats
         quoteVersions: dbRecord.quote_versions || 0,
         measurementCompleted: dbRecord.measurement_completed || false,
@@ -964,7 +964,7 @@ function mapDbToLead(dbRecord: LeadRow): Lead {
         expectedMeasurementDate: dbRecord.expected_measurement_date || undefined,
         expectedInstallationDate: dbRecord.expected_installation_date || undefined,
         totalQuoteAmount: dbRecord.total_quote_amount || 0,
-        
+
         // Status Tracking
         lastStatusChangeAt: dbRecord.last_status_change_at || undefined,
         lastStatusChangeById: dbRecord.last_status_change_by_id || undefined,
@@ -972,13 +972,13 @@ function mapDbToLead(dbRecord: LeadRow): Lead {
         cancellationReason: dbRecord.cancellation_reason || undefined,
         isPaused: dbRecord.is_paused || false,
         pauseReason: dbRecord.pause_reason || undefined,
-        
+
         // Relations
         assignedToId: dbRecord.assigned_to_id || undefined,
         designerId: dbRecord.designer_id || undefined,
         shoppingGuideId: dbRecord.shopping_guide_id || undefined,
         createdById: dbRecord.created_by_id || undefined,
-        
+
         createdAt: dbRecord.created_at,
         updatedAt: dbRecord.updated_at
     }

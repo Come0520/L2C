@@ -23,14 +23,16 @@ export function VoiceInput({
     const [isListening, setIsListening] = useState(false);
     const [isSupported, setIsSupported] = useState(true);
     const [transcript, setTranscript] = useState('');
+    // Web Speech API 类型在不同浏览器中定义不一致，使用 any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        const SpeechRecognition =
-            (window as any).SpeechRecognition ||
-            (window as any).webkitSpeechRecognition;
+        // 获取 SpeechRecognition（兼容不同浏览器）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
             setIsSupported(false);
@@ -43,6 +45,7 @@ export function VoiceInput({
         recognition.lang = language;
         recognition.maxAlternatives = 1;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
             let interimTranscript = '';
             let finalTranscript = '';
@@ -61,6 +64,7 @@ export function VoiceInput({
             onTranscript(fullTranscript);
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onerror = (event: any) => {
             console.error('Speech recognition error:', event.error);
             if (event.error === 'not-allowed') {
@@ -111,8 +115,8 @@ export function VoiceInput({
             <button
                 onClick={toggleListening}
                 className={`p-3 rounded-full transition-all ${isListening
-                        ? 'bg-red-500 text-white animate-pulse shadow-lg'
-                        : 'bg-blue-500 text-white hover:bg-blue-600 shadow'
+                    ? 'bg-red-500 text-white animate-pulse shadow-lg'
+                    : 'bg-blue-500 text-white hover:bg-blue-600 shadow'
                     }`}
                 title={isListening ? '停止录音' : '开始录音'}
             >

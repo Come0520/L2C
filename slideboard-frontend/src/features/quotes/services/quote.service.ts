@@ -1,11 +1,14 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Quote, QuoteVersion, QuoteItem, QuoteStatus, QuoteVersionStatus } from '@/shared/types/quote';
 
 import {
     CreateQuoteAPIDTO,
     CreateQuoteVersionAPIDTO,
-    UpdateQuoteVersionAPIDTO
+    UpdateQuoteVersionAPIDTO,
+    CreateQuoteItemAPIDTO
 } from '../types';
 
 /**
@@ -49,7 +52,7 @@ export const createQuote = async (data: CreateQuoteAPIDTO) => {
     if (quoteError) throw new Error(`Failed to create quote: ${quoteError.message}`);
 
     // Convert items to snake_case
-    const snakeCaseItems = data.items.map((item: any) => ({
+    const snakeCaseItems = data.items.map((item: CreateQuoteItemAPIDTO) => ({
         category: item.category,
         space: item.space,
         product_name: item.product_name,
@@ -63,8 +66,8 @@ export const createQuote = async (data: CreateQuoteAPIDTO) => {
     }));
 
     // 2. Create Initial Version (V1)
-    const totalAmount = data.items.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
-    
+    const totalAmount = data.items.reduce((sum: number, item: CreateQuoteItemAPIDTO) => sum + (item.total_price || 0), 0);
+
     const initialVersion = {
         quote_id: quote.id,
         items: snakeCaseItems,
@@ -106,7 +109,7 @@ export const createVersion = async (dto: CreateQuoteVersionAPIDTO) => {
     return version;
 };
 
-const createVersionInternal = async (supabase: any, dto: CreateQuoteVersionAPIDTO, versionNumber: number) => {
+const createVersionInternal = async (supabase: SupabaseClient, dto: CreateQuoteVersionAPIDTO, versionNumber: number) => {
     // 1. Create Version
     const { data: version, error: versionError } = await supabase
         .from('quote_versions')
@@ -125,7 +128,7 @@ const createVersionInternal = async (supabase: any, dto: CreateQuoteVersionAPIDT
 
     // 2. Create Items
     if (dto.items && dto.items.length > 0) {
-        const itemsToInsert = dto.items.map((item: any) => ({
+        const itemsToInsert = dto.items.map((item: CreateQuoteItemAPIDTO) => ({
             quote_version_id: version.id,
             category: item.category,
             space: item.space,
@@ -149,8 +152,56 @@ const createVersionInternal = async (supabase: any, dto: CreateQuoteVersionAPIDT
     return version;
 };
 
+// Database row type for quotes
+interface QuoteDbRow {
+    id: string;
+    quote_no: string;
+    lead_id?: string;
+    customer_id?: string;
+    project_name: string;
+    project_address: string;
+    salesperson_id: string;
+    current_version_id?: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    versions?: QuoteVersionDbRow[];
+    current_version?: QuoteVersionDbRow;
+}
+
+interface QuoteVersionDbRow {
+    id: string;
+    quote_id: string;
+    version_number: number;
+    version_suffix?: string;
+    quote_no?: string;
+    total_amount: number;
+    valid_until?: string;
+    status: string;
+    remarks?: string;
+    created_at: string;
+    updated_at: string;
+    items?: QuoteItemDbRow[];
+}
+
+interface QuoteItemDbRow {
+    id: string;
+    quote_version_id: string;
+    category: string;
+    space: string;
+    product_name: string;
+    product_id?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    description?: string;
+    image_url?: string;
+    attributes?: Record<string, unknown>;
+    created_at: string;
+}
+
 // Helper to map DB result to Quote type
-const mapDbToQuote = (row: any): Quote => {
+const mapDbToQuote = (row: QuoteDbRow): Quote => {
     return {
         id: row.id,
         quoteNo: row.quote_no,
@@ -160,32 +211,32 @@ const mapDbToQuote = (row: any): Quote => {
         projectAddress: row.project_address,
         salespersonId: row.salesperson_id,
         currentVersionId: row.current_version_id,
-        status: row.status as any,
+        status: row.status as QuoteStatus,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        versions: row.versions?.map((v: any) => mapDbToQuoteVersion(v)),
+        versions: row.versions?.map((v) => mapDbToQuoteVersion(v)),
         currentVersion: row.current_version ? mapDbToQuoteVersion(row.current_version) : undefined
     };
 };
 
-const mapDbToQuoteVersion = (row: any): QuoteVersion => {
+const mapDbToQuoteVersion = (row: QuoteVersionDbRow): QuoteVersion => {
     return {
         id: row.id,
         quoteId: row.quote_id,
         versionNumber: row.version_number,
         versionSuffix: row.version_suffix,
-        quoteNo: row.quote_no || '', // Might not be in version table, but QuoteVersion type has it? Check type.
+        quoteNo: row.quote_no || '',
         totalAmount: row.total_amount,
         validUntil: row.valid_until,
-        status: row.status as any,
+        status: row.status as QuoteVersionStatus,
         remarks: row.remarks,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        items: row.items?.map((i: any) => mapDbToQuoteItem(i)) || []
+        items: row.items?.map((i) => mapDbToQuoteItem(i)) || []
     };
 };
 
-const mapDbToQuoteItem = (row: any): any => { // Return type inferred or explicit
+const mapDbToQuoteItem = (row: QuoteItemDbRow): QuoteItem => {
     return {
         id: row.id,
         quoteVersionId: row.quote_version_id,
@@ -341,11 +392,11 @@ export const convertToOrder = async (quoteId: string) => {
             sales_order_id: salesOrder.id,
             category: item.category,
             space: item.space,
-            product_name: item.product_name,
-            product_id: item.product_id,
+            product_name: item.productName,
+            product_id: item.productId,
             quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
+            unit_price: item.unitPrice,
+            total_price: item.totalPrice,
             description: item.description
         }));
 

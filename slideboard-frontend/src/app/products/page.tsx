@@ -7,29 +7,37 @@ import {
   Box,
   FileText
 } from 'lucide-react';
-import React, { Suspense } from 'react';
+import React from 'react';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card';
 import { PaperNav, PaperNavItem } from '@/components/ui/paper-nav';
-import { ProductTableSkeleton } from '@/features/products/components/archives/ProductTableSkeleton';
-import { ProductDetailModal } from '@/features/products/components/details/ProductDetailModal';
-import {
-  CategoryManagementTab,
-  StoreStrategyTab,
-  SpecialCraftsTab,
-  ApprovalsTab
-} from '@/features/products/components/tabs';
-import { Product } from '@/services/products.client';
 import { getAllProducts } from '@/services/products.server';
 
-// 动态导入ProductArchivesTab以支持Suspense
-const ProductArchivesTab = React.lazy(() =>
-  import('@/features/products/components/tabs').then(module => ({
-    default: module.ProductArchivesTab
-  }))
+// 占位符组件 - 待开发
+const PlaceholderTab = ({ title }: { title: string }) => (
+  <PaperCard>
+    <PaperCardContent>
+      <div className="text-center py-12 text-ink-500">
+        <p className="text-lg font-medium">{title}</p>
+        <p className="text-sm mt-2">功能开发中...</p>
+      </div>
+    </PaperCardContent>
+  </PaperCard>
 );
 
+// 商品档案Tab组件
+const ProductArchivesTab = ({ products }: { products: any[] }) => (
+  <PaperCard>
+    <PaperCardContent>
+      <div className="text-center py-8">
+        <p className="text-lg font-medium text-ink-800">商品列表</p>
+        <p className="text-ink-500 mt-2">共 {products?.length || 0} 个商品</p>
+        <p className="text-sm text-ink-400 mt-4">商品管理功能开发中...</p>
+      </div>
+    </PaperCardContent>
+  </PaperCard>
+);
 
 export default async function ProductManagementPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
   // 从URL参数获取筛选状态
@@ -37,8 +45,6 @@ export default async function ProductManagementPage({ searchParams }: { searchPa
   const categoryLevel1Filter = typeof searchParams.category1 === 'string' ? searchParams.category1 : 'all';
   const categoryLevel2Filter = typeof searchParams.category2 === 'string' ? searchParams.category2 : 'all';
   const statusFilter = typeof searchParams.status === 'string' ? searchParams.status : 'all';
-  const currentPage = typeof searchParams.page === 'string' ? parseInt(searchParams.page) : 1;
-  const itemsPerPage = 10;
 
   // 使用服务端服务获取商品数据
   const products = await getAllProducts({
@@ -80,28 +86,16 @@ export default async function ProductManagementPage({ searchParams }: { searchPa
       </PaperCard>
 
       {(searchParams.tab === 'archives' || !searchParams.tab) && (
-        <>
-          <Suspense fallback={<ProductTableSkeleton />}>
-            <ProductArchivesTab
-              products={products}
-              searchTerm={searchTerm}
-              categoryLevel1Filter={categoryLevel1Filter}
-              categoryLevel2Filter={categoryLevel2Filter}
-              statusFilter={statusFilter}
-              currentPage={currentPage}
-              itemsPerPage={itemsPerPage}
-            />
-          </Suspense>
-        </>
+        <ProductArchivesTab products={products} />
       )}
 
-      {searchParams.tab === 'categories' && <CategoryManagementTab />}
+      {searchParams.tab === 'categories' && <PlaceholderTab title="分类管理" />}
 
-      {searchParams.tab === 'store-strategy' && <StoreStrategyTab products={products} />}
+      {searchParams.tab === 'store-strategy' && <PlaceholderTab title="门店策略" />}
 
-      {searchParams.tab === 'special-crafts' && <SpecialCraftsTab />}
+      {searchParams.tab === 'special-crafts' && <PlaceholderTab title="特殊工艺" />}
 
-      {searchParams.tab === 'approvals' && <ApprovalsTab />}
+      {searchParams.tab === 'approvals' && <PlaceholderTab title="审批管理" />}
     </div>
   );
 }

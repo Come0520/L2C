@@ -48,7 +48,8 @@ export function RegisterForm() {
       if (typeof err.msg === 'string') return err.msg;
       if (typeof err.error === 'string') return err.error;
       if (typeof err.error === 'object' && err.error !== null && 'message' in err.error) {
-        return String((err.error as any).message);
+        const nestedError = err.error as Record<string, unknown>;
+        return String(nestedError.message);
       }
     }
 
@@ -60,7 +61,7 @@ export function RegisterForm() {
     try {
       await registerUser(data.email, data.password, data.name);
       router.push('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration failed:', error);
       setGlobalError(getErrorMessage(error));
     }

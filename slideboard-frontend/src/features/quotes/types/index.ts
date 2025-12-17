@@ -1,5 +1,19 @@
 export * from '@/shared/types/quote';
 
+// Item type for API DTOs (snake_case)
+export type CreateQuoteItemAPIDTO = {
+  category: string;
+  space: string;
+  product_name: string;
+  product_id?: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  description?: string;
+  image_url?: string;
+  attributes?: Record<string, unknown>;
+};
+
 // Alias for snake_case DTOs used in API requests
 export type CreateQuoteAPIDTO = {
   lead_id?: string;

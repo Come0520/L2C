@@ -240,7 +240,7 @@ export function LeadTable({
                                     </div>
                                 </PaperTableCell> */}
                                     <PaperTableCell>
-                                        <CustomerLevelTag level={l.customerLevel as any} />
+                                        {l.customerLevel && <CustomerLevelTag level={l.customerLevel} />}
                                     </PaperTableCell>
                                     <PaperTableCell>
                                         <LeadStatusBadge status={l.status} />
@@ -260,7 +260,7 @@ export function LeadTable({
                                         </div>
                                     </PaperTableCell>
                                     <PaperTableCell>
-                                        <BusinessTagsList tags={l.businessTags as any[]} />
+                                        <BusinessTagsList tags={l.businessTags || []} />
                                     </PaperTableCell>
                                     <PaperTableCell>
                                         <div className="space-y-1">

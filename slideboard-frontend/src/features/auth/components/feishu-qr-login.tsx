@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import '@/types/feishu-sdk.d.ts';
 
 interface FeishuQRLoginProps {
   onSuccess: () => void;
@@ -15,7 +16,7 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
   useEffect(() => {
     const loadFeishuSDK = () => {
       // 检查 SDK 是否已加载
-      if ((window as any).LarkSSOSDKWebQRCode) {
+      if (window.LarkSSOSDKWebQRCode) {
         initQRLogin();
         return;
       }
@@ -41,7 +42,7 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
 
     const initQRLogin = () => {
       try {
-        const SDK = (window as any).LarkSSOSDKWebQRCode;
+        const SDK = window.LarkSSOSDKWebQRCode;
         if (!SDK) {
           console.error('LarkSSOSDKWebQRCode not found');
           return;
@@ -49,7 +50,7 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
 
         const container = document.getElementById('feishu_qr_container');
         if (!container) return;
-        
+
         container.innerHTML = ''; // 清理容器
 
         // 构造重定向 URL
@@ -59,8 +60,8 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
         const appId = process.env.NEXT_PUBLIC_FEISHU_APP_ID;
 
         if (!appId) {
-            onError('缺少飞书 App ID 配置');
-            return;
+          onError('缺少飞书 App ID 配置');
+          return;
         }
 
         const QRLoginObj = SDK.create({
@@ -73,8 +74,9 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
         QRLoginObj.mount('feishu_qr_container');
         setLoading(false);
 
-      } catch (error: any) {
-        onError(`二维码初始化失败: ${error.message}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '未知错误';
+        onError(`二维码初始化失败: ${message}`);
         setLoading(false);
       }
     };
@@ -85,7 +87,7 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl p-6 w-[360px] relative animate-in fade-in zoom-in duration-200">
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="Close"
@@ -94,11 +96,11 @@ export function FeishuQRLogin({ onSuccess, onError, onClose }: FeishuQRLoginProp
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        
+
         <div className="text-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">飞书扫码登录</h3>
         </div>
-        
+
         <div className="flex justify-center items-center min-h-[300px]" id="feishu_qr_container">
           {loading && (
             <div className="flex flex-col items-center gap-2 text-theme-text-secondary">

@@ -17,10 +17,37 @@ import { useState, useEffect } from 'react';
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardHeader, PaperCardTitle, PaperCardContent } from '@/components/ui/paper-card';
 import { useAuth } from '@/contexts/auth-context';
-import TodoCategories from '@/features/dashboard/components/TodoCategories';
-import { TodoCategory } from '@/shared/types/todo';
+import { TodoCategory, TodoItem } from '@/shared/types/todo';
 import { UserRole } from '@/shared/types/user';
 import { TRACK_PAGE_VIEW } from '@/utils/analytics';
+
+// 内联的 TodoCategories 组件（原组件已删除）
+const TodoCategories = ({ categories, onTodoAction }: { categories: TodoCategory[], onTodoAction: () => void }) => (
+  <div className="space-y-4">
+    {categories.length === 0 ? (
+      <p className="text-center text-ink-500 py-8">暂无待办事项</p>
+    ) : (
+      categories.map((category) => (
+        <div key={category.id} className="border border-paper-400 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-ink-800">{category.name}</h3>
+            <span className="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full">{category.count}</span>
+          </div>
+          <ul className="space-y-2">
+            {category.items.map((item) => (
+              <li key={item.id} className="flex items-center justify-between p-2 bg-paper-200 rounded hover:bg-paper-300 transition-colors cursor-pointer" onClick={onTodoAction}>
+                <span className="text-sm text-ink-700">{item.title}</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${item.priority === 'high' ? 'bg-error-100 text-error-700' : item.priority === 'medium' ? 'bg-warning-100 text-warning-700' : 'bg-info-100 text-info-700'}`}>
+                  {item.priority === 'high' ? '高' : item.priority === 'medium' ? '中' : '低'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    )}
+  </div>
+);
 
 /**
  * 快速统计数据接口定义

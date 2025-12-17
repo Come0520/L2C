@@ -4,19 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from '@/components/ui/toast'
 import { leadService } from '@/services/leads.client'
 
-interface DuplicateGroup {
-  phone: string
-  lead_ids: number[]
-  lead_count: number
-  lead_details: Array<{
-    id: number
-    customer_name: string
-    phone: string
-    status: string
-    lead_number: string
-    created_at: string
-  }>
-}
+import { LeadDuplicateGroup } from '@/shared/types/lead'
 
 interface LeadDedupeDialogProps {
   open: boolean
@@ -25,7 +13,7 @@ interface LeadDedupeDialogProps {
 
 export const LeadDedupeDialog: React.FC<LeadDedupeDialogProps> = ({ open, onOpenChange }) => {
   const queryClient = useQueryClient()
-  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
+  const [duplicateGroups, setDuplicateGroups] = useState<LeadDuplicateGroup[]>([])
   const [loading, setLoading] = useState(false)
   const [merging, setMerging] = useState<number | null>(null)
 
@@ -40,7 +28,7 @@ export const LeadDedupeDialog: React.FC<LeadDedupeDialogProps> = ({ open, onOpen
     try {
       const groups = await leadService.findDuplicateGroups(100)
       console.log('Duplicate groups:', groups)
-      setDuplicateGroups(groups as any)
+      setDuplicateGroups(groups)
     } catch (error) {
       console.error('Failed to fetch duplicate groups:', error)
       toast.error('获取重复线索失败')

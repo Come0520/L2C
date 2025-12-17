@@ -12,11 +12,27 @@ interface UserProfile {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   avatarUrl?: string;
   role: UserRole;
   createdAt: string;
   planExpiresAt?: string;
 }
+
+// 角色名称映射
+const roleDisplayNames: Record<UserRole, string> = {
+  'admin': '系统管理员',
+  'SALES_STORE': '门店销售',
+  'SALES_MANAGER': '销售经理',
+  'SALES_LEADER': '销售主管',
+  'SERVICE_MEASURE': '测量师',
+  'SERVICE_INSTALL': '安装师',
+  'FINANCE': '财务人员',
+  'WAREHOUSE': '仓库管理员',
+  'LOGISTICS': '物流人员',
+  'OTHER_CUSTOMER': '普通客户',
+  'pro': 'Pro用户',
+};
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -33,6 +49,7 @@ export default function ProfilePage() {
     name: '',
     avatarUrl: '',
     phone: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -44,6 +61,7 @@ export default function ProfilePage() {
           id: user!.id,
           name: user!.name,
           phone: user!.phone,
+          email: user!.email,
           avatarUrl: user!.avatarUrl,
           role: user!.role,
           createdAt: user!.createdAt,
@@ -55,6 +73,7 @@ export default function ProfilePage() {
           name: mockProfile.name,
           avatarUrl: mockProfile.avatarUrl || '',
           phone: mockProfile.phone || '',
+          email: mockProfile.email || '',
         });
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
@@ -80,6 +99,8 @@ export default function ProfilePage() {
         .update({
           name: formData.name,
           avatar_url: formData.avatarUrl || null,
+          phone: formData.phone || null,
+          email: formData.email || null,
         })
         .eq('id', user!.id);
 
@@ -92,6 +113,8 @@ export default function ProfilePage() {
         ...prev,
         name: formData.name,
         avatarUrl: formData.avatarUrl,
+        phone: formData.phone,
+        email: formData.email,
       } : null);
 
       setSuccess('资料保存成功!');
@@ -113,6 +136,7 @@ export default function ProfilePage() {
         name: profile.name,
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
+        email: profile.email || '',
       });
       setIsEditing(false);
     }
@@ -216,7 +240,7 @@ export default function ProfilePage() {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-900">{profile.name}</div>
-                <div className="text-xs text-gray-500">{profile.role === 'pro' ? 'Pro用户' : '普通用户'}</div>
+                <div className="text-xs text-gray-500">{roleDisplayNames[profile.role] || profile.role}</div>
               </div>
               <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                 {profile.avatarUrl ? (
@@ -333,13 +357,38 @@ export default function ProfilePage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">手机号</label>
-                      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">{profile.phone}</div>
+                      {isEditing ? (
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          placeholder="请输入手机号"
+                        />
+                      ) : (
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">{profile.phone || '未设置'}</div>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">账户类型</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">邮箱</label>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          placeholder="请输入邮箱"
+                        />
+                      ) : (
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">{profile.email || '未设置'}</div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">角色</label>
                       <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                        {profile.role === 'pro' ? 'Pro用户' : '普通用户'}
+                        {roleDisplayNames[profile.role] || profile.role}
                       </div>
                     </div>
                   </div>

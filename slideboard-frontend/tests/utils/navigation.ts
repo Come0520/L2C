@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page } from '@playwright/test';
 
 export async function gotoPage(page: Page, url: string) {
     await page.goto(url);

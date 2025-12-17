@@ -4,6 +4,8 @@
 /node_modules
 /node_modules_backup
 node_modules_backup/
+node_modules_old/
+**/node_modules_old/
 *_backup/
 *_backup
 *_backup/

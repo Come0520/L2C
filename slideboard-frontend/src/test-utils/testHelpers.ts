@@ -209,7 +209,7 @@ export const generatePaginationData = <T>(items: T[], page = 1, perPage = 10) =>
 /**
  * 检查分页数据结构
  */
-export const expectPaginationStructure = <T>(data: any): void => {
+export const expectPaginationStructure = (data: any): void => {
   expect(data).toHaveProperty('items');
   expect(data).toHaveProperty('total');
   expect(data).toHaveProperty('page');
@@ -235,7 +235,7 @@ export const expectErrorStructure = (error: any): void => {
 /**
  * 检查成功响应结构
  */
-export const expectSuccessStructure = <T>(response: any): void => {
+export const expectSuccessStructure = (response: any): void => {
   expect(response).toHaveProperty('success');
   expect(response.success).toBe(true);
 };
@@ -243,7 +243,7 @@ export const expectSuccessStructure = <T>(response: any): void => {
 /**
  * 检查成功响应带数据结构
  */
-export const expectSuccessWithDataStructure = <T>(response: any): void => {
+export const expectSuccessWithDataStructure = (response: any): void => {
   expect(response).toHaveProperty('success');
   expect(response).toHaveProperty('data');
   expect(response.success).toBe(true);

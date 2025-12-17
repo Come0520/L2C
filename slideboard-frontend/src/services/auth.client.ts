@@ -121,8 +121,53 @@ export const authService = {
         }
     },
 
-    async register(phone: string, password: string, name?: string) {
-        const result = await authService.registerWithPhone(phone, password, name ? { name } : undefined)
+    /**
+     * 邮箱注册
+     */
+    async registerWithEmail(email: string, password: string, metadata?: Record<string, unknown>) {
+        const supabase = createClient()
+
+        // 验证邮箱格式
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+        if (!emailRegex.test(email)) {
+            throw new ApiError('邮箱格式不正确', 'INVALID_EMAIL', 400)
+        }
+
+        // 验证密码强度
+        if (password.length < 6) {
+            throw new ApiError('密码长度至少为 6 位', 'WEAK_PASSWORD', 400)
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    ...metadata,
+                    role: 'user', // Default role
+                },
+            },
+        })
+
+        if (error) {
+            handleSupabaseError(error as AuthError)
+        }
+
+        return {
+            user: data.user ? mapSupabaseUserToUser(data.user) : null,
+            session: data.session,
+        }
+    },
+
+    /**
+     * 注册（自动判断邮箱或手机号）
+     */
+    async register(identifier: string, password: string, name?: string) {
+        const isEmail = identifier.includes('@')
+        const metadata = name ? { name } : undefined
+        const result = isEmail
+            ? await authService.registerWithEmail(identifier, password, metadata)
+            : await authService.registerWithPhone(identifier, password, metadata)
         return { user: result.user }
     },
 

@@ -1,116 +1,136 @@
-// 用户角色类型
-export type UserRole = 
-  | 'user' 
-  | 'pro' 
-  | 'admin' 
-  | 'SALES_STORE' 
-  | 'SALES_REMOTE' 
-  | 'SALES_CHANNEL' 
-  | 'SERVICE_DISPATCH' 
-  | 'SERVICE_MEASURE' 
-  | 'SERVICE_INSTALL' 
-  | 'DESIGNER' 
-  | 'CUSTOMER' 
-  | 'LEAD_SALES' 
-  | 'LEAD_CHANNEL' 
-  | 'LEAD_GENERAL' 
-  | 'LEAD_ADMIN' 
-  | 'LEAD_VIEWER' 
-  | 'APPROVER_BUSINESS' 
-  | 'APPROVER_FINANCIAL' 
-  | 'APPROVER_MANAGEMENT' 
-  | 'DELIVERY_SERVICE' 
-  | 'OTHER_FINANCE' 
-  | 'OTHER_CUSTOMER' 
-  | 'PARTNER_DESIGNER' 
-  | 'PARTNER_GUIDE'
+// 用户类型定义
+// 统一使用大写蛇形命名（UPPER_SNAKE_CASE）
 
-// 用户相关类型
+/**
+ * 用户角色类型
+ * 命名规则: {类别}_{具体角色}
+ */
+export type UserRole =
+    // 管理类角色 (LEAD_*)
+    | 'LEAD_ADMIN'           // 系统管理员（最高权限）
+    | 'LEAD_GENERAL'         // 普通领导
+    | 'LEAD_VIEWER'          // 只读领导
+
+    // 销售类角色
+    | 'SALES_STORE'          // 驻店销售
+    | 'SALES_REMOTE'         // 远程销售
+    | 'SALES_CHANNEL'        // 渠道销售
+    | 'LEAD_SALES'           // 销售主管
+    | 'LEAD_CHANNEL'         // 渠道主管
+
+    // 服务类角色
+    | 'SERVICE_DISPATCH'     // 服务调度
+    | 'SERVICE_MEASURE'      // 测量师
+    | 'SERVICE_INSTALL'      // 安装师
+    | 'DELIVERY_SERVICE'     // 订单客服
+    | 'DESIGNER'             // 设计师
+
+    // 审批类角色
+    | 'APPROVER_BUSINESS'    // 业务审批人
+    | 'APPROVER_FINANCIAL'   // 财务审批人
+    | 'APPROVER_MANAGEMENT'  // 管理审批人
+
+    // 财务/客户类角色
+    | 'OTHER_FINANCE'        // 财务人员
+    | 'OTHER_CUSTOMER'       // 客户
+    | 'CUSTOMER'             // 客户（别名）
+
+    // 合作伙伴角色
+    | 'PARTNER_DESIGNER'     // 设计师
+    | 'PARTNER_GUIDE'        // 导购
+
+    // 基础用户角色（兼容旧数据）
+    | 'user'                 // 基础用户（已废弃，请使用 USER_BASIC）
+    | 'pro'                  // 专业用户（已废弃）
+    | 'admin';               // 管理员（已废弃，请使用 LEAD_ADMIN）
+
+/**
+ * 用户接口
+ */
 export interface User {
-  id: string;
-  phone: string;
-  name: string;
-  email?: string;
-  avatarUrl?: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+    role: UserRole;
+    avatar_url?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
+/**
+ * 角色权限映射
+ */
+export const ROLE_PERMISSIONS: Record<UserRole, readonly string[]> = {
+    // 管理员 - 所有权限
+    LEAD_ADMIN: ['all'],
+    admin: ['all'],
 
-// 权限常量
-export const USER_ROLES = {
-  USER: 'user',
-  PRO: 'pro',
-  ADMIN: 'admin',
-  SALES_STORE: 'SALES_STORE',
-  SALES_REMOTE: 'SALES_REMOTE',
-  SALES_CHANNEL: 'SALES_CHANNEL',
-  SERVICE_DISPATCH: 'SERVICE_DISPATCH',
-  SERVICE_MEASURE: 'SERVICE_MEASURE',
-  SERVICE_INSTALL: 'SERVICE_INSTALL',
-  DESIGNER: 'DESIGNER',
-  CUSTOMER: 'CUSTOMER',
-  LEAD_SALES: 'LEAD_SALES',
-  LEAD_CHANNEL: 'LEAD_CHANNEL',
-  LEAD_GENERAL: 'LEAD_GENERAL',
-  LEAD_ADMIN: 'LEAD_ADMIN',
-  LEAD_VIEWER: 'LEAD_VIEWER',
-  APPROVER_BUSINESS: 'APPROVER_BUSINESS',
-  APPROVER_FINANCIAL: 'APPROVER_FINANCIAL',
-  APPROVER_MANAGEMENT: 'APPROVER_MANAGEMENT',
-  DELIVERY_SERVICE: 'DELIVERY_SERVICE',
-  OTHER_FINANCE: 'OTHER_FINANCE',
-  OTHER_CUSTOMER: 'OTHER_CUSTOMER',
-  PARTNER_DESIGNER: 'PARTNER_DESIGNER',
-  PARTNER_GUIDE: 'PARTNER_GUIDE'
-} as const
+    // 领导角色
+    LEAD_GENERAL: ['lead_view', 'lead_manage', 'report_view'],
+    LEAD_VIEWER: ['lead_view', 'report_view'],
 
-// 操作权限类型
-export type OperationPermission = 
-  | 'view_measurements' 
-  | 'create_measurements' 
-  | 'update_measurements' 
-  | 'delete_measurements' 
-  | 'assign_measurements' 
-  | 'upload_measurement_reports' 
-  | 'download_measurement_reports' 
-  | 'rate_measurements' 
-  | 'approve_measurements' 
-  | 'manage_templates' 
-  | 'view_analytics' 
-  | 'manage_users' 
-  | 'manage_roles' 
-  | 'all'
+    // 销售角色
+    SALES_STORE: ['lead_create', 'lead_view', 'lead_track', 'quote_create', 'quote_view'],
+    SALES_REMOTE: ['lead_create', 'lead_view', 'lead_track', 'quote_create', 'quote_view'],
+    SALES_CHANNEL: ['lead_create', 'lead_view', 'lead_track', 'quote_create', 'quote_view'],
+    LEAD_SALES: ['lead_create', 'lead_view', 'lead_manage', 'quote_create', 'quote_view', 'report_view'],
+    LEAD_CHANNEL: ['lead_create', 'lead_view', 'lead_manage', 'quote_create', 'quote_view', 'report_view'],
 
-// 权限映射
-export const ROLE_PERMISSIONS: Record<UserRole, OperationPermission[]> = {
-  user: ['view_measurements'],
-  pro: ['view_measurements', 'create_measurements'],
-  admin: ['all'],
-  SALES_STORE: ['view_measurements', 'create_measurements', 'update_measurements'],
-  SALES_REMOTE: ['view_measurements', 'create_measurements'],
-  SALES_CHANNEL: ['view_measurements', 'create_measurements'],
-  SERVICE_DISPATCH: ['view_measurements', 'assign_measurements', 'update_measurements'],
-  SERVICE_MEASURE: ['view_measurements', 'update_measurements', 'upload_measurement_reports', 'download_measurement_reports'],
-  SERVICE_INSTALL: ['view_measurements', 'update_measurements'],
-  DESIGNER: ['view_measurements'],
-  CUSTOMER: ['view_measurements', 'rate_measurements'],
-  LEAD_SALES: ['view_measurements', 'create_measurements', 'update_measurements', 'approve_measurements', 'view_analytics'],
-  LEAD_CHANNEL: ['view_measurements', 'create_measurements', 'update_measurements', 'approve_measurements', 'view_analytics'],
-  LEAD_GENERAL: ['view_measurements', 'approve_measurements', 'view_analytics'],
-  LEAD_ADMIN: ['all'],
-  LEAD_VIEWER: ['view_measurements', 'view_analytics'],
-  APPROVER_BUSINESS: ['view_measurements', 'approve_measurements'],
-  APPROVER_FINANCIAL: ['view_measurements', 'approve_measurements'],
-  APPROVER_MANAGEMENT: ['view_measurements', 'approve_measurements'],
-  DELIVERY_SERVICE: ['view_measurements', 'update_measurements'],
-  OTHER_FINANCE: ['view_measurements', 'approve_measurements'],
-  OTHER_CUSTOMER: ['view_measurements'],
-  PARTNER_DESIGNER: ['view_measurements'],
-  PARTNER_GUIDE: ['view_measurements']
-} as const
+    // 服务角色
+    SERVICE_DISPATCH: ['service_assign', 'service_view', 'order_view'],
+    SERVICE_MEASURE: ['service_measure', 'order_view'],
+    SERVICE_INSTALL: ['service_install', 'order_view'],
+    DELIVERY_SERVICE: ['order_view', 'order_update'],
+    DESIGNER: ['design_view', 'design_create'],
+
+    // 审批角色
+    APPROVER_BUSINESS: ['approve_business'],
+    APPROVER_FINANCIAL: ['approve_financial', 'finance_view'],
+    APPROVER_MANAGEMENT: ['approve_management'],
+
+    // 财务角色
+    OTHER_FINANCE: ['finance_view', 'finance_approve'],
+
+    // 客户角色
+    OTHER_CUSTOMER: ['order_view'],
+    CUSTOMER: ['order_view'],
+
+    // 合作伙伴
+    PARTNER_DESIGNER: ['design_view', 'design_create'],
+    PARTNER_GUIDE: ['lead_view'],
+
+    // 基础用户
+    user: [],
+    pro: ['lead_view'],
+} as const;
+
+/**
+ * 角色中文名称
+ */
+export const ROLE_LABELS: Record<UserRole, string> = {
+    LEAD_ADMIN: '系统管理员',
+    LEAD_GENERAL: '领导',
+    LEAD_VIEWER: '领导（只读）',
+    SALES_STORE: '驻店销售',
+    SALES_REMOTE: '远程销售',
+    SALES_CHANNEL: '渠道销售',
+    LEAD_SALES: '销售主管',
+    LEAD_CHANNEL: '渠道主管',
+    SERVICE_DISPATCH: '服务调度',
+    SERVICE_MEASURE: '测量师',
+    SERVICE_INSTALL: '安装师',
+    DELIVERY_SERVICE: '订单客服',
+    DESIGNER: '设计师',
+    APPROVER_BUSINESS: '业务审批人',
+    APPROVER_FINANCIAL: '财务审批人',
+    APPROVER_MANAGEMENT: '管理审批人',
+    OTHER_FINANCE: '财务',
+    OTHER_CUSTOMER: '客户',
+    CUSTOMER: '客户',
+    PARTNER_DESIGNER: '设计师',
+    PARTNER_GUIDE: '导购',
+    user: '基础用户',
+    pro: '专业用户',
+    admin: '管理员',
+};

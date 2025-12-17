@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import React, { useState } from 'react'
 
 import {
@@ -36,6 +36,24 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
     // 空间选择下拉框状态
     const [isAddingSpace, setIsAddingSpace] = useState(false)
 
+    // 自定义空间弹窗状态
+    const [showCustomSpaceDialog, setShowCustomSpaceDialog] = useState(false)
+    const [customSpaceName, setCustomSpaceName] = useState('')
+
+    // 存储自定义空间名称的映射（value -> label）
+    const [customSpaceLabels, setCustomSpaceLabels] = useState<Record<string, string>>({})
+
+    // 处理空间选择
+    const handleSpaceSelect = (spaceValue: string) => {
+        if (spaceValue === 'other') {
+            // 选择"其他"时，弹出自定义输入框
+            setShowCustomSpaceDialog(true)
+            setIsAddingSpace(false)
+        } else {
+            handleAddSpace(spaceValue)
+        }
+    }
+
     // 添加空间
     const handleAddSpace = (spaceValue: string) => {
         if (!activeSpaces.includes(spaceValue)) {
@@ -44,15 +62,58 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
         setIsAddingSpace(false)
     }
 
+    // 确认添加自定义空间
+    const handleConfirmCustomSpace = () => {
+        if (customSpaceName.trim()) {
+            // 生成唯一的空间标识
+            const customSpaceValue = `custom-${Date.now()}`
+            // 保存自定义空间名称映射
+            setCustomSpaceLabels(prev => ({
+                ...prev,
+                [customSpaceValue]: customSpaceName.trim()
+            }))
+            // 添加到活跃空间列表
+            handleAddSpace(customSpaceValue)
+            // 重置状态
+            setCustomSpaceName('')
+            setShowCustomSpaceDialog(false)
+        }
+    }
+
+    // 取消自定义空间输入
+    const handleCancelCustomSpace = () => {
+        setCustomSpaceName('')
+        setShowCustomSpaceDialog(false)
+    }
+
+    // 获取空间显示名称
+    const getSpaceLabel = (spaceValue: string): string => {
+        // 先检查是否是自定义空间
+        if (customSpaceLabels[spaceValue]) {
+            return customSpaceLabels[spaceValue]
+        }
+        // 再从预定义选项中查找
+        return SPACE_OPTIONS.find(s => s.value === spaceValue)?.label || spaceValue
+    }
+
     // 删除空间 (同时删除该空间下的所有商品)
     const handleDeleteSpace = (spaceValue: string) => {
-        if (confirm(`确定要删除${SPACE_OPTIONS.find(s => s.value === spaceValue)?.label || spaceValue}及其所有商品吗？`)) {
+        if (confirm(`确定要删除${getSpaceLabel(spaceValue)}及其所有商品吗？`)) {
             // 找出该空间下的所有商品ID并删除
             const spaceItems = items.filter(i => i.space === spaceValue)
             spaceItems.forEach(item => onDeleteItem(item.id))
 
             // 从活跃空间列表中移除
             setActiveSpaces(prev => prev.filter(s => s !== spaceValue))
+
+            // 如果是自定义空间，也从映射中移除
+            if (customSpaceLabels[spaceValue]) {
+                setCustomSpaceLabels(prev => {
+                    const newLabels = { ...prev }
+                    delete newLabels[spaceValue]
+                    return newLabels
+                })
+            }
         }
     }
 
@@ -61,6 +122,56 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
 
     return (
         <div className="space-y-8">
+            {/* 自定义空间名称输入弹窗 */}
+            {showCustomSpaceDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-ink-900">输入自定义空间名称</h3>
+                            <button
+                                onClick={handleCancelCustomSpace}
+                                className="text-ink-400 hover:text-ink-600 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-ink-500 mb-4">
+                            请输入空间名称，例如：保姆房、衣帽间、儿童房等
+                        </p>
+                        <input
+                            type="text"
+                            value={customSpaceName}
+                            onChange={(e) => setCustomSpaceName(e.target.value)}
+                            placeholder="请输入空间名称"
+                            className="w-full px-3 py-2 border border-paper-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleConfirmCustomSpace()
+                                } else if (e.key === 'Escape') {
+                                    handleCancelCustomSpace()
+                                }
+                            }}
+                        />
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button
+                                onClick={handleCancelCustomSpace}
+                                className="px-4 py-2 text-sm font-medium text-ink-700 bg-paper-100 hover:bg-paper-200 rounded-md transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleConfirmCustomSpace}
+                                disabled={!customSpaceName.trim()}
+                                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                确认添加
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeSpaces.length === 0 ? (
                 <div className="text-center py-12 bg-paper-50 rounded-lg border border-dashed border-paper-300">
                     <p className="text-ink-500 mb-4">暂无空间数据</p>
@@ -77,7 +188,7 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
                             <select
                                 className="block w-full pl-3 pr-10 py-2 text-base border-paper-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                                 onChange={(e) => {
-                                    if (e.target.value) handleAddSpace(e.target.value)
+                                    if (e.target.value) handleSpaceSelect(e.target.value)
                                 }}
                                 defaultValue=""
                                 autoFocus
@@ -94,7 +205,7 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
             ) : (
                 <div className="space-y-6">
                     {activeSpaces.map(space => {
-                        const spaceLabel = SPACE_OPTIONS.find(s => s.value === space)?.label || space
+                        const spaceLabel = getSpaceLabel(space)
                         const spaceItems = items.filter(i => i.space === space)
 
                         return (
@@ -146,7 +257,7 @@ export const SpaceProductSection: React.FC<SpaceProductSectionProps> = ({
                                 <select
                                     className="block w-full pl-3 pr-8 py-1.5 text-sm border-paper-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md"
                                     onChange={(e) => {
-                                        if (e.target.value) handleAddSpace(e.target.value)
+                                        if (e.target.value) handleSpaceSelect(e.target.value)
                                     }}
                                     defaultValue=""
                                     autoFocus

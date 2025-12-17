@@ -1,18 +1,23 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Trash2, Plus, Save } from 'lucide-react';
+import { Trash2, Plus, Save, ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 
 import { PaperButton } from '@/components/ui/paper-button';
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card';
-import { PaperInput, PaperTextarea } from '@/components/ui/paper-input';
+import { PaperInput } from '@/components/ui/paper-input';
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell } from '@/components/ui/paper-table';
 import { quoteService } from '@/services/quotes.client';
+import { productsService } from '@/services/products.client';
+import { Product } from '@/shared/types/product';
 
-import { createQuoteSchema, CreateQuoteFormData, quoteItemSchema } from '../schemas/quote-schema';
+import { createQuoteSchema, CreateQuoteFormData } from '../schemas/quote-schema';
+
+import { ProductAutocomplete } from './product-autocomplete';
 
 interface QuoteFormProps {
   initialData?: Partial<CreateQuoteFormData>;
@@ -23,13 +28,31 @@ interface QuoteFormProps {
 
 export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: QuoteFormProps) {
   const router = useRouter();
-  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
   // 乐观更新状态管理
   const [isOptimisticSaving, setIsOptimisticSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [originalData, setOriginalData] = useState<CreateQuoteFormData | null>(null);
-  
+
+  // 加载产品列表
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        const data = await productsService.getAllProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
   const {
     register,
     control,
@@ -51,7 +74,9 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
           unitPrice: 0,
           totalPrice: 0,
           category: 'standard',
-          space: 'default'
+          space: 'default',
+          imageUrl: '',
+          productId: ''
         }
       ]
     }
@@ -76,6 +101,21 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
 
   const totalAmount = watchedItems?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0;
 
+  // 处理产品选择
+  const handleProductSelect = (index: number, product: Product | null) => {
+    if (product) {
+      setValue(`items.${index}.productName`, product.productName);
+      setValue(`items.${index}.productId`, product.id);
+      setValue(`items.${index}.unitPrice`, product.prices?.retailPrice ?? 0);
+      // 获取第一张详情图
+      const imageUrl = product.images?.detailImages?.[0] || '';
+      setValue(`items.${index}.imageUrl`, imageUrl);
+    } else {
+      setValue(`items.${index}.productId`, '');
+      setValue(`items.${index}.imageUrl`, '');
+    }
+  };
+
   const onSubmit = async (data: CreateQuoteFormData) => {
     try {
       // 保存原始数据，用于回滚
@@ -84,7 +124,7 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
       setIsOptimisticSaving(true);
       setSaveStatus('idle');
       setSaveError(null);
-      
+
       if (isEditing && quoteId) {
         // 编辑模式下的乐观更新
         console.log('Update quote logic to be implemented', data);
@@ -158,7 +198,9 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
                 unitPrice: 0,
                 totalPrice: 0,
                 category: 'standard',
-                space: 'default'
+                space: 'default',
+                imageUrl: '',
+                productId: ''
               })}
               icon={<Plus className="w-4 h-4" />}
             >
@@ -170,6 +212,7 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
           <div className="overflow-x-auto">
             <PaperTable>
               <PaperTableHeader>
+                <PaperTableCell className="w-[60px]">图片</PaperTableCell>
                 <PaperTableCell className="w-[200px]">产品名称</PaperTableCell>
                 <PaperTableCell className="w-[120px]">空间</PaperTableCell>
                 <PaperTableCell className="w-[100px]">数量</PaperTableCell>
@@ -180,11 +223,32 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
               <PaperTableBody>
                 {fields.map((field, index) => (
                   <PaperTableRow key={field.id}>
+                    {/* 产品图片列 */}
                     <PaperTableCell>
-                      <PaperInput
-                        {...register(`items.${index}.productName`)}
+                      <div className="w-12 h-12 rounded border border-paper-200 overflow-hidden bg-paper-100 flex items-center justify-center">
+                        {watchedItems?.[index]?.imageUrl ? (
+                          <Image
+                            src={watchedItems[index].imageUrl!}
+                            alt="产品图片"
+                            width={48}
+                            height={48}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-ink-300" />
+                        )}
+                      </div>
+                    </PaperTableCell>
+                    {/* 产品名称 - 使用联想选择器 */}
+                    <PaperTableCell>
+                      <ProductAutocomplete
+                        value={watchedItems?.[index]?.productName || ''}
+                        onChange={(value) => setValue(`items.${index}.productName`, value)}
+                        onProductSelect={(product) => handleProductSelect(index, product)}
+                        products={products}
+                        placeholder={isLoadingProducts ? '加载中...' : '输入产品名称搜索...'}
                         error={errors.items?.[index]?.productName?.message}
-                        placeholder="产品名称"
+                        selectedProductId={watchedItems?.[index]?.productId}
                       />
                     </PaperTableCell>
                     <PaperTableCell>
@@ -228,7 +292,7 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
                 ))}
                 {fields.length === 0 && (
                   <PaperTableRow>
-                    <PaperTableCell colSpan={6} className="text-center text-ink-400 py-8">
+                    <PaperTableCell colSpan={7} className="text-center text-ink-400 py-8">
                       暂无报价项目，请点击右上角添加
                     </PaperTableCell>
                   </PaperTableRow>
@@ -259,7 +323,7 @@ export function QuoteForm({ initialData, leadId, quoteId, isEditing = false }: Q
           {saveError}
         </div>
       )}
-      
+
       <div className="flex justify-end gap-4">
         <PaperButton
           type="button"

@@ -7,8 +7,8 @@ import { PaperBadge } from '@/components/ui/paper-badge'
 import { PaperButton } from '@/components/ui/paper-button'
 import { PaperCard, PaperCardContent } from '@/components/ui/paper-card'
 import { PaperTable, PaperTableHeader, PaperTableBody, PaperTableRow, PaperTableCell, PaperTablePagination, PaperTableToolbar } from '@/components/ui/paper-table'
-import { useSalesOrders } from '@/hooks/useSalesOrders'
 import { ORDER_STATUS } from '@/constants/order-status'
+import { useSalesOrders } from '@/hooks/useSalesOrders'
 
 // 草稿/待签约订单类型定义
 interface DraftOrder {
@@ -25,11 +25,11 @@ interface DraftOrder {
 
 export function DraftSignView() {
   const router = useRouter()
-  
+
   // 使用hook获取数据
   const { data: rawResponse, isLoading } = useSalesOrders(1, 10, ORDER_STATUS.DRAFT_SIGNED)
   const [orders, setOrders] = useState<DraftOrder[]>([])
-  
+
   // 更新订单数据
   useEffect(() => {
     if (rawResponse?.data?.orders) {
@@ -67,13 +67,13 @@ export function DraftSignView() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-ink-800">开单</h1>
-          <p className="text-ink-500 mt-1">管理草稿和待签约的订单</p>
+          <p className="text-ink-500 mt-1">管理报价单草稿和版本</p>
         </div>
         <PaperButton
           variant="primary"
           onClick={handleCreateOrder}
         >
-          新建订单
+          新建报价单
         </PaperButton>
       </div>
 
@@ -139,10 +139,10 @@ export function DraftSignView() {
                     {order.updatedAt}
                   </PaperTableCell>
                   <PaperTableCell>
-                    <PaperBadge 
+                    <PaperBadge
                       className={
-                        order.status === 'draft' 
-                          ? 'bg-gray-100 text-gray-700' 
+                        order.status === 'draft'
+                          ? 'bg-gray-100 text-gray-700'
                           : 'bg-blue-100 text-blue-700'
                       }
                     >
@@ -169,7 +169,7 @@ export function DraftSignView() {
             totalPages={1}
             totalItems={orders.length}
             itemsPerPage={10}
-            onPageChange={() => {}}
+            onPageChange={() => { }}
           />
         </PaperCardContent>
       </PaperCard>

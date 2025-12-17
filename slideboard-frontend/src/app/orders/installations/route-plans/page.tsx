@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 
-import InstallationRoutePlanDetail from '@/features/installations/components/route/installation-route-plan-detail';
-import InstallationRoutePlanForm from '@/features/installations/components/route/installation-route-plan-form';
-import InstallationRoutePlanList from '@/features/installations/components/route/installation-route-plan-list';
+import InstallationRoutePlanDetail from '@/features/installations/components/route/InstallationRoutePlanDetail';
+import InstallationRoutePlanForm from '@/features/installations/components/route/InstallationRoutePlanForm';
+import InstallationRoutePlanList from '@/features/installations/components/route/InstallationRoutePlanList';
 import { installationScheduleService } from '@/services/installation-schedule.client';
 import { InstallationRoutePlan, CreateInstallationRoutePlanRequest } from '@/types/installation-schedule';
 

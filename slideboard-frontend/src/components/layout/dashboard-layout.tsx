@@ -348,9 +348,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <SidebarLink
               link={{
                 label: user?.name || 'User',
-                href: '#',
+                href: '/profile',
                 icon: (
-                  <div className="h-7 w-7 rounded-full bg-theme-bg-tertiary flex items-center justify-center border border-theme-border flex-shrink-0 overflow-hidden">
+                  <div className="h-7 w-7 rounded-full bg-theme-bg-tertiary flex items-center justify-center border border-theme-border flex-shrink-0 overflow-hidden cursor-pointer">
                     {user?.avatarUrl ? (
                       <Image src={user.avatarUrl} width={28} height={28} alt="Avatar" className="rounded-full" />
                     ) : (

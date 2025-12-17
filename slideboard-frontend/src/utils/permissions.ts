@@ -10,13 +10,13 @@ import { User, UserRole, ROLE_PERMISSIONS } from '@/shared/types/user'
  */
 export function checkPermission(user: User | null, permission: string): boolean {
   if (!user) return false
-  
-  // 管理员具有所有权限
-  if (user.role === 'admin') return true
-  
+
+  // 管理员具有所有权限（同时支持 admin 和 LEAD_ADMIN）
+  if (isAdmin(user.role)) return true
+
   // 获取用户角色的权限列表
   const permissions = ROLE_PERMISSIONS[user.role] as unknown as string[]
-  
+
   // 检查是否具有所有权限或特定权限
   return permissions.includes('all') || permissions.includes(permission)
 }
@@ -29,16 +29,16 @@ export function checkPermission(user: User | null, permission: string): boolean 
  */
 export function checkAnyPermission(user: User | null, permissions: string[]): boolean {
   if (!user) return false
-  
-  // 管理员具有所有权限
-  if (user.role === 'admin') return true
-  
+
+  // 管理员具有所有权限（同时支持 admin 和 LEAD_ADMIN）
+  if (isAdmin(user.role)) return true
+
   // 获取用户角色的权限列表
   const userPermissions = ROLE_PERMISSIONS[user.role] as unknown as string[]
-  
+
   // 检查是否具有所有权限或至少一个特定权限
   if (userPermissions.includes('all')) return true
-  
+
   return permissions.some(permission => userPermissions.includes(permission))
 }
 
@@ -50,10 +50,10 @@ export function checkAnyPermission(user: User | null, permissions: string[]): bo
  */
 export function checkRole(user: User | null, roles: UserRole[]): boolean {
   if (!user) return false
-  
-  // 管理员匹配所有角色
-  if (user.role === 'admin') return true
-  
+
+  // 管理员匹配所有角色（同时支持 admin 和 LEAD_ADMIN）
+  if (isAdmin(user.role)) return true
+
   return roles.includes(user.role)
 }
 
@@ -98,7 +98,7 @@ export function getRoleLabel(role: UserRole): string {
     PARTNER_DESIGNER: '设计师',
     PARTNER_GUIDE: '导购'
   }
-  
+
   return roleLabels[role] || role
 }
 
@@ -110,13 +110,13 @@ export function getRoleLabel(role: UserRole): string {
  */
 export function hasPermission(role: UserRole | undefined, requiredRoles: UserRole | UserRole[]): boolean {
   if (!role) return false
-  
-  // 管理员具有所有权限
-  if (role === 'admin') return true
-  
+
+  // 管理员具有所有权限（同时支持 admin 和 LEAD_ADMIN）
+  if (isAdmin(role)) return true
+
   // 转换为数组
   const rolesArray = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles]
-  
+
   // 检查是否匹配任何角色
   return rolesArray.includes(role)
 }

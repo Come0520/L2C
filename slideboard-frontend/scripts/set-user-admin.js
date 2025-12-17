@@ -30,10 +30,10 @@ async function main() {
 
     console.log('✅ User logged in successfully. User ID:', signInData.user.id);
 
-    // 2. Update user metadata to admin role
+    // 2. Update user metadata to LEAD_ADMIN (super admin) role
     const { data: updateData, error: updateError } = await supabase.auth.updateUser({
         data: {
-            role: 'admin'
+            role: 'LEAD_ADMIN'
         }
     });
 
@@ -47,7 +47,7 @@ async function main() {
     // 3. Update public.users table (if exists)
     const { data: publicUsers, error: publicError } = await supabase
         .from('users')
-        .update({ role: 'admin' })
+        .update({ role: 'LEAD_ADMIN' })
         .eq('supabase_uid', signInData.user.id)
         .select();
 

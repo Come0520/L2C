@@ -1,5 +1,7 @@
 'use client';
 
+import { ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import { PaperCard, PaperCardContent, PaperCardHeader, PaperCardTitle } from '@/components/ui/paper-card';
@@ -145,6 +147,7 @@ export function QuoteDetailView({ quote }: QuoteDetailViewProps) {
                                 <PaperTable>
                                     <PaperTableHeader>
                                         <PaperTableRow>
+                                            <PaperTableCell className="w-[60px]">图片</PaperTableCell>
                                             <PaperTableCell>空间</PaperTableCell>
                                             <PaperTableCell>产品名称</PaperTableCell>
                                             <PaperTableCell>类别</PaperTableCell>
@@ -156,6 +159,21 @@ export function QuoteDetailView({ quote }: QuoteDetailViewProps) {
                                     <PaperTableBody>
                                         {selectedVersion.items.map((item) => (
                                             <PaperTableRow key={item.id}>
+                                                <PaperTableCell>
+                                                    <div className="w-10 h-10 rounded border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                                                        {item.imageUrl ? (
+                                                            <Image
+                                                                src={item.imageUrl}
+                                                                alt={item.productName}
+                                                                width={40}
+                                                                height={40}
+                                                                className="object-cover w-full h-full"
+                                                            />
+                                                        ) : (
+                                                            <ImageIcon className="h-4 w-4 text-gray-300" />
+                                                        )}
+                                                    </div>
+                                                </PaperTableCell>
                                                 <PaperTableCell>{item.space}</PaperTableCell>
                                                 <PaperTableCell>{item.productName}</PaperTableCell>
                                                 <PaperTableCell>{item.category}</PaperTableCell>

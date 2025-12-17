@@ -1,26 +1,3 @@
-import { Session } from '@supabase/supabase-js';
-
-
-import { User } from './user';
-
-export * from './user';
-
-export interface AuthState {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  error: Error | null;
-}
-
-export interface LoginCredentials {
-  phone: string;
-  password?: string;
-  verificationCode?: string;
-}
-
-export interface RegisterData {
-  phone: string;
-  password?: string;
-  name: string;
-  email?: string;
-}
+// 认证相关类型定义
+// 重导出用户类型
+export { User, UserRole, ROLE_PERMISSIONS, ROLE_LABELS } from './user';

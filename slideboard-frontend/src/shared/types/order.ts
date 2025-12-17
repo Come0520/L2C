@@ -132,13 +132,11 @@ export type PackageItemType = NonNullable<components['schemas']['CurtainItem']['
 // 空间选项
 export const SPACE_OPTIONS = [
     { value: 'living-room', label: '客厅' },
-    { value: 'bedroom', label: '卧室' },
+    { value: 'master-bedroom', label: '主卧' },
+    { value: 'second-bedroom', label: '次卧' },
     { value: 'study', label: '书房' },
-    { value: 'dining-room', label: '餐厅' },
-    { value: 'kitchen', label: '厨房' },
     { value: 'balcony', label: '阳台' },
-    { value: 'bathroom', label: '卫生间' },
-    { value: 'hallway', label: '走廊' },
+    { value: 'dining-room', label: '餐厅' },
     { value: 'other', label: '其他' }
 ]
 

@@ -149,7 +149,7 @@ export const installationService = {
     /**
      * Update acceptance status
      */
-    async updateAcceptanceStatus(id: string, status: string, notes?: string) {
+    async updateAcceptanceStatus(id: string, status: string, _notes?: string) {
         return withErrorHandler(async () => {
             const { data, error } = await supabase
                 .from('installation_orders')

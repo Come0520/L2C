@@ -15,7 +15,7 @@ interface AuthContextType {
   loginWithSms: (phone: string, verificationCode: string) => Promise<void>;
   sendVerificationCode: (phone: string) => Promise<void>;
   loginWithThirdParty: (provider: 'wechat' | 'feishu') => Promise<void>;
-  register: (phone: string, password: string, name: string) => Promise<void>;
+  register: (identifier: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -187,9 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (phone: string, password: string, name: string) => {
+  const register = async (identifier: string, password: string, name: string) => {
     try {
-      await authService.register(phone, password, name);
+      await authService.register(identifier, password, name);
       router.push('/');
     } catch (_error) {
       throw _error;

@@ -321,7 +321,7 @@ export const TRACK_WEB_VITALS = (metric: {
 };
 
 // Export all functions
-export default {
+const Analytics = {
   TRACK_EVENT,
   TRACK_PAGE_VIEW,
   IDENTIFY_USER,
@@ -332,3 +332,5 @@ export default {
   TRACK_WEB_VITALS,
   FLUSH,
 };
+
+export default Analytics;

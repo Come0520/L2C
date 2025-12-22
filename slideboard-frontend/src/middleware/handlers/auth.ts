@@ -20,6 +20,16 @@ export class AuthMiddleware implements Middleware {
   async execute(request: NextRequest, _response: NextResponse, next: () => Promise<void>): Promise<NextResponse | void> {
     const pathname = request.nextUrl.pathname
 
+    // 将旧的 /auth/login 重定向到新的 /login
+    // 匹配 /auth/login 或 /xx-XX/auth/login
+    if (pathname === '/auth/login' || pathname.match(/^\/[a-z]{2}-[A-Z]{2}\/auth\/login$/)) {
+      const url = request.nextUrl.clone()
+      // 将路径中的 /auth/login 替换为 /login
+      // 例如 /auth/login -> /login, /zh-CN/auth/login -> /zh-CN/login
+      url.pathname = pathname.replace(/\/auth\/login$/, '/login')
+      return NextResponse.redirect(url)
+    }
+
     // 如果是公共路由，跳过认证检查
     // 但如果是登录页，我们仍需检查是否已登录以便跳转
     if (isPublicRoute(pathname) && !pathname.startsWith('/login') && !pathname.match(/^\/[a-z]{2}-[A-Z]{2}\/login/)) {
@@ -49,7 +59,7 @@ export class AuthMiddleware implements Middleware {
     if (!user) {
       // 如果当前已经在登录页，则不进行重定向，防止无限循环
       if (pathname.startsWith('/login') || pathname.match(/^\/[a-z]{2}-[A-Z]{2}\/login/)) {
-         return next()
+        return next()
       }
 
       // 使用相对路径构建登录URL，保持locale前缀（如果存在）
@@ -68,7 +78,7 @@ export class AuthMiddleware implements Middleware {
     // 另外，如果用户已登录且访问登录页，重定向到首页
     if (user && (pathname.startsWith('/login') || pathname.match(/^\/[a-z]{2}-[A-Z]{2}\/login/))) {
       const url = request.nextUrl.clone()
-      
+
       const localeMatch = pathname.match(/^\/([a-z]{2}-[A-Z]{2})/)
       url.pathname = localeMatch ? `/${localeMatch[1]}` : '/'
 

@@ -1,0 +1,73 @@
+# ========================================
+# L2C 生产环境 Docker Compose
+# ========================================
+
+services:
+  # Next.js 应用
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: l2c-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - l2c-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:17-alpine
+    container_name: l2c-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-l2c}
+      POSTGRES_USER: ${POSTGRES_USER:-l2c_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - l2c_postgres_data:/var/lib/postgresql/data
+    networks:
+      - l2c-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-l2c_user} -d ${POSTGRES_DB:-l2c}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: l2c-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - l2c-network
+
+networks:
+  l2c-network:
+    driver: bridge
+
+volumes:
+  l2c_postgres_data:
+    name: l2c_postgres_prod_data

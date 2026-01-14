@@ -1,0 +1,107 @@
+﻿import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index, boolean } from 'drizzle-orm/pg-core';
+import { tenants, users } from './infrastructure';
+import { customers } from './customers';
+
+export const quotes = pgTable('quotes', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    quoteNo: varchar('quote_no', { length: 50 }).unique().notNull(),
+    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    leadId: uuid('lead_id'), // Optional reference to lead
+    measureVariantId: uuid('measure_variant_id'), // Optional reference to measure variant
+
+    // Versioning
+    parentQuoteId: uuid('parent_quote_id'), // Points to the previous version
+    isActive: boolean('is_active').default(true), // Only one active version per QuoteNo chain
+
+    title: varchar('title', { length: 200 }),
+
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).default('0'),
+    discountRate: decimal('discount_rate', { precision: 5, scale: 4 }), // e.g. 0.9500
+    discountAmount: decimal('discount_amount', { precision: 12, scale: 2 }).default('0'),
+    finalAmount: decimal('final_amount', { precision: 12, scale: 2 }).default('0'),
+
+    status: varchar('status', { length: 50 }).default('DRAFT'),
+    version: integer('version').default(1).notNull(),
+
+    validUntil: timestamp('valid_until', { withTimezone: true }),
+    notes: text('notes'),
+
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    quoteTenantIdx: index('idx_quotes_tenant').on(table.tenantId),
+    quoteCustomerIdx: index('idx_quotes_customer').on(table.customerId),
+}));
+
+export const quoteRooms = pgTable('quote_rooms', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
+
+    name: varchar('name', { length: 100 }).notNull(),
+    measureRoomId: uuid('measure_room_id'), // Link to measurement room if applicable
+
+    sortOrder: integer('sort_order').default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const quoteItems = pgTable('quote_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
+    parentId: uuid('parent_id'), // For nested items (e.g. accessories under curtains)
+    roomId: uuid('room_id').references(() => quoteRooms.id), // Room is required in requirements, but make optional for safe migration or non-room items? Requirements say Required. Let's make it nullable for now to be safe or stick to requirements. Docs say "Required". I'll keep it nullable in DB to avoid breakage if migrating old data (though this is new table). Actually, let's make it nullable but logic enforces it.
+
+    category: varchar('category', { length: 50 }).notNull(), // CURTAIN_FABRIC, TRACK, WALLPAPER, etc.
+
+    productId: uuid('product_id'),
+    productName: varchar('product_name', { length: 200 }).notNull(),
+    productSku: varchar('product_sku', { length: 100 }),
+
+    roomName: varchar('room_name', { length: 100 }), // Redundant but requested
+
+    unit: varchar('unit', { length: 20 }), // 米, 平米, 个
+
+    unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+    quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
+
+    // Dimensions & Calc
+    width: decimal('width', { precision: 10, scale: 2 }), // mm or cm? Docs say mm
+    height: decimal('height', { precision: 10, scale: 2 }), // mm
+    foldRatio: decimal('fold_ratio', { precision: 4, scale: 2 }),
+    processFee: decimal('process_fee', { precision: 10, scale: 2 }),
+
+    subtotal: decimal('subtotal', { precision: 12, scale: 2 }).notNull(),
+
+    attributes: jsonb('attributes').default({}), // Stores dynamic attrs like material_id, etc.
+    calculationParams: jsonb('calculation_params'), // Snapshot of calc factors (loss, strips, etc.)
+    remark: text('remark'),
+    sortOrder: integer('sort_order').default(0),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const quotePlans = pgTable('quote_plans', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    code: varchar('code', { length: 50 }).notNull(), // Using varchar instead of enum as per seed code
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const quotePlanItems = pgTable('quote_plan_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    planId: uuid('plan_id').references(() => quotePlans.id).notNull(),
+    // templateId: uuid('template_id').references(() => productTemplates.id).notNull(), // requires import
+    templateId: uuid('template_id').notNull(),
+    overridePrice: decimal('override_price', { precision: 10, scale: 2 }),
+    role: varchar('role', { length: 50 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+

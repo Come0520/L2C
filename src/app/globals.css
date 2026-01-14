@@ -1,0 +1,587 @@
+/**
+ * L2C Design System - 全局样式
+ * Tailwind CSS v4 + CSS-first 配置
+ */
+
+/* Premium Sans Typography - DM Sans */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/* ==================== Theme Configuration ==================== */
+@theme {
+  /* Typography */
+  --font-sans: "DM Sans", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+
+  /* Color Palette - SaaS Premium (Mapped to Slate/Blue/Orange) */
+  --color-primary-500: #2563EB;
+  --color-primary-600: #1D4ED8;
+  --color-secondary-500: #3B82F6;
+  --color-cta-500: #F97316;
+  --color-background-light: #F8FAFC;
+  --color-text-primary: #1E293B;
+  --color-border-light: #E2E8F0;
+
+  /* Gray Scale Aliases (Mapping to Slate for v4 compatibility) */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+  --color-gray-950: #020617;
+
+  /* Shadcn/UI Compatibility Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  /* Liquid Glass System (Unified) */
+  --glass-blur: 20px;
+  /* Optimized from 40px for performance */
+  --glass-saturate: 150%;
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+
+  /* Liquid Glass - Dark Mode (Deep Space Neon - Performance Tuned) */
+  --glass-bg-dark: rgba(2, 6, 23, 0.65);
+  /* Deep Slate @ 65% for extra depth */
+  --glass-border-dark: rgba(255, 255, 255, 0.12);
+  /* Brighter edge shine */
+  --glass-shadow-dark:
+    0 8px 32px 0 rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(99, 102, 241, 0.05);
+  /* Reduced glow radius & opacity */
+  --glass-saturate-dark: 150%;
+  /* Reduced from 200% for GPU relief */
+  --neon-glow-primary: 0 0 12px rgba(37, 99, 235, 0.3);
+  /* Optimized neon */
+
+  /* Retaining specific liquid variables for backward compat if needed, pointing to main ones */
+  --glass-blur-liquid: var(--glass-blur);
+  --glass-saturate-liquid: var(--glass-saturate);
+  --glass-bg-liquid: var(--glass-bg);
+  --glass-border-liquid: var(--glass-border);
+  --glass-shadow-liquid: var(--glass-shadow);
+
+  /* Fluid Animations */
+  --curve-fluid: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --duration-morph: 400ms;
+
+  /* Antigravity (Warm Tech) Core */
+  --parchment-bg: #fbfbf9;
+  --parchment-paper: #ffffff;
+  --parchment-text: #37352f;
+  --parchment-muted: #787774;
+  --parchment-border: #e6e4e0;
+  --parchment-accent: #ea580c;
+  --parchment-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Animations - Unified Definition */
+  --animate-fade-in: fade-in var(--transition-normal) ease-out;
+  --animate-fade-out: fade-out var(--transition-normal) ease-out;
+  --animate-scale-in: scale-in var(--transition-fast) ease-out;
+  --animate-slide-up: slide-up var(--transition-normal) ease-out;
+  --animate-slide-down: slide-down var(--transition-normal) ease-out;
+  --animate-liquid-shine: liquid-shine 3s infinite;
+  --animate-aurora-flow: aurora-flow 15s ease infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes liquid-shine {
+    from {
+      transform: translateX(-100%) skewX(-15deg);
+    }
+
+    to {
+      transform: translateX(200%) skewX(-15deg);
+    }
+  }
+
+  @keyframes aurora-flow {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+}
+
+/* ==================== Liquid Background Aurora V3 ==================== */
+.liquid-mesh-bg {
+  background: #f8fafc;
+  background-image:
+    radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%),
+    radial-gradient(at 100% 0%, #f0f9ff 0px, transparent 50%),
+    radial-gradient(at 100% 100%, #fae8ff 0px, transparent 50%),
+    radial-gradient(at 0% 100%, #e0f2fe 0px, transparent 50%),
+    radial-gradient(at 50% 50%, #ffffff 0px, transparent 50%);
+  position: fixed;
+  inset: 0;
+  z-index: -50;
+  /* Lower z-index to stay behind everything */
+  pointer-events: none;
+  /* Ensure clicks pass through */
+}
+
+.aurora-animate {
+  background: linear-gradient(135deg,
+      #6366f1 0%,
+      #a855f7 25%,
+      #ec4899 50%,
+      #3b82f6 75%,
+      #6366f1 100%);
+  background-size: 400% 400%;
+  animation: var(--animate-aurora-flow);
+  filter: blur(40px);
+  /* Optimized from 80px */
+  opacity: 0.15;
+  position: fixed;
+  inset: 0;
+  z-index: -49;
+  pointer-events: none;
+  will-change: transform;
+  /* Performance Optimization */
+}
+
+.dark .aurora-animate {
+  opacity: 0.25;
+  /* Boosted nebula effect in dark mode */
+}
+
+
+/* Parchment Texture Layer - REMOVED for clean look */
+/* Parchment Texture Layer - REMOVED for clean look */
+/* 
+.parchment-texture { } 
+*/
+
+/* ==================== Base Styles ==================== */
+@layer base {
+
+  /* Reduced Motion Accessibility - WCAG 2.1 Success Criterion 2.3.3 */
+  @media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  :root {
+    /* Light Mode */
+    --background: var(--color-background-light);
+    --foreground: var(--color-text-primary);
+    --muted: var(--color-gray-100);
+    --muted-foreground: var(--color-gray-500);
+    --border: var(--color-border-light);
+    --ring: var(--color-primary-500);
+
+    /* Popover & Interactive - DIRECTLY MAPPED IN @theme NOW */
+    /* Removed redundant var declarations to optimize lookup */
+  }
+
+  .dark {
+    /* Dark Mode */
+    --background: var(--color-gray-950);
+    --foreground: var(--color-gray-50);
+    --muted: var(--color-gray-800);
+    --muted-foreground: var(--color-gray-400);
+    --border: var(--color-gray-800);
+    --ring: var(--color-primary-400);
+
+    /* Popover & Interactive - Override Theme Colors Directly */
+    --color-popover: var(--color-gray-950);
+    --color-popover-foreground: var(--color-gray-50);
+    --color-accent: var(--color-gray-800);
+    --color-accent-foreground: var(--color-gray-50);
+    --color-input: var(--color-gray-800);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: transparent;
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 滚动条美化 - Floating Glass Rod Theme (Final Fix for Arrows) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* 彻底消除所有滚动条按钮和箭头 */
+  ::-webkit-scrollbar-button,
+  ::-webkit-scrollbar-button:start,
+  ::-webkit-scrollbar-button:end,
+  ::-webkit-scrollbar-button:vertical:start:increment,
+  ::-webkit-scrollbar-button:vertical:start:decrement,
+  ::-webkit-scrollbar-button:vertical:end:increment,
+  ::-webkit-scrollbar-button:vertical:end:decrement {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 116, 139, 0.2) !important;
+    background-clip: padding-box !important;
+    border: 1px solid transparent !important;
+    border-radius: 100px !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.4) !important;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.5);
+    /* Hover 加深 */
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.2);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* 隐藏滚动条但保持可滚动 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari and Opera */
+  }
+}
+
+/* ==================== Utility Classes ==================== */
+@layer utilities {
+
+  /* 文本截断 */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+}
+
+
+
+/* ==================== Component Base ==================== */
+@layer components {
+
+  /* 卡片基础 */
+  .card {
+    background-color: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .dark .card {
+    background-color: var(--color-gray-900);
+  }
+
+  /* 输入框基础 */
+  .input-base {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: white;
+    font-size: var(--text-sm);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .input-base:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px oklch(0.55 0.20 250 / 0.2);
+  }
+
+  .dark .input-base {
+    background-color: var(--color-gray-800);
+  }
+
+  /* Glassmorphism 基础组件 */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    will-change: backdrop-filter;
+    /* GPU Acceleration */
+  }
+
+  .dark .glass {
+    background: var(--glass-bg-dark);
+  }
+
+  /* Liquid Glass V3 - Performance Optimized */
+  .glass-liquid {
+    background: var(--glass-bg-liquid);
+    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
+    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
+    border: 1px solid var(--glass-border-liquid);
+    box-shadow: var(--glass-shadow-liquid);
+    border-radius: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    will-change: backdrop-filter;
+  }
+
+  .dark .glass-liquid {
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
+    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
+    border-color: var(--glass-border-dark);
+    box-shadow: var(--glass-shadow-dark);
+  }
+
+  .glass-liquid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.3) 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .dark .glass-liquid::before {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  /* Ultra variant with all features */
+  .glass-liquid-ultra {
+    background: var(--glass-bg-liquid);
+    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
+    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
+    border: 1px solid var(--glass-border-liquid);
+    box-shadow: var(--glass-shadow-liquid);
+    border-radius: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    will-change: backdrop-filter;
+  }
+
+  .dark .glass-liquid-ultra {
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
+    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
+    border-color: var(--glass-border-dark);
+    box-shadow: var(--glass-shadow-dark);
+  }
+
+  .glass-liquid-ultra::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.3) 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .dark .glass-liquid-ultra::before {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  /* Interactive morphing (respects reduced-motion) */
+  .glass-morph-hover {
+    transition: all var(--duration-morph) var(--curve-fluid);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-morph-hover:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 40px 0 rgba(31, 38, 135, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    }
+  }
+
+  /* Antigravity Theme Utilities */
+  .theme-parchment {
+    --background: var(--parchment-bg);
+    --foreground: var(--parchment-text);
+    --muted: #f2f0ed;
+    --muted-foreground: var(--parchment-muted);
+    --border: var(--parchment-border);
+    --ring: var(--parchment-accent);
+    /* filter: sepia(0.08); REMOVED */
+  }
+
+  .theme-parchment .card {
+    background-color: var(--parchment-paper);
+    border-color: var(--parchment-border);
+    box-shadow: var(--parchment-shadow);
+    border-radius: 0.75rem;
+    /* Softer, modern radius */
+  }
+
+  /* CMDK Settings */
+  [cmdk-group-heading] {
+    @apply px-2 py-1.5 text-xs font-medium text-muted-foreground;
+  }
+
+  [cmdk-group-marker] {
+    @apply px-2;
+  }
+
+  [cmdk-group]:not([hidden])~[cmdk-group] {
+    @apply pt-0;
+  }
+
+  [cmdk-group] {
+    @apply px-2;
+  }
+
+  [cmdk-input-wrapper] svg {
+    @apply h-5 w-5;
+  }
+
+  [cmdk-input] {
+    @apply h-12;
+  }
+
+  [cmdk-item] {
+    @apply px-2 py-3;
+  }
+
+  [cmdk-item] svg {
+    @apply h-5 w-5;
+  }
+}

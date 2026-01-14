@@ -1,0 +1,171 @@
+﻿
+Running 10 tests using 3 workers
+
+[1A[2K[1/10] [setup] 鈥?e2e\auth.setup.ts:6:6 鈥?authenticate
+[1A[2K[setup] 鈥?e2e\auth.setup.ts:6:6 鈥?authenticate
+Navigating to login page...
+
+[1A[2KPAGE LOG: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+
+[1A[2KPAGE LOG: [HMR] connected
+
+[1A[2KLogin page loaded
+
+[1A[2KForm filled, clicking submit...
+
+[1A[2KPAGE LOG: [Login Debug] Submitting login form: 13800000002
+
+[1A[2KWaiting for login response...
+
+[1A[2KPAGE LOG: [Login Debug] SignIn result: {error: undefined, code: undefined, status: 200, ok: true, url: http://localhost:3000/login}
+
+[1A[2KPAGE LOG: [Login Debug] Login success, redirecting to workbench...
+
+[1A[2KPAGE LOG: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG: [Fast Refresh] done in 445ms
+
+[1A[2KPAGE LOG: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG: [Fast Refresh] done in 381ms
+
+[1A[2KPAGE LOG: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG: [Fast Refresh] done in 388ms
+
+[1A[2KPAGE LOG: [Fast Refresh] rebuilding
+
+[1A[2KWaiting for redirect to workbench...
+
+[1A[2KAuthentication successful
+
+[1A[2K[2/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:302:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈤噸澶嶈浆璁㈠崟
+[1A[2K[3/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:295:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈡縺娲绘病鏈夋槑缁嗙殑鎶ヤ环鍗?[1A[2K[4/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:295:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈡縺娲绘病鏈夋槑缁嗙殑鎶ヤ环鍗?鈴笍 璺宠繃锛氶渶瑕佷笓闂ㄧ殑娴嬭瘯鏁版嵁
+
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储
+PAGE LOG [log]: [HMR] connected
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 147ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 392ms
+
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:302:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈤噸澶嶈浆璁㈠崟
+鈴笍 鏃犲凡閿佸畾鎶ヤ环鍗曪紝璺宠繃娴嬭瘯
+
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储
+PAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 296ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 973ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 335ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 397ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 379ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 374ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 396ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 387ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 384ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 377ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 395ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 395ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 380ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 365ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 380ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 382ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 363ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 367ms
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] done in 399ms
+
+[1A[2K  1) [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/鎴愬姛|Success/).first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByText(/鎴愬姛|Success/).first()[22m
+
+
+      65 |
+      66 |         // 楠岃瘉鎴愬姛 Toast
+    > 67 |         await expect(page.getByText(/鎴愬姛|Success/).first()).toBeVisible({ timeout: 10000 });
+         |                                                            ^
+      68 |
+      69 |         // 绛夊緟瀵硅瘽妗嗗叧闂?      70 |         await expect(page.getByTestId('create-lead-dialog')).toBeHidden({ timeout: 5000 });
+        at C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\full-sales-flow.spec.ts:67:60
+
+    Error Context: test-results\flows-full-sales-flow-瀹屾暣閿€鍞祦绋?E2E-Step-1-鍒涘缓绾跨储-chromium\error-context.md
+
+
+[1A[2K[5/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:86:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 2: 鍒涘缓蹇€熸姤浠?[1A[2K[6/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:135:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 3: 婵€娲绘姤浠峰崟
+[1A[2K[7/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:162:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 4: 鎶ヤ环杞鍗?[1A[2K[8/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:200:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 5: 楠岃瘉璁㈠崟璇︽儏涓庣姸鎬?[1A[2K[9/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:238:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 6: 纭鎺掍骇
+[1A[2K[10/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:265:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 7: 瀹夋帓鍙戣揣
+[1A[2K  1 failed
+    [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  1 skipped
+  6 did not run
+  2 passed (22.8s)
+
+[36m  Serving HTML report at http://localhost:58181. Press Ctrl+C to quit.[39m

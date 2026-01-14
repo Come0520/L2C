@@ -1,0 +1,54 @@
+# L2C 本地开发环境 & 生产部署编排
+
+services:
+  # 数据库服务
+  postgres:
+    image: postgres:17-alpine
+    container_name: l2c-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432" # 宿主机端口:容器端口
+    environment:
+      POSTGRES_DB: l2c_dev
+      POSTGRES_USER: l2c_user
+      POSTGRES_PASSWORD: l2c_dev_password
+    volumes:
+      - l2c_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U l2c_user -d l2c_dev" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js 应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: l2c-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # 数据库连接：使用服务名 'postgres' 作为 host
+      DATABASE_URL: postgres://l2c_user:l2c_dev_password@postgres:5432/l2c_dev
+
+      # NextAuth / Auth.js
+      AUTH_SECRET: ${AUTH_SECRET} # 从宿主机环境读取或 .env 文件
+      AUTH_URL: http://localhost:3000 # 生产环境应修改为实际域名
+
+      # Aliyun OSS (示例值，生产环境请通过 .env 注入)
+      NEXT_PUBLIC_OSS_REGION: ${NEXT_PUBLIC_OSS_REGION}
+      NEXT_PUBLIC_OSS_BUCKET: ${NEXT_PUBLIC_OSS_BUCKET}
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET}
+
+      # Node Environment
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  l2c_postgres_data:
+    name: l2c_postgres_data

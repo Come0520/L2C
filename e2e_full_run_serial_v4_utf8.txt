@@ -1,0 +1,569 @@
+﻿
+Running 10 tests using 3 workers
+
+[1A[2K[1/10] [setup] 鈥?e2e\auth.setup.ts:6:6 鈥?authenticate
+[1A[2K[setup] 鈥?e2e\auth.setup.ts:6:6 鈥?authenticate
+Navigating to login page...
+
+[1A[2KPAGE LOG: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+
+[1A[2KPAGE LOG: [HMR] connected
+
+[1A[2KLogin page loaded
+
+[1A[2KForm filled, clicking submit...
+
+[1A[2KPAGE LOG: [Login Debug] Submitting login form: 13800000002
+
+[1A[2KWaiting for login response...
+
+[1A[2KPAGE LOG: [Login Debug] SignIn result: {error: undefined, code: undefined, status: 200, ok: true, url: http://localhost:3000/login}
+
+[1A[2KPAGE LOG: [Login Debug] Login success, redirecting to workbench...
+
+[1A[2KWaiting for redirect to workbench...
+
+[1A[2KAuthentication successful
+
+[1A[2K[2/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:302:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈤噸澶嶈浆璁㈠崟
+[1A[2K[3/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储
+[1A[2K[4/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:295:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈡縺娲绘病鏈夋槑缁嗙殑鎶ヤ环鍗?[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:295:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈡縺娲绘病鏈夋槑缁嗙殑鎶ヤ环鍗?鈴笍 璺宠繃锛氶渶瑕佷笓闂ㄧ殑娴嬭瘯鏁版嵁
+
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:44:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 1: 鍒涘缓绾跨储
+PAGE LOG [log]: [HMR] connected
+
+[1A[2KPAGE LOG [log]: [HMR] connected
+
+[1A[2K鉁?绾跨储鍒涘缓鎴愬姛: d417b279-e970-4b82-8813-455d74f812b6
+
+[1A[2K[5/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:86:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 2: 鍒涘缓蹇€熸姤浠?[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:302:9 鈥?閿€鍞祦绋嬭竟鐣屾潯浠?鈥?搴旈樆姝㈤噸澶嶈浆璁㈠崟
+鈴笍 鏃犲凡閿佸畾鎶ヤ环鍗曪紝璺宠繃娴嬭瘯
+
+[1A[2K[chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:86:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 2: 鍒涘缓蹇€熸姤浠?PAGE LOG [error]: Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+
+[1A[2KPAGE LOG [log]: [HMR] connected
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2KPAGE LOG [log]: [Fast Refresh] rebuilding
+
+[1A[2KPAGE LOG [error]: ./src/features/service/measurement/actions.ts:16:5
+Ecmascript file had an error
+  14 |     getMeasurementConfig,
+  15 |     getAvailableWorkers,
+> 16 |     getAvailableWorkers,
+     |     ^^^^^^^^^^^^^^^^^^^
+  17 |     getMeasureBrief,
+  18 |     getMeasureTasksByOrder
+  19 | } = queries;
+
+the name `getAvailableWorkers` is defined multiple times
+
+Import trace:
+  Server Component:
+    ./src/features/service/measurement/actions.ts
+    ./src/app/(dashboard)/leads/[id]/page.tsx
+
+[1A[2K  1) [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:86:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 2: 鍒涘缓蹇€熸姤浠?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('quick-quote-btn')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('quick-quote-btn')[22m
+
+
+      93 |         // 鐐瑰嚮蹇€熸姤浠锋寜閽?      94 |         const quickQuoteBtn = page.getByTestId('quick-quote-btn');
+    > 95 |         await expect(quickQuoteBtn).toBeVisible({ timeout: 10000 });
+         |                                     ^
+      96 |         await quickQuoteBtn.click();
+      97 |
+      98 |         // 绛夊緟鎶ヤ环瀵硅瘽妗?        at C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\full-sales-flow.spec.ts:95:37
+
+    Error Context: test-results\flows-full-sales-flow-瀹屾暣閿€鍞祦绋?E2E-Step-2-鍒涘缓蹇€熸姤浠?chromium\error-context.md
+
+
+[1A[2K[6/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:135:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 3: 婵€娲绘姤浠峰崟
+[1A[2K[7/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:162:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 4: 鎶ヤ环杞鍗?[1A[2K[8/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:200:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 5: 楠岃瘉璁㈠崟璇︽儏涓庣姸鎬?[1A[2K[9/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:238:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 6: 纭鎺掍骇
+[1A[2K[10/10] [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:265:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 7: 瀹夋帓鍙戣揣
+[1A[2K  1 failed
+    [chromium] 鈥?e2e\flows\full-sales-flow.spec.ts:86:9 鈥?瀹屾暣閿€鍞祦绋?E2E 鈥?Step 2: 鍒涘缓蹇€熸姤浠?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  1 skipped
+  5 did not run
+  3 passed (27.2s)
+
+[36m  Serving HTML report at http://localhost:53539. Press Ctrl+C to quit.[39m

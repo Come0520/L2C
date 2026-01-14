@@ -1,0 +1,88 @@
+# L2C E2E 测试工作流
+# 在 PR 和 push 到 main 分支时运行完整的 E2E 测试
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://l2c_test_user:l2c_test_password@localhost:5434/l2c_test
+  AUTH_SECRET: test-auth-secret-for-ci
+  NEXTAUTH_URL: http://localhost:3000
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: l2c_test
+          POSTGRES_USER: l2c_test_user
+          POSTGRES_PASSWORD: l2c_test_password
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U l2c_test_user -d l2c_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5434 -U l2c_test_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Run database migrations
+        run: npm run db:push
+
+      - name: Seed test data
+        run: npm run db:seed:test
+        continue-on-error: true
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-screenshots
+          path: test-results/
+          retention-days: 7

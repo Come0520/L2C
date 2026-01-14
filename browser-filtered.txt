@@ -1,0 +1,124 @@
+﻿
+> BROWSER LOG: %cDownload the React DevToo
+ls for a better development experience: ht
+tps://react.dev/link/react-devtools font-w
+eight:bold
+  
+> [1A[2KBROWSER LOG: %c%s%c getLeads Ses
+sion User: background: #e6e6e6;background:
+ light-dark(rgba(0,0,0,0.1), rgba(255,255,
+255,0.25));color: #000000;color: light-dar
+k(#000000, #ffffff);border-radius: 2px  Se
+rver   {"name":"閿€鍞?寮犱笁","email":null,"id"
+:"40da0fa8-06d7-4308-972e-16d66479157d","t
+enantId":"dc22467f-c929-40aa-871e-da57408e
+eede","phone":"13800000002","role":"SALES"
+}
+  
+> [1A[2KBROWSER LOG: [HMR] connected
+  
+> [1A[2KBROWSER LOG: Visible Modules: [宸
+ヤ綔鍙? 绾跨储绠＄悊, 瀹㈡埛妗ｆ, 鎶ヤ环绠＄悊, 璁㈠崟绠＄悊, 鍞悗鏈嶅
+姟]
+  
+> [1A[2KBROWSER LOG: Visible Modules: [宸
+ヤ綔鍙? 绾跨储绠＄悊, 瀹㈡埛妗ｆ, 鎶ヤ环绠＄悊, 璁㈠崟绠＄悊, 鍞悗鏈嶅
+姟]
+  
+> [1A[2KBROWSER LOG: A tree hydrated but
+ some attributes of the server rendered HT
+ML didn't match the client properties. Thi
+s won't be patched up. This can happen if 
+a SSR-ed Client Component used:
+  
+  - A server/client branch `if (typeof win
+dow !== 'undefined')`.
+  - Variable input such as `Date.now()` or
+ `Math.random()` which changes each time i
+t's called.
+  - Date formatting in a user's locale whi
+ch doesn't match the server.
+  - External changing data without sending
+ a snapshot of it along with the HTML.
+  - Invalid HTML tag nesting.
+  
+> It can also happen if the client has a b
+rowser extension installed which messes wi
+th the HTML before React loaded.
+  
+  %s%s https://react.dev/link/hydration-mi
+smatch 
+  
+    ...
+      <RedirectErrorBoundary router={{...}
+}>
+        <InnerLayoutRouter url="/leads" tr
+ee={[...]} params={{}} cacheNode={{rsc:<Fr
+agment>, ...}} segmentPath={[...]} ...>
+          <SegmentViewNode type="page" pag
+ePath="(dashboard...">
+            <SegmentTrieNode>
+            <LeadsPage>
+              <div className="space-y-8 ..
+.">
+                <div>
+                <div>
+                <div>
+                <div className="relative z
+-0">
+                  <LeadFilters tableConten
+t={<Suspense>}>
+                    <div className="flex f
+lex-...">
+                      <div className="flex
+ flex-...">
+                        <AceternityTabs>
+                        <div className="fl
+ex items...">
+                          <div>
+> [1A[2KBROWSER EXCEPTION: TypeError: no
+tifications.map is not a function
+  
+> [1A[2KBROWSER EXCEPTION: Error: Render
+ed more hooks than during the previous ren
+der.
+  
+> [1A[2KBROWSER LOG: [Fast Refresh] rebu
+ilding
+  
+> [1A[2KBROWSER LOG: [Fast Refresh] done
+ in 132ms
+  
+  [1A[2KSaved failure HTML to test-resul
+ts/failure-should-create-a-new-lead-succes
+sfully.html
+  
+  [1A[2K  1) [chromium] 鈥?e2e\flows\lead
+-creation.spec.ts:21:9 鈥?Lead Management 鈥
+?should create a new lead successfully 
+  
+      Error: [2mexpect([22m[31mlocator
+[39m[2m).[22mtoBeVisible[2m([22m[2m)
+[22m failed
+  
+      Locator: getByTestId('create-lead-bt
+n')
+      Expected: visible
+      Timeout: 15000ms
+      Error: element(s) not found
+  
+      Call log:
+      [2m  - Expect "toBeVisible" with ti
+meout 15000ms[22m
+      [2m  - waiting for getByTestId('cre
+ate-lead-btn')[22m
+  
+  
+        33 |         // 绛夊緟鍒涘缓鎸夐挳鍙 (浣跨敤 
+data-testid 鏇寸ǔ瀹?
+        34 |         const createBtn = pag
+e.getByTestId('create-lead-btn');
+      > 35 |         await expect(createBt
+n).toBeVisible({ timeout: 15000 });
+
+

@@ -1,0 +1,99 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e6]: L2C System
+      - navigation [ref=e7]:
+        - list [ref=e8]:
+          - listitem [ref=e9]:
+            - link "Dashboard" [ref=e10] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e11]
+              - text: Dashboard
+          - listitem [ref=e14]:
+            - link "Leads" [ref=e15] [cursor=pointer]:
+              - /url: /leads
+              - img [ref=e16]
+              - text: Leads
+          - listitem [ref=e21]:
+            - link "Quotes" [ref=e22] [cursor=pointer]:
+              - /url: /quotes
+              - img [ref=e23]
+              - text: Quotes
+          - listitem [ref=e26]:
+            - link "Orders" [ref=e27] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e28]
+              - text: Orders
+          - listitem [ref=e32]:
+            - link "Inventory" [ref=e33] [cursor=pointer]:
+              - /url: /inventory
+              - img [ref=e34]
+              - text: Inventory
+          - listitem [ref=e38]:
+            - link "Analytics" [ref=e39] [cursor=pointer]:
+              - /url: /analytics
+              - img [ref=e40]
+              - text: Analytics
+          - listitem [ref=e41]:
+            - link "Settings" [ref=e42] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e43]
+              - text: Settings
+      - generic [ref=e49]:
+        - generic [ref=e50]: Admin User
+        - generic [ref=e51]: View Profile
+    - generic [ref=e52]:
+      - banner [ref=e53]: Header Mock
+      - main [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - heading "线索管理" [level=1] [ref=e57]
+            - button "新建线索" [ref=e58]:
+              - img [ref=e59]
+              - text: 新建线索
+          - generic [ref=e60]:
+            - table [ref=e63]:
+              - rowgroup [ref=e64]:
+                - row "线索编号 客户信息 状态 来源 跟进销售 创建时间 操作" [ref=e65]:
+                  - columnheader "线索编号" [ref=e66]
+                  - columnheader "客户信息" [ref=e67]
+                  - columnheader "状态" [ref=e68]
+                  - columnheader "来源" [ref=e69]
+                  - columnheader "跟进销售" [ref=e70]
+                  - columnheader "创建时间" [ref=e71]
+                  - columnheader "操作" [ref=e72]
+              - rowgroup [ref=e73]:
+                - row "LD20260114D67E35 测试客户_qqwlnl 13990097056 待分配 - 未分配 2026-01-14 16:14 查看" [ref=e74]:
+                  - cell "LD20260114D67E35" [ref=e75]:
+                    - link "LD20260114D67E35" [ref=e76] [cursor=pointer]:
+                      - /url: /leads/1d913511-98d0-46d4-9f7e-3ee7fe5e9375
+                  - cell "测试客户_qqwlnl 13990097056" [ref=e77]:
+                    - generic [ref=e78]:
+                      - generic [ref=e79]: 测试客户_qqwlnl
+                      - generic [ref=e80]: "13990097056"
+                  - cell "待分配" [ref=e81]:
+                    - generic [ref=e82]: 待分配
+                  - cell "-" [ref=e83]
+                  - cell "未分配" [ref=e84]
+                  - cell "2026-01-14 16:14" [ref=e85]
+                  - cell "查看" [ref=e86]:
+                    - link "查看" [ref=e87] [cursor=pointer]:
+                      - /url: /leads/1d913511-98d0-46d4-9f7e-3ee7fe5e9375
+            - generic [ref=e89]: 共 1 条
+  - region "Notifications alt+T"
+  - generic [ref=e94] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e95]:
+      - img [ref=e96]
+    - generic [ref=e99]:
+      - button "Open issues overlay" [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: "0"
+          - generic [ref=e103]: "1"
+        - generic [ref=e104]: Issue
+      - button "Collapse issues badge" [ref=e105]:
+        - img [ref=e106]
+  - alert [ref=e108]
+```

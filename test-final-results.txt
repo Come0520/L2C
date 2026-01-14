@@ -1,0 +1,609 @@
+﻿
+> l2c@0.1.0 test:run C:\Users\bigey\Documents\Antigravity\L2C
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/bigey/Documents/Antigravity/L2C[39m
+
+ [32m鉁?[39m src/test/health-check.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/quote-engine.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m鉁?[39m src/features/orders/logic/__tests__/order-state-machine.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+node.exe : [90mstderr[2m | src/features/service/measurement/__tests__/sync-manager.test.ts[2m > [22m[2mMeasureSyncManager[2m > [22m[2mpushLocalChanges[2m > [22m[2mshould handle partial failures
+所在位置 C:\Users\bigey\AppData\Roaming\npm\pnpm.ps1:24 字符: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([90mstderr[2m...artial failures:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[22m[39mSync partial errors: [ { id: [32m'local-2'[39m, error: [32m'Server error'[39m } ]
+
+[90mstderr[2m | src/shared/lib/__tests__/permission-check.test.ts[2m > [22m[2mcheckPermission[2m > [22m[2mshould throw Forbidden if role is missing
+[22m[39mAUTH ERROR: Role invalid or missing. Role: undefined, Available: ADMIN,MANAGER,SALES_MANAGER,SALES,DISPATCHER,FINANCE,WORKER
+
+[90mstderr[2m | src/features/service/measurement/__tests__/sync-manager.test.ts[2m > [22m[2mMeasureSyncManager[2m > [22m[2mpushLocalChanges[2m > [22m[2mshould handle sync errors gracefully
+[22m[39mSync partial errors: [
+  {
+    id: [32m'local-1'[39m,
+    error: Error: Network error
+        at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/sync-manager.test.ts:326:60
+        at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+        at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+        at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+        at new Promise (<anonymous>)
+        at runWithTimeout [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+        at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+        at Traces.$ [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/chunks/traces
+.U4xDYhzZ.js:115:27[90m)[39m
+        at trace [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/chunks/test.B8ej
+_ZHS.js:239:21[90m)[39m
+        at runTest [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+  }
+]
+
+ [32m鉁?[39m src/shared/lib/__tests__/permission-check.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [31m鉂?[39m src/features/service/measurement/__tests__/sync-manager.test.ts [2m([22m[2m10 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 33[2mms[22m[39m
+[31m       [31m脳[31m should pull tasks from server and store locally[39m[32m 16[2mms[22m[39m
+       [32m鉁?[39m should skip tasks with pending local changes[32m 1[2mms[22m[39m
+       [32m鉁?[39m should handle server error gracefully[32m 1[2mms[22m[39m
+       [32m鉁?[39m should return undefined when result is invalid[32m 0[2mms[22m[39m
+[31m       [31m脳[31m should push pending tasks to server[39m[32m 4[2mms[22m[39m
+       [32m鉁?[39m should handle multiple pending tasks[32m 1[2mms[22m[39m
+       [32m鉁?[39m should handle partial failures[32m 2[2mms[22m[39m
+       [32m鉁?[39m should return 0 when no pending tasks[32m 0[2mms[22m[39m
+       [32m鉁?[39m should handle task without checkIn data[32m 2[2mms[22m[39m
+       [32m鉁?[39m should handle sync errors gracefully[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/shared/lib/__tests__/utils.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mcreateInstallTaskFromOrder[2m > [22m[2m搴旇鎷掔粷涓嶅瓨鍦ㄧ殑璁㈠崟
+[22m[39mServer Action Error: Error: 鏈壘鍒板搴旇鍗?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:191:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mcreateInstallTaskFromOrder[2m > [22m[2m搴旇璁板綍瀹¤鏃ュ織
+[22m[39mServer Action Error: TypeError: Cannot read properties of undefined (reading 'length')
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:217:24
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mdispatchInstallTask[2m > [22m[2m搴旇鎷掔粷闈濸ENDING鐘舵€佺殑浠诲姟娲惧崟
+[22m[39mServer Action Error: Error: 鍙湁寰呮寚娲剧姸鎬佺殑浠诲姟鎵嶈兘鍒嗛厤
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:268:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mdispatchInstallTask[2m > [22m[2m搴旇鎷掔粷涓嶅瓨鍦ㄧ殑宸ヤ汉
+[22m[39mServer Action Error: Error: 鏈壘鍒伴€夊畾鐨勫畨瑁呭笀
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:277:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mdispatchInstallTask[2m > [22m[2m搴旇鎷掔粷涓嶅瓨鍦ㄧ殑浠诲姟
+[22m[39mServer Action Error: Error: 鏈壘鍒颁换鍔?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:264:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/service/installation/__tests__/install-tasks.test.ts[2m > [22m[2mInstall Tasks[2m > [22m[2mrejectInstallation[2m > [22m[2m搴旇鎷掔粷涓嶅瓨鍦ㄧ殑浠诲姟
+[22m[39mServer Action Error: Error: 鏈壘鍒颁换鍔?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:501:26
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+ [32m鉁?[39m src/features/service/installation/__tests__/install-tasks.test.ts [2m([22m[2m46 tests[22m[2m)[22m[32m 273[2mms[22m[39m
+ [32m鉁?[39m src/features/supply-chain/__tests__/po-completion.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+[90mstderr[2m | src/features/finance/__tests__/ar-actions.test.ts[2m > [22m[2mAR Actions[2m > [22m[2mrecordPayment[2m > [22m[2m濡傛灉璐﹀崟宸插叧闂簲璇ラ樆姝㈡敹娆?[22m[39mServer Action Error: Error: Statement is already
+ closed
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/finance/actions.ts:188:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/finance/__tests__/ar-actions.test.ts[2m > [22m[2mAR Actions[2m > [22m[2mcreateRefund[2m > [22m[2m閫€娆鹃噾棰濅笉鑳借秴杩囧凡鏀舵閲戦
+[22m[39mServer Action Error: Error: 閫€娆鹃噾棰濅笉鑳借秴杩囧凡鏀舵閲戦
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/finance/actions.ts:301:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+ [32m鉁?[39m src/features/finance/__tests__/ar-actions.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [31m鉂?[39m src/features/supply-chain/__tests__/po-lifecycle.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 48[2mms[22m[39m
+[31m     [31m脳[31m should create a PO in DRAFT status[39m[32m 28[2mms[22m[39m
+[31m     [31m脳[31m should receive PO and trigger AP creation[39m[32m 10[2mms[22m[39m
+[31m     [31m脳[31m should NOT receive PO if not in correct status[39m[32m 8[2mms[22m[39m
+[90mstderr[2m | src/features/products/__tests__/actions.test.ts[2m > [22m[2mProducts Server Actions[2m > [22m[2mupdateProduct[2m > [22m[2mshould return error when product does not exist
+[22m[39mServer Action Error: Error: 鍟嗗搧涓嶅瓨鍦?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/products/actions.ts:140:23
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/products/__tests__/actions.test.ts[2m > [22m[2mProducts Server Actions[2m > [22m[2mupdateProduct[2m > [22m[2mshould return error when tenant does not match
+[22m[39mServer Action Error: Error: 鏃犳潈鎿嶄綔姝ゅ晢鍝?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/products/actions.ts:144:23
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/products/__tests__/actions.test.ts[2m > [22m[2mProducts Server Actions[2m > [22m[2mdeleteProduct[2m > [22m[2mshould return error when product does not exist
+[22m[39mServer Action Error: Error: 鍟嗗搧涓嶅瓨鍦?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/products/actions.ts:212:23
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/products/__tests__/actions.test.ts[2m > [22m[2mProducts Server Actions[2m > [22m[2mdeleteProduct[2m > [22m[2mshould return error when tenant does not match
+[22m[39mServer Action Error: Error: 鏃犳潈鎿嶄綔姝ゅ晢鍝?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/products/actions.ts:216:23
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/products/__tests__/actions.test.ts[2m > [22m[2mProducts Server Actions[2m > [22m[2mactivateProduct[2m > [22m[2mshould return error when product does not exist
+[22m[39mServer Action Error: Error: 鍟嗗搧涓嶅瓨鍦?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/products/actions.ts:259:23
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+ [32m鉁?[39m src/features/products/__tests__/actions.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m鉁?[39m src/features/finance/__tests__/finance-additional.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+[90mstdout[2m | src/features/finance/__tests__/reconciliation.test.ts[2m > [22m[2mFinance Reconciliation Integration[2m > [22m[2mshould NOT create duplicate AR if it already exists (Idempotency)
+[22m[39mTest Failure Result: {
+  "success": false,
+  "error": "璇ヨ鍗曞凡瀛樺湪瀵硅处鍗?,
+  "timestamp": 1767682452117
+}
+
+[90mstderr[2m | src/features/customers/__tests__/actions.test.ts[2m > [22m[2mCustomers Server Actions[2m > [22m[2mcreateCustomer[2m > [22m[2mshould create a customer successfully when phone is unique
+[22m[39mServer Action Error: TypeError: __vite_ssr_import_1__.db.insert(...).values(...).returning is not a function
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/actions.ts:172:8
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Module.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/shared/lib/server-action.ts:59:28)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/__tests__/actions.test.ts:82:28
+    at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+ [32m鉁?[39m src/features/finance/__tests__/reconciliation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [31m鉂?[39m src/features/finance/ap/__tests__/ap-actions.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 69[2mms[22m[39m
+[31m       [31m脳[31m 搴旇鎴愬姛鍒涘缓鍖呭惈娴嬮噺銆佸畨瑁呬换鍔″拰鎵ｆ鐨勫璐﹀崟[39m[32m 42[2mms[22m[39m
+[31m       [31m脳[31m 濡傛灉娌℃湁鍙粨绠楅」搴旇杩斿洖閿欒[39m[32m 11[2mms[22m[39m
+[31m       [31m脳[31m 搴旇鎴愬姛鍒涘缓鍖呭惈閲囪喘鍗曠殑瀵硅处鍗?[39m[32m 9[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛鏇存柊鐘舵€佸苟璁板綍鏃ュ織[32m 3[2mms[22m[39m
+       [32m鉁?[39m 瀹屾垚鏀粯鏃跺簲璇ヨ褰曟敮浠樻椂闂村拰鍑瘉[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 濡傛灉娌℃湁鏉冮檺搴旇鎶涘嚭閿欒[39m[32m 1[2mms[22m[39m
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mcreateMeasureTask[2m > [22m[2mshould return error when lead not found
+[22m[39mServer Action Error: Error: 鏈壘鍒板叧鑱旂嚎绱㈡垨瀹㈡埛淇℃伅
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:103:15
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Module.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/shared/lib/server-action.ts:59:28)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:131:28
+    at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mcreateMeasureTask[2m > [22m[2mshould return error when customer missing
+[22m[39mServer Action Error: Error: 鏈壘鍒板叧鑱旂嚎绱㈡垨瀹㈡埛淇℃伅
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:103:15
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Module.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/shared/lib/server-action.ts:59:28)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:145:28
+    at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/features/customers/__tests__/actions.test.ts[2m > [22m[2mCustomers Server Actions[2m > [22m[2mupdateCustomer[2m > [22m[2mshould update customer successfully
+[22m[39mServer Action Error: Error: [vitest] No "systemLogs" export is defined on the "@/shared/api/schema" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/c
+hunks/startModuleRunner.DpqpB8k3.js:311:17[90m)[39m
+    at Object.get [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/chunks/startMod
+uleRunner.DpqpB8k3.js:384:16[90m)[39m
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/actions.ts:207:21
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Module.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/shared/lib/server-action.ts:59:28)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/__tests__/actions.test.ts:135:28
+    at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20 {
+  codeFrame: [32m'vi.mock(import("@/shared/api/schema"), async (importOriginal) => {\n'[39m +
+    [32m'  const actual = await importOriginal()\n'[39m +
+    [32m'  return {\n'[39m +
+    [32m'    ...actual,\n'[39m +
+    [32m'    // your mocked methods\n'[39m +
+    [32m'  }\n'[39m +
+    [32m'})'[39m
+}
+
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mdispatchMeasureTask[2m > [22m[2mshould return error when task not found
+[22m[39mServer Action Error: Error: 鏈壘鍒颁换鍔?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:233:26
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+ [32m鉁?[39m src/features/supply-chain/__tests__/suppliers.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mdispatchMeasureTask[2m > [22m[2mshould return error when worker not found
+[22m[39mServer Action Error: Error: 鏈壘鍒伴€夊畾鐨勬祴閲忓笀
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:245:28
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+[90mstderr[2m | src/features/customers/__tests__/actions.test.ts[2m > [22m[2mCustomers Server Actions[2m > [22m[2mupdateCustomer[2m > [22m[2mshould map address to defaultAddress
+[22m[39mServer Action Error: Error: [vitest] No "systemLogs" export is defined on the "@/shared/api/schema" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/c
+hunks/startModuleRunner.DpqpB8k3.js:311:17[90m)[39m
+    at Object.get [90m(file:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.16_@types+node@2_62eb78d569462eac68b0f0f0e86903d8/node_modules/[4mvitest[24m/dist/chunks/startMod
+uleRunner.DpqpB8k3.js:384:16[90m)[39m
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/actions.ts:207:21
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Module.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/shared/lib/server-action.ts:59:28)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/customers/__tests__/actions.test.ts:142:13
+    at [90mfile:///C:/Users/bigey/Documents/Antigravity/L2C/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.16/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20 {
+  codeFrame: [32m'vi.mock(import("@/shared/api/schema"), async (importOriginal) => {\n'[39m +
+    [32m'  const actual = await importOriginal()\n'[39m +
+    [32m'  return {\n'[39m +
+    [32m'    ...actual,\n'[39m +
+    [32m'    // your mocked methods\n'[39m +
+    [32m'  }\n'[39m +
+    [32m'})'[39m
+}
+
+ [31m鉂?[39m src/features/customers/__tests__/actions.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 62[2mms[22m[39m
+[31m       [31m脳[31m should create a customer successfully when phone is unique[39m[32m 26[2mms[22m[39m
+       [32m鉁?[39m should return error when phone already exists[32m 1[2mms[22m[39m
+       [32m鉁?[39m should throw validation error for empty name[32m 2[2mms[22m[39m
+       [32m鉁?[39m should return paginated customers[32m 8[2mms[22m[39m
+       [32m鉁?[39m should apply level filter correctly[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should update customer successfully[39m[32m 13[2mms[22m[39m
+       [32m鉁?[39m should map address to defaultAddress[32m 2[2mms[22m[39m
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2msubmitMeasureData[2m > [22m[2mshould return error when no images provided
+[22m[39mServer Action Error: Error: 蹇呴』涓婁紶鑷冲皯涓€寮犵収鐗?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:293:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2msubmitMeasureData[2m > [22m[2mshould return error when GPS location missing
+[22m[39mServer Action Error: Error: 鎻愪氦娴嬮噺鏁版嵁蹇呴』鍖呭惈 GPS 鎵撳崱瀹氫綅
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:298:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mconfirmMeasureData[2m > [22m[2mshould return error when task not in PENDING_CON
+FIRM status
+[22m[39mServer Action Error: Error: 鍙湁寰呯‘璁ょ殑浠诲姟鍙互鎵ц姝ゆ搷浣?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:357:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+ [32m鉁?[39m src/features/after-sales/__tests__/actions.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+[90mstderr[2m | src/features/service/measurement/__tests__/actions.test.ts[2m > [22m[2mMeasurement Server Actions[2m > [22m[2mcreateMeasureVariant[2m > [22m[2mshould return error when parent task not found
+[22m[39mServer Action Error: Error: 鏈壘鍒板師娴嬮噺浠诲姟
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/actions.ts:450:28
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/measurement/__tests__/actions.test.ts:72:42)
+
+ [32m鉁?[39m src/features/service/measurement/__tests__/actions.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+[90mstdout[2m | src/features/quotes/__tests__/quick-quote.test.ts[2m > [22m[2mverify createQuickQuote logic[2m > [22m[2mshould create quick quote successfully
+[22m[39m[createQuickQuote] Action started { leadId: [32m'lead-1'[39m, planType: [32m'COMFORT'[39m }
+
+[90mstdout[2m | src/features/quotes/__tests__/quick-quote.test.ts[2m > [22m[2mverify createQuickQuote logic[2m > [22m[2mshould create quick quote successfully
+[22m[39m[createQuickQuote] Plans fetched { count: [33m1[39m, keys: [ [32m'COMFORT'[39m ] }
+
+[90mstdout[2m | src/features/quotes/__tests__/quick-quote.test.ts[2m > [22m[2mverify createQuickQuote logic[2m > [22m[2mshould create quick quote successfully
+[22m[39m[createQuickQuote] Plan selected { plan: [32m'Comfort'[39m }
+
+ [32m鉁?[39m src/features/leads/__tests__/actions.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/__tests__/actions.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/__tests__/quick-quote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+[90mstderr[2m | src/features/service/installation/__tests__/finance-integration.test.ts[2m > [22m[2mInstallation Finance Integration (AP Logic)[2m > [22m[2mshould create a labor AP record when installation is
+ confirmed
+[22m[39mServer Action Error: TypeError: tx.query.installTasks.findMany is not a function
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/actions.ts:398:54
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> (C:/Users/bigey/Documents/Antigravity/L2C/src/features/service/installation/__tests__/finance-integration.test.ts:41:20)
+
+ [31m鉂?[39m src/features/service/installation/__tests__/finance-integration.test.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 17[2mms[22m[39m
+[31m     [31m脳[31m should create a labor AP record when installation is confirmed[39m[32m 15[2mms[22m[39m
+ [32m鉁?[39m src/features/orders/__tests__/status-sync.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m鉁?[39m src/features/supply-chain/__tests__/inventory-actions.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mconfirmOrderProduction[2m > [22m[2m濡傛灉鐘舵€佷笉姝ｇ‘搴旇鎶ラ敊
+[22m[39mServer Action Error: Error: 褰撳墠鐘舵€佷笉鍙帓浜?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:303:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mconfirmOrderProduction[2m > [22m[2m濡傛灉淇＄敤棰濆害涓嶈冻涓旀湭浠樺畾閲戝簲璇ユ姤閿?[22m[39mServer Action Error: Error: 
+闇€鏀粯瀹氶噾鎴栫敵璇锋巿淇￠搴?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:312:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mshipOrder[2m > [22m[2m濡傛灉鐘舵€佷笉鍏佽鍙戣揣搴旇鎶ラ敊
+[22m[39mServer Action Error: Error: 璁㈠崟鐘舵€佷笉鍏佽鍙戣揣 (闇€鍦ㄧ敓浜т腑鎴栧緟鍙戣揣)
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:354:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mcloseOrder[2m > [22m[2m濡傛灉璁㈠崟鏈畬鎴愪笉鑳藉叧闂?[22m[39mServer Action Error: Error: 璁㈠崟鏈畬鎴愶紝涓嶈兘鍏抽棴
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:435:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mcloseOrder[2m > [22m[2m濡傛灉鏈粯娓呮椤逛笉鑳藉叧闂?[22m[39mServer Action Error: Error: 灏氭湁 楼200.00 鏈敹娆?    
+at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:443:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | src/features/orders/__tests__/order-actions.test.ts[2m > [22m[2mOrder Actions[2m > [22m[2mcancelOrder[2m > [22m[2m濡傛灉璁㈠崟宸插叧闂垨宸插彇娑堜笉鑳藉啀娆″彇娑?[22m[39mServer Action Error: Error: 璁㈠崟宸插叧闂垨宸插
+彇娑?    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/orders/actions.ts:484:19
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+ [31m鉂?[39m src/features/orders/__tests__/order-actions.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 35[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛鑾峰彇璁㈠崟鍒楄〃[32m 6[2mms[22m[39m
+       [32m鉁?[39m 搴旇鏀寔鐘舵€佺瓫閫?[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 搴旇鎴愬姛鑾峰彇璁㈠崟璇︽儏[39m[32m 9[2mms[22m[39m
+[31m       [31m脳[31m 濡傛灉璁㈠崟涓嶅瓨鍦ㄥ簲璇ヨ繑鍥為敊璇?[39m[32m 2[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛纭鎺掍骇骞惰Е鍙?PO 鐢熸垚[32m 4[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉鐘舵€佷笉姝ｇ‘搴旇鎶ラ敊[32m 3[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉淇＄敤棰濆害涓嶈冻涓旀湭浠樺畾閲戝簲璇ユ姤閿?[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛纭鍙戣揣[32m 1[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉鐘舵€佷笉鍏佽鍙戣揣搴旇鎶ラ敊[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛瀹屾垚璁㈠崟[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛鍏抽棴宸插畬鎴愪笖宸蹭粯娓呯殑璁㈠崟[32m 1[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉璁㈠崟鏈畬鎴愪笉鑳藉叧闂?[32m 1[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉鏈粯娓呮椤逛笉鑳藉叧闂?[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴旇鎴愬姛鍙栨秷璁㈠崟[32m 1[2mms[22m[39m
+       [32m鉁?[39m 濡傛灉璁㈠崟宸插叧闂垨宸插彇娑堜笉鑳藉啀娆″彇娑?[32m 1[2mms[22m[39m
+
+[31m鈳幆鈳幆鈳幆[39m[1m[41m Failed Tests 14 [49m[22m[31m鈳幆鈳幆鈳幆鈳?[39m
+
+[41m[1m FAIL [22m[49m src/features/customers/__tests__/actions.test.ts[2m > [22mCustomers Server Actions[2m > [22mcreateCustomer[2m > [22mshould create a customer successfully when phone is unique
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/customers/__tests__/actions.test.ts:[2m84:36[22m[39m
+    [90m 82| [39m            const result = await createCustomer(initialState, customer鈥?    [90m 83| [39m
+    [90m 84| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m 85| [39m            [34mexpect[39m(db[33m.[39minsert)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+    [90m 86| [39m        })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆1/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/customers/__tests__/actions.test.ts[2m > [22mCustomers Server Actions[2m > [22mupdateCustomer[2m > [22mshould update customer successfully
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/customers/__tests__/actions.test.ts:[2m137:36[22m[39m
+    [90m135| [39m            const result = await updateCustomer(initialState, { id: 't鈥?    [90m136| [39m
+    [90m137| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m138| [39m            [34mexpect[39m(db[33m.[39mupdate)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+    [90m139| [39m        })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆2/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/orders/__tests__/order-actions.test.ts[2m > [22mOrder Actions[2m > [22mgetOrderById[2m > [22m搴旇鎴愬姛鑾峰彇璁㈠崟璇︽儏
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/orders/__tests__/order-actions.test.ts:[2m139:36[22m[39m
+    [90m137| [39m            [35mconst[39m result [33m=[39m [35mawait[39m [34mgetOrderById[39m({ id[33m:[39m [32m'o1'[39m })[33m;[39m
+    [90m138| [39m
+    [90m139| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m140| [39m            [34mexpect[39m(result[33m.[39mdata)[33m.[39m[34mtoEqual[39m(mockOrder)[33m;[39m
+    [90m141| [39m        })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆3/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/orders/__tests__/order-actions.test.ts[2m > [22mOrder Actions[2m > [22mgetOrderById[2m > [22m濡傛灉璁㈠崟涓嶅瓨鍦ㄥ簲璇ヨ繑鍥為敊璇?[31m[1mAssertionError[22m: expected '杈撳叆鏁版嵁楠岃瘉澶辫触' to b
+e 'Order not found' // Object.is equality[39m
+
+Expected: [32m"Order not found"[39m
+Received: [31m"杈撳叆鏁版嵁楠岃瘉澶辫触"[39m
+
+[36m [2m鉂?[22m src/features/orders/__tests__/order-actions.test.ts:[2m149:34[22m[39m
+    [90m147| [39m
+    [90m148| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m149| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoBe[39m([32m'Order not found'[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m150| [39m        })[33m;[39m
+    [90m151| [39m    })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆4/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/supply-chain/__tests__/po-lifecycle.test.ts[2m > [22mPO Lifecycle[2m > [22mshould create a PO in DRAFT status
+[31m[1mAssertionError[22m: expected undefined to be 'DRAFT' // Object.is equality[39m
+
+[32m- Expected:[39m 
+"DRAFT"
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m鉂?[22m src/features/supply-chain/__tests__/po-lifecycle.test.ts:[2m140:37[22m[39m
+    [90m138| [39m        [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m139| [39m        [34mexpect[39m(result[33m.[39mdata)[33m.[39m[34mtoHaveProperty[39m([32m'id'[39m[33m,[39m [32m'new-po-id'[39m)[33m;[39m
+    [90m140| [39m        [34mexpect[39m(result[33m.[39mdata[33m![39m[33m.[39mstatus)[33m.[39m[34mtoBe[39m([32m'DRAFT'[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m141| [39m        [34mexpect[39m(db[33m.[39minsert)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+    [90m142| [39m    })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆5/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/supply-chain/__tests__/po-lifecycle.test.ts[2m > [22mPO Lifecycle[2m > [22mshould receive PO and trigger AP creation
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called at least once[39m
+[36m [2m鉂?[22m src/features/supply-chain/__tests__/po-lifecycle.test.ts:[2m157:27[22m[39m
+    [90m155| [39m
+    [90m156| [39m        [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m157| [39m        [34mexpect[39m(db[33m.[39mupdate)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+    [90m   | [39m                          [31m^[39m
+    [90m158| [39m        [34mexpect[39m(createApFromPoInternal)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+    [90m159| [39m    })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆6/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/supply-chain/__tests__/po-lifecycle.test.ts[2m > [22mPO Lifecycle[2m > [22mshould NOT receive PO if not in correct status
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m鉂?[22m src/features/supply-chain/__tests__/po-lifecycle.test.ts:[2m173:32[22m[39m
+    [90m171| [39m        [35mconst[39m result [33m=[39m [35mawait[39m [34mreceivePO[39m({ poId })[33m;[39m
+    [90m172| [39m
+    [90m173| [39m        [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m   | [39m                               [31m^[39m
+    [90m174| [39m        [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoMatch[39m([36m/status/[39m)[33m;[39m
+    [90m175| [39m        [34mexpect[39m(createApFromPoInternal)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆7/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/finance/ap/__tests__/ap-actions.test.ts[2m > [22mAP Actions[2m > [22mcreateApStatement (LABOR)[2m > [22m搴旇鎴愬姛鍒涘缓鍖呭惈娴嬮噺銆佸畨瑁呬换鍔″拰鎵ｆ鐨勫璐﹀崟
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/finance/ap/__tests__/ap-actions.test.ts:[2m127:36[22m[39m
+    [90m125| [39m
+    [90m126| [39m            [90m// Assertions[39m
+    [90m127| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m128| [39m            expect((result.data as { statementNo: string })?.statement鈥?    [90m129| [39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆8/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/finance/ap/__tests__/ap-actions.test.ts[2m > [22mAP Actions[2m > [22mcreateApStatement (LABOR)[2m > [22m濡傛灉娌℃湁鍙粨绠楅」搴旇杩斿洖閿欒
+[31m[1mAssertionError[22m: expected '杈撳叆鏁版嵁楠岃瘉澶辫触' to contain 'No billable items'[39m
+
+Expected: [32m"No billable items"[39m
+Received: [31m"杈撳叆鏁版嵁楠岃瘉澶辫触"[39m
+
+[36m [2m鉂?[22m src/features/finance/ap/__tests__/ap-actions.test.ts:[2m163:34[22m[39m
+    [90m161| [39m
+    [90m162| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m163| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoContain[39m([32m'No billable items'[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m164| [39m        })[33m;[39m
+    [90m165| [39m    })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆9/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/finance/ap/__tests__/ap-actions.test.ts[2m > [22mAP Actions[2m > [22mcreateApStatement (SUPPLIER)[2m > [22m搴旇鎴愬姛鍒涘缓鍖呭惈閲囪喘鍗曠殑瀵硅处鍗?[31m[1mAssertionError[22m: expected fa
+lse to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/finance/ap/__tests__/ap-actions.test.ts:[2m204:36[22m[39m
+    [90m202| [39m            })[33m;[39m
+    [90m203| [39m
+    [90m204| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m205| [39m
+    [90m206| [39m            [90m// Verify Total: 500.50 + 200.00 = 700.50[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[10/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/finance/ap/__tests__/ap-actions.test.ts[2m > [22mAP Actions[2m > [22mPermissions[2m > [22m濡傛灉娌℃湁鏉冮檺搴旇鎶涘嚭閿欒
+[31m[1mAssertionError[22m: expected '杈撳叆鏁版嵁楠岃瘉澶辫触' to contain 'Unauthorized'[39m
+
+Expected: [32m"Unauthorized"[39m
+Received: [31m"杈撳叆鏁版嵁楠岃瘉澶辫触"[39m
+
+[36m [2m鉂?[22m src/features/finance/ap/__tests__/ap-actions.test.ts:[2m280:34[22m[39m
+    [90m278| [39m
+    [90m279| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m280| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoContain[39m([32m'Unauthorized'[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m281| [39m        })[33m;[39m
+    [90m282| [39m    })[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[11/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/service/installation/__tests__/finance-integration.test.ts[2m > [22mInstallation Finance Integration (AP Logic)[2m > [22mshould create a labor AP record when installation is
+ confirmed
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m鉂?[22m src/features/service/installation/__tests__/finance-integration.test.ts:[2m88:32[22m[39m
+    [90m 86| [39m
+    [90m 87| [39m        [90m// 4. Assertions[39m
+    [90m 88| [39m        [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                               [31m^[39m
+    [90m 89| [39m        [34mexpect[39m(mockDbInsert)[33m.[39m[34mtoHaveBeenCalledWith[39m(apStatements)[33m;[39m
+    [90m 90| [39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[12/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/service/measurement/__tests__/sync-manager.test.ts[2m > [22mMeasureSyncManager[2m > [22mpullTasks[2m > [22mshould pull tasks from server and store locally
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called with arguments: [ { workerId: 'worker-1', 鈥?2) } ][90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m[2m  [[22m
+[2m    {[22m
+[31m+     "page": 1,[90m
+[2m      "pageSize": 50,[22m
+[2m      "status": "PENDING_VISIT",[22m
+[2m      "workerId": "worker-1",[22m
+[2m    },[22m
+[2m  ][22m
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m鉂?[22m src/features/service/measurement/__tests__/sync-manager.test.ts:[2m113:37[22m[39m
+    [90m111| [39m
+    [90m112| [39m            [34mexpect[39m(count)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+    [90m113| [39m            [34mexpect[39m(getMeasureTasks)[33m.[39m[34mtoHaveBeenCalledWith[39m({
+    [90m   | [39m                                    [31m^[39m
+    [90m114| [39m                workerId[33m:[39m [32m'worker-1'[39m[33m,[39m
+    [90m115| [39m                status[33m:[39m [32m'PENDING_VISIT'[39m[33m,[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[13/14]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/features/service/measurement/__tests__/sync-manager.test.ts[2m > [22mMeasureSyncManager[2m > [22mpushLocalChanges[2m > [22mshould push pending tasks to server
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called with arguments: [ { taskId: 'task-1', 鈥?3) } ][90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m[33m@@ -2,11 +2,10 @@[90m
+[2m    {[22m
+[2m      "checkInLocation": {[22m
+[2m        "address": "鍖椾含甯傛湞闃冲尯",[22m
+[2m        "lat": 39.9042,[22m
+[2m        "lng": 116.4074,[22m
+[32m-       "timestamp": "2026-01-01T10:00:00Z",[90m
+[2m      },[22m
+[2m      "images": [[22m
+[2m        "photo1.jpg",[22m
+[2m        "photo2.jpg",[22m
+[2m      ],[22m
+[33m@@ -16,10 +15,13 @@[90m
+[2m            "name": "瀹㈠巺",[22m
+[2m            "windows": [[22m
+[2m              {[22m
+[2m                "height": 2600,[22m
+[2m                "id": "w1",[22m
+[31m+               "installType": "TOP",[90m
+[31m+               "name": "W1",[90m
+[31m+               "openType": "SINGLE",[90m
+[2m                "photos": [],[22m
+[2m                "type": "STRAIGHT",[22m
+[2m                "width": 3000,[22m
+[2m              },[22m
+[2m            ],[22m
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m鉂?[22m src/features/service/measurement/__tests__/sync-manager.test.ts:[2m216:39[22m[39m
+    [90m214| [39m
+    [90m215| [39m            [34mexpect[39m(successCount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m216| [39m            [34mexpect[39m(submitMeasureData)[33m.[39m[34mtoHaveBeenCalledWith[39m({
+    [90m   | [39m                                      [31m^[39m
+    [90m217| [39m                taskId[33m:[39m [32m'task-1'[39m[33m,[39m
+    [90m218| [39m                resultData[33m:[39m { rooms[33m:[39m pendingTasks[[34m0[39m][33m.[39mdata[33m.[39mrooms }[33m,[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[14/14]鈳?[22m[39m
+
+
+[2m Test Files [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m19 passed[39m[22m[90m (25)[39m
+[2m      Tests [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m256 passed[39m[22m[90m (270)[39m
+[2m   Start at [22m 14:54:08
+[2m   Duration [22m 4.27s[2m (transform 6.45s, setup 4.94s, import 30.96s, tests 1.33s, environment 44.32s)[22m
+
+鈥塃LIFECYCLE鈥?Command failed with exit code 1.

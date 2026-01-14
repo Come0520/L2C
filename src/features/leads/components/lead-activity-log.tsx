@@ -1,0 +1,63 @@
+import { getLeadTimeline } from '../actions';
+import { Card, CardContent, CardHeader } from '@/shared/ui/card';
+import { formatDate } from '@/shared/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { cn } from '@/shared/lib/utils';
+
+interface LeadActivityLogProps {
+    leadId: string;
+}
+
+export async function LeadActivityLog({ leadId }: LeadActivityLogProps) {
+    const activities = await getLeadTimeline({ leadId });
+
+    return (
+        <Card>
+            <CardHeader title="跟进记录" className="border-b pb-4 mb-4" />
+            <CardContent>
+                <div className="space-y-6">
+                    {activities.length === 0 ? (
+                        <div className="text-center text-sm text-gray-500 py-4">暂无跟进记录</div>
+                    ) : (
+                        activities.map((activity, index) => (
+                            <div key={activity.id} className="relative pl-6 pb-6 last:pb-0 border-l border-gray-200 last:border-0 ml-2">
+                                {/* Dot */}
+                                <div className={cn(
+                                    "absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full border border-white",
+                                    activity.activityType === 'SYSTEM' ? "bg-gray-300" : "bg-blue-500"
+                                )} />
+
+                                <div className="flex flex-col space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {activity.creator?.name || '系统'}
+                                            <span className="text-gray-500 font-normal ml-2">
+                                                {activity.activityType === 'PHONE_CALL' && '拨打了电话'}
+                                                {activity.activityType === 'WECHAT_CHAT' && '微信沟通'}
+                                                {activity.activityType === 'STORE_VISIT' && '客户到店'}
+                                                {activity.activityType === 'HOME_VISIT' && '上门拜访'}
+                                                {activity.activityType === 'QUOTE_SENT' && '发送报价'}
+                                                {activity.activityType === 'SYSTEM' && '系统操作'}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {formatDate(activity.createdAt)}
+                                        </div>
+                                    </div>
+                                    <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded-md">
+                                        {activity.content}
+                                    </div>
+                                    {activity.nextFollowupDate && (
+                                        <div className="text-xs text-orange-600 mt-1">
+                                            下次跟进: {formatDate(activity.nextFollowupDate)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}

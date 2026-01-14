@@ -1,0 +1,46 @@
+﻿import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index } from 'drizzle-orm/pg-core';
+import { tenants, users } from './infrastructure';
+import { customers } from './customers';
+
+export const quotes = pgTable('quotes', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    quoteNo: varchar('quote_no', { length: 50 }).unique().notNull(),
+    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    leadId: uuid('lead_id'), // Optional reference to lead
+    
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).default('0'),
+    finalAmount: decimal('final_amount', { precision: 12, scale: 2 }).default('0'),
+    status: varchar('status', { length: 50 }).default('DRAFT'),
+    
+    validUntil: timestamp('valid_until', { withTimezone: true }),
+    notes: text('notes'),
+    
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    quoteTenantIdx: index('idx_quotes_tenant').on(table.tenantId),
+    quoteCustomerIdx: index('idx_quotes_customer').on(table.customerId),
+}));
+
+export const quoteItems = pgTable('quote_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
+    
+    productId: uuid('product_id'),
+    productName: varchar('product_name', { length: 200 }).notNull(),
+    
+    roomName: varchar('room_name', { length: 100 }),
+    attributes: jsonb('attributes').default({}), // Stores dynamic attrs
+
+    unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+    quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
+    subtotal: decimal('subtotal', { precision: 12, scale: 2 }).notNull(),
+
+    remark: text('remark'),
+    sortOrder: integer('sort_order').default(0),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});

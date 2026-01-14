@@ -1,0 +1,55 @@
+﻿
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/bigey/Documents/Antigravity/L2C[39m
+
+ [31m鉂?[39m src/features/orders/logic/__tests__/order-split-router.test.ts [2m([22m[2m10 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 10[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭寜鍝佺被鎷嗗垎涓绘枡鍟嗗搧[32m 2[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭寜闄勪欢绫诲瀷鎷嗗垎闄勪欢鍟嗗搧[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴旇缃纭殑渚涘簲鍟嗘爣绛?[32m 1[2mms[22m[39m
+       [32m鉁?[39m 搴斾繚鐣欓檮浠剁殑 parentItemId[32m 0[2mms[22m[39m
+       [32m鉁?[39m pendingItems 鍦ㄥ鏉炬ā寮忎笅搴斾负绌?[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 搴斾娇鐢ㄦ暟鎹簱瑙勫垯瑕嗙洊榛樿瑙勫垯[39m[32m 3[2mms[22m[39m
+       [32m鉁?[39m 涓ユ牸妯″紡涓嬫棤鍖归厤瑙勫垯涓旀棤榛樿鏄犲皠搴旀斁鍏ュ緟鍒嗛厤姹?[32m 0[2mms[22m[39m
+       [32m鉁?[39m 瀹芥澗妯″紡涓嬫棤鍖归厤瑙勫垯搴旈粯璁ゅ埌甯冨巶[32m 0[2mms[22m[39m
+       [32m鉁?[39m 绌烘暟缁勫簲杩斿洖绌哄垎缁?[32m 0[2mms[22m[39m
+       [32m鉁?[39m 閲戦璁＄畻搴旀纭?[32m 0[2mms[22m[39m
+node.exe : 
+所在位置 C:\Users\bigey\AppData\Roaming\npm\pnpm.ps1:24 字符: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $
+args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], Remo 
+   teException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31m鈳幆鈳幆鈳幆鈳?[39m[1m[41m Failed Tests 1 [49m[22m[31m鈳幆
+鈳幆鈳幆鈳?[39m
+
+[41m[1m FAIL [22m[49m src/features/orders/logic/__tests__/o
+rder-split-router.test.ts[2m > [22m璁㈠崟鎷嗘祦璺敱 (Order Split Rou
+ter)[2m > [22m鑷畾涔夎鍒欐ā鎷?(閫氳繃 Mock loadActiveRules)[2m > [2
+2m搴斾娇鐢ㄦ暟鎹簱瑙勫垯瑕嗙洊榛樿瑙勫垯
+[31m[1mAssertionError[22m: expected undefined to be defined
+[39m
+[36m [2m鉂?[22m src/features/orders/logic/__tests__/order-spli
+t-router.test.ts:[2m151:33[22m[39m
+    [90m149| [39m            [90m// 绐楀笜杞ㄩ亾搴旇鍦ㄦ寚瀹氫緵搴斿晢鍒嗙粍[3
+9m
+    [90m150| [39m            [35mconst[39m customGroup [33
+m=[39m result[33m.[39mgroups[33m.[39m[35mget[39m([32m's
+upplier-uuid-123'[39m)[33m;[39m
+    [90m151| [39m            [34mexpect[39m(customGroup)[3
+3m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m   | [39m                                [31m^[39m
+    [90m152| [39m            expect(customGroup!.some((i: Spl
+itOrderItem) => i.productN鈥?    [90m153| [39m        })[33m;
+[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[1/1]鈳?[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m9 passed[39m[22m[90m (10)[39m
+[2m   Start at [22m 22:22:37
+[2m   Duration [22m 1.70s[2m (transform 151ms, setup 151ms, import 714ms, tests 10ms, environment 577ms)[22m
+

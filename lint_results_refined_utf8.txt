@@ -1,0 +1,197 @@
+﻿
+> l2c@0.1.0 lint C:\Users\bigey\Documents\Antigravity\L2C
+> eslint
+
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\customer-lifecycle.spec.ts
+  69:19  warning  'stats' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\full-sales-flow.spec.ts
+  286:36  warning  'page' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\lead-creation.spec.ts
+  46:15  warning  'createPromise' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\purchase-order.spec.ts
+  180:23  warning  'poList' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\quote-lifecycle.spec.ts
+  129:68  warning  'page' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\e2e\flows\search-filter.spec.ts
+  1:16  warning  'expect' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\manual-migrate.ts
+  16:11  warning  'db' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\playwright.config.ts
+  2:8  warning  'path' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\seed-channels.ts
+  5:10  warning  'eq' is defined but never used   @typescript-eslint/no-unused-vars
+  5:14  warning  'and' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\seed-test-user.ts
+  32:16  warning  'role' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\(dashboard)\finance\labor\page.tsx
+  9:10  warning  'apStatements' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\(dashboard)\settings\channels\channel-list-wrapper.tsx
+  4:10  warning  'ChannelForm' is defined but never used  @typescript-eslint/no-unused-vars
+  5:10  warning  'useState' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\(dashboard)\settings\roles\page.tsx
+  3:10  warning  'RoleList' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\(dashboard)\settings\users\page.tsx
+  4:10  warning  'Button' is defined but never used       @typescript-eslint/no-unused-vars
+  5:10  warning  'Plus' is defined but never used         @typescript-eslint/no-unused-vars
+  9:10  warning  'PERMISSIONS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\(mobile)\measure\[id]\page.tsx
+   6:10  warning  'MeasureSyncManager' is defined but never used                                                               @typescript-eslint/no-unused-vars
+   7:10  warning  'Button' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+  27:8   warning  React Hook useEffect has a missing dependency: 'loadTask'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\api\mobile\tasks\[type]\[id]\route.ts
+   3:38  warning  'orders' is defined but never used  @typescript-eslint/no-unused-vars
+   4:19  warning  'sql' is defined but never used     @typescript-eslint/no-unused-vars
+  52:14  warning  'error' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\app\api\mobile\tasks\route.ts
+  4:14  warning  'and' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\customers\components\customer-table.tsx
+  18:16  warning  'Phone' is defined but never used          @typescript-eslint/no-unused-vars
+  18:23  warning  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\__tests__\finance-additional.test.ts
+  110:10  warning  'eq' is defined but never used          @typescript-eslint/no-unused-vars
+  110:14  warning  'and' is defined but never used         @typescript-eslint/no-unused-vars
+  110:19  warning  'between' is defined but never used     @typescript-eslint/no-unused-vars
+  110:28  warning  'notInArray' is defined but never used  @typescript-eslint/no-unused-vars
+  110:40  warning  'inArray' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\ap\components\ap-statement-table.tsx
+  16:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\leads\components\create-lead-dialog.tsx
+  8:10  warning  'Button' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\leads\components\lead-filters.tsx
+  15:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\monitoring\external-notifications.ts
+  7:10  warning  'auth' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\orders\__tests__\order-actions.test.ts
+  14:10  warning  'revalidatePath' is defined but never used         @typescript-eslint/no-unused-vars
+  79:11  warning  'mockDbInsert' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\orders\components\order-table.tsx
+  11:10  warning  'Badge' is defined but never used     @typescript-eslint/no-unused-vars
+  13:15  warning  'FileText' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\products\components\product-form.tsx
+  130:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\quotes\components\quote-copilot-dialog.tsx
+  63:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\quotes\components\quote-print-template.tsx
+   4:19  warning  'Download' is defined but never used                 @typescript-eslint/no-unused-vars
+  45:5   warning  'companyAddress' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\quotes\components\quote-table.tsx
+  64:46  warning  'index' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\quotes\quick-quote\components\room-input-list.tsx
+  10:24  warning  'Box' is defined but never used     @typescript-eslint/no-unused-vars
+  12:10  warning  'cn' is defined but never used      @typescript-eslint/no-unused-vars
+  38:52  warning  'errors' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\__tests__\finance-integration.test.ts
+  3:10  warning  'db' is defined but never used            @typescript-eslint/no-unused-vars
+  4:10  warning  'installTasks' is defined but never used  @typescript-eslint/no-unused-vars
+  4:38  warning  'orders' is defined but never used        @typescript-eslint/no-unused-vars
+  5:10  warning  'eq' is defined but never used            @typescript-eslint/no-unused-vars
+  6:10  warning  'auth' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\__tests__\install-tasks.test.ts
+    5:52  warning  'table' is defined but never used         @typescript-eslint/no-unused-vars
+  140:29  warning  'values' is defined but never used        @typescript-eslint/no-unused-vars
+  159:10  warning  'installTasks' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\components\install-task-table.tsx
+  17:15  warning  'InstallTaskWithRelations' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\__tests__\sync-manager.test.ts
+  10:10  warning  'RoomMeasureData' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\actions.ts
+  398:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\approval-flow-designer.tsx
+    3:20   warning  'useCallback' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    8:60   warning  'DialogTrigger' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  239:122  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\approval-flow-designer.tsx:239:122
+  237 |                         <div className="space-y-2">
+  238 |                             <Label>瀹℃壒绫诲瀷</Label>
+> 239 |                             <Select onValueChange={(v) => setValue('type', v as 'role' | 'specific_user')} defaultValue={watch('type')}>
+      |                                                                                                                          ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  240 |                                 <SelectTrigger>
+  241 |                                     <SelectValue />
+  242 |                                 </SelectTrigger>  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\channel-form.tsx
+  106:43  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\channel-form.tsx:106:43
+  104 |                         <Select
+  105 |                             onValueChange={(val) => setValue('categoryId', val)}
+> 106 |                             defaultValue={watch('categoryId') || initialData?.categoryId}
+      |                                           ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  107 |                         >
+  108 |                             <SelectTrigger>
+  109 |                                 <SelectValue placeholder="閫夋嫨鍒嗙被" />  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\role-form.tsx
+  42:32  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\role-form.tsx:42:32
+  40 |     });
+  41 |
+> 42 |     const watchedPermissions = watch('permissions');
+     |                                ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  43 |
+  44 |     useEffect(() => {
+  45 |         if (open) {  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\user-form.tsx
+  125:36  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\settings\components\user-form.tsx:125:36
+  123 |                         <Select
+  124 |                             onValueChange={(val) => setValue('role', val)}
+> 125 |                             value={watch('role')}
+      |                                    ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  126 |                         >
+  127 |                             <SelectTrigger>
+  128 |                                 <SelectValue placeholder="閫夋嫨瑙掕壊" />  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\shared\ui\noise-background.tsx
+  211:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+鉁?66 problems (0 errors, 66 warnings)
+

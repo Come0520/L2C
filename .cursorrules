@@ -1,0 +1,14 @@
+# Project Rules
+
+This project uses Antigravity for structured agent interaction. Please refer to the following rules for specific domains:
+
+- **Database Safety & Migration**: [.antigravity/rules/db-safety.md](.antigravity/rules/db-safety.md)
+- **Aliyun OSS Security**: [.antigravity/rules/aliyun-oss.md](.antigravity/rules/aliyun-oss.md)
+- **Deployment & Rollback**: [.antigravity/rules/deployment.md](.antigravity/rules/deployment.md)
+- **Testing Standards**: [.antigravity/rules/testing-standards.md](.antigravity/rules/testing-standards.md)
+
+## General Guidelines
+
+1. **Follow the Rules**: Always check the specific domain rule file before making changes in that area.
+2. **Commit Messages**: Use semantic commit messages (feat, fix, chore, etc.).
+3. **Language**: Use Simplified Chinese for all interactions and documentation as per project standards.

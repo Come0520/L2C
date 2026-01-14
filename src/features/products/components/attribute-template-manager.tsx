@@ -1,0 +1,264 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { upsertAttributeTemplate, getAttributeTemplate } from '../actions/templates';
+import { productCategoryEnum } from '@/shared/api/schema/enums';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormLabel,
+    FormMessage,
+} from '@/shared/ui/form';
+import { Input } from '@/shared/ui/input';
+import { Button } from '@/shared/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/shared/ui/select';
+import { Switch } from '@/shared/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Loader2, Plus, Trash2, Save } from 'lucide-react';
+import { toast } from 'sonner';
+
+// Schema for a single field definition
+const attributeFieldSchema = z.object({
+    key: z.string().min(1, 'Key is required').regex(/^[a-zA-Z0-9_]+$/, 'Key must be alphanumeric'),
+    label: z.string().min(1, 'Label is required'),
+    type: z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'SELECT']),
+    required: z.boolean().default(false),
+    options: z.array(z.string()).optional(), // Only for SELECT
+    unit: z.string().optional(),
+    placeholder: z.string().optional(),
+});
+
+// Overall schema for the form
+const templateFormSchema = z.object({
+    category: z.enum(productCategoryEnum.enumValues),
+    templateSchema: z.array(attributeFieldSchema),
+});
+
+type TemplateFormValues = z.infer<typeof templateFormSchema>;
+
+export function AttributeTemplateManager() {
+    const [selectedCategory, setSelectedCategory] = useState<string>('CURTAIN_FABRIC');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const form = useForm<TemplateFormValues>({
+        resolver: zodResolver(templateFormSchema),
+        defaultValues: {
+            category: 'CURTAIN_FABRIC',
+            templateSchema: [],
+        },
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: 'templateSchema',
+    });
+
+    // Load template when category changes
+    useEffect(() => {
+        const loadTemplate = async () => {
+            setIsLoading(true);
+            try {
+                const result = await getAttributeTemplate({ category: selectedCategory as any });
+                if (result.error) {
+                    toast.error(result.error);
+                } else if (result.data) {
+                    // Force reset with new data
+                    form.reset({
+                        category: selectedCategory as any,
+                        // Ensure templateSchema is an array. If DB has null/empty, default to []
+                        templateSchema: Array.isArray(result.data.templateSchema) ? result.data.templateSchema : [],
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error('Failed to load template');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadTemplate();
+    }, [selectedCategory, form]);
+
+    const onSubmit = async (values: TemplateFormValues) => {
+        setIsLoading(true);
+        try {
+            const result = await upsertAttributeTemplate(values);
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success('Template saved successfully');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to save template');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Card className="w-full max-w-4xl mx-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>品类属性模板配置</CardTitle>
+                <div className="w-[200px]">
+                    <Select
+                        value={selectedCategory}
+                        onValueChange={setSelectedCategory}
+                        disabled={isLoading}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="选择品类" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="CURTAIN">窗帘成品</SelectItem>
+                            <SelectItem value="CURTAIN_FABRIC">窗帘面料</SelectItem>
+                            <SelectItem value="WALLCLOTH">墙布</SelectItem>
+                            <SelectItem value="WALLPAPER">墙纸</SelectItem>
+                            <SelectItem value="CURTAIN_ACCESSORY">窗帘配件</SelectItem>
+                            <SelectItem value="MATTRESS">床垫</SelectItem>
+                            <SelectItem value="OTHER">其他</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="space-y-4">
+                            {fields.map((field, index) => (
+                                <div key={field.id} className="flex gap-4 p-4 border rounded-md bg-slate-50 items-start">
+                                    <div className="grid grid-cols-4 gap-4 flex-1">
+                                        <FormField
+                                            control={form.control}
+                                            name={`templateSchema.${index}.key`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs">字段 Key (英文)</FormLabel>
+                                                    <FormControl><Input {...field} placeholder="e.g. width" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`templateSchema.${index}.label`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs">显示名称 (中文)</FormLabel>
+                                                    <FormControl><Input {...field} placeholder="e.g. 幅宽" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`templateSchema.${index}.type`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs">类型</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="STRING">文本</SelectItem>
+                                                            <SelectItem value="NUMBER">数值</SelectItem>
+                                                            <SelectItem value="BOOLEAN">布尔 (开关)</SelectItem>
+                                                            <SelectItem value="SELECT">下拉选项</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`templateSchema.${index}.unit`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs">单位 (可选)</FormLabel>
+                                                    <FormControl><Input {...field} placeholder="e.g. cm" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        {form.watch(`templateSchema.${index}.type`) === 'SELECT' && (
+                                            <div className="col-span-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.options`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">选项 (逗号分隔)</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    placeholder="Option A, Option B"
+                                                                    value={field.value?.join(', ') || ''}
+                                                                    onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="col-span-4 flex items-center gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name={`templateSchema.${index}.required`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                                        <FormLabel className="text-xs font-normal">必填</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-500 mt-8"
+                                        onClick={() => remove(index)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full border-dashed"
+                            onClick={() => append({ key: '', label: '', type: 'STRING', required: false })}
+                        >
+                            <Plus className="mr-2 h-4 w-4" /> 添加属性字段
+                        </Button>
+
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                保存配置
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
+    );
+}

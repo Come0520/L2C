@@ -78,7 +78,7 @@ vi.mock('@/shared/api/schema', () => ({
 
 // Import Actions
 import { createOrderFromQuote, confirmOrderProduction } from '../actions';
-import { createArFromOrderInternal, recordPayment } from '@/features/finance';
+import { createPayment as recordPayment } from '@/features/finance/actions/mutations';
 
 // Note: createArFromOrderInternal is imported dynamically in createOrderFromQuote, 
 // but for unit test we might need to mock the import or ensure it runs.

@@ -15,6 +15,7 @@ export const env = {
     OSS_ACCESS_KEY_ID: process.env.OSS_ACCESS_KEY_ID || '',
     OSS_ACCESS_KEY_SECRET: process.env.OSS_ACCESS_KEY_SECRET || '',
     OSS_BUCKET: process.env.OSS_BUCKET || 'l2c-uploads',
+    OSS_ROLE_ARN: process.env.OSS_ROLE_ARN || '',
 
     // Aliyun SMS
     SMS_ACCESS_KEY_ID: process.env.SMS_ACCESS_KEY_ID || '',

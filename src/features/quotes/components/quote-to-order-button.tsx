@@ -15,30 +15,30 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/shared/ui/dialog"
+} from '@/shared/ui/dialog';
 
 interface QuoteToOrderButtonProps {
     quoteId: string;
 }
 
 export function QuoteToOrderButton({ quoteId }: QuoteToOrderButtonProps) {
+    const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
-    const [open, setOpen] = useState(false);
 
-    const handleConfirm = () => {
+    const handleConvert = () => {
         startTransition(async () => {
             try {
-                const result = await createOrderFromQuote({ quoteId });
-                if (result.success && result.data) {
-                    toast.success(`订单 ${result.data.orderNo} 创建成功`);
-                    router.push(`/orders/${result.data.id}`);
+                // createOrderFromQuote returns Order object directly
+                const order = await createOrderFromQuote({ quoteId });
+                if (order?.id) {
+                    toast.success(`订单 ${order.orderNo} 创建成功`);
+                    router.push(`/orders/${order.id}`);
                 } else {
-                    toast.error('创建订单失败');
+                    toast.error('转换失败');
                 }
-            } catch (error) {
-                console.error(error);
-                toast.error('创建订单出错');
+            } catch (error: any) {
+                toast.error(error?.message || '转换失败，请稍后重试');
             } finally {
                 setOpen(false);
             }
@@ -48,28 +48,24 @@ export function QuoteToOrderButton({ quoteId }: QuoteToOrderButtonProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button variant="default" className="gap-2">
+                    <ArrowRight className="w-4 h-4" />
                     转为订单
-                    <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>确认转为订单?</DialogTitle>
+                    <DialogTitle>确认转换</DialogTitle>
                     <DialogDescription>
-                        这将锁定当前报价单，并生成一个新的订单记录�?
-                        报价单一旦锁定将无法在其基础上继续修改�?
+                        将此报价单转换为正式订单，确认后报价单将被锁定。
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button variant="outline">取消</Button>
                     </DialogClose>
-                    <Button onClick={(e) => {
-                        e.preventDefault();
-                        handleConfirm();
-                    }} disabled={isPending}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button onClick={handleConvert} disabled={isPending}>
+                        {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         确认转换
                     </Button>
                 </DialogFooter>

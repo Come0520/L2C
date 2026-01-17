@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import {
     Dialog,
     DialogContent,
@@ -29,85 +30,92 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import { assignInstallWorker } from '../actions';
+import { dispatchInstallTask } from '../actions';
 import { toast } from 'sonner';
 
-
-const dispatchSchema = z.object({
-    workerId: z.string().min(1, "请选择安装师傅"),
-    scheduledAt: z.string().min(1, "请选择预约时间"),
-    laborFee: z.string().optional(),
+const formSchema = z.object({
+    installerId: z.string().min(1, '请选择安装师'),
+    scheduledDate: z.string().optional(),
+    scheduledTimeSlot: z.string().optional(),
+    laborFee: z.string().optional(), // Input as string, convert to number
+    dispatcherNotes: z.string().optional(),
 });
 
-type DispatchFormValues = z.infer<typeof dispatchSchema>;
-
-interface DispatchDialogProps {
+interface InstallDispatchDialogProps {
     taskId: string;
-    workers: { id: string; name: string }[];
+    workers: { id: string; name: string | null }[];
     trigger?: React.ReactNode;
-    onSuccess?: () => void;
 }
 
-export function InstallDispatchDialog({ taskId, workers, trigger, onSuccess }: DispatchDialogProps) {
+export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispatchDialogProps) {
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<DispatchFormValues>({
-        resolver: zodResolver(dispatchSchema),
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
         defaultValues: {
-            workerId: '',
-            scheduledAt: '',
-            laborFee: '',
-        }
+            installerId: '',
+            scheduledDate: '',
+            scheduledTimeSlot: '',
+            laborFee: '', // Use empty string for input
+            dispatcherNotes: '',
+        },
     });
 
-    const onSubmit = async (data: DispatchFormValues) => {
-        setLoading(true);
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsLoading(true);
         try {
-            await assignInstallWorker({
-                taskId,
-                workerId: data.workerId,
-                scheduledDate: data.scheduledAt,
-                laborFee: data.laborFee ? Number(data.laborFee) : undefined
+            const result = await dispatchInstallTask({
+                id: taskId,
+                installerId: values.installerId,
+                scheduledDate: values.scheduledDate ? new Date(values.scheduledDate) : undefined,
+                scheduledTimeSlot: values.scheduledTimeSlot,
+                laborFee: values.laborFee ? parseFloat(values.laborFee) : undefined,
+                dispatcherNotes: values.dispatcherNotes,
             });
-            toast.success('指派成功');
-            setOpen(false);
-            onSuccess?.();
-        } catch (error) {
-            toast.error('操作失败');
-            console.error(error);
+
+            if (result.data?.success) {
+                toast.success('指派成功');
+                setOpen(false);
+                form.reset();
+            } else {
+                toast.error(result.data?.error || result.error || '指派失败');
+            }
+        } catch (_error) {
+            toast.error('请求失败');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
-    };
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {trigger || <Button>指派安装</Button>}
+                {trigger || <Button>指派安装师</Button>}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>指派安装师傅</DialogTitle>
+                    <DialogTitle>指派安装任务</DialogTitle>
                 </DialogHeader>
-
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
                             control={form.control}
-                            name="workerId"
+                            name="installerId"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>选择师傅</FormLabel>
+                                    <FormLabel>选择安装师</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="选择人员" />
+                                                <SelectValue placeholder="请选择安装师" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {workers.map(w => (
-                                                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                                            {workers.map((worker) => (
+                                                <SelectItem key={worker.id} value={worker.id}>
+                                                    {worker.name || '未命名'}
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -115,14 +123,42 @@ export function InstallDispatchDialog({ taskId, workers, trigger, onSuccess }: D
                                 </FormItem>
                             )}
                         />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="scheduledDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>预约日期</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="scheduledTimeSlot"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>预约时段</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="例如: 上午, 14:00" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                         <FormField
                             control={form.control}
-                            name="scheduledAt"
+                            name="laborFee"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>预约时间</FormLabel>
+                                    <FormLabel>预估工费 (元)</FormLabel>
                                     <FormControl>
-                                        <Input type="datetime-local" {...field} />
+                                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -130,12 +166,12 @@ export function InstallDispatchDialog({ taskId, workers, trigger, onSuccess }: D
                         />
                         <FormField
                             control={form.control}
-                            name="laborFee"
+                            name="dispatcherNotes"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>预估工费 (�?</FormLabel>
+                                    <FormLabel>派单备注</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="0.00" {...field} />
+                                        <Textarea placeholder="填写注意事项..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -143,8 +179,8 @@ export function InstallDispatchDialog({ taskId, workers, trigger, onSuccess }: D
                         />
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>取消</Button>
-                            <Button type="submit" variant="success" isLoading={loading}>
-                                确认指派
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading ? '正在指派...' : '确认指派'}
                             </Button>
                         </DialogFooter>
                     </form>

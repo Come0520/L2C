@@ -1,4 +1,4 @@
-import { getAPSupplierStatements, getAPLaborStatements } from '@/features/finance/actions';
+import { getAPSupplierStatements, getAPLaborStatements } from '@/features/finance/actions/ap';
 import { APStatementTable } from '@/features/finance/components/APStatementTable';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';

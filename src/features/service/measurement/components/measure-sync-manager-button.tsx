@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import { RefreshCw } from 'lucide-react';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 
 export function MeasureSyncManagerButton({ quoteId }: { quoteId: string }) {
     const [loading, setLoading] = useState(false);

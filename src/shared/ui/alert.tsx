@@ -6,13 +6,13 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
 const alertVariants = cva(
-    'relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7',
+    'relative w-full glass-liquid px-4 py-4 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-9',
     {
         variants: {
             variant: {
-                default: 'bg-background text-foreground',
+                default: 'bg-white/40 dark:bg-black/40 text-foreground border-white/20',
                 destructive:
-                    'border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive',
+                    'bg-destructive/10 text-destructive border-destructive/20 dark:border-destructive/30 [&>svg]:text-destructive',
             },
         },
         defaultVariants: {

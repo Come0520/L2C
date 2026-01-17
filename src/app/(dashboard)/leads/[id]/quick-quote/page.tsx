@@ -1,5 +1,5 @@
 import { QuickQuoteForm } from "@/features/quotes/quick-quote/components/quick-quote-form";
-import { getLeadById } from "@/features/leads/actions";
+import { getLeadById } from "@/features/leads/actions/queries";
 import { fetchQuotePlans } from "@/features/quotes/lib/plan-loader";
 import { notFound } from "next/navigation";
 import { Separator } from "@/shared/ui/separator";

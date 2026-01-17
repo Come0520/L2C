@@ -28,7 +28,8 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Switch } from '@/shared/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Card, CardContent } from '@/shared/ui/card';
-import { Loader2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { toast } from 'sonner';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
 
@@ -45,7 +46,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
     const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
     const [fetchingSuppliers, setFetchingSuppliers] = useState(false);
 
-    const form = useForm<ProductFormValues>({
+    const form = useForm({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as any,
         defaultValues: initialData ? {
@@ -198,7 +199,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
                 <Tabs defaultValue="basic" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="basic">基础信息</TabsTrigger>

@@ -3,7 +3,7 @@ import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 import { marketChannels } from './catalogs';
 import { channels, channelContacts } from './channels';
-import { leadStatusEnum, intentionLevelEnum, leadActivityTypeEnum } from './enums';
+import { leadStatusEnum, intentionLevelEnum, leadActivityTypeEnum, decorationProgressEnum } from './enums';
 
 export const leads = pgTable('leads', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -44,6 +44,9 @@ export const leads = pgTable('leads', {
 
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }),
     nextFollowupAt: timestamp('next_followup_at', { withTimezone: true }),
+    nextFollowupRecommendation: timestamp('next_followup_recommendation', { withTimezone: true }), // [NEW] System recommended time
+
+    decorationProgress: decorationProgressEnum('decoration_progress'), // [NEW] Decoration stage
 
     quotedAt: timestamp('quoted_at', { withTimezone: true }),
     visitedStoreAt: timestamp('visited_store_at', { withTimezone: true }),

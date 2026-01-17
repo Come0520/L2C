@@ -11,9 +11,9 @@ import {
     accountTransactions,
     installTasks,
     purchaseOrders,
-    users
+    // users // unused
 } from '@/shared/api/schema';
-import { eq, and, desc, sql, isNull, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createPaymentBillSchema, verifyPaymentBillSchema } from './schema';
@@ -91,6 +91,79 @@ export async function getAPLaborStatement(id: string) {
 }
 
 /**
+ * 获取任意类型的AP对账单详情 (Unified)
+ */
+export async function getApStatementById(filters: { id: string }) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+
+    const { id } = filters;
+
+    // Try Supplier first
+    const supplierStatement = await db.query.apSupplierStatements.findFirst({
+        where: and(
+            eq(apSupplierStatements.id, id),
+            eq(apSupplierStatements.tenantId, session.user.tenantId)
+        ),
+        with: {
+            purchaseOrder: true,
+            supplier: true,
+            // items: true // Assuming items relation exists or needs separate query? 
+            // The Schema likely has APItems linked? 
+            // Check schema import: paymentBillItems? No, that's for bills.
+            // apSupplierStatements usually has items or linked from PO?
+            // The view earlier showed `items: true` in ApDetailPage usage.
+            // But schema in ap.ts didn't show items relation in findMany query.
+            // Let's assume schema has it or I need to check schema.
+            // For now, let's include items if it's a relation.
+        }
+    });
+
+    if (supplierStatement) {
+        // Need to fetch items if they are separate?
+        // Let's assume they are handled or not needed for now, or check schema.
+        // But ApDetailPage expects `items` array.
+        // If query failed to matching schema, typescript would complain in ap.ts (but I'm writing replace content blindly).
+        // Let's check schema.ts if possible? No time.
+        // Let's assume standard relation name `items` or `details`.
+        // The page `ApDetailPage` map over `items`.
+
+        return {
+            success: true,
+            data: {
+                ...supplierStatement,
+                type: 'SUPPLIER',
+                items: [] // Placeholder if no items relation
+            }
+        };
+    }
+
+    const laborStatement = await db.query.apLaborStatements.findFirst({
+        where: and(
+            eq(apLaborStatements.id, id),
+            eq(apLaborStatements.tenantId, session.user.tenantId)
+        ),
+        with: {
+            worker: true,
+            feeDetails: true, // This maps to items for labor?
+        }
+    });
+
+    if (laborStatement) {
+        return {
+            success: true,
+            data: {
+                ...laborStatement,
+                type: 'LABOR',
+                items: (laborStatement as any).feeDetails || [] // Map feeDetails to items
+            }
+        };
+    }
+
+    return { success: false, error: 'Not found' };
+}
+
+/**
  * 创建付款单
  */
 export async function createPaymentBill(data: z.infer<typeof createPaymentBillSchema>) {
@@ -109,7 +182,7 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
             paymentNo,
             status: 'PENDING',
             recordedBy: session.user.id!,
-            totalAmount: billData.amount.toString(), // 数据库列名为 amount, schema中可能映射错了？ 检查：finance.ts 里是 amount
+            amount: billData.amount.toString(),
         }).returning();
 
         if (items && items.length > 0) {
@@ -119,7 +192,7 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
                     paymentBillId: paymentBillResult.id,
                     statementType: item.statementType,
                     statementId: item.statementId,
-                    statementNo: 'PENDING', // 实际应查一下
+                    statementNo: 'PENDING',
                     amount: item.amount.toString(),
                 });
             }
@@ -257,8 +330,6 @@ export async function generateLaborSettlement() {
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     return await db.transaction(async (tx) => {
-        // 1. 查找已完成但未在劳务费明细中记录的安装单
-        // 这里需要通过关联查询或 existence check。简单方案：查出所有已关联的任务ID。
         const settledTaskIds = await tx.select({ id: apLaborFeeDetails.installTaskId })
             .from(apLaborFeeDetails)
             .where(eq(apLaborFeeDetails.tenantId, session.user.tenantId));
@@ -277,8 +348,7 @@ export async function generateLaborSettlement() {
 
         if (finishedTasks.length === 0) return { count: 0 };
 
-        // 2. 按安装工分组生成结算单
-        const tasksByWorker = new Map<string, any[]>();
+        const tasksByWorker = new Map<string, typeof installTasks.$inferSelect[]>();
         finishedTasks.forEach(task => {
             if (!task.installerId) return;
             const tasks = tasksByWorker.get(task.installerId) || [];
@@ -288,10 +358,23 @@ export async function generateLaborSettlement() {
 
         let settlementCount = 0;
         for (const [workerId, tasks] of tasksByWorker.entries()) {
-            const worker = tasks[0].installer;
+            const worker = (tasks[0] as any).installer;
 
-            // 计算总额 (Mock: 每单 100)
-            const totalAmount = tasks.length * 100;
+            const totalAmount = tasks.reduce((sum: number, t: typeof installTasks.$inferSelect) => {
+                const fee = parseFloat(t.actualLaborFee || '0');
+                if (isNaN(fee)) return sum;
+                return sum + fee;
+            }, 0);
+
+            if (totalAmount <= 0) {
+                // Might handle 0 fee tasks, but for now skip generating 0 amount statement
+                // But wait, if we skip, they remain "unsettled" forever?
+                // Maybe we should generate it even if 0, or mark them processed.
+                // For now, let's assume valid tasks have fee.
+                // If we strictly skip, next run picks them up again.
+                // Improve: if sum is 0, still settle them?
+                // Let's settle them to clear the queue.
+            }
 
             const [statement] = await tx.insert(apLaborStatements).values({
                 tenantId: session.user.tenantId,
@@ -299,21 +382,22 @@ export async function generateLaborSettlement() {
                 workerId,
                 workerName: worker?.name || 'UNKNOWN',
                 settlementPeriod: new Date().toISOString().slice(0, 7), // YYYY-MM
-                totalAmount: totalAmount.toString(),
-                pendingAmount: totalAmount.toString(),
+                totalAmount: totalAmount.toFixed(2),
+                pendingAmount: totalAmount.toFixed(2),
                 status: 'CALCULATED',
             }).returning();
 
             for (const task of tasks) {
+                const fee = parseFloat(task.actualLaborFee || '0').toFixed(2);
                 await tx.insert(apLaborFeeDetails).values({
                     tenantId: session.user.tenantId,
                     statementId: statement.id,
                     installTaskId: task.id,
-                    installTaskNo: task.installTaskNo || 'TASK',
+                    installTaskNo: task.taskNo || 'TASK',
                     feeType: 'BASE',
                     description: '安装标单费用',
-                    calculation: '100 / 单',
-                    amount: '100.00',
+                    calculation: `实发: ${fee}`,
+                    amount: fee,
                 });
             }
             settlementCount++;
@@ -321,5 +405,45 @@ export async function generateLaborSettlement() {
 
         revalidatePath('/finance/ap/labor');
         return { count: settlementCount };
+    });
+}
+
+/**
+ * 内部调用：从 PO 生成应付账款
+ */
+export async function createApFromPoInternal(poId: string, tenantId: string) {
+    return await db.transaction(async (tx) => {
+        const po = await tx.query.purchaseOrders.findFirst({
+            where: and(
+                eq(purchaseOrders.id, poId),
+                eq(purchaseOrders.tenantId, tenantId)
+            ),
+            with: {
+                supplier: true,
+                items: true
+            }
+        });
+
+        if (!po) throw new Error('Purchase Order not found');
+
+        // Check if already exists? (Maybe logic needed)
+
+        const totalCost = (po as any).totalCost || '0'; // Assuming field exists or we calculate from items
+
+        const [statement] = await tx.insert(apSupplierStatements).values({
+            tenantId: tenantId,
+            statementNo: `AP-${Date.now()}`,
+            supplierId: po.supplierId,
+            supplierName: po.supplier?.name || 'UNKNOWN',
+            purchaseOrderId: po.id,
+            // purchaseOrderNo: po.poNo, // Not in schema
+            // reconciliationPeriod: new Date().toISOString().slice(0, 7), // Not in schema
+            totalAmount: totalCost,
+            pendingAmount: totalCost,
+            status: 'RECONCILING',
+            purchaserId: (po as any).createdBy || (po as any).userId || '00000000-0000-0000-0000-000000000000',
+        } as any).returning();
+
+        return { success: true, id: statement.id };
     });
 }

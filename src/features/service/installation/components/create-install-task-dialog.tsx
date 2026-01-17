@@ -1,45 +1,47 @@
 ﻿'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
 
 interface CreateInstallTaskDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSuccess: () => void;
+    trigger?: React.ReactNode;
+    onSuccess?: () => void;
 }
 
-export function CreateInstallTaskDialog({ open, onOpenChange, onSuccess }: CreateInstallTaskDialogProps) {
+export function CreateInstallTaskDialog({ trigger, onSuccess }: CreateInstallTaskDialogProps) {
+    const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleCreate = async () => {
         setLoading(true);
         setTimeout(() => {
             setLoading(false);
-            toast.success('Installation task created (mock)');
-            onSuccess();
-            onOpenChange(false);
+            toast.success('安装任务已创建 (Mock)');
+            onSuccess?.();
+            setOpen(false);
         }, 1000);
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Create Installation Task</DialogTitle>
+                    <DialogTitle>新建安装任务</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 text-center text-muted-foreground">
-                    Create installation task form not available in recovery mode.
+                    安装单创建表单在恢复模式下暂不可见，稍后将对接完整业务逻辑。
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
                     <Button onClick={handleCreate} disabled={loading}>
-                        {loading ? 'Creating...' : 'Create'}
+                        {loading ? '创建中...' : '提交创建'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
+

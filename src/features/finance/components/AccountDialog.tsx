@@ -28,7 +28,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/shared/ui/dialog';
-import { createFinanceAccount, updateFinanceAccount } from '../actions';
+import { createFinanceAccount, updateFinanceAccount } from '@/features/finance/actions/config';
 import { toast } from 'sonner';
 import { useTransition, useEffect } from 'react';
 import { z } from 'zod';
@@ -45,7 +45,7 @@ export function AccountDialog({ open, onOpenChange, initialData }: AccountDialog
     const [isPending, startTransition] = useTransition();
     const isEdit = !!initialData;
 
-    const form = useForm<FormValues>({
+    const form = useForm({
         resolver: zodResolver(createFinanceAccountSchema),
         defaultValues: {
             accountNo: '',

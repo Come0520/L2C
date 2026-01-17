@@ -9,7 +9,7 @@ import {
     DialogFooter,
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 interface MeasureSyncDialogProps {
     open: boolean;
@@ -40,7 +40,7 @@ export function MeasureSyncDialog({ open, onClose, tasks, onSync }: MeasureSyncD
                 <DialogHeader>
                     <DialogTitle>同步测量数据</DialogTitle>
                 </DialogHeader>
-                
+
                 <div className="flex-1 overflow-y-auto py-4">
                     <p className="text-sm text-muted-foreground mb-4">
                         请确认以下测量项的尺寸变更，并选择需要同步到报价单的项目。

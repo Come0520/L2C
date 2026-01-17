@@ -7,13 +7,13 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/shared/components/ui/table';
-import { Button } from '@/shared/components/ui/button';
+} from '@/shared/ui/table';
+import { Button } from '@/shared/ui/button';
 import { LiabilityNotice } from '../types';
 import { confirmLiabilityNotice } from '../actions';
-import { useToast } from '@/shared/components/ui/use-toast';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Badge } from '@/shared/components/ui/badge';
+import { Badge } from '@/shared/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -22,7 +22,7 @@ interface LiabilityNoticeListProps {
 }
 
 export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
-    const { toast } = useToast();
+
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
     const handleConfirm = async (id: string) => {
@@ -30,10 +30,10 @@ export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
         const result = await confirmLiabilityNotice({ noticeId: id });
         setConfirmingId(null);
 
-        if (result.success) {
-            toast({ title: '确认成功', description: result.message });
+        if (result.data?.success) {
+            toast.success('确认成功', { description: result.data.message });
         } else {
-            toast({ title: '确认失败', description: result.error || result.message, variant: 'destructive' });
+            toast.error('确认失败', { description: result.error || result.data?.message });
         }
     };
 

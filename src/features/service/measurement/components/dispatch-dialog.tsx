@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
@@ -9,18 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { dispatchMeasureTask } from '../actions/mutations';
 import { getAvailableWorkers } from '../actions/queries';
+import { WorkerBase } from '@/types/service';
 
 interface DispatchDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     taskId: string;
     taskNo?: string;
     defaultScheduledAt?: Date;
+    trigger?: React.ReactNode;
 }
 
-export function DispatchDialog({ open, onOpenChange, taskId, taskNo, defaultScheduledAt }: DispatchDialogProps) {
+export function DispatchDialog({ open: controlledOpen, onOpenChange: setControlledOpen, taskId, taskNo, defaultScheduledAt, trigger }: DispatchDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
+
     const [loading, setLoading] = useState(false);
-    const [workers, setWorkers] = useState<any[]>([]);
+    const [workers, setWorkers] = useState<WorkerBase[]>([]);
     const [formData, setFormData] = useState({
         assignedWorkerId: '',
         scheduledAt: defaultScheduledAt || new Date(),
@@ -40,6 +47,9 @@ export function DispatchDialog({ open, onOpenChange, taskId, taskNo, defaultSche
     }, [open, defaultScheduledAt]);
 
     const handleDispatch = async () => {
+        if (!formData.assignedWorkerId && onOpenChange) { // fallback check
+            // ...
+        }
         if (!formData.assignedWorkerId) {
             toast.error('请选择测量师');
             return;
@@ -55,7 +65,7 @@ export function DispatchDialog({ open, onOpenChange, taskId, taskNo, defaultSche
 
             if (res.success) {
                 toast.success('指派成功');
-                onOpenChange(false);
+                if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
             console.error(error);
@@ -67,6 +77,7 @@ export function DispatchDialog({ open, onOpenChange, taskId, taskNo, defaultSche
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>指派测量任务 {taskNo && `- ${taskNo}`}</DialogTitle>
@@ -104,7 +115,7 @@ export function DispatchDialog({ open, onOpenChange, taskId, taskNo, defaultSche
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={() => onOpenChange?.(false)}>取消</Button>
                     <Button onClick={handleDispatch} disabled={loading}>
                         {loading ? '提交中...' : '提交'}
                     </Button>

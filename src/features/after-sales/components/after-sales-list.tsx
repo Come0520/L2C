@@ -1,17 +1,17 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAfterSalesTickets } from '../actions';
-import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/shared/components/ui/select';
+} from '@/shared/ui/select';
 import {
     Table,
     TableBody,
@@ -19,7 +19,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/shared/components/ui/table';
+} from '@/shared/ui/table';
 import { afterSalesStatusEnum } from '@/shared/api/schema/enums';
 import { format } from 'date-fns';
 import Link from 'next/link';

@@ -21,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import { createCustomer, updateCustomer } from '../actions';
+import { createCustomer, updateCustomer } from '../actions/mutations';
 import { toast } from 'sonner';
 import { useTransition } from 'react';
 import { z } from 'zod';

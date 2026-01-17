@@ -12,7 +12,8 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { formatDate } from '@/shared/lib/utils';
 import Link from 'next/link';
-import { ArrowRight, User } from 'lucide-react';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import User from 'lucide-react/dist/esm/icons/user';
 
 interface CustomerTableProps {
     data: any[]; // Replace with specific type

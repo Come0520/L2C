@@ -22,7 +22,7 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
-import { updateFinanceConfig } from '../actions';
+import { updateFinanceConfig } from '../actions/config';
 import { toast } from 'sonner';
 import { useTransition } from 'react';
 import { z } from 'zod';
@@ -37,7 +37,7 @@ interface FinanceSettingsFormProps {
 export function FinanceSettingsForm({ initialData }: FinanceSettingsFormProps) {
     const [isPending, startTransition] = useTransition();
 
-    const form = useForm<FormValues>({
+    const form = useForm({
         resolver: zodResolver(updateFinanceConfigSchema),
         defaultValues: {
             allow_difference: initialData?.allow_difference ?? false,

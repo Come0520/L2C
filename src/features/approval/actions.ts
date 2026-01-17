@@ -12,16 +12,17 @@ import * as queries from './actions/queries';
 import * as utils from './actions/utils';
 
 export const {
-    submitApprovalRequest
+    submitApproval
 } = submission;
 
 export const {
-    processApprovalDecision
+    processApproval
 } = processing;
 
 export const {
-    findActiveApprovalFlow,
-    getPendingApprovals
+    getPendingApprovals,
+    getApprovalHistory,
+    getApprovalDetails
 } = queries;
 
 export const {

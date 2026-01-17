@@ -2,7 +2,7 @@
 
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { Search } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { useCallback, useState } from 'react';

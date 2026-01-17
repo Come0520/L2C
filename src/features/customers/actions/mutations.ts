@@ -1,4 +1,4 @@
-import 'server-only';
+'use server';
 
 import { db } from '@/shared/api/db';
 import { customers, customerAddresses } from '@/shared/api/schema';

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronsUpDown, Plus, Search } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Maximize2 } from 'lucide-react';
+import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
 import {
     Dialog,
     DialogContent,

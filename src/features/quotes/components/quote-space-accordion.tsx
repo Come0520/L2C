@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import {
@@ -6,11 +6,11 @@ import {
     AccordionContent,
     AccordionItem,
     AccordionTrigger,
-} from '@/shared/components/ui/accordion';
+} from '@/shared/ui/accordion';
 
 export function QuoteSpaceAccordion() {
     return (
-        <Accordion type="single" collapsible>
+        <Accordion type="single" defaultValue="placeholder">
             <AccordionItem value="placeholder">
                 <AccordionTrigger>空间列表 (Spaces)</AccordionTrigger>
                 <AccordionContent>

@@ -1,4 +1,4 @@
-﻿import { pgEnum } from 'drizzle-orm/pg-core';
+import { pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'SALES', 'MANAGER', 'WORKER', 'FINANCE', 'SUPPLY']);
 
@@ -45,6 +45,21 @@ export const customerLevelEnum = pgEnum('customer_level', ['A', 'B', 'C', 'D']);
 export const settlementTypeEnum = pgEnum('settlement_type', ['CASH', 'TRANSFER']);
 export const roomTypeEnum = pgEnum('room_type', ['LIVING_ROOM', 'BEDROOM', 'DINING_ROOM', 'STUDY', 'BALCONY', 'BATHROOM', 'KITCHEN', 'OTHER']);
 export const headerProcessTypeEnum = pgEnum('header_process_type', ['HOOK', 'PUNCH', 'FIXED_PLEAT']);
+
+export const customerLifecycleStageEnum = pgEnum('customer_lifecycle_stage', ['LEAD', 'OPPORTUNITY', 'SIGNED', 'DELIVERED', 'LOST']);
+
+export const customerPipelineStatusEnum = pgEnum('customer_pipeline_status', [
+    'UNASSIGNED',
+    'PENDING_FOLLOWUP',
+    'PENDING_MEASUREMENT',
+    'PENDING_QUOTE',
+    'QUOTE_SENT',
+    'IN_PRODUCTION',
+    'PENDING_DELIVERY',
+    'PENDING_INSTALLATION',
+    'COMPLETED'
+]);
+
 
 export const leadStatusEnum = pgEnum('lead_status', [
     'PENDING_ASSIGNMENT',
@@ -165,3 +180,118 @@ export const liabilityReasonCategoryEnum = pgEnum('liability_reason_category', [
     'LOGISTICS_ISSUE',
     'CUSTOMER_REASON'
 ]);
+
+// [NEW] Enums from Schema RFC
+export const decorationProgressEnum = pgEnum('decoration_progress', [
+    'WATER_ELECTRIC',
+    'MUD_WOOD',
+    'INSTALLATION',
+    'PAINTING',
+    'COMPLETED'
+]);
+
+export const orderSettlementTypeEnum = pgEnum('order_settlement_type', [
+    'PREPAID',
+    'CREDIT',
+    'CASH'
+]);
+
+export const poTypeEnum = pgEnum('po_type', [
+    'FINISHED',
+    'FABRIC',
+    'STOCK'
+]);
+
+export const notificationChannelEnum = pgEnum('notification_channel', [
+    'IN_APP',
+    'EMAIL',
+    'SMS',
+    'WECHAT',
+    'WECHAT',
+    'LARK'
+]);
+
+export const notificationTypeEnum = pgEnum('notification_type_enum', [
+    'SYSTEM',
+    'ORDER_STATUS',
+    'APPROVAL',
+    'ALERT',
+    'MENTION',
+    'INFO',
+    'SUCCESS',
+    'WARNING',
+    'ERROR'
+]);
+
+export const poFinishedStatusEnum = pgEnum('po_finished_status', [
+    'DRAFT',
+    'IN_PRODUCTION',
+    'READY',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED'
+]);
+
+export const poFabricStatusEnum = pgEnum('po_fabric_status', [
+    'DRAFT',
+    'IN_PRODUCTION',
+    'DELIVERED',
+    'STOCKED',
+    'CANCELLED'
+]);
+
+export const paymentStatusEnum = pgEnum('payment_status', [
+    'PENDING',
+    'PARTIAL',
+    'PAID'
+]);
+
+export const workOrderStatusEnum = pgEnum('work_order_status', [
+    'PENDING',
+    'PROCESSING',
+    'COMPLETED',
+    'CANCELLED'
+]);
+
+
+export const measureTypeEnum = pgEnum('measure_type', [
+    'QUOTE_BASED',
+    'BLIND',
+    'SALES_SELF'
+]);
+
+// Installation Enums
+export const installTaskSourceTypeEnum = pgEnum('install_task_source_type', [
+    'ORDER',
+    'AFTER_SALES',
+    'REWORK'
+]);
+
+export const installTaskCategoryEnum = pgEnum('install_task_category', [
+    'CURTAIN',
+    'WALLCLOTH',
+    'OTHER'
+]);
+
+export const installTaskStatusEnum = pgEnum('install_task_status', [
+    'PENDING_DISPATCH',
+    'DISPATCHING',
+    'PENDING_VISIT',
+    'PENDING_CONFIRM',
+    'COMPLETED',
+    'CANCELLED'
+]);
+
+export const installItemIssueCategoryEnum = pgEnum('install_item_issue_category', [
+    'NONE',
+    'MISSING',
+    'DAMAGED',
+    'WRONG_SIZE'
+]);
+
+export const installPhotoTypeEnum = pgEnum('install_photo_type', [
+    'BEFORE',
+    'AFTER',
+    'DETAIL'
+]);
+

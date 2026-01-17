@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { toast } from 'sonner';
@@ -9,13 +9,19 @@ import { reviewMeasureTask } from '../actions/workflows';
 import { Label } from '@/shared/ui/label';
 
 interface ConfirmRejectDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
+    open?: boolean; // make optional
+    onOpenChange?: (open: boolean) => void; // make optional
     taskId: string;
-    onSuccess: () => void;
+    onSuccess?: () => void; // make optional
+    trigger?: React.ReactNode;
 }
 
-export function ConfirmDialog({ open, onOpenChange, taskId, onSuccess }: ConfirmRejectDialogProps) {
+export function ConfirmDialog({ open: controlledOpen, onOpenChange: setControlledOpen, taskId, onSuccess, trigger }: ConfirmRejectDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
+
     const [loading, setLoading] = useState(false);
 
     const handleConfirm = async () => {
@@ -27,8 +33,8 @@ export function ConfirmDialog({ open, onOpenChange, taskId, onSuccess }: Confirm
             });
             if (res.success) {
                 toast.success('测量结果已确认');
-                onSuccess();
-                onOpenChange(false);
+                if (onSuccess) onSuccess();
+                if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
             console.error(error);
@@ -40,6 +46,7 @@ export function ConfirmDialog({ open, onOpenChange, taskId, onSuccess }: Confirm
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>确认测量结果</DialogTitle>
@@ -48,7 +55,7 @@ export function ConfirmDialog({ open, onOpenChange, taskId, onSuccess }: Confirm
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={() => onOpenChange && onOpenChange(false)}>取消</Button>
                     <Button onClick={handleConfirm} disabled={loading}>
                         {loading ? '确认中...' : '确认验收'}
                     </Button>
@@ -58,7 +65,12 @@ export function ConfirmDialog({ open, onOpenChange, taskId, onSuccess }: Confirm
     );
 }
 
-export function RejectDialog({ open, onOpenChange, taskId, onSuccess }: ConfirmRejectDialogProps) {
+export function RejectDialog({ open: controlledOpen, onOpenChange: setControlledOpen, taskId, onSuccess, trigger }: ConfirmRejectDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
+
     const [loading, setLoading] = useState(false);
     const [reason, setReason] = useState('');
 
@@ -77,8 +89,8 @@ export function RejectDialog({ open, onOpenChange, taskId, onSuccess }: ConfirmR
             });
             if (res.success) {
                 toast.success('已驳回重测');
-                onSuccess();
-                onOpenChange(false);
+                if (onSuccess) onSuccess();
+                if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
             console.error(error);
@@ -90,6 +102,7 @@ export function RejectDialog({ open, onOpenChange, taskId, onSuccess }: ConfirmR
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>驳回重测</DialogTitle>
@@ -109,7 +122,7 @@ export function RejectDialog({ open, onOpenChange, taskId, onSuccess }: ConfirmR
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={() => onOpenChange && onOpenChange(false)}>取消</Button>
                     <Button variant="destructive" onClick={handleReject} disabled={loading}>
                         {loading ? '提交中...' : '确认驳回'}
                     </Button>

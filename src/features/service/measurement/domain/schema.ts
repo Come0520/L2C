@@ -9,7 +9,7 @@ export const spaceMeasurementSchema = z.object({
     width: z.number().min(0),
     height: z.number().min(0),
     depth: z.number().min(0).optional(),
-    attributes: z.record(z.any()).optional()
+    attributes: z.record(z.string(), z.any()).optional()
 });
 
 export type SpaceMeasurement = z.infer<typeof spaceMeasurementSchema>;

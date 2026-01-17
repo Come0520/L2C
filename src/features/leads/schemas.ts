@@ -28,7 +28,11 @@ export const leadSchema = z.object({
     // Notes
     remark: z.string().optional().nullable(), // Will map to 'notes'
     tags: z.array(z.string()).optional(),
+
+    // Linking to existing customer (Lead = Opportunity)
+    customerId: z.string().uuid().optional().nullable(),
 });
+
 
 export const updateLeadSchema = leadSchema.partial().extend({
     id: z.string(),

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import { Plus } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 
 export function CreatePODialog() {
@@ -16,7 +16,7 @@ export function CreatePODialog() {
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                 <DialogHeader>
+                <DialogHeader>
                     <DialogTitle>Create Purchase Order</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 text-center">

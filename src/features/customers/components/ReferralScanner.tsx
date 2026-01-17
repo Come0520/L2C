@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { Loader2, Search } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { toast } from 'sonner';
 
 interface ReferralScannerProps {

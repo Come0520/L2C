@@ -7,6 +7,7 @@ import { LeadsFilterBar } from '@/features/leads/components/leads-filter-bar';
 import { LeadsAdvancedFilter } from '@/features/leads/components/leads-advanced-filter';
 import { LeadTable } from '@/features/leads/components/lead-table';
 import { CreateLeadDialog } from '@/features/leads/components/create-lead-dialog';
+import { ExcelImportDialog } from '@/features/leads/components/excel-import-dialog';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 
@@ -42,7 +43,10 @@ export default async function LeadsPage({
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">线索管理</h1>
-                <CreateLeadDialog channels={channels} userId={userId} tenantId={tenantId} />
+                <div className="flex gap-2">
+                    <ExcelImportDialog userId={userId} tenantId={tenantId} />
+                    <CreateLeadDialog channels={channels} userId={userId} tenantId={tenantId} />
+                </div>
             </div>
 
             <div className="flex items-center space-x-4">

@@ -14,13 +14,13 @@ import {
 } from '@/shared/ui/table';
 import { getQuotes } from '@/features/quotes/actions/queries';
 import { createQuote } from '@/features/quotes/actions/mutations';
-import { useToast } from '@/shared/ui/use-toast';
-import { Plus, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { format } from 'date-fns';
 
 export function QuoteList() {
     const router = useRouter();
-    const { toast } = useToast();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -35,7 +35,7 @@ export function QuoteList() {
             setQuotes(data || []);
         } catch (error) {
             console.error(error);
-            toast({ title: '加载失败', variant: 'destructive' });
+            toast.error('加载失败');
         } finally {
             setLoading(false);
         }
@@ -43,20 +43,7 @@ export function QuoteList() {
 
     const handleCreate = async () => {
         try {
-            // Placeholder creation logic - in real app might open a dialog for customer selection first
-            // For MVP, creating a draft for a default customer/demo
-            // Ideally, we redirect to a "New Quote" page or open a modal. 
-            // Requirements say "Click New Quote -> Manual Entry". 
-            // Let's assume we navigate to /quotes/new or create placeholder.
-            // Let's creating a placeholder quote for now to jump to edit.
-
-            // FIXME: This requires selecting a customer ID. 
-            // I'll skip auto-create here and assume there is a UI to select customer, 
-            // but for simplicity I'll alert the user or just console log.
-            // Better: Add a "New Quote" button that navigates to /quotes/new (which I haven't creating yet).
-            // Or create a dummy one.
-
-            toast({ title: '请先选择客户 (功能待完善)', description: '点击新建应弹出客户选择' });
+            toast.info('请先选择客户 (功能待完善)', { description: '点击新建应弹出客户选择' });
         } catch (error) {
             // ...
         }

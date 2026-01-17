@@ -2,7 +2,8 @@
 
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
 
 export function InstallationFilterBar() {
     return (

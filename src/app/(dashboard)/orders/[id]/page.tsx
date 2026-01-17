@@ -27,7 +27,7 @@ export default async function OrderDetailPage({
     }
 
     const order = result.data as any;
-    const workersResult = await getAvailableWorkers({});
+    const workersResult = await getAvailableWorkers();
     const workers = workersResult.success && workersResult.data ? workersResult.data : [];
 
     // Check Profit View Permission

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
-import { Filter } from 'lucide-react';
+import Filter from 'lucide-react/dist/esm/icons/filter';
 
 export function AdvancedFilterDialog() {
     const [open, setOpen] = useState(false);

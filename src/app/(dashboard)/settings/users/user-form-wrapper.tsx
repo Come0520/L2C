@@ -14,7 +14,7 @@ export function UserFormWrapper() {
                 <Plus className="mr-2 h-4 w-4" />
                 新建用户
             </Button>
-            <UserForm open={open} onOpenChange={setOpen} />
+            <UserForm open={open} onOpenChange={setOpen} onSuccess={() => setOpen(false)} />
         </>
     );
 }

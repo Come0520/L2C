@@ -2,8 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
-import { Trash2, Check, Plus, Home, Building } from 'lucide-react';
-import { addCustomerAddress, deleteCustomerAddress, setDefaultAddress } from '@/features/customers/actions';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Home from 'lucide-react/dist/esm/icons/home';
+import Building from 'lucide-react/dist/esm/icons/building';
+import { addCustomerAddress, deleteCustomerAddress, setDefaultAddress } from '@/features/customers/actions/mutations';
 import {
     Dialog,
     DialogContent,

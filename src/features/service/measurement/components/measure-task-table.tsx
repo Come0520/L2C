@@ -11,7 +11,10 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
-import { MoreHorizontal, Calendar, User, MapPin } from 'lucide-react';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import User from 'lucide-react/dist/esm/icons/user';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import { MEASURE_STATUS_LABELS, type MeasureTask, type MeasureTaskStatus } from '../types';
 import { format } from 'date-fns';
 import Link from 'next/link';

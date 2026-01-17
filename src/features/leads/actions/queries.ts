@@ -108,6 +108,12 @@ export async function getLeadDetail(id: string) {
     return lead;
 }
 
+export async function getLeadById({ id }: { id: string }) {
+    const lead = await getLeadDetail(id);
+    if (!lead) return { success: false, error: 'Lead not found' };
+    return { success: true, data: lead };
+}
+
 export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsSchema>) {
     const { leadId } = input;
 

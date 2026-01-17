@@ -29,6 +29,34 @@
       "when": 1768228985374,
       "tag": "0003_faithful_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1768487939682,
+      "tag": "0004_furry_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768488821319,
+      "tag": "0005_flaky_adam_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768556421129,
+      "tag": "0006_fine_preak",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1768631068386,
+      "tag": "0007_fearless_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

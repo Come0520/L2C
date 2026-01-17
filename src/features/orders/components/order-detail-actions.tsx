@@ -2,15 +2,13 @@
 
 import React from 'react';
 import { Button } from '@/shared/ui/button';
-import {
-    Download,
-    Printer,
-    SplitSquareVertical,
-    Truck,
-    CheckCircle,
-    XCircle,
-    MoreHorizontal
-} from 'lucide-react';
+import Download from 'lucide-react/dist/esm/icons/download';
+import Printer from 'lucide-react/dist/esm/icons/printer';
+import SplitSquareVertical from 'lucide-react/dist/esm/icons/split-square-vertical';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
 import {
     DropdownMenu,
     DropdownMenuContent,

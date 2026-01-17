@@ -12,9 +12,10 @@ import { getShipments } from '@/features/supply-chain/actions/shipment-actions';
 export default async function ProcessingOrderDetailPage({
     params,
 }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
-    const res = await getProcessingOrderById({ id: params.id });
+    const { id } = await params;
+    const res = await getProcessingOrderById({ id });
     if (!res.success || !res.data) {
         return <div>Processing Order Not Found</div>;
     }

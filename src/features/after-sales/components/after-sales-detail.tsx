@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useQuery } from '@tanstack/react-query';
 import { getTicketDetail } from '../actions';
@@ -7,12 +7,12 @@ import {
     TabsContent,
     TabsList,
     TabsTrigger,
-} from '@/shared/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+} from '@/shared/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { LiabilityNoticeList } from './liability-notice-list';
 import { LiabilityNoticeDialog } from './liability-notice-dialog'; // Fixed import path
 import { format } from 'date-fns';
-import { Badge } from '@/shared/components/ui/badge';
+import { Badge } from '@/shared/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { TraceabilityView } from './traceability-view';
 import { SLAStatus } from './sla-status';

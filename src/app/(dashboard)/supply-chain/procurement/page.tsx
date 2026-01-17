@@ -8,7 +8,7 @@ import { ProcurementDashboard } from '@/features/supply-chain/components/procure
 export default async function ProcurementPage() {
     const session = await auth();
     if (!session) return null;
-    await checkPermission(session, PERMISSIONS.PO.VIEW);
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
 
     // Fetch all DRAFT POs for this tenant
     const drafts = await db.query.purchaseOrders.findMany({
@@ -31,7 +31,7 @@ export default async function ProcurementPage() {
         poNo: po.poNo,
         supplierId: po.supplierId,
         supplierName: po.supplierName,
-        totalCost: po.totalCost,
+        totalCost: po.totalAmount,
         orderNo: po.order?.orderNo,
         createdAt: po.createdAt!
     }));

@@ -1,43 +1,66 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+    DialogDescription
+} from '@/shared/ui/dialog';
+import { checkOutInstallTaskAction } from '../actions';
 import { toast } from 'sonner';
 
-interface SubmitCompletionDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
+interface SubmitInstallCompletionDialogProps {
     taskId: string;
-    onSuccess: () => void;
+    trigger?: React.ReactNode;
 }
 
-export function SubmitCompletionDialog({ open, onOpenChange, taskId, onSuccess }: SubmitCompletionDialogProps) {
-    const [loading, setLoading] = useState(false);
+export function SubmitInstallCompletionDialog({ taskId, trigger }: SubmitInstallCompletionDialogProps) {
+    const [open, setOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async () => {
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            toast.success('Installation completion submitted (mock)');
-            onSuccess();
-            onOpenChange(false);
-        }, 1000);
-    };
+    async function handleConfirm() {
+        setIsLoading(true);
+        try {
+            // Check out effectively submits completion for review
+            const result = await checkOutInstallTaskAction({
+                id: taskId,
+                // Location is optional schema wise, passing empty for now or could add geo-location later
+            });
+
+            if (result.data?.success) {
+                toast.success(result.data.message || '已提交完工申请');
+                setOpen(false);
+            } else {
+                toast.error(result.data?.error || result.error || '提交失败');
+            }
+        } catch (_error) {
+            toast.error('请求失败');
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger || <Button>提交完工</Button>}
+            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Submit Installation Completion</DialogTitle>
+                    <DialogTitle>确认提交完工申请？</DialogTitle>
+                    <DialogDescription>
+                        确认所有安装项已完成并拍摄照片后，点击提交待销售验收。
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 text-center text-muted-foreground">
-                    Completion submission form not available in recovery mode.
-                </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={loading}>
-                        {loading ? 'Submitting...' : 'Submit'}
+                    <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+                    <Button onClick={handleConfirm} disabled={isLoading}>
+                        {isLoading ? '提交中...' : '确认提交'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

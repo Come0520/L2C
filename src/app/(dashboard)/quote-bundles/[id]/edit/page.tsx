@@ -1,5 +1,5 @@
 import { auth } from '@/shared/lib/auth';
-import { getQuoteBundleById } from '@/features/quotes/actions';
+import { getQuoteBundleById } from '@/features/quotes/actions/queries';
 import { QuoteBundleEditor } from '@/features/quotes/components/quote-bundle-editor';
 import { notFound } from 'next/navigation';
 

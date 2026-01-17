@@ -1,112 +1,85 @@
 import { offlineStore } from '@/shared/lib/offline-store';
-import { getMeasureTasks, submitMeasureData } from '@/features/service/measurement/actions';
+import { getMeasureTasks } from '@/features/service/measurement/actions/queries';
+import { submitMeasureData } from '@/features/service/measurement/actions/mutations';
 
-interface SyncError {
-    id: string;
-    error: unknown;
-}
-
-export class MeasureSyncManager {
-    /**
-     * 从服务器拉取分配给当前用户的任务 (Pull)
-     * 用于工人每天早上"下载"任务到本�?
-     */
-    static async pullTasks(workerId: string) {
+export class SyncManager {
+    static async syncOnlineTasks(workerId: string) {
         try {
-            // 1. 调用 Server Action 获取列表
-            const result = await getMeasureTasks({ page: 1, pageSize: 50, status: 'PENDING_VISIT', workerId });
+            const result = await getMeasureTasks({
+                page: 1,
+                pageSize: 50,
+                status: 'DISPATCHED'
+            });
 
-            if (!result || !result.success || !result.data) return;
-
-            const tasks = result.data.data;
-
-            // 2. 存入 IndexedDB
-            await offlineStore.transaction('rw', offlineStore.measurements, async () => {
-                for (const task of tasks) {
-                    // 检查本地是否已存在且有未同步修�?
-                    const existing = await offlineStore.measurements.where('taskId').equals(task.id).first();
-                    if (existing && existing.status === 'pending') {
-                        continue; // 本地有未提交的修改，跳过覆盖
-                    }
-
-                    // 转换并写�?更新
+            if (result.success && result.data) {
+                // Save to local offline store
+                for (const task of result.data) {
                     await offlineStore.measurements.put({
-                        id: task.id, // 使用 TaskID 作为本地 ID
+                        id: task.id,
                         taskId: task.id,
-                        leadId: task.leadId,
+                        measureNo: task.measureNo,
                         customerName: task.customer?.name || 'Unknown',
-                        address: task.customer?.defaultAddress || '暂无地址',
-                        status: 'draft',
-                        data: { rooms: [], sitePhotos: [] },
-                        createdAt: new Date(task.createdAt || Date.now()),
+                        customerPhone: task.customer?.phone || '',
+                        // Fix: addresses access
+                        address: (task.customer as any)?.addresses?.[0]?.address || '',
+                        status: 'pending',
+                        scheduledAt: task.scheduledAt ? new Date(task.scheduledAt) : new Date(),
+                        createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
                         updatedAt: new Date(),
                     });
                 }
-            });
-
-            return tasks.length;
+                return result.data.length;
+            }
+            return 0;
         } catch (error) {
-            console.error('Pull tasks failed:', error);
+            console.error('Sync online tasks failed:', error);
             throw error;
         }
     }
 
-    /**
-     * 将本地已完成的测量数据推送到服务�?(Push)
-     */
-    static async pushLocalChanges() {
-        const pendingTasks = await offlineStore.getPendingSyncList();
-
-        if (pendingTasks.length === 0) return 0;
-
+    static async syncLocalChanges() {
         let successCount = 0;
-        const errors: SyncError[] = [];
+        const errors: any[] = [];
 
-        for (const localTask of pendingTasks) {
-            try {
-                // 构造提交数�?
-                const { rooms, sitePhotos, checkIn } = localTask.data;
+        try {
+            const pendingTasks = await offlineStore.getPendingSyncList();
 
-                // 确保 checkIn 适配 submitMeasureDataSchema
-                const checkInLocation = checkIn ? {
-                    lat: checkIn.lat,
-                    lng: checkIn.lng,
-                    address: checkIn.address,
-                } : undefined;
+            for (const localTask of pendingTasks) {
+                try {
+                    // Prepare data for submission
+                    const { data, images, checkIn } = localTask;
 
-                // 转换窗户数据，确保包含所有必需属�?
-                const transformedRooms = rooms.map((room) => ({
-                    ...room,
-                    windows: room.windows.map((window, windowIndex) => ({
-                        ...window,
-                        name: `W${windowIndex + 1}`,
-                        type: window.type as 'STRAIGHT' | 'L_SHAPE' | 'U_SHAPE' | 'ARC' | 'CURVED' | 'OTHER',
-                        installType: 'TOP' as const,
-                        openType: 'SINGLE' as const
-                    }))
-                }));
+                    if (!data) continue;
 
-                // 调用提交接口
-                const result = await submitMeasureData({
-                    taskId: localTask.taskId,
-                    resultData: { rooms: transformedRooms },
-                    images: sitePhotos || [],
-                    checkInLocation
-                });
-
-                if (result.success) {
-                    // 更新本地状态为 synced
-                    await offlineStore.measurements.update(localTask.id, {
-                        status: 'synced',
-                        updatedAt: new Date()
+                    const result = await submitMeasureData({
+                        taskId: localTask.taskId,
+                        resultData: data,
+                        images: images || [],
+                        checkInLocation: checkIn ? {
+                            lat: checkIn.lat,
+                            lng: checkIn.lng,
+                            address: checkIn.address,
+                            timestamp: checkIn.timestamp
+                        } : undefined
                     });
-                    successCount++;
-                } else {
-                    errors.push({ id: localTask.id, error: result.error });
+
+                    if (result.success) {
+                        successCount++;
+                        // Update local status to synced
+                        await offlineStore.measurements.update(localTask.id, {
+                            status: 'synced',
+                            updatedAt: new Date()
+                        });
+                    } else {
+                        errors.push({ id: localTask.id, error: (result as any).error || 'Unknown error' });
+                    }
+                } catch (err) {
+                    errors.push({ id: localTask.id, error: err });
                 }
-            } catch (err) {
-                errors.push({ id: localTask.id, error: err });
             }
+        } catch (error) {
+            console.error('Sync local changes failed:', error);
+            throw error;
         }
 
         if (errors.length > 0) {

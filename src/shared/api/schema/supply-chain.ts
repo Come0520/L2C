@@ -1,6 +1,8 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { orders } from './orders';
+import { orders, orderItems } from './orders';
+import { poTypeEnum } from './enums';
+import { afterSalesTickets } from './after-sales';
 
 export const suppliers = pgTable('suppliers', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -27,17 +29,34 @@ export const purchaseOrders = pgTable('purchase_orders', {
     poNo: varchar('po_no', { length: 50 }).unique().notNull(),
 
     orderId: uuid('order_id').references(() => orders.id),
+    afterSalesId: uuid('after_sales_id').references(() => afterSalesTickets.id),
 
     supplierId: uuid('supplier_id').references(() => suppliers.id),
     supplierName: varchar('supplier_name', { length: 100 }).notNull(),
+    type: poTypeEnum('type').default('FINISHED'),
 
-    splitRuleId: uuid('split_rule_id'), // Reference to the rule used to generate this PO
+    splitRuleId: uuid('split_rule_id'),
 
     status: varchar('status', { length: 50 }).default('DRAFT'),
 
     totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).default('0'),
 
+    externalPoNo: varchar('external_po_no', { length: 100 }),
+    supplierQuoteImg: text('supplier_quote_img'),
+    sentMethod: varchar('sent_method', { length: 20 }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+
+    producedAt: timestamp('produced_at', { withTimezone: true }),
+
+    logisticsCompany: varchar('logistics_company', { length: 50 }),
+    logisticsNo: varchar('logistics_no', { length: 100 }),
+    shippedAt: timestamp('shipped_at', { withTimezone: true }),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+
+    paymentStatus: varchar('payment_status', { length: 20 }).default('PENDING'),
+
     expectedDate: timestamp('expected_date', { withTimezone: true }),
+    remark: text('remark'),
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -45,6 +64,7 @@ export const purchaseOrders = pgTable('purchase_orders', {
 }, (table) => ({
     poTenantIdx: index('idx_po_tenant').on(table.tenantId),
     poOrderIdx: index('idx_po_order').on(table.orderId),
+    poAfterSalesIdx: index('idx_po_after_sales').on(table.afterSalesId),
 }));
 
 export const purchaseOrderItems = pgTable('purchase_order_items', {
@@ -52,14 +72,29 @@ export const purchaseOrderItems = pgTable('purchase_order_items', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     poId: uuid('po_id').references(() => purchaseOrders.id).notNull(),
 
+    orderItemId: uuid('order_item_id').references(() => orderItems.id), // Optional for direct PO creation
+    productId: uuid('product_id'),
+    productSku: varchar('product_sku', { length: 100 }),
+    category: varchar('category', { length: 50 }),
+
     productName: varchar('product_name', { length: 200 }).notNull(),
     quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).default('0'),
 
-    quoteItemId: uuid('quote_item_id'), // Optional link back to Quote Item source
+    width: decimal('width', { precision: 10, scale: 2 }),
+    height: decimal('height', { precision: 10, scale: 2 }),
+    subtotal: decimal('subtotal', { precision: 12, scale: 2 }),
+
+    quoteItemId: uuid('quote_item_id'),
+
+    remark: text('remark'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+    poiTenantIdx: index('idx_poi_tenant').on(table.tenantId),
+    poiPoIdx: index('idx_poi_po').on(table.poId),
+    poiOrderItemIdx: index('idx_poi_order_item').on(table.orderItemId),
+}));
 
 export const splitRouteRules = pgTable('split_route_rules', {
     id: uuid('id').primaryKey().defaultRandom(),

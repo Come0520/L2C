@@ -1,14 +1,15 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { offlineStore, OfflineMeasurement } from '@/shared/lib/offline-store';
 
 import { toast } from 'sonner';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 import { NumericKeypad } from '@/features/service/measurement/components/mobile/measure-input';
 
-export default function MobileMeasurePage({ params }: { params: { id: string } }) {
+export default function MobileMeasurePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+    const params = use(paramsPromise);
     const [task, setTask] = useState<OfflineMeasurement | null>(null);
     const [loading, setLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);

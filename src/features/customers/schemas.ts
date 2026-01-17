@@ -4,6 +4,9 @@ import { z } from 'zod';
 // Drizzle 'pgEnum' exports a value that can be used, but Zod usually wants native string array or z.enum()
 const customerLevels = ['A', 'B', 'C', 'D'] as const;
 const customerTypes = ['INDIVIDUAL', 'COMPANY', 'DESIGNER', 'PARTNER'] as const;
+const customerLifecycleStages = ['LEAD', 'OPPORTUNITY', 'SIGNED', 'DELIVERED', 'LOST'] as const;
+const customerPipelineStatuses = ['UNASSIGNED', 'PENDING_FOLLOWUP', 'PENDING_MEASUREMENT', 'PENDING_QUOTE', 'QUOTE_SENT', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALLATION', 'COMPLETED'] as const;
+
 
 export const customerSchema = z.object({
     name: z.string().min(1, '姓名不能为空'),
@@ -18,7 +21,10 @@ export const customerSchema = z.object({
     birthday: z.date().optional(),
     referrerCustomerId: z.string().optional(),
     tags: z.array(z.string()).optional(),
+    lifecycleStage: z.enum(customerLifecycleStages).optional().default('LEAD'),
+    pipelineStatus: z.enum(customerPipelineStatuses).optional().default('UNASSIGNED'),
 });
+
 
 export const updateCustomerSchema = z.object({
     id: z.string().min(1),
@@ -32,8 +38,12 @@ export const getCustomersSchema = z.object({
     type: z.enum(customerTypes).optional(),
     level: z.enum(customerLevels).optional(),
     assignedSalesId: z.string().optional(),
+    lifecycleStage: z.enum(customerLifecycleStages).optional(),
+    pipelineStatus: z.enum(customerPipelineStatuses).optional(),
     sort: z.string().optional(),
 });
+
+
 
 export const getCustomerByIdSchema = z.string().min(1);
 

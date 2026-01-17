@@ -25,6 +25,7 @@ export function RoleListWrapper({ initialData }: { initialData: Role[] }) {
                     }
                 }}
                 initialData={editingRole}
+                onSuccess={() => setEditingRole(undefined)}
             />
         </>
     );

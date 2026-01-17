@@ -17,6 +17,7 @@ import { AddFollowupDialog } from '@/features/leads/components/add-followup-dial
 import { LeadStatusBar } from '@/features/leads/components/lead-status-bar';
 import { VoidLeadDialog } from '@/features/leads/components/void-lead-dialog';
 import { LeadActivityLog } from '@/features/leads/components/lead-activity-log';
+import { LeadRelatedCards } from '@/features/leads/components/lead-related-cards';
 import { NoiseButton } from '@/shared/ui/noise-button';
 import { auth } from '@/shared/lib/auth';
 
@@ -174,18 +175,8 @@ export default async function LeadDetailPage({
 
                 {/* 右侧：系统信息与服务 */}
                 <div className="space-y-6">
-                    {/* 测量服务 Card - Placeholder */}
-                    <Card>
-                        <CardHeader title="测量服务" className="text-sm text-gray-500 uppercase tracking-wider" />
-                        <CardContent className="space-y-4">
-                            <div className="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded-md border border-dashed">
-                                暂无测量任务 (开发中)
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* 报价单记录 - Placeholder */}
-                    {/* <LeadQuoteVersions leadId={lead.id} /> */}
+                    {/* 关联业务数据 */}
+                    <LeadRelatedCards leadId={lead.id} tenantId={session.user.tenantId} />
 
                     {/* 系统信息摘要 */}
                     <Card>

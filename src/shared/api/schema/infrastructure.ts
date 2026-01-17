@@ -22,6 +22,7 @@ export const users = pgTable('users', {
     permissions: jsonb('permissions').default([]), // For granular permissions
     wechatOpenId: varchar('wechat_openid', { length: 100 }).unique(), // For WeChat Login
     preferences: jsonb('preferences').default({}),
+    dashboardConfig: jsonb('dashboard_config').default({}),
     isActive: boolean('is_active').default(true),
     avatarUrl: text('avatar_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),

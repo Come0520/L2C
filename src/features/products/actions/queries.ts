@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { products, suppliers } from '@/shared/api/schema';
+import { products, suppliers, auditLogs } from '@/shared/api/schema';
 import { eq, desc, and, sql, ilike } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
@@ -82,5 +82,13 @@ export const getProductById = createSafeAction(getProductSchema, async ({ id }, 
 
     if (!product) throw new Error('产品不存在');
 
-    return product;
+    // Fetch Audit Logs
+    const logs = await db.select().from(auditLogs).where(
+        and(
+            eq(auditLogs.tableName, 'products'),
+            eq(auditLogs.recordId, id)
+        )
+    ).orderBy(desc(auditLogs.createdAt));
+
+    return { ...product, logs };
 });

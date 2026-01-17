@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
-import { Input } from '@/shared/components/ui/input';
-import { Button } from '@/shared/components/ui/button';
-import { Search } from 'lucide-react';
+import { Input } from '@/shared/ui/input';
+import { Button } from '@/shared/ui/button';
+import Search from 'lucide-react/dist/esm/icons/search';
 
 export function QuotesFilterBar() {
     return (

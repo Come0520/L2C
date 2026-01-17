@@ -16,6 +16,8 @@ export const PRODUCT_CATEGORIES = [
 
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
+export const productCategorySchema = z.enum(PRODUCT_CATEGORIES);
+
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
     'CURTAIN_FABRIC': 'Curtain Fabric',
     'CURTAIN_SHEER': 'Curtain Sheer',

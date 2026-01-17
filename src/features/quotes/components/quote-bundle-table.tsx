@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import {
@@ -8,7 +8,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/shared/components/ui/table';
+} from '@/shared/ui/table';
 
 export function QuoteBundleTable() {
     return (

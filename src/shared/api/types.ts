@@ -16,3 +16,5 @@ export interface PaginatedResponse<T> {
     pageSize: number;
     totalPages: number;
 }
+
+// NotificationType is exported from schema/types.ts

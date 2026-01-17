@@ -11,8 +11,9 @@ import { format } from "date-fns";
 import { PaymentOrderDialog } from "@/features/finance/components/PaymentOrderDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-export default async function ARStatementDetailPage({ params }: { params: { id: string } }) {
-    const statement = await getARStatement(params.id);
+export default async function ARStatementDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const statement = await getARStatement(id);
 
     if (!statement) {
         notFound();

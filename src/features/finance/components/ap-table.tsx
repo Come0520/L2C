@@ -8,7 +8,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/shared/components/ui/table';
+} from '@/shared/ui/table';
 
 export function APTable() {
     return (
@@ -22,7 +22,7 @@ export function APTable() {
                 <TableBody>
                     <TableRow>
                         <TableCell className="h-24 text-center">
-                            AP 表格在恢复模式下暂不可用。
+                            AP 表格在恢复模式下暂不可用�?
                         </TableCell>
                     </TableRow>
                 </TableBody>

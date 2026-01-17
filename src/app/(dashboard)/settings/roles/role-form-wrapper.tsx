@@ -14,7 +14,7 @@ export function RoleFormWrapper() {
                 <Plus className="mr-2 h-4 w-4" />
                 新建角色
             </Button>
-            <RoleForm open={open} onOpenChange={setOpen} />
+            <RoleForm open={open} onOpenChange={setOpen} onSuccess={() => setOpen(false)} />
         </>
     );
 }

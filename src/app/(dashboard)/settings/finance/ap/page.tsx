@@ -1,7 +1,7 @@
-import { auth } from '@/shared/lib/auth';
+﻿import { auth } from '@/shared/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 
-export default async function FinanceAPConfigPage() {
+export default async function APSettingsPage() {
     const session = await auth();
     if (!session?.user) return null;
 
@@ -19,7 +19,7 @@ export default async function FinanceAPConfigPage() {
                     <CardHeader>
                         <CardTitle>付款策略</CardTitle>
                         <CardDescription>
-                            配置各品类的默认付款周期和结算模�?
+                            配置各品类的默认付款周期和结算模式
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

@@ -1,4 +1,4 @@
-'use server';
+﻿'use server';
 
 import { db } from '@/shared/api/db';
 import { orders, leads, quotes, measureTasks, arStatements, purchaseOrders, users } from '@/shared/api/schema';
@@ -6,11 +6,12 @@ import { eq, and, gte, lte, sql, desc, SQL } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
+import { cache } from 'react';
 
 const PERMISSIONS = {
     ANALYTICS: {
         VIEW: 'analytics:view',
-        VIEW_ALL: 'analytics:view_all', // 店长/管理�?
+        VIEW_ALL: 'analytics:view_all', // 店长/管理层
     }
 };
 
@@ -19,7 +20,7 @@ const PERMISSIONS = {
 const dashboardStatsSchema = z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
-    salesId: z.string().optional(), // 如果是销售，自动过滤到本�?
+    salesId: z.string().optional(), // 如果是销售，自动过滤到本人
 });
 
 const salesFunnelSchema = z.object({
@@ -41,12 +42,12 @@ const orderTrendSchema = z.object({
     granularity: z.enum(['day', 'week', 'month']).default('day'),
 });
 
-// ==================== Actions ====================
+// ==================== Actions (Optimized with React.cache) ====================
 
 /**
  * 获取核心指标数据
  */
-export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (params, { session }) => {
+export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -58,14 +59,14 @@ export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (p
         lte(orders.createdAt, endDate),
     ];
 
-    // 如果是普通销售，只能看自己的数据
+    // 濡傛灉鏄櫘閫氶攢鍞紝鍙兘鐪嬭嚜宸辩殑鏁版嵁
     if (params.salesId || session.user.role !== 'MANAGER') {
         conditions.push(eq(orders.salesId, params.salesId || session.user.id));
     }
 
     const whereClause = and(...conditions);
 
-    // 本月销售额
+    // 鏈湀閿€鍞
     const salesResult = await db
         .select({
             totalAmount: sql<string>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
@@ -74,7 +75,7 @@ export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (p
         .from(orders)
         .where(whereClause);
 
-    // 转化率计算（线索数）
+    // 杞寲鐜囪绠楋紙绾跨储鏁帮級
     const leadConditions = [
         eq(leads.tenantId, session.user.tenantId),
         gte(leads.createdAt, startDate),
@@ -93,7 +94,7 @@ export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (p
     const wonOrders = Number(salesResult[0]?.orderCount || 0);
     const conversionRate = totalLeads > 0 ? ((wonOrders / totalLeads) * 100).toFixed(2) : '0';
 
-    // 待收�?
+    // 寰呮敹娆?
     const arResult = await db
         .select({
             pendingAmount: sql<string>`COALESCE(SUM(CAST(${arStatements.pendingAmount} AS DECIMAL)), 0)`,
@@ -106,10 +107,10 @@ export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (p
             )
         );
 
-    // 待付款（采购单）
+    // 寰呬粯娆撅紙閲囪喘鍗曪級
     const apResult = await db
         .select({
-            pendingCost: sql<string>`COALESCE(SUM(CAST(${purchaseOrders.totalCost} AS DECIMAL)), 0)`,
+            pendingCost: sql<string>`COALESCE(SUM(CAST(${purchaseOrders.totalAmount} AS DECIMAL)), 0)`,
         })
         .from(purchaseOrders)
         .where(
@@ -130,12 +131,12 @@ export const getDashboardStats = createSafeAction(dashboardStatsSchema, async (p
             pendingPayables: apResult[0]?.pendingCost || '0',
         }
     };
-});
+}));
 
 /**
- * 获取销售漏斗数�?
+ * 鑾峰彇閿€鍞紡鏂楁暟鎹?
  */
-export const getSalesFunnel = createSafeAction(salesFunnelSchema, async (params, { session }) => {
+export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -143,7 +144,7 @@ export const getSalesFunnel = createSafeAction(salesFunnelSchema, async (params,
 
     const salesId = params.salesId || (session.user.role !== 'MANAGER' ? session.user.id : undefined);
 
-    // 线索�?
+    // 绾跨储鏁?
     const leadConditions = [
         eq(leads.tenantId, session.user.tenantId),
         gte(leads.createdAt, startDate),
@@ -156,20 +157,21 @@ export const getSalesFunnel = createSafeAction(salesFunnelSchema, async (params,
         .from(leads)
         .where(and(...leadConditions));
 
-    // 测量�?
+    // 娴嬮噺鏁?
     const measureCount = await db
         .select({ count: sql<number>`COUNT(DISTINCT ${measureTasks.leadId})` })
         .from(measureTasks)
+        .leftJoin(leads, eq(measureTasks.leadId, leads.id))
         .where(
             and(
                 eq(measureTasks.tenantId, session.user.tenantId),
                 gte(measureTasks.createdAt, startDate),
                 lte(measureTasks.createdAt, endDate),
-                salesId ? eq(measureTasks.createdBy, salesId) : sql`true`
+                salesId ? eq(leads.assignedSalesId, salesId) : sql`true`
             )
         );
 
-    // 报价�?
+    // 鎶ヤ环鏁?
     const quoteConditions = [
         eq(quotes.tenantId, session.user.tenantId),
         gte(quotes.createdAt, startDate),
@@ -182,7 +184,7 @@ export const getSalesFunnel = createSafeAction(salesFunnelSchema, async (params,
         .from(quotes)
         .where(and(...quoteConditions));
 
-    // 成交�?
+    // 鎴愪氦鏁?
     const orderConditions = [
         eq(orders.tenantId, session.user.tenantId),
         gte(orders.createdAt, startDate),
@@ -198,19 +200,19 @@ export const getSalesFunnel = createSafeAction(salesFunnelSchema, async (params,
     return {
         success: true,
         data: [
-            { stage: '线索', count: Number(leadCount[0]?.count || 0) },
-            { stage: '测量', count: Number(measureCount[0]?.count || 0) },
-            { stage: '报价', count: Number(quoteCount[0]?.count || 0) },
-            { stage: '成交', count: Number(orderCount[0]?.count || 0) },
+            { stage: '绾跨储', count: Number(leadCount[0]?.count || 0) },
+            { stage: '娴嬮噺', count: Number(measureCount[0]?.count || 0) },
+            { stage: '鎶ヤ环', count: Number(quoteCount[0]?.count || 0) },
+            { stage: '鎴愪氦', count: Number(orderCount[0]?.count || 0) },
         ]
     };
-});
+}));
 
 /**
- * 获取业绩排名
+ * 鑾峰彇涓氱哗鎺掑悕
  */
-export const getLeaderboard = createSafeAction(leaderboardSchema, async (params, { session }) => {
-    checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL); // 仅店长可�?
+export const getLeaderboard = cache(createSafeAction(leaderboardSchema, async (params, { session }) => {
+    checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL); // 浠呭簵闀垮彲瑙?
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = params.endDate ? new Date(params.endDate) : new Date();
@@ -240,17 +242,17 @@ export const getLeaderboard = createSafeAction(leaderboardSchema, async (params,
         data: leaderboard.map((item, index) => ({
             rank: index + 1,
             salesId: item.salesId,
-            salesName: item.salesName || '未知',
+            salesName: item.salesName || '鏈煡',
             totalAmount: item.totalAmount,
             orderCount: item.orderCount,
         }))
     };
-});
+}));
 
 /**
- * 获取订单趋势数据
+ * 鑾峰彇璁㈠崟瓒嬪娍鏁版嵁
  */
-export const getOrderTrend = createSafeAction(orderTrendSchema, async (params, { session }) => {
+export const getOrderTrend = cache(createSafeAction(orderTrendSchema, async (params, { session }) => {
     checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = new Date(params.startDate);
@@ -293,4 +295,5 @@ export const getOrderTrend = createSafeAction(orderTrendSchema, async (params, {
             count: item.orderCount,
         }))
     };
-});
+}));
+

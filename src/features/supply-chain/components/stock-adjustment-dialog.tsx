@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
-import { Archive } from 'lucide-react';
+import Archive from 'lucide-react/dist/esm/icons/archive';
 
 export function StockAdjustmentDialog() {
     const [open, setOpen] = useState(false);
@@ -21,7 +21,7 @@ export function StockAdjustmentDialog() {
                     <DialogTitle>Stock Adjustment</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
-                     <p className="text-muted-foreground">Stock adjustment not available in recovery mode.</p>
+                    <p className="text-muted-foreground">Stock adjustment not available in recovery mode.</p>
                 </div>
             </DialogContent>
         </Dialog>

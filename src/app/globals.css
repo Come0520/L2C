@@ -3,15 +3,16 @@
  * Tailwind CSS v4 + CSS-first 配置
  */
 
-/* Premium Sans Typography - DM Sans */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+/* Premium Typography - Cormorant Infant (Serif) & Jost (Sans) */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
 /* ==================== Theme Configuration ==================== */
 @theme {
   /* Typography */
-  --font-sans: "DM Sans", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: "Jost", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-serif: "Cormorant Infant", serif;
 
   /* Color Palette - SaaS Premium (Mapped to Slate/Blue/Orange) */
   --color-primary-500: #2563EB;
@@ -48,22 +49,17 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
 
-  /* Liquid Glass System (Unified) */
+  /* Liquid Glass System (Refined V3) */
   --glass-blur: 20px;
-  /* Optimized from 40px for performance */
   --glass-saturate: 150%;
-  --glass-bg: rgba(255, 255, 255, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
 
-  /* Liquid Glass - Dark Mode (Deep Space Neon - Performance Tuned) */
-  --glass-bg-dark: rgba(2, 6, 23, 0.65);
-  /* Deep Slate @ 65% for extra depth */
-  --glass-border-dark: rgba(255, 255, 255, 0.12);
-  /* Brighter edge shine */
-  --glass-shadow-dark:
-    0 8px 32px 0 rgba(0, 0, 0, 0.6),
-    0 0 10px rgba(99, 102, 241, 0.05);
+  /* Liquid Glass - Dark Mode (Deep Space Neon) */
+  --glass-bg-dark: rgba(15, 23, 42, 0.75);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+  --glass-shadow-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
   /* Reduced glow radius & opacity */
   --glass-saturate-dark: 150%;
   /* Reduced from 200% for GPU relief */
@@ -441,11 +437,11 @@
 
   /* Liquid Glass V3 - Performance Optimized */
   .glass-liquid {
-    background: var(--glass-bg-liquid);
-    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
-    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-liquid));
-    border: 1px solid var(--glass-border-liquid);
-    box-shadow: var(--glass-shadow-liquid);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
     border-radius: 1.5rem;
     position: relative;
     overflow: hidden;
@@ -454,8 +450,8 @@
 
   .dark .glass-liquid {
     background: var(--glass-bg-dark);
-    backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
-    -webkit-backdrop-filter: blur(var(--glass-blur-liquid)) saturate(var(--glass-saturate-dark));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     border-color: var(--glass-border-dark);
     box-shadow: var(--glass-shadow-dark);
   }

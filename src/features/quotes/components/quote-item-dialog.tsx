@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import {
@@ -6,7 +6,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from '@/shared/components/ui/dialog';
+} from '@/shared/ui/dialog';
 
 interface QuoteItemDialogProps {
     open: boolean;

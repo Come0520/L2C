@@ -9,7 +9,7 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { ClipboardList } from 'lucide-react';
+import ClipboardList from 'lucide-react/dist/esm/icons/clipboard-list';
 import { StockAdjustmentDialog } from './stock-adjustment-dialog';
 
 interface InventoryTableProps {

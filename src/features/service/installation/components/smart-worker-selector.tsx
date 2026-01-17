@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import { User, Check } from 'lucide-react';
+import User from 'lucide-react/dist/esm/icons/user';
+import Check from 'lucide-react/dist/esm/icons/check';
 import { cn } from '@/shared/utils';
 
 interface Worker {

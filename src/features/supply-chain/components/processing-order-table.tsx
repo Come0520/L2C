@@ -9,7 +9,8 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Eye, Edit } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import Edit from 'lucide-react/dist/esm/icons/edit';
 import { StatusBadge } from '@/shared/ui/status-badge';
 
 interface ProcessingOrderTableProps {

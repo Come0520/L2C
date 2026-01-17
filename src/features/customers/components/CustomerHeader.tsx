@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { CreateCustomerDialog } from './create-customer-dialog';
 import { ReferralScanner } from './ReferralScanner';
 import { Button } from '@/shared/ui/button';
-import { Plus } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { toast } from 'sonner';
 
 interface CustomerHeaderProps {

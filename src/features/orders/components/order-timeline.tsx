@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
-import { CheckCircle2, Circle, Clock } from 'lucide-react';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import Circle from 'lucide-react/dist/esm/icons/circle';
+import Clock from 'lucide-react/dist/esm/icons/clock';
 
 const steps = [
     { status: 'DRAFT', label: '草稿', description: '订单已创建' },

@@ -1,5 +1,10 @@
 import { QuoteBundleEditor } from '@/features/quotes/components/quote-bundle-editor';
 import { Suspense } from 'react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: '创建报价单 | Antigravity L2C',
+};
 
 interface PageProps {
     searchParams: Promise<{
@@ -9,14 +14,17 @@ interface PageProps {
 }
 
 export default async function CreateQuoteBundlePage({ searchParams }: PageProps) {
-    const params = await searchParams;
+    const resolvedParams = await searchParams;
 
     return (
-        <Suspense fallback={<div className="p-8 text-center text-gray-500">加载�?..</div>}>
-            <QuoteBundleEditor
-                initialCustomerId={params.customerId}
-                initialLeadId={params.leadId}
-            />
-        </Suspense>
+        <div className="container py-6">
+            <h1 className="mb-6 text-2xl font-bold">创建报价单</h1>
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground">加载中...</div>}>
+                <QuoteBundleEditor
+                    initialCustomerId={resolvedParams.customerId}
+                    initialLeadId={resolvedParams.leadId}
+                />
+            </Suspense>
+        </div>
     );
 }

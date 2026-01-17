@@ -6,7 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { NotificationType } from '@/shared/api/types';
+import { NotificationType } from '@/shared/api/schema';
 
 // Schema Definition
 const updatePreferenceSchema = z.object({

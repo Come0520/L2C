@@ -1,10 +1,10 @@
 import 'server-only';
 
 import { db } from '@/shared/api/db';
-import { customers, customerAddresses } from '@/shared/api/schema';
-import { eq, and, like, desc, sql, inArray } from 'drizzle-orm';
+import { customers } from '@/shared/api/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { getCustomersSchema, getCustomerByIdSchema } from '../schemas';
+import { getCustomersSchema } from '@/features/customers/schemas';
 
 export async function getCustomers(params: z.infer<typeof getCustomersSchema>) {
     const { page, pageSize, search, type, level, assignedSalesId } = getCustomersSchema.parse(params);

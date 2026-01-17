@@ -7,7 +7,7 @@ import { cn } from "@/shared/lib/utils"
 const Accordion = React.forwardRef<
     HTMLDivElement,
     React.ComponentPropsWithoutRef<"div"> & { type?: "single" | "multiple"; defaultValue?: string | string[] }
->(({ className, ...props }, ref) => (
+>(({ className, type, defaultValue, ...props }, ref) => (
     <div ref={ref} className={cn("space-y-1", className)} {...props} />
 ))
 Accordion.displayName = "Accordion"

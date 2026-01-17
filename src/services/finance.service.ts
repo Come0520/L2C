@@ -7,9 +7,11 @@ import {
     accountTransactions,
     arStatements,
     commissionRecords,
-    paymentOrderItems
+    paymentOrderItems,
+    orderItems,
+    products
 } from "@/shared/api/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 export interface CreatePaymentOrderData {
@@ -253,7 +255,42 @@ export class FinanceService {
         if (mode === 'REBATE') {
             commissionAmount = orderAmount.times(rate);
         } else if (mode === 'BASE_PRICE') {
-            commissionAmount = orderAmount.times(rate); // Mock logic
+            // Fetch order items to calculate base cost
+            const items = await tx.query.orderItems.findMany({
+                where: eq(orderItems.orderId, statement.orderId),
+            });
+
+            if (items.length > 0) {
+                const productIds = items.map((i: any) => i.productId);
+                // Ensure unique IDs
+                const uniqueProductIds = [...new Set(productIds)];
+
+                if (uniqueProductIds.length > 0) {
+                    // Cast array to any to avoid type check issues for now
+                    const productList = await tx.query.products.findMany({
+                        where: inArray(products.id, uniqueProductIds as string[])
+                    });
+                    const productMap = new Map(productList.map((p: any) => [p.id, p]));
+
+                    let totalBasePrice = new Decimal(0);
+                    for (const item of items) {
+                        const product = productMap.get((item as any).productId);
+                        if (product) {
+                            // Use floorPrice if available, otherwise purchasePrice, fallback to 0
+                            const base = new Decimal((product as any).floorPrice || (product as any).purchasePrice || 0);
+                            const qty = new Decimal((item as any).quantity || 0);
+                            totalBasePrice = totalBasePrice.plus(base.times(qty));
+                        }
+                    }
+
+                    // Commission = (OrderAmount - TotalBase) * Rate
+                    // Ensure non-negative
+                    const profit = orderAmount.minus(totalBasePrice);
+                    if (profit.gt(0)) {
+                        commissionAmount = profit.times(rate);
+                    }
+                }
+            }
         }
 
         if (commissionAmount.gt(0)) {

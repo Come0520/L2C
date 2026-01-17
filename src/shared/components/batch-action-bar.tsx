@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { Button } from '@/shared/ui/button';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import { AnimatePresence, motion } from 'framer-motion';
 
 interface BatchActionBarProps {

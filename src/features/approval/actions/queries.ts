@@ -1,52 +1,91 @@
 'use server';
 
-import { db } from '@/shared/api/db';
-import { approvalInstances, approvalFlows, users } from '@/shared/api/schema';
-import { eq, desc, and } from 'drizzle-orm';
-import { ApprovalStep } from '../schema';
+import { db } from "@/shared/api/db";
+import {
+    approvals,
+    approvalTasks,
+    approvalFlows,
+    approvalNodes
+} from "@/shared/api/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { auth } from "@/shared/lib/auth";
 
-/**
- * 查找活跃的审批流�?
- */
-export async function findActiveApprovalFlow(tenantId: string, module: string, triggerAction: string) {
-    return await db.query.approvalFlows.findFirst({
-        where: and(
-            eq(approvalFlows.tenantId, tenantId),
-            eq(approvalFlows.module, module),
-            eq(approvalFlows.triggerAction, triggerAction),
-            eq(approvalFlows.isActive, true)
-        )
-    });
+export async function getPendingApprovals() {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: [] };
+
+    try {
+        const tasks = await db.query.approvalTasks.findMany({
+            where: and(
+                eq(approvalTasks.tenantId, session.user.tenantId),
+                eq(approvalTasks.approverId, session.user.id),
+                eq(approvalTasks.status, 'PENDING')
+            ),
+            with: {
+                approval: {
+                    with: {
+                        flow: true
+                    }
+                },
+                node: true
+            },
+            orderBy: [desc(approvalTasks.createdAt)]
+        });
+        return { success: true, data: tasks };
+    } catch (e: any) {
+        console.error("getPendingApprovals error", e);
+        return { success: false, error: e.message };
+    }
 }
 
-/**
- * 获取我的待审批任�?
- */
-export async function getPendingApprovals(userId: string, userRole: string | null) {
-    const pending = await db.query.approvalInstances.findMany({
-        where: eq(approvalInstances.status, 'PENDING'),
-        with: {
-            flow: true,
-            applicant: true
-        },
-        orderBy: desc(approvalInstances.appliedAt)
-    });
+export async function getApprovalHistory() {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: [] };
 
-    const myTasks = pending.filter(inst => {
-        const steps = inst.flow?.steps as unknown as ApprovalStep[];
-        if (!steps) return false;
-
-        const currentStep = steps[(inst.currentStep || 1) - 1];
-        if (!currentStep) return false;
-
-        // Match Logic
-        if (currentStep.approverType === 'USER' && currentStep.approverValue === userId) return true;
-        if (currentStep.approverType === 'ROLE' && userRole && currentStep.approverValue === userRole) return true;
-
-        return false;
-    });
-
-    return { success: true, data: myTasks };
+    try {
+        const myApprovals = await db.query.approvals.findMany({
+            where: and(
+                eq(approvals.tenantId, session.user.tenantId),
+                eq(approvals.requesterId, session.user.id)
+            ),
+            with: {
+                flow: true,
+            },
+            orderBy: [desc(approvals.createdAt)]
+        });
+        return { success: true, data: myApprovals };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
 }
 
-// TODO: Add more queries like getApprovalHistory, etc.
+export async function getApprovalDetails(id: string) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+    try {
+        const approval = await db.query.approvals.findFirst({
+            where: and(
+                eq(approvals.id, id),
+                eq(approvals.tenantId, session.user.tenantId)
+            ),
+            with: {
+                flow: true,
+            }
+        });
+
+        if (!approval) return { success: false, error: "Not found" };
+
+        const tasks = await db.query.approvalTasks.findMany({
+            where: eq(approvalTasks.approvalId, id),
+            with: {
+                node: true,
+            },
+            orderBy: [desc(approvalTasks.createdAt)]
+        });
+
+        return { success: true, data: { approval, tasks } };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}

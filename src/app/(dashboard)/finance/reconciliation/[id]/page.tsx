@@ -10,8 +10,9 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-export default async function ReconciliationDetailPage({ params }: { params: { id: string } }) {
-    const reconciliation = await getReconciliation(params.id);
+export default async function ReconciliationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const reconciliation = await getReconciliation(id);
 
     if (!reconciliation) {
         notFound();

@@ -17,6 +17,21 @@ export const updateQuoteSchema = z.object({
     validUntil: z.date().optional(),
 });
 
+export const submitQuoteSchema = z.object({
+    id: z.string().uuid(),
+});
+
+export const acceptQuoteSchema = z.object({
+    id: z.string().uuid(),
+});
+
+export const rejectQuoteSchema = z.object({
+    id: z.string().uuid(),
+    reason: z.string().min(1, '必须提供拒绝原因'),
+});
+
+
+
 export const createQuoteRoomSchema = z.object({
     quoteId: z.string().uuid(),
     name: z.string().min(1).max(100),
@@ -32,6 +47,7 @@ export const updateQuoteRoomSchema = z.object({
 export const createQuoteItemSchema = z.object({
     quoteId: z.string().uuid(),
     roomId: z.string().uuid().nullable().optional(),
+    parentId: z.string().uuid().optional(),
 
     category: z.string().min(1).max(50),
     productId: z.string().uuid().optional(),
@@ -47,7 +63,7 @@ export const createQuoteItemSchema = z.object({
     foldRatio: z.number().min(0).optional(),
     processFee: z.number().min(0).optional(),
 
-    attributes: z.record(z.any()).optional(),
+    attributes: z.record(z.string(), z.any()).optional(),
     remark: z.string().optional(),
 });
 
@@ -62,11 +78,23 @@ export const updateQuoteItemSchema = z.object({
     foldRatio: z.number().min(0).optional(),
     processFee: z.number().min(0).optional(),
 
-    attributes: z.record(z.any()).optional(),
+    attributes: z.record(z.string(), z.any()).optional(),
     remark: z.string().optional(),
     sortOrder: z.number().int().optional(),
 });
 
 export const deleteQuoteItemSchema = z.object({
     id: z.string().uuid(),
+});
+
+export const convertQuoteToOrderSchema = z.object({
+    quoteId: z.string().uuid(),
+    tenantId: z.string().uuid(),
+});
+
+export const rejectQuoteDiscountSchema = z.object({
+    id: z.string().uuid(),
+    tenantId: z.string().uuid(),
+    rejectedBy: z.string().uuid(),
+    reason: z.string().min(1, 'Reason is required'),
 });

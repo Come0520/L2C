@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
 import { cn } from '@/shared/utils';
 
 interface SpaceSelectorProps {

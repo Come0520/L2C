@@ -79,6 +79,7 @@ export const marketChannels = pgTable('market_channels', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     parentId: uuid('parent_id'), // Self reference for hierarchy
     name: varchar('name', { length: 100 }).notNull(),
+    code: varchar('code', { length: 50 }),
     level: decimal('level').default('1'), // 1, 2, 3
     isActive: boolean('is_active').default(true),
     sortOrder: decimal('sort_order').default('0'),

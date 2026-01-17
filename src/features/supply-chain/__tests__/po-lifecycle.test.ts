@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
-import { createApFromPoInternal } from '@/features/finance';
+import { createApFromPoInternal } from '@/features/finance/actions/ap';
 
 interface TransactionContext {
     query: {

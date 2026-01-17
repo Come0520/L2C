@@ -8,7 +8,7 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { toast } from 'sonner';
 import { createMeasureTask } from '../actions/mutations';
-import { Plus } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { DatePicker } from '@/shared/ui/date-picker'; // Assuming DatePicker exists or use Input type="datetime-local"
 
 export function CreateMeasureTaskDialog() {

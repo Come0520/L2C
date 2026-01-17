@@ -1,4 +1,5 @@
 
+// @ts-expect-error Missing types for kuaidi100 module
 import Kuaidi100 from 'kuaidi100';
 
 const key = process.env.KUAIDI100_KEY;

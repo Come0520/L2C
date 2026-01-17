@@ -14,9 +14,10 @@ import { Badge } from '@/shared/ui/badge';
 
 interface ChannelListProps {
     data: any[];
+    categories?: any[];
 }
 
-export function ChannelList({ data }: ChannelListProps) {
+export function ChannelList({ data, categories }: ChannelListProps) {
     return (
         <div className="rounded-md border">
             <Table>

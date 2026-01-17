@@ -1,7 +1,9 @@
 'use server';
 
 import { db } from '@/shared/api/db';
+import { cache } from 'react';
 import { orders, orderItems } from '@/shared/api/schema/orders';
+
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, sql, desc } from 'drizzle-orm';
 import { z } from 'zod';
@@ -53,7 +55,7 @@ export async function createOrderFromQuote(input: z.infer<typeof createOrderSche
     }
 }
 
-export async function getOrders(page = 1, pageSize = 10) {
+export const getOrders = cache(async (page = 1, pageSize = 10) => {
     const offset = (page - 1) * pageSize;
     const data = await db.query.orders.findMany({
         limit: pageSize,
@@ -65,9 +67,10 @@ export async function getOrders(page = 1, pageSize = 10) {
         }
     });
     return data;
-}
+});
 
-export async function getOrder(id: string) {
+
+export const getOrder = cache(async (id: string) => {
     return await db.query.orders.findFirst({
         where: eq(orders.id, id),
         with: {
@@ -77,7 +80,8 @@ export async function getOrder(id: string) {
             paymentSchedules: true,
         }
     });
-}
+});
+
 
 const splitOrderSchema = z.object({
     orderId: z.string().uuid(),

@@ -3,7 +3,7 @@
  */
 
 import { Suspense } from 'react';
-import { getCustomers } from '@/features/customers/actions';
+import { getCustomers } from '@/features/customers/actions/queries';
 import { CustomerTable } from '@/features/customers/components/customer-table';
 import { CustomerHeader } from '@/features/customers/components/CustomerHeader';
 import { Button } from '@/shared/ui/button';
@@ -71,7 +71,6 @@ export default async function CustomersPage({
                 <Pagination
                     currentPage={page}
                     totalPages={pagination.totalPages}
-                    totalItems={pagination.total}
                 />
             </div>
         </div>

@@ -27,16 +27,17 @@ export async function GET(request: Request) {
             where: eq(measureTasks.assignedWorkerId, workerId),
             orderBy: [desc(measureTasks.scheduledAt)],
             with: {
-                customer: { columns: { name: true, phone: true, defaultAddress: true } }
+                customer: { columns: { name: true, phone: true } },
+                lead: { columns: { address: true } }
             }
         });
 
         // Fetch Install Tasks
         const iTasks = await db.query.installTasks.findMany({
-            where: eq(installTasks.assignedWorkerId, workerId),
-            orderBy: [desc(installTasks.scheduledAt)],
+            where: eq(installTasks.installerId, workerId),
+            orderBy: [desc(installTasks.scheduledDate)],
             with: {
-                customer: { columns: { name: true, phone: true, defaultAddress: true } }
+                customer: { columns: { name: true, phone: true } }
             }
         });
 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
                 status: t.status,
                 customer: t.customer,
                 scheduledAt: t.scheduledAt,
-                address: t.customer.defaultAddress
+                address: t.lead?.address || ''
             })),
             ...iTasks.map(t => ({
                 id: t.id,
@@ -57,8 +58,8 @@ export async function GET(request: Request) {
                 docNo: t.taskNo,
                 status: t.status,
                 customer: t.customer,
-                scheduledAt: t.scheduledAt,
-                address: t.customer.defaultAddress
+                scheduledAt: t.scheduledDate,
+                address: t.address || ''
             }))
         ].sort((a, b) => {
             const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;

@@ -1,4 +1,4 @@
-import { getARStatements } from '@/features/finance/actions';
+import { getARStatements } from '@/features/finance/actions/ar';
 import { ARStatementTable } from '@/features/finance/components/ARStatementTable';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 

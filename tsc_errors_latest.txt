@@ -1,0 +1,113 @@
+﻿src/features/after-sales/components/after-sales-detail.tsx(45,10): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-detail.tsx(89,34): error TS17008: JSX element 'span' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-detail.tsx(89,96): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-detail.tsx(103,22): error TS17008: JSX element 'Tabs' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-detail.tsx(105,81): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-detail.tsx(106,76): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-detail.tsx(109,27): error TS17002: Expected corresponding JSX closing tag for 'TabsTrigger'.
+src/features/after-sales/components/after-sales-detail.tsx(127,23): error TS17002: Expected corresponding JSX closing tag for 'TabsTrigger'.
+src/features/after-sales/components/after-sales-detail.tsx(128,19): error TS17002: Expected corresponding JSX closing tag for 'TabsList'.
+src/features/after-sales/components/after-sales-detail.tsx(161,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/after-sales-detail.tsx(162,1): error TS1005: '</' expected.
+src/features/after-sales/components/after-sales-list.tsx(49,10): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-list.tsx(71,47): error TS1003: Identifier expected.
+src/features/after-sales/components/after-sales-list.tsx(71,48): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-list.tsx(71,65): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-list.tsx(71,66): error TS1002: Unterminated string literal.
+src/features/after-sales/components/after-sales-list.tsx(77,23): error TS17002: Expected corresponding JSX closing tag for 'SelectTrigger'.
+src/features/after-sales/components/after-sales-list.tsx(81,14): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-list.tsx(82,18): error TS17008: JSX element 'Table' has no corresponding closing tag.
+src/features/after-sales/components/after-sales-list.tsx(85,54): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-list.tsx(88,54): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-list.tsx(89,53): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/after-sales-list.tsx(92,27): error TS17002: Expected corresponding JSX closing tag for 'TableHead'.
+src/features/after-sales/components/after-sales-list.tsx(93,23): error TS17002: Expected corresponding JSX closing tag for 'TableHead'.
+src/features/after-sales/components/after-sales-list.tsx(139,19): error TS17002: Expected corresponding JSX closing tag for 'TableHead'.
+src/features/after-sales/components/after-sales-list.tsx(140,15): error TS17002: Expected corresponding JSX closing tag for 'TableRow'.
+src/features/after-sales/components/after-sales-list.tsx(143,11): error TS17002: Expected corresponding JSX closing tag for 'TableHeader'.
+src/features/after-sales/components/after-sales-list.tsx(145,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/after-sales-list.tsx(146,1): error TS1005: '</' expected.
+src/features/after-sales/components/sla-status.tsx(24,86): error TS1002: Unterminated string literal.
+src/features/after-sales/components/sla-status.tsx(25,9): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(25,26): error TS1005: '{' expected.
+src/features/after-sales/components/sla-status.tsx(25,33): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(25,86): error TS1002: Unterminated string literal.
+src/features/after-sales/components/sla-status.tsx(27,9): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(27,15): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(27,59): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(29,19): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(29,29): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(29,38): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(29,93): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(30,23): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(30,25): error TS1003: Identifier expected.
+src/features/after-sales/components/sla-status.tsx(30,28): error TS1005: '{' expected.
+src/features/after-sales/components/sla-status.tsx(30,35): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(30,96): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(31,23): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(31,25): error TS1003: Identifier expected.
+src/features/after-sales/components/sla-status.tsx(31,29): error TS1005: '{' expected.
+src/features/after-sales/components/sla-status.tsx(31,36): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(31,100): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(33,16): error TS1005: ':' expected.
+src/features/after-sales/components/sla-status.tsx(33,70): error TS1005: ',' expected.
+src/features/after-sales/components/sla-status.tsx(54,31): error TS1002: Unterminated string literal.
+src/features/after-sales/components/sla-status.tsx(58,31): error TS1002: Unterminated string literal.
+src/features/after-sales/components/sla-status.tsx(62,31): error TS1002: Unterminated string literal.
+src/features/after-sales/components/sla-status.tsx(144,1): error TS1005: '}' expected.
+src/features/after-sales/components/traceability-view.tsx(26,27): error TS1002: Unterminated string literal.
+src/features/after-sales/components/traceability-view.tsx(27,5): error TS1005: ',' expected.
+src/features/after-sales/components/traceability-view.tsx(38,10): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/features/after-sales/components/traceability-view.tsx(47,18): error TS17008: JSX element 'Card' has no corresponding closing tag.
+src/features/after-sales/components/traceability-view.tsx(63,129): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/traceability-view.tsx(64,67): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/traceability-view.tsx(73,33): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/traceability-view.tsx(74,31): error TS17002: Expected corresponding JSX closing tag for 'p'.
+src/features/after-sales/components/traceability-view.tsx(76,29): error TS1005: ':' expected.
+src/features/after-sales/components/traceability-view.tsx(81,127): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/traceability-view.tsx(82,67): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/traceability-view.tsx(87,130): error TS1002: Unterminated string literal.
+src/features/after-sales/components/traceability-view.tsx(88,49): error TS1005: '}' expected.
+src/features/after-sales/components/traceability-view.tsx(93,33): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/traceability-view.tsx(94,31): error TS17002: Expected corresponding JSX closing tag for 'p'.
+src/features/after-sales/components/traceability-view.tsx(95,25): error TS1005: ':' expected.
+src/features/after-sales/components/traceability-view.tsx(96,23): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/features/after-sales/components/traceability-view.tsx(97,19): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/features/after-sales/components/traceability-view.tsx(139,34): error TS17008: JSX element 'CardTitle' has no corresponding closing tag.
+src/features/after-sales/components/traceability-view.tsx(139,109): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/after-sales/components/traceability-view.tsx(149,152): error TS1002: Unterminated string literal.
+src/features/after-sales/components/traceability-view.tsx(150,49): error TS1005: '}' expected.
+src/features/after-sales/components/traceability-view.tsx(174,134): error TS1005: ':' expected.
+src/features/after-sales/components/traceability-view.tsx(174,141): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/traceability-view.tsx(182,15): error TS17002: Expected corresponding JSX closing tag for 'CardContent'.
+src/features/after-sales/components/traceability-view.tsx(185,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/features/after-sales/components/traceability-view.tsx(186,1): error TS1005: '</' expected.
+src/features/quotes/components/convert-to-order-dialog.tsx(25,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/convert-to-order-dialog.tsx(25,78): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/create-quote-bundle-form.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/create-quote-bundle-form.tsx(13,75): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/create-wizard/create-quote-wizard.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/create-wizard/create-quote-wizard.tsx(13,72): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/curtain-fabric-quote-dialog.tsx(24,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/curtain-fabric-quote-dialog.tsx(24,74): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/curtain-fabric-quote-form.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/curtain-fabric-quote-form.tsx(13,76): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/master-summary-tab.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/master-summary-tab.tsx(13,74): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quick-quote-dialog.tsx(24,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quick-quote-dialog.tsx(24,78): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-bundle-editor.tsx(18,103): error TS1002: Unterminated string literal.
+src/features/quotes/components/quote-bundle-editor.tsx(19,20): error TS1005: '}' expected.
+src/features/quotes/components/quote-bundle-editor.tsx(19,61): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-copilot-dialog.tsx(25,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-copilot-dialog.tsx(25,78): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-item-config-dialog.tsx(24,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-item-config-dialog.tsx(24,74): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-item-dialog.tsx(24,22): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-item-dialog.tsx(24,77): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-summary-panel.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-summary-panel.tsx(13,80): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-version-compare-view.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-version-compare-view.tsx(13,76): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/quotes/components/quote-version-compare.tsx(13,18): error TS17008: JSX element 'p' has no corresponding closing tag.
+src/features/quotes/components/quote-version-compare.tsx(13,76): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?

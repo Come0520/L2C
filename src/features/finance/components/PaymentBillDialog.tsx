@@ -28,7 +28,8 @@ import {
     DialogFooter,
     DialogTrigger,
 } from '@/shared/ui/dialog';
-import { createPaymentBill, getFinanceAccounts } from '../actions';
+import { createPaymentBill } from '../actions/ap';
+import { getFinanceAccounts } from '../actions/config';
 import { toast } from 'sonner';
 import { useTransition, useEffect, useState } from 'react';
 import { z } from 'zod';

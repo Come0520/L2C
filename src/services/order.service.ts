@@ -4,6 +4,7 @@ import { quotes } from "@/shared/api/schema/quotes";
 import { eq, and } from "drizzle-orm";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
+import { POSplitService } from "./po-split.service";
 
 export interface CreateOrderOptions {
     paymentProofImg?: string;
@@ -71,8 +72,8 @@ export class OrderService {
                 totalAmount: quote.totalAmount,
                 paidAmount: options?.paymentAmount || '0',
                 balanceAmount: String(balance),
-                settlementType: 'PREPAID',
-                status: 'PENDING_PO',
+                settlementType: 'PREPAID' as any,
+                status: 'PENDING_PO' as any,
 
                 confirmationImg: options?.confirmationImg,
                 paymentProofImg: options?.paymentProofImg,
@@ -113,7 +114,7 @@ export class OrderService {
 
     /**
      * Lock Order
-     * Prevents further edits to the order items.
+     * Prevents further edits to order items.
      */
     static async lockOrder(orderId: string, tenantId: string, userId: string) {
         return await db.transaction(async (tx) => {
@@ -132,6 +133,34 @@ export class OrderService {
                 })
                 .where(eq(orders.id, orderId))
                 .returning();
+
+            return updatedOrder;
+        });
+    }
+
+    /**
+     * Update Order Status
+     * Triggers PO split when order is confirmed
+     */
+    static async updateOrderStatus(orderId: string, newStatus: string, tenantId: string, userId: string) {
+        return await db.transaction(async (tx) => {
+            const order = await tx.query.orders.findFirst({
+                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
+            });
+
+            if (!order) throw new Error("Order not found");
+
+            const [updatedOrder] = await tx.update(orders)
+                .set({
+                    status: newStatus as any,
+                    updatedAt: new Date()
+                })
+                .where(eq(orders.id, orderId))
+                .returning();
+
+            if (newStatus === 'CONFIRMED') {
+                await POSplitService.splitOrderToPOs(orderId, tenantId, userId);
+            }
 
             return updatedOrder;
         });

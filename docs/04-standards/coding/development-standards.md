@@ -77,21 +77,20 @@ if (!success) return toast.error(error);
 
 ### 3.1 长度单位：厘米 (cm)
 
-所有涉及尺寸的字段（如 `width`, `height`, `length`, `hem`, `margin`）必须以**厘米 (cm)** 为单位存储和计算。
+所有涉及尺寸的字段（如 `width`, `height`, `length`）必须以**厘米 (cm)** 为单位展示和计算。
 
-* ✅ `width: 150` // 表示 150 厘米
-* ❌ `widthMm: 1500` // 禁止使用毫米
+*   **数据库存储**: 统一使用 `decimal(precision, 2)`。
+*   ✅ `width: 150.50` // 表示 150.5 厘米
 
 ### 3.2 金额单位：元 (yuan)
 
-所有涉及金额的字段（如 `price`, `amount`, `cost`, `fee`, `total`）必须以**元 (yuan)** 为单位存储。
+所有涉及金额的字段（如 `price`, `total`）必须以**元 (yuan)** 为单位。
 
-* ✅ `totalAmount: '1299.00'` // 表示 1299 元
-* ❌ `totalAmountCent: 129900` // 禁止使用分
+*   **数据库存储**: 统一使用 `decimal(precision, 2)`。
+*   ✅ `totalAmount: '1299.00'`
 
-### 3.3 自动化检测
-
-`l2c-check.ts` 脚本会自动扫描 `schema.ts` 文件，若检测到包含 `mm`, `cent`, `分` 等禁止的单位关键字，将拦截提交。
+> [!NOTE]
+> 使用 `Decimal` 类型而非浮点数，以杜绝 JavaScript/Postgres 中的精度丢失问题。
 
 
 ---

@@ -1,94 +1,82 @@
-/**
- * 通用统计卡片组件
- * 用于展示数值指标、趋势变化等统计信息
- */
-
 'use client';
 
+import React from 'react';
 import { Card, CardContent } from '@/shared/ui/card';
-import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
+import ArrowUpIcon from 'lucide-react/dist/esm/icons/arrow-up-right';
+import ArrowDownIcon from 'lucide-react/dist/esm/icons/arrow-down-right';
 import { cn } from '@/shared/lib/utils';
 
 export interface StatCardProps {
     /** 卡片标题 */
     title: string;
-    /** 主要数�?*/
+    /** 数值 */
     value: string | number;
-    /** 副标�?描述 */
-    subtitle?: string;
-    /** 趋势数据 */
-    trend?: {
-        /** 变化百分�?*/
-        value: number;
-        /** 是否正向趋势（上升为正向�?*/
-        isPositive: boolean;
-    };
-    /** 右侧图标 */
+    /** 图标 */
     icon?: React.ReactNode;
     /** 图标背景颜色类名 */
     iconBgClass?: string;
-    /** 图标文字颜色类名 */
+    /** 图标颜色类名 */
     iconTextClass?: string;
-    /** 自定义类�?*/
+    /** 副标题/描述 */
+    subtitle?: string;
+    /** 趋势数据 */
+    trend?: {
+        value: number;
+        isPositive: boolean;
+        label?: string;
+    };
+    /** 样式类名 */
     className?: string;
-    /** 卡片尺寸 */
-    size?: 'sm' | 'md' | 'lg';
 }
 
-export function StatCard({
+/**
+ * 通用统计卡片组件
+ * 用于展示数值指标、趋势变化等统计信息
+ */
+export const StatCard = React.memo(function StatCard({
     title,
     value,
-    subtitle,
-    trend,
     icon,
     iconBgClass = 'bg-blue-50',
     iconTextClass = 'text-blue-600',
+    subtitle,
+    trend,
     className,
-    size = 'md',
 }: StatCardProps) {
-    const paddingClass = {
-        sm: 'p-4',
-        md: 'p-6',
-        lg: 'p-8',
-    }[size];
-
-    const valueClass = {
-        sm: 'text-xl',
-        md: 'text-2xl',
-        lg: 'text-3xl',
-    }[size];
-
     return (
-        <Card className={className}>
-            <CardContent className={paddingClass}>
+        <Card className={cn("overflow-hidden hover:shadow-md transition-shadow duration-300", className)}>
+            <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <p className="text-sm text-gray-500">{title}</p>
-                        <h3 className={cn("font-bold mt-2", valueClass)}>{value}</h3>
-                        {subtitle && (
-                            <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
-                        )}
-                        {trend && (
-                            <div className={cn(
-                                "flex items-center mt-2 text-sm",
-                                trend.isPositive ? 'text-green-600' : 'text-red-600'
-                            )}>
-                                {trend.isPositive ? (
-                                    <ArrowUpIcon className="h-4 w-4 mr-1" />
-                                ) : (
-                                    <ArrowDownIcon className="h-4 w-4 mr-1" />
-                                )}
-                                <span>{Math.abs(trend.value)}%</span>
-                            </div>
-                        )}
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
+                        <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
+                        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
                     </div>
                     {icon && (
-                        <div className={cn("ml-4 p-3 rounded-lg", iconBgClass, iconTextClass)}>
+                        <div className={cn("p-3 rounded-lg", iconBgClass, iconTextClass)}>
                             {icon}
                         </div>
                     )}
                 </div>
+                {trend && (
+                    <div className="flex items-center mt-4 text-sm">
+                        <div className={cn(
+                            "flex items-center font-medium",
+                            trend.isPositive ? "text-green-600" : "text-red-600"
+                        )}>
+                            {trend.isPositive ? (
+                                <ArrowUpIcon className="h-4 w-4 mr-1" />
+                            ) : (
+                                <ArrowDownIcon className="h-4 w-4 mr-1" />
+                            )}
+                            <span>{Math.abs(trend.value)}%</span>
+                        </div>
+                        {trend.label && (
+                            <span className="text-muted-foreground ml-2">{trend.label}</span>
+                        )}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
-}
+});

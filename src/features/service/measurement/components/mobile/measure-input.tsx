@@ -2,7 +2,8 @@
 'use client';
 
 import { Button } from '@/shared/ui/button';
-import { Delete, Check } from 'lucide-react';
+import Delete from 'lucide-react/dist/esm/icons/delete';
+import Check from 'lucide-react/dist/esm/icons/check';
 
 interface NumericKeypadProps {
     onValueChange: (val: number) => void;

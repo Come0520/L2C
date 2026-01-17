@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 
 import { Button } from '@/shared/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface PaginationProps {
@@ -43,10 +44,10 @@ export function Pagination({ totalPages, currentPage: controlledPage, onPageChan
                 disabled={currentPage <= 1}
             >
                 <ChevronLeft className="h-4 w-4" />
-                上一�?
+                上一页
             </Button>
             <span className="text-sm text-gray-600">
-                �?{currentPage} �?/ �?{totalPages} �?
+                第 {currentPage} 页 / 共 {totalPages} 页
             </span>
             <Button
                 variant="outline"
@@ -54,7 +55,7 @@ export function Pagination({ totalPages, currentPage: controlledPage, onPageChan
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
             >
-                下一�?
+                下一页
                 <ChevronRight className="h-4 w-4" />
             </Button>
         </div>

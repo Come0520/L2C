@@ -134,6 +134,7 @@ async function main() {
                 tenantId: tenant.id,
                 name: u.name,
                 phone: u.phone,
+                email: `${u.phone}@example.com`,
                 passwordHash: '$2a$10$demoPasswordHash',
                 role: u.role,
                 isActive: true,

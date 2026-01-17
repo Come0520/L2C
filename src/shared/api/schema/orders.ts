@@ -4,11 +4,11 @@ import { customers } from './customers';
 import { quotes, quoteItems } from './quotes';
 import { products } from './catalogs';
 import {
-    settlementTypeEnum,
     orderStatusEnum,
     productCategoryEnum,
     paymentMethodEnum,
-    paymentScheduleStatusEnum
+    paymentScheduleStatusEnum,
+    orderSettlementTypeEnum
 } from './enums';
 
 export const orders = pgTable('orders', {
@@ -30,7 +30,7 @@ export const orders = pgTable('orders', {
     paidAmount: decimal('paid_amount', { precision: 12, scale: 2 }).default('0'),
     balanceAmount: decimal('balance_amount', { precision: 12, scale: 2 }).default('0'),
 
-    settlementType: settlementTypeEnum('settlement_type').notNull(),
+    settlementType: orderSettlementTypeEnum('settlement_type').notNull(),
 
     // Proofs
     confirmationImg: text('confirmation_img'), // For credit customers

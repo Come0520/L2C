@@ -1,4 +1,4 @@
-import { getReconciliations } from '@/features/finance/actions';
+import { getReconciliations } from '@/features/finance/actions/reconciliation';
 import { ReconciliationTable } from '@/features/finance/components/ReconciliationTable';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 

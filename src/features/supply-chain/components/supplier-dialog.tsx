@@ -9,15 +9,13 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/shared/ui/dialog';
-import { Button } from '@/shared/ui/button';
-import { Plus } from 'lucide-react';
-import { SupplierForm } from './supplier-form';
+import { SupplierForm, SupplierFormValues } from './supplier-form';
 import { createSupplier, updateSupplier } from '../actions/mutations'; // Ensure these are exported from somewhere
 import { toast } from 'sonner';
 
 interface SupplierDialogProps {
     trigger?: React.ReactNode;
-    initialData?: any; // Should be typed properly based on Supplier schema
+    initialData?: SupplierFormValues;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     onSuccess?: () => void;
@@ -37,15 +35,15 @@ export function SupplierDialog({
     const open = isControlled ? controlledOpen : uncontrolledOpen;
     const setOpen = isControlled ? setControlledOpen! : setUncontrolledOpen;
 
-    const handleSubmit = async (values: any) => {
+    const handleSubmit = async (values: SupplierFormValues) => {
         try {
             if (initialData?.id) {
                 const res = await updateSupplier({ ...values, id: initialData.id });
-                if (res?.serverError) throw new Error(res.serverError);
+                if (res?.error) throw new Error(res.error);
                 toast.success('供应商更新成功');
             } else {
                 const res = await createSupplier(values);
-                if (res?.serverError) throw new Error(res.serverError);
+                if (res?.error) throw new Error(res.error);
                 toast.success('供应商创建成功');
             }
             setOpen(false);

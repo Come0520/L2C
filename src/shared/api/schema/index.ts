@@ -2,6 +2,7 @@
 export * from './infrastructure';
 export * from './catalogs';
 export * from './customers';
+export * from './customer-addresses';
 export * from './leads';
 export * from './channels';
 export * from './quotes';
@@ -14,3 +15,6 @@ export * from './approval';
 export * from './after-sales';
 export * from './audit';
 export * from './relations';
+export * from './notifications';
+export * from './loyalty';
+export * from './types';

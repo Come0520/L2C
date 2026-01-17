@@ -100,6 +100,7 @@ CREATE TYPE quote_status AS ENUM (
 
 -- 订单状态
 CREATE TYPE order_status AS ENUM (
+  'PENDING_CONFIRMATION',  -- 待确认深化图 [NEW]
   'PENDING_PO',        -- 待下单
   'IN_PRODUCTION',     -- 生产中
   'PENDING_DELIVERY',  -- 待发货
@@ -108,6 +109,7 @@ CREATE TYPE order_status AS ENUM (
   'PENDING_INSTALL',   -- 待安装
   'COMPLETED',         -- 已完成
   'CLOSED',            -- 已关闭
+  'HALTED',            -- 已叫停 [NEW]
   'CANCELLED'          -- 已取消
 );
 
@@ -118,7 +120,15 @@ CREATE TYPE po_status AS ENUM (
   'READY',             -- 备货完成
   'SHIPPED',           -- 已发货
   'DELIVERED',         -- 已到货
+  'STOCKED',           -- 已入库 (面料)
   'CANCELLED'          -- 已取消
+);
+
+-- [MODIFIED] 采购单类型
+CREATE TYPE po_type AS ENUM (
+  'FINISHED',          -- 成品采购
+  'FABRIC',            -- 面料采购
+  'STOCK'              -- 内部备货
 );
 
 -- 安装任务状态
@@ -189,6 +199,37 @@ CREATE TYPE payment_method AS ENUM ('CASH', 'WECHAT', 'ALIPAY', 'BANK_TRANSFER',
 
 -- 责任方类型
 CREATE TYPE liable_party_type AS ENUM ('COMPANY', 'SUPPLIER', 'INSTALLER', 'MEASURER', 'CUSTOMER');
+
+-- [NEW] 装修进度
+CREATE TYPE decoration_progress AS ENUM (
+  'WATER_ELECTRIC',    -- 水电
+  'MUD_WOOD',          -- 泥木
+  'INSTALLATION',      -- 安装
+  'PAINTING',          -- 油漆
+  'COMPLETED'          -- 完工
+);
+
+-- [NEW] 订单结算方式
+CREATE TYPE order_settlement_type AS ENUM (
+  'PREPAID',           -- 预收
+  'CREDIT',            -- 月结
+  'CASH'               -- 现结
+);
+
+-- [NEW] 加工单状态
+CREATE TYPE work_order_status AS ENUM (
+  'PENDING',           -- 待加工 (面料未入库)
+  'PROCESSING',        -- 加工中
+  'COMPLETED',         -- 已完成
+  'CANCELLED'          -- 已取消
+);
+
+-- [NEW] 测量类型
+CREATE TYPE measure_type AS ENUM (
+  'QUOTE_BASED',       -- 方案验证
+  'BLIND',             -- 盲测
+  'SALES_SELF'         -- 销售自测
+);
 ```
 
 ---
@@ -371,6 +412,8 @@ CREATE TABLE leads (
   assigned_at TIMESTAMPTZ,
   tags TEXT[] DEFAULT '{}',
   remark TEXT,
+  decoration_progress decoration_progress,    -- [NEW] 装修进度
+  next_follow_up_recommendation TIMESTAMPTZ,  -- [NEW] 系统推荐跟进时间
   referrer_customer_id UUID REFERENCES customers(id),
   customer_id UUID REFERENCES customers(id), -- 成交后关联
   quoted_at TIMESTAMPTZ,
@@ -430,6 +473,7 @@ CREATE TABLE measure_tasks (
   scheduled_time_slot VARCHAR(20),            -- 上午/下午/晚间
   check_in_at TIMESTAMPTZ,
   check_in_location POINT,
+  type measure_type DEFAULT 'BLIND',          -- [NEW] 测量类型
   reject_count INTEGER DEFAULT 0,
   remark TEXT,
   created_by UUID REFERENCES users(id) NOT NULL,
@@ -594,11 +638,27 @@ CREATE TABLE orders (
   customer_phone VARCHAR(20) NOT NULL,
   delivery_address TEXT NOT NULL,
   status order_status DEFAULT 'PENDING_PO',
+  settlement_type order_settlement_type DEFAULT 'CASH', -- [NEW] 结算方式
   total_amount DECIMAL(12,2) NOT NULL,
   paid_amount DECIMAL(12,2) DEFAULT 0,
   confirmation_img TEXT,                      -- 客户确认凭证
+  payment_proof_img TEXT,                     -- 付款凭证
+  payment_amount DECIMAL(12,2),              -- 立即支付金额
+  payment_method payment_method,                 -- 支付方式
+  payment_time TIMESTAMPTZ,                   -- 支付时间
+  prepaid_payment_id UUID,                      -- 预收款单 ID
   sales_id UUID REFERENCES users(id) NOT NULL,
   remark TEXT,
+  snapshot_data JSONB NOT NULL DEFAULT '{}',   -- [NEW] 订单快照数据
+  halted_reason TEXT,                            -- [NEW] 叫停原因
+  halted_at TIMESTAMPTZ,                         -- [NEW] 叫停时间
+  previous_status order_status,                   -- [NEW] 叫停前的状态
+  cancel_reason TEXT,                            -- [NEW] 撤单原因
+  cancelled_by UUID REFERENCES users(id),           -- [NEW] 撤单人ID
+  cancelled_at TIMESTAMPTZ,                      -- [NEW] 撤单时间
+  locked_by UUID REFERENCES users(id),              -- [NEW] 锁定人ID
+  is_locked BOOLEAN DEFAULT FALSE,                 -- [NEW] 是否锁定
+  confirmation_deadline TIMESTAMPTZ,             -- [NEW] 深化图确认截止时间
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   completed_at TIMESTAMPTZ,
@@ -629,16 +689,51 @@ CREATE TABLE order_items (
   height DECIMAL(10,2),
   subtotal DECIMAL(12,2) NOT NULL,
   po_id UUID,                                 -- 关联采购单 (拆单后)
-  supplier_id UUID,
+  supplier_id UUID REFERENCES suppliers(id),  -- 供应商ID [NEW]
+  purchase_order_id UUID REFERENCES purchase_orders(id),  -- 采购单ID [NEW]
+  delivery_status VARCHAR(50) DEFAULT 'PENDING',  -- 交付状态 [NEW]
+  delivered_at TIMESTAMPTZ,                      -- 送达时间 [NEW]
   status VARCHAR(50) DEFAULT 'PENDING',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_po ON order_items(po_id);
+CREATE INDEX idx_order_items_supplier ON order_items(supplier_id);  -- [NEW]
+CREATE INDEX idx_order_items_purchase_order ON order_items(purchase_order_id);  -- [NEW]
 ```
 
-### 8.3 payment_schedules (收款计划)
+### 8.4 change_requests (变更单) [NEW]
+
+```sql
+CREATE TABLE change_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES tenants(id) NOT NULL,
+  order_id UUID REFERENCES orders(id) NOT NULL,
+  order_no VARCHAR(50) NOT NULL,
+  change_type VARCHAR(50) NOT NULL,  -- ADD_ITEM/REMOVE_ITEM/MODIFY_ITEM
+  change_reason TEXT NOT NULL,
+  original_items JSONB NOT NULL,
+  new_items JSONB NOT NULL,
+  price_difference DECIMAL(10,2),
+  status VARCHAR(50) NOT NULL DEFAULT 'PENDING',  -- PENDING/APPROVED/REJECTED
+  approved_by UUID REFERENCES users(id),
+  approved_at TIMESTAMPTZ,
+  rejected_by UUID REFERENCES users(id),
+  rejected_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  created_by UUID REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_change_requests_order ON change_requests(order_id);
+CREATE INDEX idx_change_requests_status ON change_requests(status);
+CREATE INDEX idx_change_requests_tenant ON change_requests(tenant_id);
+CREATE INDEX idx_change_requests_tenant_status ON change_requests(tenant_id, status);
+```
+
+### 8.5 payment_schedules (收款计划)
 
 ```sql
 CREATE TABLE payment_schedules (
@@ -696,7 +791,7 @@ CREATE TABLE purchase_orders (
   order_id UUID REFERENCES orders(id) NOT NULL,
   supplier_id UUID REFERENCES suppliers(id) NOT NULL,
   supplier_name VARCHAR(100) NOT NULL,
-  type VARCHAR(20) DEFAULT 'EXTERNAL',        -- EXTERNAL/INTERNAL
+  type po_type DEFAULT 'FINISHED',            -- [MODIFIED] 采购类型
   status po_status DEFAULT 'DRAFT',
   total_cost DECIMAL(12,2) NOT NULL,
   external_po_no VARCHAR(100),                -- 工厂方单号
@@ -742,6 +837,42 @@ CREATE TABLE po_items (
 );
 
 CREATE INDEX idx_po_items_po ON po_items(po_id);
+
+### 9.4 work_orders (加工单) [NEW]
+
+```sql
+CREATE TABLE work_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES tenants(id) NOT NULL,
+  wo_no VARCHAR(50) UNIQUE NOT NULL,         -- WO20260101001
+  order_id UUID REFERENCES orders(id) NOT NULL,
+  po_id UUID REFERENCES purchase_orders(id) NOT NULL, -- 关联的面料采购单
+  supplier_id UUID REFERENCES suppliers(id) NOT NULL, -- 加工厂
+  status work_order_status DEFAULT 'PENDING',
+  start_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  remark TEXT,
+  created_by UUID REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_work_orders_order ON work_orders(order_id);
+CREATE INDEX idx_work_orders_po ON work_orders(po_id);
+```
+
+### 9.5 work_order_items (加工明细) [NEW]
+
+```sql
+CREATE TABLE work_order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wo_id UUID REFERENCES work_orders(id) NOT NULL,
+  order_item_id UUID REFERENCES order_items(id) NOT NULL, -- 关联原始订单项(成品窗帘)
+  status VARCHAR(20) DEFAULT 'PENDING',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 ```
 
 ---

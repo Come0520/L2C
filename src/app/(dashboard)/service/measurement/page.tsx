@@ -11,17 +11,18 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-    searchParams: {
+    searchParams: Promise<{
         page?: string;
         search?: string;
         status?: string;
-    };
+    }>;
 }
 
 export default async function MeasurementPage({ searchParams }: PageProps) {
-    const page = Number(searchParams.page) || 1;
-    const search = searchParams.search || '';
-    const status = searchParams.status || '';
+    const params = await searchParams;
+    const page = Number(params.page) || 1;
+    const search = params.search || '';
+    const status = params.status || '';
 
     const { data: tasks, total, totalPages } = await getMeasureTasks({
         page,

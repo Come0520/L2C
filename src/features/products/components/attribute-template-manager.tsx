@@ -12,7 +12,6 @@ import {
     FormField,
     FormItem,
     FormLabel,
-    FormLabel,
     FormMessage,
 } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
@@ -26,7 +25,10 @@ import {
 } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Loader2, Plus, Trash2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { toast } from 'sonner';
 
 // Schema for a single field definition
@@ -52,7 +54,7 @@ export function AttributeTemplateManager() {
     const [selectedCategory, setSelectedCategory] = useState<string>('CURTAIN_FABRIC');
     const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<TemplateFormValues>({
+    const form = useForm({
         resolver: zodResolver(templateFormSchema),
         defaultValues: {
             category: 'CURTAIN_FABRIC',

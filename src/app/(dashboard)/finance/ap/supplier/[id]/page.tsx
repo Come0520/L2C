@@ -10,8 +10,9 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { PaymentBillDialog } from "@/features/finance/components/PaymentBillDialog";
 
-export default async function APSupplierStatementDetailPage({ params }: { params: { id: string } }) {
-    const statement = await getAPSupplierStatement(params.id);
+export default async function APSupplierStatementDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const statement = await getAPSupplierStatement(id);
 
     if (!statement) {
         notFound();

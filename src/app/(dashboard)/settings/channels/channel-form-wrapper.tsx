@@ -4,9 +4,9 @@ import { Button } from "@/shared/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { ChannelForm } from "@/features/settings/components/channel-form";
-import { marketChannelCategories } from "@/shared/api/schema";
+import { marketChannels } from "@/shared/api/schema";
 
-type MarketChannelCategory = typeof marketChannelCategories.$inferSelect;
+type MarketChannelCategory = typeof marketChannels.$inferSelect;
 
 export function ChannelFormWrapper({ categories }: { categories: MarketChannelCategory[] }) {
     const [open, setOpen] = useState(false);

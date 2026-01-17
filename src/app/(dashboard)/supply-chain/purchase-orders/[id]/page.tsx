@@ -1,5 +1,5 @@
 
-import { getPoById, updatePoStatus } from '@/features/supply-chain/actions';
+import { getPoById, updatePoStatus } from '@/features/supply-chain/actions/po-actions';
 import { LogisticsDialog } from '@/features/supply-chain/components/logistics-dialog';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader, CardContent } from '@/shared/ui/card';
@@ -8,12 +8,12 @@ import { ArrowLeft, Play, PackageCheck, CheckCircle, Truck } from 'lucide-react'
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
-import { purchaseOrderItems, poQuoteStatusEnum } from '@/shared/api/schema';
-import { PoQuoteDialog } from '@/features/supply-chain/components/po-quote-dialog';
-import { FileText, ExternalLink } from 'lucide-react';
+import { purchaseOrderItems } from '@/shared/api/schema';
+// import { POQuoteDialog } from '@/features/supply-chain/components/po-quote-dialog';
+// import { FileText, ExternalLink } from 'lucide-react';
 
 type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
-type PoQuoteStatus = typeof poQuoteStatusEnum.enumValues[number];
+// type PoQuoteStatus = typeof poQuoteStatusEnum.enumValues[number];
 
 function PoStatusBadge({ status }: { status: string }) {
     const map: Record<string, { label: string; className: string }> = {
@@ -64,10 +64,10 @@ export default async function PoDetailPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold tracking-tight">{po.poNo}</h1>
-                            <PoStatusBadge status={po.status} />
+                            <PoStatusBadge status={po.status || 'DRAFT'} />
                         </div>
                         <p className="text-muted-foreground text-sm">
-                            供应商: {po.supplierName} · 关联订单: {po.order.orderNo}
+                            供应商: {po.supplierName} · 关联订单: {po.order?.orderNo || '-'}
                         </p>
                     </div>
                 </div>
@@ -125,20 +125,7 @@ export default async function PoDetailPage({
                         </form>
                     )}
 
-                    {/* Quote Action */}
-                    { }
-                    {(!po.quoteStatus || po.quoteStatus === 'PENDING_QUOTE' || po.quoteStatus === 'QUOTED') && !isDraft && po.status !== 'CANCELLED' && po.status !== 'COMPLETED' && (
-                        <PoQuoteDialog
-                            poId={po.id}
-                            systemTotalCost={Number(po.totalCost)}
-                            trigger={
-                                <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    {po.quoteStatus === 'QUOTED' ? '修改报价' : '录入报价'}
-                                </Button>
-                            }
-                        />
-                    )}
+                    {/* Quote Action disabled */}
                 </div>
             </div>
 
@@ -163,16 +150,16 @@ export default async function PoDetailPage({
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">
                                                 <div className="font-medium">{item.productName}</div>
-                                                <div className="text-xs text-gray-400">SKU: {item.sku}</div>
+                                                <div className="text-xs text-gray-400">SKU: {(item as any).productSku || '-'}</div>
                                             </td>
-                                            <td className="px-4 py-3 text-right">¥{item.unitCost}</td>
+                                            <td className="px-4 py-3 text-right">¥{item.unitPrice}</td>
                                             <td className="px-4 py-3 text-right">{item.quantity}</td>
                                             <td className="px-4 py-3 text-right font-medium">¥{item.subtotal}</td>
                                         </tr>
                                     ))}
                                     <tr className="bg-gray-50 font-medium border-t">
                                         <td colSpan={3} className="px-4 py-3 text-right">总成本</td>
-                                        <td className="px-4 py-3 text-right text-lg">¥{po.totalCost}</td>
+                                        <td className="px-4 py-3 text-right text-lg">¥{po.totalAmount}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -205,38 +192,7 @@ export default async function PoDetailPage({
 
                 {/* Right: Info */}
                 <div className="space-y-6">
-                    {/* Quote Info Card */}
-                    {po.quotedTotalCost && (
-                        <Card>
-                            <CardHeader title="报价信息" />
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">状态</span>
-                                    <Badge variant={(po.quoteStatus as PoQuoteStatus) === 'PENDING_APPROVAL' ? 'warning' : 'success'}>
-                                        {po.quoteStatus === 'PENDING_APPROVAL' ? '待审批' : po.quoteStatus === 'VERIFIED' ? '已确认' : '已报价'}
-                                    </Badge>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-400">供应商报价</div>
-                                    <div className="font-medium text-lg">¥{po.quotedTotalCost}</div>
-                                </div>
-                                {po.varianceReason && (
-                                    <div>
-                                        <div className="text-xs text-gray-400">差异说明</div>
-                                        <div className="text-sm text-gray-700 mt-1">{po.varianceReason}</div>
-                                    </div>
-                                )}
-                                {po.supplierQuoteImg && (
-                                    <div>
-                                        <div className="text-xs text-gray-400 mb-1">凭证</div>
-                                        <a href={po.supplierQuoteImg} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center">
-                                            查看图片 <ExternalLink className="h-3 w-3 ml-1" />
-                                        </a>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                    {/* Quote Info Card disabled */}
 
                     <Card>
                         <CardHeader title="基础信息" />
@@ -245,18 +201,18 @@ export default async function PoDetailPage({
                                 <div className="text-xs text-gray-400">供应商</div>
                                 <div className="font-medium text-base">{po.supplierName}</div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    类型: {po.type === 'INTERNAL' ? '内部' : '外部'}
+                                    类型: {po.type === 'STOCK' ? '库存' : po.type === 'FABRIC' ? '面料' : '成品'}
                                 </div>
                             </div>
                             <div>
                                 <div className="text-xs text-gray-400">关联订单</div>
                                 <Link href={`/orders/${po.orderId}`} className="text-blue-600 hover:underline">
-                                    {po.order.orderNo}
+                                    {po.order?.orderNo || '-'}
                                 </Link>
                             </div>
                             <div>
                                 <div className="text-xs text-gray-400">创建人</div>
-                                <div>{po.creator.name}</div>
+                                <div>{po.creator?.name || '-'}</div>
                             </div>
                         </CardContent>
                     </Card>

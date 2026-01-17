@@ -10,8 +10,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '@/shared/components/ui/dialog';
-import { Button } from '@/shared/components/ui/button';
+} from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
 import {
     Form,
     FormControl,
@@ -19,11 +19,11 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from '@/shared/components/ui/form';
-import { Input } from '@/shared/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
-import { Textarea } from '@/shared/components/ui/textarea';
-import { useToast } from '@/shared/components/ui/use-toast';
+} from '@/shared/ui/form';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
+import { toast } from 'sonner';
 import { createAfterSalesTicket } from '../actions';
 import { Loader2 } from 'lucide-react';
 
@@ -31,7 +31,7 @@ const createTicketSchema = z.object({
     orderId: z.string().uuid("请选择关联订单"),
     type: z.string().min(1, "请选择售后类型"),
     description: z.string().min(1, "问题描述不能为空"),
-    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
     assignedTo: z.string().uuid().optional(),
 });
 
@@ -50,7 +50,7 @@ export function CreateTicketDialog({
     orderId,
     onSuccess,
 }: CreateTicketDialogProps) {
-    const { toast } = useToast();
+
 
     const form = useForm<FormValues>({
         resolver: zodResolver(createTicketSchema),
@@ -65,16 +65,14 @@ export function CreateTicketDialog({
     const onSubmit = async (values: FormValues) => {
         const result = await createAfterSalesTicket(values);
 
-        if (result.success) {
-            toast({ title: '创建成功', description: result.message });
+        if (result.data?.success) {
+            toast.success('创建成功', { description: result.data.message });
             onOpenChange(false);
             form.reset();
             onSuccess?.();
         } else {
-            toast({
-                title: '创建失败',
-                description: result.error || result.message,
-                variant: 'destructive'
+            toast.error('创建失败', {
+                description: result.error || result.data?.message,
             });
         }
     };

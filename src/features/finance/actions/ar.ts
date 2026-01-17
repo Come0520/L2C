@@ -6,7 +6,7 @@ import {
 } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { FinanceService } from '@/services/finance.service';
-// auth imported above
+import { auth } from '@/shared/lib/auth';
 import { createPaymentOrderSchema, verifyPaymentOrderSchema } from './schema';
 import { z } from 'zod';
 

@@ -41,7 +41,7 @@ export async function LeadActivityLog({ leadId }: LeadActivityLogProps) {
                                             </span>
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            {formatDate(activity.createdAt)}
+                                            {formatDate(new Date(activity.createdAt as any))}
                                         </div>
                                     </div>
                                     <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded-md">
@@ -49,7 +49,7 @@ export async function LeadActivityLog({ leadId }: LeadActivityLogProps) {
                                     </div>
                                     {activity.nextFollowupDate && (
                                         <div className="text-xs text-orange-600 mt-1">
-                                            下次跟进: {formatDate(activity.nextFollowupDate)}
+                                            下次跟进: {formatDate(new Date(activity.nextFollowupDate as any))}
                                         </div>
                                     )}
                                 </div>

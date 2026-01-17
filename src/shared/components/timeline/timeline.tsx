@@ -6,7 +6,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Circle, ChevronDown, ChevronUp } from 'lucide-react';
+import Circle from 'lucide-react/dist/esm/icons/circle';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import { cn, formatDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 

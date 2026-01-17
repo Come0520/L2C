@@ -84,6 +84,7 @@ export class SupplyChainService {
                     await tx.insert(purchaseOrderItems).values({
                         tenantId,
                         poId: po.id,
+                        orderItemId: item.id, // Fixed: Link to Order Item
                         productName: item.productName,
                         quantity: item.quantity.toString(),
                         unitPrice: item.unitPrice.toString(), // Cost price? defaulting to sell price for now mocked
@@ -107,4 +108,39 @@ export class SupplyChainService {
     }
 
 
+    /**
+     * Sync PO Status to Order Items
+     */
+    static async syncStatus(poId: string, tenantId: string) {
+        return await db.transaction(async (tx) => {
+            const po = await tx.query.purchaseOrders.findFirst({
+                where: and(eq(purchaseOrders.id, poId), eq(purchaseOrders.tenantId, tenantId))
+            });
+
+            if (!po) throw new Error("PO not found");
+
+            // Mapping PO Status to Order Item Status
+            let targetItemStatus: string;
+            switch (po.status) {
+                case 'CONFIRMED':
+                    targetItemStatus = 'PO_CONFIRMED';
+                    break;
+                case 'SHIPPED':
+                    targetItemStatus = 'SHIPPED';
+                    break;
+                case 'RECEIVED':
+                    targetItemStatus = 'RECEIVED';
+                    break;
+                default:
+                    return; // No sync needed for DRAFT, etc.
+            }
+
+            // Update all Order Items linked to this PO
+            await tx.update(orderItems)
+                .set({ status: targetItemStatus })
+                .where(and(eq(orderItems.poId, poId), eq(orderItems.tenantId, tenantId)));
+
+            return { success: true, status: targetItemStatus };
+        });
+    }
 }

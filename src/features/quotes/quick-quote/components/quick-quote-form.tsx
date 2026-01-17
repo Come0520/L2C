@@ -5,7 +5,12 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/form';
 
-export function QuickQuoteForm() {
+interface QuickQuoteFormProps {
+    leadId: string;
+    plans: any;
+}
+
+export function QuickQuoteForm({ leadId, plans }: QuickQuoteFormProps) {
     const form = useForm();
     return (
         <Form {...form}>

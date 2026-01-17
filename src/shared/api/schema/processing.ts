@@ -1,30 +1,43 @@
 ﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { orders } from './orders';
+import { orders, orderItems } from './orders';
+import { purchaseOrders, suppliers } from './supply-chain';
+import { workOrderStatusEnum } from './enums';
 
-export const processingOrders = pgTable('processing_orders', {
+export const workOrders = pgTable('work_orders', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    processingNo: varchar('processing_no', { length: 50 }).unique().notNull(),
-    
+    woNo: varchar('wo_no', { length: 50 }).unique().notNull(),
+
     orderId: uuid('order_id').references(() => orders.id).notNull(),
-    
-    processorId: uuid('processor_id'), // External processor ID if needed
-    processorName: varchar('processor_name', { length: 100 }),
-    
-    status: varchar('status', { length: 50 }).default('PENDING'),
-    
-    totalCost: decimal('total_cost', { precision: 10, scale: 2 }).default('0'),
-    
-    startedAt: timestamp('started_at', { withTimezone: true }),
+    poId: uuid('po_id').references(() => purchaseOrders.id).notNull(), // Link to Fabric PO
+    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(), // Processing Factory
+
+    status: workOrderStatusEnum('status').default('PENDING'),
+
+    startAt: timestamp('start_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
-    
-    notes: text('notes'),
-    
-    createdBy: uuid('created_by').references(() => users.id),
+
+    remark: text('remark'),
+
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
-    procTenantIdx: index('idx_processing_orders_tenant').on(table.tenantId),
-    procOrderIdx: index('idx_processing_orders_order').on(table.orderId),
+    woTenantIdx: index('idx_work_orders_tenant').on(table.tenantId),
+    woOrderIdx: index('idx_work_orders_order').on(table.orderId),
+    woPoIdx: index('idx_work_orders_po').on(table.poId),
+}));
+
+export const workOrderItems = pgTable('work_order_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    woId: uuid('wo_id').references(() => workOrders.id).notNull(),
+    orderItemId: uuid('order_item_id').references(() => orderItems.id).notNull(), // Finished Product
+
+    status: varchar('status', { length: 20 }).default('PENDING'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    woItemWoIdx: index('idx_work_order_items_wo').on(table.woId),
 }));

@@ -28,12 +28,12 @@ export function SLAMonitor() {
         setIsLoading(true);
         try {
             const res = await runSLACheckAction({});
-            if (res?.success) {
+            if (res?.data?.success) {
                 toast.success('SLA Check Completed');
-                setLastResult(res.data as SLACheckResult[]);
+                setLastResult(res.data.data as unknown as SLACheckResult[]);
                 setLastRunAt(new Date());
             } else {
-                toast.error('SLA Check Failed');
+                toast.error(res?.error || 'SLA Check Failed');
             }
         } catch (error) {
             toast.error('An error occurred');

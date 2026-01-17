@@ -16,7 +16,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger
 } from '@/shared/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { useState } from 'react';
 import { SupplierDialog } from './supplier-dialog';
 import { deleteSupplier } from '../actions/mutations';
@@ -63,8 +65,8 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
         setIsDeleting(true);
         try {
             const res = await deleteSupplier({ id: deletingSupplierId });
-            if (res?.serverError) {
-                toast.error(res.serverError);
+            if (res?.error) {
+                toast.error(res.error);
             } else {
                 toast.success('供应商已删除');
                 setDeletingSupplierId(null);
@@ -147,7 +149,15 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
             <SupplierDialog
                 open={!!editingSupplier}
                 onOpenChange={(open) => !open && setEditingSupplier(null)}
-                initialData={editingSupplier}
+                initialData={editingSupplier ? {
+                    id: editingSupplier.id,
+                    name: editingSupplier.name,
+                    contactPerson: editingSupplier.contactPerson || undefined,
+                    phone: editingSupplier.phone || undefined,
+                    paymentPeriod: (editingSupplier.paymentPeriod as "CASH" | "MONTHLY") || 'CASH',
+                    address: editingSupplier.address || undefined,
+                    remark: editingSupplier.remark || undefined,
+                } : undefined}
             />
 
             <AlertDialog open={!!deletingSupplierId} onOpenChange={(open) => !open && setDeletingSupplierId(null)}>

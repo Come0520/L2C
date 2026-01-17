@@ -2,9 +2,16 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
-import { Package, Truck, AlertTriangle, CheckCircle } from 'lucide-react';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
-export function ProcurementDashboard() {
+interface ProcurementDashboardProps {
+    draftPos: any[];
+}
+
+export function ProcurementDashboard({ draftPos }: ProcurementDashboardProps) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>

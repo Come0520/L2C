@@ -9,10 +9,12 @@ import {
     TableRow
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Edit2, Plus, Trash2 } from 'lucide-react';
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { useState } from 'react';
 import { AccountDialog } from './AccountDialog';
-import { StatusBadge } from '@/shared/ui/status-badge';
+import { Badge } from '@/shared/ui/badge';
 
 interface AccountListProps {
     accounts: any[];
@@ -88,11 +90,11 @@ export function AccountList({ accounts }: AccountListProps) {
                                     <TableCell>{account.holderName}</TableCell>
                                     <TableCell>¥ {parseFloat(account.balance).toLocaleString()}</TableCell>
                                     <TableCell>
-                                        <StatusBadge
-                                            status={account.isActive ? 'ACTIVE' : 'INACTIVE'}
-                                            label={account.isActive ? '启用' : '禁用'}
+                                        <Badge
                                             variant={account.isActive ? 'success' : 'secondary'}
-                                        />
+                                        >
+                                            {account.isActive ? '启用' : '禁用'}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(account)}>

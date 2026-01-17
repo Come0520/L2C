@@ -1,22 +1,31 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
-import { customers } from '@/shared/api/schema/customers';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { cache } from 'react';
+import { quotes } from '@/shared/api/schema/quotes';
+import { eq, desc, and, or } from 'drizzle-orm';
 import { users } from '@/shared/api/schema/infrastructure';
+import { auditLogs } from '@/shared/api/schema/audit';
 
-export const getQuotes = async ({
+export const getQuoteVersions = cache(async (rootId: string) => {
+    if (!rootId) return [];
+    return await db.query.quotes.findMany({
+        columns: { id: true, version: true, status: true, createdAt: true, quoteNo: true },
+        where: or(eq(quotes.rootQuoteId, rootId), eq(quotes.id, rootId)),
+        orderBy: desc(quotes.version)
+    });
+});
+
+export const getQuotes = cache(async ({
     page = 1,
     pageSize = 10,
     status,
-    search
 }: {
     page?: number;
     pageSize?: number;
     status?: string;
-    search?: string;
 } = {}) => {
+
     // Current tenant context should be handled by authentication/middleware, 
     // assuming we filter by tenant if necessary. 
     // For now, listing all for simplicity or verify how tenant context is passed.
@@ -43,9 +52,11 @@ export const getQuotes = async ({
 
     // Total count logic omitted for brevity, can be added.
     return { data };
-};
+});
 
-export const getQuote = async (id: string) => {
+
+export const getQuote = cache(async (id: string) => {
+
     const data = await db.query.quotes.findFirst({
         where: eq(quotes.id, id),
         with: {
@@ -66,4 +77,28 @@ export const getQuote = async (id: string) => {
     });
 
     return { data };
+});
+
+export const getQuoteBundleById = async ({ id }: { id: string }) => {
+    const { data } = await getQuote(id);
+    if (!data) return { success: false, message: 'Quote not found' };
+    return { success: true, data };
 };
+
+export const getQuoteAuditLogs = cache(async (quoteId: string) => {
+    return await db.select({
+        id: auditLogs.id,
+        action: auditLogs.action,
+        createdAt: auditLogs.createdAt,
+        userName: users.name,
+    })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .where(
+            and(
+                eq(auditLogs.tableName, 'quotes'),
+                eq(auditLogs.recordId, quoteId)
+            )
+        )
+        .orderBy(desc(auditLogs.createdAt));
+});

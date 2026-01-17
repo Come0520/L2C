@@ -10,7 +10,8 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Plus, Eye } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Eye from 'lucide-react/dist/esm/icons/eye';
 import { useState } from 'react';
 import { PaymentBillDialog } from './PaymentBillDialog';
 import { format } from 'date-fns';
@@ -130,7 +131,7 @@ export function APStatementTable({ data, type }: APStatementTableProps) {
                 open={isBillDialogOpen}
                 onOpenChange={setIsBillDialogOpen}
                 initialStatement={selectedStatement}
-                type={type}
+                statementType={type === 'SUPPLIER' ? 'AP_SUPPLIER' : 'AP_LABOR'}
             />
         </div>
     );

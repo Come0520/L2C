@@ -1,17 +1,22 @@
 import { notFound } from 'next/navigation';
 import { getInstallTaskById, getAvailableWorkers } from '@/features/service/installation/actions';
-import { Card, CardContent, CardHeader } from '@/shared/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
+import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { InstallDispatchDialog } from '@/features/service/installation/components/install-dispatch-dialog';
 import { SubmitInstallCompletionDialog } from '@/features/service/installation/components/submit-completion-dialog';
 import { ConfirmInstallDialog, RejectInstallDialog } from '@/features/service/installation/components/confirm-reject-dialogs';
+import { InstallPhotoGallery } from '@/features/service/installation/components/install-photo-gallery';
+import { InstallItemsTable } from '@/features/service/installation/components/install-items-table';
 import { Calendar, User, MapPin, Package, Star, FileText } from 'lucide-react';
+
 
 export const dynamic = 'force-dynamic';
 
 const statusMap = {
     PENDING: { label: '待分配', color: 'bg-gray-500' },
     DISPATCHED: { label: '已分配', color: 'bg-blue-500' },
+    DISPATCHING: { label: '待接单', color: 'bg-blue-500' },
     PENDING_VISIT: { label: '待上门', color: 'bg-yellow-500' },
     PENDING_CONFIRM: { label: '待验收', color: 'bg-orange-500' },
     COMPLETED: { label: '已完成', color: 'bg-green-500' },
@@ -24,16 +29,38 @@ export default async function InstallTaskDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const result = await getInstallTaskById({ id });
+    const result = await getInstallTaskById(id);
 
-    if (!result.success || !result.data) {
+    if (!result.data || !result.success) {
         notFound();
     }
 
     const task = result.data;
-    const workerRes = await getAvailableWorkers({});
+    const workerRes = await getAvailableWorkers();
     const workers = workerRes.success ? (workerRes.data || []) : [];
     const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.PENDING;
+
+    // Helper to cast items to component props
+    const tableItems = (task.items || []).map(item => ({
+        id: item.id,
+        productName: item.productName,
+        roomName: item.roomName,
+        quantity: item.quantity as string,
+        actualInstalledQuantity: item.actualInstalledQuantity as string | null,
+        isInstalled: item.isInstalled,
+        issueCategory: item.issueCategory as 'NONE' | 'MISSING' | 'DAMAGED' | 'WRONG_SIZE' | null,
+    }));
+
+    // Helper to cast photos to component props
+    const galleryPhotos = (task.photos || []).map(p => ({
+        id: p.id,
+        photoType: p.photoType as 'BEFORE' | 'AFTER' | 'DETAIL',
+        photoUrl: p.photoUrl,
+        remark: p.remark,
+        createdAt: p.createdAt ? new Date(p.createdAt) : null
+    }));
+
+    const allowEdit = task.status === 'PENDING_VISIT' || task.status === 'DISPATCHING';
 
     return (
         <div className="space-y-6">
@@ -53,7 +80,9 @@ export default async function InstallTaskDetailPage({
             {/* 基础信息卡片 */}
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
-                    <CardHeader title="客户信息" />
+                    <CardHeader>
+                        <CardTitle>客户信息</CardTitle>
+                    </CardHeader>
                     <CardContent className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                             <User className="h-4 w-4 text-muted-foreground" />
@@ -61,22 +90,24 @@ export default async function InstallTaskDetailPage({
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{task.customer?.defaultAddress || '-'}</span>
+                            <span>{task.customer?.phone || '-'}</span>
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardHeader title="任务信息" />
+                    <CardHeader>
+                        <CardTitle>任务信息</CardTitle>
+                    </CardHeader>
                     <CardContent className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <span>安装师: {task.worker?.name || '未分配'}</span>
+                            <span>安装师: {task.installer?.name || '未分配'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span>
-                                预约日期: {task.scheduledDate || '未设置'}
+                                预约日期: {task.scheduledDate ? new Date(task.scheduledDate).toLocaleDateString() : '未设置'}
                             </span>
                         </div>
                         {task.laborFee && (
@@ -96,32 +127,36 @@ export default async function InstallTaskDetailPage({
             </div>
 
 
-            {/* 安装明细 */}
-            {task.order?.quote?.items && task.order.quote.items.length > 0 && (
+            {/* 安装明细 & 照片 */}
+            <div className="grid gap-6">
                 <Card>
-                    <CardHeader title="安装明细" description={`共 ${task.order.quote.items.length} 项`} />
+                    <CardHeader>
+                        <CardTitle>安装明细</CardTitle>
+                        <CardDescription>共 {task.items?.length || 0} 项</CardDescription>
+                    </CardHeader>
                     <CardContent>
-                        <div className="space-y-2">
-                            {task.order.quote.items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                                    <div>
-                                        <p className="font-medium">{item.productName}</p>
-                                        <p className="text-sm text-muted-foreground">数量: {item.quantity}</p>
-                                    </div>
-                                    <Badge variant="secondary">
-                                        待安装
-                                    </Badge>
-                                </div>
-                            ))}
-                        </div>
+                        <InstallItemsTable
+                            items={tableItems}
+                            allowEdit={allowEdit}
+                        />
                     </CardContent>
                 </Card>
-            )}
+
+                <InstallPhotoGallery
+                    photos={galleryPhotos}
+                    allowUpload={allowEdit}
+                />
+            </div>
 
             {/* 评价信息 */}
             {task.rating && (
                 <Card>
-                    <CardHeader title="客户评价" icon={<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />} />
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            客户评价
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
                             <div className="flex gap-1">
@@ -143,22 +178,25 @@ export default async function InstallTaskDetailPage({
                 </Card>
             )}
 
+
             {/* 操作按钮 */}
             <Card>
-                <CardHeader title="操作" />
+                <CardHeader>
+                    <CardTitle>操作</CardTitle>
+                </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
                     {task.status === 'PENDING_DISPATCH' && (
                         <InstallDispatchDialog
                             taskId={task.id}
                             workers={workers}
-                            trigger={<button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">指派安装师</button>}
+                            trigger={<Button>指派安装师</Button>}
                         />
                     )}
 
                     {(task.status === 'DISPATCHING' || task.status === 'PENDING_VISIT') && (
                         <SubmitInstallCompletionDialog
                             taskId={task.id}
-                            trigger={<button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">提交完工</button>}
+                            trigger={<Button>提交完工</Button>}
                         />
                     )}
 
@@ -177,7 +215,12 @@ export default async function InstallTaskDetailPage({
             {/* 备注/日志 */}
             {task.remark && (
                 <Card>
-                    <CardHeader title="备注/日志" icon={<FileText className="h-4 w-4" />} />
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            备注/日志
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent>
                         <pre className="text-sm whitespace-pre-wrap text-muted-foreground">{task.remark}</pre>
                     </CardContent>

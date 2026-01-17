@@ -323,3 +323,64 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>, user
         return res;
     });
 }
+
+export async function importLeads(data: any[], userId: string, tenantId: string) {
+    let successCount = 0;
+    let errors: { row: number, error: string }[] = [];
+
+    // Batch processing
+    // For large imports, we might want to chunk this, but for Phase 1 (~hundreds), loop is fine.
+    for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+
+        // Basic Transformation if needed
+        // Assuming row keys match createLeadSchema
+
+        const parseResult = createLeadSchema.safeParse(row);
+
+        if (!parseResult.success) {
+            errors.push({
+                row: i + 1,
+                error: parseResult.error.issues.map(iss => `${iss.path.join('.')}: ${iss.message}`).join('; ')
+            });
+            continue;
+        }
+
+        const validData = parseResult.data;
+
+        try {
+            const result = await LeadService.createLead({
+                ...validData,
+                customerName: validData.customerName,
+                customerPhone: validData.customerPhone,
+                customerWechat: validData.customerWechat ?? null,
+                community: validData.community ?? null,
+                houseType: validData.houseType ?? null,
+                address: validData.address ?? null,
+                sourceChannelId: validData.sourceChannelId ?? null,
+                sourceSubId: validData.sourceSubId ?? null,
+                sourceDetail: validData.sourceDetail ?? null,
+                intentionLevel: validData.intentionLevel ?? null,
+                estimatedAmount: validData.estimatedAmount ? String(validData.estimatedAmount) : null,
+                channelId: validData.channelId ?? null,
+                channelContactId: validData.channelContactId ?? null,
+                notes: validData.remark ?? null,
+                tags: validData.tags ?? null,
+            } as any, tenantId, userId);
+
+            if (result.isDuplicate) {
+                errors.push({
+                    row: i + 1,
+                    error: `重复线索: ${result.duplicateReason === 'PHONE' ? '手机号重复' : '地址重复'} (与现有活跃线索冲突)`
+                });
+            } else {
+                successCount++;
+            }
+        } catch (err: any) {
+            errors.push({ row: i + 1, error: err.message || 'Unknown error' });
+        }
+    }
+
+    revalidatePath('/leads');
+    return { successCount, errors };
+}

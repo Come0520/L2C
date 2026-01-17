@@ -3,7 +3,7 @@
  */
 
 import { notFound, redirect } from 'next/navigation';
-import { getCustomerDetail } from '@/features/customers/actions';
+import { getCustomerDetail } from '@/features/customers/actions/queries';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';

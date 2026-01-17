@@ -1,6 +1,6 @@
 import { db } from "@/shared/api/db";
 import { leads, channels } from "@/shared/api/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, notInArray } from "drizzle-orm";
 import { CustomerService } from "./customer.service";
 import { randomBytes } from 'crypto';
 import { format } from 'date-fns';
@@ -29,16 +29,18 @@ export class LeadService {
         lead: any; // Type inference helper
     }> {
 
-        // 1. Check Phone Uniqueness
-        const existingLead = await db.query.leads.findFirst({
+        // 1. Check Active Lead Uniqueness
+        // Only block if the lead exists and is active (not WON or VOID)
+        const activeLead = await db.query.leads.findFirst({
             where: and(
                 eq(leads.customerPhone, data.customerPhone),
-                eq(leads.tenantId, tenantId)
+                eq(leads.tenantId, tenantId),
+                notInArray(leads.status, ['WON', 'VOID'])
             )
         });
 
-        if (existingLead) {
-            return { isDuplicate: true, duplicateReason: 'PHONE', lead: existingLead };
+        if (activeLead) {
+            return { isDuplicate: true, duplicateReason: 'PHONE', lead: activeLead };
         }
 
         // 2. Check Address/Community Uniqueness (Secondary Check)

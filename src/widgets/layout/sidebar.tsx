@@ -1,86 +1,223 @@
 ﻿"use client";
-import React, { useState } from "react";
+
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "../../shared/utils";
+import { cn } from "@/shared/lib/utils";
 import {
-    Home, Users, FileText, ShoppingCart, 
-    BarChart2, Settings, Package, Menu, X
-} from "lucide-react";
+    Sidebar,
+    SidebarBody,
+    useSidebar,
+} from "@/components/ui/sidebar";
+import Home from 'lucide-react/dist/esm/icons/home';
+import Users from 'lucide-react/dist/esm/icons/users';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Ruler from 'lucide-react/dist/esm/icons/ruler';
+import Wrench from 'lucide-react/dist/esm/icons/wrench';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Headphones from 'lucide-react/dist/esm/icons/headphones';
+import Truck from 'lucide-react/dist/esm/icons/truck';
 
-export function Sidebar() {
-    const [open, setOpen] = useState(false);
+import { motion } from "motion/react";
+import { AnimatedList } from "@/shared/ui/animated-list";
+import { LogoWithThemeSwitcher } from "@/shared/ui/theme-pill-nav";
+
+/**
+ * 导航链接配置
+ * 各模块入口，使用 lucide-react 图标
+ */
+const navLinks = [
+    {
+        label: "工作台",
+        href: "/",
+        icon: Home,
+    },
+    {
+        label: "线索管理",
+        href: "/leads",
+        icon: Users,
+    },
+    {
+        label: "报价管理",
+        href: "/quotes",
+        icon: FileText,
+    },
+    {
+        label: "订单管理",
+        href: "/orders",
+        icon: ShoppingCart,
+    },
+    {
+        label: "测量服务",
+        href: "/service/measurement",
+        icon: Ruler,
+    },
+    {
+        label: "安装服务",
+        href: "/service/installation",
+        icon: Wrench,
+    },
+    {
+        label: "供应链",
+        href: "/supply-chain",
+        icon: Truck,
+    },
+    {
+        label: "财务中心",
+        href: "/finance",
+        icon: DollarSign,
+    },
+    {
+        label: "售后服务",
+        href: "/after-sales",
+        icon: Headphones,
+    },
+    {
+        label: "数据分析",
+        href: "/analytics",
+        icon: BarChart2,
+    },
+    {
+        label: "系统设置",
+        href: "/settings",
+        icon: Settings,
+    },
+];
+
+/**
+ * 应用侧边栏导航组件
+ * 使用 Aceternity UI Sidebar 实现悬停展开效果
+ */
+export function AppSidebar() {
     const pathname = usePathname();
-
-    const links = [
-        { label: "Dashboard", href: "/dashboard", icon: <Home className="h-5 w-5" /> },
-        { label: "Leads", href: "/leads", icon: <Users className="h-5 w-5" /> },
-        { label: "Quotes", href: "/quotes", icon: <FileText className="h-5 w-5" /> },
-        { label: "Orders", href: "/orders", icon: <ShoppingCart className="h-5 w-5" /> },
-        { label: "Inventory", href: "/inventory", icon: <Package className="h-5 w-5" /> },
-        { label: "Analytics", href: "/analytics", icon: <BarChart2 className="h-5 w-5" /> },
-        { label: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
-    ];
+    const [open, setOpen] = React.useState(false);
 
     return (
-        <>
-            {/* Mobile Menu Button */}
-            <div className="md:hidden fixed top-4 left-4 z-50">
-                <button onClick={() => setOpen(!open)} className="p-2 bg-white rounded-md shadow-md">
-                    {open ? <X /> : <Menu />}
-                </button>
-            </div>
-
-            {/* Sidebar Container */}
-            <div className={cn(
-                "fixed inset-y-0 left-0 z-40 w-64 bg-white/90 backdrop-blur-xl border-r border-gray-200 transition-transform duration-300 md:translate-x-0 dark:bg-black/90 dark:border-gray-800",
-                open ? "translate-x-0" : "-translate-x-full"
-            )}>
-                <div className="flex flex-col h-full">
-                    {/* Logo */}
-                    <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-800">
-                        <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-                            L2C System
-                        </span>
+        <Sidebar open={open} setOpen={setOpen}>
+            <SidebarBody className="justify-between gap-6 glass-liquid border-r border-white/10 dark:border-white/5">
+                <div className="flex flex-col flex-1 overflow-hidden">
+                    {/* Logo 带主题切换 */}
+                    <div className="px-2 pb-4 border-b border-white/10 dark:border-white/5">
+                        <LogoWrapper />
                     </div>
 
-                    {/* Nav Links */}
-                    <nav className="flex-1 overflow-y-auto py-4">
-                        <ul className="space-y-1 px-3">
-                            {links.map((link) => {
-                                const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                    {/* 导航链接 - 使用 AnimatedList */}
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden mt-4 px-1">
+                        <AnimatedList
+                            items={navLinks.map((link, index) => {
+                                const isActive = pathname === link.href ||
+                                    (link.href !== "/" && pathname.startsWith(link.href));
                                 return (
-                                    <li key={link.href}>
-                                        <Link
-                                            href={link.href}
-                                            className={cn(
-                                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                                                isActive 
-                                                    ? "bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400" 
-                                                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                                            )}
-                                        >
-                                            {link.icon}
-                                            {link.label}
-                                        </Link>
-                                    </li>
+                                    <NavLink
+                                        key={link.href}
+                                        href={link.href}
+                                        label={link.label}
+                                        icon={link.icon}
+                                        isActive={isActive}
+                                    />
                                 );
                             })}
-                        </ul>
-                    </nav>
-
-                    {/* Footer */}
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700" />
-                            <div className="flex flex-col">
-                                <span className="text-sm font-medium">Admin User</span>
-                                <span className="text-xs text-gray-500">View Profile</span>
-                            </div>
-                        </div>
+                            showGradients={false}
+                            enableArrowNavigation={false}
+                            displayScrollbar={true}
+                            itemClassName="mb-1"
+                        />
                     </div>
                 </div>
-            </div>
-        </>
+
+                {/* 底部用户信息 */}
+                <div className="border-t border-white/10 dark:border-white/5 pt-4 px-2">
+                    <NavLink
+                        href="/settings/preferences"
+                        label="个人设置"
+                        icon={() => (
+                            <div className="h-7 w-7 shrink-0 rounded-full bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-sm font-medium">
+                                U
+                            </div>
+                        )}
+                        isActive={false}
+                    />
+                </div>
+            </SidebarBody>
+        </Sidebar>
     );
 }
+
+/**
+ * Logo 包装组件（根据展开状态显示/隐藏标题）
+ */
+function LogoWrapper() {
+    const { open, animate } = useSidebar();
+
+    return (
+        <div className={cn(
+            "flex items-center transition-all duration-300",
+            animate && !open ? "justify-center" : "justify-start gap-3"
+        )}>
+            <LogoWithThemeSwitcher />
+            <motion.span
+                animate={{
+                    display: animate ? (open ? "inline-block" : "none") : "inline-block",
+                    opacity: animate ? (open ? 1 : 0) : 1,
+                }}
+                className="font-serif font-semibold text-xl bg-linear-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent whitespace-pre"
+            >
+                L2C System
+            </motion.span>
+        </div>
+    );
+}
+
+/**
+ * 导航链接项组件
+ * 放大了字体尺寸 (text-base)
+ */
+function NavLink({
+    href,
+    label,
+    icon: Icon,
+    isActive,
+}: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    isActive: boolean;
+}) {
+    const { open, animate } = useSidebar();
+
+    return (
+        <Link
+            href={href}
+            className={cn(
+                "flex items-center py-2.5 px-3 rounded-xl transition-all duration-300 group/sidebar",
+                animate && !open ? "justify-center" : "justify-start gap-3",
+                isActive
+                    ? "bg-primary-500/20 text-primary-600 dark:text-primary-400"
+                    : "text-neutral-700 dark:text-neutral-200 hover:bg-white/10 dark:hover:bg-white/5"
+            )}
+        >
+            <Icon className={cn(
+                "h-5 w-5 shrink-0 transition-colors",
+                isActive ? "text-primary-600 dark:text-primary-400" : "text-neutral-500 dark:text-neutral-400"
+            )} />
+            <motion.span
+                animate={{
+                    display: animate ? (open ? "inline-block" : "none") : "inline-block",
+                    opacity: animate ? (open ? 1 : 0) : 1,
+                }}
+                className={cn(
+                    "text-base font-medium group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre",
+                    isActive ? "text-primary-600 dark:text-primary-400" : ""
+                )}
+            >
+                {label}
+            </motion.span>
+        </Link>
+    );
+}
+
+// 默认导出以保持向后兼容
+export { AppSidebar as Sidebar };

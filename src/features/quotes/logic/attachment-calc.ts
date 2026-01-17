@@ -1,4 +1,14 @@
-﻿export const calculateAttachmentAmount = (attachments: any[], parentUnitPrice: number) => {
+﻿/**
+ * 附件项类型定义
+ */
+export interface AttachmentItem {
+    type: string;
+    quantity: number;
+    unitPrice: number;
+    inheritParentPrice: boolean;
+}
+
+export const calculateAttachmentAmount = (attachments: AttachmentItem[], parentUnitPrice: number) => {
     return attachments.reduce((sum, att) => {
         const price = att.inheritParentPrice ? parentUnitPrice : (att.unitPrice || 0);
         return sum + (price * (att.quantity || 0));

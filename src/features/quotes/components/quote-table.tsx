@@ -10,7 +10,7 @@ import {
 } from '../../../shared/ui/table';
 
 import { Button } from '../../../shared/ui/button';
-import { Eye } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
 import Link from 'next/link';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { format } from 'date-fns';

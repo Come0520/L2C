@@ -41,7 +41,7 @@ export class MeasurementService {
             await tx.update(measureTasks)
                 .set({
                     assignedWorkerId: workerId,
-                    status: 'DISPATCHED', // Map to enum 'DISPATCHING'
+                    status: 'DISPATCHING', // Use correct enum value
                     updatedAt: new Date()
                 })
                 .where(eq(measureTasks.id, taskId));

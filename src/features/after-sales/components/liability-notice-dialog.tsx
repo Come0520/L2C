@@ -10,8 +10,8 @@ import {
     DialogTitle,
     DialogTrigger,
     DialogFooter
-} from '@/shared/components/ui/dialog';
-import { Button } from '@/shared/components/ui/button';
+} from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
 import {
     Form,
     FormControl,
@@ -19,12 +19,12 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from '@/shared/components/ui/form';
-import { Input } from '@/shared/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
-import { Textarea } from '@/shared/components/ui/textarea';
+} from '@/shared/ui/form';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
 import { createLiabilityNotice } from '../actions';
-import { useToast } from '@/shared/components/ui/use-toast';
+import { toast } from 'sonner';
 import { liablePartyTypeEnum, liabilityReasonCategoryEnum } from '@/shared/api/schema/enums';
 
 const REASON_CATEGORY_LABELS: Record<string, string> = {
@@ -56,13 +56,14 @@ interface LiabilityNoticeDialogProps {
 
 export function LiabilityNoticeDialog({ afterSalesId, onSuccess, trigger }: LiabilityNoticeDialogProps) {
     const [open, setOpen] = useState(false);
-    const { toast } = useToast();
 
-    const form = useForm<FormValues>({
+
+    const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
             reason: '',
             amount: 0,
+            liablePartyType: 'INSTALLER',
         },
     });
 
@@ -74,16 +75,16 @@ export function LiabilityNoticeDialog({ afterSalesId, onSuccess, trigger }: Liab
         });
 
         if (result.error) {
-            toast({ title: '创建失败', description: result.error, variant: 'destructive' });
+            toast.error('创建失败', { description: result.error });
             return;
         }
 
         if (result.data?.success) {
-            toast({ title: '创建成功', description: result.data.message });
+            toast.success('创建成功', { description: result.data.message });
             setOpen(false);
             if (onSuccess) onSuccess();
         } else {
-            toast({ title: '创建失败', description: result.data?.message || '未知错误', variant: 'destructive' });
+            toast.error('创建失败', { description: result.error || result.data?.message || '未知错误' });
         }
     };
 
@@ -129,7 +130,7 @@ export function LiabilityNoticeDialog({ afterSalesId, onSuccess, trigger }: Liab
                                 <FormItem>
                                     <FormLabel>定责金额</FormLabel>
                                     <FormControl>
-                                        <Input type="number" {...field} />
+                                        <Input type="number" {...field} value={field.value as number} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

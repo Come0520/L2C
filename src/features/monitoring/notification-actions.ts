@@ -13,7 +13,7 @@ import { revalidatePath } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { notificationService } from '@/features/notifications/service';
-import { NotificationType } from '@/shared/api/types';
+import { NotificationType } from '@/shared/api/schema';
 
 export type CreateNotificationParams = {
     userId: string;
@@ -56,7 +56,7 @@ export const createNotification = createSafeAction(createNotificationSchema, asy
     } else if (params.type === 'INFO') {
         notificationType = 'SYSTEM';
     } else {
-        notificationType = params.type as NotificationType;
+        notificationType = params.type as unknown as NotificationType;
     }
 
     try {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/shared/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { Plus } from 'lucide-react';
 
 export default function QuotesPageClient() {
@@ -15,7 +15,7 @@ export default function QuotesPageClient() {
                 </Button>
             </div>
             <div className="rounded-md border p-8 text-center text-muted-foreground">
-                报价列表组件在恢复模式下暂不可用。
+                报价列表组件在恢复模式下暂不可用�?
             </div>
         </div>
     );

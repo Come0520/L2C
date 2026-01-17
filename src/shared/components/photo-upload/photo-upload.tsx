@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import { Upload, X } from 'lucide-react';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import X from 'lucide-react/dist/esm/icons/x';
 
 interface PhotoUploadProps {
     value?: string[];
@@ -51,4 +52,9 @@ export function PhotoUpload({ value = [], onChange, maxFiles = 5 }: PhotoUploadP
             </div>
         </div>
     );
+}
+
+export async function compressImage(file: File): Promise<Blob> {
+    // Mock compression or just return file
+    return file;
 }

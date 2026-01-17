@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { auth } from '@/shared/lib/auth';
 import { fetchQuotePlans } from '@/features/quotes/lib/plan-loader';
-import { getQuoteBundleById } from '@/features/quotes/actions';
+import { getQuoteBundleById } from '@/features/quotes/actions/queries';
 import { QuoteBundleDetailView } from '@/features/quotes/components/quote-bundle-detail-view';
 import { notFound } from 'next/navigation';
 

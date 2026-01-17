@@ -1,4 +1,4 @@
-import { getFinanceConfig, getFinanceAccounts } from '@/features/finance/actions';
+import { getFinanceConfig, getFinanceAccounts } from '@/features/finance/actions/config';
 import { FinanceSettingsForm } from '@/features/finance/components/FinanceSettingsForm';
 import { AccountList } from '@/features/finance/components/AccountList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';

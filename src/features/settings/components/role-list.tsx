@@ -14,9 +14,10 @@ import { Badge } from '@/shared/ui/badge';
 
 interface RoleListProps {
     data: any[];
+    onEdit?: (role: any) => void;
 }
 
-export function RoleList({ data }: RoleListProps) {
+export function RoleList({ data, onEdit }: RoleListProps) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -24,7 +25,7 @@ export function RoleList({ data }: RoleListProps) {
                     <TableRow>
                         <TableHead>Role Name</TableHead>
                         <TableHead>Code</TableHead>
-                         <TableHead>Type</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -41,7 +42,7 @@ export function RoleList({ data }: RoleListProps) {
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.code}</TableCell>
                                 <TableCell>
-                                     <Badge variant="outline">Custom</Badge>
+                                    <Badge variant="outline">Custom</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon">

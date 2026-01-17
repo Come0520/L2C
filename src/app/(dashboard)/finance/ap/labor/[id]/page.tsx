@@ -11,8 +11,9 @@ import { format } from "date-fns";
 import { PaymentBillDialog } from "@/features/finance/components/PaymentBillDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-export default async function APLaborStatementDetailPage({ params }: { params: { id: string } }) {
-    const statement = await getAPLaborStatement(params.id);
+export default async function APLaborStatementDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const statement = await getAPLaborStatement(id);
 
     if (!statement) {
         notFound();

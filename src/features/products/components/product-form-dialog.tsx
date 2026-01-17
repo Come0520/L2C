@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { ProductForm } from './product-form';
 import { Product } from '..';
+import { createProduct, updateProduct } from '../actions';
+import { toast } from 'sonner';
 
 interface ProductFormDialogProps {
     open: boolean;
@@ -20,10 +22,32 @@ export function ProductFormDialog({
 }: ProductFormDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSuccess = () => {
-        setIsLoading(false);
-        onOpenChange(false);
-        onSuccess?.();
+    const handleSubmit = async (values: any) => {
+        setIsLoading(true);
+        try {
+            if (initialData?.id) {
+                const result = await updateProduct({ ...values, id: initialData.id });
+                if (result.error) {
+                    toast.error(result.error);
+                    return;
+                }
+                toast.success('更新成功');
+            } else {
+                const result = await createProduct(values);
+                if (result.error) {
+                    toast.error(result.error);
+                    return;
+                }
+                toast.success('创建成功');
+            }
+            onOpenChange(false);
+            onSuccess?.();
+        } catch (error) {
+            console.error(error);
+            toast.error('操作失败');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleCancel = () => {
@@ -41,9 +65,9 @@ export function ProductFormDialog({
                     </DialogTitle>
                 </DialogHeader>
                 <ProductForm
-                    initialData={initialData}
-                    onSuccess={handleSuccess}
-                    onCancel={handleCancel}
+                    initialData={initialData as any}
+                    onSubmit={handleSubmit}
+                    isLoading={isLoading}
                 />
             </DialogContent>
         </Dialog>

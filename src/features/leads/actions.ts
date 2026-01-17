@@ -15,7 +15,8 @@ import {
     addFollowup,
     releaseToPool,
     claimFromPool,
-    convertLead
+    convertLead,
+    importLeads
 } from './actions/mutations';
 
 export {
@@ -30,7 +31,8 @@ export {
     addFollowup as addLeadFollowup,
     releaseToPool,
     claimFromPool,
-    convertLead
+    convertLead,
+    importLeads
 };
 
 

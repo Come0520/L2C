@@ -10,7 +10,11 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Eye, ClipboardEdit, Truck, Warehouse } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import ClipboardEdit from 'lucide-react/dist/esm/icons/clipboard-edit';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import Warehouse from 'lucide-react/dist/esm/icons/warehouse';
+
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { OrderStatusBadge } from './order-status-badge';
@@ -30,7 +34,7 @@ interface OrderTableProps {
     data: Order[];
 }
 
-export function OrderTable({ data }: OrderTableProps) {
+export const OrderTable = React.memo(function OrderTable({ data }: OrderTableProps) {
     return (
         <div className="rounded-md border bg-white">
             <Table>
@@ -106,4 +110,5 @@ export function OrderTable({ data }: OrderTableProps) {
             </Table>
         </div>
     );
-}
+});
+

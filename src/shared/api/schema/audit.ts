@@ -1,8 +1,9 @@
 import { pgTable, text, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
-import { users } from './infrastructure';
+import { users, tenants } from './infrastructure';
 
 export const auditLogs = pgTable('audit_logs', {
     id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     tableName: text('table_name').notNull(),
     recordId: text('record_id').notNull(),
     action: text('action').notNull(), // UPDATE, DELETE, CREATE

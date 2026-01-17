@@ -22,9 +22,9 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
-type SupplierFormValues = {
+export type SupplierFormValues = {
     id?: string;
     name: string;
     contactPerson?: string;

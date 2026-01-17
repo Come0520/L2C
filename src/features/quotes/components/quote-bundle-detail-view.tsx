@@ -2,7 +2,12 @@
 
 import React from 'react';
 
-export function QuoteBundleDetailView() {
+interface QuoteBundleDetailViewProps {
+    bundle: any;
+    plans: any;
+}
+
+export function QuoteBundleDetailView({ bundle, plans }: QuoteBundleDetailViewProps) {
     return (
         <div className="p-4">
             <h2 className="text-xl font-bold">报价单详情 (Bundle Detail)</h2>

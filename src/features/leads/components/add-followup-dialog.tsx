@@ -67,7 +67,7 @@ export function AddFollowupDialog({ leadId, trigger, userId, tenantId }: AddFoll
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
 
-    const form = useForm<FormValues>({
+    const form = useForm({
         resolver: zodResolver(addLeadFollowupSchema),
         defaultValues: {
             leadId,

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
-import { TableRow, TableCell } from '@/shared/components/ui/table';
+import { TableRow, TableCell } from '@/shared/ui/table';
 
 export function QuoteItemTableRow() {
     return (

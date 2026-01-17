@@ -9,7 +9,11 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Edit, Trash2, MoreHorizontal, Power, PowerOff } from 'lucide-react';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Power from 'lucide-react/dist/esm/icons/power';
+import PowerOff from 'lucide-react/dist/esm/icons/power-off';
 import {
     DropdownMenu,
     DropdownMenuContent,

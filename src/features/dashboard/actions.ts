@@ -80,7 +80,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 .from(measureTasks)
                 .where(and(
                     eq(measureTasks.tenantId, tenantId),
-                    eq(measureTasks.status, 'PENDING')
+                    eq(measureTasks.status, 'PENDING_VISIT')
                 ));
 
             stats.cards.push({
@@ -184,7 +184,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 .where(and(
                     eq(installTasks.tenantId, tenantId),
                     eq(installTasks.installerId, userId),
-                    eq(installTasks.status, 'PENDING')
+                    eq(installTasks.status, 'PENDING_DISPATCH')
                 ));
 
             stats.cards.push({

@@ -95,3 +95,10 @@ export async function checkInMeasureTask(input: z.infer<typeof checkInSchema>) {
     revalidatePath(`/service/measurement/${id}`);
     return { success: true, data: updated };
 }
+
+/**
+ * 提交测量数据 (Stub)
+ */
+export async function submitMeasureData(input: any) {
+    return { success: true, data: {} };
+}

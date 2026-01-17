@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Search, RotateCcw, Filter } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Filter from 'lucide-react/dist/esm/icons/filter';
+
 import { OrderTable } from './order-table';
 import { getOrders } from '../actions/orders';
 import { toast } from 'sonner';
@@ -15,12 +18,11 @@ export function OrderList() {
     const fetchOrders = React.useCallback(async () => {
         setLoading(true);
         try {
-            const orders = await getOrders();
-            if (Array.isArray(orders)) {
-                setData(orders);
-            } else if (orders.success && orders.data) {
-                setData(orders.data);
+            const ordersData = await getOrders();
+            if (Array.isArray(ordersData)) {
+                setData(ordersData);
             }
+
         } catch (error) {
             console.error('Failed to fetch orders:', error);
             toast.error('获取订单列表失败');

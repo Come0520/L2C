@@ -11,7 +11,8 @@
     decimal,
 } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { customerLevelEnum } from './enums'; // Using existing enum
+import { customerLevelEnum, customerLifecycleStageEnum, customerPipelineStatusEnum } from './enums'; // Using existing enum
+
 
 export const customers = pgTable('customers', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -27,6 +28,9 @@ export const customers = pgTable('customers', {
     birthday: timestamp('birthday'),
 
     level: customerLevelEnum('level').default('D'),
+    lifecycleStage: customerLifecycleStageEnum('lifecycle_stage').default('LEAD').notNull(),
+    pipelineStatus: customerPipelineStatusEnum('pipeline_status').default('UNASSIGNED').notNull(),
+
 
     // Referral
     referrerCustomerId: uuid('referrer_customer_id'), // Self-reference added in relations

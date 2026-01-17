@@ -40,11 +40,23 @@ import {
 } from './quotes';
 
 import {
+    approvalFlows,
+    approvalNodes,
+    approvals,
+    approvalTasks
+} from './approval';
+
+import {
     measureTasks,
     measureSheets,
     measureItems,
-    installTasks
+    installTasks,
+    installItems,
+    installPhotos
 } from './service';
+
+
+
 
 import {
     financeConfigs,
@@ -394,6 +406,7 @@ export const measureTasksRelations = relations(measureTasks, ({ one, many }) => 
     sheets: many(measureSheets),
 }));
 
+
 export const measureSheetsRelations = relations(measureSheets, ({ one, many }) => ({
     tenant: one(tenants, {
         fields: [measureSheets.tenantId],
@@ -417,6 +430,7 @@ export const measureItemsRelations = relations(measureItems, ({ one }) => ({
     }),
 }));
 
+
 export const installTasksRelations = relations(installTasks, ({ one, many }) => ({
     tenant: one(tenants, {
         fields: [installTasks.tenantId],
@@ -426,16 +440,57 @@ export const installTasksRelations = relations(installTasks, ({ one, many }) => 
         fields: [installTasks.orderId],
         references: [orders.id],
     }),
+    afterSales: one(afterSalesTickets, {
+        fields: [installTasks.afterSalesId],
+        references: [afterSalesTickets.id],
+    }),
     customer: one(customers, {
         fields: [installTasks.customerId],
         references: [customers.id],
+    }),
+    sales: one(users, {
+        fields: [installTasks.salesId],
+        references: [users.id],
+    }),
+    dispatcher: one(users, {
+        fields: [installTasks.dispatcherId],
+        references: [users.id],
     }),
     installer: one(users, {
         fields: [installTasks.installerId],
         references: [users.id],
     }),
+    confirmedBy: one(users, {
+        fields: [installTasks.confirmedBy],
+        references: [users.id],
+    }),
+    items: many(installItems),
+    photos: many(installPhotos),
     laborFeeDetails: many(apLaborFeeDetails),
 }));
+
+export const installItemsRelations = relations(installItems, ({ one }) => ({
+    tenant: one(tenants, {
+        fields: [installItems.tenantId],
+        references: [tenants.id],
+    }),
+    task: one(installTasks, {
+        fields: [installItems.installTaskId],
+        references: [installTasks.id],
+    }),
+}));
+
+export const installPhotosRelations = relations(installPhotos, ({ one }) => ({
+    tenant: one(tenants, {
+        fields: [installPhotos.tenantId],
+        references: [tenants.id],
+    }),
+    task: one(installTasks, {
+        fields: [installPhotos.installTaskId],
+        references: [installTasks.id],
+    }),
+}));
+
 
 // ==================== 财务模块关系 (Finance Module Relations) ====================
 
@@ -686,6 +741,45 @@ export const liabilityNoticesRelations = relations(liabilityNotices, ({ one }) =
     }),
     arbitrator: one(users, {
         fields: [liabilityNotices.arbitratedBy],
+        references: [users.id],
+    }),
+}));
+
+export const approvalFlowsRelations = relations(approvalFlows, ({ many }) => ({
+    nodes: many(approvalNodes),
+    instances: many(approvals),
+}));
+
+export const approvalNodesRelations = relations(approvalNodes, ({ one }) => ({
+    flow: one(approvalFlows, {
+        fields: [approvalNodes.flowId],
+        references: [approvalFlows.id],
+    }),
+}));
+
+export const approvalsRelations = relations(approvals, ({ one, many }) => ({
+    flow: one(approvalFlows, {
+        fields: [approvals.flowId],
+        references: [approvalFlows.id],
+    }),
+    requester: one(users, {
+        fields: [approvals.requesterId],
+        references: [users.id],
+    }),
+    tasks: many(approvalTasks),
+}));
+
+export const approvalTasksRelations = relations(approvalTasks, ({ one }) => ({
+    approval: one(approvals, {
+        fields: [approvalTasks.approvalId],
+        references: [approvals.id],
+    }),
+    node: one(approvalNodes, {
+        fields: [approvalTasks.nodeId],
+        references: [approvalNodes.id],
+    }),
+    approver: one(users, {
+        fields: [approvalTasks.approverId],
         references: [users.id],
     }),
 }));

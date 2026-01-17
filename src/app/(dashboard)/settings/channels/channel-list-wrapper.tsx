@@ -1,10 +1,10 @@
 'use client';
 
 import { ChannelList } from "@/features/settings/components/channel-list";
-import { marketChannels, marketChannelCategories } from "@/shared/api/schema";
+import { marketChannels } from "@/shared/api/schema";
 
 type MarketChannel = typeof marketChannels.$inferSelect;
-type MarketChannelCategory = typeof marketChannelCategories.$inferSelect;
+type MarketChannelCategory = typeof marketChannels.$inferSelect;
 
 // 扩展类型，包含categoryName字段
 interface ChannelWithCategory extends MarketChannel {

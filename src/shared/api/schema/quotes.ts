@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index, boolean } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 
@@ -11,6 +11,7 @@ export const quotes = pgTable('quotes', {
     measureVariantId: uuid('measure_variant_id'), // Optional reference to measure variant
 
     // Versioning
+    rootQuoteId: uuid('root_quote_id'), // Identifies the quote family
     parentQuoteId: uuid('parent_quote_id'), // Points to the previous version
     isActive: boolean('is_active').default(true), // Only one active version per QuoteNo chain
 
@@ -20,12 +21,19 @@ export const quotes = pgTable('quotes', {
     discountRate: decimal('discount_rate', { precision: 5, scale: 4 }), // e.g. 0.9500
     discountAmount: decimal('discount_amount', { precision: 12, scale: 2 }).default('0'),
     finalAmount: decimal('final_amount', { precision: 12, scale: 2 }).default('0'),
+    minProfitMargin: decimal('min_profit_margin', { precision: 5, scale: 4 }), // Snapshot of required margin at time of quote
 
     status: varchar('status', { length: 50 }).default('DRAFT'),
     version: integer('version').default(1).notNull(),
 
     validUntil: timestamp('valid_until', { withTimezone: true }),
     notes: text('notes'),
+
+    // Approval Flow (Batch 1 Task 2)
+    approvalRequired: boolean('approval_required').default(false),
+    approverId: uuid('approver_id').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    rejectReason: text('reject_reason'),
 
     lockedAt: timestamp('locked_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => users.id),
@@ -66,11 +74,12 @@ export const quoteItems = pgTable('quote_items', {
     unit: varchar('unit', { length: 20 }), // 米, 平米, 个
 
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal('cost_price', { precision: 10, scale: 2 }), // Cost snapshot for profit analysis
     quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
 
     // Dimensions & Calc
-    width: decimal('width', { precision: 10, scale: 2 }), // mm or cm? Docs say mm
-    height: decimal('height', { precision: 10, scale: 2 }), // mm
+    width: decimal('width', { precision: 10, scale: 2 }), // cm
+    height: decimal('height', { precision: 10, scale: 2 }), // cm
     foldRatio: decimal('fold_ratio', { precision: 4, scale: 2 }),
     processFee: decimal('process_fee', { precision: 10, scale: 2 }),
 
@@ -83,6 +92,10 @@ export const quoteItems = pgTable('quote_items', {
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
+
+export type QuoteItem = typeof quoteItems.$inferSelect;
+export type NewQuoteItem = typeof quoteItems.$inferInsert;
+
 
 export const quotePlans = pgTable('quote_plans', {
     id: uuid('id').primaryKey().defaultRandom(),

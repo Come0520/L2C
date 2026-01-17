@@ -24,7 +24,7 @@ export default function SuppliersPage() {
                 toast.error(result.error);
                 return;
             }
-            setData(result.data || []);
+            setData(result.data?.data || []);
         } catch (error: any) {
             toast.error('获取供应商失败');
         } finally {

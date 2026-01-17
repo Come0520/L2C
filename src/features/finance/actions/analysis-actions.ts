@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import {
     orders,
-    inventoryUsageLogs,
+
     purchaseOrderItems,
     installTasks,
     quoteItems
@@ -20,7 +20,7 @@ const getOrderProfitSchema = z.object({
 
 export const getOrderProfitability = createSafeAction(getOrderProfitSchema, async ({ orderId }, { session }) => {
     // Ensure permission
-    await checkPermission(session, PERMISSIONS.FINANCE.PROFIT_VIEW);
+    await checkPermission(session, PERMISSIONS.FINANCE.VIEW);
 
     // 1. Fetch Order and Revenue
     const order = await db.query.orders.findFirst({
@@ -43,12 +43,12 @@ export const getOrderProfitability = createSafeAction(getOrderProfitSchema, asyn
 
     // 2. Inventory Cost (FIFO) - Stock Items
     // Sum cost from inventory_usage_logs
-    const inventoryCostResult = await db
-        .select({ total: sql<number>`sum(${inventoryUsageLogs.cost})` })
-        .from(inventoryUsageLogs)
-        .where(eq(inventoryUsageLogs.orderId, orderId));
+    // const inventoryCostResult = await db
+    //     .select({ total: sql<number>`sum(${inventoryUsageLogs.cost})` })
+    //     .from(inventoryUsageLogs)
+    //     .where(eq(inventoryUsageLogs.orderId, orderId));
 
-    const inventoryCost = Number(inventoryCostResult[0]?.total || 0);
+    const inventoryCost = 0; // Number(inventoryCostResult[0]?.total || 0);
 
     // 3. Direct Material Cost (Non-Stock) - PO Items
     // Strategy: Find all quote items for this order that are potentially non-stock

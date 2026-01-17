@@ -21,7 +21,7 @@ const updateSupplierSchema = z.object({
     name: z.string().min(1).max(200).optional(),
     contactPerson: z.string().optional(),
     phone: z.string().optional(),
-    paymentPeriod: z.enum(['CASH', 'MONTHLY']).optional(),
+    paymentPeriod: z.enum(['CASH', 'MONTHLY']).optional().nullable(),
     isActive: z.boolean().optional(),
 });
 
@@ -34,9 +34,10 @@ export const createSupplier = createSafeAction(createSupplierSchema, async (data
 
     const [supplier] = await db.insert(suppliers).values({
         tenantId: session.user.tenantId,
+        supplierNo: `SUP${Date.now()}`,
         name: data.name,
-        contactPerson: data.contactPerson,
-        phone: data.phone,
+        contactPerson: data.contactPerson ?? null,
+        phone: data.phone ?? null,
         paymentPeriod: data.paymentPeriod,
         createdBy: session.user.id,
     }).returning();

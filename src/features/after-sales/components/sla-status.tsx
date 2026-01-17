@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
 
 import { format, differenceInHours, differenceInMinutes, isPast } from "date-fns";
 import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -71,7 +71,7 @@ export function SLAStatus({ ticket }: SLAStatusProps) {
                         <Clock className="h-5 w-5" /> SLA 监控
                     </span>
                     {activeStatus && (activeStatus.status === 'urgent' || activeStatus.status === 'overdue') && (
-                        <Badge variant="destructive" className="animate-pulse">
+                        <Badge className="bg-destructive animate-pulse text-destructive-foreground">
                             <AlertCircle className="h-3 w-3 mr-1" /> 此单急需处理
                         </Badge>
                     )}

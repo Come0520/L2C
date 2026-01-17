@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { History, CopyPlus } from 'lucide-react';
+import History from 'lucide-react/dist/esm/icons/history';
+import CopyPlus from 'lucide-react/dist/esm/icons/copy-plus';
 import { createNextVersion } from '../actions/mutations';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils'; // Assuming utils existence or use clsx

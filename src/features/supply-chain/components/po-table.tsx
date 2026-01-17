@@ -9,7 +9,8 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Eye, Printer } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import Printer from 'lucide-react/dist/esm/icons/printer';
 import { StatusBadge } from '@/shared/ui/status-badge';
 import Link from 'next/link';
 

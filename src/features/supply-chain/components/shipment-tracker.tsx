@@ -1,13 +1,18 @@
 ﻿'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Truck } from 'lucide-react';
+import Truck from 'lucide-react/dist/esm/icons/truck';
 
 interface ShipmentTrackerProps {
-    orderId: string;
+    orderId?: string;
+    company?: string;
+    trackingNo?: string;
+    status?: string;
+    trackingData?: any;
+    updatedAt?: string | Date;
 }
 
-export function ShipmentTracker({ orderId }: ShipmentTrackerProps) {
+export function ShipmentTracker({ orderId, company, trackingNo, status, trackingData }: ShipmentTrackerProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -15,9 +20,9 @@ export function ShipmentTracker({ orderId }: ShipmentTrackerProps) {
                 <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">No Data</div>
+                <div className="text-2xl font-bold">{status || 'No Data'}</div>
                 <p className="text-xs text-muted-foreground">
-                    Tracking information for {orderId} is unavailable in recovery mode.
+                    {company} - {trackingNo}
                 </p>
                 <div className="mt-4 space-y-2">
                     {/* Mock timeline */}

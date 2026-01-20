@@ -326,16 +326,14 @@ interface QuoteItemsTableProps {
     rooms: any[];
     items: any[];
     onItemUpdate?: () => void;
+    onAddRoom?: () => void;
     mode?: 'simple' | 'advanced';
     visibleFields?: string[];
     readOnly?: boolean;
-    dimensionLimits?: any; // Should import DimensionLimits, but 'any' avoids circular or extra imports for now if not easy. 
-    // Wait, DimensionLimits is exported from quote-config.service.ts, I should import it or use 'any' if I want to be lazy (not recommended).
-    // Let's use 'any' if import is far, or just skip type if not strict. 
-    // Actually, I can import it.
+    dimensionLimits?: any;
 }
 
-export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 'simple', visibleFields, readOnly = false, dimensionLimits }: QuoteItemsTableProps) {
+export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom, mode = 'simple', visibleFields, readOnly = false, dimensionLimits }: QuoteItemsTableProps) {
 
     const isFieldVisible = (field: string) => {
         if (visibleFields && visibleFields.length > 0) {
@@ -533,9 +531,29 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 's
     return (
         <div className="space-y-8">
             {rooms.length === 0 && itemsByRoom.unassigned.length === 0 && (
-                <div className="glass-empty-state py-12 text-muted-foreground">
+                <div className="glass-empty-state py-12 text-muted-foreground text-center">
                     <p className="text-sm">暂无报价文件明细</p>
                     <p className="text-xs opacity-60 mt-1">请先添加空间或从产品库导入主材</p>
+                    {!readOnly && onAddRoom && (
+                        <Button
+                            variant="outline"
+                            className="mt-4"
+                            onClick={onAddRoom}
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            添加空间
+                        </Button>
+                    )}
+                </div>
+            )}
+
+            {/* 顶部操作栏：添加空间按钮 */}
+            {(rooms.length > 0 || itemsByRoom.unassigned.length > 0) && !readOnly && onAddRoom && (
+                <div className="flex justify-start">
+                    <Button variant="outline" size="sm" onClick={onAddRoom}>
+                        <Plus className="w-4 h-4 mr-1" />
+                        添加空间
+                    </Button>
                 </div>
             )}
 

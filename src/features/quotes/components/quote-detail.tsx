@@ -10,7 +10,7 @@ import { QuoteItemsTable } from './quote-items-table';
 
 import { QuoteVersionHistory } from './quote-version-history';
 import { QuoteToOrderButton } from './quote-to-order-button';
-import { updateQuote, submitQuote, approveQuote, rejectQuote } from '@/features/quotes/actions/mutations';
+import { updateQuote, submitQuote, approveQuote, rejectQuote, createRoom } from '@/features/quotes/actions/mutations';
 import { Badge } from '@/shared/ui/badge';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { toast } from 'sonner';
@@ -385,6 +385,15 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                         visibleFields={config?.visibleFields}
                         readOnly={isReadOnly}
                         dimensionLimits={config?.dimensionLimits}
+                        onAddRoom={async () => {
+                            const name = prompt('请输入空间名称', '新空间');
+                            if (!name) return;
+                            toast.promise(createRoom({ quoteId: quote.id, name }), {
+                                loading: '创建空间中...',
+                                success: '空间创建成功',
+                                error: '创建失败'
+                            });
+                        }}
                     />
                 ) : (
                     // 空间优先视图：按空间组织，每个空间内包含不同品类
@@ -399,6 +408,15 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                         visibleFields={config?.visibleFields}
                         readOnly={isReadOnly}
                         dimensionLimits={config?.dimensionLimits}
+                        onAddRoom={async () => {
+                            const name = prompt('请输入空间名称', '新空间');
+                            if (!name) return;
+                            toast.promise(createRoom({ quoteId: quote.id, name }), {
+                                loading: '创建空间中...',
+                                success: '空间创建成功',
+                                error: '创建失败'
+                            });
+                        }}
                     />
                 )}
             </div>

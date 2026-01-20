@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index, uniqueIndex, date } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, paymentSchedules } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
@@ -557,4 +557,85 @@ export const debitNotes = pgTable('debit_notes', {
     tenantIdx: index('idx_debit_notes_tenant').on(table.tenantId),
     supplierIdx: index('idx_debit_notes_supplier').on(table.supplierId),
     statusIdx: index('idx_debit_notes_status').on(table.status),
+}));
+
+// ==================== 对账确认 (Statement Confirmations) ====================
+
+/**
+ * 账单确认主表 (Statement Confirmations)
+ * 用于月结客户/供应商的定期对账确认
+ * 
+ * 业务场景：
+ * - 每月向月结客户发送对账单
+ * - 客户确认应收金额
+ * - 供应商确认应付金额
+ */
+export const statementConfirmations = pgTable('statement_confirmations', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    confirmationNo: varchar('confirmation_no', { length: 50 }).notNull().unique(),
+
+    // 对账类型：客户对账 / 供应商对账
+    type: varchar('type', { length: 20 }).notNull(), // CUSTOMER/SUPPLIER
+
+    // 对账对象
+    targetId: uuid('target_id').notNull(), // customerId or supplierId
+    targetName: varchar('target_name', { length: 100 }).notNull(),
+
+    // 对账周期
+    periodStart: date('period_start').notNull(),
+    periodEnd: date('period_end').notNull(),
+    periodLabel: varchar('period_label', { length: 50 }).notNull(), // 例如 "2026年1月"
+
+    // 汇总金额
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(), // 账单总额
+    confirmedAmount: decimal('confirmed_amount', { precision: 12, scale: 2 }).default('0'), // 已确认金额
+    disputedAmount: decimal('disputed_amount', { precision: 12, scale: 2 }).default('0'), // 争议金额
+
+    // 状态
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'), // PENDING/SENT/CONFIRMED/DISPUTED/RESOLVED
+
+    // 确认信息
+    sentAt: timestamp('sent_at', { withTimezone: true }), // 发送时间
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }), // 确认时间
+    confirmedBy: varchar('confirmed_by', { length: 100 }), // 对方确认人
+
+    // 元数据
+    remark: text('remark'),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_statement_confirmations_tenant').on(table.tenantId),
+    targetIdx: index('idx_statement_confirmations_target').on(table.targetId),
+    periodIdx: index('idx_statement_confirmations_period').on(table.periodStart, table.periodEnd),
+    statusIdx: index('idx_statement_confirmations_status').on(table.status),
+}));
+
+/**
+ * 账单确认明细表 (Statement Confirmation Details)
+ * 包含每张对账单的明细
+ */
+export const statementConfirmationDetails = pgTable('statement_confirmation_details', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    confirmationId: uuid('confirmation_id').references(() => statementConfirmations.id).notNull(),
+
+    // 关联的原始单据
+    documentType: varchar('document_type', { length: 30 }).notNull(), // AR_STATEMENT/AP_SUPPLIER_STATEMENT/AP_LABOR_STATEMENT
+    documentId: uuid('document_id').notNull(),
+    documentNo: varchar('document_no', { length: 50 }).notNull(),
+    documentDate: date('document_date').notNull(),
+
+    // 金额
+    documentAmount: decimal('document_amount', { precision: 12, scale: 2 }).notNull(),
+
+    // 确认状态
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'), // PENDING/CONFIRMED/DISPUTED
+    disputeReason: text('dispute_reason'), // 争议原因
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    confirmationIdx: index('idx_statement_confirmation_details_confirmation').on(table.confirmationId),
+    documentIdx: index('idx_statement_confirmation_details_doc').on(table.documentId),
 }));

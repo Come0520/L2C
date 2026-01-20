@@ -6,6 +6,8 @@ import { OrderTimeline } from '@/features/orders/components/order-timeline';
 import { OrderDetailActions } from '@/features/orders/components/order-detail-actions';
 import { SnapshotComparison } from '@/features/orders/components/snapshot-view';
 import { LogisticsCard } from '@/features/orders/components/logistics-card';
+import { OrderChangeHistory } from '@/features/orders/components/order-change-history';
+import { RelatedDocuments } from '@/features/orders/components/related-documents';
 import { getOrderById } from '@/features/orders/actions';
 import { getAvailableWorkers } from '@/features/service/measurement/actions/queries';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
@@ -257,23 +259,16 @@ export default async function OrderDetailPage({
                     {/* Logistics Card */}
                     <LogisticsCard orderId={order.id} logistics={order.logistics} />
 
-                    {/* Quick Access Card for Related Docs */}
-                    <Card className="shadow-sm border-dashed bg-slate-50/30">
-                        <CardHeader className="py-3">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">关联单据</span>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-1 pb-6">
-                            <div className="bg-white p-3 rounded-lg border flex items-center justify-between">
-                                <div className="text-sm">
-                                    <div className="text-slate-400 text-[10px] uppercase font-bold">报价来源</div>
-                                    <Link href={`/quotes/${order.quoteId}`} className="font-bold text-primary hover:underline">
-                                        {order.quoteId ? 'VIEW_QUOTE' : '-'}
-                                    </Link>
-                                </div>
-                                <ArrowLeft className="rotate-180 h-4 w-4 text-slate-300" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* 关联单据 (GlassIcons) */}
+                    <RelatedDocuments
+                        orderId={order.id}
+                        purchaseOrderCount={order.purchaseOrders?.length || 0}
+                        installTaskCount={order.installTasks?.length || 0}
+                        receiptBillCount={order.receiptBills?.length || 0}
+                    />
+
+                    {/* 变更历史 */}
+                    <OrderChangeHistory changes={order.changes || []} />
                 </div>
             </div>
         </div>

@@ -2,26 +2,80 @@
 
 import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, users } from '@/shared/api/schema';
-import { eq, and, desc, or, ilike, count } from 'drizzle-orm';
+import { eq, and, desc, or, ilike, count, gte, lte } from 'drizzle-orm';
 
 
 /**
- * 获取测量任务列表
+ * 测量任务查询筛选参数
  */
-export async function getMeasureTasks(filters: {
+export interface MeasureTaskQueryFilters {
     status?: string;
     search?: string;
     page?: number;
     pageSize?: number;
-}) {
-    const { status, search, page = 1, pageSize = 10 } = filters;
+    // 扩展筛选参数
+    workerId?: string;       // 测量师
+    salesId?: string;        // 销售
+    address?: string;        // 地址模糊搜索
+    channel?: string;        // 渠道
+    customerName?: string;   // 客户名称
+    dateFrom?: string;       // 预约日期开始
+    dateTo?: string;         // 预约日期结束
+}
+
+/**
+ * 获取测量任务列表
+ * 
+ * 支持筛选条件：
+ * - status: 任务状态
+ * - search: 搜索（测量单号、备注、地址、渠道、客户）
+ * - workerId: 测量师 ID
+ * - salesId: 销售 ID 
+ * - address: 地址关键词
+ * - channel: 渠道
+ * - customerName: 客户名称
+ * - dateFrom/dateTo: 预约日期范围
+ */
+export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
+    const {
+        status,
+        search,
+        page = 1,
+        pageSize = 10,
+        workerId,
+        salesId,
+        address,
+        channel,
+        customerName,
+        dateFrom,
+        dateTo,
+    } = filters;
+
     const whereConditions = [];
 
+    // 状态筛选
     if (status) {
         // @ts-expect-error - 兼容枚举类型不匹配
         whereConditions.push(eq(measureTasks.status, status));
     }
 
+    // 测量师筛选
+    if (workerId) {
+        whereConditions.push(eq(measureTasks.assignedWorkerId, workerId));
+    }
+
+    // 日期范围筛选
+    if (dateFrom) {
+        whereConditions.push(gte(measureTasks.scheduledAt, new Date(dateFrom)));
+    }
+    if (dateTo) {
+        // 日期结束包含当天，设置为当天 23:59:59
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        whereConditions.push(lte(measureTasks.scheduledAt, endDate));
+    }
+
+    // 通用搜索（测量单号、备注）
     if (search) {
         whereConditions.push(or(
             ilike(measureTasks.measureNo, `%${search}%`),
@@ -36,7 +90,8 @@ export async function getMeasureTasks(filters: {
         .from(measureTasks)
         .where(whereClause);
 
-    const rows = await db.query.measureTasks.findMany({
+    // 查询任务列表（包含关联数据）
+    let rows = await db.query.measureTasks.findMany({
         where: whereClause,
         with: {
             assignedWorker: true,
@@ -47,6 +102,29 @@ export async function getMeasureTasks(filters: {
         limit: pageSize,
         offset: (page - 1) * pageSize,
     });
+
+    // 关联表筛选（在应用层过滤）
+    // 注意：Drizzle ORM 的 with 查询暂不支持在关联表上直接过滤
+    // 如需严格分页准确性，应使用 SQL JOIN 查询
+    if (salesId) {
+        rows = rows.filter(row => row.lead?.assignedSalesId === salesId);
+    }
+    if (address) {
+        const addressLower = address.toLowerCase();
+        rows = rows.filter(row =>
+            row.lead?.address?.toLowerCase().includes(addressLower) ||
+            row.lead?.community?.toLowerCase().includes(addressLower)
+        );
+    }
+    if (channel) {
+        rows = rows.filter(row => row.lead?.channelId === channel);
+    }
+    if (customerName) {
+        const nameLower = customerName.toLowerCase();
+        rows = rows.filter(row =>
+            row.customer?.name?.toLowerCase().includes(nameLower)
+        );
+    }
 
     return {
         success: true,

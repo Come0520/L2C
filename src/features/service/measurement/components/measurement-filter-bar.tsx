@@ -6,11 +6,33 @@ import Search from 'lucide-react/dist/esm/icons/search';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { useCallback, useState } from 'react';
+import { MeasurementAdvancedFilter, type MeasurementFilters } from './measurement-advanced-filter';
 
-export function MeasurementFilterBar() {
+interface MeasurementFilterBarProps {
+    workerOptions?: { id: string; name: string }[];
+    salesOptions?: { id: string; name: string }[];
+    channelOptions?: { id: string; name: string }[];
+}
+
+export function MeasurementFilterBar({
+    workerOptions = [],
+    salesOptions = [],
+    channelOptions = [],
+}: MeasurementFilterBarProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
+
+    // 从 URL 参数中读取当前筛选条件
+    const currentFilters: MeasurementFilters = {
+        workerId: searchParams.get('workerId') || undefined,
+        salesId: searchParams.get('salesId') || undefined,
+        address: searchParams.get('address') || undefined,
+        channel: searchParams.get('channel') || undefined,
+        customerName: searchParams.get('customerName') || undefined,
+        dateFrom: searchParams.get('dateFrom') || undefined,
+        dateTo: searchParams.get('dateTo') || undefined,
+    };
 
     const createQueryString = useCallback(
         (name: string, value: string) => {
@@ -44,6 +66,26 @@ export function MeasurementFilterBar() {
         router.push(`?${params.toString()}`);
     };
 
+    const handleFiltersChange = (filters: MeasurementFilters) => {
+        const params = new URLSearchParams(searchParams.toString());
+
+        // 更新或删除每个筛选参数
+        const filterKeys: (keyof MeasurementFilters)[] = [
+            'workerId', 'salesId', 'address', 'channel', 'customerName', 'dateFrom', 'dateTo'
+        ];
+
+        filterKeys.forEach((key) => {
+            if (filters[key]) {
+                params.set(key, filters[key] as string);
+            } else {
+                params.delete(key);
+            }
+        });
+
+        params.delete('page'); // 重置分页
+        router.push(`?${params.toString()}`);
+    };
+
     const currentStatus = searchParams.get('status') || 'ALL';
 
     return (
@@ -63,7 +105,7 @@ export function MeasurementFilterBar() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         className="pl-10"
-                        placeholder="搜索测量单号、客户姓名、备注..."
+                        placeholder="搜索测量单号、客户姓名、地址、备注..."
                         value={searchValue}
                         onChange={(e) => handleSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && applySearch()}
@@ -71,6 +113,13 @@ export function MeasurementFilterBar() {
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={applySearch}>搜索</Button>
+                    <MeasurementAdvancedFilter
+                        filters={currentFilters}
+                        onFiltersChange={handleFiltersChange}
+                        workerOptions={workerOptions}
+                        salesOptions={salesOptions}
+                        channelOptions={channelOptions}
+                    />
                 </div>
             </div>
         </div>

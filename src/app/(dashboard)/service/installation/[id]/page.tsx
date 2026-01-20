@@ -9,6 +9,7 @@ import { ConfirmInstallDialog, RejectInstallDialog } from '@/features/service/in
 import { InstallPhotoGallery } from '@/features/service/installation/components/install-photo-gallery';
 import { InstallItemsTable } from '@/features/service/installation/components/install-items-table';
 import { InstallChecklist } from '@/features/service/installation/components/install-checklist';
+import { InstallStatusProgress } from '@/features/service/installation/components/install-status-progress';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import User from 'lucide-react/dist/esm/icons/user';
 import MapPin from 'lucide-react/dist/esm/icons/map-pin';
@@ -82,6 +83,13 @@ export default async function InstallTaskDetailPage({
                     <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
                 </div>
             </div>
+
+            {/* 状态进度条 */}
+            <Card>
+                <CardContent className="py-6">
+                    <InstallStatusProgress currentStatus={task.status} />
+                </CardContent>
+            </Card>
 
             {/* 基础信息卡片 */}
             <div className="grid gap-4 md:grid-cols-2">

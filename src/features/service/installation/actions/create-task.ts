@@ -26,6 +26,21 @@ export const generateInstallTasksFromOrder = createSafeAction(
     async (input: GenerateInstallTasksInput): Promise<ActionState<any>> => {
         const { orderId, tenantId, userId: _userId } = input;
 
+        // 收款检查（在事务外执行，避免长事务）
+        const { checkPaymentBeforeInstall } = await import('../logic/payment-check');
+        const paymentCheck = await checkPaymentBeforeInstall(orderId);
+
+        if (!paymentCheck.passed) {
+            return {
+                success: false,
+                error: paymentCheck.reason || '收款检查未通过',
+                data: {
+                    requiresApproval: paymentCheck.requiresApproval,
+                    details: paymentCheck.details,
+                }
+            };
+        }
+
         return await db.transaction(async (tx) => {
             // 1. Fetch Order & Order Items
             const order = await tx.query.orders.findFirst({

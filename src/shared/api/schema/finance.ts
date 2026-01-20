@@ -142,7 +142,7 @@ export const receiptBills = pgTable('receipt_bills', {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     receiptNo: varchar('receipt_no', { length: 50 }).notNull().unique(),
-    type: varchar('type', { length: 20 }).notNull(), // PREPAID/NORMAL
+    type: varchar('type', { length: 20 }).notNull(), // PREPAID/NORMAL/REFUND (退款给供应商)
 
     customerId: uuid('customer_id').references(() => customers.id),
     customerName: varchar('customer_name', { length: 100 }).notNull(),
@@ -312,7 +312,7 @@ export const paymentBills = pgTable('payment_bills', {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     paymentNo: varchar('payment_no', { length: 50 }).notNull().unique(),
-    type: varchar('type', { length: 20 }).default('SUPPLIER'), // SUPPLIER/LABOR
+    type: varchar('type', { length: 20 }).default('SUPPLIER'), // SUPPLIER/LABOR/REFUND (客户退款)
 
     // 关联方信息
     payeeType: varchar('payee_type', { length: 20 }).notNull(), // SUPPLIER/WORKER/CUSTOMER

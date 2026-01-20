@@ -9,15 +9,107 @@ import {
     orderItems,
     products
 } from "@/shared/api/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, ilike, or, count } from "drizzle-orm";
 import { auth } from "@/shared/lib/auth";
+import { revalidatePath } from "next/cache";
 
-export async function createProcessingOrder(data: any) { return { success: true }; }
-export async function updateProcessingOrder(id: string, data: any) { return { success: true }; }
+/**
+ * 加工单状态枚举
+ */
+export type ProcessingOrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
+/**
+ * 获取加工单列表
+ */
+export async function getProcessingOrders(params: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    search?: string;
+}) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+
+    const { page = 1, pageSize = 20, status, search } = params;
+    const tenantId = session.user.tenantId;
+
+    // 构建查询条件
+    const conditions = [eq(workOrders.tenantId, tenantId)];
+
+    if (status && status !== 'ALL') {
+        conditions.push(eq(workOrders.status, status as ProcessingOrderStatus));
+    }
+
+    // 基础查询
+    const results = await db.select({
+        wo: workOrders,
+        supplier: {
+            id: suppliers.id,
+            name: suppliers.name,
+        },
+        order: {
+            id: orders.id,
+            orderNo: orders.orderNo,
+        },
+    })
+        .from(workOrders)
+        .leftJoin(suppliers, eq(workOrders.supplierId, suppliers.id))
+        .leftJoin(orders, eq(workOrders.orderId, orders.id))
+        .where(and(...conditions))
+        .orderBy(desc(workOrders.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+    // 应用层搜索过滤（如有）
+    let filteredResults = results;
+    if (search) {
+        const searchLower = search.toLowerCase();
+        filteredResults = results.filter(r =>
+            r.wo.woNo.toLowerCase().includes(searchLower) ||
+            r.order?.orderNo?.toLowerCase().includes(searchLower) ||
+            r.supplier?.name?.toLowerCase().includes(searchLower)
+        );
+    }
+
+    // 获取总数
+    const [{ total: totalCount }] = await db.select({ total: count() })
+        .from(workOrders)
+        .where(and(...conditions));
+
+    const total = Number(totalCount);
+
+    // 映射数据
+    const data = filteredResults.map(r => ({
+        id: r.wo.id,
+        processingNo: r.wo.woNo,
+        status: r.wo.status,
+        processorName: r.supplier?.name || '未知加工厂',
+        order: {
+            id: r.order?.id,
+            orderNo: r.order?.orderNo || '-',
+        },
+        startedAt: r.wo.startAt ? new Date(r.wo.startAt).toLocaleDateString('zh-CN') : '-',
+        completedAt: r.wo.completedAt ? new Date(r.wo.completedAt).toLocaleDateString('zh-CN') : null,
+        createdAt: r.wo.createdAt ? new Date(r.wo.createdAt).toLocaleDateString('zh-CN') : '-',
+        remark: r.wo.remark,
+    }));
+
+    return {
+        success: true,
+        data,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+    };
+}
+
+/**
+ * 获取加工单详情
+ */
 export async function getProcessingOrderById({ id }: { id: string }) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
     const result = await db.select({
         wo: workOrders,
@@ -33,11 +125,11 @@ export async function getProcessingOrderById({ id }: { id: string }) {
         ));
 
     const record = result[0];
-    if (!record) return { success: false, error: 'Processing order not found' };
+    if (!record) return { success: false, error: '加工单不存在' };
 
     const { wo, supplier, order } = record;
 
-    // Fetch Items
+    // 获取明细
     const items = await db.select({
         woItem: workOrderItems,
         orderItem: orderItems,
@@ -48,27 +140,65 @@ export async function getProcessingOrderById({ id }: { id: string }) {
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(eq(workOrderItems.woId, wo.id));
 
-    // Map content
-    // Note: page expects: poNo, status, processorName, order.orderNo, items with productName, sku, quantity, unitFee
     const mapped = {
         id: wo.id,
-        poNo: wo.woNo,
+        processingNo: wo.woNo,
         status: wo.status,
-        processorName: supplier?.name || 'Unknown',
+        processorName: supplier?.name || '未知',
         order: {
-            orderNo: order?.orderNo || 'Unknown'
+            id: order?.id,
+            orderNo: order?.orderNo || '-'
         },
         items: items.map(i => ({
             id: i.woItem.id,
-            productName: i.orderItem?.productName || 'Unknown Product',
+            productName: i.orderItem?.productName || '未知产品',
             sku: i.product?.sku || '-',
-            quantity: i.orderItem?.quantity || 1, // fallback
-            unitFee: 0, // Mock
+            quantity: i.orderItem?.quantity || 1,
+            status: i.woItem.status,
         })),
-        estimatedFee: 0,
-        actualFee: 0,
-        remark: wo.remark
+        startedAt: wo.startAt,
+        completedAt: wo.completedAt,
+        remark: wo.remark,
+        createdAt: wo.createdAt,
     };
 
     return { success: true, data: mapped };
 }
+
+/**
+ * 更新加工单状态
+ */
+export async function updateProcessingOrderStatus(id: string, status: ProcessingOrderStatus) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    await db.update(workOrders)
+        .set({
+            status,
+            ...(status === 'IN_PROGRESS' ? { startAt: new Date() } : {}),
+            ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
+            updatedAt: new Date(),
+        })
+        .where(and(
+            eq(workOrders.id, id),
+            eq(workOrders.tenantId, session.user.tenantId)
+        ));
+
+    revalidatePath('/supply-chain/processing-orders');
+    return { success: true };
+}
+
+/**
+ * 创建加工单 (占位)
+ */
+export async function createProcessingOrder(_data: unknown) {
+    return { success: true, message: '功能开发中' };
+}
+
+/**
+ * 更新加工单 (占位)
+ */
+export async function updateProcessingOrder(_id: string, _data: unknown) {
+    return { success: true, message: '功能开发中' };
+}
+

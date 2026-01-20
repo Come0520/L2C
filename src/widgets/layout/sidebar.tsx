@@ -20,7 +20,8 @@ import {
     Wrench,
     DollarSign,
     Headphones,
-    Truck
+    Truck,
+    ClipboardCheck
 } from 'lucide-react';
 
 import { motion } from "motion/react";
@@ -71,6 +72,11 @@ const navLinks = [
         label: "财务中心",
         href: "/finance",
         icon: DollarSign,
+    },
+    {
+        label: "审批中心",
+        href: "/workflow/approvals",
+        icon: ClipboardCheck,
     },
     {
         label: "售后服务",

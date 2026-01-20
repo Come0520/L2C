@@ -135,7 +135,8 @@ async function main() {
                 name: u.name,
                 phone: u.phone,
                 email: `${u.phone}@example.com`,
-                passwordHash: '$2a$10$demoPasswordHash',
+                // 密码: 123456 的 bcrypt 哈希
+                passwordHash: '$2b$10$nIgNyH7hqSPi0IYtG.RFXeM0IfyQk8JQJSzMVV4eAX8rf.0M4sz.RK',
                 role: u.role,
                 isActive: true,
                 skills: u.skills || [],

@@ -1,5 +1,3 @@
-'use server';
-
 import { DimensionLimits } from '@/services/quote-config.service';
 
 /**

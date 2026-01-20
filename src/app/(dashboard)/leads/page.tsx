@@ -26,17 +26,40 @@ export default async function LeadsPage({
 
     const tenantId = session?.user?.tenantId;
     const userId = session?.user?.id;
+    const userRole = session?.user?.role || 'SALES';
 
-    if (!tenantId || !userId) redirect('/auth/signin');
+    if (!tenantId || !userId) redirect('/login');
+
+    // 解析筛选参数
     const page = Number(resolvedParams?.page) || 1;
     const statusParam = resolvedParams?.status;
-    const search = resolvedParams?.search as string;
+    const search = resolvedParams?.search as string | undefined;
+    const salesFilter = resolvedParams?.salesFilter as string | undefined;
+    const intentionLevel = resolvedParams?.intentionLevel as string | undefined;
+    const channelId = resolvedParams?.channelId as string | undefined;
+    const salesId = resolvedParams?.salesId as string | undefined;
+    const dateFrom = resolvedParams?.dateFrom as string | undefined;
+    const dateTo = resolvedParams?.dateTo as string | undefined;
 
+    // 状态筛选
     const status = statusParam === 'ALL' || !statusParam
         ? undefined
         : Array.isArray(statusParam)
             ? statusParam
             : [statusParam];
+
+    // 归属销售筛选逻辑
+    let effectiveSalesId = salesId;
+    if (salesFilter === 'MINE') {
+        // "我的跟进" Tab：按当前用户筛选
+        effectiveSalesId = userId;
+    }
+
+    // 日期范围
+    const dateRange = dateFrom || dateTo ? {
+        from: dateFrom ? new Date(dateFrom) : undefined,
+        to: dateTo ? new Date(dateTo) : undefined,
+    } : undefined;
 
     const [leadsResult, channels] = await Promise.all([
         getLeads({
@@ -44,6 +67,10 @@ export default async function LeadsPage({
             pageSize: 10,
             status,
             search,
+            salesId: effectiveSalesId,
+            intentionLevel: intentionLevel as 'HIGH' | 'MEDIUM' | 'LOW' | undefined,
+            sourceCategoryId: channelId,
+            dateRange,
         }),
         getChannels()
     ]);
@@ -74,8 +101,10 @@ export default async function LeadsPage({
                     page={page}
                     pageSize={10}
                     total={leadsResult.total}
+                    userRole={userRole}
                 />
             </Suspense>
         </div>
     );
 }
+

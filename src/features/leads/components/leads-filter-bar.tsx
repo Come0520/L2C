@@ -12,10 +12,16 @@ export function LeadsFilterBar() {
         const params = new URLSearchParams(searchParams.toString());
         if (value === 'ALL') {
             params.delete('status');
+            params.delete('salesFilter');
+        } else if (value === 'MY_FOLLOWING') {
+            // 我的跟进：按归属销售筛选
+            params.delete('status');
+            params.set('salesFilter', 'MINE');
         } else {
             params.set('status', value);
+            params.delete('salesFilter');
         }
-        params.set('page', '1'); // Reset to page 1
+        params.set('page', '1'); // 重置到第1页
         router.push(`?${params.toString()}`);
     };
 
@@ -23,9 +29,10 @@ export function LeadsFilterBar() {
         <Tabs value={currentStatus} onValueChange={handleTabChange} className="w-full">
             <TabsList>
                 <TabsTrigger value="ALL">全部线索</TabsTrigger>
-                <TabsTrigger value="PENDING_ASSIGNMENT">公海池 (待分配)</TabsTrigger>
+                <TabsTrigger value="PENDING_ASSIGNMENT">公海池</TabsTrigger>
                 <TabsTrigger value="PENDING_FOLLOWUP">待跟进</TabsTrigger>
-                <TabsTrigger value="Following">我的跟进</TabsTrigger> {/* Logic for 'Mine' needs backend support via separate param or special status handling */}
+                <TabsTrigger value="MY_FOLLOWING">我的跟进</TabsTrigger>
+                <TabsTrigger value="FOLLOWING_UP">跟进中</TabsTrigger>
                 <TabsTrigger value="WON">已成交</TabsTrigger>
                 <TabsTrigger value="VOID">已作废</TabsTrigger>
             </TabsList>

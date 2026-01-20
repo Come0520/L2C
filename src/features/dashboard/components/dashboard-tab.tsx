@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { cn } from "@/shared/lib/utils";
 import {
@@ -11,6 +12,7 @@ import {
     TrendingUp,
     ArrowUpRight,
     ArrowDownRight,
+    ClipboardCheck,
 } from "lucide-react";
 
 /**
@@ -56,8 +58,8 @@ export function DashboardTab() {
                 />
             </div>
 
-            {/* 财务概览 */}
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* 财务概览 + 待审批 */}
+            <div className="grid gap-4 md:grid-cols-3">
                 <Card className="glass-liquid border-white/10">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base font-medium text-muted-foreground">
@@ -84,6 +86,22 @@ export function DashboardTab() {
                         </p>
                     </CardContent>
                 </Card>
+                <Link href="/workflow/approvals" className="block">
+                    <Card className="glass-liquid border-white/10 hover:bg-amber-500/10 transition-colors h-full">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
+                                <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                                待审批
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-amber-500">3</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                需要您处理的审批任务
+                            </p>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             {/* 近期趋势占位 */}

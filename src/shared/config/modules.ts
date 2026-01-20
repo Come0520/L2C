@@ -19,7 +19,7 @@ export interface ModuleConfig {
 }
 
 export const MODULES: ModuleConfig[] = [
-    { code: 'DASHBOARD', name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { code: 'DASHBOARD', name: 'Dashboard', path: '/workbench', icon: LayoutDashboard },
     { code: 'ORDERS', name: 'Orders', path: '/orders', icon: ShoppingCart, permissions: [PERMISSIONS.ORDER.VIEW] },
     { code: 'QUOTES', name: 'Quotes', path: '/quotes', icon: FileText, permissions: [PERMISSIONS.QUOTE.VIEW] },
     { code: 'CUSTOMERS', name: 'Customers', path: '/customers', icon: Users, permissions: [PERMISSIONS.CUSTOMER.VIEW] },

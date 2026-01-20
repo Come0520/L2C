@@ -36,7 +36,7 @@ export default function LoginPage() {
                 });
             } else {
                 toast.success('登录成功');
-                router.push('/dashboard');
+                router.push('/workbench');
                 router.refresh();
             }
         } catch (error) {

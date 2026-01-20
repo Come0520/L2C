@@ -8,7 +8,7 @@ import {
     installTasks,
     quoteItems
 } from '@/shared/api/schema';
-import { eq, sql, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';

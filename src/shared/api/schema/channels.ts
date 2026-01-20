@@ -26,6 +26,7 @@ export const channels = pgTable('channels', {
     priceDiscountRate: decimal('price_discount_rate', { precision: 5, scale: 4 }), // e.g. 0.9500 for 95%
 
     settlementType: channelSettlementTypeEnum('settlement_type').notNull(), // PREPAY / MONTHLY
+    creditLimit: decimal('credit_limit', { precision: 15, scale: 2 }).default('0'), // 月结渠道授信额度
     bankInfo: jsonb('bank_info'),
 
     // Attachments

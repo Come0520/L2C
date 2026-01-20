@@ -38,7 +38,7 @@ type FormValues = z.infer<typeof createFinanceAccountSchema>;
 interface AccountDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     initialData?: any; // 账户数据结构复杂，后续可定义具体类型
 }
 

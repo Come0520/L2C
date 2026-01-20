@@ -64,7 +64,7 @@ interface ReceiptBillDialogProps {
     customerName?: string;
     customerPhone?: string;
     amount?: string | number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     initialStatement?: any; // 保持向后兼容，后续可定义具体类型
 }
 
@@ -85,7 +85,7 @@ export function ReceiptBillDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
 
     useEffect(() => {
@@ -151,14 +151,14 @@ export function ReceiptBillDialog({
     const onSubmit = (values: FormValues) => {
         startTransition(async () => {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 const result = await createAndSubmitReceipt(values as any); // Action 输入与 Zod 类型可能不匹配
                 if (result.success) {
                     toast.success('收款单已提交审批');
                     onOpenChange?.(false);
                     form.reset();
                 } else {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                     
                     toast.error((result as any).error || '提交失败');
                 }
             } catch (error: unknown) {

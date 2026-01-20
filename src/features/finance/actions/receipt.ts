@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { receiptBills, receiptBillItems } from '@/shared/api/schema';
+import { receiptBills } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { ReceiptService, CreateReceiptBillData } from '@/services/receipt.service';
 import { auth } from '@/shared/lib/auth';

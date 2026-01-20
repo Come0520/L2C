@@ -1,0 +1,86 @@
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\analysis-actions.ts
+  11:14  warning  'sql' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\ar.ts
+  119:15  warning  'userId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\queries.ts
+  3:35  warning  'params' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  4:34  warning  'id' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\receipt.ts
+  4:24  warning  'receiptBillItems' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\reconciliation.ts
+  427:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  429:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  431:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\actions\refund.ts
+  7:7  warning  'createRefundRequestSchema' is assigned a value but only used as a type. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\ap\actions.ts
+  3:44  warning  'params' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\ap\components\ap-generate-dialog.tsx
+  2:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\AccountDialog.tsx
+   41:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  192:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\AccountDialog.tsx:192:26
+  190 |                         />
+  191 |
+> 192 |                         {form.watch('accountType') === 'BANK' && (
+      |                          ^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  193 |                             <div className="grid grid-cols-2 gap-4">
+  194 |                                 <FormField
+  195 |                                     control={form.control}  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\AccountList.tsx
+  14:8  warning  'Trash2' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\FinanceSettingsForm.tsx
+  94:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\FinanceSettingsForm.tsx:94:26
+  92 |                         />
+  93 |
+> 94 |                         {form.watch('allow_difference') && (
+     |                          ^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  95 |                             <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-primary/20">
+  96 |                                 <FormField
+  97 |                                     control={form.control}  react-hooks/incompatible-library
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\PaymentBillDialog.tsx
+  51:5  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  72:5  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\PaymentOrderDialog.tsx
+  50:5  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  70:5  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\create-ap-dialog.tsx
+  2:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\create-ar-dialog.tsx
+  2:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\payment-dialog.tsx
+  2:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\finance\components\receipt-bill-dialog.tsx
+   67:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+   88:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  154:17  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  161:21  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+鉁?26 problems (0 errors, 26 warnings)
+  0 errors and 12 warnings potentially fixable with the `--fix` option.
+

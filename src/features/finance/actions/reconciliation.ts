@@ -424,11 +424,11 @@ export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliat
         gte(arStatements.createdAt, new Date(originalStartDate)),
         lte(arStatements.createdAt, new Date(originalEndDate)),
         or(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             eq(arStatements.status, 'PENDING' as any),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             eq(arStatements.status, 'PARTIAL' as any),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             eq(arStatements.status, 'PENDING_RECON' as any)
         ),
     ];

@@ -48,7 +48,7 @@ interface PaymentBillDialogProps {
     supplierName?: string; // used for both supplier and worker name display
     supplierId?: string; // or workerId
     amount?: string | number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     initialStatement?: any; // 保持向后兼容，后续可定义具体类型
 }
 
@@ -69,7 +69,7 @@ export function PaymentBillDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
 
     useEffect(() => {

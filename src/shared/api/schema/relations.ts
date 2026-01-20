@@ -87,6 +87,7 @@ import {
     financeConfigs,
     financeAccounts,
     accountTransactions,
+    internalTransfers,
     arStatements,
     paymentOrders,
     paymentOrderItems,
@@ -544,6 +545,43 @@ export const accountTransactionsRelations = relations(accountTransactions, ({ on
     account: one(financeAccounts, {
         fields: [accountTransactions.accountId],
         references: [financeAccounts.id],
+    }),
+}));
+
+export const internalTransfersRelations = relations(internalTransfers, ({ one }) => ({
+    tenant: one(tenants, {
+        fields: [internalTransfers.tenantId],
+        references: [tenants.id],
+    }),
+    fromAccount: one(financeAccounts, {
+        fields: [internalTransfers.fromAccountId],
+        references: [financeAccounts.id],
+        relationName: 'transferFromAccount',
+    }),
+    toAccount: one(financeAccounts, {
+        fields: [internalTransfers.toAccountId],
+        references: [financeAccounts.id],
+        relationName: 'transferToAccount',
+    }),
+    createdByUser: one(users, {
+        fields: [internalTransfers.createdBy],
+        references: [users.id],
+        relationName: 'transferCreator',
+    }),
+    approvedByUser: one(users, {
+        fields: [internalTransfers.approvedBy],
+        references: [users.id],
+        relationName: 'transferApprover',
+    }),
+    fromTransaction: one(accountTransactions, {
+        fields: [internalTransfers.fromTransactionId],
+        references: [accountTransactions.id],
+        relationName: 'transferFromTransaction',
+    }),
+    toTransaction: one(accountTransactions, {
+        fields: [internalTransfers.toTransactionId],
+        references: [accountTransactions.id],
+        relationName: 'transferToTransaction',
     }),
 }));
 

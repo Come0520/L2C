@@ -28,13 +28,9 @@ import { MeasureDataImportDialog } from './measure-data-import-dialog';
 import { QuoteBottomSummaryBar } from './quote-bottom-summary-bar';
 import { CustomerInfoDrawer } from './customer-info-drawer';
 import { QuoteCategoryTabs, QuoteCategory, ViewMode } from './quote-category-tabs';
+import { QuoteExportMenu } from './quote-export-menu';
 import { Download } from 'lucide-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
+import { DropdownMenuItem } from '@/shared/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
 import { QuotePdfDocument } from './quote-pdf';
 
@@ -173,33 +169,50 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
 
                         {/* ... other buttons ... */}
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline">
-                                    <FileText className="mr-2 h-4 w-4" /> 导出 PDF
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <PDFDownloadLink
-                                        document={<QuotePdfDocument quote={quote} mode="customer" />}
-                                        fileName={`报价单_${quote.quoteNo}_客户版.pdf`}
-                                        className="flex items-center w-full"
-                                    >
-                                        <Download className="mr-2 h-4 w-4" /> 客户版 (无成本)
-                                    </PDFDownloadLink>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <PDFDownloadLink
-                                        document={<QuotePdfDocument quote={quote} mode="internal" />}
-                                        fileName={`报价单_${quote.quoteNo}_内部版.pdf`}
-                                        className="flex items-center w-full"
-                                    >
-                                        <Download className="mr-2 h-4 w-4" /> 内部版 (含成本)
-                                    </PDFDownloadLink>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <QuoteExportMenu
+                            quote={{
+                                id: quote.id,
+                                quoteNo: quote.quoteNo,
+                                title: quote.title,
+                                customer: quote.customer,
+                                items: quote.items?.map(item => ({
+                                    productName: item.productName,
+                                    width: item.width,
+                                    height: item.height,
+                                    quantity: item.quantity,
+                                    unitPrice: item.unitPrice,
+                                    subtotal: item.subtotal,
+                                    roomId: item.roomId,
+                                })),
+                                rooms: quote.rooms?.map(r => ({ id: r.id, name: r.name })),
+                                totalAmount: quote.totalAmount,
+                                discountAmount: quote.discountAmount,
+                                finalAmount: quote.finalAmount,
+                                notes: quote.notes,
+                            }}
+                            renderPdfButtons={
+                                <>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <PDFDownloadLink
+                                            document={<QuotePdfDocument quote={quote} mode="customer" />}
+                                            fileName={`报价单_${quote.quoteNo}_客户版.pdf`}
+                                            className="flex items-center w-full"
+                                        >
+                                            <Download className="mr-2 h-4 w-4" /> 客户版 PDF
+                                        </PDFDownloadLink>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <PDFDownloadLink
+                                            document={<QuotePdfDocument quote={quote} mode="internal" />}
+                                            fileName={`报价单_${quote.quoteNo}_内部版.pdf`}
+                                            className="flex items-center w-full"
+                                        >
+                                            <Download className="mr-2 h-4 w-4" /> 内部版 PDF
+                                        </PDFDownloadLink>
+                                    </DropdownMenuItem>
+                                </>
+                            }
+                        />
 
                         {quote.status === 'PENDING_APPROVAL' && (
                             <>

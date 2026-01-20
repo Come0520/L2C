@@ -81,7 +81,23 @@ export function MeasureTaskTable({ data }: MeasureTaskTableProps) {
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    <StatusBadge status={item.status as MeasureTaskStatus} />
+                                    <div className="flex items-center gap-1">
+                                        <StatusBadge status={item.status as MeasureTaskStatus} />
+                                        {/* 驳回次数徽章 */}
+                                        {item.rejectCount > 0 && (
+                                            <span
+                                                className={`inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium rounded-full ${item.rejectCount >= 3
+                                                        ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200'
+                                                        : item.rejectCount >= 2
+                                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'
+                                                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200'
+                                                    }`}
+                                                title={`已驳回 ${item.rejectCount} 次`}
+                                            >
+                                                驳{item.rejectCount}
+                                            </span>
+                                        )}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     {item.scheduledAt ? (

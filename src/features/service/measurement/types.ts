@@ -20,6 +20,8 @@ export interface MeasureTask {
     status: MeasureTaskStatus;
     scheduledAt: Date;
     address: string;
+    rejectCount?: number;      // 驳回次数
+    rejectReason?: string;     // 最近驳回原因
     customer?: {
         name: string;
         phone: string;

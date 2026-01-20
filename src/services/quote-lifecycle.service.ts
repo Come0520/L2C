@@ -16,10 +16,23 @@ export class QuoteLifecycleService {
         return await db.transaction(async (tx) => {
             const quote = await tx.query.quotes.findFirst({
                 where: eq(quotes.id, quoteId),
+                with: { items: true }
             });
             if (!quote) throw new Error('Quote not found');
             if (quote.status !== 'DRAFT' && quote.status !== 'REJECTED') {
                 throw new Error('Only draft or rejected quotes can be submitted');
+            }
+
+            // 校验：至少1条商品且金额大于0
+            const itemCount = quote.items?.length || 0;
+            const finalAmount = Number(quote.finalAmount || 0);
+
+            if (itemCount === 0) {
+                throw new Error('报价单至少需要包含1条商品才能提交');
+            }
+
+            if (finalAmount <= 0) {
+                throw new Error('报价单金额必须大于0才能提交');
             }
 
             // Risk Check

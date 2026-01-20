@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getMeasureTaskById, checkMeasureFeeStatus } from '@/features/service/measurement/actions/queries';
+import Link from 'next/link';
+import { getMeasureTaskById, checkMeasureFeeStatus, getMeasureTaskVersions } from '@/features/service/measurement/actions/queries';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -8,28 +9,20 @@ import { SubmitDataDialog as SubmitMeasureDataDialog } from '@/features/service/
 import { ConfirmDialog as ConfirmMeasureDialog, RejectDialog as RejectMeasureDialog } from '@/features/service/measurement/components/confirm-reject-dialogs';
 import { SplitTaskDialog } from '@/features/service/measurement/components/split-task-dialog';
 import { FeeWaiverDialog } from '@/features/service/measurement/components/fee-waiver-dialog';
+import { MeasureStatusTabs } from '@/features/service/measurement/components/status-tabs';
+import { OperationLog } from '@/features/service/measurement/components/operation-log';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import User from 'lucide-react/dist/esm/icons/user';
 import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import type { MeasureTaskWithRelations } from '@/types/service';
 import { formatDateTimeDisplay } from '@/types/service';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 
 export const dynamic = 'force-dynamic';
-
-const statusMap = {
-    PENDING: { label: '待分配', color: 'bg-gray-500' },
-    DISPATCHED: { label: '已分配', color: 'bg-blue-500' },
-    PENDING_VISIT: { label: '待上门', color: 'bg-yellow-500' },
-    PENDING_CONFIRM: { label: '待确认', color: 'bg-orange-500' },
-    COMPLETED: { label: '已完成', color: 'bg-green-500' },
-    CANCELLED: { label: '已取消', color: 'bg-red-500' },
-    DISPATCHING: { label: '派单中', color: 'bg-blue-400' },
-    PENDING_APPROVAL: { label: '审批中', color: 'bg-orange-400' },
-};
 
 export default async function MeasureTaskDetailPage({
     params,
@@ -45,15 +38,30 @@ export default async function MeasureTaskDetailPage({
 
     // 使用类型断言转换为统一类型
     const task = result.data as unknown as MeasureTaskWithRelations;
-    const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.PENDING;
 
     // 检查费用状态
     const feeCheck = await checkMeasureFeeStatus(id);
     const canDispatch = feeCheck?.canDispatch ?? true;
 
+    // 获取版本历史 (容错处理，如果表列不存在则返回空)
+    let versions: any[] = [];
+    try {
+        const versionsResult = await getMeasureTaskVersions(id);
+        versions = versionsResult.data || [];
+    } catch (_e) {
+        console.warn('获取版本历史失败，可能需要运行数据库迁移');
+    }
+
     // 从 sheets 关联获取测量数据
     const latestSheet = task.sheets?.[0];
     const measureItems = latestSheet?.items || [];
+
+    // 模拟操作日志数据 (TODO: 从数据库查询)
+    const mockOperationLogs = [
+        { id: '1', action: 'CREATE', detail: '创建测量任务', operatorName: '系统', createdAt: task.createdAt || new Date() },
+        ...(task.assignedWorkerId ? [{ id: '2', action: 'DISPATCH', detail: `指派给 ${task.assignedWorker?.name || '测量师'}`, operatorName: '派单员', createdAt: task.updatedAt || new Date() }] : []),
+        ...(task.checkInAt ? [{ id: '3', action: 'CHECK_IN', detail: '测量师现场签到', operatorName: task.assignedWorker?.name || '测量师', createdAt: task.checkInAt }] : []),
+    ];
 
     return (
         <div className="space-y-6">
@@ -64,12 +72,14 @@ export default async function MeasureTaskDetailPage({
                     <p className="text-muted-foreground">任务编号: {task.measureNo}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
                     {task.feeCheckStatus === 'PENDING' && (
                         <Badge variant="outline" className="border-orange-500 text-orange-500">费用待审批</Badge>
                     )}
                 </div>
             </div>
+
+            {/* 状态 Tabs */}
+            <MeasureStatusTabs currentStatus={task.status} />
 
             {/* 费用告警 */}
             {!canDispatch && task.status === 'PENDING' && (
@@ -80,6 +90,24 @@ export default async function MeasureTaskDetailPage({
                         {feeCheck?.message || '需支付定金或申请豁免工费才能进行派单'}
                     </AlertDescription>
                 </Alert>
+            )}
+
+            {/* 版本切换 (如有多个版本) */}
+            {versions.length > 1 && (
+                <Card>
+                    <CardHeader className="py-3">
+                        <CardTitle className="text-sm">测量版本</CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-2">
+                        <div className="flex gap-2">
+                            {versions.map((v: any) => (
+                                <Badge key={v.id} variant={v.id === latestSheet?.id ? 'default' : 'outline'}>
+                                    {v.versionDisplay || `V${v.round}.${v.variant}`}
+                                </Badge>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             )}
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -181,14 +209,27 @@ export default async function MeasureTaskDetailPage({
                 </Card>
             )}
 
+            {/* 操作日志 */}
+            <OperationLog logs={mockOperationLogs} />
+
             {/* 操作按钮 */}
             <div className="flex gap-4 flex-wrap">
+                {/* 转报价按钮 - 仅 COMPLETED 状态可用 */}
+                {task.status === 'COMPLETED' && (
+                    <Button asChild>
+                        <Link href={`/quotes/create?measureTaskId=${task.id}`}>
+                            转报价
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                )}
+
                 {/* 拆单按钮 - 仅 PENDING/DISPATCHING 状态可用 */}
                 {(task.status === 'PENDING' || task.status === 'DISPATCHING') && (
                     <SplitTaskDialog originalTaskId={task.id} />
                 )}
 
-                {/* 费用豁免按钮 - 仅无法派单(即欠费)且未申请过(或被驳回?)时可用 */}
+                {/* 费用豁免按钮 - 仅无法派单(即欠费)且未申请过时可用 */}
                 {!canDispatch && task.status === 'PENDING' && task.feeCheckStatus !== 'PENDING' && (
                     <FeeWaiverDialog taskId={task.id} />
                 )}

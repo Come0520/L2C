@@ -87,8 +87,10 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                     search: searchQuery,
                     isActive: true
                 });
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setProducts((res?.data ?? []) as any[]);
+                // createSafeAction 返回 { data: { data: [], total, ... }, success }
+                // 需要解构两层才能获取到产品数组
+                const productList = res?.data?.data ?? [];
+                setProducts(productList as any[]);
             } catch (err) {
                 console.error(err);
                 toast.error("Failed to load products");

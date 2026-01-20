@@ -14,8 +14,8 @@ if (!connectionString) {
 }
 
 const client = postgres(connectionString, {
-    max: 10,
-    idle_timeout: 20,
+    max: env.DB_MAX_CONNECTIONS,
+    idle_timeout: 30,  // 空闲超时 30s
     connect_timeout: 10,
     prepare: true,
 });

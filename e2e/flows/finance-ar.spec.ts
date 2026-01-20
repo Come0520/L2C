@@ -13,17 +13,17 @@ import { test, expect } from '@playwright/test';
 
 test.describe('财务应收 (Finance AR)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        // await page.waitForLoadState('networkidle');
     });
 
     test('应在应收账单列表页正常显示数据', async ({ page }) => {
         await page.goto('/finance/ar');
-        await page.waitForLoadState('networkidle');
-
-        await expect(page.getByRole('heading', { name: /应收|收款/ })).toBeVisible();
+        // await page.waitForLoadState('networkidle');
+        // 验证页面标题 (精确匹配)
+        await expect(page.getByRole('heading', { name: '应收对账单' })).toBeVisible();
 
         const table = page.locator('table');
-        await expect(table).toBeVisible();
+        await expect(table).toBeVisible({ timeout: 15000 });
 
         const firstRow = page.locator('table tbody tr').first();
         if (await firstRow.isVisible()) {

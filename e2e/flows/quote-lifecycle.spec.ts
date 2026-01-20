@@ -105,7 +105,6 @@ test.describe('Quote Lifecycle Flow', () => {
         if (!foundIndicator) {
             console.log('Failed to find any page load indicator. Saving full error page...');
             const content = await page.content();
-            const fs = require('fs');
             fs.writeFileSync('test-results/debug-error-page.html', content);
             console.log('Saved to test-results/debug-error-page.html');
             throw new Error('Lead detail page did not load properly - no indicators found');

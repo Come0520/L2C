@@ -36,7 +36,7 @@ interface MergeCustomerDialogProps {
 interface MergePreview {
     primary: Customer;
     secondary: Customer;
-    conflicts: Record<string, { primary: unknown; secondary: unknown }>;
+    conflicts: Record<string, { primary: string | number | null; secondary: string | number | null }>;
     affectedData: {
         orders: number;
         quotes: number;
@@ -63,9 +63,12 @@ export function MergeCustomerDialog({ targetCustomer, userId, trigger }: MergeCu
 
             setSearching(true);
             try {
-                const res = await getCustomers({ search: searchTerm, page: 1, pageSize: 5 } as any);
+                // Ensure params match getCustomers signature. 
+                // Assuming it accepts { search, page, pageSize }
+                const res = await getCustomers({ search: searchTerm, page: 1, pageSize: 5 });
                 // 排除目标客户自己
-                setSearchResults(res.data.filter((c: any) => c.id !== targetCustomer.id));
+                // res.data is assumed to be Customer[] or compatible
+                setSearchResults(res.data.filter((c: Customer) => c.id !== targetCustomer.id));
             } catch (err) {
                 console.error('Search failed:', err);
                 toast.error('搜索客户失败');
@@ -87,8 +90,9 @@ export function MergeCustomerDialog({ targetCustomer, userId, trigger }: MergeCu
         const fetchPreview = async () => {
             try {
                 const res = await previewMergeAction(selectedSourceId, targetCustomer.id);
-                setPreview(res);
-            } catch (err) {
+                // Ensure res matches MergePreview
+                setPreview(res as unknown as MergePreview);
+            } catch (_err) {
                 toast.error('获取预览失败');
             }
         };
@@ -108,8 +112,9 @@ export function MergeCustomerDialog({ targetCustomer, userId, trigger }: MergeCu
             }, userId);
             toast.success('客户合并成功');
             setOpen(false);
-        } catch (err: any) {
-            toast.error(err.message || '合并失败');
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : '合并失败';
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
@@ -221,11 +226,11 @@ export function MergeCustomerDialog({ targetCustomer, userId, trigger }: MergeCu
                                                     <div key={field} className="grid grid-cols-2 p-2 gap-4">
                                                         <div>
                                                             <span className="text-gray-400 mr-2">{field}:</span>
-                                                            <span className="line-through text-red-400">{(vals as any).secondary || '空'}</span>
+                                                            <span className="line-through text-red-400">{String(vals.secondary || '空')}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             <ArrowRight className="h-3 w-3 text-gray-400" />
-                                                            <span className="text-green-600 font-medium">{(vals as any).primary || '空'}</span>
+                                                            <span className="text-green-600 font-medium">{String(vals.primary || '空')}</span>
                                                         </div>
                                                     </div>
                                                 ))}

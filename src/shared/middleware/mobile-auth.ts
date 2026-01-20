@@ -8,17 +8,12 @@
  */
 
 import { NextRequest } from 'next/server';
-import { verifyToken } from '@/shared/lib/jwt';
+import { verifyToken, MobileRole } from '@/shared/lib/jwt';
 import { apiUnauthorized, apiForbidden } from '@/shared/lib/api-response';
 
 // ============================================================
 // 类型定义
 // ============================================================
-
-/**
- * 移动端用户角色
- */
-export type MobileRole = 'WORKER' | 'SALES' | 'BOSS' | 'PURCHASER' | 'CUSTOMER';
 
 /**
  * 移动端用户会话信息
@@ -70,12 +65,21 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
             };
         }
 
+        // 安全修复：确实从 Payload 中提取角色，增强权限控制
+        // 如果旧 Token 没有 role 字段（迁移期间），需要处理
+        if (!payload.role) {
+            return {
+                success: false,
+                response: apiUnauthorized('Token 缺少权限信息，请重新登录'),
+            };
+        }
+
         // 从 payload 中提取用户信息
         const session: MobileSession = {
             userId: payload.userId,
             tenantId: payload.tenantId,
             phone: payload.phone,
-            role: 'WORKER', // 默认角色，实际应从用户表查询
+            role: payload.role,
             name: undefined,
         };
 

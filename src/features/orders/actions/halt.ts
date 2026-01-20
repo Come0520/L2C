@@ -11,7 +11,7 @@
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -86,8 +86,8 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
             };
         }
 
-        if (order.status === 'PAUSED') {
-            return { success: false, error: '订单已处于暂停状态' };
+        if (order.status === 'PAUSED' || order.status === 'HALTED') {
+            return { success: false, error: '订单已处于暂停/叫停状态' };
         }
 
         // 构建暂停原因（包含原始状态以便恢复）
@@ -100,7 +100,7 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
         // 更新订单状态
         await db.update(orders)
             .set({
-                status: 'PAUSED',
+                status: 'HALTED',
                 pausedAt: new Date(),
                 pauseReason: pauseReasonJson,
             })
@@ -161,8 +161,8 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
             return { success: false, error: '订单不存在' };
         }
 
-        if (order.status !== 'PAUSED') {
-            return { success: false, error: '订单不在暂停状态' };
+        if (order.status !== 'PAUSED' && order.status !== 'HALTED') {
+            return { success: false, error: '订单不在暂停/叫停状态' };
         }
 
         // 解析暂停原因获取原始状态
@@ -232,7 +232,7 @@ export async function getHaltedOrders() {
     const haltedOrders = await db.query.orders.findMany({
         where: and(
             eq(orders.tenantId, tenantId),
-            eq(orders.status, 'PAUSED')
+            inArray(orders.status, ['PAUSED', 'HALTED'])
         ),
         columns: {
             id: true,
@@ -255,15 +255,21 @@ export async function getHaltedOrders() {
 
     // 解析暂停信息
     const enrichedOrders = haltedOrders.map(order => {
-        let haltInfo = {
+        const haltInfo = {
             haltReason: 'OTHER',
             daysHalted: 0,
+            alertLevel: 'NONE', // NONE, WARNING
         };
 
         if (order.pausedAt) {
             haltInfo.daysHalted = Math.floor(
                 (Date.now() - order.pausedAt.getTime()) / (1000 * 60 * 60 * 24)
             );
+
+            // 自动恢复提醒 / 预警
+            if (haltInfo.daysHalted > 7) {
+                haltInfo.alertLevel = 'WARNING';
+            }
         }
 
         try {

@@ -1,4 +1,4 @@
-import { db } from "@/shared/api/db";
+import { db, type Transaction } from "@/shared/api/db";
 import {
     paymentSchedules,
     orders,
@@ -9,9 +9,10 @@ import {
     commissionRecords,
     paymentOrderItems,
     orderItems,
-    products
+    products,
+    marketChannels
 } from "@/shared/api/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, type InferSelectModel } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 export interface CreatePaymentOrderData {
@@ -101,7 +102,7 @@ export class FinanceService {
                 remainingAmount: data.totalAmount, // Initially full amount remaining (if PREPAID logic applies? keeping simple)
                 type: data.type,
                 status: 'PENDING',
-                paymentMethod: data.paymentMethod as any,
+                paymentMethod: data.paymentMethod, // Ensure data.paymentMethod matches varchar type
                 accountId: data.accountId,
                 proofUrl: data.proofUrl,
                 receivedAt: data.receivedAt,
@@ -228,7 +229,7 @@ export class FinanceService {
                             .set({
                                 receivedAmount: receivedAfter.toString(),
                                 pendingAmount: pending.toString(),
-                                status: newStatus as any,
+                                status: newStatus,
                                 completedAt: pending.lte(0) ? new Date() : null,
                             })
                             .where(eq(arStatements.id, statement.id));
@@ -244,7 +245,7 @@ export class FinanceService {
         });
     }
 
-    private static async calculateCommission(tx: any, statement: any, tenantId: string) {
+    private static async calculateCommission(tx: Transaction, statement: InferSelectModel<typeof arStatements> & { channel?: InferSelectModel<typeof marketChannels> | null }, tenantId: string) {
         if (!statement.channelId || !statement.channel) return;
 
         const mode = statement.channel.cooperationMode || 'REBATE';
@@ -261,7 +262,7 @@ export class FinanceService {
             });
 
             if (items.length > 0) {
-                const productIds = items.map((i: any) => i.productId);
+                const productIds = items.map(i => i.productId);
                 // Ensure unique IDs
                 const uniqueProductIds = [...new Set(productIds)];
 
@@ -270,15 +271,15 @@ export class FinanceService {
                     const productList = await tx.query.products.findMany({
                         where: inArray(products.id, uniqueProductIds as string[])
                     });
-                    const productMap = new Map(productList.map((p: any) => [p.id, p]));
+                    const productMap = new Map(productList.map(p => [p.id, p]));
 
                     let totalBasePrice = new Decimal(0);
                     for (const item of items) {
-                        const product = productMap.get((item as any).productId);
+                        const product = productMap.get(item.productId);
                         if (product) {
                             // Use floorPrice if available, otherwise purchasePrice, fallback to 0
-                            const base = new Decimal((product as any).floorPrice || (product as any).purchasePrice || 0);
-                            const qty = new Decimal((item as any).quantity || 0);
+                            const base = new Decimal(product.floorPrice || product.purchasePrice || 0);
+                            const qty = new Decimal(item.quantity || 0);
                             totalBasePrice = totalBasePrice.plus(base.times(qty));
                         }
                     }

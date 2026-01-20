@@ -23,10 +23,10 @@ export class LeadService {
      * @param tenantId Tenant ID
      * @param userId Creator User ID
      */
-    static async createLead(data: typeof leads.$inferInsert, tenantId: string, userId: string): Promise<{
+    static async createLead(data: Omit<typeof leads.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'tenantId' | 'leadNo' | 'createdBy' | 'assignedSalesId' | 'assignedAt' | 'status'>, tenantId: string, userId: string): Promise<{
         isDuplicate: boolean;
         duplicateReason?: 'PHONE' | 'ADDRESS';
-        lead: any; // Type inference helper
+        lead: typeof leads.$inferSelect;
     }> {
 
         // 1. Check Active Lead Uniqueness
@@ -70,8 +70,8 @@ export class LeadService {
 
         // 5. 自动分配策略 (Round Robin / Load Balance)
         // 尝试获取分配建议
-        let assignedSalesId = data.assignedSalesId || null;
-        let initialStatus = 'PENDING_ASSIGNMENT';
+        let assignedSalesId = null;
+        let initialStatus: typeof leads.$inferInsert['status'] = 'PENDING_ASSIGNMENT';
 
         // 如果没有指定销售，且未成交，尝试自动分配
         if (!assignedSalesId && initialStatus === 'PENDING_ASSIGNMENT') {
@@ -102,7 +102,7 @@ export class LeadService {
                 customerId: customerId,
                 tenantId: tenantId,
                 createdBy: userId,
-                status: initialStatus as any,
+                status: initialStatus,
                 assignedSalesId: assignedSalesId,
                 assignedAt: assignedSalesId ? new Date() : null,
             }).returning();

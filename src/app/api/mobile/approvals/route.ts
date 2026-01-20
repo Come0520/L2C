@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
 import { eq, and, desc, or } from 'drizzle-orm';
-import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 
 export async function GET(request: NextRequest) {

@@ -38,7 +38,8 @@ export function CreateMeasureTaskDialog() {
                 customerId: formData.customerId,
                 scheduledAt: formData.scheduledAt.toISOString(),
                 isFeeExempt: formData.isFeeExempt,
-                type: formData.type as any,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                type: formData.type as any, // 测量类型枚举
                 remark: formData.remark,
             }, 'user-id-placeholder', 'tenant-id-placeholder');
 
@@ -47,11 +48,13 @@ export function CreateMeasureTaskDialog() {
                 setOpen(false);
                 setFormData({ leadId: '', customerId: '', scheduledAt: new Date(), isFeeExempt: false, type: 'BLIND', remark: '' });
             } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 toast.error((res as any).error || '创建失败');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error(error.message || '创建失败');
+            const message = error instanceof Error ? error.message : '创建失败';
+            toast.error(message);
         } finally {
             setLoading(false);
         }

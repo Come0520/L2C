@@ -2,7 +2,9 @@ import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index
 import { sql } from 'drizzle-orm';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
-import { productTemplates } from './catalogs';
+import { productTemplates, products } from './catalogs';
+import { quoteStatusEnum } from './enums';
+import { QuoteItemAttributes, QuoteCalculationParams } from '../types/quote-types';
 
 export const quotes = pgTable('quotes', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -26,7 +28,7 @@ export const quotes = pgTable('quotes', {
     finalAmount: decimal('final_amount', { precision: 12, scale: 2 }).default('0'),
     minProfitMargin: decimal('min_profit_margin', { precision: 5, scale: 4 }), // Snapshot of required margin at time of quote
 
-    status: varchar('status', { length: 50 }).default('DRAFT'),
+    status: quoteStatusEnum('status').default('DRAFT'),
     version: integer('version').default(1).notNull(),
 
     validUntil: timestamp('valid_until', { withTimezone: true }),
@@ -39,9 +41,12 @@ export const quotes = pgTable('quotes', {
     rejectReason: text('reject_reason'),
 
     lockedAt: timestamp('locked_at', { withTimezone: true }),
-    createdBy: uuid('created_by').references(() => users.id),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
     quoteTenantIdx: index('idx_quotes_tenant').on(table.tenantId),
     quoteCustomerIdx: index('idx_quotes_customer').on(table.customerId),
@@ -62,7 +67,10 @@ export const quoteRooms = pgTable('quote_rooms', {
 
     sortOrder: integer('sort_order').default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    quoteRoomsQuoteIdx: index('idx_quote_rooms_quote').on(table.quoteId),
+}));
 
 export const quoteItems = pgTable('quote_items', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -73,7 +81,7 @@ export const quoteItems = pgTable('quote_items', {
 
     category: varchar('category', { length: 50 }).notNull(), // CURTAIN_FABRIC, TRACK, WALLPAPER, etc.
 
-    productId: uuid('product_id'),
+    productId: uuid('product_id').references(() => products.id),
     productName: varchar('product_name', { length: 200 }).notNull(),
     productSku: varchar('product_sku', { length: 100 }),
 
@@ -93,13 +101,16 @@ export const quoteItems = pgTable('quote_items', {
 
     subtotal: decimal('subtotal', { precision: 12, scale: 2 }).notNull(),
 
-    attributes: jsonb('attributes').default({}), // Stores dynamic attrs like material_id, etc.
-    calculationParams: jsonb('calculation_params'), // Snapshot of calc factors (loss, strips, etc.)
+    attributes: jsonb('attributes').$type<QuoteItemAttributes>().default({}), // Stores dynamic attrs like material_id, etc.
+    calculationParams: jsonb('calculation_params').$type<QuoteCalculationParams>(), // Snapshot of calc factors (loss, strips, etc.)
     remark: text('remark'),
     sortOrder: integer('sort_order').default(0),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    quoteItemsQuoteIdx: index('idx_quote_items_quote').on(table.quoteId),
+}));
 
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type NewQuoteItem = typeof quoteItems.$inferInsert;
@@ -114,7 +125,9 @@ export const quotePlans = pgTable('quote_plans', {
     isActive: boolean('is_active').default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+    quotePlanCodeTenantIdx: uniqueIndex('idx_quote_plans_code_tenant').on(table.code, table.tenantId),
+}));
 
 export const quotePlanItems = pgTable('quote_plan_items', {
     id: uuid('id').primaryKey().defaultRandom(),

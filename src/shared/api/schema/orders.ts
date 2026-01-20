@@ -12,7 +12,8 @@ import {
     paymentScheduleStatusEnum,
     orderSettlementTypeEnum,
     changeRequestTypeEnum,
-    changeRequestStatusEnum
+    changeRequestStatusEnum,
+    orderItemStatusEnum
 } from './enums';
 
 export const orders = pgTable('orders', {
@@ -21,7 +22,7 @@ export const orders = pgTable('orders', {
     orderNo: varchar('order_no', { length: 50 }).unique().notNull(),
 
     quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
-    quoteVersionId: uuid('quote_version_id').notNull(), // Should reference quote_versions if exists, or just UUID
+    quoteVersionId: uuid('quote_version_id').references(() => quotes.id).notNull(), // 报价版本关联
 
     leadId: uuid('lead_id').references(() => leads.id), // 线索关联
 
@@ -57,10 +58,12 @@ export const orders = pgTable('orders', {
     salesId: uuid('sales_id').references(() => users.id),
 
     remark: text('remark'),
-    snapshotData: jsonb('snapshot_data'),
+    snapshotData: jsonb('snapshot_data'), // Generic snapshot/state
+    quoteSnapshot: jsonb('quote_snapshot'), // Deep clone of original quote
     logistics: jsonb('logistics'), // Stores tracking info (carrier, trackingNo, traces)
 
-    createdBy: uuid('created_by').references(() => users.id),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -75,6 +78,7 @@ export const orders = pgTable('orders', {
 }, (table) => ({
     orderTenantIdx: index('idx_orders_tenant').on(table.tenantId),
     orderCustomerIdx: index('idx_orders_customer').on(table.customerId),
+    orderTenantStatusIdx: index('idx_orders_tenant_status').on(table.tenantId, table.status),
     orderQuoteIdx: index('idx_orders_quote').on(table.quoteId),
     orderNoIdx: index('idx_orders_order_no').on(table.orderNo),
     orderStatusIdx: index('idx_orders_status').on(table.status),
@@ -105,7 +109,7 @@ export const orderItems = pgTable('order_items', {
     poId: uuid('po_id').references(() => purchaseOrders.id), // 采购单关联
     supplierId: uuid('supplier_id').references(() => suppliers.id), // 供应商关联
 
-    status: varchar('status', { length: 50 }).default('PENDING'), // Item level status
+    status: orderItemStatusEnum('status').default('PENDING'), // 订单项状态
 
     remark: text('remark'),
     sortOrder: integer('sort_order').default(0),

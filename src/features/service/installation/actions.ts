@@ -7,7 +7,6 @@ import { db } from '@/shared/api/db';
 import {
     installTasks,
     installItems,
-    installPhotos,
     users,
     customers,
     orders

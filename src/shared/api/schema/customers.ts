@@ -58,7 +58,8 @@ export const customers = pgTable('customers', {
     mergedFrom: uuid('merged_from').array(),
 
     assignedSalesId: uuid('assigned_sales_id').references(() => users.id),
-    createdBy: uuid('created_by').references(() => users.id),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),

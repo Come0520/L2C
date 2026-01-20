@@ -7,7 +7,7 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { measureTasks, measureItems } from '@/shared/api/schema';
+import { measureTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
 
     // 7. 保存测量数据（简化处理，实际应存储到 measure_items 表）
     // 这里将数据结构化存储
-    const measurementData = {
+    const _measurementData = {
         plans,
         notes,
         voiceNotes,

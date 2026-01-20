@@ -9,6 +9,7 @@ import { orders, customers } from '@/shared/api/schema';
 import { eq, desc } from 'drizzle-orm';
 import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
+import { OrderStatusMap, getStatusText } from '@/shared/lib/status-maps';
 
 export async function GET(request: NextRequest) {
     // 1. 认证
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
                 orderNo: true,
                 status: true,
                 totalAmount: true,
+                paidAmount: true,
+                balanceAmount: true,
+                deliveryAddress: true,
                 createdAt: true,
             }
         });
@@ -65,13 +69,16 @@ export async function GET(request: NextRequest) {
         });
         const total = allOrders.length;
 
-        // 7. 格式化响应（status 是枚举类型，需要类型断言）
+        // 7. 格式化响应
         const items = orderList.map(order => ({
             id: order.id,
             orderNo: order.orderNo,
             status: order.status,
-            statusText: getOrderStatusText((order.status as string | null) ?? ''),
+            statusText: getStatusText(OrderStatusMap, order.status),
             totalAmount: order.totalAmount ? parseFloat(String(order.totalAmount)) : 0,
+            paidAmount: order.paidAmount ? parseFloat(String(order.paidAmount)) : 0,
+            balanceAmount: order.balanceAmount ? parseFloat(String(order.balanceAmount)) : 0,
+            deliveryAddress: order.deliveryAddress,
             createdAt: order.createdAt?.toISOString(),
         }));
 
@@ -81,22 +88,4 @@ export async function GET(request: NextRequest) {
         console.error('订单列表查询错误:', error);
         return apiError('查询订单列表失败', 500);
     }
-}
-
-/**
- * 订单状态文本映射
- */
-function getOrderStatusText(status: string): string {
-    const statusMap: Record<string, string> = {
-        'DRAFT': '草稿',
-        'PENDING_CONFIRM': '待确认',
-        'CONFIRMED': '已确认',
-        'SIGNED': '已签约',
-        'IN_PRODUCTION': '生产中',
-        'PENDING_INSTALL': '待安装',
-        'INSTALLING': '安装中',
-        'COMPLETED': '已完成',
-        'CANCELLED': '已取消',
-    };
-    return statusMap[status] || status;
 }

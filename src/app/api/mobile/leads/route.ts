@@ -9,8 +9,9 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { leads } from '@/shared/api/schema';
 import { eq, and, isNull, desc, or, ilike } from 'drizzle-orm';
-import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
+import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
 
 export async function GET(request: NextRequest) {
     // 1. 认证
@@ -63,12 +64,15 @@ export async function GET(request: NextRequest) {
             offset: (page - 1) * pageSize,
             columns: {
                 id: true,
+                leadNo: true,
                 customerName: true,
                 customerPhone: true,
                 address: true,
                 status: true,
                 intentionLevel: true,
                 lastActivityAt: true,
+                nextFollowupAt: true,
+                decorationProgress: true,
                 createdAt: true,
             }
         });
@@ -83,13 +87,16 @@ export async function GET(request: NextRequest) {
         // 7. 格式化响应
         const items = leadList.map(lead => ({
             id: lead.id,
+            leadNo: lead.leadNo,
             name: lead.customerName,
             phone: maskPhone(lead.customerPhone),
             address: lead.address,
             status: lead.status,
-            statusText: getStatusText(lead.status),
+            statusText: getStatusText(LeadStatusMap, lead.status),
             intentionLevel: lead.intentionLevel,
             lastActivityAt: lead.lastActivityAt?.toISOString(),
+            nextFollowupAt: lead.nextFollowupAt?.toISOString(),
+            decorationProgress: lead.decorationProgress,
             createdAt: lead.createdAt?.toISOString(),
         }));
 
@@ -107,20 +114,4 @@ export async function GET(request: NextRequest) {
 function maskPhone(phone: string | null): string {
     if (!phone || phone.length < 7) return phone || '';
     return phone.slice(0, 3) + '****' + phone.slice(-4);
-}
-
-/**
- * 状态文本
- */
-function getStatusText(status: string | null): string {
-    const map: Record<string, string> = {
-        'NEW': '新线索',
-        'CONTACTED': '已联系',
-        'INTERESTED': '有意向',
-        'QUOTED': '已报价',
-        'NEGOTIATING': '谈判中',
-        'CONVERTED': '已转化',
-        'LOST': '已流失',
-    };
-    return map[status || ''] || status || '';
 }

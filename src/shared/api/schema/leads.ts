@@ -57,12 +57,15 @@ export const leads = pgTable('leads', {
 
     customerId: uuid('customer_id').references(() => customers.id), // Linked customer when WON
 
-    createdBy: uuid('created_by').references(() => users.id),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
     leadTenantIdx: index('idx_leads_tenant').on(table.tenantId),
     leadPhoneIdx: index('idx_leads_phone').on(table.customerPhone),
+    leadTenantDateIdx: index('idx_leads_tenant_date').on(table.tenantId, table.createdAt),
     leadStatusIdx: index('idx_leads_status').on(table.status),
     leadSalesIdx: index('idx_leads_sales').on(table.assignedSalesId),
 }));

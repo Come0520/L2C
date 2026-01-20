@@ -49,10 +49,32 @@ async function main() {
     console.log(`🔄 正在恢复数据库 ${dbName}...`);
 
     try {
-        execSync(
-            `docker exec -i ${container} psql -U ${dbUser} ${dbName} < "${fullPath}"`,
-            { stdio: 'inherit', shell: 'cmd.exe' }
-        );
+
+        const { hostname } = new URL(process.env.DATABASE_URL || '');
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const useDocker = isLocalhost && !process.env.USE_NATIVE_PGCLIENT;
+
+        if (useDocker) {
+            console.log('🐳 检测到本地环境，使用 Docker 执行恢复...');
+            execSync(
+                `docker exec -i ${container} psql -U ${dbUser} ${dbName} < "${fullPath}"`,
+                { stdio: 'inherit', shell: 'cmd.exe' }
+            );
+        } else {
+            console.log('🌐 检测到远程/原生环境，使用本地 psql 工具...');
+            // 检查 psql 是否存在
+            try {
+                execSync('psql --version', { stdio: 'ignore' });
+            } catch (e) {
+                throw new Error('未找到 psql 工具，请先安装 PostgreSQL 客户端工具');
+            }
+
+            const dbUrl = process.env.DATABASE_URL!;
+            execSync(
+                `psql "${dbUrl}" < "${fullPath}"`,
+                { stdio: 'inherit', shell: 'cmd.exe' }
+            );
+        }
         console.log('✅ 恢复完成');
     } catch (error) {
         console.error('❌ 恢复失败:', error);

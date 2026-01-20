@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { tenants } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import {
     handleWebhookRequest,
-    verifyAccessToken,
     WebhookLeadPayload,
     WebhookResponse
 } from '@/features/leads/logic/webhook-handler';
@@ -73,27 +71,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 3. 根据 Token 查找租户 (简化: 遍历所有租户验证)
-        // 生产环境应使用 token -> tenantId 的索引表
-        const allTenants = await db.query.tenants.findMany({
-            columns: { id: true, settings: true }
+        // 3. 根据 Token 查找租户 (优化: 使用 JSON 操作符直接查询)
+        // 假设 settings 字段结构为 { "webhookAccessToken": "..." }
+        // 注意：PostgreSQL JSONB 查询语法
+        const matchedTenant = await db.query.tenants.findFirst({
+            where: sql`settings->>'webhookAccessToken' = ${accessToken}`,
+            columns: { id: true }
         });
 
-        let matchedTenantId: string | null = null;
-        for (const tenant of allTenants) {
-            const settings = tenant.settings as { webhookAccessToken?: string } | null;
-            if (settings?.webhookAccessToken === accessToken) {
-                matchedTenantId = tenant.id;
-                break;
-            }
-        }
-
-        if (!matchedTenantId) {
+        if (!matchedTenant) {
             return NextResponse.json(
                 { code: 401, message: 'Unauthorized: Invalid Access-Token' },
                 { status: 401 }
             );
         }
+
+        const matchedTenantId = matchedTenant.id;
 
         // 4. 解析请求体
         let payload: WebhookLeadPayload;
@@ -119,10 +112,11 @@ export async function POST(request: NextRequest) {
         // 6. 返回响应
         return NextResponse.json(result, { status: result.code });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Webhook error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { code: 500, message: `Internal Server Error: ${error.message}` },
+            { code: 500, message: `Internal Server Error: ${message}` },
             { status: 500 }
         );
     }

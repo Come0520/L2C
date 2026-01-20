@@ -20,3 +20,4 @@ export * from './loyalty';
 export * from './types';
 export * from './quote-config';
 export * from './inventory';
+export * from './verification_codes';

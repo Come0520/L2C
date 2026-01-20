@@ -53,6 +53,7 @@ export const measureTasks = pgTable('measure_tasks', {
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
     measureTenantIdx: index('idx_measure_tasks_tenant').on(table.tenantId),
     measureLeadIdx: index('idx_measure_tasks_lead').on(table.leadId),
@@ -97,7 +98,10 @@ export const measureItems = pgTable('measure_items', {
     remark: text('remark'),
     segmentData: jsonb('segment_data'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    measureItemsSheetIdx: index('idx_measure_items_sheet').on(table.sheetId),
+}));
 
 export const installTasks = pgTable('install_tasks', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -186,7 +190,9 @@ export const installItems = pgTable('install_items', {
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
-});
+}, (table) => ({
+    installItemsTaskIdx: index('idx_install_items_task').on(table.installTaskId),
+}));
 
 export const installPhotos = pgTable('install_photos', {
     id: uuid('id').primaryKey().defaultRandom(),

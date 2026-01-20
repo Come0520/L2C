@@ -27,6 +27,7 @@ export class OrderStateMachine {
 
         'COMPLETED': [],
         'PAUSED': ['IN_PRODUCTION', 'PENDING_PRODUCTION'], // Add PAUSED transitions
+        'HALTED': ['IN_PRODUCTION', 'PENDING_PRODUCTION', 'CANCELLED'], // Add HALTED transitions
         'PENDING_APPROVAL': ['PENDING_PRODUCTION', 'CANCELLED'],
         'CANCELLED': []
     };

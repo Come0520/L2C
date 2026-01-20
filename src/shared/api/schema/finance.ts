@@ -1,10 +1,11 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, paymentSchedules } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
 import { customers } from './customers';
 import { marketChannels } from './catalogs';
 import { installTasks } from './service';
+import { arStatementStatusEnum, commissionStatusEnum } from './enums';
 
 // ==================== 基础配置表 (Base Configs) ====================
 
@@ -40,6 +41,7 @@ export const financeAccounts = pgTable('finance_accounts', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     tenantIdx: index('idx_finance_accounts_tenant').on(table.tenantId),
+    accountNoTenantIdx: uniqueIndex('idx_finance_accounts_no_tenant').on(table.accountNo, table.tenantId),
 }));
 
 // 账户流水表 (Account Transactions)
@@ -62,6 +64,37 @@ export const accountTransactions = pgTable('account_transactions', {
     relatedIdx: index('idx_account_transactions_related').on(table.relatedId),
 }));
 
+// 资金调拨表 (Internal Transfers)
+export const internalTransfers = pgTable('internal_transfers', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    transferNo: varchar('transfer_no', { length: 50 }).notNull().unique(),
+
+    fromAccountId: uuid('from_account_id').references(() => financeAccounts.id).notNull(),
+    toAccountId: uuid('to_account_id').references(() => financeAccounts.id).notNull(),
+
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+
+    // 关联的双边流水记录
+    fromTransactionId: uuid('from_transaction_id').references(() => accountTransactions.id),
+    toTransactionId: uuid('to_transaction_id').references(() => accountTransactions.id),
+
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'), // PENDING/COMPLETED/CANCELLED
+
+    remark: text('remark'),
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    approvedBy: uuid('approved_by').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_internal_transfers_tenant').on(table.tenantId),
+    fromIdx: index('idx_internal_transfers_from').on(table.fromAccountId),
+    toIdx: index('idx_internal_transfers_to').on(table.toAccountId),
+    statusIdx: index('idx_internal_transfers_status').on(table.status),
+}));
+
 // ==================== 应收管理 (AR) ====================
 
 // AR对账单 (AR Statements)
@@ -78,7 +111,7 @@ export const arStatements = pgTable('ar_statements', {
     receivedAmount: decimal('received_amount', { precision: 12, scale: 2 }).notNull().default('0'),
     pendingAmount: decimal('pending_amount', { precision: 12, scale: 2 }).notNull(),
 
-    status: varchar('status', { length: 20 }).notNull(), // PENDING_RECON/RECONCILED/INVOICED/PARTIAL/PAID/PENDING_DELIVER/COMPLETED/BAD_DEBT
+    status: arStatementStatusEnum('status').notNull(), // AR对账单状态
 
     invoiceNo: varchar('invoice_no', { length: 100 }),
     invoicedAt: timestamp('invoiced_at', { withTimezone: true }),
@@ -93,7 +126,7 @@ export const arStatements = pgTable('ar_statements', {
 
     commissionRate: decimal('commission_rate', { precision: 5, scale: 4 }),
     commissionAmount: decimal('commission_amount', { precision: 12, scale: 2 }),
-    commissionStatus: varchar('commission_status', { length: 20 }), // PENDING/CALCULATED/PAID
+    commissionStatus: commissionStatusEnum('commission_status'), // 佣金状态
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),

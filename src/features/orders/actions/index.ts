@@ -4,5 +4,6 @@ export {
     createOrderFromQuote,
     getOrder as getOrderDetail,
     splitOrder,
-    requestDelivery
+    requestDelivery,
+    confirmOrderProduction // Added export
 } from './orders';

@@ -3,6 +3,23 @@ import { quoteConfig } from '@/shared/api/schema/quote-config';
 import { eq, and } from 'drizzle-orm';
 
 /**
+ * 尺寸限制配置 (Dimension Limits Configuration)
+ * 支持租户级自定义，但不能超过系统硬限制
+ */
+export interface DimensionLimits {
+    /** 高度警告阈值 (cm)，超过此值提示确认 */
+    heightWarning: number;
+    /** 高度硬限制 (cm)，系统级上限，不可超过 */
+    heightMax: number;
+    /** 宽度警告阈值 (cm)，超过此值提示确认 */
+    widthWarning: number;
+    /** 宽度硬限制 (cm)，系统级上限，不可超过 */
+    widthMax: number;
+    /** 是否启用尺寸校验 */
+    enabled: boolean;
+}
+
+/**
  * 报价方案配置 (Quote Plan Settings)
  */
 export interface QuotePlanSettings {
@@ -41,6 +58,9 @@ export interface QuoteConfig {
         minDiscountRate: number;
         requireApprovalBelow: number;
     };
+
+    /** 尺寸校验配置 (Dimension Validation) */
+    dimensionLimits?: DimensionLimits;
 }
 
 /**
@@ -76,6 +96,19 @@ const SYSTEM_DEFAULT_CONFIG: QuoteConfig = {
     discountControl: {
         minDiscountRate: 0.80,
         requireApprovalBelow: 0.90
+    },
+    /**
+     * 尺寸限制系统默认配置
+     * - 系统级硬限制：高度 1000cm，宽度 2000cm（不可超过）
+     * - 警告阈值：高度 400cm（复式/挑高），宽度 1000cm（需分段）
+     * - 租户可自定义更低的警告阈值，但硬限制不可调整
+     */
+    dimensionLimits: {
+        heightWarning: 400,   // 超过 400cm 提示是否为复式/挑高
+        heightMax: 1000,      // 系统硬限制，不可超过 1000cm
+        widthWarning: 1000,   // 超过 1000cm 提示是否需分段
+        widthMax: 2000,       // 系统硬限制，不可超过 2000cm
+        enabled: true
     }
 };
 
@@ -150,7 +183,23 @@ export class QuoteConfigService {
                 ...SYSTEM_DEFAULT_CONFIG.visibleFields,
                 ...(tenantSettings.visibleFields || []),
                 ...(userPrefs.visibleFields || [])
-            ]))
+            ])),
+            // 尺寸限制配置：租户可自定义警告阈值，但硬限制始终使用系统默认值
+            dimensionLimits: {
+                // 硬限制不可调整，始终使用系统默认值
+                heightMax: SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax,
+                widthMax: SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax,
+                // 警告阈值可由租户自定义，但不能超过硬限制
+                heightWarning: Math.min(
+                    tenantSettings.dimensionLimits?.heightWarning ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
+                    SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax
+                ),
+                widthWarning: Math.min(
+                    tenantSettings.dimensionLimits?.widthWarning ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
+                    SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
+                ),
+                enabled: tenantSettings.dimensionLimits?.enabled ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.enabled
+            }
         };
 
         // If advanced mode, ensure advanced fields are visible
@@ -185,7 +234,21 @@ export class QuoteConfigService {
             visibleFields: Array.from(new Set([
                 ...SYSTEM_DEFAULT_CONFIG.visibleFields,
                 ...(tenantSettings.visibleFields || [])
-            ]))
+            ])),
+            // 尺寸限制配置
+            dimensionLimits: {
+                heightMax: SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax,
+                widthMax: SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax,
+                heightWarning: Math.min(
+                    tenantSettings.dimensionLimits?.heightWarning ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
+                    SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax
+                ),
+                widthWarning: Math.min(
+                    tenantSettings.dimensionLimits?.widthWarning ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
+                    SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
+                ),
+                enabled: tenantSettings.dimensionLimits?.enabled ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.enabled
+            }
         };
     }
 

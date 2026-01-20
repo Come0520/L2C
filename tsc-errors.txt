@@ -1,1 +1,0 @@
-src/shared/lib/invite-token.ts(289,16): error TS2353: Object literal may only specify known properties, and 'userId' does not exist in type '{ name?: string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}> | undefined; tenantId?: string | SQL<unknown> | PgColumn<...> | undefined; ... 30 more ...; deletedAt?: SQL<...> | ... 3 more ... | undefined; }'.

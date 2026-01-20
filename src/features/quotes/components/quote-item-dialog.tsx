@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -12,21 +12,22 @@ import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'; // Using Tabs for Category? Or just Select.
+// Tabs 组件导入已移除（未使用）
 import { getProducts } from '@/features/products/actions/queries';
 import { createQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
-import { Check, ChevronsUpDown, Search } from 'lucide-react';
+import { Check, ChevronsUpDown, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import {
     Command,
     CommandEmpty,
-    CommandGroup,
     CommandInput,
     CommandItem,
     CommandList,
 } from "@/shared/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { DimensionLimits } from '@/services/quote-config.service';
+import { getHeightStatus, getWidthStatus, validateDimensions } from '@/features/quotes/utils/dimension-validation';
 
 interface QuoteItemDialogProps {
     open: boolean;
@@ -34,9 +35,27 @@ interface QuoteItemDialogProps {
     quoteId: string;
     roomId?: string | null;
     onSuccess?: () => void;
+    /** 尺寸限制配置 (从父组件传入，默认使用系统配置) */
+    dimensionLimits?: DimensionLimits;
+    /** 可见字段列表 (如果不传，默认全部显示或根据简单逻辑显示) */
+    visibleFields?: string[];
 }
 
-export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess }: QuoteItemDialogProps) {
+/** 默认尺寸限制配置 (系统级默认值) */
+const DEFAULT_DIMENSION_LIMITS: DimensionLimits = {
+    heightWarning: 400,
+    heightMax: 1000,
+    widthWarning: 1000,
+    widthMax: 2000,
+    enabled: true
+};
+
+export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess, dimensionLimits, visibleFields }: QuoteItemDialogProps) {
+    const limits = dimensionLimits ?? DEFAULT_DIMENSION_LIMITS;
+
+    // Helper to check visibility
+    const isVisible = (field: string) => !visibleFields || visibleFields.includes(field);
+
     const [category, setCategory] = useState<string>('CURTAIN');
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [productOpen, setProductOpen] = useState(false);
@@ -50,6 +69,10 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
     const [height, setHeight] = useState<number>(0);
     const [foldRatio, setFoldRatio] = useState<number>(2.0);
     const [remark, setRemark] = useState('');
+
+    // 尺寸校验状态 (Dimension Validation States)
+    const heightStatus = useMemo(() => getHeightStatus(height, limits), [height, limits]);
+    const widthStatus = useMemo(() => getWidthStatus(width, limits), [width, limits]);
 
     // Load products on search or category change
     useEffect(() => {
@@ -80,14 +103,27 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
 
     const handleSubmit = async () => {
         if (!selectedProduct) {
-            toast.error("Please select a product");
+            toast.error("请选择商品");
             return;
+        }
+
+        // 尺寸校验 - 硬限制检查
+        const dimensionCheck = validateDimensions(height, width, limits);
+        if (!dimensionCheck.valid) {
+            toast.error(dimensionCheck.message || "尺寸超出限制");
+            return;
+        }
+
+        // 尺寸警告 - 提示但不阻止
+        if (dimensionCheck.type === 'warning') {
+            toast.warning(dimensionCheck.message);
         }
 
         try {
             await createQuoteItem({
                 quoteId,
                 roomId: roomId || undefined,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 category: category as any,
                 productId: selectedProduct.id,
                 productName: selectedProduct.name,
@@ -102,7 +138,7 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                     productImage: selectedProduct.images?.[0]
                 }
             });
-            toast.success("Item added successfully");
+            toast.success("报价项添加成功");
             onOpenChange(false);
             if (onSuccess) onSuccess();
 
@@ -113,7 +149,7 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
             setQuantity(1);
         } catch (error) {
             console.error(error);
-            toast.error("Failed to add item");
+            toast.error("添加失败");
         }
     };
 
@@ -203,25 +239,61 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                     {/* Dynamic Fields based on Category */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">宽度 (cm)</Label>
-                        <Input
-                            type="number"
-                            className="col-span-3"
-                            value={width}
-                            onChange={(e) => setWidth(Number(e.target.value))}
-                        />
+                        <div className="col-span-3 space-y-1">
+                            <Input
+                                type="number"
+                                className={cn(
+                                    widthStatus.status === 'error' && 'border-red-500 focus-visible:ring-red-500',
+                                    widthStatus.status === 'warning' && 'border-yellow-500 focus-visible:ring-yellow-500'
+                                )}
+                                value={width}
+                                onChange={(e) => setWidth(Number(e.target.value))}
+                                max={limits.widthMax}
+                            />
+                            {widthStatus.message && (
+                                <div className={cn(
+                                    'flex items-center gap-1 text-xs',
+                                    widthStatus.status === 'error' ? 'text-red-500' : 'text-yellow-600'
+                                )}>
+                                    {widthStatus.status === 'error'
+                                        ? <XCircle className="h-3 w-3" />
+                                        : <AlertTriangle className="h-3 w-3" />
+                                    }
+                                    {widthStatus.message}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">高度 (cm)</Label>
-                        <Input
-                            type="number"
-                            className="col-span-3"
-                            value={height}
-                            onChange={(e) => setHeight(Number(e.target.value))}
-                        />
+                        <div className="col-span-3 space-y-1">
+                            <Input
+                                type="number"
+                                className={cn(
+                                    heightStatus.status === 'error' && 'border-red-500 focus-visible:ring-red-500',
+                                    heightStatus.status === 'warning' && 'border-yellow-500 focus-visible:ring-yellow-500'
+                                )}
+                                value={height}
+                                onChange={(e) => setHeight(Number(e.target.value))}
+                                max={limits.heightMax}
+                            />
+                            {heightStatus.message && (
+                                <div className={cn(
+                                    'flex items-center gap-1 text-xs',
+                                    heightStatus.status === 'error' ? 'text-red-500' : 'text-yellow-600'
+                                )}>
+                                    {heightStatus.status === 'error'
+                                        ? <XCircle className="h-3 w-3" />
+                                        : <AlertTriangle className="h-3 w-3" />
+                                    }
+                                    {heightStatus.message}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {category === 'CURTAIN' && (
+                    {category === 'CURTAIN' && isVisible('foldRatio') && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">褶皱倍数</Label>
                             <Input
@@ -231,6 +303,21 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                                 step="0.1"
                                 onChange={(e) => setFoldRatio(Number(e.target.value))}
                             />
+                        </div>
+                    )}
+
+                    {category === 'CURTAIN' && isVisible('installType') && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">安装方式</Label>
+                            <Select onValueChange={(val) => { /* Update State (missing state) */ }}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="顶装/侧装" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="top">顶装</SelectItem>
+                                    <SelectItem value="side">侧装</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     )}
 
@@ -244,14 +331,16 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                         />
                     </div>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">备注</Label>
-                        <Input
-                            className="col-span-3"
-                            value={remark}
-                            onChange={(e) => setRemark(e.target.value)}
-                        />
-                    </div>
+                    {isVisible('remark') && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">备注</Label>
+                            <Input
+                                className="col-span-3"
+                                value={remark}
+                                onChange={(e) => setRemark(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter>

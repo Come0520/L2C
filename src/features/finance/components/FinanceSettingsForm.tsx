@@ -54,8 +54,9 @@ export function FinanceSettingsForm({ initialData }: FinanceSettingsFormProps) {
             try {
                 await updateFinanceConfig(values);
                 toast.success('财务配置更新成功');
-            } catch (error: any) {
-                toast.error(error.message || '更新失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '更新失败';
+                toast.error(message);
             }
         });
     };

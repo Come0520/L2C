@@ -1,8 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { db } from '@/shared/api/db';
-import { approvals, approvalTasks, users } from '@/shared/api/schema';
-import { eq, desc } from 'drizzle-orm';
+import { approvalTasks } from '@/shared/api/schema';
+import { desc } from 'drizzle-orm';
 import { Badge } from '@/shared/ui/badge';
 
 export async function ApApprovalHistory({ entityId, entityType }: { entityId: string; entityType: string }) {
@@ -44,8 +44,8 @@ export async function ApApprovalHistory({ entityId, entityType }: { entityId: st
                     {approval.tasks.map((task: any) => (
                         <div key={task.id} className="relative pl-6">
                             <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${task.status === 'APPROVED' ? 'bg-green-500 border-green-500' :
-                                    task.status === 'REJECTED' ? 'bg-red-500 border-red-500' :
-                                        'bg-background border-muted'
+                                task.status === 'REJECTED' ? 'bg-red-500 border-red-500' :
+                                    'bg-background border-muted'
                                 }`}></div>
 
                             <div className="flex justify-between items-start">

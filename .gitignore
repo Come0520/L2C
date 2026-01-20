@@ -24,12 +24,25 @@
 .DS_Store
 *.pem
 
-# debug
+# debug & temp files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.log
+
+# 临时输出文件 (调试/测试/构建产物)
+e2e_*.txt
+tsc_*.txt
+lint_*.txt
+type_*.txt
+build_*.txt
+test_*.txt
+*_output*.txt
+*_results*.txt
+*_errors*.txt
+*-errors*.txt
+*.scratchpad.txt
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -43,6 +56,9 @@ next-env.d.ts
 
 # database backups
 /backups/
+
+# local database directory (PostgreSQL data)
+/local-db/
 
 # Antigravity Agent Workflows
 !.agent/workflows/

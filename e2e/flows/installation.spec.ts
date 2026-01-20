@@ -21,7 +21,7 @@ test.describe('安装流程', () => {
         await page.waitForLoadState('networkidle');
 
         // 验证页面标题
-        await expect(page.getByRole('heading', { name: /安装/ })).toBeVisible();
+        await expect(page.getByRole('heading', { name: '安装服务 (Installation Service)' })).toBeVisible();
 
         // 验证 Tab 分组
         const tabs = page.locator('[role="tablist"]');
@@ -97,7 +97,7 @@ test.describe('安装流程', () => {
             await page.waitForURL(/\/service\/installation\/.+/);
 
             // 验证详情页
-            await expect(page.getByText(/安装单详情|安装单号/)).toBeVisible();
+            await expect(page.getByText(/安装任务详情|安装单号/)).toBeVisible();
 
             // 验证客户信息
             const customerInfo = page.getByText(/客户|姓名|电话/);
@@ -211,8 +211,8 @@ test.describe('移动端安装单测试', () => {
         await page.goto('/service/installation');
         await page.waitForLoadState('networkidle');
 
-        // 验证页面适配
-        await expect(page.getByRole('heading', { name: /安装/ })).toBeVisible();
+        // 验证页面标题
+        await expect(page.getByRole('heading', { name: '安装服务 (Installation Service)' })).toBeVisible();
 
         // 验证触摸交互元素大小合适
         const buttons = page.locator('button');

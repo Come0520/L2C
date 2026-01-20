@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
 import { eq, and, desc } from 'drizzle-orm';
-import { customers, leads } from '@/shared/api/schema';
+// customers, leads 导入已移除（未使用）
 
 // Schema Definitions
 const previewImportSchema = z.object({

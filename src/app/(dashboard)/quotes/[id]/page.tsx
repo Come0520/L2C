@@ -1,15 +1,9 @@
-
 import { getQuote } from '@/features/quotes/actions/queries';
-import { Button } from '@/shared/ui/button';
-import { Card, CardHeader, CardContent } from '@/shared/ui/card';
-import { StatusBadge } from '@/shared/ui/status-badge';
-import { ArrowLeft, Printer, FileText } from 'lucide-react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { format } from 'date-fns';
 import { QuoteDetail } from '@/features/quotes/components/quote-detail';
 import { getQuoteVersions } from '@/features/quotes/actions/queries';
 import { getMyQuoteConfig } from '@/features/quotes/actions/config-actions';
+import { QuoteService } from '@/services/quote.service';
 
 export default async function QuoteDetailPage({
     params,
@@ -19,6 +13,12 @@ export default async function QuoteDetailPage({
     const { id } = await params;
 
     // 并行获取报价和用户配置 (消除 Waterfall)
+    // 注意：先获取 ID，然后并行执行
+
+    // 1. 检查是否过期 (Fire and forget or await, depending on consistency needs)
+    // 我们在此处 await 以确保页面显示最新状态
+    await QuoteService.checkAndExpireQuote(id);
+
     const [result, config] = await Promise.all([
         getQuote(id),
         getMyQuoteConfig()

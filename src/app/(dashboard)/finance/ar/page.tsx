@@ -3,7 +3,18 @@ import { ARStatementTable } from '@/features/finance/components/ARStatementTable
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 
 export default async function ARPage() {
-    const data = await getARStatements();
+    let data = [];
+    try {
+        data = await getARStatements();
+    } catch (e: any) { // Type explicitly as any or Error
+        return (
+            <div className="p-4 bg-red-50 text-red-500">
+                <h1 className="text-xl font-bold">Data Load Error</h1>
+                <pre>{e?.message || JSON.stringify(e)}</pre>
+                <pre>{e?.stack}</pre>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

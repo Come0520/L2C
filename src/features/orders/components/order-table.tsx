@@ -23,11 +23,11 @@ export interface Order {
     id: string;
     orderNo: string;
     customerName: string | null;
-    totalAmount: string;
-    paidAmount: string;
-    status: string;
-    sales: { name: string } | null;
-    createdAt: Date | string;
+    totalAmount: string | null;
+    paidAmount: string | null;
+    status: string | null;
+    sales: { name: string | null } | null;
+    createdAt: Date | string | null;
 }
 
 interface OrderTableProps {
@@ -73,11 +73,11 @@ export const OrderTable = React.memo(function OrderTable({ data }: OrderTablePro
                                     ¥{Number(order.paidAmount).toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <OrderStatusBadge status={order.status} />
+                                    <OrderStatusBadge status={order.status || 'DRAFT'} />
                                 </TableCell>
                                 <TableCell>{order.sales?.name || '-'}</TableCell>
                                 <TableCell className="text-muted-foreground text-sm">
-                                    {format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm')}
+                                    {order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm') : '-'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">

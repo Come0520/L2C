@@ -21,6 +21,7 @@ interface ARStatementTableProps {
 }
 
 export function ARStatementTable({ data }: ARStatementTableProps) {
+    console.log('🖼️ ARStatementTable rendering, data length:', data?.length);
     const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
     const [selectedStatement, setSelectedStatement] = useState<any>(null);
 

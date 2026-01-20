@@ -62,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             type: 'oauth',
             clientId: process.env.WECHAT_CLIENT_ID,
             clientSecret: process.env.WECHAT_CLIENT_SECRET,
-            authorization: 'https://open.weixin.qq.com/connect/qrconnect?appid=' + process.env.WECHAT_CLIENT_ID + '&redirect_uri=' + process.env.NEXTAUTH_URL + '/api/auth/callback/wechat&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect',
+            authorization: 'https://open.weixin.qq.com/connect/qrconnect?appid=' + process.env.WECHAT_CLIENT_ID + '&redirect_uri=' + process.env.NEXTAUTH_URL + '/api/auth/callback/wechat&response_type=code&scope=snsapi_login#wechat_redirect',
             token: 'https://api.weixin.qq.com/sns/oauth2/access_token',
             userinfo: 'https://api.weixin.qq.com/sns/userinfo',
             profile(profile) {

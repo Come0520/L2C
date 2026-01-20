@@ -50,7 +50,7 @@ export async function createSplitRule(input: SplitRuleInput) {
         conditions: validated.conditions,
         targetType: validated.targetType,
         targetSupplierId: validated.targetSupplierId,
-        isActive: validated.isActive,
+        isActive: validated.isActive === 1, // 转换为 boolean
     });
 
     revalidatePath('/supply-chain/rules');
@@ -80,7 +80,7 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
             conditions: validated.conditions,
             targetType: validated.targetType,
             targetSupplierId: validated.targetSupplierId,
-            isActive: validated.isActive,
+            isActive: validated.isActive === 1, // 转换为 boolean
             updatedAt: new Date()
         })
         .where(and(

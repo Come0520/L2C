@@ -32,7 +32,11 @@ export class OrderService {
             const quote = await tx.query.quotes.findFirst({
                 where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
                 with: {
-                    items: true,
+                    items: {
+                        with: {
+                            product: true
+                        }
+                    },
                     customer: true
                 }
             });
@@ -62,9 +66,10 @@ export class OrderService {
             const balance = total - paid;
 
             // Prepare Snapshot
-            const snapshotData = {
+            const quoteSnapshot = {
                 quote: {
                     ...quote,
+                    // Ensure items have product details
                     items: quote.items
                 },
                 customer: quote.customer,
@@ -84,8 +89,8 @@ export class OrderService {
                 totalAmount: quote.totalAmount,
                 paidAmount: options?.paymentAmount || '0',
                 balanceAmount: String(balance),
-                settlementType: 'PREPAID' as any,
-                status: 'PENDING_PO' as any,
+                settlementType: 'PREPAID',
+                status: 'PENDING_PO',
 
                 confirmationImg: options?.confirmationImg,
                 paymentProofImg: options?.paymentProofImg,
@@ -93,7 +98,8 @@ export class OrderService {
                 paymentTime: options?.paymentAmount ? new Date() : null,
                 remark: options?.remark,
 
-                snapshotData, // Save Snapshot
+                quoteSnapshot, // Save Deep Snapshot
+                snapshotData: {}, // Initialize generic snapshot data
 
                 isLocked: false, // Default false
 
@@ -109,7 +115,7 @@ export class OrderService {
                     quoteItemId: item.id,
                     productId: item.productId!,
                     productName: item.productName,
-                    category: item.category as any,
+                    category: item.category as typeof orderItems.$inferSelect.category,
                     quantity: item.quantity,
                     width: item.width,
                     height: item.height,
@@ -117,7 +123,7 @@ export class OrderService {
                     subtotal: item.subtotal,
                     roomName: item.roomName || 'Default',
                     remark: item.remark,
-                    status: 'PENDING',
+                    status: 'PENDING' as const,
                 }));
                 await tx.insert(orderItems).values(itemsToInsert);
             }
@@ -166,7 +172,7 @@ export class OrderService {
 
             const [updatedOrder] = await tx.update(orders)
                 .set({
-                    status: newStatus as any,
+                    status: newStatus as typeof orders.$inferSelect.status,
                     updatedAt: new Date()
                 })
                 .where(eq(orders.id, orderId))
@@ -218,7 +224,7 @@ export class OrderService {
                 })
                 .where(eq(orders.id, orderId));
 
-            return { success: true, approvalId: (result as any).approvalId };
+            return { success: true, approvalId: (result as { approvalId?: string }).approvalId };
         });
     }
 
@@ -239,10 +245,10 @@ export class OrderService {
 
             const [updatedOrder] = await tx.update(orders)
                 .set({
-                    status: 'PAUSED' as any,
+                    status: 'PAUSED',
                     pausedAt: new Date(),
                     pauseReason: reason,
-                    snapshotData: { ... (order.snapshotData as any || {}), previousStatus: order.status }, // Store status for resume
+                    snapshotData: { ...(order.snapshotData as Record<string, unknown> || {}), previousStatus: order.status }, // Store status for resume
                     updatedAt: new Date()
                 })
                 .where(eq(orders.id, orderId))
@@ -264,7 +270,7 @@ export class OrderService {
 
             if (!order || order.status !== 'PAUSED') throw new Error("订单未处于叫停状态");
 
-            const previousStatus = (order.snapshotData as any)?.previousStatus || 'IN_PRODUCTION';
+            const previousStatus = (order.snapshotData as Record<string, any>)?.previousStatus || 'IN_PRODUCTION';
             const pauseStart = order.pausedAt;
             let addedDays = 0;
             if (pauseStart) {
@@ -274,7 +280,7 @@ export class OrderService {
 
             const [updatedOrder] = await tx.update(orders)
                 .set({
-                    status: previousStatus as any,
+                    status: previousStatus as typeof orders.$inferSelect.status,
                     pausedAt: null,
                     pauseReason: null,
                     pauseCumulativeDays: (order.pauseCumulativeDays || 0) + addedDays,

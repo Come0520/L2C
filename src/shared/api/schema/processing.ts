@@ -1,8 +1,8 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
-import { workOrderStatusEnum } from './enums';
+import { workOrderStatusEnum, workOrderItemStatusEnum } from './enums';
 
 export const workOrders = pgTable('work_orders', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -35,7 +35,7 @@ export const workOrderItems = pgTable('work_order_items', {
     woId: uuid('wo_id').references(() => workOrders.id).notNull(),
     orderItemId: uuid('order_item_id').references(() => orderItems.id).notNull(), // Finished Product
 
-    status: varchar('status', { length: 20 }).default('PENDING'),
+    status: workOrderItemStatusEnum('status').default('PENDING'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({

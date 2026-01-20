@@ -1,0 +1,94 @@
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\components\fee-waiver-dialog.tsx
+  23:35  warning  'taskId' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  42:18  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\components\measure-history-list.tsx
+  5:38  warning  'orderId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\__tests__\debug-db.test.ts
+  2:24  warning  'expect' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  5:10  warning  'eq' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\__tests__\integration\checklist.test.ts
+  2:10  warning  'eq' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  4:10  warning  'installTasks' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\actions.ts
+  10:5  warning  'installPhotos' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\actions\create-task.test.ts
+  13:10  warning  'tenants' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  13:19  warning  'users' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  15:10  warning  'uuid' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\actions\create-task.ts
+   5:18  warning  'orderItems' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   6:14  warning  'inArray' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  10:10  warning  'installTaskStatusEnum' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  10:33  warning  'installTaskCategoryEnum' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  27:36  warning  'userId' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\components\completion-form.tsx
+  7:46  warning  'taskId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\components\fee-breakdown-form.tsx
+  7:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\components\installation-advanced-filter.tsx
+  4:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\components\smart-worker-selector.tsx
+  4:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\installation\logic\logistics-check.ts
+  3:14  warning  'and' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  3:19  warning  'notInArray' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  3:31  warning  'inArray' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\actions.ts
+  2:40  warning  'data' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  3:39  warning  'id' is defined but never used. Allowed unused args must match /^_/u    @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\actions\create-task.ts
+  52:47  warning  'userId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\actions\dispatch.ts
+  2:43  warning  'id' is defined but never used. Allowed unused args must match /^_/u        @typescript-eslint/no-unused-vars
+  2:55  warning  'workerId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\actions\sync-actions.ts
+  12:77  warning  'data' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  17:77  warning  'data' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\actions\workflows.ts
+   5:14  warning  'and' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  72:20  warning  'task' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  95:90  warning  'tenantId' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\create-measure-task-dialog.tsx
+  41:17  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  51:17  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\measure-sync-dialog.tsx
+  21:52  warning  'tasks' is defined but never used. Allowed unused args must match /^_/u                        @typescript-eslint/no-unused-vars
+  23:29  warning  'setSelectedItemIds' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\measure-sync-manager-button.tsx
+  7:44  warning  'quoteId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\measurement-advanced-filter.tsx
+  4:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\mobile-form.tsx
+  11:23  warning  'data' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\components\submit-data-dialog.tsx
+  16:91  warning  'taskId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\service\measurement\lib\sync-manager.ts
+  6:34  warning  'workerId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+鉁?42 problems (0 errors, 42 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

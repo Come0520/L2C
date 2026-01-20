@@ -12,11 +12,13 @@ import { Input } from '@/shared/ui/input';
 import { toast } from 'sonner';
 
 export default function SuppliersPage() {
-    const [data, setData] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [data, setData] = useState<any[]>([]); // 供应商列表类型后续可精确定义
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState('');
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [selectedSupplier, setSelectedSupplier] = useState<any>(null); // 供应商类型后续可精确定义
 
     const fetchData = async () => {
         setLoading(true);
@@ -27,7 +29,7 @@ export default function SuppliersPage() {
                 return;
             }
             setData(result.data?.data || []);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error('获取供应商失败');
         } finally {
             setLoading(false);
@@ -43,7 +45,8 @@ export default function SuppliersPage() {
         setDialogOpen(true);
     };
 
-    const handleEdit = (supplier: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleEdit = (supplier: any) => { // 供应商类型后续可精确定义
         setSelectedSupplier(supplier);
         setDialogOpen(true);
     };
@@ -57,7 +60,7 @@ export default function SuppliersPage() {
             }
             toast.success(active ? '供应商已启用' : '供应商已停用');
             fetchData();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error('操作失败');
         }
     };

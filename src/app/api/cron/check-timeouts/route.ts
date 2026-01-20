@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             timestamp: new Date().toISOString(),
-            ...(result as any)
+            ...(result as Record<string, unknown>)
         });
     } catch (error) {
         console.error('Cron job error:', error);

@@ -5,7 +5,7 @@ import { cache } from 'react';
 import { orders, orderItems } from '@/shared/api/schema/orders';
 
 import { quotes } from '@/shared/api/schema/quotes';
-import { eq, sql, desc } from 'drizzle-orm';
+import { eq, sql, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '@/shared/lib/auth';
 
@@ -302,11 +302,42 @@ export async function customerAcceptAction(orderId: string) {
     return { success: true };
 }
 
+
 export async function customerRejectAction(orderId: string, reason: string) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
     const tenantId = (session.user as any).tenantId;
 
     await OrderService.customerReject(orderId, tenantId, reason);
+    return { success: true };
+}
+
+export async function confirmOrderProduction(input: { orderId: string }) {
+    const session = await auth();
+    if (!session?.user) throw new Error('Unauthorized');
+    const tenantId = (session.user as any).tenantId;
+
+    const order = await db.query.orders.findFirst({
+        where: and(eq(orders.id, input.orderId), eq(orders.tenantId, tenantId))
+    });
+
+    if (!order) throw new Error('订单不存在');
+
+    // Business Rule Check: Deposit
+    // Business Rule Check: Deposit (TODO: Schema missing productionTrigger/depositRatio)
+    /*
+    if ((order as any).productionTrigger === 'DEPOSIT_REQUIRED') {
+        const total = Number(order.totalAmount || 0);
+        const paid = Number(order.paidAmount || 0);
+        const requiredDeposit = total * Number((order as any).depositRatio || 0);
+
+        // Allow small floating point margin or strict check? Strict for currency.
+        if (paid < requiredDeposit) {
+            throw new Error(`需支付定金 (¥${requiredDeposit.toFixed(2)}) 才可排产`);
+        }
+    }
+    */
+
+    await OrderService.updateOrderStatus(input.orderId, 'IN_PRODUCTION', tenantId, session.user.id);
     return { success: true };
 }

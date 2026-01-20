@@ -1,19 +1,6 @@
 
-// @ts-expect-error Missing types for kuaidi100 module
-import Kuaidi100 from 'kuaidi100';
-
 const key = process.env.KUAIDI100_KEY;
 const customer = process.env.KUAIDI100_CUSTOMER;
-
-// Initialize client if keys are present
-// Note: Kuaidi100 constructor might throw or fail if keys are missing? 
-// Based on typical usage, we should check.
-// However, to avoid runtime crash on startup, we might lazy init or check in function.
-
-let client: Kuaidi100 | null = null;
-if (key && customer) {
-    client = new Kuaidi100({ key, customer });
-}
 
 export interface TrackingResult {
     message: string;
@@ -34,25 +21,48 @@ export interface TrackingResult {
 }
 
 export async function queryTracking(company: string, trackingNo: string): Promise<TrackingResult | null> {
-    if (!client) {
-        console.warn('Kuaidi100 API keys not configured');
+    if (!key || !customer) {
+        console.warn('Kuaidi100 API keys not configured (KUAIDI100_KEY, KUAIDI100_CUSTOMER)');
         return null;
     }
 
     try {
-        // Based on docs, client.query returns a Promise
-        const result = await client.query(trackingNo, company); // Note: check signature (num, com) or (com, num)
-        // Kuaidi100 package signature usually (num, com, phone, from, to, resultv2)
-        // Wait, typical SDKs often use query(num, com).
-        // Let's assume (trackingNo, company) for now or check usage later.
-        // Actually, the implementation plan said: client.query({ com: company, num: trackingNo })
-        // If the package supports object arg, that's safer.
+        // Implementation based on standard Kuaidi100 'poll' API
+        // Docs: https://api.kuaidi100.com/document/5f0ffb572977d50a94e1023c
+        const param = JSON.stringify({ com: company, num: trackingNo });
+        const crypto = await import('crypto'); // Dynamic import to keep top-level clean
+        const sign = crypto.createHash('md5')
+            .update(param + key + customer)
+            .digest('hex').toUpperCase();
 
-        // Let's try to infer from common usage or assume object if implementation plan suggested it.
-        // If the valid code is `client.poll(com, num)` or `client.query(num, com)`.
+        const response = await fetch('https://poll.kuaidi100.com/poll/query.do', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                customer,
+                sign,
+                param
+            })
+        });
 
-        // I'll create a safer wrapper that handles errors.
-        return result as unknown as TrackingResult;
+        if (!response.ok) {
+            throw new Error(`Kuaidi100 API error: ${response.status}`);
+        }
+
+        const result = await response.json() as TrackingResult;
+
+        // Check for API level errors
+        if (result.message && result.status !== '200') { // API often returns 200 even on logical error, but 'status' field helps
+            // Note: The interface defines 'status' as string. 200 is success.
+            // If validation fails, it might return message.
+            console.warn('Kuaidi100 returned error:', result.message);
+            return null;
+        }
+
+        return result;
+
     } catch (error) {
         console.error('Kuaidi100 query error:', error);
         return null;

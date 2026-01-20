@@ -23,7 +23,8 @@ import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 
 interface AddressListProps {
-    addresses: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    addresses: any[]; // 地址列表类型后续可精确定义
     customerId: string;
     tenantId: string;
 }
@@ -65,8 +66,9 @@ export function CustomerAddressList({ addresses, customerId, tenantId }: Address
                     address: '',
                     isDefault: false,
                 });
-            } catch (error: any) {
-                toast.error(error.message || '添加失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '添加失败';
+                toast.error(message);
             }
         });
     };

@@ -1,11 +1,10 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import { X, ZoomIn, ZoomOut, RotateCw, Download } from "lucide-react";
 import { useState } from "react";
-import Image from "next/image";
 
 interface FilePreviewDialogProps {
     open: boolean;

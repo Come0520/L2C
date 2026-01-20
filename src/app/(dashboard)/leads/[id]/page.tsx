@@ -62,7 +62,7 @@ export default async function LeadDetailPage({
         } else {
             console.log('[DEBUG-PAGE] Lead found:', lead?.id);
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[DEBUG-PAGE] Error in page:', error);
         console.error(`[${new Date().toISOString()}] Error fetching lead detail:`, error);
         throw error;

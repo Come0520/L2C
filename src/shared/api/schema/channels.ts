@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum } from './enums';
+import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum, channelStatusEnum } from './enums';
 
 export const channels = pgTable('channels', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -35,7 +35,7 @@ export const channels = pgTable('channels', {
     totalLeads: integer('total_leads').default(0),
     totalDealAmount: decimal('total_deal_amount', { precision: 15, scale: 2 }).default('0'),
 
-    status: varchar('status', { length: 20 }).default('ACTIVE'), // ACTIVE, SUSPENDED, TERMINATED
+    status: channelStatusEnum('status').default('ACTIVE'), // 渠道状态
 
     assignedManagerId: uuid('assigned_manager_id').references(() => users.id),
 

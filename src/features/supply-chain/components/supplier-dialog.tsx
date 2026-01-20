@@ -48,8 +48,9 @@ export function SupplierDialog({
             }
             setOpen(false);
             onSuccess?.();
-        } catch (error: any) {
-            toast.error(error.message || '操作失败');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : '操作失败';
+            toast.error(message);
         }
     };
 

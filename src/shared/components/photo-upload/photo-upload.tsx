@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Upload, X } from 'lucide-react';
 

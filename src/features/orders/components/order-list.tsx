@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import Search from 'lucide-react/dist/esm/icons/search';
@@ -18,44 +19,42 @@ import { toast } from 'sonner';
  * 
  * 功能：
  * 1. 服务端分页（默认每页 20 条）
- * 2. 搜索过滤（预留）
- * 3. 刷新功能
+ * 2. React Query 客户端缓存
+ * 3. 平滑分页切换 (keepPreviousData)
  */
 export function OrderList() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [data, setData] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
+    const [search, setSearch] = useState('');
     const pageSize = 20;
 
-    const fetchOrders = useCallback(async (pageNum: number) => {
-        setLoading(true);
-        try {
-            const result = await getOrders(pageNum, pageSize);
-            if (result && Array.isArray(result.data)) {
-                setData(result.data);
-                setTotalPages(result.totalPages);
-                setTotal(result.total);
+    // 使用 React Query 进行数据获取和缓存
+    const { data, isLoading, isFetching, refetch } = useQuery({
+        queryKey: ['orders', page, pageSize, search],
+        queryFn: async () => {
+            const result = await getOrders(page, pageSize);
+            if (!result || !Array.isArray(result.data)) {
+                throw new Error('获取订单列表失败');
             }
-        } catch (error) {
-            console.error('Failed to fetch orders:', error);
-            toast.error('获取订单列表失败');
-        } finally {
-            setLoading(false);
-        }
-    }, [pageSize]);
+            return result;
+        },
+        placeholderData: keepPreviousData, // 切换页面时保持旧数据显示
+        staleTime: 30 * 1000, // 30秒内数据视为新鲜
+    });
 
-    useEffect(() => {
-        fetchOrders(page);
-    }, [fetchOrders, page]);
+    const orders = data?.data || [];
+    const totalPages = data?.totalPages || 1;
+    const total = data?.total || 0;
 
-    const goToPage = (newPage: number) => {
+    const goToPage = useCallback((newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setPage(newPage);
         }
-    };
+    }, [totalPages]);
+
+    const handleRefresh = useCallback(() => {
+        refetch();
+        toast.success('已刷新');
+    }, [refetch]);
 
     return (
         <div className="space-y-4">
@@ -66,23 +65,26 @@ export function OrderList() {
                         <Input
                             placeholder="搜索客户、订单号..."
                             className="pl-9 bg-muted/20 border-none focus-visible:ring-1"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <Button variant="outline" size="icon">
                         <Filter className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => fetchOrders(page)}>
-                        <RotateCcw className={loading ? "animate-spin h-4 w-4" : "h-4 w-4"} />
+                    <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isFetching}>
+                        <RotateCcw className={isFetching ? "animate-spin h-4 w-4" : "h-4 w-4"} />
                     </Button>
                 </div>
 
                 {/* 分页信息 */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>共 {total} 条</span>
+                    {isFetching && !isLoading && <span className="text-blue-500">更新中...</span>}
                 </div>
             </div>
 
-            {loading ? (
+            {isLoading ? (
                 <div className="h-[400px] flex items-center justify-center glass-empty-state rounded-lg border border-dashed">
                     <div className="flex flex-col items-center gap-2">
                         <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -90,7 +92,7 @@ export function OrderList() {
                     </div>
                 </div>
             ) : (
-                <OrderTable data={data} />
+                <OrderTable data={orders} />
             )}
 
             {/* 分页控件 */}

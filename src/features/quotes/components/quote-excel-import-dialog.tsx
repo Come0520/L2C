@@ -7,14 +7,12 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/shared/ui/dialog';
-import { Upload, FileDown, AlertCircle, CheckCircle, Loader2, Table as TableIcon } from 'lucide-react';
+import { FileDown, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { batchImportQuoteItems } from '@/features/quotes/actions/import-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
-import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
 interface QuoteExcelImportDialogProps {

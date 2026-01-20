@@ -8,6 +8,25 @@ import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { revalidatePath } from 'next/cache';
 
+// ==================== 对账分层定义 (Reconciliation Layers) ====================
+/**
+ * L1 业务核销 - 实时核销层
+ * - 订单与收款单的实时匹配
+ * - 单笔或批量核销
+ * - 即时更新账单状态
+ * 
+ * L2 账单确认 - 周期对账层
+ * - 按周/月生成对账汇总
+ * - 客户确认机制
+ * - 开票关联
+ */
+export const RECONCILIATION_LAYERS = {
+    L1_BUSINESS_WRITEOFF: 'L1_BUSINESS_WRITEOFF', // 业务核销
+    L2_STATEMENT_CONFIRM: 'L2_STATEMENT_CONFIRM', // 账单确认
+} as const;
+
+export type ReconciliationLayer = keyof typeof RECONCILIATION_LAYERS;
+
 /**
  * 获取对账单列表
  */
@@ -405,9 +424,12 @@ export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliat
         gte(arStatements.createdAt, new Date(originalStartDate)),
         lte(arStatements.createdAt, new Date(originalEndDate)),
         or(
-            eq(arStatements.status, 'PENDING'),
-            eq(arStatements.status, 'PARTIAL'),
-            eq(arStatements.status, 'PENDING_RECON')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            eq(arStatements.status, 'PENDING' as any),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            eq(arStatements.status, 'PARTIAL' as any),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            eq(arStatements.status, 'PENDING_RECON' as any)
         ),
     ];
 

@@ -196,6 +196,7 @@ export async function processApproval(payload: {
                         const roleUsers = await tx.query.users.findMany({
                             where: and(
                                 eq(users.tenantId, session.user.tenantId),
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 eq(users.role, nextNode.approverRole as any)
                             )
                         });
@@ -235,7 +236,8 @@ export async function processApproval(payload: {
                     // Business Callback
                     if (task.approval.entityType === 'QUOTE') {
                         await tx.update(quotes)
-                            .set({ status: 'APPROVED' })
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            .set({ status: 'APPROVED' as any })
                             .where(eq(quotes.id, task.approval.entityId));
                     } else if (task.approval.entityType === 'RECEIPT_BILL') {
                         // Workflow approved -> Mark as APPROVED

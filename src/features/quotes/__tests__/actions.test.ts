@@ -1,8 +1,8 @@
 /**
  * Quotes Server Actions 集成测试
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as actions from '../actions';
+import { describe, vi, beforeEach } from 'vitest';
+// actions 导入已移除（未使用）
 
 // Mocks
 // Mocks

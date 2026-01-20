@@ -47,7 +47,8 @@ interface PaymentOrderDialogProps {
     customerId?: string;
     customerName?: string;
     amount?: string | number;
-    initialStatement?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialStatement?: any; // 保持向后兼容，后续可定义具体类型
 }
 
 export function PaymentOrderDialog({
@@ -66,7 +67,8 @@ export function PaymentOrderDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-    const [accounts, setAccounts] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
 
     useEffect(() => {
         if (open) {
@@ -134,8 +136,9 @@ export function PaymentOrderDialog({
                 toast.success('收款单已提交审核');
                 onOpenChange?.(false);
                 form.reset();
-            } catch (error: any) {
-                toast.error(error.message || '提交失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '提交失败';
+                toast.error(message);
             }
         });
     };

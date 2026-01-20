@@ -30,6 +30,10 @@ export interface CreateReceiptBillData {
         scheduleId?: string;
     }[];
 }
+interface TenantSettings {
+    tenantScale?: 'LARGE' | 'SMALL';
+    largeAmountThreshold?: string;
+}
 
 export class ReceiptService {
 
@@ -119,7 +123,7 @@ export class ReceiptService {
             where: eq(tenants.id, tenantId)
         });
 
-        const settings = (tenant?.settings as any) || {};
+        const settings = (tenant?.settings as unknown as TenantSettings) || {};
         const isLarge = settings.tenantScale === 'LARGE';
         const amountNum = new Decimal(amount);
         const threshold = new Decimal(settings.largeAmountThreshold || '10000');
@@ -220,7 +224,7 @@ export class ReceiptService {
                             .set({
                                 receivedAmount: receivedAfter.toString(),
                                 pendingAmount: pending.toString(),
-                                status: newStatus as any,
+                                status: newStatus,
                                 completedAt: pending.lte(0) ? new Date() : null,
                             })
                             .where(eq(arStatements.id, statement.id));

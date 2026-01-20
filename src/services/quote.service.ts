@@ -447,10 +447,233 @@ export class QuoteService {
         const status = risk.isRisk ? 'PENDING_APPROVAL' : 'PENDING_CUSTOMER';
 
         await db.update(quotes).set({
-            status: status,
+            status,
             lockedAt: new Date()
         }).where(eq(quotes.id, quoteId));
 
         return { status, risk };
     }
+
+    /**
+     * 检查并标记过期报价 (Check and Expire Quote)
+     * 用于单个报价访问时的实时检查
+     * 
+     * @param quoteId - 报价ID
+     * @returns 是否已过期
+     */
+    static async checkAndExpireQuote(quoteId: string): Promise<{ expired: boolean; expiredAt?: Date }> {
+        const quote = await db.query.quotes.findFirst({
+            where: eq(quotes.id, quoteId)
+        });
+
+        if (!quote) throw new Error('Quote not found');
+
+        // 如果已是 EXPIRED 状态，直接返回
+        if (quote.status === 'EXPIRED') {
+            return { expired: true, expiredAt: quote.updatedAt ?? undefined };
+        }
+
+        // 检查是否需要过期（validUntil 已过期且状态不是已确认/已拒绝）
+        const now = new Date();
+        const validUntil = quote.validUntil;
+        const canExpire = quote.status === 'DRAFT' || quote.status === 'SUBMITTED';
+
+        if (validUntil && validUntil < now && canExpire) {
+            // 更新状态为 EXPIRED
+            await db.update(quotes)
+                .set({
+                    status: 'EXPIRED',
+                    updatedAt: now
+                })
+                .where(eq(quotes.id, quoteId));
+
+            return { expired: true, expiredAt: now };
+        }
+
+        return { expired: false };
+    }
+
+    /**
+     * 批量过期处理 (Batch Expire Overdue Quotes)
+     * 用于定时任务/Cron Job，批量处理所有过期报价
+     * 
+     * @param tenantId - 可选，限定租户范围
+     * @returns 处理结果统计
+     */
+    static async expireAllOverdueQuotes(tenantId?: string): Promise<{ processed: number; expired: number }> {
+        const { lt, inArray } = await import('drizzle-orm');
+
+        const now = new Date();
+
+        // 构建查询条件
+        const conditions = [
+            lt(quotes.validUntil, now),
+            inArray(quotes.status, ['DRAFT', 'SUBMITTED'])
+        ];
+
+        if (tenantId) {
+            conditions.push(eq(quotes.tenantId, tenantId));
+        }
+
+        // 查找所有过期报价
+        const overdueQuotes = await db.query.quotes.findMany({
+            where: and(...conditions),
+            columns: { id: true }
+        });
+
+        if (overdueQuotes.length === 0) {
+            return { processed: 0, expired: 0 };
+        }
+
+        const quoteIds = overdueQuotes.map(q => q.id);
+
+        // 批量更新状态
+        await db.update(quotes)
+            .set({
+                status: 'EXPIRED',
+                updatedAt: now
+            })
+            .where(inArray(quotes.id, quoteIds));
+
+        return { processed: quoteIds.length, expired: quoteIds.length };
+    }
+
+    /**
+     * 刷新过期报价价格 (Refresh Expired Quote Prices)
+     * 当客户重新确认过期报价时，刷新所有商品价格为最新价格
+     * 
+     * @param quoteId - 报价ID
+     * @param newValidDays - 新的有效期天数（默认7天）
+     * @returns 刷新后的报价
+     */
+    static async refreshExpiredQuotePrices(
+        quoteId: string,
+        newValidDays: number = 7
+    ): Promise<{
+        success: boolean;
+        updatedItems: number;
+        priceChanges: { itemId: string; oldPrice: number; newPrice: number }[];
+        newValidUntil: Date;
+    }> {
+        const quote = await db.query.quotes.findFirst({
+            where: eq(quotes.id, quoteId),
+            with: { items: true }
+        });
+
+        if (!quote) throw new Error('Quote not found');
+
+        // 仅允许 EXPIRED 或 DRAFT 状态的报价刷新价格
+        if (quote.status !== 'EXPIRED' && quote.status !== 'DRAFT') {
+            throw new Error('只有已过期或草稿状态的报价可以刷新价格');
+        }
+
+        const { products } = await import('@/shared/api/schema/catalogs');
+
+        const priceChanges: { itemId: string; oldPrice: number; newPrice: number }[] = [];
+        let updatedItems = 0;
+
+        // 获取所有商品的最新价格并更新
+        for (const item of quote.items) {
+            if (!item.productId) continue;
+
+            // 获取商品最新价格
+            const product = await db.query.products.findFirst({
+                where: eq(products.id, item.productId),
+                columns: { retailPrice: true }
+            });
+
+            if (!product) continue;
+
+            const oldPrice = Number(item.unitPrice);
+            const newPrice = Number(product.retailPrice);
+
+            // 如果价格有变化，更新报价项
+            if (Math.abs(oldPrice - newPrice) > 0.01) {
+                const newSubtotal = newPrice * Number(item.quantity);
+
+                await db.update(quoteItems)
+                    .set({
+                        unitPrice: newPrice.toFixed(2),
+                        subtotal: newSubtotal.toFixed(2),
+                        updatedAt: new Date()
+                    })
+                    .where(eq(quoteItems.id, item.id));
+
+                priceChanges.push({
+                    itemId: item.id,
+                    oldPrice,
+                    newPrice
+                });
+                updatedItems++;
+            }
+        }
+
+        // 计算新的有效期
+        const newValidUntil = new Date();
+        newValidUntil.setDate(newValidUntil.getDate() + newValidDays);
+
+        // 更新报价总金额和状态
+        await this.updateQuoteTotal(quoteId);
+
+        await db.update(quotes)
+            .set({
+                status: 'DRAFT', // 重新变为草稿状态
+                validUntil: newValidUntil,
+                updatedAt: new Date()
+            })
+            .where(eq(quotes.id, quoteId));
+
+        return {
+            success: true,
+            updatedItems,
+            priceChanges,
+            newValidUntil
+        };
+    }
+
+    /**
+     * 获取报价过期状态信息 (Get Quote Expiration Info)
+     * 
+     * @param quoteId - 报价ID
+     * @returns 过期状态详情
+     */
+    static async getExpirationInfo(quoteId: string): Promise<{
+        isExpired: boolean;
+        validUntil: Date | null;
+        daysUntilExpiry: number | null;
+        status: string;
+    }> {
+        const quote = await db.query.quotes.findFirst({
+            where: eq(quotes.id, quoteId),
+            columns: {
+                status: true,
+                validUntil: true
+            }
+        });
+
+        if (!quote) throw new Error('Quote not found');
+
+        const now = new Date();
+        const validUntil = quote.validUntil;
+
+        let daysUntilExpiry: number | null = null;
+        let isExpired = quote.status === 'EXPIRED';
+
+        if (validUntil) {
+            const diffMs = validUntil.getTime() - now.getTime();
+            daysUntilExpiry = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (daysUntilExpiry < 0 && (quote.status === 'DRAFT' || quote.status === 'SUBMITTED')) {
+                isExpired = true;
+            }
+        }
+
+        return {
+            isExpired,
+            validUntil,
+            daysUntilExpiry,
+            status: quote.status ?? 'DRAFT'
+        };
+    }
 }
+

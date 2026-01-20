@@ -88,8 +88,9 @@ export function AddFollowupDialog({ leadId, trigger, userId, tenantId }: AddFoll
                 toast.success('跟进记录添加成功');
                 setOpen(false);
                 form.reset();
-            } catch (error: any) {
-                toast.error(error.message || '添加失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '添加失败';
+                toast.error(message);
             }
         });
     }

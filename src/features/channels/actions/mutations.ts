@@ -35,15 +35,27 @@ export async function createChannel(input: ChannelInput, tenantId: string) {
 }
 
 export async function updateChannel(id: string, input: Partial<ChannelInput>, tenantId: string) {
-    // Simplified partial validation for now
+    // 构建更新数据，过滤掉 undefined 值
+    const updateData: Record<string, unknown> = {
+        updatedAt: new Date(),
+    };
+
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.code !== undefined) updateData.code = input.code;
+    if (input.category !== undefined) updateData.category = input.category;
+    if (input.channelType !== undefined) updateData.channelType = input.channelType;
+    if (input.level !== undefined) updateData.level = input.level;
+    if (input.contactName !== undefined) updateData.contactName = input.contactName;
+    if (input.phone !== undefined) updateData.phone = input.phone;
+    if (input.commissionRate !== undefined) updateData.commissionRate = input.commissionRate.toString();
+    if (input.priceDiscountRate !== undefined) updateData.priceDiscountRate = input.priceDiscountRate.toString();
+    if (input.commissionType !== undefined) updateData.commissionType = input.commissionType;
+    if (input.cooperationMode !== undefined) updateData.cooperationMode = input.cooperationMode;
+    if (input.settlementType !== undefined) updateData.settlementType = input.settlementType;
 
     const [updated] = await db.update(channels)
-        .set({
-            ...input,
-            commissionRate: input.commissionRate?.toString(),
-            priceDiscountRate: input.priceDiscountRate?.toString(),
-            updatedAt: new Date(),
-        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set(updateData as any)
         .where(and(eq(channels.id, id), eq(channels.tenantId, tenantId)))
         .returning();
 

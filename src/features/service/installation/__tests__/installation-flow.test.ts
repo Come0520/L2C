@@ -82,6 +82,7 @@ describe('Installation Flow Integration', () => {
                 tenantId,
                 orderNo: `ORD-${Date.now()}`,
                 quoteId,
+                quoteVersionId: quoteId,
                 customerId,
                 salesId: userId,
                 customerName: 'Test Customer',
@@ -90,6 +91,7 @@ describe('Installation Flow Integration', () => {
                 status: 'IN_PRODUCTION',
                 totalAmount: '1000',
                 paidAmount: '1000',
+                createdBy: userId
             }).returning();
             orderId = order.id;
         } catch (error) {

@@ -10,7 +10,7 @@
  * - 用户会话信息
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
 // ============================================================
@@ -79,25 +79,30 @@ interface MobileAuthProviderProps {
 
 export function MobileAuthProvider({ children }: MobileAuthProviderProps) {
     const router = useRouter();
-    const [user, setUser] = useState<MobileUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
-    // 初始化: 从 localStorage 恢复会话
-    useEffect(() => {
+    // 使用惰性初始化从 localStorage 恢复用户会话
+    const [user, setUser] = useState<MobileUser | null>(() => {
+        // 仅在客户端执行
+        if (typeof window === 'undefined') return null;
+
         const storedUser = localStorage.getItem(USER_KEY);
         const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
 
         if (storedUser && storedToken) {
             try {
-                setUser(JSON.parse(storedUser));
+                return JSON.parse(storedUser) as MobileUser;
             } catch {
                 // JSON 解析失败，清理存储
                 localStorage.removeItem(USER_KEY);
                 localStorage.removeItem(ACCESS_TOKEN_KEY);
+                return null;
             }
         }
-        setIsLoading(false);
-    }, []);
+        return null;
+    });
+
+    // 由于用户状态通过惰性初始化同步恢复，加载状态直接为 false
+    const [isLoading] = useState(false);
 
     // 登录
     const login = useCallback(async (phone: string, password: string) => {

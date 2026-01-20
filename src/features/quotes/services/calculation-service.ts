@@ -99,7 +99,7 @@ class QuoteCalculationServiceClass {
         };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     private calculateStandard(item: CalcItem, _width: number, _height: number) {
         const strategy = new StandardProductStrategy();
         const result = strategy.calculate({

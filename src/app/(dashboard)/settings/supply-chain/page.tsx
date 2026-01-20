@@ -1,17 +1,77 @@
-'use client';
+import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Truck, Package, Users } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Plus } from 'lucide-react';
 
-import React from 'react';
-
+/**
+ * 供应链配置页面
+ * 管理供应商和仓库设置
+ */
 export default function SupplyChainSettingsPage() {
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b px-6 py-4">
-                <h1 className="text-2xl font-bold tracking-tight">供应链配置 (Supply Chain Settings)</h1>
-            </div>
-            <div className="flex-1 p-6">
-                <div className="rounded-md border p-4 text-center text-muted-foreground">
-                    供应链配置页面在恢复模式下暂不可用。
-                </div>
+        <div className="space-y-6">
+            <DashboardPageHeader
+                title="供应链配置"
+                subtitle="管理供应商和仓库设置"
+            >
+                <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    添加供应商
+                </Button>
+            </DashboardPageHeader>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            供应商管理
+                        </CardTitle>
+                        <CardDescription>
+                            管理合作供应商信息
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center py-8 text-muted-foreground">
+                            暂无供应商数据
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Package className="h-5 w-5" />
+                            仓库设置
+                        </CardTitle>
+                        <CardDescription>
+                            配置仓库和库存管理
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center py-8 text-muted-foreground">
+                            暂无仓库数据
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Truck className="h-5 w-5" />
+                            物流配置
+                        </CardTitle>
+                        <CardDescription>
+                            配置物流渠道和运费规则
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center py-8 text-muted-foreground">
+                            物流配置功能开发中...
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

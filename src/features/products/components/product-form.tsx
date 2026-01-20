@@ -37,7 +37,7 @@ import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
 type ProductFormValues = z.infer<typeof createProductSchema> & { id?: string };
 
 interface ProductFormProps {
-    initialData?: Partial<ProductFormValues> & { specs?: Record<string, any> };
+    initialData?: Partial<ProductFormValues> & { specs?: Record<string, unknown> };
     onSubmit: (values: ProductFormValues) => Promise<void>;
     isLoading?: boolean;
 }
@@ -46,7 +46,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
     const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
     const [fetchingSuppliers, setFetchingSuppliers] = useState(false);
 
-    const form = useForm({
+    const form = useForm<ProductFormValues>({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as any,
         defaultValues: initialData ? {
@@ -147,7 +147,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
 
         return (
             <div className="grid grid-cols-2 gap-4">
-                {attributeSchema.map((field: any) => (
+                {attributeSchema.map((field) => (
                     <FormField
                         key={field.key}
                         control={form.control}
@@ -203,7 +203,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <Tabs defaultValue="basic" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="basic">基础信息</TabsTrigger>

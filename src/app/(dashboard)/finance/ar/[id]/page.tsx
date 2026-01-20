@@ -18,12 +18,12 @@ export default async function ARStatementDetailPage({ params }: { params: Promis
         notFound();
     }
 
-    const getStatusVariant = (status: string): any => {
+    const getStatusVariant = (status: string): 'warning' | 'info' | 'success' | 'destructive' | 'secondary' | 'default' => {
         switch (status) {
             case 'PENDING': return 'warning';
-            case 'PARTIAL': return 'info';
+            case 'PARTIAL': return 'default';
             case 'PAID': return 'success';
-            case 'OVERDUE': return 'error';
+            case 'OVERDUE': return 'destructive';
             case 'CANCELLED': return 'secondary';
             default: return 'default';
         }
@@ -53,7 +53,7 @@ export default async function ARStatementDetailPage({ params }: { params: Promis
                             返回列表
                         </Link>
                     </Button>
-                    {statement.status !== 'PAID' && statement.status !== 'CANCELLED' && (
+                    {(statement.status as string) !== 'PAID' && (statement.status as string) !== 'CANCELLED' && (
                         <ReceiptBillDialog
                             orderId={statement.orderId}
                             customerName={statement.customerName}

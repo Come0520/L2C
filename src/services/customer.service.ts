@@ -40,7 +40,7 @@ export class CustomerService {
      * @param addressData 可选的默认地址
      */
     static async createCustomer(
-        data: typeof customers.$inferInsert,
+        data: Omit<typeof customers.$inferInsert, 'id' | 'customerNo' | 'createdAt' | 'updatedAt' | 'tenantId' | 'createdBy' | 'deletedAt'>,
         tenantId: string,
         userId: string,
         addressData?: { address: string }

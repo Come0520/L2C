@@ -179,7 +179,7 @@ export default async function PoDetailPage({
                     </Card>
 
                     {/* Logistics Info (If Shipped) */}
-                    {(po.status === 'SHIPPED' || po.status === 'RECEIVED' || po.status === 'COMPLETED') && (
+                    {(po.status === 'SHIPPED' || po.status === 'DELIVERED' || po.status === 'COMPLETED') && (
                         <Card>
                             <CardHeader title="物流信息" />
                             <CardContent>

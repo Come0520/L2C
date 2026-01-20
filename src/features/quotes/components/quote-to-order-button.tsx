@@ -59,8 +59,9 @@ export function QuoteToOrderButton({ quoteId, defaultAmount }: QuoteToOrderButto
                 } else {
                     toast.error('转换失败');
                 }
-            } catch (error: any) {
-                toast.error(error?.message || '转换失败，请稍后重试');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '转换失败，请稍后重试';
+                toast.error(message);
             }
         });
     };
@@ -99,7 +100,7 @@ export function QuoteToOrderButton({ quoteId, defaultAmount }: QuoteToOrderButto
                         <>
                             <div className="grid gap-2">
                                 <Label>支付方式</Label>
-                                <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                                <Select value={paymentMethod} onValueChange={(v: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK') => setPaymentMethod(v)}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>

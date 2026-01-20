@@ -115,12 +115,14 @@ export async function POST(request: NextRequest) {
         const accessToken = await generateAccessToken(
             customer.id,
             customer.tenantId,
-            customer.phone || ''
+            customer.phone || '',
+            'CUSTOMER'
         );
         const refreshToken = await generateRefreshToken(
             customer.id,
             customer.tenantId,
-            customer.phone || ''
+            customer.phone || '',
+            'CUSTOMER'
         );
 
         console.log(`[微信登录] 客户 ${customer.name} 登录成功`);

@@ -1,33 +1,75 @@
 /**
  * L2C Environment Configuration
  */
-export const env = {
+import { z } from 'zod';
+
+const envSchema = z.object({
     // Database
-    DATABASE_URL: process.env.DATABASE_URL || '',
+    DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+    DB_MAX_CONNECTIONS: z.coerce.number().int().positive().default(20),
 
     // App Info
-    APP_NAME: 'L2C Sales Management',
-    APP_VERSION: '0.1.0',
+    APP_NAME: z.string().default('L2C Sales Management'),
+    APP_VERSION: z.string().default('0.1.0'),
 
     // Aliyun OSS
-    OSS_REGION: process.env.OSS_REGION || 'oss-cn-hangzhou',
-    OSS_INTERNAL_ENDPOINT: process.env.OSS_INTERNAL_ENDPOINT,
-    OSS_ACCESS_KEY_ID: process.env.OSS_ACCESS_KEY_ID || '',
-    OSS_ACCESS_KEY_SECRET: process.env.OSS_ACCESS_KEY_SECRET || '',
-    OSS_BUCKET: process.env.OSS_BUCKET || 'l2c-uploads',
-    OSS_ROLE_ARN: process.env.OSS_ROLE_ARN || '',
+    OSS_REGION: z.string().default('oss-cn-hangzhou'),
+    OSS_INTERNAL_ENDPOINT: z.string().optional(),
+    OSS_ACCESS_KEY_ID: z.string().optional(),
+    OSS_ACCESS_KEY_SECRET: z.string().optional(),
+    OSS_BUCKET: z.string().default('l2c-uploads'),
+    OSS_ROLE_ARN: z.string().optional(),
 
     // Aliyun SMS
-    SMS_ACCESS_KEY_ID: process.env.SMS_ACCESS_KEY_ID || '',
-    SMS_ACCESS_KEY_SECRET: process.env.SMS_ACCESS_KEY_SECRET || '',
-    SMS_SIGN_NAME: process.env.SMS_SIGN_NAME || '',
-    SMS_TEMPLATE_CODE: process.env.SMS_TEMPLATE_CODE || '',
+    SMS_ACCESS_KEY_ID: z.string().optional(),
+    SMS_ACCESS_KEY_SECRET: z.string().optional(),
+    SMS_SIGN_NAME: z.string().optional(),
+    SMS_TEMPLATE_CODE: z.string().optional(),
 
     // NextAuth
-    AUTH_SECRET: process.env.AUTH_SECRET || '', // 必须在环境变量中设置
-    AUTH_URL: process.env.AUTH_URL || 'http://localhost:3000',
+    AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
+    AUTH_URL: z.string().url().default('http://localhost:3000'),
 
-    // 微信小程序
-    WX_APPID: process.env.WX_APPID || '',
-    WX_APPSECRET: process.env.WX_APPSECRET || '',
+    // WeChat
+    WX_APPID: z.string().optional(),
+    WX_APPSECRET: z.string().optional(),
+});
+
+const processEnv = {
+    DATABASE_URL: process.env.DATABASE_URL,
+    DB_MAX_CONNECTIONS: process.env.DB_MAX_CONNECTIONS,
+    APP_NAME: process.env.APP_NAME,
+    APP_VERSION: process.env.APP_VERSION,
+    OSS_REGION: process.env.OSS_REGION,
+    OSS_INTERNAL_ENDPOINT: process.env.OSS_INTERNAL_ENDPOINT,
+    OSS_ACCESS_KEY_ID: process.env.OSS_ACCESS_KEY_ID,
+    OSS_ACCESS_KEY_SECRET: process.env.OSS_ACCESS_KEY_SECRET,
+    OSS_BUCKET: process.env.OSS_BUCKET,
+    OSS_ROLE_ARN: process.env.OSS_ROLE_ARN,
+    SMS_ACCESS_KEY_ID: process.env.SMS_ACCESS_KEY_ID,
+    SMS_ACCESS_KEY_SECRET: process.env.SMS_ACCESS_KEY_SECRET,
+    SMS_SIGN_NAME: process.env.SMS_SIGN_NAME,
+    SMS_TEMPLATE_CODE: process.env.SMS_TEMPLATE_CODE,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_URL: process.env.AUTH_URL,
+    WX_APPID: process.env.WX_APPID,
+    WX_APPSECRET: process.env.WX_APPSECRET,
 };
+
+// Validate environment variables
+const parsed = envSchema.safeParse(processEnv);
+
+if (!parsed.success) {
+    console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 2));
+    // In development, strict validation might be annoying if .env is missing some non-critical ones.
+    // But plan says "Strict Env Validation", typically we want to fail fast.
+    // However, build process might fail if we are too strict on things not needed for build.
+    // Generally usually fine to throw for required ones.
+    // Make sure we don't crash the build if we are in a CI environment that sets vars differently or for simple checks.
+    // But for now, adhering to the plan to ensure stability.
+    if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+    }
+}
+
+export const env = parsed.success ? parsed.data : (processEnv as any);

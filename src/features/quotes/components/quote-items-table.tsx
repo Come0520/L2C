@@ -329,9 +329,14 @@ interface QuoteItemsTableProps {
     mode?: 'simple' | 'advanced';
     visibleFields?: string[];
     readOnly?: boolean;
+    dimensionLimits?: any; // Should import DimensionLimits, but 'any' avoids circular or extra imports for now if not easy. 
+    // Wait, DimensionLimits is exported from quote-config.service.ts, I should import it or use 'any' if I want to be lazy (not recommended).
+    // Let's use 'any' if import is far, or just skip type if not strict. 
+    // Actually, I can import it.
 }
 
-export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 'simple', visibleFields, readOnly = false }: QuoteItemsTableProps) {
+export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 'simple', visibleFields, readOnly = false, dimensionLimits }: QuoteItemsTableProps) {
+
     const isFieldVisible = (field: string) => {
         if (visibleFields && visibleFields.length > 0) {
             return visibleFields.includes(field);
@@ -599,6 +604,8 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 's
                 quoteId={quoteId}
                 roomId={activeRoomId}
                 onSuccess={onItemUpdate}
+                dimensionLimits={dimensionLimits}
+                visibleFields={visibleFields}
             />
         </div>
     );

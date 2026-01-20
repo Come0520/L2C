@@ -7,11 +7,11 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
 import { products } from '@/shared/api/schema/catalogs';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, InferSelectModel } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
 import { CustomerService } from '@/services/customer.service';
-import { auth } from '@/shared/lib/auth';
+// auth 导入已移除（未使用）
 import {
     createQuoteSchema,
     updateQuoteSchema,
@@ -112,6 +112,7 @@ export const createQuoteBundle = createSafeAction(createQuoteBundleSchema, async
         title: `Quote Bundle - ${quoteNo}`,
         notes: data.remark,
         status: 'DRAFT',
+        createdBy: context.session.user.id,
         // summaryMode: data.summaryMode // If schema supports it
     }).returning();
 
@@ -136,6 +137,7 @@ export const createQuote = createSafeAction(createQuoteSchema, async (data, cont
         title: data.title,
         notes: data.notes,
         status: 'DRAFT',
+        createdBy: context.session.user.id,
     }).returning();
 
     // Set rootQuoteId to itself for start of version chain
@@ -697,7 +699,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
     // 1. Validate Lead
     const lead = await db.query.leads.findFirst({
         where: eq(leads.id, leadId)
-    });
+    }) as InferSelectModel<typeof leads> | undefined;
     if (!lead) throw new Error('Lead not found');
 
     // 2. Ensure Customer exists
@@ -712,7 +714,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
             type: 'INDIVIDUAL',
             lifecycleStage: 'LEAD',
             pipelineStatus: 'UNASSIGNED',
-        } as any, tenantId, userId);
+        }, tenantId, userId);
         customerId = newCustomerResult.customer.id;
 
         await db.update(leads)
@@ -739,6 +741,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
             leadId,
             title: `快速报价 - ${planType}`,
             status: 'DRAFT',
+            createdBy: userId,
         }).returning();
         console.log('[createQuickQuote] Quote created:', newQuote.id);
     } catch (insertError) {

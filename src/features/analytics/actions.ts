@@ -467,3 +467,225 @@ export const getCustomerSourceDistribution = cache(createSafeAction(customerSour
         data: result
     };
 }));
+
+// ==================== 新增：利润率计算 (Profit Margin) ====================
+
+// 注意：orderItems 和 products 已导入用于未来扩展，暂未使用
+import { orderItems as _orderItems, products as _products } from '@/shared/api/schema';
+
+const profitMarginSchema = z.object({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    groupBy: z.enum(['category', 'month', 'sales']).default('category'),
+});
+
+/**
+ * 获取利润率分析数据
+ * 
+ * 计算公式：
+ * - 毛利 = 销售收入 - 采购成本
+ * - 毛利率 = 毛利 / 销售收入 * 100%
+ */
+export const getProfitMarginAnalysis = cache(createSafeAction(profitMarginSchema, async (params, { session }) => {
+    await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL);
+
+    const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const endDate = params.endDate ? new Date(params.endDate) : new Date();
+    const tenantId = session.user.tenantId;
+
+    // 订单收入和成本（基于订单项）
+    const orderStats = await db
+        .select({
+            totalRevenue: sql<string>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
+            orderCount: sql<number>`COUNT(DISTINCT ${orders.id})`,
+        })
+        .from(orders)
+        .where(
+            and(
+                eq(orders.tenantId, tenantId),
+                gte(orders.createdAt, startDate),
+                lte(orders.createdAt, endDate),
+                sql`${orders.status} NOT IN ('CANCELLED', 'DRAFT')`
+            )
+        );
+
+    // 计算采购成本（基于订单关联的采购单）
+    const costStats = await db
+        .select({
+            totalCost: sql<string>`COALESCE(SUM(CAST(${purchaseOrders.totalAmount} AS DECIMAL)), 0)`,
+        })
+        .from(purchaseOrders)
+        .where(
+            and(
+                eq(purchaseOrders.tenantId, tenantId),
+                gte(purchaseOrders.createdAt, startDate),
+                lte(purchaseOrders.createdAt, endDate),
+                sql`${purchaseOrders.status} NOT IN ('CANCELLED', 'REJECTED')`
+            )
+        );
+
+    const revenue = Number(orderStats[0]?.totalRevenue || 0);
+    const cost = Number(costStats[0]?.totalCost || 0);
+    const grossProfit = revenue - cost;
+    const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+
+    // 按月份趋势
+    const monthlyTrend = await db
+        .select({
+            month: sql`DATE_TRUNC('month', ${orders.createdAt})`,
+            revenue: sql<string>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
+        })
+        .from(orders)
+        .where(
+            and(
+                eq(orders.tenantId, tenantId),
+                gte(orders.createdAt, startDate),
+                lte(orders.createdAt, endDate),
+                sql`${orders.status} NOT IN ('CANCELLED', 'DRAFT')`
+            )
+        )
+        .groupBy(sql`DATE_TRUNC('month', ${orders.createdAt})`)
+        .orderBy(sql`DATE_TRUNC('month', ${orders.createdAt})`);
+
+    return {
+        success: true,
+        data: {
+            totalRevenue: revenue.toFixed(2),
+            totalCost: cost.toFixed(2),
+            grossProfit: grossProfit.toFixed(2),
+            grossMargin: grossMargin.toFixed(2),
+            orderCount: Number(orderStats[0]?.orderCount || 0),
+            avgOrderValue: Number(orderStats[0]?.orderCount) > 0
+                ? (revenue / Number(orderStats[0]?.orderCount)).toFixed(2)
+                : '0',
+            monthlyTrend: monthlyTrend.map(item => ({
+                month: item.month instanceof Date ? item.month.toISOString().slice(0, 7) : String(item.month).slice(0, 7),
+                revenue: item.revenue,
+            })),
+        }
+    };
+}));
+
+// ==================== 新增：售后健康度指标 (After-Sales Health) ====================
+
+import { liabilityNotices, afterSalesTickets } from '@/shared/api/schema/after-sales';
+
+const afterSalesHealthSchema = z.object({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+});
+
+/**
+ * 获取售后健康度指标
+ * 
+ * 指标：
+ * - 退款率 = 退款金额 / 总销售额
+ * - 客诉率 = 客诉工单数 / 总订单数
+ * - 责任分布 = 按责任方统计的定责单分布
+ */
+export const getAfterSalesHealth = cache(createSafeAction(afterSalesHealthSchema, async (params, { session }) => {
+    await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
+
+    const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const endDate = params.endDate ? new Date(params.endDate) : new Date();
+    const tenantId = session.user.tenantId;
+
+    // 总销售额和订单数（同期）
+    const salesStats = await db
+        .select({
+            totalRevenue: sql<string>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
+            totalOrders: sql<number>`COUNT(*)`,
+        })
+        .from(orders)
+        .where(
+            and(
+                eq(orders.tenantId, tenantId),
+                gte(orders.createdAt, startDate),
+                lte(orders.createdAt, endDate),
+                sql`${orders.status} NOT IN ('CANCELLED', 'DRAFT')`
+            )
+        );
+
+    const totalRevenue = Number(salesStats[0]?.totalRevenue || 0);
+    const totalOrders = Number(salesStats[0]?.totalOrders || 0);
+
+    // 售后工单统计（使用 afterSalesTickets 表的 actualDeduction 字段作为退款金额）
+    let afterSalesCount = 0;
+    let refundAmount = 0;
+    try {
+        const asStats = await db
+            .select({
+                count: sql<number>`COUNT(*)`,
+                refundTotal: sql<string>`COALESCE(SUM(CAST(${afterSalesTickets.actualDeduction} AS DECIMAL)), 0)`,
+            })
+            .from(afterSalesTickets)
+            .where(
+                and(
+                    eq(afterSalesTickets.tenantId, tenantId),
+                    gte(afterSalesTickets.createdAt, startDate),
+                    lte(afterSalesTickets.createdAt, endDate)
+                )
+            );
+        afterSalesCount = Number(asStats[0]?.count || 0);
+        refundAmount = Number(asStats[0]?.refundTotal || 0);
+    } catch {
+        // 表可能不存在，忽略
+    }
+
+    // 定责单责任分布
+    let liabilityDistribution: { party: string; count: number; amount: number }[] = [];
+    try {
+        const liability = await db
+            .select({
+                partyType: liabilityNotices.liablePartyType,
+                count: sql<number>`COUNT(*)`,
+                totalAmount: sql<string>`COALESCE(SUM(CAST(${liabilityNotices.amount} AS DECIMAL)), 0)`,
+            })
+            .from(liabilityNotices)
+            .where(
+                and(
+                    eq(liabilityNotices.tenantId, tenantId),
+                    gte(liabilityNotices.createdAt, startDate),
+                    lte(liabilityNotices.createdAt, endDate),
+                    eq(liabilityNotices.status, 'CONFIRMED')
+                )
+            )
+            .groupBy(liabilityNotices.liablePartyType);
+
+        liabilityDistribution = liability.map(item => ({
+            party: item.partyType || '未知',
+            count: Number(item.count || 0),
+            amount: Number(item.totalAmount || 0),
+        }));
+    } catch {
+        // 表可能不存在，忽略
+    }
+
+    // 计算指标
+    const refundRate = totalRevenue > 0 ? (refundAmount / totalRevenue) * 100 : 0;
+    const complaintRate = totalOrders > 0 ? (afterSalesCount / totalOrders) * 100 : 0;
+
+    return {
+        success: true,
+        data: {
+            // 核心指标
+            refundRate: refundRate.toFixed(2),
+            refundAmount: refundAmount.toFixed(2),
+            complaintRate: complaintRate.toFixed(2),
+            afterSalesCount,
+
+            // 基准数据
+            totalRevenue: totalRevenue.toFixed(2),
+            totalOrders,
+
+            // 责任分布
+            liabilityDistribution,
+
+            // 健康等级评估
+            healthLevel: refundRate < 1 && complaintRate < 3 ? 'GOOD'
+                : refundRate < 3 && complaintRate < 5 ? 'NORMAL'
+                    : 'WARNING',
+        }
+    };
+}));
+

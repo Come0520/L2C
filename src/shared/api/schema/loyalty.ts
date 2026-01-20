@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
-import { orders } from './orders';
+// orders 导入已移除（未使用）
 
 export const loyaltyTransactions = pgTable('loyalty_transactions', {
     id: uuid('id').primaryKey().defaultRandom(),

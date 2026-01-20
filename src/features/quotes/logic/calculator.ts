@@ -1,7 +1,11 @@
+export type CalculatorDetails =
+    | { formula: CurtainFormula; hFinished: number; wFinished: number; wCut: number; hCut: number; }
+    | { formula: WallpaperFormula };
+
 export interface CalculatorResult {
     quantity: number;
     warnings: string[];
-    details: any; // Debug info or detailed breakdown
+    details: CalculatorDetails;
 }
 
 export type CurtainFormula = 'FIXED_HEIGHT' | 'FIXED_WIDTH';
@@ -74,7 +78,7 @@ export const CurtainCalculator = {
         // 2. 裁剪尺寸
         // Width Cut
         const splitCount = splitType === 'SINGLE' ? 1 : (splitType === 'DOUBLE' ? 2 : 2); // Multi simplified as 2 for now logic
-        const wCut = wFinished + (splitCount * sideLoss * 2); // Each piece has 2 sides? 
+        // const wCut = wFinished + (splitCount * sideLoss * 2); // Unused 
         // Docs: "Double(2 pieces) add 10cm; Single(1 piece) add 5cm". 
         // If Side Loss is 5cm/side.
         // Single: 1 piece * 2 sides * 5cm = 10cm? Or docs mean total side loss?

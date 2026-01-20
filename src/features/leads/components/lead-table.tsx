@@ -14,17 +14,13 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { format } from 'date-fns';
 import Link from 'next/link';
-// import { Lead } from '@/shared/api/schema'; // We might need a type, usually from logic or inferred
-import { type leads } from '@/shared/api/schema'; // drizzle type or inferred?
-// Using inferred type from queries is better, but for now I'll use any or define a minimal interface
-// actually 'leads' is the table definition. 'InferSelectModel' from drizzle-orm.
+import { getLeads } from '@/features/leads/actions/queries';
 
-import { useRouter } from 'next/navigation';
+// Using inferred type from queries
+type LeadData = Awaited<ReturnType<typeof getLeads>>['data'][number];
 
-// Simplified type for now. 
-// Ideally we import the ReturnType of getLeads['data'][0]
 interface LeadTableProps {
-    data: any[]; // TODO: Strict typing
+    data: LeadData[];
     page: number;
     pageSize: number;
     total: number;
@@ -41,7 +37,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 };
 
 export const LeadTable = React.memo(function LeadTable({ data, page, pageSize, total }: LeadTableProps) {
-    const router = useRouter();
+
 
     return (
         <div className="space-y-4">
@@ -67,7 +63,7 @@ export const LeadTable = React.memo(function LeadTable({ data, page, pageSize, t
                             </TableRow>
                         ) : (
                             data.map((lead) => {
-                                const statusConfig = STATUS_MAP[lead.status] || { label: lead.status, variant: 'secondary' };
+                                const statusConfig = STATUS_MAP[lead.status || ''] || { label: lead.status || 'Unknown', variant: 'secondary' };
 
                                 return (
                                     <TableRow key={lead.id}>
@@ -83,7 +79,7 @@ export const LeadTable = React.memo(function LeadTable({ data, page, pageSize, t
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={statusConfig.variant as any}>
+                                            <Badge variant={statusConfig.variant}>
                                                 {statusConfig.label}
                                             </Badge>
                                         </TableCell>

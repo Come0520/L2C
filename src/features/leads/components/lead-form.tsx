@@ -3,6 +3,15 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createLeadSchema, updateLeadSchema, LeadFormValues } from '../schemas';
+
+interface ConflictData {
+    type: 'PHONE' | 'ADDRESS';
+    existingEntity: {
+        id: string;
+        name: string;
+        owner?: string | null;
+    };
+}
 import {
     Form,
     FormControl,
@@ -17,71 +26,77 @@ import { Textarea } from '@/shared/ui/textarea';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
 import { createLead, updateLead } from '../actions/mutations';
 import { toast } from 'sonner';
-import { useTransition } from 'react';
+// useTransition removed
 
 interface LeadFormProps {
     onSuccess?: () => void;
     userId: string;
     tenantId: string;
     initialData?: Record<string, unknown>;
-    channels: Array<{ id: string; name: string; type?: string }>;
+    channels?: Array<{ id: string; name: string; type?: string }>;
+    isEdit?: boolean;
 }
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmartDuplicateCheck } from './SmartDuplicateCheck';
 
-export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }: LeadFormProps) {
-    const [isPending, startTransition] = useTransition();
+export function LeadForm({ initialData, isEdit = false, onSuccess, userId, tenantId }: LeadFormProps) {
     const router = useRouter();
-    const isEdit = !!initialData;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [conflictData, setConflictData] = useState<any>(null);
+    const [conflictData, setConflictData] = useState<ConflictData | null>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
     const form = useForm<LeadFormValues>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(isEdit ? updateLeadSchema : createLeadSchema) as any,
         defaultValues: {
-            customerName: initialData?.customerName || '',
-            customerPhone: initialData?.customerPhone || '',
-            customerWechat: initialData?.customerWechat || '',
-            community: initialData?.community || '',
-            houseType: initialData?.houseType || '',
-            address: initialData?.address || '',
-            remark: initialData?.notes || '',
-            sourceDetail: initialData?.sourceDetail || '',
-            channelId: initialData?.channelId || initialData?.sourceChannelId || undefined,
-            id: initialData?.id,
-            intentionLevel: initialData?.intentionLevel || undefined,
+            customerName: (initialData?.customerName as string) || '',
+            customerPhone: (initialData?.customerPhone as string) || '',
+            customerWechat: (initialData?.customerWechat as string) || '',
+            community: (initialData?.community as string) || '',
+            houseType: (initialData?.houseType as string) || '',
+            address: (initialData?.address as string) || '',
+            remark: (initialData?.notes as string) || '', // 'notes' in DB, 'remark' in form? Check schema map
+            sourceDetail: (initialData?.sourceDetail as string) || '',
+            channelId: (initialData?.channelId as string) || (initialData?.sourceChannelId as string) || undefined,
+            // id removed as it is not in LeadFormValues
+            intentionLevel: (initialData?.intentionLevel as 'HIGH' | 'MEDIUM' | 'LOW') || undefined,
             estimatedAmount: initialData?.estimatedAmount ? Number(initialData.estimatedAmount) : undefined,
-        } as any,
+        },
     });
 
-    const onSubmit = (values: LeadFormValues) => {
-        startTransition(async () => {
-            try {
-                if (isEdit) {
-                    await updateLead({ ...values, id: initialData.id as string }, userId);
+    const onSubmit = async (values: LeadFormValues) => {
+        try {
+            if (isEdit) {
+                if (!initialData?.id || typeof initialData.id !== 'string') return;
+                const success = await updateLead({ ...values, id: initialData.id });
+                if (success) {
                     toast.success('线索更新成功');
                     onSuccess?.();
-                } else {
-                    const res = await createLead(values, userId, tenantId);
-                    if (!res.success && res.status === 'DUPLICATE') {
-                        setConflictData(res.conflict);
-                        setShowDuplicateDialog(true);
-                        return;
-                    }
-                    if (!res.success) {
-                        throw new Error(res.error || '创建失败');
-                    }
-                    toast.success('线索创建成功');
-                    onSuccess?.();
                 }
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : (isEdit ? '更新失败' : '创建失败');
-                toast.error(message);
+            } else {
+                const res = await createLead(values, userId, tenantId);
+                if (!res.success && res.status === 'DUPLICATE') {
+                    setConflictData({
+                        type: res.conflict.type as 'PHONE' | 'ADDRESS',
+                        existingEntity: {
+                            ...res.conflict.existingEntity,
+                            owner: res.conflict.existingEntity.owner ?? undefined
+                        }
+                    });
+                    setShowDuplicateDialog(true);
+                    return;
+                }
+                if (!res.success) {
+                    throw new Error(res.error || '创建失败');
+                }
+                toast.success('线索创建成功');
+                onSuccess?.();
             }
-        });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : (isEdit ? '更新失败' : '创建失败');
+            toast.error(message);
+        }
     };
 
     const handleStrategySelect = (strategy: 'LINK' | 'OVERWRITE' | 'CANCEL') => {
@@ -101,7 +116,7 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
                 onStrategySelect={handleStrategySelect}
             />
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -253,8 +268,8 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
                     />
 
                     <div className="flex justify-end space-x-2 pt-4">
-                        <Button type="submit" disabled={isPending} data-testid="submit-lead-btn">
-                            {isPending ? '保存中...' : (isEdit ? '保存更新' : '创建线索')}
+                        <Button type="submit" disabled={form.formState.isSubmitting} data-testid="submit-lead-btn">
+                            {form.formState.isSubmitting ? '保存中...' : (isEdit ? '保存更新' : '创建线索')}
                         </Button>
                     </div>
                 </form>

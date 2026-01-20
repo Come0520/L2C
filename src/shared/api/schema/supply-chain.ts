@@ -1,13 +1,13 @@
 import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
-import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum } from './enums';
+import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum, purchaseOrderStatusEnum, paymentStatusEnum } from './enums';
 import { afterSalesTickets } from './after-sales';
 
 export const suppliers = pgTable('suppliers', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    supplierNo: varchar('supplier_no', { length: 50 }).notNull(),
+    supplierNo: varchar('supplier_no', { length: 50 }).unique().notNull(),
     name: varchar('name', { length: 200 }).notNull(),
     contactPerson: varchar('contact_person', { length: 100 }),
     phone: varchar('phone', { length: 50 }),
@@ -31,13 +31,13 @@ export const purchaseOrders = pgTable('purchase_orders', {
     orderId: uuid('order_id').references(() => orders.id),
     afterSalesId: uuid('after_sales_id').references(() => afterSalesTickets.id),
 
-    supplierId: uuid('supplier_id').references(() => suppliers.id),
+    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(),
     supplierName: varchar('supplier_name', { length: 100 }).notNull(),
     type: poTypeEnum('type').default('FINISHED'),
 
     splitRuleId: uuid('split_rule_id'),
 
-    status: varchar('status', { length: 50 }).default('DRAFT'),
+    status: purchaseOrderStatusEnum('status').default('DRAFT'),
 
     totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).default('0'),
 
@@ -53,7 +53,7 @@ export const purchaseOrders = pgTable('purchase_orders', {
     shippedAt: timestamp('shipped_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
 
-    paymentStatus: varchar('payment_status', { length: 20 }).default('PENDING'),
+    paymentStatus: paymentStatusEnum('payment_status').default('PENDING'),
 
     expectedDate: timestamp('expected_date', { withTimezone: true }),
     remark: text('remark'),
@@ -103,10 +103,10 @@ export const splitRouteRules = pgTable('split_route_rules', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     priority: integer('priority').default(0),
     name: varchar('name', { length: 100 }).notNull(),
-    conditions: text('conditions').notNull(), // JSON string for flexibility
+    conditions: jsonb('conditions').notNull().default([]), // 路由条件 JSON
     targetType: varchar('target_type', { length: 50 }).notNull(), // PURCHASE_ORDER, SERVICE_TASK
-    targetSupplierId: uuid('target_supplier_id'), // Optional, if routing to specific supplier
-    isActive: integer('is_active').default(1),
+    targetSupplierId: uuid('target_supplier_id').references(() => suppliers.id), // 目标供应商
+    isActive: boolean('is_active').default(true), // 是否启用
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

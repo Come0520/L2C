@@ -73,7 +73,7 @@ export function ExcelImporter<T extends Record<string, any>>({
             await onImport(validData);
             toast.success(`成功导入 ${validData.length} 条数据`);
             setState('success');
-        } catch (error) {
+        } catch (_error) {
             toast.error('导入失败，请稍后重试');
             setState('previewing');
         }

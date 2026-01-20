@@ -16,7 +16,7 @@ interface SmartDuplicateCheckProps {
     onOpenChange: (open: boolean) => void;
     conflictData: {
         type: 'PHONE' | 'ADDRESS';
-        existingEntity: { id: string; name: string; owner?: string };
+        existingEntity: { id: string; name: string; owner?: string | null };
     } | null;
     onStrategySelect: (strategy: 'LINK' | 'OVERWRITE' | 'CANCEL') => void;
 }

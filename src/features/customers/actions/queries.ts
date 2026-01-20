@@ -6,7 +6,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getCustomersSchema } from '@/features/customers/schemas';
 
-export async function getCustomers(params: z.infer<typeof getCustomersSchema>) {
+export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
     const { page, pageSize, search, type, level, assignedSalesId } = getCustomersSchema.parse(params);
     const offset = (page - 1) * pageSize;
 

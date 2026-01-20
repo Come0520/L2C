@@ -51,7 +51,7 @@ export async function createMeasureTask(input: z.infer<typeof createMeasureTaskS
             scheduledAt: new Date(data.scheduledAt),
             remark: data.remark ? `${data.remark}\n\n[费用准入] ${admission.message}` : `[费用准入] ${admission.message}`,
             isFeeExempt: data.isFeeExempt,
-            type: data.type as any,
+            type: data.type,
             status,
         }).returning();
 
@@ -65,13 +65,18 @@ export async function createMeasureTask(input: z.infer<typeof createMeasureTaskS
             }, tx);
 
             if (!approvalResult.success) {
-                throw new Error(`Failed to submit approval: ${(approvalResult as any).error}`);
+                // Determine error message safely
+                const errorMessage = 'error' in approvalResult ? approvalResult.error : 'Approval submission failed';
+                throw new Error(`Failed to submit approval: ${errorMessage}`);
             }
 
             // 更新任务关联的 feeApprovalId
-            await tx.update(measureTasks)
-                .set({ feeApprovalId: (approvalResult as any).approvalId })
-                .where(eq(measureTasks.id, newTask.id));
+            // approvalResult is union, if success is true, approvalId exists
+            if ('approvalId' in approvalResult) {
+                await tx.update(measureTasks)
+                    .set({ feeApprovalId: approvalResult.approvalId })
+                    .where(eq(measureTasks.id, newTask.id));
+            }
         }
 
         return newTask;
@@ -188,14 +193,14 @@ export async function checkInMeasureTask(input: z.infer<typeof checkInSchema>) {
 /**
  * 提交测量数据 (Stub)
  */
-export async function submitMeasureData(input: any) {
+export async function submitMeasureData(_input: unknown) {
     return { success: true, data: {} };
 }
 
 /**
  * 申请费用减免 (Stub)
  */
-export async function requestFeeWaiver(input: any) {
+export async function requestFeeWaiver(_input: unknown) {
     return { success: true, data: {} };
 }
 

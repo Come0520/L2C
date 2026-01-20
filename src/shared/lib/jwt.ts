@@ -10,13 +10,48 @@ const ACCESS_TOKEN_EXPIRY = '24h';  // 访问令牌：24小时
 const REFRESH_TOKEN_EXPIRY = '7d';  // 刷新令牌：7天
 
 /**
+ * 移动端用户角色
+ * 统一管理角色定义，避免循环依赖
+ */
+export type MobileRole = 'WORKER' | 'SALES' | 'BOSS' | 'PURCHASER' | 'CUSTOMER';
+
+/**
  * 移动端 Token 载荷接口
  */
 export interface MobileTokenPayload extends JWTPayload {
     userId: string;
     tenantId: string;
     phone: string;
-    type: 'access' | 'refresh';
+    role: MobileRole;
+    type: 'access' | 'refresh' | 'pre-auth';
+}
+
+// ... (existing getSecretKey)
+
+/**
+ * 生成预授权令牌 (Pre-Auth Token) for MFA
+ * 有效期：5分钟
+ */
+export async function generatePreAuthToken(
+    userId: string,
+    tenantId: string,
+    phone: string,
+    role: string
+): Promise<string> {
+    const token = await new SignJWT({
+        userId,
+        tenantId,
+        phone,
+        role: role as MobileRole,
+        type: 'pre-auth',
+    })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('5m')
+        .setIssuer('l2c-mobile')
+        .sign(getSecretKey());
+
+    return token;
 }
 
 /**
@@ -40,16 +75,21 @@ function getSecretKey(): Uint8Array {
  * @param userId 用户ID
  * @param tenantId 租户ID
  * @param phone 手机号
+ * @param role 用户角色
  */
 export async function generateAccessToken(
     userId: string,
     tenantId: string,
-    phone: string
+    phone: string,
+    role: string
 ): Promise<string> {
+    // 简单验证 role 是否合法，或者做转换
+    // 这里为了兼容性，暂时接受 string，但 Payload 需断言
     const token = await new SignJWT({
         userId,
         tenantId,
         phone,
+        role: role as MobileRole,
         type: 'access',
     })
         .setProtectedHeader({ alg: 'HS256' })
@@ -66,16 +106,19 @@ export async function generateAccessToken(
  * @param userId 用户ID
  * @param tenantId 租户ID
  * @param phone 手机号
+ * @param role 用户角色 (刷新 Token 也包含 role 以便恢复)
  */
 export async function generateRefreshToken(
     userId: string,
     tenantId: string,
-    phone: string
+    phone: string,
+    role: string
 ): Promise<string> {
     const token = await new SignJWT({
         userId,
         tenantId,
         phone,
+        role: role as MobileRole,
         type: 'refresh',
     })
         .setProtectedHeader({ alg: 'HS256' })

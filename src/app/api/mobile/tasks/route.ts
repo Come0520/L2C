@@ -2,7 +2,8 @@
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, desc } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
 export async function GET(request: NextRequest) {
@@ -69,16 +70,10 @@ export async function GET(request: NextRequest) {
             return dateB - dateA; // Descending
         });
 
-        return NextResponse.json({
-            success: true,
-            data: combined
-        });
+        return apiSuccess(combined);
 
     } catch (error) {
         console.error('Mobile Task List Error:', error);
-        return NextResponse.json(
-            { success: false, message: 'Internal Server Error' },
-            { status: 500 }
-        );
+        return apiError('Internal Server Error', 500);
     }
 }

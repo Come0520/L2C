@@ -14,19 +14,18 @@ import { updateQuote, submitQuote, approveQuote, rejectQuote } from '@/features/
 import { Badge } from '@/shared/ui/badge';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { toast } from 'sonner';
+import { Ruler, FileText, Save } from 'lucide-react';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
-import Save from 'lucide-react/dist/esm/icons/save';
-import Plus from 'lucide-react/dist/esm/icons/plus';
 import { QuoteVersionCompare } from './quote-version-compare';
 
 import { QuoteConfig } from '@/services/quote-config.service';
 import { toggleQuoteMode } from '@/features/quotes/actions/config-actions';
 import { QuoteConfigDialog } from './quote-config-dialog';
-import { getQuoteAuditLogs } from '@/features/quotes/actions/queries';
+import { getQuoteAuditLogs, getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
 import { format } from 'date-fns';
 
 import { MeasureDataImportDialog } from './measure-data-import-dialog'; // Import
-import { Ruler, FileText, Download } from 'lucide-react'; // Import Ruler icon
+import { Download } from 'lucide-react'; // Import Ruler icon
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -37,15 +36,20 @@ import dynamic from 'next/dynamic';
 import { QuotePdfDocument } from './quote-pdf';
 
 import { QuoteExcelImportDialog } from './quote-excel-import-dialog';
+import { QuoteExpirationBanner } from './quote-expiration-banner';
 
 const PDFDownloadLink = dynamic(
     () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
     { ssr: false, loading: () => <span className="text-xs">Loading PDF...</span> }
 );
 
+type QuoteData = NonNullable<Awaited<ReturnType<typeof getQuote>>['data']>;
+type QuoteVersion = Awaited<ReturnType<typeof getQuoteVersions>>[number];
+type QuoteLog = Awaited<ReturnType<typeof getQuoteAuditLogs>>[number];
+
 interface QuoteDetailProps {
-    quote: any;
-    versions?: any[];
+    quote: QuoteData;
+    versions?: QuoteVersion[];
     initialConfig?: QuoteConfig;
 }
 
@@ -53,7 +57,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('space');
     const [config, setConfig] = useState<QuoteConfig | undefined>(initialConfig);
-    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [auditLogs, setAuditLogs] = useState<QuoteLog[]>([]);
     const [importDialogOpen, setImportDialogOpen] = useState(false); // Measure Import
     const [excelImportOpen, setExcelImportOpen] = useState(false); // Excel Import
     const mode = config?.mode || 'simple';
@@ -112,23 +116,27 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             <QuoteVersionHistory
                                 currentQuoteId={quote.id}
                                 version={quote.version || 1}
-                                versions={versions}
+                                versions={versions.map(v => ({
+                                    ...v,
+                                    status: v.status || 'DRAFT',
+                                    createdAt: v.createdAt || new Date()
+                                }))}
                             />
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-muted-foreground text-sm">{quote.customer?.name}</span>
                             <Badge variant={
-                                quote.status === 'APPROVED' ? 'success' :
-                                    quote.status === 'ORDERED' ? 'default' :
-                                        quote.status === 'REJECTED' ? 'error' :
-                                            quote.status === 'PENDING_APPROVAL' ? 'warning' : 'secondary'
+                                quote.status === 'ACCEPTED' ? 'success' :
+                                    quote.status === 'REJECTED' ? 'destructive' : // 'error' -> 'destructive' usually in shadcn
+                                        quote.status === 'PENDING_APPROVAL' ? 'warning' : 'secondary'
                             }>
                                 {quote.status === 'DRAFT' && '草稿'}
                                 {quote.status === 'SUBMITTED' && '已提交'}
                                 {quote.status === 'PENDING_APPROVAL' && '待审批'}
-                                {quote.status === 'APPROVED' && '已批准'}
-                                {quote.status === 'REJECTED' && '已驳回'}
-                                {quote.status === 'ORDERED' && '已下单'}
+                                {quote.status === 'PENDING_CUSTOMER' && '待客户确认'}
+                                {quote.status === 'ACCEPTED' && '已接受'}
+                                {quote.status === 'REJECTED' && '已拒绝'}
+                                {quote.status === 'EXPIRED' && '已过期'}
                             </Badge>
                         </div>
                         {quote.approvalRequired && quote.status === 'PENDING_APPROVAL' && (
@@ -142,7 +150,18 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 <div className="space-x-2">
                     <div className="flex gap-2">
                         {versions.length > 1 && (
-                            <QuoteVersionCompare currentQuote={quote} versions={versions} />
+                            <QuoteVersionCompare
+                                currentQuote={{
+                                    ...quote,
+                                    totalAmount: Number(quote.totalAmount || 0)
+                                } as any}
+                                versions={versions.map(v => ({
+                                    ...v,
+                                    totalAmount: (v as any).totalAmount ? Number((v as any).totalAmount) : 0,
+                                    status: v.status || 'DRAFT',
+                                    createdAt: v.createdAt || new Date()
+                                }))}
+                            />
                         )}
                         {quote.status === 'DRAFT' && (
                             <>
@@ -220,12 +239,13 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             </>
                         )}
 
-                        {(quote.status === 'APPROVED' || quote.status === 'ACCEPTED' || quote.status === 'SUBMITTED') && (
+                        {/* Actions */}
+                        <div className="flex gap-2">
                             <QuoteToOrderButton
                                 quoteId={quote.id}
-                                defaultAmount={quote.finalAmount}
+                                defaultAmount={quote.finalAmount || undefined}
                             />
-                        )}
+                        </div>
 
                         <QuoteConfigDialog currentConfig={config} />
 
@@ -241,6 +261,13 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                     </div>
                 </div >
             </div>
+
+            <QuoteExpirationBanner
+                quoteId={quote.id}
+                status={quote.status || ''}
+                validUntil={quote.validUntil}
+                isReadOnly={isReadOnly}
+            />
 
             <MeasureDataImportDialog
                 open={importDialogOpen}
@@ -275,14 +302,14 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             <div className="col-span-2">
                                 <label className="text-sm font-medium">报价标题</label>
                                 <Input
-                                    defaultValue={quote.title}
+                                    defaultValue={quote.title || ''}
                                     onBlur={(e) => updateQuote({ id: quote.id, title: e.target.value })}
                                 />
                             </div>
                             <div className="col-span-2">
                                 <label className="text-sm font-medium">备注</label>
                                 <Input
-                                    defaultValue={quote.notes}
+                                    defaultValue={quote.notes || ''}
                                     onBlur={(e) => updateQuote({ id: quote.id, notes: e.target.value })}
                                 />
                             </div>
@@ -296,9 +323,6 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                                 <TabsTrigger value="space">空间视图</TabsTrigger>
                                 <TabsTrigger value="category">品类视图</TabsTrigger>
                             </TabsList>
-                            <Button size="sm" variant="outline" onClick={handleAddRoom}>
-                                <Plus className="mr-2 h-4 w-4" /> 添加空间
-                            </Button>
                         </div>
 
                         <TabsContent value="space">
@@ -307,11 +331,24 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                                 rooms={quote.rooms || []}
                                 items={[
                                     ...(quote.items || []),
-                                    ...(quote.rooms || []).flatMap((r: any) => r.items || [])
+                                    ...(quote.rooms || []).flatMap((r) => r.items || [])
                                 ]}
                                 mode={mode}
                                 visibleFields={config?.visibleFields}
                                 readOnly={isReadOnly}
+                                dimensionLimits={config?.dimensionLimits}
+                            />
+                        </TabsContent>
+                        <TabsContent value="versions" className="mt-4">
+                            <QuoteVersionHistory
+                                currentQuoteId={quote.id} // Fixed prop name from currentVersion to currentQuoteId? Check definition. 
+                                version={quote.version}
+                                versions={versions.map(v => ({
+                                    id: v.id,
+                                    version: v.version,
+                                    status: v.status || 'DRAFT',
+                                    createdAt: v.createdAt || new Date()
+                                }))}
                             />
                         </TabsContent>
                         <TabsContent value="category">

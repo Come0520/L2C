@@ -1,0 +1,4 @@
+
+> l2c@0.1.0 lint C:\Users\bigey\Documents\Antigravity\L2C
+> eslint
+

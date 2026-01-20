@@ -5,6 +5,13 @@ export const tenants = pgTable('tenants', {
     name: varchar('name', { length: 100 }).notNull(),
     code: varchar('code', { length: 50 }).unique().notNull(),
     logoUrl: text('logo_url'),
+    // Settings JSON structure:
+    // interface TenantSettings {
+    //     mfa?: {
+    //         enabled: boolean;
+    //         roles: string[]; // e.g. ['BOSS', 'ADMIN']
+    //     };
+    // }
     settings: jsonb('settings').default({}),
     isActive: boolean('is_active').default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),

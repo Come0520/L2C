@@ -8,6 +8,7 @@ import { customerAddresses } from '@/shared/api/schema/customer-addresses';
 import { eq, desc, and, or, ilike, inArray, gte, lte, count } from 'drizzle-orm';
 import { users } from '@/shared/api/schema/infrastructure';
 import { auditLogs } from '@/shared/api/schema/audit';
+import { quoteStatusEnum } from '@/shared/api/schema/enums';
 
 export const getQuoteVersions = cache(async (rootId: string) => {
     if (!rootId) return [];
@@ -38,7 +39,7 @@ export const getQuotes = cache(async ({
 
     // 1. Status Filter
     if (status && status !== 'ALL') {
-        conditions.push(eq(quotes.status, status));
+        conditions.push(eq(quotes.status, status as typeof quoteStatusEnum.enumValues[number]));
     }
 
     // 2. Customer Filter

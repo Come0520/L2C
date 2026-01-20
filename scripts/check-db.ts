@@ -1,17 +1,31 @@
 
 import 'dotenv/config';
-import { db } from "@/shared/api/db";
-import { sql } from "drizzle-orm";
+import postgres from 'postgres';
 
 async function main() {
-    console.log("Checking install_tasks columns...");
-    const result = await db.execute(sql`
-    SELECT column_name, data_type 
-    FROM information_schema.columns 
-    WHERE table_name = 'install_tasks';
-  `);
-    console.log(result);
-    process.exit(0);
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error('❌ DATABASE_URL not set');
+    process.exit(1);
+  }
+  console.log('Connecting to:', databaseUrl);
+  const sql = postgres(databaseUrl);
+
+  try {
+    const arCount = await sql`SELECT count(*) FROM ar_statements`;
+    console.log('AR Statements Count:', arCount[0].count);
+
+    if (arCount[0].count > 0) {
+      const firstRow = await sql`SELECT * FROM ar_statements LIMIT 1`;
+      console.log('First Row:', firstRow[0]);
+    } else {
+      console.log('❌ No AR Statements found!');
+    }
+  } catch (e) {
+    console.error('❌ DB Query Error:', e);
+  } finally {
+    await sql.end();
+  }
 }
 
 main();

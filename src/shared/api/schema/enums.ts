@@ -60,7 +60,8 @@ export const orderStatusEnum = pgEnum('order_status', [
     'PENDING_PO', // Waiting for Purchase Order generation
     'PENDING_PRODUCTION',
     'IN_PRODUCTION',
-    'PAUSED',
+    'PAUSED', // Keeping for backward compatibility if needed, or migration
+    'HALTED', // New standard halt status
     'PENDING_APPROVAL',
     'PENDING_DELIVERY',
     'PENDING_INSTALL',
@@ -73,6 +74,8 @@ export const orderStatusEnum = pgEnum('order_status', [
 
 export const quoteStatusEnum = pgEnum('quote_status', [
     'DRAFT',
+    'PENDING_APPROVAL', // New
+    'PENDING_CUSTOMER', // New
     'SUBMITTED',
     'ACCEPTED',
     'REJECTED',
@@ -321,6 +324,7 @@ export const installTaskSourceTypeEnum = pgEnum('install_task_source_type', [
 
 export const installTaskCategoryEnum = pgEnum('install_task_category', [
     'CURTAIN',
+    'WALLPAPER',
     'WALLCLOTH',
     'OTHER'
 ]);
@@ -374,3 +378,74 @@ export const changeRequestStatusEnum = pgEnum('change_request_status', [
     'REJECTED',
     'CANCELLED'
 ]);
+
+// [NEW] 订单项状态枚举
+export const orderItemStatusEnum = pgEnum('order_item_status', [
+    'PENDING',      // 待处理
+    'PROCESSING',   // 处理中
+    'PO_CONFIRMED', // 采购确认
+    'PRODUCED',     // 已生产
+    'SHIPPED',      // 已发货
+    'DELIVERED',    // 已送达
+    'INSTALLED',    // 已安装
+    'COMPLETED',    // 已完成
+    'CANCELLED'     // 已取消
+]);
+
+// [NEW] 采购单状态枚举
+export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', [
+    'DRAFT',        // 草稿
+    'PENDING',      // 待确认
+    'CONFIRMED',    // 已确认
+    'IN_PRODUCTION',// 生产中
+    'READY',        // 待发货
+    'SHIPPED',      // 已发货
+    'DELIVERED',    // 已送达
+    'COMPLETED',    // 已完成
+    'CANCELLED'     // 已取消
+]);
+
+// [NEW] 渠道状态枚举
+export const channelStatusEnum = pgEnum('channel_status', [
+    'ACTIVE',       // 活跃
+    'SUSPENDED',    // 暂停
+    'TERMINATED'    // 终止
+]);
+
+// [NEW] AR 对账单状态枚举
+export const arStatementStatusEnum = pgEnum('ar_statement_status', [
+    'PENDING_RECON',    // 待对账
+    'RECONCILED',       // 已对账
+    'INVOICED',         // 已开票
+    'PARTIAL',          // 部分收款
+    'PAID',             // 已收款
+    'PENDING_DELIVER',  // 待发货
+    'COMPLETED',        // 已完成
+    'BAD_DEBT'          // 坏账
+]);
+
+// [NEW] 佣金状态枚举
+export const commissionStatusEnum = pgEnum('commission_status', [
+    'PENDING',      // 待计算
+    'CALCULATED',   // 已计算
+    'PAID'          // 已支付
+]);
+
+// [NEW] 付款单/收款单状态枚举
+export const billStatusEnum = pgEnum('bill_status', [
+    'DRAFT',        // 草稿
+    'PENDING',      // 待审批
+    'APPROVED',     // 已审批
+    'PAID',         // 已支付
+    'REJECTED',     // 已拒绝
+    'CANCELLED'     // 已取消
+]);
+
+// [NEW] 工单项状态枚举
+export const workOrderItemStatusEnum = pgEnum('work_order_item_status', [
+    'PENDING',      // 待处理
+    'PROCESSING',   // 处理中
+    'COMPLETED',    // 已完成
+    'CANCELLED'     // 已取消
+]);
+

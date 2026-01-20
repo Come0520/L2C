@@ -48,7 +48,8 @@ interface PaymentBillDialogProps {
     supplierName?: string; // used for both supplier and worker name display
     supplierId?: string; // or workerId
     amount?: string | number;
-    initialStatement?: any; // Keep for backward compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialStatement?: any; // 保持向后兼容，后续可定义具体类型
 }
 
 export function PaymentBillDialog({
@@ -68,7 +69,8 @@ export function PaymentBillDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-    const [accounts, setAccounts] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
 
     useEffect(() => {
         if (open) {
@@ -131,8 +133,9 @@ export function PaymentBillDialog({
                 toast.success('付款单已提交审核');
                 onOpenChange?.(false);
                 form.reset();
-            } catch (error: any) {
-                toast.error(error.message || '提交失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '提交失败';
+                toast.error(message);
             }
         });
     };

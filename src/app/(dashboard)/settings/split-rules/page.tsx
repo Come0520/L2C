@@ -1,18 +1,34 @@
-'use client';
+import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { SplitRulesConfig } from '@/features/settings/components/split-rules-config';
+import { Scissors } from 'lucide-react';
 
-import React from 'react';
-
+/**
+ * 采购拆单规则设置页面
+ * 配置订单分拆至采购单的规则
+ */
 export default function SplitRulesPage() {
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b px-6 py-4">
-                <h1 className="text-2xl font-bold tracking-tight">拆单规则 (Split Rules)</h1>
-            </div>
-            <div className="flex-1 p-6">
-                <div className="rounded-md border p-4 text-center text-muted-foreground">
-                    拆单规则页面在恢复模式下暂不可用。
-                </div>
-            </div>
+        <div className="space-y-6">
+            <DashboardPageHeader
+                title="采购拆单规则"
+                subtitle="配置订单分拆至采购单的规则"
+            />
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Scissors className="h-5 w-5" />
+                        拆单配置
+                    </CardTitle>
+                    <CardDescription>
+                        定义如何将销售订单拆分为采购单
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SplitRulesConfig />
+                </CardContent>
+            </Card>
         </div>
     );
 }

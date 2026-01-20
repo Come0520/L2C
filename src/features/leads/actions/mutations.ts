@@ -4,15 +4,14 @@ import { db } from '@/shared/api/db';
 import { leads, leadActivities, leadStatusHistory, customers, channels } from '@/shared/api/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { randomBytes } from 'crypto';
+
 import {
     createLeadSchema,
     updateLeadSchema,
     assignLeadSchema,
     addLeadFollowupSchema,
     voidLeadSchema,
-    convertLeadSchema,
-    createCustomerSchema
+    convertLeadSchema
 } from '../schemas';
 import { revalidatePath } from 'next/cache';
 import { format } from 'date-fns';
@@ -45,7 +44,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>, userId
             channelContactId: data.channelContactId ?? null,
             notes: data.remark ?? null,
             tags: data.tags ?? null,
-        } as any, tenantId, userId);
+        }, tenantId, userId);
 
         if (result.isDuplicate) {
             return {
@@ -71,7 +70,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>, userId
     }
 }
 
-export async function updateLead(input: z.infer<typeof updateLeadSchema>, userId: string) {
+export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
     const { id, ...data } = updateLeadSchema.parse(input);
 
     const [updated] = await db.update(leads)
@@ -327,7 +326,7 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>, user
     });
 }
 
-export async function importLeads(data: any[], userId: string, tenantId: string) {
+export async function importLeads(data: unknown[], userId: string, tenantId: string) {
     let successCount = 0;
     const errors: { row: number, error: string }[] = [];
 
@@ -369,7 +368,7 @@ export async function importLeads(data: any[], userId: string, tenantId: string)
                 channelContactId: validData.channelContactId ?? null,
                 notes: validData.remark ?? null,
                 tags: validData.tags ?? null,
-            } as any, tenantId, userId);
+            }, tenantId, userId);
 
             if (result.isDuplicate) {
                 errors.push({

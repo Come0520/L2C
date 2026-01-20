@@ -27,7 +27,7 @@ export class ProductionService {
             // If linked to item, update item status?
             if (orderItemId) {
                 await tx.update(orderItems)
-                    .set({ status: 'IN_PRODUCTION' })
+                    .set({ status: 'PROCESSING' as const }) // IN_PRODUCTION 映射为 PROCESSING
                     .where(and(eq(orderItems.id, orderItemId), eq(orderItems.tenantId, tenantId)));
             }
 

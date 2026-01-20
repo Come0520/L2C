@@ -57,8 +57,9 @@ export function VoidLeadDialog({ leadId, trigger, userId }: VoidLeadDialogProps)
                 await voidLead(values, userId);
                 toast.success('线索已作废');
                 setOpen(false);
-            } catch (error: any) {
-                toast.error(error.message || '操作失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '操作失败';
+                toast.error(message);
             }
         });
     }

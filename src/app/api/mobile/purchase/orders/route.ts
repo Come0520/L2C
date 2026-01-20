@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         // 使用 and() 组合多个条件
         const baseCondition = eq(purchaseOrders.tenantId, session.tenantId);
         const whereCondition = status
-            ? and(baseCondition, eq(purchaseOrders.status, status))
+            ? and(baseCondition, eq(purchaseOrders.status, status as 'DRAFT' | 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'))
             : baseCondition;
 
         // 5. 查询采购单

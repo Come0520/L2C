@@ -14,17 +14,23 @@ import { z } from 'zod';
  * 获取应收对账单列表
  */
 export async function getARStatements() {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) throw new Error('未授权');
 
-    return await db.query.arStatements.findMany({
-        where: eq(arStatements.tenantId, session.user.tenantId),
-        with: {
-            order: true,
-            customer: true,
-        },
-        orderBy: [desc(arStatements.createdAt)],
-    });
+        const result = await db.query.arStatements.findMany({
+            where: eq(arStatements.tenantId, session.user.tenantId),
+            with: {
+                order: true,
+                customer: true,
+            },
+            orderBy: [desc(arStatements.createdAt)],
+        });
+        return result;
+    } catch (error) {
+        console.error('❌ getARStatements Error:', error);
+        throw error;
+    }
 }
 
 /**
@@ -81,3 +87,118 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
 
 // calculateCommission moved to FinanceService
 // export * from './receipt'; // Removed to avoid re-export issues
+
+// ==================== 客户退款流程 (Customer Refund) ====================
+
+const createRefundSchema = z.object({
+    originalStatementId: z.string().uuid('请选择原对账单'),
+    refundAmount: z.number().positive('退款金额必须大于0'),
+    reason: z.string().min(1, '请填写退款原因'),
+    remark: z.string().optional(),
+});
+
+/**
+ * 创建退款对账单（红字 AR）
+ * 
+ * 逻辑：
+ * 1. 验证原对账单存在且已收款
+ * 2. 验证退款金额不超过已收金额
+ * 3. 创建红字 AR 对账单（负数金额）
+ * 4. 更新原对账单状态
+ */
+export async function createRefundStatement(input: z.infer<typeof createRefundSchema>) {
+    try {
+        const data = createRefundSchema.parse(input);
+        const session = await auth();
+
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未授权' };
+        }
+
+        const tenantId = session.user.tenantId;
+        const userId = session.user.id!;
+
+        return await db.transaction(async (tx) => {
+            // 1. 获取原对账单
+            const originalStatement = await tx.query.arStatements.findFirst({
+                where: and(
+                    eq(arStatements.id, data.originalStatementId),
+                    eq(arStatements.tenantId, tenantId)
+                ),
+                with: {
+                    order: true,
+                    customer: true,
+                }
+            });
+
+            if (!originalStatement) {
+                return { success: false, error: '原对账单不存在' };
+            }
+
+            const receivedAmount = Number(originalStatement.receivedAmount);
+            if (receivedAmount <= 0) {
+                return { success: false, error: '原对账单未收款，无法退款' };
+            }
+
+            if (data.refundAmount > receivedAmount) {
+                return { success: false, error: `退款金额不能超过已收金额 ¥${receivedAmount.toLocaleString()}` };
+            }
+
+            // 2. 生成红字对账单编号
+            const date = new Date();
+            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+            const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const refundNo = `AR-RF-${dateStr}-${random}`;
+
+            // 3. 创建红字 AR 对账单（负数金额）
+            const [refundStatement] = await tx.insert(arStatements).values({
+                tenantId,
+                statementNo: refundNo,
+                orderId: originalStatement.orderId,
+                customerId: originalStatement.customerId,
+                customerName: originalStatement.customerName,
+                settlementType: originalStatement.settlementType,
+
+                // 负数金额表示红字
+                totalAmount: String(-data.refundAmount),
+                receivedAmount: String(-data.refundAmount), // 已退
+                pendingAmount: '0',
+
+                status: 'COMPLETED', // 红字单直接完成
+
+                salesId: originalStatement.salesId,
+                channelId: originalStatement.channelId,
+            }).returning();
+
+            // 4. 更新原对账单已收金额
+            const newReceivedAmount = receivedAmount - data.refundAmount;
+            const newPendingAmount = Number(originalStatement.totalAmount) - newReceivedAmount;
+
+            await tx.update(arStatements)
+                .set({
+                    receivedAmount: String(newReceivedAmount),
+                    pendingAmount: String(newPendingAmount),
+                    status: newReceivedAmount >= Number(originalStatement.totalAmount) ? 'PAID' : 'PARTIAL',
+                })
+                .where(eq(arStatements.id, data.originalStatementId));
+
+            return {
+                success: true,
+                data: {
+                    refundStatementId: refundStatement.id,
+                    refundNo,
+                    refundAmount: data.refundAmount,
+                    originalStatementNo: originalStatement.statementNo,
+                    message: '退款对账单创建成功'
+                }
+            };
+        });
+    } catch (error) {
+        console.error('创建退款对账单失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '操作失败'
+        };
+    }
+}
+

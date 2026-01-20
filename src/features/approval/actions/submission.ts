@@ -5,16 +5,20 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { ApprovalDelegationService } from "@/services/approval-delegation.service";
 
+// Helper type for Transaction
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 interface Condition {
+    // ... unchanged
     field: string;
     operator: string;
-    value: any;
+    value: string | number | boolean | string[];
 }
 
 /**
  * 评估节点条件是否匹配
  */
-function evaluateConditions(conditions: Condition[], payload: Record<string, any>): boolean {
+function evaluateConditions(conditions: Condition[], payload: Record<string, unknown>): boolean {
     if (!conditions || !Array.isArray(conditions) || conditions.length === 0) return true;
 
     return conditions.every(cond => {
@@ -26,7 +30,7 @@ function evaluateConditions(conditions: Condition[], payload: Record<string, any
             case 'ne': return value != cond.value;
             case 'gt': return Number(value) > Number(cond.value);
             case 'lt': return Number(value) < Number(cond.value);
-            case 'in': return Array.isArray(cond.value) && cond.value.includes(value);
+            case 'in': return Array.isArray(cond.value) && (cond.value as any[]).includes(value);
             default: return true;
         }
     });
@@ -45,15 +49,15 @@ export async function submitApproval(payload: {
     entityId: string;
     amount?: string | number;
     comment?: string;
-    [key: string]: any; // 支持动态条件字段
-}, externalTx?: any) { // externalTx is often 'any' from drizzle transaction, but we can try to type it or keep as is if it's too complex
+    [key: string]: unknown; // 支持动态条件字段
+}, externalTx?: Transaction) {
     const session = await auth();
     const tenantId = payload.tenantId || session?.user?.tenantId;
     const requesterId = payload.requesterId || session?.user?.id;
 
     if (!tenantId || !requesterId) return { success: false, error: 'Unauthorized/Missing IDs' };
 
-    const run = async (tx: any) => {
+    const run = async (tx: Transaction) => {
         // 1. Find active flow definition
         const flow = await tx.query.approvalFlows.findFirst({
             where: and(
@@ -84,7 +88,7 @@ export async function submitApproval(payload: {
             if (!amountMatch) return false;
 
             // Custom Conditions Check
-            return evaluateConditions(node.conditions as any, payload);
+            return evaluateConditions(node.conditions as unknown as Condition[], payload);
         });
 
         const firstNode = activeNodes[0];
@@ -151,37 +155,41 @@ export async function submitApproval(payload: {
         return await db.transaction(async (tx) => {
             try {
                 return await run(tx);
-            } catch (e: any) {
-                return { success: false, error: e.message };
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : String(e);
+                return { success: false, error: message };
             }
         });
     }
 }
 
-async function updateEntityStatus(tx: any, type: string, id: string, status: string, tenantId: string) {
-    const targetStatus = status;
+async function updateEntityStatus(tx: Transaction, type: string, id: string, status: string, tenantId: string) {
     const { orderChanges, orders } = await import('@/shared/api/schema');
 
     switch (type) {
         case 'QUOTE':
-            await tx.update(quotes).set({ status: targetStatus }).where(and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)));
+            await tx.update(quotes).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)));
             break;
         case 'ORDER':
-            await tx.update(orders).set({ status: targetStatus }).where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)));
+            await tx.update(orders).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)));
             break;
         case 'ORDER_CHANGE':
             await tx.update(orderChanges)
-                .set({ status: targetStatus, updatedAt: new Date() })
+                .set({ status: status as 'PENDING_APPROVAL', updatedAt: new Date() })
                 .where(and(eq(orderChanges.id, id), eq(orderChanges.tenantId, tenantId)));
             break;
         case 'MEASURE_TASK':
-            await tx.update(measureTasks).set({ status: targetStatus }).where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, tenantId)));
+            await tx.update(measureTasks).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, tenantId)));
             break;
-        case 'PAYMENT_BILL':
-            await tx.update(paymentBills).set({ status: targetStatus }).where(and(eq(paymentBills.id, id), eq(paymentBills.tenantId, tenantId)));
+        case 'PAYMENT_BILL': {
+            const billStatus = status === 'PENDING_APPROVAL' ? 'PENDING' : status;
+            await tx.update(paymentBills).set({ status: billStatus }).where(and(eq(paymentBills.id, id), eq(paymentBills.tenantId, tenantId)));
             break;
-        case 'RECEIPT_BILL':
-            await tx.update(receiptBills).set({ status: targetStatus }).where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, tenantId)));
+        }
+        case 'RECEIPT_BILL': {
+            const billStatus = status === 'PENDING_APPROVAL' ? 'PENDING' : status;
+            await tx.update(receiptBills).set({ status: billStatus }).where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, tenantId)));
             break;
+        }
     }
 }

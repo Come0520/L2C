@@ -164,7 +164,8 @@ export async function handleWebhookRequest(
             estimatedAmount: payload.estimated_amount ? String(payload.estimated_amount) : null,
             notes: payload.remark || null,
             externalId: payload.external_id || null,
-        } as any, tenantId, systemUserId);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any, tenantId, systemUserId); // 类型断言用于兼容 LeadService
 
         if (result.isDuplicate && !payload.force_create) {
             return {
@@ -188,10 +189,11 @@ export async function handleWebhookRequest(
                 is_new: true
             }
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return {
             code: 500,
-            message: `Internal Error: ${error.message}`
+            message: `Internal Error: ${message}`
         };
     }
 }

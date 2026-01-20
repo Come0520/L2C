@@ -1,6 +1,6 @@
 import { db } from '@/shared/api/db';
 import { purchaseOrders } from '@/shared/api/schema';
-import { eq, and, notInArray, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export interface LogisticsCheckResult {
     ready: boolean;

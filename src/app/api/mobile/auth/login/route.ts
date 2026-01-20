@@ -1,9 +1,10 @@
 
 import { db } from '@/shared/api/db';
-import { users } from '@/shared/api/schema';
+import { users, tenants } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
-import { generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { generateAccessToken, generateRefreshToken, generatePreAuthToken } from '@/shared/lib/jwt';
+import { VerificationCodeService } from '@/shared/services/verification-code.service';
 import { compare } from 'bcryptjs';
 
 /**
@@ -20,10 +21,7 @@ export async function POST(request: Request) {
 
         // 参数校验
         if (!phone || !password) {
-            return NextResponse.json(
-                { success: false, message: '手机号或密码不能为空' },
-                { status: 400 }
-            );
+            return apiError('手机号或密码不能为空', 400);
         }
 
         // 查找用户
@@ -36,49 +34,101 @@ export async function POST(request: Request) {
 
         // 安全修复：统一返回模糊错误信息，防止用户枚举攻击
         if (!user || !user.passwordHash) {
-            return NextResponse.json(
-                { success: false, message: '手机号或密码错误' },
-                { status: 401 }
-            );
+            return apiError('手机号或密码错误', 401);
         }
 
         // 安全修复：验证密码哈希
         const passwordsMatch = await compare(password, user.passwordHash);
         if (!passwordsMatch) {
-            return NextResponse.json(
-                { success: false, message: '手机号或密码错误' },
-                { status: 401 }
-            );
+            return apiError('手机号或密码错误', 401);
         }
 
-        // 生成 JWT Token
-        const userPhone = user.phone || phone; // 使用登录时的手机号作为备用
-        const accessToken = await generateAccessToken(user.id, user.tenantId, userPhone);
-        const refreshToken = await generateRefreshToken(user.id, user.tenantId, userPhone);
+        // 角色映射 logic
+        let mobileRole = 'WORKER'; // Default fallback
+        const dbRole = user.role || '';
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                accessToken,
-                refreshToken,
-                expiresIn: 86400, // 24小时（秒）
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    phone: user.phone,
-                    avatar: user.avatarUrl,
-                    tenantId: user.tenantId,
-                    role: user.role
-                }
+        // Simple mapping based on known enums
+        // 'ADMIN', 'SALES', 'MANAGER', 'WORKER', 'FINANCE', 'SUPPLY'
+        switch (dbRole) {
+            case 'ADMIN':
+            case 'MANAGER':
+                mobileRole = 'BOSS';
+                break;
+            case 'SALES':
+                mobileRole = 'SALES';
+                break;
+            case 'WORKER':
+                mobileRole = 'WORKER';
+                break;
+            case 'SUPPLY':
+                mobileRole = 'PURCHASER';
+                break;
+            default:
+                mobileRole = 'WORKER';
+        }
+
+        // ... existing user check ...
+
+        // 7. MFA Check
+        // Fetch tenant settings
+        const tenant = await db.query.tenants.findFirst({
+            where: eq(tenants.id, user.tenantId),
+            columns: {
+                settings: true
+            }
+        });
+
+        const settings = tenant?.settings as any; // Cast generic jsonb
+        const mfaConfig = settings?.mfa;
+
+        let mfaRequired = false;
+        if (mfaConfig?.enabled && mfaConfig?.roles?.includes(mobileRole)) {
+            mfaRequired = true;
+        }
+
+        if (mfaRequired) {
+            // Generate SMS Code
+            const userPhone = user.phone || phone;
+            await VerificationCodeService.generateAndSend(user.id, userPhone, 'LOGIN_MFA');
+
+            // Generate Pre-Auth Token
+            const preAuthToken = await generatePreAuthToken(
+                user.id,
+                user.tenantId,
+                userPhone,
+                mobileRole
+            );
+
+            return apiSuccess({
+                mfaRequired: true,
+                preAuthToken,
+                maskPhone: userPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') // Simple mask
+            });
+        }
+
+        // 生成 JWT Token (Normal Flow)
+        const userPhone = user.phone || phone; // 使用登录时的手机号作为备用
+        const accessToken = await generateAccessToken(user.id, user.tenantId, userPhone, mobileRole);
+        const refreshToken = await generateRefreshToken(user.id, user.tenantId, userPhone, mobileRole);
+
+        return apiSuccess({
+            mfaRequired: false,
+            accessToken,
+            refreshToken,
+            expiresIn: 86400, // 24小时（秒）
+            user: {
+                id: user.id,
+                name: user.name,
+                phone: user.phone,
+                avatar: user.avatarUrl,
+                tenantId: user.tenantId,
+                role: mobileRole // Return mapped role to client
             }
         });
 
     } catch (error) {
         console.error('移动端登录错误:', error);
-        return NextResponse.json(
-            { success: false, message: '服务器内部错误' },
-            { status: 500 }
-        );
+        return apiError('服务器内部错误', 500);
     }
 }
 

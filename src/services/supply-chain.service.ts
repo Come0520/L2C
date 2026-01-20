@@ -94,7 +94,7 @@ export class SupplyChainService {
                     // Update Order Item to link to this PO
                     await tx.update(orderItems)
                         .set({
-                            status: 'PO_CREATED',
+                            status: 'PROCESSING', // PO_CREATED 映射为 PROCESSING
                             poId: po.id,
                             supplierId: supplier.id
                         })
@@ -120,7 +120,7 @@ export class SupplyChainService {
             if (!po) throw new Error("PO not found");
 
             // Mapping PO Status to Order Item Status
-            let targetItemStatus: string;
+            let targetItemStatus: 'PO_CONFIRMED' | 'SHIPPED' | 'DELIVERED';
             switch (po.status) {
                 case 'CONFIRMED':
                     targetItemStatus = 'PO_CONFIRMED';
@@ -128,8 +128,8 @@ export class SupplyChainService {
                 case 'SHIPPED':
                     targetItemStatus = 'SHIPPED';
                     break;
-                case 'RECEIVED':
-                    targetItemStatus = 'RECEIVED';
+                case 'DELIVERED': // 原 RECEIVED，使用枚举正确值
+                    targetItemStatus = 'DELIVERED';
                     break;
                 default:
                     return; // No sync needed for DRAFT, etc.
@@ -137,7 +137,7 @@ export class SupplyChainService {
 
             // Update all Order Items linked to this PO
             await tx.update(orderItems)
-                .set({ status: targetItemStatus })
+                .set({ status: targetItemStatus }) // 类型断言用于业务状态映射
                 .where(and(eq(orderItems.poId, poId), eq(orderItems.tenantId, tenantId)));
 
             return { success: true, status: targetItemStatus };

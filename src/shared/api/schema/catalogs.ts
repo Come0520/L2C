@@ -113,6 +113,10 @@ export const marketChannels = pgTable('market_channels', {
     sortOrder: integer('sort_order').default(0), // 排序
     autoAssignSalesId: uuid('auto_assign_sales_id').references(() => users.id),
 
+    // Commission Config
+    cooperationMode: varchar('cooperation_mode', { length: 20 }).default('REBATE'), // REBATE/BASE_PRICE
+    commissionRate: decimal('commission_rate', { precision: 5, scale: 4 }).default('0.1'),
+
     // Distribution Strategy & Config
     distributionRuleId: uuid('distribution_rule_id'), // Reference to a Strategy Config Table (Future)
     allowDuplicateLeads: boolean('allow_duplicate_leads').default(false),

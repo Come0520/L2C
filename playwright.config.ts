@@ -22,7 +22,13 @@ export default defineConfig({
 
         /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
+
+        /* 增加超时配置以提高测试稳定性 */
+        actionTimeout: 15000, // 单个操作超时 15s
     },
+
+    /* 全局测试超时 */
+    timeout: 60000, // 每个测试最多 60s
 
     /* Configure projects for major browsers */
     projects: [

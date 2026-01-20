@@ -49,10 +49,11 @@ export async function GET(request: Request) {
             details: results
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Pool Recycle] Error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: message },
             { status: 500 }
         );
     }

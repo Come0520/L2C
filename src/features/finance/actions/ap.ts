@@ -572,6 +572,117 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
     });
 }
 
+// ==================== 供应商退款流程 (Supplier Refund) ====================
+
+const createSupplierRefundSchema = z.object({
+    originalStatementId: z.string().uuid('请选择原对账单'),
+    refundAmount: z.number().positive('退款金额必须大于0'),
+    reason: z.string().min(1, '请填写退款原因'),
+    remark: z.string().optional(),
+});
+
+/**
+ * 创建供应商退款对账单（红字 AP）
+ * 
+ * 逻辑：
+ * 1. 验证原对账单存在且已付款
+ * 2. 验证退款金额不超过已付金额
+ * 3. 创建红字 AP 对账单（负数金额）
+ * 4. 创建对应的收款单
+ */
+export async function createSupplierRefundStatement(input: z.infer<typeof createSupplierRefundSchema>) {
+    try {
+        const data = createSupplierRefundSchema.parse(input);
+        const session = await auth();
+
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未授权' };
+        }
+
+        const tenantId = session.user.tenantId;
+
+        return await db.transaction(async (tx) => {
+            // 1. 获取原对账单
+            const originalStatement = await tx.query.apSupplierStatements.findFirst({
+                where: and(
+                    eq(apSupplierStatements.id, data.originalStatementId),
+                    eq(apSupplierStatements.tenantId, tenantId)
+                ),
+                with: {
+                    supplier: true,
+                }
+            });
+
+            if (!originalStatement) {
+                return { success: false, error: '原对账单不存在' };
+            }
+
+            const paidAmount = Number(originalStatement.paidAmount);
+            if (paidAmount <= 0) {
+                return { success: false, error: '原对账单未付款，无法退款' };
+            }
+
+            if (data.refundAmount > paidAmount) {
+                return { success: false, error: `退款金额不能超过已付金额 ¥${paidAmount.toLocaleString()}` };
+            }
+
+            // 2. 生成红字对账单编号
+            const date = new Date();
+            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+            const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const refundNo = `AP-RF-${dateStr}-${random}`;
+
+            // 3. 创建红字 AP 对账单（负数金额）
+            const [refundStatement] = await tx.insert(apSupplierStatements).values({
+                tenantId,
+                statementNo: refundNo,
+                purchaseOrderId: originalStatement.purchaseOrderId,
+                supplierId: originalStatement.supplierId,
+                supplierName: originalStatement.supplierName,
+
+                // 负数金额表示红字
+                totalAmount: String(-data.refundAmount),
+                paidAmount: String(-data.refundAmount), // 已退
+                pendingAmount: '0',
+
+                status: 'COMPLETED', // 红字单直接完成
+                purchaserId: originalStatement.purchaserId,
+            }).returning();
+
+            // 4. 更新原对账单已付金额
+            const newPaidAmount = paidAmount - data.refundAmount;
+            const newPendingAmount = Number(originalStatement.totalAmount) - newPaidAmount;
+
+            await tx.update(apSupplierStatements)
+                .set({
+                    paidAmount: String(newPaidAmount),
+                    pendingAmount: String(newPendingAmount),
+                    status: newPaidAmount >= Number(originalStatement.totalAmount) ? 'COMPLETED' : 'PARTIAL',
+                })
+                .where(eq(apSupplierStatements.id, data.originalStatementId));
+
+            revalidatePath('/finance/ap');
+
+            return {
+                success: true,
+                data: {
+                    refundStatementId: refundStatement.id,
+                    refundNo,
+                    refundAmount: data.refundAmount,
+                    originalStatementNo: originalStatement.statementNo,
+                    message: '供应商退款对账单创建成功'
+                }
+            };
+        });
+    } catch (error) {
+        console.error('创建供应商退款对账单失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '操作失败'
+        };
+    }
+}
+
 /**
  * 内部调用：从 PO 生成应付账款
  */

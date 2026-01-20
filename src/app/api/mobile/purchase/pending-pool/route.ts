@@ -5,8 +5,8 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { purchaseOrders, purchaseOrderItems } from '@/shared/api/schema';
-import { eq, and, or, sql } from 'drizzle-orm';
+import { purchaseOrders } from '@/shared/api/schema';
+import { eq, and, or } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requirePurchaser } from '@/shared/middleware/mobile-auth';
 

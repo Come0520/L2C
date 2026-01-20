@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Card, CardHeader, CardContent, CardTitle } from '@/shared/ui/card';
 

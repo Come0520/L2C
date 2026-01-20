@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';

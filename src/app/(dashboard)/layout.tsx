@@ -1,4 +1,4 @@
-﻿import { AppSidebar } from '../../widgets/layout/sidebar';
+import { AppSidebar } from '../../widgets/layout/sidebar';
 import { Header } from '../../widgets/layout/header';
 
 /**

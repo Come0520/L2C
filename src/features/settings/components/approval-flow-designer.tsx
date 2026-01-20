@@ -45,7 +45,7 @@ interface ApprovalFlowDesignerProps {
 const nodeSchema = z.object({
     name: z.string().min(1, '节点名称必填'),
     type: z.enum(['role', 'specific_user']),
-    targetId: z.string().min(1, '必须选择审批�?角色'),
+    targetId: z.string().min(1, '必须选择审批�?角色'),
     condition: z.string().optional(),
 });
 
@@ -144,7 +144,7 @@ export function ApprovalFlowDesigner({ initialFlow, roles, onSave }: ApprovalFlo
                             <Input
                                 value={flowMetadata.name}
                                 onChange={(e) => setFlowMetadata({ ...flowMetadata, name: e.target.value })}
-                                placeholder="�? 特价审批流程"
+                                placeholder="�? 特价审批流程"
                             />
                         </div>
                         <div className="space-y-2">
@@ -152,7 +152,7 @@ export function ApprovalFlowDesigner({ initialFlow, roles, onSave }: ApprovalFlo
                             <Input
                                 value={flowMetadata.code}
                                 onChange={(e) => setFlowMetadata({ ...flowMetadata, code: e.target.value })}
-                                placeholder="�? DISCOUNT_APPROVAL"
+                                placeholder="�? DISCOUNT_APPROVAL"
                                 disabled={!!initialFlow?.id}
                             />
                         </div>
@@ -171,7 +171,7 @@ export function ApprovalFlowDesigner({ initialFlow, roles, onSave }: ApprovalFlo
                 <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border -z-10" />
 
                 <div className="bg-primary/10 text-primary px-4 py-2 rounded-full font-medium text-sm border border-primary/20 z-10 bg-background">
-                    开�?
+                    开�?
                 </div>
 
                 <ArrowDown className="text-muted-foreground w-4 h-4" />

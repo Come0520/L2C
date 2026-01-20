@@ -1,6 +1,6 @@
 /**
  * Tenant Context & Provider
- * 提供当前租户信息，确保数据隔�?
+ * 提供当前租户信息，确保数据隔�?
  */
 
 'use client';
@@ -35,8 +35,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
         try {
             // 暂时模拟获取租户信息
-            // 实际应调�?API: GET /api/tenants/current
-            // 或者从 Session 中直接解析更多租户信�?
+            // 实际应调�?API: GET /api/tenants/current
+            // 或者从 Session 中直接解析更多租户信�?
 
             // 模拟延迟
             // await new Promise(resolve => setTimeout(resolve, 100));

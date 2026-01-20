@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 
 export const WindowTypeEnum = z.enum(['STRAIGHT', 'L_SHAPE', 'U_SHAPE', 'BAY_WINDOW', 'CURVED']);
 

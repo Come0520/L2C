@@ -64,7 +64,7 @@ export function ActionConfirmDialog({
                         <Button variant="outline" disabled={isPending}>取消</Button>
                     </DialogClose>
                     <Button onClick={handleConfirm} disabled={isPending}>
-                        {isPending ? '提交�?..' : '确认'}
+                        {isPending ? '提交�?..' : '确认'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

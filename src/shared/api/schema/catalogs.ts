@@ -1,6 +1,6 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { productCategoryEnum } from './enums';
+import { productCategoryEnum, productTypeEnum } from './enums';
 import { suppliers } from './supply-chain';
 
 export const products = pgTable('products', {
@@ -9,6 +9,7 @@ export const products = pgTable('products', {
     sku: varchar('sku', { length: 50 }).unique().notNull(),
     name: varchar('name', { length: 200 }).notNull(),
     category: productCategoryEnum('category').notNull(),
+    productType: productTypeEnum('product_type').notNull().default('FINISHED'), // 商品类型：成品/定制
 
     unitPrice: decimal('unit_price', { precision: 12, scale: 2 }).default('0'), // Legacy or generic sales price
     unit: varchar('unit', { length: 20 }).default('件'),
@@ -37,6 +38,11 @@ export const products = pgTable('products', {
 
     isActive: boolean('is_active').default(true),
 
+    images: jsonb('images').default([]),
+    stockUnit: varchar('stock_unit', { length: 20 }),
+    salesUnit: varchar('sales_unit', { length: 20 }),
+    conversionRate: decimal('conversion_rate', { precision: 10, scale: 4 }),
+
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -44,6 +50,28 @@ export const products = pgTable('products', {
     prodTenantIdx: index('idx_products_tenant').on(table.tenantId),
     prodSkuIdx: index('idx_products_sku').on(table.sku),
     prodSupplierIdx: index('idx_products_supplier').on(table.defaultSupplierId),
+}));
+
+export const productPriceHistory = pgTable('product_price_history', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    productId: uuid('product_id').references(() => products.id).notNull(),
+    supplierId: uuid('supplier_id'),   // 供应商变价时关联
+    channelId: uuid('channel_id'),     // 渠道价变动时关联
+    priceType: varchar('price_type', { length: 20 }).notNull(), // PURCHASE/RETAIL/CHANNEL/SPECIAL
+
+    oldPrice: decimal('old_price', { precision: 12, scale: 2 }),
+    newPrice: decimal('new_price', { precision: 12, scale: 2 }),
+    effectiveDate: timestamp('effective_date', { withTimezone: true }),
+
+    changeType: varchar('change_type', { length: 50 }).notNull(), // e.g. 'MANUAL_ADJUST', 'BATCH_UPDATE'
+    reason: text('reason'),
+
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    priceHistoryProductIdx: index('idx_product_price_history_product').on(table.productId),
+    priceHistoryTenantIdx: index('idx_product_price_history_tenant').on(table.tenantId),
 }));
 
 export const productAttributeTemplates = pgTable('product_attribute_templates', {
@@ -80,9 +108,9 @@ export const marketChannels = pgTable('market_channels', {
     parentId: uuid('parent_id'), // Self reference for hierarchy
     name: varchar('name', { length: 100 }).notNull(),
     code: varchar('code', { length: 50 }),
-    level: decimal('level').default('1'), // 1, 2, 3
+    level: integer('level').default(1), // 层级：1, 2, 3
     isActive: boolean('is_active').default(true),
-    sortOrder: decimal('sort_order').default('0'),
+    sortOrder: integer('sort_order').default(0), // 排序
     autoAssignSalesId: uuid('auto_assign_sales_id').references(() => users.id),
 
     // Distribution Strategy & Config

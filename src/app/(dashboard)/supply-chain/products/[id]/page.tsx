@@ -113,7 +113,7 @@ export default async function ProductDetailPage({
                                 <div>
                                     <label className="text-sm font-medium text-gray-500">默认供应商</label>
                                     <p className="mt-1 text-gray-900">
-                                        {/* @ts-ignore */}
+                                        {/* @ts-expect-error */}
                                         {productData.defaultSupplier?.name || '未设置'}
                                     </p>
                                 </div>

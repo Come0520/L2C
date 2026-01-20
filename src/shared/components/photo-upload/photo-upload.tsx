@@ -1,9 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import Upload from 'lucide-react/dist/esm/icons/upload';
-import X from 'lucide-react/dist/esm/icons/x';
+import { Upload, X } from 'lucide-react';
 
 interface PhotoUploadProps {
     value?: string[];

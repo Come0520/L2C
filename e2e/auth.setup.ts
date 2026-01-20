@@ -12,7 +12,7 @@ setup('authenticate', async ({ page }) => {
 
     // 填写登录表单
     // 注意：已通过 seed-e2e.ts 预设管理员账号
-    await page.getByPlaceholder('手机号').fill('13800000002');
+    await page.getByPlaceholder('手机号').fill('13800000001');
     await page.getByPlaceholder('密码').fill('123456');
     console.log('Form filled, clicking submit...');
     await page.getByRole('button', { name: '登录' }).click();

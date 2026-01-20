@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 export async function getWorkflows() {
     return { success: true, data: [] };

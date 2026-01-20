@@ -9,6 +9,7 @@
 import * as submission from './actions/submission';
 import * as processing from './actions/processing';
 import * as queries from './actions/queries';
+import * as timeout from './actions/timeout';
 import * as utils from './actions/utils';
 
 export const {
@@ -26,5 +27,11 @@ export const {
 } = queries;
 
 export const {
+    processTimeouts,
+    checkTimeoutsManually
+} = timeout;
+
+export const {
     // Add exports from utils if any
 } = utils;
+

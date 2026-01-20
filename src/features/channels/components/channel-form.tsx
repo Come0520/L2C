@@ -13,7 +13,8 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 interface ChannelFormProps {
-    initialData?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialData?: any; // 渠道数据结构复杂，后续可定义具体类型
     tenantId: string;
 }
 
@@ -22,6 +23,7 @@ export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
     const form = useForm<ChannelInput>({
         resolver: zodResolver(channelSchema) as any,
         defaultValues: initialData || {
+            category: 'OFFLINE',
             channelType: 'DECORATION_CO',
             level: 'C',
             name: '',
@@ -47,8 +49,9 @@ export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
             }
             router.push('/channels');
             router.refresh();
-        } catch (error: any) {
-            toast.error(error.message || '操作失败');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : '操作失败';
+            toast.error(message);
         }
     };
 
@@ -88,10 +91,36 @@ export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
                         />
                         <FormField
                             control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>渠道大类</FormLabel>
+                                    <Select onValueChange={(val) => {
+                                        field.onChange(val);
+                                        // Reset channel type when category changes
+                                        form.setValue('channelType', val === 'ONLINE' ? 'DOUYIN' : val === 'OFFLINE' ? 'DECORATION_CO' : 'OTHER');
+                                    }} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="选择大类" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="ONLINE">线上渠道</SelectItem>
+                                            <SelectItem value="OFFLINE">线下渠道</SelectItem>
+                                            <SelectItem value="REFERRAL">转介绍</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
                             name="channelType"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>渠道类型</FormLabel>
+                                    <FormLabel>子渠道类型</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
@@ -99,9 +128,28 @@ export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="DECORATION_CO">装饰公司</SelectItem>
-                                            <SelectItem value="DESIGNER">独立设计师</SelectItem>
-                                            <SelectItem value="CROSS_INDUSTRY">异业合作</SelectItem>
+                                            {form.watch('category') === 'ONLINE' && (
+                                                <>
+                                                    <SelectItem value="DOUYIN">抖音</SelectItem>
+                                                    <SelectItem value="XIAOHONGSHU">小红书</SelectItem>
+                                                    <SelectItem value="OTHER">其他线上</SelectItem>
+                                                </>
+                                            )}
+                                            {form.watch('category') === 'OFFLINE' && (
+                                                <>
+                                                    <SelectItem value="DECORATION_CO">装饰公司</SelectItem>
+                                                    <SelectItem value="DESIGNER">独立设计师</SelectItem>
+                                                    <SelectItem value="CROSS_INDUSTRY">异业合作</SelectItem>
+                                                    <SelectItem value="STORE">自营门店</SelectItem>
+                                                </>
+                                            )}
+                                            {form.watch('category') === 'REFERRAL' && (
+                                                <>
+                                                    <SelectItem value="OTHER">通用转介绍</SelectItem>
+                                                </>
+                                            )}
+                                            {/* Fallback to show all if no category selected (should not happen with default) */}
+                                            {!form.watch('category') && <SelectItem value="OTHER">请先选择大类</SelectItem>}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

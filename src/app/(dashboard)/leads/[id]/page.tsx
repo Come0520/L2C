@@ -9,7 +9,10 @@ import { Button } from '@/shared/ui/button';
 import { StatusBadge } from '@/shared/ui/status-badge';
 import { formatDate } from '@/shared/lib/utils';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
-import { Edit, Plus, Zap, Ban } from 'lucide-react';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Zap from 'lucide-react/dist/esm/icons/zap';
+import Ban from 'lucide-react/dist/esm/icons/ban';
 import Link from 'next/link';
 
 import { EditLeadDialog } from '@/features/leads/components/edit-lead-dialog';
@@ -28,7 +31,11 @@ export default async function LeadDetailPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const session = await auth();
+    const [session, resolvedParams] = await Promise.all([
+        auth(),
+        params
+    ]);
+
     const userId = session?.user?.id;
     const tenantId = session?.user?.tenantId;
 
@@ -36,15 +43,29 @@ export default async function LeadDetailPage({
         redirect('/auth/login');
     }
 
-    const resolvedParams = await params;
+    console.log('[DEBUG] Page Component params.id:', resolvedParams.id);
+    console.log('[DEBUG] Page Component user:', userId);
 
-    const [lead, channels] = await Promise.all([
-        getLeadDetail(resolvedParams.id),
-        getChannels(),
-    ]);
+    let lead, channels;
+    try {
+        console.log('[DEBUG-PAGE] Fetching lead with ID:', resolvedParams.id);
 
-    if (!lead) {
-        notFound();
+        [lead, channels] = await Promise.all([
+            getLeadDetail(resolvedParams.id),
+            getChannels(),
+        ]);
+
+        if (!lead) {
+            console.log('[DEBUG-PAGE] Lead NOT found for ID:', resolvedParams.id);
+            console.error(`[${new Date().toISOString()}] Lead not found for ID: ${resolvedParams.id}`);
+            notFound();
+        } else {
+            console.log('[DEBUG-PAGE] Lead found:', lead?.id);
+        }
+    } catch (error: any) {
+        console.error('[DEBUG-PAGE] Error in page:', error);
+        console.error(`[${new Date().toISOString()}] Error fetching lead detail:`, error);
+        throw error;
     }
 
     return (
@@ -114,7 +135,12 @@ export default async function LeadDetailPage({
                 </div>
 
                 {/* Status Bar */}
-                <LeadStatusBar status={lead.status || 'PENDING_ASSIGNMENT'} />
+                <LeadStatusBar
+                    status={lead.status || 'PENDING_ASSIGNMENT'}
+                    leadId={lead.id}
+                    userId={userId}
+                    tenantId={tenantId}
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

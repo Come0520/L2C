@@ -1,18 +1,18 @@
-'use client';
+import { SystemParamsConfig } from '@/features/settings/components/system-params-config';
+import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 
-import React from 'react';
-
+/**
+ * 报价设置页面
+ * [Settings-02] 系统参数配置
+ */
 export default function QuoteSettingsPage() {
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b px-6 py-4">
-                <h1 className="text-2xl font-bold tracking-tight">报价设置 (Quote Settings)</h1>
-            </div>
-            <div className="flex-1 p-6">
-                <div className="rounded-md border p-4 text-center text-muted-foreground">
-                    报价设置页面在恢复模式下暂不可用。
-                </div>
-            </div>
+        <div className="space-y-6">
+            <DashboardPageHeader
+                title="系统参数配置"
+                subtitle="配置报价有效期、提醒规则和服务排期参数"
+            />
+            <SystemParamsConfig />
         </div>
     );
 }

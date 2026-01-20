@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Download from 'lucide-react/dist/esm/icons/download';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import { Download, Loader2 } from 'lucide-react';
 import { Button, ButtonProps } from '@/shared/ui/button';
 import { exportToExcel, ExportColumn } from '@/shared/lib/export-utils';
 import { toast } from 'sonner';

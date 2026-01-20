@@ -9,16 +9,30 @@ import {
 } from '@/shared/ui/dialog';
 import { CustomerForm } from './customer-form';
 import { useState } from 'react';
-import { Button } from '@/shared/ui/button'; // Assuming Button is needed or used in triggering, but simpler logic here
 
 interface CreateCustomerDialogProps {
     trigger: React.ReactNode;
     userId: string;
     tenantId: string;
+    /** 可选：创建成功后的回调，传入新建客户的 ID */
+    onSuccess?: (customer?: { id: string }) => void;
 }
 
-export function CreateCustomerDialog({ trigger, userId, tenantId }: CreateCustomerDialogProps) {
+/**
+ * 新建客户弹窗组件
+ *
+ * 用于快速创建新客户，可选择在创建成功后执行回调
+ */
+export function CreateCustomerDialog({ trigger, userId, tenantId, onSuccess }: CreateCustomerDialogProps) {
     const [open, setOpen] = useState(false);
+
+    /**
+     * 处理创建成功
+     */
+    const handleSuccess = (customer?: { id: string }) => {
+        setOpen(false);
+        onSuccess?.(customer);
+    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -32,7 +46,7 @@ export function CreateCustomerDialog({ trigger, userId, tenantId }: CreateCustom
                 <CustomerForm
                     userId={userId}
                     tenantId={tenantId}
-                    onSuccess={() => setOpen(false)}
+                    onSuccess={handleSuccess}
                 />
             </DialogContent>
         </Dialog>

@@ -1,4 +1,4 @@
-﻿import {
+import {
     pgTable,
     uuid,
     varchar,
@@ -23,6 +23,7 @@ export const customers = pgTable('customers', {
     phone: varchar('phone', { length: 20 }).notNull(),
     phoneSecondary: varchar('phone_secondary', { length: 20 }),
     wechat: varchar('wechat', { length: 50 }),
+    wechatOpenId: varchar('wechat_openid', { length: 100 }).unique(), // 微信小程序登录绑定
 
     gender: varchar('gender', { length: 10 }), // MALE, FEMALE
     birthday: timestamp('birthday'),
@@ -33,8 +34,8 @@ export const customers = pgTable('customers', {
 
 
     // Referral
-    referrerCustomerId: uuid('referrer_customer_id'), // Self-reference added in relations
-    sourceLeadId: uuid('source_lead_id'),
+    referrerCustomerId: uuid('referrer_customer_id'), // 自引用，通过 Relations 定义关联
+    sourceLeadId: uuid('source_lead_id'), // 线索关联，外键通过 Relations 定义避免循环依赖
 
     // Loyalty
     loyaltyPoints: integer('loyalty_points').default(0),
@@ -66,3 +67,36 @@ export const customers = pgTable('customers', {
     custPhoneIdx: index('idx_customers_phone').on(table.phone),
     custReferrerIdx: index('idx_customers_referrer').on(table.referrerCustomerId),
 }));
+
+// 手机号查看日志表 (Phone View Logs)
+// 记录敏感信息的查看行为，用于安全审计
+export const phoneViewLogs = pgTable('phone_view_logs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    viewerId: uuid('viewer_id').references(() => users.id).notNull(),
+    viewerRole: varchar('viewer_role', { length: 50 }).notNull(),
+    ipAddress: varchar('ip_address', { length: 50 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    phoneLogTenantIdx: index('idx_phone_view_logs_tenant').on(table.tenantId),
+    phoneLogCustomerIdx: index('idx_phone_view_logs_customer').on(table.customerId),
+    phoneLogViewerIdx: index('idx_phone_view_logs_viewer').on(table.viewerId),
+}));
+
+// 客户合并日志表 (Customer Merge Logs)
+// 记录客户档案合并操作的详细信息，用于审计和追溯
+export const customerMergeLogs = pgTable('customer_merge_logs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    primaryCustomerId: uuid('primary_customer_id').references(() => customers.id).notNull(),
+    mergedCustomerIds: uuid('merged_customer_ids').array().notNull(),
+    operatorId: uuid('operator_id').references(() => users.id).notNull(),
+    fieldConflicts: jsonb('field_conflicts'), // 记录冲突字段的决策过程
+    affectedTables: text('affected_tables').array(), // 受影响的关联表 (orders, quotes, leads...)
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    mergeLogTenantIdx: index('idx_merge_logs_tenant').on(table.tenantId),
+    mergeLogPrimaryIdx: index('idx_merge_logs_primary').on(table.primaryCustomerId),
+}));
+

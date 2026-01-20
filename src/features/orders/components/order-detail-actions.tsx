@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import Download from 'lucide-react/dist/esm/icons/download';
 import Printer from 'lucide-react/dist/esm/icons/printer';
@@ -16,26 +16,82 @@ import {
     DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { splitOrder, requestDelivery } from '../actions';
+import {
+    confirmInstallationAction,
+    requestCustomerConfirmationAction,
+    customerAcceptAction,
+    customerRejectAction
+} from '../actions/orders';
+import { useRouter } from 'next/navigation';
+import { ChangeOrderDialog } from '@/features/orders/components/change-order-dialog';
+import { SplitOrderDialog } from '@/features/orders/components/split-order-dialog';
+import { DeliveryRequestDialog } from '@/features/orders/components/delivery-request-dialog';
+import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
 
 interface OrderDetailActionsProps {
-    order: any;
-    workers?: any[];
+    order: {
+        id: string;
+        status: string;
+        items?: Array<{
+            id: string;
+            productName: string;
+            quantity: string;
+            unitPrice: string;
+            subtotal: string;
+            supplierId?: string;
+            poId?: string;
+        }>;
+    };
+    suppliers?: Array<{ id: string; name: string }>;
 }
 
-export function OrderDetailActions({ order }: OrderDetailActionsProps) {
-    const handleSplit = async () => {
-        toast.info('拆单功能正在处理...');
-        // Implement real logic or redirect to split page
+export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActionsProps) {
+    const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+    const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+
+    const handleSplit = () => {
+        setSplitDialogOpen(true);
     };
 
-    const handleDelivery = async () => {
+    const handleDelivery = () => {
+        setDeliveryDialogOpen(true);
+    };
+
+    const router = useRouter();
+
+    const handleConfirmInstall = async () => {
         try {
-            await requestDelivery(order.id);
-            toast.success('发货申请已提交');
-        } catch {
-            toast.error('申请失败');
-        }
+            await confirmInstallationAction(order.id);
+            toast.success('安装已确认完成');
+            router.refresh();
+        } catch { toast.error('操作失败'); }
+    };
+
+    const handleRequestConfirmation = async () => {
+        try {
+            await requestCustomerConfirmationAction(order.id);
+            toast.success('已通知客户验收');
+            router.refresh();
+        } catch { toast.error('操作失败'); }
+    };
+
+    const handleAccept = async () => {
+        try {
+            await customerAcceptAction(order.id);
+            toast.success('订单已验收完成');
+            router.refresh();
+        } catch { toast.error('操作失败'); }
+    };
+
+    // Simple reject for now, ideally a dialog
+    const handleReject = async () => {
+        const reason = prompt('请输入驳回原因:');
+        if (!reason) return;
+        try {
+            await customerRejectAction(order.id, reason);
+            toast.success('已驳回验收');
+            router.refresh();
+        } catch { toast.error('操作失败'); }
     };
 
     return (
@@ -59,6 +115,29 @@ export function OrderDetailActions({ order }: OrderDetailActionsProps) {
                 </Button>
             )}
 
+            {order.status === 'PENDING_INSTALL' && (
+                <Button size="sm" onClick={handleConfirmInstall}>
+                    <CheckCircle className="h-4 w-4 mr-2" /> 确认安装完成
+                </Button>
+            )}
+
+            {order.status === 'INSTALLATION_COMPLETED' && (
+                <Button size="sm" onClick={handleRequestConfirmation} variant="secondary">
+                    <CheckCircle className="h-4 w-4 mr-2" /> 通知客户验收
+                </Button>
+            )}
+
+            {order.status === 'PENDING_CONFIRMATION' && (
+                <>
+                    <Button size="sm" variant="default" onClick={handleAccept} className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle className="h-4 w-4 mr-2" /> 确认验收
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={handleReject}>
+                        <XCircle className="h-4 w-4 mr-2" /> 驳回
+                    </Button>
+                </>
+            )}
+
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon">
@@ -66,10 +145,37 @@ export function OrderDetailActions({ order }: OrderDetailActionsProps) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                    <div className="px-2 py-1.5 outline-none">
+                        <ChangeOrderDialog
+                            orderId={order.id}
+                            trigger={
+                                <div className="relative flex select-none items-center rounded-sm text-sm outline-none transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer p-1">
+                                    <FileEdit className="mr-2 h-4 w-4" />
+                                    <span>发起变更</span>
+                                </div>
+                            }
+                        />
+                    </div>
                     <DropdownMenuItem>编辑订单</DropdownMenuItem>
                     <DropdownMenuItem className="text-red-600">取消订单</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* 拆单对话框 */}
+            <SplitOrderDialog
+                open={splitDialogOpen}
+                onOpenChange={setSplitDialogOpen}
+                orderId={order.id}
+                orderItems={order.items || []}
+                suppliers={suppliers}
+            />
+
+            {/* 发货申请对话框 */}
+            <DeliveryRequestDialog
+                open={deliveryDialogOpen}
+                onOpenChange={setDeliveryDialogOpen}
+                orderId={order.id}
+            />
         </div>
     );
 }

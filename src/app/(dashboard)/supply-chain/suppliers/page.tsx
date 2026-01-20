@@ -5,7 +5,9 @@ import { SupplierTable } from '@/features/supply-chain/components/supplier-table
 import { SupplierDialog } from '@/features/supply-chain/components/supplier-dialog';
 import { getSuppliers, updateSupplier } from '@/features/supply-chain/actions/supplier-actions';
 import { Button } from '@/shared/ui/button';
-import { Plus, Search, Loader2 } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { Input } from '@/shared/ui/input';
 import { toast } from 'sonner';
 

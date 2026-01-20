@@ -1,6 +1,6 @@
 /**
  * 通用日志工具
- * 封装 console.log/error，未来可接入 Sentry 或其他监控系�?
+ * 封装 console.log/error，未来可接入 Sentry 或其他监控系�?
  */
 
 export const logger = {

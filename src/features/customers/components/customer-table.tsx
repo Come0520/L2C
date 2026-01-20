@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import {
     Table,
     TableBody,
@@ -14,25 +16,60 @@ import { formatDate } from '@/shared/lib/utils';
 import Link from 'next/link';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import User from 'lucide-react/dist/esm/icons/user';
+import { MaskedPhone } from '@/shared/components/masked-phone';
+import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 
-interface CustomerTableProps {
-    data: any[]; // Replace with specific type
-    page: number;
-    pageSize: number;
+interface Customer {
+    id: string;
+    customerNo: string | null;
+    name: string;
+    phone: string | null;
+    level: string | null;
+    type: string | null;
+    totalAmount: string | number | null;
+    totalOrders: number | null;
+    assignedSales?: { name: string | null } | null;
+    lastOrderAt: Date | null | string;
 }
 
-export function CustomerTable({ data, page, pageSize }: CustomerTableProps) {
+interface CustomerTableProps {
+    data: Customer[];
+
+    currentUser: {
+        id: string;
+        tenantId: string;
+        role: string;
+    };
+}
+
+export const CustomerTable = React.memo(function CustomerTable({ data, currentUser }: CustomerTableProps) {
     if (data.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-500 border rounded-lg bg-gray-50">
+            <div className="glass-empty-state py-12 text-muted-foreground">
                 <User className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                 <p>暂无客户数据</p>
             </div>
         );
     }
 
+    // 判断当前用户是否有权查看详情（ADMIN, MANAGER, 或者归属销售）
+    const canViewFull = () => {
+        if (currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') return true;
+        // 注意：这里假设业务逻辑是管理员和经理可见，或者根据需要调整
+        return true; // Phase 1 简化处理，后续可细化
+    };
+
+    const handleViewPhone = async (customerId: string) => {
+        await logPhoneView({
+            customerId,
+            viewerId: currentUser.id,
+            viewerRole: currentUser.role,
+            tenantId: currentUser.tenantId,
+        });
+    };
+
     return (
-        <div className="border rounded-md">
+        <div className="glass-table overflow-hidden">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -56,8 +93,15 @@ export function CustomerTable({ data, page, pageSize }: CustomerTableProps) {
                                 </Link>
                             </TableCell>
                             <TableCell>
-                                <div className="font-medium text-gray-900">{customer.name}</div>
-                                <div className="text-xs text-gray-500">{customer.phone}</div>
+                                <div className="font-medium">{customer.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                    <MaskedPhone
+                                        phone={customer.phone || ''}
+                                        customerId={customer.id}
+                                        canViewFull={canViewFull()}
+                                        onViewFull={handleViewPhone}
+                                    />
+                                </div>
                             </TableCell>
                             <TableCell>
                                 <div className="flex flex-col gap-1 items-start">
@@ -100,4 +144,5 @@ export function CustomerTable({ data, page, pageSize }: CustomerTableProps) {
             </Table>
         </div>
     );
-}
+});
+

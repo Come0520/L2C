@@ -35,7 +35,7 @@ test.describe('完整销售流程 E2E', () => {
             const dir = 'test-results';
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-            const baseName = testInfo.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+            const baseName = `${testInfo.project.name}-${testInfo.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
             await page.screenshot({ path: path.join(dir, `${baseName}.png`), fullPage: true });
             fs.writeFileSync(path.join(dir, `${baseName}.html`), await page.content());
         }
@@ -75,7 +75,7 @@ test.describe('完整销售流程 E2E', () => {
         await expect(row).toBeVisible();
 
         // 获取线索 ID (从链接中)
-        const detailLink = row.locator('a[href^="/leads/"]');
+        const detailLink = row.locator('a[href^="/leads/"]').first();
         const href = await detailLink.getAttribute('href');
         createdLeadId = href?.split('/').pop() || '';
 
@@ -119,6 +119,9 @@ test.describe('完整销售流程 E2E', () => {
         const roomInput = page.locator('input[name="rooms.0.name"]');
         if (await roomInput.isVisible()) {
             await roomInput.fill('客厅');
+            // 填写必需的尺寸信息
+            await page.locator('input[name="rooms.0.width"]').fill('350');
+            await page.locator('input[name="rooms.0.height"]').fill('270');
         }
 
         // 提交报价

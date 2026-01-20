@@ -1,0 +1,1353 @@
+
+> l2c@0.1.0 test:run C:\Users\bigey\Documents\Antigravity\L2C
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/bigey/Documents/Antigravity/L2C[39m
+
+[90mstdout[2m | src/features/quotes/__tests__/aggregation.test.ts
+[22m[39m[dotenv@17.2.3] injecting env (3) from .env -- tip: 馃攼 prevent committing .env to code: https://dotenvx.com/precommit
+
+ [31m鉂?[39m src/features/quotes/__tests__/risk-control.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 12[2mms[22m[39m
+     [32m鉁?[39m should pass valid quote[32m 2[2mms[22m[39m
+     [32m鉁?[39m should detect high discount (Soft Stop)[32m 1[2mms[22m[39m
+[31m     [31m脳[31m should detect low margin (Soft Stop)[39m[32m 7[2mms[22m[39m
+     [32m鉁?[39m should block negative margin (Hard Stop)[32m 0[2mms[22m[39m
+ [31m鉂?[39m src/features/orders/logic/__tests__/order-state-machine.test.ts [2m([22m[2m14 tests[22m[2m | [22m[31m11 failed[39m[2m)[22m[32m 24[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from PENDING_PO to IN_PRODUCTION[39m[32m 10[2mms[22m[39m
+       [32m鉁?[39m should allow transition from IN_PRODUCTION to PENDING_DELIVERY[32m 0[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from PENDING_DELIVERY to DISPATCHING[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from DISPATCHING to SHIPPED[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from SHIPPED to PENDING_INSTALL[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from PENDING_INSTALL to COMPLETED[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should allow transition from COMPLETED to CLOSED[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should prevent skipping steps (PENDING_PO -> SHIPPED)[39m[32m 2[2mms[22m[39m
+[31m       [31m脳[31m should prevent reversing steps (SHIPPED -> IN_PRODUCTION)[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should prevent modifying CLOSED orders[39m[32m 1[2mms[22m[39m
+       [32m鉁?[39m should allow cancellation from PENDING_PO[32m 0[2mms[22m[39m
+       [32m鉁?[39m should allow cancellation from IN_PRODUCTION[32m 0[2mms[22m[39m
+[31m       [31m脳[31m should NOT allow cancellation from COMPLETED[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m should NOT allow cancellation from CLOSED[39m[32m 1[2mms[22m[39m
+ [31m鉂?[39m src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 13[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭绠楀熀纭€澧欑焊鍗锋暟 - 鍗曞闈?[32m 2[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭绠楀澧欐澧欑焊鍗锋暟[32m 0[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭鐞嗚姳璺濆鑺遍€昏緫[32m 0[2mms[22m[39m
+[31m       [31m脳[31m 搴旀纭绠楀甯冮潰绉?- 鍗曞闈?[39m[32m 4[2mms[22m[39m
+[31m       [31m脳[31m 搴旀纭绠楀澧欐澧欏竷闈㈢Н[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 搴斿湪澧欓珮瓒呰繃骞呭鏃跺彂鍑鸿鍛?[39m[32m 4[2mms[22m[39m
+       [32m鉁?[39m 搴旀纭缃粯璁ゆ崯鑰楀弬鏁?[32m 0[2mms[22m[39m
+ [31m鉂?[39m src/features/quotes/__tests__/actions.test.ts [2m([22m[2m0 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [31m鉂?[39m src/features/supply-chain/__tests__/processing-actions.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 11[2mms[22m[39m
+[31m       [31m脳[31m should create a processing order successfully[39m[32m 7[2mms[22m[39m
+       [32m鉁?[39m should update processing order successfully[32m 0[2mms[22m[39m
+[31m       [31m脳[31m should get processing order successfully[39m[32m 2[2mms[22m[39m
+ [31m鉂?[39m src/features/supply-chain/__tests__/po-lifecycle.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 19[2mms[22m[39m
+[31m     [31m脳[31m should create a PO in DRAFT status[39m[32m 12[2mms[22m[39m
+[31m     [31m脳[31m should receive PO and trigger AP creation[39m[32m 4[2mms[22m[39m
+[31m     [31m脳[31m should NOT receive PO if not in correct status[39m[32m 1[2mms[22m[39m
+ [31m鉂?[39m src/features/service/installation/__tests__/finance-integration.test.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 13[2mms[22m[39m
+[31m     [31m脳[31m should create a labor AP record when installation is confirmed[39m[32m 11[2mms[22m[39m
+ [31m鉂?[39m src/features/service/installation/__tests__/integration/checklist.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 21[2mms[22m[39m
+[31m       [31m脳[31m 搴旇鎴愬姛淇濆瓨閮ㄥ垎瀹屾垚鐨勬竻鍗?[39m[32m 7[2mms[22m[39m
+[31m       [31m脳[31m 搴旇姝ｇ‘璁＄畻 allCompleted 鐘舵€?- 鏈畬鎴?[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 搴旇姝ｇ‘璁＄畻 allCompleted 鐘舵€?- 宸插畬鎴?[39m[32m 1[2mms[22m[39m
+[31m       [31m脳[31m 搴旇闃绘绛鹃€€ - 褰撴竻鍗曟湭瀹屾垚鏃?[39m[32m 8[2mms[22m[39m
+[31m       [31m脳[31m 搴旇鍏佽绛鹃€€ - 褰撴竻鍗曞凡瀹屾垚鏃?[39m[32m 2[2mms[22m[39m
+[31m       [31m脳[31m 搴旇闃绘绛鹃€€ - 褰撴竻鍗曚笉瀛樺湪鏃?[39m[32m 1[2mms[22m[39m
+ [31m鉂?[39m src/features/approval/__tests__/approval-enhancements.test.ts [2m([22m[2m4 tests[22m[2m | [22m[33m4 skipped[39m[2m)[22m[33m 1512[2mms[22m[39m
+     [2m[90m鈫?[39m[22m should handle Parallel Approval (ANY)
+     [2m[90m鈫?[39m[22m should handle Parallel Approval (ALL)
+     [2m[90m鈫?[39m[22m should handle Delegation
+     [2m[90m鈫?[39m[22m should handle Withdraw
+stderr | src/features/quotes/__tests__/aggregation.test.ts > Quote Bundle Aggregation
+Setup failed DrizzleQueryError: Failed query: select "id", "tenant_id", "lead_no", "customer_name", "customer_phone", "customer_wechat", "address", "community", "house_type", "status", "intention_level", "channel_id", "channel_contact_id", "source_channel_id", "source_sub_id", "distribution_rule_id", "source_detail", "url_params", "referrer_name", "referrer_customer_id", "estimated_amount", "tags", "notes", "lost_reason", "external_id", "assigned_sales_id", "assigned_at", "last_activity_at", "next_followup_at", "next_followup_recommendation", "decoration_progress", "quoted_at", "visited_store_at", "won_at", "customer_id", "created_by", "created_at", "updated_at" from "leads" "leads" where "leads"."tenant_id" = $1 limit $2
+params: 0b14e703-762d-49c0-abe8-8138c842908b,1
+    at PostgresJsPreparedQuery.queryWithCache (file:///C:/Users/bigey/Documents/Antigravity/L2C/node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/pg-core/session.js:41:15)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at file:///C:/Users/bigey/Documents/Antigravity/L2C/node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/postgres-js/session.js:37:20
+    at C:/Users/bigey/Documents/Antigravity/L2C/src/features/quotes/__tests__/aggregation.test.ts:57:26 {
+  query: 'select "id", "tenant_id", "lead_no", "customer_name", "customer_phone", "customer_wechat", "address", "community", "house_type", "status", "intention_level", "channel_id", "channel_contact_id", "source_channel_id", "source_sub_id", "distribution_rule_id", "source_detail", "url_params", "referrer_name", "referrer_customer_id", "estimated_amount", "tags", "notes", "lost_reason", "external_id", "assigned_sales_id", "assigned_at", "last_activity_at", "next_followup_at", "next_followup_recommendation", "decoration_progress", "quoted_at", "visited_store_at", "won_at", "customer_id", "created_by", "created_at", "updated_at" from "leads" "leads" where "leads"."tenant_id" = $1 limit $2',
+  params: [ '0b14e703-762d-49c0-abe8-8138c842908b', 1 ],
+  cause: PostgresError: column "external_id" does not exist
+      at ErrorResponse (file:///C:/Users/bigey/Documents/Antigravity/L2C/node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:794:26)
+      at handle (file:///C:/Users/bigey/Documents/Antigravity/L2C/node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:480:6)
+      at Socket.data (file:///C:/Users/bigey/Documents/Antigravity/L2C/node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:315:9)
+      at Socket.emit (node:events:519:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Socket.Readable.push (node:internal/streams/readable:392:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    severity_local: 'ERROR',
+    severity: 'ERROR',
+    code: '42703',
+    position: '381',
+    file: 'parse_relation.c',
+    line: '3716',
+    routine: 'errorMissingColumn'
+  }
+}
+
+ [31m鉂?[39m src/features/quotes/__tests__/aggregation.test.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 4255[2mms[22m[39m
+     [2m[90m鈫?[39m[22m should aggregate totals when adding quotes
+ [31m鉂?[39m src/features/orders/__tests__/order-finance-flow.test.ts [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 11[2mms[22m[39m
+[31m     [31m脳[31m Scenario 1: Cash Order - Create, Deposit, Confirm Production[39m[32m 7[2mms[22m[39m
+[31m     [31m脳[31m Scenario 2: Monthly Settlement - No Deposit Required[39m[32m 2[2mms[22m[39m
+ [31m鉂?[39m src/features/orders/__tests__/status-sync.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 12[2mms[22m[39m
+[31m     [31m脳[31m should stay PENDING_PO if no POs exist (even if prioritized logic implies otherwise)[39m[32m 5[2mms[22m[39m
+[31m     [31m脳[31m should promote to IN_PRODUCTION if any PO is ORDERED[39m[32m 1[2mms[22m[39m
+[31m     [31m脳[31m should promote to PENDING_DELIVERY only when ALL POs are RECEIVED or COMPLETED[39m[32m 1[2mms[22m[39m
+[31m     [31m脳[31m should stay SHIPPED/PENDING_INSTALL if tasks exist but not started[39m[32m 1[2mms[22m[39m
+[31m     [31m脳[31m should stay PENDING_INSTALL if any task is installing[39m[32m 1[2mms[22m[39m
+[31m     [31m脳[31m should promote to COMPLETED only when ALL tasks are COMPLETED[39m[32m 1[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/curtain-calc-engine.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m鉁?[39m src/test/health-check.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m鉁?[39m src/shared/lib/__tests__/utils.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 159[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/quote-version-compare.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m鉁?[39m src/features/service/measurement/__tests__/actions.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/curtain-warnings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/calc-strategies/__tests__/comprehensive-calc.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/calc-strategies/__tests__/curtain-strategy.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m鉁?[39m src/features/leads/__tests__/webhook.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m鉁?[39m src/features/service/installation/__tests__/integration/conflict.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m鉁?[39m src/features/service/installation/__tests__/install-tasks.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/actions/__tests__/calc-integration.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m鉁?[39m src/features/orders/__tests__/order-actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m鉁?[39m src/features/orders/__tests__/production-trigger.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/service/measurement/__tests__/sync-manager.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+[90mstdout[2m | src/features/quotes/__tests__/bundle-flow.test.ts
+[22m[39m[dotenv@17.2.3] injecting env (3) from .env -- tip: 馃懃 sync secrets across teammates & machines: https://dotenvx.com/ops
+
+ [2m[90m鈫?[39m[22m src/features/quotes/__tests__/bundle-flow.test.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [32m鉁?[39m src/features/supply-chain/__tests__/inventory-actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/finance/__tests__/finance-additional.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/supply-chain/actions/__tests__/po-preview.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/after-sales/__tests__/actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/finance/__tests__/ar-actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/supply-chain/__tests__/po-completion.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m鉁?[39m src/features/finance/ap/__tests__/ap-actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/attachment-calc.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/supply-chain/__tests__/suppliers.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/finance/__tests__/reconciliation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/orders/logic/__tests__/order-split-router.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/products/__tests__/actions.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/shared/lib/__tests__/permission-check.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/logic/__tests__/curtain-calc-warnings.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m鉁?[39m src/features/quotes/__tests__/quick-quote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+鈳幆鈳幆鈳幆 Failed Suites 43 鈳幆鈳幆鈳幆
+
+ FAIL  e2e/flows/after-sales.spec.ts [ e2e/flows/after-sales.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/after-sales.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('After-sales Management', () => {
+       |      ^
+      4|     test.beforeEach(async ({ page }) => {
+      5|         // 瀵艰埅鍒板敭鍚庡垪琛ㄩ〉
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆1/78]鈳?[22m
+
+ FAIL  e2e/flows/analytics.spec.ts [ e2e/flows/analytics.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/analytics.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('鏁版嵁浠〃鐩樺熀纭€鍔熻兘', () => {
+       |      ^
+     15|     test.beforeEach(async ({ page }) => {
+     16|         // 瀵艰埅鍒颁华琛ㄧ洏椤甸潰 (閫氬父鏄?/analytics 鎴?/dashboard)
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆2/78]鈳?[22m
+
+ FAIL  e2e/flows/approval-designer.spec.ts [ e2e/flows/approval-designer.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/approval-designer.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Approval Flow Designer', () => {
+       |      ^
+      4|     test('should allow creating and publishing a simple flow', async (鈥?      5|         // 1. Navigate to Settings -> Approvals
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆3/78]鈳?[22m
+
+ FAIL  e2e/flows/approval-process.spec.ts [ e2e/flows/approval-process.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/approval-process.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Approval Process Flow', () => {
+       |      ^
+      4| 
+      5|     test('should trigger ORDER_CHANGE approval flow', async ({ page })鈥?
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆4/78]鈳?[22m
+
+ FAIL  e2e/flows/channels.spec.ts [ e2e/flows/channels.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/channels.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('娓犻亾绠＄悊鍩虹鍔熻兘', () => {
+       |      ^
+     15|     test.beforeEach(async ({ page }) => {
+     16|         // 瀵艰埅鍒版笭閬撶鐞嗛〉闈?[39m
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆5/78]鈳?[22m
+
+ FAIL  e2e/flows/customer-lifecycle.spec.ts [ e2e/flows/customer-lifecycle.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/customer-lifecycle.spec.ts:13:6
+     11|  */
+     12| 
+     13| test.describe('瀹㈡埛鍏ㄧ敓鍛藉懆鏈?(Customer Lifecycle)', () => {
+       |      ^
+     14|     test.beforeEach(async ({ page }) => {
+     15|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆6/78]鈳?[22m
+
+ FAIL  e2e/flows/finance-ap.spec.ts [ e2e/flows/finance-ap.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/finance-ap.spec.ts:13:6
+     11|  */
+     12| 
+     13| test.describe('渚涘簲鍟嗗璐?(Finance AP)', () => {
+       |      ^
+     14|     test.beforeEach(async ({ page }) => {
+     15|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆7/78]鈳?[22m
+
+ FAIL  e2e/flows/finance-ar-advanced.spec.ts [ e2e/flows/finance-ar-advanced.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/finance-ar-advanced.spec.ts:8:6
+      6|  */
+      7| 
+      8| test.describe('Finance AR Advanced Flows', () => {
+       |      ^
+      9|     test.beforeEach(async ({ page }) => {
+     10|         await page.goto('/finance/ar');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆8/78]鈳?[22m
+
+ FAIL  e2e/flows/finance-ar.spec.ts [ e2e/flows/finance-ar.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/finance-ar.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('璐㈠姟搴旀敹 (Finance AR)', () => {
+       |      ^
+     15|     test.beforeEach(async ({ page }) => {
+     16|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆9/78]鈳?[22m
+
+ FAIL  e2e/flows/full-sales-flow.spec.ts [ e2e/flows/full-sales-flow.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/full-sales-flow.spec.ts:12:6
+     10|  */
+     11| 
+     12| test.describe('瀹屾暣閿€鍞祦绋?E2E', () => {
+       |      ^
+     13|     test.describe.configure({ mode: 'serial' });
+     14|     test.beforeEach(async ({ page }) => {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[10/78]鈳?[22m
+
+ FAIL  e2e/flows/installation.spec.ts [ e2e/flows/installation.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/installation.spec.ts:13:6
+     11|  */
+     12| 
+     13| test.describe('瀹夎娴佺▼', () => {
+       |      ^
+     14|     test.beforeEach(async ({ page }) => {
+     15|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[11/78]鈳?[22m
+
+ FAIL  e2e/flows/labor-settlement.spec.ts [ e2e/flows/labor-settlement.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/labor-settlement.spec.ts:12:6
+     10|  */
+     11| 
+     12| test.describe('鍔冲姟缁撶畻 (Labor Settlement)', () => {
+       |      ^
+     13|     test.beforeEach(async ({ page }) => {
+     14|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[12/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-advanced-filtering.spec.ts [ e2e/flows/lead-advanced-filtering.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-advanced-filtering.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Advanced Filtering', () => {
+       |      ^
+      4|     test('should filter leads by status', async ({ page }) => {
+      5|         await page.goto('/leads');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[13/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-bulk-operations.spec.ts [ e2e/flows/lead-bulk-operations.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-bulk-operations.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Bulk Operations', () => {
+       |      ^
+      4|     test('should bulk assign leads to same sales', async ({ page }) =>鈥?      5|         await page.goto('/leads');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[14/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-concurrency.spec.ts [ e2e/flows/lead-concurrency.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-concurrency.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Concurrency', () => {
+       |      ^
+      4|     test('should handle simultaneous lead creation', async ({ page, co鈥?      5|         const randomPhone = `139${Math.floor(Math.random() * 100000000鈥?
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[15/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-creation.spec.ts [ e2e/flows/lead-creation.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-creation.spec.ts:4:6
+      2| import * as fs from 'fs';
+      3| 
+      4| test.describe('Lead Management', () => {
+       |      ^
+      5|     test.afterEach(async ({ page }, testInfo) => {
+      6|         if (testInfo.status !== testInfo.expectedStatus) {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[16/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-data-integrity.spec.ts [ e2e/flows/lead-data-integrity.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-data-integrity.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Data Integrity', () => {
+       |      ^
+      4|     test('should handle soft delete correctly', async ({ page }) => {
+      5|         await page.goto('/leads');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[17/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-error-recovery.spec.ts [ e2e/flows/lead-error-recovery.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-error-recovery.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Error Recovery', () => {
+       |      ^
+      4|     test('should handle network interruption during lead creation', as鈥?      5|         await page.goto('/leads');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[18/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-followup-reminders.spec.ts [ e2e/flows/lead-followup-reminders.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-followup-reminders.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Followup Reminders', () => {
+       |      ^
+      4|     let leadId: string;
+      5| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[19/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-lifecycle.spec.ts [ e2e/flows/lead-lifecycle.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-lifecycle.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Lifecycle', () => {
+       |      ^
+      4|     let leadId: string;
+      5|     let leadNo: string;
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[20/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-measurement.spec.ts [ e2e/flows/lead-measurement.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-measurement.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Measurement Service', () => {
+       |      ^
+      4|     let leadId: string;
+      5|     let measureTaskId: string;
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[21/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-pool-management.spec.ts [ e2e/flows/lead-pool-management.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-pool-management.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Pool Management', () => {
+       |      ^
+      4|     let leadId: string;
+      5|     let leadNo: string;
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[22/78]鈳?[22m
+
+ FAIL  e2e/flows/lead-status-workflow.spec.ts [ e2e/flows/lead-status-workflow.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/lead-status-workflow.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('Lead Status Workflow', () => {
+       |      ^
+      4|     let leadId: string;
+      5|     let leadNo: string;
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[23/78]鈳?[22m
+
+ FAIL  e2e/flows/measurement.spec.ts [ e2e/flows/measurement.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/measurement.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('娴嬮噺娴佺▼ (Measurement Lifecycle)', () => {
+       |      ^
+     15|     // 璁剧疆鍦扮悊浣嶇疆妯℃嫙 (鐢ㄤ簬鎵撳崱鏍￠獙)
+     16|     test.use({
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[24/78]鈳?[22m
+
+ FAIL  e2e/flows/notifications.spec.ts [ e2e/flows/notifications.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/notifications.spec.ts:13:6
+     11|  */
+     12| 
+     13| test.describe('閫氱煡涓績鍩虹鍔熻兘', () => {
+       |      ^
+     14|     test.beforeEach(async ({ page }) => {
+     15|         // 瀵艰埅鍒伴€氱煡涓績椤甸潰
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[25/78]鈳?[22m
+
+ FAIL  e2e/flows/order-enhancements.spec.ts [ e2e/flows/order-enhancements.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/order-enhancements.spec.ts:3:6
+      1| import { test, expect } from '@playwright/test';
+      2| 
+      3| test.describe('璁㈠崟澧炲己鍔熻兘娴嬭瘯 (鎷嗗崟/鍙戣揣鐢宠/鍙樻洿)', () => {
+       |      ^
+      4|     test.beforeEach(async ({ page }) => {
+      5|         await page.goto('/orders');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[26/78]鈳?[22m
+
+ FAIL  e2e/flows/order-lifecycle.spec.ts [ e2e/flows/order-lifecycle.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/order-lifecycle.spec.ts:13:6
+     11|  */
+     12| 
+     13| test.describe('璁㈠崟鍏ㄧ敓鍛藉懆鏈?, () => {
+       |      ^
+     14|     // 娴嬭瘯鐢ㄧ殑鍞竴鏍囪瘑绗?[39m
+     15|     const timestamp = Date.now();
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[27/78]鈳?[22m
+
+ FAIL  e2e/flows/permissions.spec.ts [ e2e/flows/permissions.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/permissions.spec.ts:12:6
+     10|  */
+     11| 
+     12| test.describe('鏉冮檺涓庡畨鍏ㄨ竟鐣屾祴璇?, () => {
+       |      ^
+     13| 
+     14|     test('搴斿湪琛ㄥ崟涓獙璇佸繀濉瓧娈?, async ({ page }) => {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[28/78]鈳?[22m
+
+ FAIL  e2e/flows/purchase-order.spec.ts [ e2e/flows/purchase-order.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/purchase-order.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('閲囪喘鍗曟祦绋?(Supply Chain PO)', () => {
+       |      ^
+     15|     test.beforeEach(async ({ page }) => {
+     16|         await page.waitForLoadState('networkidle');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[29/78]鈳?[22m
+
+ FAIL  e2e/flows/quote-first-flow.spec.ts [ e2e/flows/quote-first-flow.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/quote-first-flow.spec.ts:14:6
+     12|  */
+     13| 
+     14| test.describe('鎶ヤ环浼樺厛妯″紡 E2E', () => {
+       |      ^
+     15|     const timestamp = Date.now();
+     16|     const testCustomerName = `QFirst_${timestamp}`;
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[30/78]鈳?[22m
+
+ FAIL  e2e/flows/quote-lifecycle.spec.ts [ e2e/flows/quote-lifecycle.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/quote-lifecycle.spec.ts:5:6
+      3| import * as path from 'path';
+      4| 
+      5| test.describe('Quote Lifecycle Flow', () => {
+       |      ^
+      6| 
+      7|     test.afterEach(async ({ page }, testInfo) => {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[31/78]鈳?[22m
+
+ FAIL  e2e/flows/search-filter.spec.ts [ e2e/flows/search-filter.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ 鉂?[22m TestTypeImpl._currentSuite node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:75:13
+ 鉂?[22m TestTypeImpl._describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/common/testType.js:115:24
+ 鉂?[22m Function.describe node_modules/.pnpm/playwright@1.57.0/node_modules/playwright/lib/transform/transform.js:275:12
+ 鉂?[22m e2e/flows/search-filter.spec.ts:12:6
+     10|  */
+     11| 
+     12| test.describe('鍏ㄥ眬鎼滅储鍔熻兘', () => {
+       |      ^
+     13| 
+     14|     test('搴旀墽琛屽叏灞€鎼滅储骞舵樉绀虹粨鏋?, async ({ page }) => {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[32/78]鈳?[22m
+
+ FAIL  src/features/approval/__tests__/approval-enhancements.test.ts > Approval Enhancements
+Error: Failed query: insert into "tenants" ("id", "name", "code", "logo_url", "settings", "is_active", "created_at", "updated_at") values (default, $1, $2, default, default, default, default, default) returning "id", "name", "code", "logo_url", "settings", "is_active", "created_at", "updated_at"
+params: Test Tenant 1768750593194,TEST_1768750593194
+ 鉂?[22m PostgresJsPreparedQuery.queryWithCache node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/pg-core/session.js:41:15
+ 鉂?[22m node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/postgres-js/session.js:37:20
+ 鉂?[22m src/features/approval/__tests__/approval-enhancements.test.ts:43:24
+     41| 
+     42|         // Setup Tenant and Users
+     43|         const tenant = await db.insert(schema.tenants).values({
+       |                        ^
+     44|             name: 'Test Tenant ' + Date.now(),
+     45|             code: 'TEST_' + Date.now(),
+
+Caused by: PostgresError: database "l2c_test" does not exist
+ 鉂?[22m ErrorResponse node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:794:26
+ 鉂?[22m handle node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:480:6
+ 鉂?[22m Socket.data node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:315:9
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆
+Serialized Error: { severity_local: 'FATAL', severity: 'FATAL', code: '3D000', file: 'postinit.c', routine: 'InitPostgres', query: undefined, parameters: undefined, args: [ 'Test Tenant 1768750593194', 'TEST_1768750593194' ], types: null }
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[33/78]鈳?[22m
+
+ FAIL  src/features/approval/__tests__/approval-flow.test.ts [ src/features/approval/__tests__/approval-flow.test.ts ]
+Error:  DATABASE_URL is not defined
+ 鉂?[22m src/shared/api/db.ts:13:11
+     11| 
+     12| if (!connectionString) {
+     13|     throw new Error(' DATABASE_URL is not defined');
+       |           ^
+     14| }
+     15| 
+ 鉂?[22m src/features/approval/__tests__/approval-flow.test.ts:9:1
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[34/78]鈳?[22m
+
+ FAIL  src/features/approval/__tests__/approval-lifecycle.test.ts [ src/features/approval/__tests__/approval-lifecycle.test.ts ]
+Error:  DATABASE_URL is not defined
+ 鉂?[22m src/shared/api/db.ts:13:11
+     11| 
+     12| if (!connectionString) {
+     13|     throw new Error(' DATABASE_URL is not defined');
+       |           ^
+     14| }
+     15| 
+ 鉂?[22m src/features/approval/__tests__/approval-lifecycle.test.ts:1:1
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[35/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/actions.test.ts [ src/features/quotes/__tests__/actions.test.ts ]
+Error: No test found in suite src/features/quotes/__tests__/actions.test.ts
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[36/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/actions.test.ts > Quote Actions
+Error: No test found in suite Quote Actions
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[37/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/aggregation.test.ts > Quote Bundle Aggregation
+Error: Failed query: select "id", "tenant_id", "lead_no", "customer_name", "customer_phone", "customer_wechat", "address", "community", "house_type", "status", "intention_level", "channel_id", "channel_contact_id", "source_channel_id", "source_sub_id", "distribution_rule_id", "source_detail", "url_params", "referrer_name", "referrer_customer_id", "estimated_amount", "tags", "notes", "lost_reason", "external_id", "assigned_sales_id", "assigned_at", "last_activity_at", "next_followup_at", "next_followup_recommendation", "decoration_progress", "quoted_at", "visited_store_at", "won_at", "customer_id", "created_by", "created_at", "updated_at" from "leads" "leads" where "leads"."tenant_id" = $1 limit $2
+params: 0b14e703-762d-49c0-abe8-8138c842908b,1
+ 鉂?[22m PostgresJsPreparedQuery.queryWithCache node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/pg-core/session.js:41:15
+ 鉂?[22m node_modules/.pnpm/drizzle-orm@0.45.1_@electri_14a3b3976a637d72e29a8b006d9c66f9/node_modules/drizzle-orm/postgres-js/session.js:37:20
+ 鉂?[22m src/features/quotes/__tests__/aggregation.test.ts:57:26
+     55| 
+     56|             // Get Lead
+     57|             const lead = await db.query.leads.findFirst({
+       |                          ^
+     58|                 where: (l: { tenantId: string }, { eq }: { eq: (a: unk鈥?     59|             });
+
+Caused by: PostgresError: column "external_id" does not exist
+ 鉂?[22m ErrorResponse node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:794:26
+ 鉂?[22m handle node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:480:6
+ 鉂?[22m Socket.data node_modules/.pnpm/postgres@3.4.7/node_modules/postgres/src/connection.js:315:9
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆
+Serialized Error: { severity_local: 'ERROR', severity: 'ERROR', code: '42703', position: '381', file: 'parse_relation.c', routine: 'errorMissingColumn', query: 'select "id", "tenant_id", "lead_no", "customer_name", "customer_phone", "customer_wechat", "address", "community", "house_type", "status", "intention_level", "channel_id", "channel_contact_id", "source_channel_id", "source_sub_id", "distribution_rule_id", "source_detail", "url_params", "referrer_name", "referrer_customer_id", "estimated_amount", "tags", "notes", "lost_reason", "external_id", "assigned_sales_id", "assigned_at", "last_activity_at", "next_followup_at", "next_followup_recommendation", "decoration_progress", "quoted_at", "visited_store_at", "won_at", "customer_id", "created_by", "created_at", "updated_at" from "leads" "leads" where "leads"."tenant_id" = $1 limit $2', parameters: [ '0b14e703-762d-49c0-abe8-8138c842908b', 1 ], args: [ '0b14e703-762d-49c0-abe8-8138c842908b', 1 ], types: [ +0, +0 ] }
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[38/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/quote-to-measure.test.ts [ src/features/quotes/__tests__/quote-to-measure.test.ts ]
+Error: Failed to resolve import "../../actions/measure-actions" from "src/features/quotes/__tests__/quote-to-measure.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: C:/Users/bigey/Documents/Antigravity/L2C/src/features/quotes/__tests__/quote-to-measure.test.ts:35:0
+  18 |    generateDocNo: vi.fn().mockResolvedValue("MS-001")
+  19 |  }));
+  20 |  const __vi_import_0__ = await import("../../actions/measure-actions");
+     |                                       ^
+  21 |  import { describe, it, expect, vi, beforeEach } from "vitest";
+  22 |  const mockDbInsert = vi.fn();
+ 鉂?[22m TransformPluginContext._formatLog node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:28998:43
+ 鉂?[22m TransformPluginContext.error node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:28995:14
+ 鉂?[22m normalizeUrl node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:27118:18
+ 鉂?[22m node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:27176:32
+ 鉂?[22m TransformPluginContext.transform node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:27144:4
+ 鉂?[22m EnvironmentPluginContainer.transform node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:28796:14
+ 鉂?[22m loadAndTransform node_modules/.pnpm/vite@7.3.0_@types+node@20.1_624f807ef5f716bedfb98ce665656766/node_modules/vite/dist/node/chunks/config.js:22669:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[39/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/workflow.test.ts [ src/features/quotes/__tests__/workflow.test.ts ]
+Error:  DATABASE_URL is not defined
+ 鉂?[22m src/shared/api/db.ts:13:11
+     11| 
+     12| if (!connectionString) {
+     13|     throw new Error(' DATABASE_URL is not defined');
+       |           ^
+     14| }
+     15| 
+ 鉂?[22m src/features/quotes/__tests__/workflow.test.ts:2:1
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[40/78]鈳?[22m
+
+ FAIL  src/features/quotes/__tests__/integration/lifecycle.test.ts [ src/features/quotes/__tests__/integration/lifecycle.test.ts ]
+Error: Cannot find module 'C:\Users\bigey\Documents\Antigravity\L2C\node_modules\.pnpm\next-auth@5.0.0-beta.30_nex_d98eb997d1a2c228127455d89bf97ada\node_modules\next\server' imported from C:\Users\bigey\Documents\Antigravity\L2C\node_modules\.pnpm\next-auth@5.0.0-beta.30_nex_d98eb997d1a2c228127455d89bf97ada\node_modules\next-auth\lib\env.js
+Did you mean to import "next/server.js"?
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[41/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/debug-db.test.ts [ src/features/service/installation/__tests__/debug-db.test.ts ]
+Error:  DATABASE_URL is not defined
+ 鉂?[22m src/shared/api/db.ts:13:11
+     11| 
+     12| if (!connectionString) {
+     13|     throw new Error(' DATABASE_URL is not defined');
+       |           ^
+     14| }
+     15| 
+ 鉂?[22m src/features/service/installation/__tests__/debug-db.test.ts:3:1
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[42/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/installation-flow.test.ts [ src/features/service/installation/__tests__/installation-flow.test.ts ]
+Error:  DATABASE_URL is not defined
+ 鉂?[22m src/shared/api/db.ts:13:11
+     11| 
+     12| if (!connectionString) {
+     13|     throw new Error(' DATABASE_URL is not defined');
+       |           ^
+     14| }
+     15| 
+ 鉂?[22m src/features/service/installation/__tests__/installation-flow.test.ts:3:1
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[43/78]鈳?[22m
+
+
+鈳幆鈳幆鈳幆 Failed Tests 35 鈳幆鈳幆鈳幆鈳?[39m
+
+ FAIL  src/features/quotes/__tests__/risk-control.test.ts > Discount Risk Control > should detect low margin (Soft Stop)
+AssertionError: expected '褰撳墠鎶樻墸 (5.50鎶? 浣庝簬鏈€浣庢姌鎵ｉ檺鍒?(8.00鎶?銆? to contain '浣庝簬鏈€浣庢瘺鍒╅檺鍒?
+
+Expected: "浣庝簬鏈€浣庢瘺鍒╅檺鍒?
+Received: "褰撳墠鎶樻墸 (5.50鎶? 浣庝簬鏈€浣庢姌鎵ｉ檺鍒?(8.00鎶?銆?
+
+ 鉂?[22m src/features/quotes/__tests__/risk-control.test.ts:53:34
+     51|         expect(result.isRisk).toBe(true);
+     52|         expect(result.hardStop).toBe(false);
+     53|         expect(result.reason[0]).toContain('浣庝簬鏈€浣庢瘺鍒╅檺鍒?);
+       |                                  ^
+     54|     });
+     55| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[44/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/order-finance-flow.test.ts > Order & Finance Integration Flow > Scenario 1: Cash Order - Create, Deposit, Confirm Production
+Error: Cannot convert quote with status ACTIVE. Only WON quotes can be converted.
+ 鉂?[22m Module.createOrderFromQuote src/features/orders/actions/orders.ts:61:15
+     59|         return order;
+     60|     } catch (e: any) {
+     61|         throw new Error(e.message || 'Failed to create order');
+       |               ^
+     62|     }
+     63| }
+ 鉂?[22m src/features/orders/__tests__/order-finance-flow.test.ts:115:24
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[45/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/order-finance-flow.test.ts > Order & Finance Integration Flow > Scenario 2: Monthly Settlement - No Deposit Required
+TypeError: __vi_import_0__.confirmOrderProduction is not a function
+ 鉂?[22m src/features/orders/__tests__/order-finance-flow.test.ts:199:37
+    197| 
+    198|         // Confirm Production - Should Succeed immediately
+    199|         const confirmResult = await confirmOrderProduction({ orderId }鈥?       |                                     ^
+    200|         expect(confirmResult.success).toBe(true);
+    201|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[46/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should stay PENDING_PO if no POs exist (even if prioritized logic implies otherwise)
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:51:30
+     49| 
+     50|         // Execute
+     51|         const result = await refreshOrderStatus('o1');
+       |                              ^
+     52| 
+     53|         // Verify
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[47/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should promote to IN_PRODUCTION if any PO is ORDERED
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:74:30
+     72|         (db.query.orders.findFirst as typeof vi.fn).mockResolvedValue(鈥?     73| 
+     74|         const result = await refreshOrderStatus('o1');
+       |                              ^
+     75| 
+     76|         expect(result.newStatus).toBe('IN_PRODUCTION');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[48/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should promote to PENDING_DELIVERY only when ALL POs are RECEIVED or COMPLETED
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:94:28
+     92|         (db.query.orders.findFirst as typeof vi.fn).mockResolvedValueO鈥?     93| 
+     94|         let result = await refreshOrderStatus('o1');
+       |                            ^
+     95|         expect(result.status).toBe('IN_PRODUCTION'); // Unchanged
+     96| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[49/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should stay SHIPPED/PENDING_INSTALL if tasks exist but not started
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:127:30
+    125|         });
+    126| 
+    127|         const result = await refreshOrderStatus('o1');
+       |                              ^
+    128| 
+    129|         // Logic says: if at SHIPPED and tasks exist, maintain PENDING鈥?
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[50/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should stay PENDING_INSTALL if any task is installing
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:144:30
+    142|         });
+    143| 
+    144|         const result = await refreshOrderStatus('o1');
+       |                              ^
+    145|         expect(result.status).toBe('PENDING_INSTALL'); // Unchanged
+    146|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[51/78]鈳?[22m
+
+ FAIL  src/features/orders/__tests__/status-sync.test.ts > refreshOrderStatus > should promote to COMPLETED only when ALL tasks are COMPLETED
+TypeError: __vi_import_0__.refreshOrderStatus is not a function
+ 鉂?[22m src/features/orders/__tests__/status-sync.test.ts:159:30
+    157|         });
+    158| 
+    159|         const result = await refreshOrderStatus('o1');
+       |                              ^
+    160|         expect(result.newStatus).toBe('COMPLETED');
+    161|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[52/78]鈳?[22m
+
+ FAIL  src/features/supply-chain/__tests__/po-lifecycle.test.ts > PO Lifecycle > should create a PO in DRAFT status
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ 鉂?[22m src/features/supply-chain/__tests__/po-lifecycle.test.ts:139:32
+    137|         const result = await createPO(input);
+    138| 
+    139|         expect(result.success).toBe(true);
+       |                                ^
+    140|         expect(result.data).toHaveProperty('id', 'new-po-id');
+    141|         expect(result.data!.status).toBe('DRAFT');
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[53/78]鈳?[22m
+
+ FAIL  src/features/supply-chain/__tests__/po-lifecycle.test.ts > PO Lifecycle > should receive PO and trigger AP creation
+TypeError: __vite_ssr_import_0__.db.query.purchaseOrders.findMany is not a function
+ 鉂?[22m Function.updateOrderStatusByPOs src/services/po-status-aggregator.service.ts:9:51
+      7| 
+      8|     static async updateOrderStatusByPOs(orderId: string, tenantId: str鈥?      9|         const pos = await db.query.purchaseOrders.findMany({
+       |                                                   ^
+     10|             where: eq(purchaseOrders.orderId, orderId)
+     11|         });
+ 鉂?[22m src/features/supply-chain/actions/po-actions.ts:175:38
+ 鉂?[22m Object.<anonymous> src/features/supply-chain/__tests__/po-lifecycle.test.ts:174:20
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[54/78]鈳?[22m
+
+ FAIL  src/features/supply-chain/__tests__/po-lifecycle.test.ts > PO Lifecycle > should NOT receive PO if not in correct status
+TypeError: __vite_ssr_import_0__.db.query.purchaseOrders.findMany is not a function
+ 鉂?[22m Function.updateOrderStatusByPOs src/services/po-status-aggregator.service.ts:9:51
+      7| 
+      8|     static async updateOrderStatusByPOs(orderId: string, tenantId: str鈥?      9|         const pos = await db.query.purchaseOrders.findMany({
+       |                                                   ^
+     10|             where: eq(purchaseOrders.orderId, orderId)
+     11|         });
+ 鉂?[22m src/features/supply-chain/actions/po-actions.ts:175:38
+ 鉂?[22m Object.<anonymous> src/features/supply-chain/__tests__/po-lifecycle.test.ts:214:20
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[55/78]鈳?[22m
+
+ FAIL  src/features/supply-chain/__tests__/processing-actions.test.ts > Processing Actions > createProcessingOrder > should create a processing order successfully
+AssertionError: the given combination of arguments (undefined and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+ 鉂?[22m src/features/supply-chain/__tests__/processing-actions.test.ts:118:36
+    116| 
+    117|             expect(result.success).toBe(true);
+    118|             expect(result.message).toContain('Processing order created鈥?       |                                    ^
+    119|         });
+    120|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[56/78]鈳?[22m
+
+ FAIL  src/features/supply-chain/__tests__/processing-actions.test.ts > Processing Actions > getProcessingOrder > should get processing order successfully
+TypeError: __vi_import_1__.getProcessingOrder is not a function
+ 鉂?[22m src/features/supply-chain/__tests__/processing-actions.test.ts:144:34
+    142|             };
+    143| 
+    144|             const result = await getProcessingOrder(undefined, input);
+       |                                  ^
+    145| 
+    146|             expect(result.success).toBe(true);
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[57/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from PENDING_PO to IN_PRODUCTION
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from PENDING_DELIVERY to DISPATCHING
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from DISPATCHING to SHIPPED
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from SHIPPED to PENDING_INSTALL
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from PENDING_INSTALL to COMPLETED
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Valid Transitions (Happy Path) > should allow transition from COMPLETED to CLOSED
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:20:72
+     18|         validFlows.forEach(({ from, to }) => {
+     19|             it(`should allow transition from ${from} to ${to}`, () => {
+     20|                 expect(OrderStateMachine.validateTransition(from, to))鈥?       |                                                                        ^
+     21|             });
+     22|         });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[58/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Invalid Transitions > should prevent skipping steps (PENDING_PO -> SHIPPED)
+AssertionError: expected [Function] to throw an error
+
+- Expected: 
+null
+
++ Received: 
+undefined
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:27:89
+     25|     describe('Invalid Transitions', () => {
+     26|         it('should prevent skipping steps (PENDING_PO -> SHIPPED)', ()鈥?     27|             expect(() => OrderStateMachine.validateTransition('PENDING鈥?       |                                                                                         ^
+     28|         });
+     29| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[59/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Invalid Transitions > should prevent reversing steps (SHIPPED -> IN_PRODUCTION)
+AssertionError: expected [Function] to throw an error
+
+- Expected: 
+null
+
++ Received: 
+undefined
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:31:92
+     29| 
+     30|         it('should prevent reversing steps (SHIPPED -> IN_PRODUCTION)'鈥?     31|             expect(() => OrderStateMachine.validateTransition('SHIPPED鈥?       |                                                                                            ^
+     32|         });
+     33| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[60/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Invalid Transitions > should prevent modifying CLOSED orders
+AssertionError: expected [Function] to throw an error
+
+- Expected: 
+null
+
++ Received: 
+undefined
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:35:87
+     33| 
+     34|         it('should prevent modifying CLOSED orders', () => {
+     35|             expect(() => OrderStateMachine.validateTransition('CLOSED'鈥?       |                                                                                       ^
+     36|         });
+     37|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[61/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Cancellation Logic > should NOT allow cancellation from COMPLETED
+AssertionError: expected [Function] to throw an error
+
+- Expected: 
+null
+
++ Received: 
+undefined
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:52:90
+     50|         it('should NOT allow cancellation from COMPLETED', () => {
+     51|             expect(OrderStateMachine.canCancel('COMPLETED')).toBe(fals鈥?     52|             expect(() => OrderStateMachine.validateTransition('COMPLET鈥?       |                                                                                          ^
+     53|         });
+     54| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[62/78]鈳?[22m
+
+ FAIL  src/features/orders/logic/__tests__/order-state-machine.test.ts > Order State Machine > Cancellation Logic > should NOT allow cancellation from CLOSED
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ 鉂?[22m src/features/orders/logic/__tests__/order-state-machine.test.ts:56:59
+     54| 
+     55|         it('should NOT allow cancellation from CLOSED', () => {
+     56|             expect(OrderStateMachine.canCancel('CLOSED')).toBe(false);
+       |                                                           ^
+     57|             expect(() => OrderStateMachine.validateTransition('CLOSED'鈥?     58|         });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[63/78]鈳?[22m
+
+ FAIL  src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts > WallpaperStrategy > 澧欏竷璁＄畻 (WALLCLOTH - 闈㈢Н璁＄畻) > 搴旀纭绠楀甯冮潰绉?- 鍗曞闈?AssertionError: expected 3.2 to be close to 9.28, received difference is 6.079999999999999, but expected 0.05
+ 鉂?[22m src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts:120:34
+    118|             // 鐢ㄦ枡楂樺害 = 2.8 + 0.1 = 2.9m
+    119|             // 闈㈢Н = 3.2 脳 2.9 = 9.28 m虏
+    120|             expect(result.usage).toBeCloseTo(9.28, 1);
+       |                                  ^
+    121|             expect(result.subtotal).toBeCloseTo(464, 0); // 9.28 脳 50
+    122|         });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[64/78]鈳?[22m
+
+ FAIL  src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts > WallpaperStrategy > 澧欏竷璁＄畻 (WALLCLOTH - 闈㈢Н璁＄畻) > 搴旀纭绠楀澧欐澧欏竷闈㈢Н
+AssertionError: expected 10.1 to be close to 29.29, received difference is 19.189999999999998, but expected 0.05
+ 鉂?[22m src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts:143:34
+    141|             // 鐢ㄦ枡楂樺害 = 2.8 + 0.1 = 2.9m
+    142|             // 闈㈢Н = 10.1 脳 2.9 = 29.29 m虏
+    143|             expect(result.usage).toBeCloseTo(29.29, 1);
+       |                                  ^
+    144|         });
+    145| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[65/78]鈳?[22m
+
+ FAIL  src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts > WallpaperStrategy > 澧欏竷璁＄畻 (WALLCLOTH - 闈㈢Н璁＄畻) > 搴斿湪澧欓珮瓒呰繃骞呭鏃跺彂鍑鸿鍛?AssertionError: expected '澧欏竷楂樺害涓嶈冻锛氶渶 310cm (鍚崯鑰?, 闈㈡枡骞呭 280cm' to contain 'exceeds'
+
+Expected: "exceeds"
+Received: "澧欏竷楂樺害涓嶈冻锛氶渶 310cm (鍚崯鑰?, 闈㈡枡骞呭 280cm"
+
+ 鉂?[22m src/features/quotes/calc-strategies/__tests__/wallpaper-strategy.test.ts:157:44
+    155| 
+    156|             expect(result.details.warning).toBeDefined();
+    157|             expect(result.details.warning).toContain('exceeds');
+       |                                            ^
+    158|         });
+    159|     });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[66/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/finance-integration.test.ts > Installation Finance Integration (AP Logic) > should create a labor AP record when installation is confirmed
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ 鉂?[22m src/features/service/installation/__tests__/finance-integration.test.ts:93:32
+     91| 
+     92|         // 4. Assertions
+     93|         expect(result.success).toBe(true);
+       |                                ^
+     94|         expect(mockDbInsert).toHaveBeenCalled();
+     95|         // Check that insert was called with apStatements
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[67/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > updateInstallChecklistAction > 搴旇鎴愬姛淇濆瓨閮ㄥ垎瀹屾垚鐨勬竻鍗?TypeError: __vi_import_1__.updateInstallChecklistAction is not a function
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:59:34
+     57|             };
+     58| 
+     59|             const result = await updateInstallChecklistAction(mockData鈥?       |                                  ^
+     60|                 session: {
+     61|                     user: {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[68/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > updateInstallChecklistAction > 搴旇姝ｇ‘璁＄畻 allCompleted 鐘舵€?- 鏈畬鎴?TypeError: __vi_import_1__.updateInstallChecklistAction is not a function
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:81:19
+     79|             };
+     80| 
+     81|             await updateInstallChecklistAction(mockData, {
+       |                   ^
+     82|                 session: {
+     83|                     user: {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[69/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > updateInstallChecklistAction > 搴旇姝ｇ‘璁＄畻 allCompleted 鐘舵€?- 宸插畬鎴?TypeError: __vi_import_1__.updateInstallChecklistAction is not a function
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:104:19
+    102|             };
+    103| 
+    104|             await updateInstallChecklistAction(mockData, {
+       |                   ^
+    105|                 session: {
+    106|                     user: {
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[70/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > checkOutInstallTaskAction - Checklist 楠岃瘉 > 搴旇闃绘绛鹃€€ - 褰撴竻鍗曟湭瀹屾垚鏃?AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:144:36
+    142|             } as any);
+    143| 
+    144|             expect(result.success).toBe(false);
+       |                                    ^
+    145|             expect(result.error).toBe('璇峰厛瀹屾垚鎵€鏈夋爣鍑嗗寲浣滀笟妫€鏌ラ」');
+    146|         });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[71/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > checkOutInstallTaskAction - Checklist 楠岃瘉 > 搴旇鍏佽绛鹃€€ - 褰撴竻鍗曞凡瀹屾垚鏃?AssertionError: expected undefined to be '宸叉彁浜ゅ畬宸ョ敵璇凤紝寰呴攢鍞獙鏀? // Object.is equality
+
+- Expected: 
+"宸叉彁浜ゅ畬宸ョ敵璇凤紝寰呴攢鍞獙鏀?
+
++ Received: 
+undefined
+
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:175:36
+    173| 
+    174|             expect(result.success).toBe(true);
+    175|             expect(result.message).toBe('宸叉彁浜ゅ畬宸ョ敵璇凤紝寰呴攢鍞獙鏀?);
+       |                                    ^
+    176|         });
+    177| 
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[72/78]鈳?[22m
+
+ FAIL  src/features/service/installation/__tests__/integration/checklist.test.ts > 瀹夎娓呭崟楠岃瘉娴嬭瘯 > checkOutInstallTaskAction - Checklist 楠岃瘉 > 搴旇闃绘绛鹃€€ - 褰撴竻鍗曚笉瀛樺湪鏃?AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ 鉂?[22m src/features/service/installation/__tests__/integration/checklist.test.ts:197:36
+    195|             } as any);
+    196| 
+    197|             expect(result.success).toBe(false);
+       |                                    ^
+    198|             expect(result.error).toBe('璇峰厛瀹屾垚鎵€鏈夋爣鍑嗗寲浣滀笟妫€鏌ラ」');
+    199|         });
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[73/78]鈳?[22m
+
+
+[2m Test Files [22m [1m[31m51 failed[39m[22m[2m | [22m[1m[32m30 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (82)[39m
+[2m      Tests [22m [1m[31m35 failed[39m[22m[2m | [22m[1m[32m90 passed[39m[22m[2m | [22m[33m6 skipped[39m[90m (131)[39m
+[2m   Start at [22m 23:36:29
+[2m   Duration [22m 12.66s[2m (transform 5.61s, setup 0ms, import 18.78s, tests 6.20s, environment 136.61s)[22m
+
+鈥塃LIFECYCLE鈥?Command failed with exit code 1.

@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';

@@ -1,6 +1,7 @@
 import { orderStatusEnum } from '@/shared/api/schema';
 
 // Helper to get type from Enum
+// Helper to get type from Enum
 type OrderStatus = typeof orderStatusEnum.enumValues[number];
 
 export class OrderStateMachine {
@@ -10,12 +11,23 @@ export class OrderStateMachine {
         'MEASURED': ['QUOTED', 'CANCELLED'],
         'QUOTED': ['SIGNED', 'CANCELLED', 'DRAFT'],
         'SIGNED': ['PAID', 'CANCELLED'],
-        'PAID': ['PENDING_PRODUCTION', 'CANCELLED'],
+        'PAID': ['PENDING_PRODUCTION', 'PENDING_PO', 'CANCELLED'],
+        'PENDING_PO': ['PENDING_PRODUCTION', 'CANCELLED'],
         'PENDING_PRODUCTION': ['IN_PRODUCTION', 'CANCELLED'],
         'IN_PRODUCTION': ['PENDING_DELIVERY', 'CANCELLED'],
         'PENDING_DELIVERY': ['PENDING_INSTALL', 'CANCELLED'],
-        'PENDING_INSTALL': ['COMPLETED', 'CANCELLED'],
+        'PENDING_INSTALL': ['INSTALLATION_COMPLETED', 'CANCELLED'], // Install -> Completed (Wait for check)
+
+        'INSTALLATION_COMPLETED': ['PENDING_CONFIRMATION', 'INSTALLATION_REJECTED', 'COMPLETED', 'CANCELLED'],
+        // Can go to PENDING_CONFIRMATION (Wait for Customer), 
+        // or directly COMPLETED (if no confirmation needed? Rule says Wait-for-Customer)
+
+        'PENDING_CONFIRMATION': ['COMPLETED', 'INSTALLATION_REJECTED', 'CANCELLED'],
+        'INSTALLATION_REJECTED': ['PENDING_INSTALL', 'CANCELLED'], // Re-install
+
         'COMPLETED': [],
+        'PAUSED': ['IN_PRODUCTION', 'PENDING_PRODUCTION'], // Add PAUSED transitions
+        'PENDING_APPROVAL': ['PENDING_PRODUCTION', 'CANCELLED'],
         'CANCELLED': []
     };
 

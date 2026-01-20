@@ -111,7 +111,7 @@ export function EnhancedPOTable({ data, onFilterChange }: POTableProps) {
             </div>
 
             {showFilters && (
-                <div className="flex gap-4 p-4 border rounded-md bg-muted/50">
+                <div className="flex gap-4 p-4 border rounded-md glass-panel">
                     <div className="flex-1">
                         <label className="text-sm font-medium mb-2 block">付款状态</label>
                         <Select
@@ -203,10 +203,11 @@ export function EnhancedPOTable({ data, onFilterChange }: POTableProps) {
                                     </TableCell>
                                     <TableCell>{item.supplierName}</TableCell>
                                     <TableCell>
-                                        <span className={`px-2 py-1 rounded text-xs ${item.type === 'FINISHED' ? 'bg-blue-100 text-blue-800' :
-                                                item.type === 'FABRIC' ? 'bg-green-100 text-green-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                            }`}>
+                                        <span className={
+                                            item.type === 'FINISHED' ? 'glass-alert-info px-2 py-1 rounded text-xs' :
+                                                item.type === 'FABRIC' ? 'glass-alert-success px-2 py-1 rounded text-xs' :
+                                                    'glass-step-inactive px-2 py-1 rounded text-xs'
+                                        }>
                                             {item.type === 'FINISHED' ? '成品' :
                                                 item.type === 'FABRIC' ? '面料' : '内部备货'}
                                         </span>
@@ -216,10 +217,11 @@ export function EnhancedPOTable({ data, onFilterChange }: POTableProps) {
                                         <StatusBadge status={item.status} />
                                     </TableCell>
                                     <TableCell>
-                                        <span className={`px-2 py-1 rounded text-xs ${item.paymentStatus === 'PAID' ? 'bg-green-100 text-green-800' :
-                                                item.paymentStatus === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                            }`}>
+                                        <span className={
+                                            item.paymentStatus === 'PAID' ? 'glass-alert-success px-2 py-1 rounded text-xs' :
+                                                item.paymentStatus === 'PARTIAL' ? 'glass-alert-warning px-2 py-1 rounded text-xs' :
+                                                    'glass-step-inactive px-2 py-1 rounded text-xs'
+                                        }>
                                             {item.paymentStatus === 'PAID' ? '已付款' :
                                                 item.paymentStatus === 'PARTIAL' ? '部分付款' : '待付款'}
                                         </span>

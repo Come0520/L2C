@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/shared/ui/card';
-import ArrowUpIcon from 'lucide-react/dist/esm/icons/arrow-up-right';
-import ArrowDownIcon from 'lucide-react/dist/esm/icons/arrow-down-right';
+import { ArrowUpRight as ArrowUpIcon, ArrowDownRight as ArrowDownIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
 export interface StatCardProps {

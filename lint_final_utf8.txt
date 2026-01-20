@@ -1,0 +1,16 @@
+﻿
+C:\Users\bigey\Documents\Antigravity\L2C\src\features\quotes\actions\mutations.ts
+   29:27  warning  'fetchQuoteGlobals' is defined but never used  @typescript-eslint/no-unused-vars
+  658:46  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  671:49  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\bigey\Documents\Antigravity\L2C\src\services\quote.service.ts
+  126:85  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  203:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  328:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  330:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  339:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  340:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+鉁?9 problems (8 errors, 1 warning)
+

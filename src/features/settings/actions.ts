@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
@@ -38,7 +38,7 @@ export const updateTenantProfile = createSafeAction(mockActionSchema, async (dat
 
 import { db } from '@/shared/api/db';
 import { marketChannels } from '@/shared/api/schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 
 /**
@@ -126,6 +126,17 @@ export const updateChannel = createSafeAction(channelSchema, async (data, ctx) =
     if (!session?.user?.tenantId || !data.id) return { success: false, error: '未授权或缺少 ID' };
 
     try {
+        // 安全检查：验证渠道属于当前租户
+        const existingChannel = await db.query.marketChannels.findFirst({
+            where: and(
+                eq(marketChannels.id, data.id),
+                eq(marketChannels.tenantId, session.user.tenantId)
+            ),
+        });
+        if (!existingChannel) {
+            return { success: false, error: '渠道不存在或无权操作' };
+        }
+
         await db.update(marketChannels)
             .set({
                 name: data.name,
@@ -134,7 +145,10 @@ export const updateChannel = createSafeAction(channelSchema, async (data, ctx) =
                 isActive: data.isActive,
                 updatedAt: new Date(),
             })
-            .where(eq(marketChannels.id, data.id));
+            .where(and(
+                eq(marketChannels.id, data.id),
+                eq(marketChannels.tenantId, session.user.tenantId)
+            ));
 
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道更新成功' };
@@ -152,7 +166,22 @@ export const deleteChannel = createSafeAction(z.object({ id: z.string() }), asyn
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
-        await db.delete(marketChannels).where(eq(marketChannels.id, data.id));
+        // 安全检查：验证渠道属于当前租户
+        const existingChannel = await db.query.marketChannels.findFirst({
+            where: and(
+                eq(marketChannels.id, data.id),
+                eq(marketChannels.tenantId, session.user.tenantId)
+            ),
+        });
+        if (!existingChannel) {
+            return { success: false, error: '渠道不存在或无权操作' };
+        }
+
+        await db.delete(marketChannels)
+            .where(and(
+                eq(marketChannels.id, data.id),
+                eq(marketChannels.tenantId, session.user.tenantId)
+            ));
 
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道删除成功' };

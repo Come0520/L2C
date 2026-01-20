@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { splitRouteRules, suppliers } from '@/shared/api/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 import { z } from 'zod';
 import { auth } from '@/shared/lib/auth';
@@ -58,9 +58,20 @@ export async function createSplitRule(input: SplitRuleInput) {
 }
 
 export async function updateSplitRule(id: string, input: SplitRuleInput) {
-    await requireUser();
+    const user = await requireUser();
 
     const validated = splitRuleSchema.parse(input);
+
+    // 安全检查：验证规则属于当前租户
+    const existingRule = await db.query.splitRouteRules.findFirst({
+        where: and(
+            eq(splitRouteRules.id, id),
+            eq(splitRouteRules.tenantId, user.tenantId)
+        ),
+    });
+    if (!existingRule) {
+        throw new Error('规则不存在或无权操作');
+    }
 
     await db.update(splitRouteRules)
         .set({
@@ -72,17 +83,34 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
             isActive: validated.isActive,
             updatedAt: new Date()
         })
-        .where(eq(splitRouteRules.id, id)); // In real app, check tenantId too
+        .where(and(
+            eq(splitRouteRules.id, id),
+            eq(splitRouteRules.tenantId, user.tenantId)
+        ));
 
     revalidatePath('/supply-chain/rules');
     return { success: true };
 }
 
 export async function deleteSplitRule(id: string) {
-    await requireUser(); // Authorization check implied
+    const user = await requireUser();
+
+    // 安全检查：验证规则属于当前租户
+    const existingRule = await db.query.splitRouteRules.findFirst({
+        where: and(
+            eq(splitRouteRules.id, id),
+            eq(splitRouteRules.tenantId, user.tenantId)
+        ),
+    });
+    if (!existingRule) {
+        throw new Error('规则不存在或无权操作');
+    }
 
     await db.delete(splitRouteRules)
-        .where(eq(splitRouteRules.id, id));
+        .where(and(
+            eq(splitRouteRules.id, id),
+            eq(splitRouteRules.tenantId, user.tenantId)
+        ));
 
     revalidatePath('/supply-chain/rules');
     return { success: true };

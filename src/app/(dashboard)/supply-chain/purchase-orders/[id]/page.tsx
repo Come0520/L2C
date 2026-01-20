@@ -15,12 +15,14 @@ import { purchaseOrderItems } from '@/shared/api/schema';
 type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
 // type PoQuoteStatus = typeof poQuoteStatusEnum.enumValues[number];
 
+// Status Badge Component
 function PoStatusBadge({ status }: { status: string }) {
     const map: Record<string, { label: string; className: string }> = {
         'DRAFT': { label: '草稿', className: 'bg-gray-100 text-gray-700' },
-        'ORDERED': { label: '已下单', className: 'bg-blue-100 text-blue-700' },
+        'IN_PRODUCTION': { label: '生产中', className: 'bg-blue-100 text-blue-700' },
+        'READY': { label: '备货完成', className: 'bg-indigo-100 text-indigo-700' },
         'SHIPPED': { label: '已发货', className: 'bg-purple-100 text-purple-700' },
-        'RECEIVED': { label: '已收货', className: 'bg-orange-100 text-orange-700' },
+        'DELIVERED': { label: '已到货', className: 'bg-orange-100 text-orange-700' },
         'COMPLETED': { label: '已完成', className: 'bg-green-100 text-green-700' },
         'CANCELLED': { label: '已取消', className: 'bg-red-100 text-red-700' },
     };
@@ -41,15 +43,12 @@ export default async function PoDetailPage({
         notFound();
     }
 
-    // Action Buttons Component (Server component usage limitation, might need client wrapper or simple server actions in form)
-    // For simplicity using simple forms or buttons that trigger actions via client component wrapper if needed.
-    // Actually, we can just use a client component for the actions bar.
-
     // Status check
     const isDraft = po.status === 'DRAFT';
-    const isOrdered = po.status === 'ORDERED';
+    const isInProduction = po.status === 'IN_PRODUCTION';
+    const isReady = po.status === 'READY';
     const isShipped = po.status === 'SHIPPED';
-    const isReceived = po.status === 'RECEIVED';
+    const isDelivered = po.status === 'DELIVERED';
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -77,7 +76,7 @@ export default async function PoDetailPage({
                     {isDraft && (
                         <form action={async () => {
                             'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'ORDERED' });
+                            const res = await updatePoStatus({ poId: id, status: 'IN_PRODUCTION' });
                             if (!res.success) throw new Error(res.error);
                         }}>
                             <Button type="submit" className="bg-blue-600">
@@ -87,7 +86,20 @@ export default async function PoDetailPage({
                         </form>
                     )}
 
-                    {isOrdered && (
+                    {isInProduction && (
+                        <form action={async () => {
+                            'use server';
+                            const res = await updatePoStatus({ poId: id, status: 'READY' });
+                            if (!res.success) throw new Error(res.error);
+                        }}>
+                            <Button type="submit" className="bg-indigo-600">
+                                <PackageCheck className="h-4 w-4 mr-2" />
+                                备货完成
+                            </Button>
+                        </form>
+                    )}
+
+                    {isReady && (
                         <LogisticsDialog
                             poId={po.id}
                             trigger={
@@ -102,17 +114,17 @@ export default async function PoDetailPage({
                     {isShipped && (
                         <form action={async () => {
                             'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'RECEIVED' });
+                            const res = await updatePoStatus({ poId: id, status: 'DELIVERED' });
                             if (!res.success) throw new Error(res.error);
                         }}>
                             <Button type="submit" className="bg-orange-600">
                                 <PackageCheck className="h-4 w-4 mr-2" />
-                                确认收货
+                                确认到货
                             </Button>
                         </form>
                     )}
 
-                    {isReceived && (
+                    {isDelivered && (
                         <form action={async () => {
                             'use server';
                             const res = await updatePoStatus({ poId: id, status: 'COMPLETED' });

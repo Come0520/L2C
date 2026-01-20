@@ -1,4 +1,4 @@
-﻿export default function NotificationsSettingsPage() {
+export default function NotificationsSettingsPage() {
     return (
         <div className="space-y-6">
             <div>

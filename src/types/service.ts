@@ -93,6 +93,8 @@ export interface MeasureTaskWithRelations {
     scheduledAt?: Date | null;
     checkInAt?: Date | null;
     checkOutAt?: Date | null;
+    feeCheckStatus?: string | null;
+    quoteId?: string | null;
 
     // 关联数据 - 使用正确的关联名称
     customer: CustomerBase | null;

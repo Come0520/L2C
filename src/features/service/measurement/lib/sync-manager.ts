@@ -49,7 +49,7 @@ export class SyncManager {
                     // Prepare data for submission
                     const { data, images, checkIn } = localTask;
 
-                    if (!data) continue;
+                    if (!localTask.id || !data) continue;
 
                     const result = await submitMeasureData({
                         taskId: localTask.taskId,
@@ -58,8 +58,7 @@ export class SyncManager {
                         checkInLocation: checkIn ? {
                             lat: checkIn.lat,
                             lng: checkIn.lng,
-                            address: checkIn.address,
-                            timestamp: checkIn.timestamp
+                            address: checkIn.address
                         } : undefined
                     });
 

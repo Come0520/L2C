@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';

@@ -99,7 +99,13 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
                     const newRow: any = {};
                     Object.keys(row).forEach(key => {
                         if (FIELD_MAPPING[key]) {
-                            newRow[FIELD_MAPPING[key]] = String(row[key] || '').trim();
+                            const fieldName = FIELD_MAPPING[key];
+                            const rawValue = row[key];
+                            if (fieldName === 'estimatedAmount') {
+                                newRow[fieldName] = rawValue ? Number(rawValue) : undefined;
+                            } else {
+                                newRow[fieldName] = String(rawValue || '').trim();
+                            }
                         }
                     });
                     return newRow;
@@ -141,7 +147,7 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
 
                 <div className="space-y-6">
                     {/* Step 1: Download Template & Upload */}
-                    <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-4 p-4 rounded-lg glass-empty-state border-dashed">
                         <Button variant="outline" size="sm" onClick={downloadTemplate}>
                             <FileDown className="mr-2 h-4 w-4" />
                             下载模版
@@ -151,7 +157,7 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
                                 type="file"
                                 accept=".xlsx, .xls"
                                 onChange={handleFileChange}
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                                className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                             />
                         </div>
                     </div>
@@ -159,7 +165,7 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
                     {/* Step 2: Preview & Stats */}
                     {previewData.length > 0 && !importResult && (
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center text-sm text-gray-600">
+                            <div className="flex justify-between items-center text-sm text-muted-foreground">
                                 <span>预览前 5 条 (共 {stats?.total} 条数据)</span>
                             </div>
                             <div className="border rounded-md overflow-hidden">

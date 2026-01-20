@@ -14,10 +14,42 @@ const updateGlobalConfigSchema = z.object({
     mode: z.enum(['simple', 'advanced']).optional(),
     visibleFields: z.array(z.string()).optional(),
     presetLoss: z.object({
-        side: z.number(),
-        bottom: z.number(),
-        header: z.number(),
+        curtain: z.object({
+            sideLoss: z.number(),
+            bottomLoss: z.number(),
+            headerLoss: z.number(),
+        }),
+        wallpaper: z.object({
+            widthLoss: z.number(),
+            cutLoss: z.number(),
+        }),
     }).optional(),
+    discountControl: z.object({
+        minDiscountRate: z.number().min(0).max(1),
+        requireApprovalBelow: z.number().min(0).max(1),
+    }).optional(),
+    defaultPlan: z.enum(['ECONOMIC', 'COMFORT', 'LUXURY']).optional(),
+    planSettings: z.object({
+        ECONOMIC: z.object({
+            markup: z.number().min(0).max(2),
+            quality: z.string(),
+            description: z.string().optional(),
+        }).optional(),
+        COMFORT: z.object({
+            markup: z.number().min(0).max(2),
+            quality: z.string(),
+            description: z.string().optional(),
+        }).optional(),
+        LUXURY: z.object({
+            markup: z.number().min(0).max(2),
+            quality: z.string(),
+            description: z.string().optional(),
+        }).optional(),
+    }).optional(),
+});
+
+const updateUserPlanSchema = z.object({
+    plan: z.enum(['ECONOMIC', 'COMFORT', 'LUXURY'])
 });
 
 /**
@@ -66,3 +98,34 @@ export const updateGlobalQuoteConfig = createSafeAction(updateGlobalConfigSchema
     revalidatePath('/quotes');
     return { success: true };
 });
+
+/**
+ * 更新用户的默认报价方案
+ */
+export const updateUserPlan = createSafeAction(updateUserPlanSchema, async (data) => {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error('Unauthorized');
+    }
+
+    await QuoteConfigService.updateUserPlan(session.user.id, data.plan);
+
+    revalidatePath('/quotes');
+    return { success: true };
+});
+
+/**
+ * 获取特定方案的设置
+ */
+export async function getPlanSettings(plan: 'ECONOMIC' | 'COMFORT' | 'LUXURY') {
+    const session = await auth();
+    if (!session?.user) {
+        throw new Error('Unauthorized');
+    }
+
+    return await QuoteConfigService.getPlanSettings(
+        session.user.tenantId,
+        session.user.id,
+        plan
+    );
+}

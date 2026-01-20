@@ -9,21 +9,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { QuoteItemsTable } from './quote-items-table';
 import { QuoteSummary } from './quote-summary';
 import { QuoteVersionHistory } from './quote-version-history';
-import { updateQuote, submitQuote, approveQuote, rejectQuote, convertQuoteToOrder } from '@/features/quotes/actions/mutations';
+import { QuoteToOrderButton } from './quote-to-order-button';
+import { updateQuote, submitQuote, approveQuote, rejectQuote } from '@/features/quotes/actions/mutations';
 import { Badge } from '@/shared/ui/badge';
-import { cn } from '@/shared/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { toast } from 'sonner';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import Save from 'lucide-react/dist/esm/icons/save';
 import Plus from 'lucide-react/dist/esm/icons/plus';
+import { QuoteVersionCompare } from './quote-version-compare';
 
 import { QuoteConfig } from '@/services/quote-config.service';
 import { toggleQuoteMode } from '@/features/quotes/actions/config-actions';
 import { QuoteConfigDialog } from './quote-config-dialog';
 import { getQuoteAuditLogs } from '@/features/quotes/actions/queries';
 import { format } from 'date-fns';
+
+import { MeasureDataImportDialog } from './measure-data-import-dialog'; // Import
+import { Ruler, FileText, Download } from 'lucide-react'; // Import Ruler icon
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
+import dynamic from 'next/dynamic';
+import { QuotePdfDocument } from './quote-pdf';
+
+import { QuoteExcelImportDialog } from './quote-excel-import-dialog';
+
+const PDFDownloadLink = dynamic(
+    () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+    { ssr: false, loading: () => <span className="text-xs">Loading PDF...</span> }
+);
 
 interface QuoteDetailProps {
     quote: any;
@@ -36,13 +54,14 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     const [activeTab, setActiveTab] = useState('space');
     const [config, setConfig] = useState<QuoteConfig | undefined>(initialConfig);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [importDialogOpen, setImportDialogOpen] = useState(false); // Measure Import
+    const [excelImportOpen, setExcelImportOpen] = useState(false); // Excel Import
     const mode = config?.mode || 'simple';
+    const isReadOnly = !quote.isActive; // STRICT: Only active quote is editable
 
     // Update config when initialConfig changes, but avoid direct setState in render or effect if possible
     // Here we use useEffect for data fetching and state syncing
     useEffect(() => {
-        if (initialConfig) setConfig(initialConfig);
-
         const loadLogs = async () => {
             try {
                 const logs = await getQuoteAuditLogs(quote.id);
@@ -52,7 +71,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
             }
         };
         loadLogs();
-    }, [initialConfig, quote.id]);
+    }, [quote.id]);
 
     const handleToggleMode = async () => {
         const newMode = mode === 'simple' ? 'advanced' : 'simple';
@@ -92,9 +111,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             <h2 className="text-2xl font-bold tracking-tight">报价单详情: {quote.quoteNo}</h2>
                             <QuoteVersionHistory
                                 currentQuoteId={quote.id}
-                                quoteNo={quote.quoteNo}
                                 version={quote.version || 1}
-                                parentQuoteId={quote.parentQuoteId}
                                 versions={versions}
                             />
                         </div>
@@ -124,17 +141,58 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 </div>
                 <div className="space-x-2">
                     <div className="flex gap-2">
-                        {quote.status === 'DRAFT' && (
-                            <Button onClick={async () => {
-                                toast.promise(submitQuote({ id: quote.id }), {
-                                    loading: '提交中...',
-                                    success: '报价单已提交',
-                                    error: (err) => `提交失败: ${err.message}`
-                                });
-                            }}>
-                                提交审核
-                            </Button>
+                        {versions.length > 1 && (
+                            <QuoteVersionCompare currentQuote={quote} versions={versions} />
                         )}
+                        {quote.status === 'DRAFT' && (
+                            <>
+                                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                                    <Ruler className="mr-2 h-4 w-4" /> 导入测量
+                                </Button>
+                                <Button variant="outline" onClick={() => setExcelImportOpen(true)}>
+                                    <FileText className="mr-2 h-4 w-4" /> 批量导入
+                                </Button>
+                                <Button onClick={async () => {
+                                    toast.promise(submitQuote({ id: quote.id }), {
+                                        loading: '提交中...',
+                                        success: '报价单已提交',
+                                        error: (err) => `提交失败: ${err.message}`
+                                    });
+                                }}>
+                                    提交审核
+                                </Button>
+                            </>
+                        )}
+
+                        {/* ... other buttons ... */}
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline">
+                                    <FileText className="mr-2 h-4 w-4" /> 导出 PDF
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <PDFDownloadLink
+                                        document={<QuotePdfDocument quote={quote} mode="customer" />}
+                                        fileName={`报价单_${quote.quoteNo}_客户版.pdf`}
+                                        className="flex items-center w-full"
+                                    >
+                                        <Download className="mr-2 h-4 w-4" /> 客户版 (无成本)
+                                    </PDFDownloadLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <PDFDownloadLink
+                                        document={<QuotePdfDocument quote={quote} mode="internal" />}
+                                        fileName={`报价单_${quote.quoteNo}_内部版.pdf`}
+                                        className="flex items-center w-full"
+                                    >
+                                        <Download className="mr-2 h-4 w-4" /> 内部版 (含成本)
+                                    </PDFDownloadLink>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {quote.status === 'PENDING_APPROVAL' && (
                             <>
@@ -162,17 +220,11 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             </>
                         )}
 
-                        {(quote.status === 'APPROVED' || quote.status === 'ACCEPTED') && (
-                            <Button className="bg-blue-600 hover:bg-blue-700" onClick={async () => {
-                                if (!confirm('确认将此报价单转换为订单?')) return;
-                                toast.promise(convertQuoteToOrder({ quoteId: quote.id }), {
-                                    loading: '转换中...',
-                                    success: '订单创建成功',
-                                    error: '转换失败'
-                                });
-                            }}>
-                                转订单
-                            </Button>
+                        {(quote.status === 'APPROVED' || quote.status === 'ACCEPTED' || quote.status === 'SUBMITTED') && (
+                            <QuoteToOrderButton
+                                quoteId={quote.id}
+                                defaultAmount={quote.finalAmount}
+                            />
                         )}
 
                         <QuoteConfigDialog currentConfig={config} />
@@ -189,6 +241,20 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                     </div>
                 </div >
             </div>
+
+            <MeasureDataImportDialog
+                open={importDialogOpen}
+                onOpenChange={setImportDialogOpen}
+                quoteId={quote.id}
+                onSuccess={() => router.refresh()}
+            />
+
+            <QuoteExcelImportDialog
+                open={excelImportOpen}
+                onOpenChange={setExcelImportOpen}
+                quoteId={quote.id}
+                onSuccess={() => router.refresh()}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
@@ -239,9 +305,13 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             <QuoteItemsTable
                                 quoteId={quote.id}
                                 rooms={quote.rooms || []}
-                                items={quote.items || []} // These are items WITHOUT room
+                                items={[
+                                    ...(quote.items || []),
+                                    ...(quote.rooms || []).flatMap((r: any) => r.items || [])
+                                ]}
                                 mode={mode}
                                 visibleFields={config?.visibleFields}
+                                readOnly={isReadOnly}
                             />
                         </TabsContent>
                         <TabsContent value="category">

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { cn } from '@/shared/utils';
 import { AuthProvider } from '@/shared/providers/auth-provider';
@@ -14,6 +14,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
     title: 'L2C - 销售管理系统',
     description: 'Lead to Cash 全流程管理',
+    icons: {
+        icon: '/l2c-logo.svg',
+    },
 };
 
 export default function RootLayout({

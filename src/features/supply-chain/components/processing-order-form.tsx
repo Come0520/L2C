@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';

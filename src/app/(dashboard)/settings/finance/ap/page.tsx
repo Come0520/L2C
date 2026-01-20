@@ -1,4 +1,4 @@
-﻿import { auth } from '@/shared/lib/auth';
+import { auth } from '@/shared/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 
 export default async function APSettingsPage() {

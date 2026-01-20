@@ -44,3 +44,17 @@ export const cancelOrderSchema = z.object({
     orderId: z.string(),
     reason: z.string().optional(),
 });
+
+export const requestOrderCancellationSchema = z.object({
+    orderId: z.string().uuid(),
+    reason: z.string().min(5, '请填写至少5个字的撤单原因'),
+});
+
+export const pauseOrderSchema = z.object({
+    orderId: z.string().uuid(),
+    reason: z.string().min(2, '请填写叫停原因'),
+});
+
+export const resumeOrderSchema = z.object({
+    orderId: z.string().uuid(),
+});

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';

@@ -33,7 +33,8 @@ export const PERMISSIONS = {
     },
     FINANCE: {
         VIEW: 'finance.view',
-        LABOR_VIEW: 'finance.labor_view'
+        LABOR_VIEW: 'finance.labor_view',
+        MANAGE: 'finance.manage',
     },
     AFTER_SALES: {
         VIEW: 'after_sales.view',
@@ -63,6 +64,7 @@ export const PERMISSIONS = {
     },
     SETTINGS: {
         USER_MANAGE: 'settings:user_manage',
+        MANAGE: 'settings:manage',
     },
     GLOBAL: {
         VIEW: '*',

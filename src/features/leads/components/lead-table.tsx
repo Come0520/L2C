@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import {
     Table,
     TableBody,
@@ -38,7 +40,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
     'INVALID': { label: '无效', variant: 'destructive' },
 };
 
-export function LeadTable({ data, page, pageSize, total }: LeadTableProps) {
+export const LeadTable = React.memo(function LeadTable({ data, page, pageSize, total }: LeadTableProps) {
     const router = useRouter();
 
     return (
@@ -115,4 +117,4 @@ export function LeadTable({ data, page, pageSize, total }: LeadTableProps) {
             </div>
         </div>
     );
-}
+});

@@ -1,6 +1,6 @@
 /**
- * 线索模块统一�?Mock 配置
- * 提供 Drizzle ORM 的完整链�?API 模拟
+ * 线索模块统一�?Mock 配置
+ * 提供 Drizzle ORM 的完整链�?API 模拟
  */
 
 import { vi } from 'vitest';
@@ -52,7 +52,7 @@ export function createMockDelete() {
 
 /**
  * 创建 Drizzle Select Mock
- * 模拟 db.select(...).from(...).where(...) 等链式调�? */
+ * 模拟 db.select(...).from(...).where(...) 等链式调�? */
 export function createMockSelect() {
   return vi.fn().mockImplementation(() => {
     const chain = {
@@ -78,8 +78,8 @@ export function createMockSelect() {
 }
 
 /**
- * 创建完整�?Transaction Mock 对象
- * 模拟 db.transaction(async (tx) => { ... }) 内部可用�?tx 对象
+ * 创建完整�?Transaction Mock 对象
+ * 模拟 db.transaction(async (tx) => { ... }) 内部可用�?tx 对象
  */
 export function createMockTransaction() {
   return {
@@ -100,8 +100,8 @@ export function createMockTransaction() {
 }
 
 /**
- * 创建完整�?DB Mock 对象
- * 模拟 db 对象的所有常用方�? */
+ * 创建完整�?DB Mock 对象
+ * 模拟 db 对象的所有常用方�? */
 export function createMockDb() {
   const mockTransaction = vi.fn().mockImplementation(async (callback) => {
     return callback(createMockTransaction());

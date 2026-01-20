@@ -23,8 +23,8 @@ interface LeadFormProps {
     onSuccess?: () => void;
     userId: string;
     tenantId: string;
-    initialData?: any;
-    channels: any[];
+    initialData?: Record<string, unknown>;
+    channels: Array<{ id: string; name: string; type?: string }>;
 }
 
 import { useState } from 'react';
@@ -35,6 +35,7 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const isEdit = !!initialData;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [conflictData, setConflictData] = useState<any>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
@@ -59,9 +60,8 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
     const onSubmit = (values: LeadFormValues) => {
         startTransition(async () => {
             try {
-                let result;
                 if (isEdit) {
-                    result = await updateLead({ ...values, id: initialData.id }, userId);
+                    await updateLead({ ...values, id: initialData.id as string }, userId);
                     toast.success('线索更新成功');
                     onSuccess?.();
                 } else {
@@ -77,8 +77,9 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
                     toast.success('线索创建成功');
                     onSuccess?.();
                 }
-            } catch (error: any) {
-                toast.error(error.message || (isEdit ? '更新失败' : '创建失败'));
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : (isEdit ? '更新失败' : '创建失败');
+                toast.error(message);
             }
         });
     };
@@ -109,7 +110,7 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
                                 <FormItem>
                                     <FormLabel>客户姓名 *</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="输入姓名" {...field} />
+                                        <Input placeholder="输入姓名" {...field} data-testid="lead-name-input" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -122,7 +123,7 @@ export function LeadForm({ onSuccess, userId, tenantId, initialData, channels }:
                                 <FormItem>
                                     <FormLabel>手机号 *</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="输入11位手机号" {...field} />
+                                        <Input placeholder="输入11位手机号" {...field} data-testid="lead-phone-input" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

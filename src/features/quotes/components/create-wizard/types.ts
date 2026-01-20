@@ -55,9 +55,9 @@ export interface WizardQuoteItem {
     specLength?: number;
     cutLoss?: number;
     patternRepeat?: number; // 花距 (cm)
-    widthLoss?: number; // 宽度损�?(cm)
-    heightLoss?: number; // 高度损�?(cm)
-    // 多墙段支�?
+    widthLoss?: number; // 宽度损�?(cm)
+    heightLoss?: number; // 高度损�?(cm)
+    // 多墙段支�?
     wallSegments?: {
         id: string; // uuid
         width: number; // cm

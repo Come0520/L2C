@@ -1,4 +1,4 @@
-﻿export default function SLASettingsPage() {
+export default function SLASettingsPage() {
     return (
         <div className="space-y-6">
             <div>

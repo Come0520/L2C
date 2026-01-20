@@ -10,24 +10,23 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Eye from 'lucide-react/dist/esm/icons/eye';
+import { Plus, Eye } from 'lucide-react';
 import { useState } from 'react';
-import { PaymentOrderDialog } from './PaymentOrderDialog';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { ReceiptBillDialog } from './receipt-bill-dialog';
 
 interface ARStatementTableProps {
     data: any[];
 }
 
 export function ARStatementTable({ data }: ARStatementTableProps) {
-    const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
     const [selectedStatement, setSelectedStatement] = useState<any>(null);
 
-    const handleCreatePayment = (statement: any) => {
+    const handleCreateReceipt = (statement: any) => {
         setSelectedStatement(statement);
-        setIsOrderDialogOpen(true);
+        setIsReceiptDialogOpen(true);
     };
 
     const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
@@ -60,7 +59,7 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">应收对账单</h3>
-                <Button size="sm" onClick={() => handleCreatePayment(null)}>
+                <Button size="sm" onClick={() => handleCreateReceipt(null)}>
                     <Plus className="w-4 h-4 mr-1" />
                     新建收款单
                 </Button>
@@ -114,7 +113,7 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
                                             </Link>
                                         </Button>
                                         {parseFloat(item.pendingAmount) > 0 && (
-                                            <Button variant="ghost" size="icon" title="登记收款" onClick={() => handleCreatePayment(item)}>
+                                            <Button variant="ghost" size="icon" title="登记收款" onClick={() => handleCreateReceipt(item)}>
                                                 <Plus className="w-4 h-4" />
                                             </Button>
                                         )}
@@ -126,9 +125,9 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
                 </Table>
             </div>
 
-            <PaymentOrderDialog
-                open={isOrderDialogOpen}
-                onOpenChange={setIsOrderDialogOpen}
+            <ReceiptBillDialog
+                open={isReceiptDialogOpen}
+                onOpenChange={setIsReceiptDialogOpen}
                 initialStatement={selectedStatement}
             />
         </div>

@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';

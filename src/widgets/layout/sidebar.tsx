@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -9,17 +9,19 @@ import {
     SidebarBody,
     useSidebar,
 } from "@/components/ui/sidebar";
-import Home from 'lucide-react/dist/esm/icons/home';
-import Users from 'lucide-react/dist/esm/icons/users';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
-import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
-import Settings from 'lucide-react/dist/esm/icons/settings';
-import Ruler from 'lucide-react/dist/esm/icons/ruler';
-import Wrench from 'lucide-react/dist/esm/icons/wrench';
-import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
-import Headphones from 'lucide-react/dist/esm/icons/headphones';
-import Truck from 'lucide-react/dist/esm/icons/truck';
+import {
+    Home,
+    Users,
+    FileText,
+    ShoppingCart,
+    BarChart2,
+    Settings,
+    Ruler,
+    Wrench,
+    DollarSign,
+    Headphones,
+    Truck
+} from 'lucide-react';
 
 import { motion } from "motion/react";
 import { AnimatedList } from "@/shared/ui/animated-list";

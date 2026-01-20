@@ -1,7 +1,7 @@
 
 import { ProductSupplierManager } from './product-supplier-manager';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createProductSchema, updateProductSchema } from '../schema';
@@ -83,26 +83,28 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
 
     const category = form.watch('category');
 
-    useEffect(() => {
-        const fetchSuppliers = async () => {
-            setFetchingSuppliers(true);
-            try {
-                const result = await getSuppliers({ page: 1, pageSize: 100 });
-                if (result.error) {
-                    toast.error(result.error);
-                    return;
-                }
-                if (result.data) {
-                    setSuppliersList(result.data.data);
-                }
-            } catch (error) {
-                console.error('Failed to fetch suppliers', error);
-            } finally {
-                setFetchingSuppliers(false);
+    // 使用 useCallback 稳定函数引用
+    const fetchSuppliers = useCallback(async () => {
+        setFetchingSuppliers(true);
+        try {
+            const result = await getSuppliers({ page: 1, pageSize: 100 });
+            if (result.error) {
+                toast.error(result.error);
+                return;
             }
-        };
-        fetchSuppliers();
+            if (result.data) {
+                setSuppliersList(result.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch suppliers', error);
+        } finally {
+            setFetchingSuppliers(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchSuppliers();
+    }, [fetchSuppliers]);
 
     const [attributeSchema, setAttributeSchema] = useState<{
         key: string;
@@ -114,24 +116,26 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
         placeholder?: string;
     }[]>([]);
 
-    useEffect(() => {
-        const fetchTemplate = async () => {
-            if (!category) return;
-            try {
+    // 使用 useCallback 稳定 fetchTemplate 引用
+    const fetchTemplate = useCallback(async () => {
+        if (!category) return;
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = await import('../actions').then(mod => mod.getAttributeTemplate({ category: category as any }));
+            if (result.data?.templateSchema && Array.isArray(result.data.templateSchema)) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const result = await import('../actions').then(mod => mod.getAttributeTemplate({ category: category as any }));
-                if (result.data?.templateSchema && Array.isArray(result.data.templateSchema)) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setAttributeSchema(result.data.templateSchema as any[]);
-                } else {
-                    setAttributeSchema([]);
-                }
-            } catch (error) {
-                console.error('Failed to fetch attribute template', error);
+                setAttributeSchema(result.data.templateSchema as any[]);
+            } else {
+                setAttributeSchema([]);
             }
-        };
-        fetchTemplate();
+        } catch (error) {
+            console.error('Failed to fetch attribute template', error);
+        }
     }, [category]);
+
+    useEffect(() => {
+        fetchTemplate();
+    }, [fetchTemplate]);
 
     // 辅助函数：根据品类渲染动态属性
     const renderAttributeFields = () => {
@@ -339,7 +343,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                         </div>
 
                         {/* 利润分析实时预览 */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                        <div className="bg-muted/10 p-4 rounded-lg border border-border space-y-2">
                             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">实时利润分析 (预估)</h4>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>

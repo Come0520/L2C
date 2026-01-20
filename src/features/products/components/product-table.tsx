@@ -42,7 +42,7 @@ export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: Product
     };
 
     return (
-        <div className="rounded-md border bg-white">
+        <div className="rounded-md border glass-liquid">
             <Table>
                 <TableHeader>
                     <TableRow>

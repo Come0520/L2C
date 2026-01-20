@@ -8,7 +8,7 @@ import { CustomerTable } from '@/features/customers/components/customer-table';
 import { CustomerHeader } from '@/features/customers/components/CustomerHeader';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Search } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { Pagination } from '@/shared/ui/pagination';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
@@ -20,15 +20,17 @@ export default async function CustomersPage({
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-    const session = await auth();
+    const [session, resolvedParams] = await Promise.all([
+        auth(),
+        searchParams
+    ]);
+
     const userId = session?.user?.id;
     const tenantId = session?.user?.tenantId;
 
     if (!userId || !tenantId) {
         redirect('/auth/login');
     }
-
-    const resolvedParams = await searchParams;
     const page = Number(resolvedParams.page) || 1;
     const query = typeof resolvedParams.search === 'string' ? resolvedParams.search : undefined;
 
@@ -36,6 +38,10 @@ export default async function CustomersPage({
         page,
         pageSize: 10,
         search: query,
+        type: typeof resolvedParams.type === 'string' ? resolvedParams.type : undefined,
+        level: typeof resolvedParams.level === 'string' ? resolvedParams.level : undefined,
+        lifecycleStage: typeof resolvedParams.lifecycleStage === 'string' ? resolvedParams.lifecycleStage : undefined,
+        pipelineStatus: typeof resolvedParams.pipelineStatus === 'string' ? resolvedParams.pipelineStatus : undefined,
     });
 
     return (
@@ -62,8 +68,8 @@ export default async function CustomersPage({
             <Suspense fallback={<div>加载中...</div>}>
                 <CustomerTable
                     data={data}
-                    page={page}
-                    pageSize={10}
+
+                    currentUser={session.user}
                 />
             </Suspense>
 

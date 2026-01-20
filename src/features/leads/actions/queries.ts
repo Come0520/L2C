@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { leads, leadActivities, users, marketChannels, customers } from '@/shared/api/schema';
+import { leads, leadActivities, marketChannels } from '@/shared/api/schema';
 import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { leadFilterSchema, getLeadTimelineLogsSchema } from '../schemas';
@@ -15,8 +15,9 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
     // whereConditions.push(eq(leads.tenantId, tenantId)); 
 
     // Status Filter
-    if (filters.status) {
-        whereConditions.push(eq(leads.status, filters.status));
+    if (filters.status && filters.status.length > 0) {
+        // 类型断言：leadFilterSchema 中已限制 status 值为有效的 leadStatusEnum 值
+        whereConditions.push(inArray(leads.status, filters.status as ("PENDING_ASSIGNMENT" | "PENDING_FOLLOWUP" | "FOLLOWING_UP" | "WON" | "VOID" | "INVALID")[]));
     }
 
     // Intention Level Filter
@@ -94,18 +95,32 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
 }
 
 export async function getLeadDetail(id: string) {
-    const lead = await db.query.leads.findFirst({
-        where: eq(leads.id, id),
-        with: {
-            assignedSales: true,
-            sourceChannel: true,
-            sourceSub: true,
-            customer: true,
-            referrerCustomer: true,
+    console.log('[DEBUG] getLeadDetail called with ID:', id);
+    try {
+        const lead = await db.query.leads.findFirst({
+            where: eq(leads.id, id),
+            with: {
+                assignedSales: true,
+                sourceChannel: true,
+                sourceSub: true,
+                customer: true,
+                referrerCustomer: true,
+            }
+        });
+        console.log('[DEBUG] getLeadDetail result:', lead ? 'FOUND' : 'NOT FOUND', lead?.id);
+        if (!lead) {
+            // Check if ANY lead exists to verify DB connection
+            const count = await db.select({ count: sql`count(*)` }).from(leads);
+            console.log('[DEBUG] Total leads in DB:', count[0]?.count);
+            // Check raw query for this ID
+            const raw = await db.select().from(leads).where(eq(leads.id, id));
+            console.log('[DEBUG] Raw query result:', raw);
         }
-    });
-
-    return lead;
+        return lead;
+    } catch (error) {
+        console.error('[DEBUG] getLeadDetail ERROR:', error);
+        throw error;
+    }
 }
 
 export async function getLeadById({ id }: { id: string }) {

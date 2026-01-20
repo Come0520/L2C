@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import {
@@ -18,17 +19,20 @@ import { toast } from 'sonner';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Search from 'lucide-react/dist/esm/icons/search';
 import { format } from 'date-fns';
+import { SelectCustomerDialog } from './select-customer-dialog';
 
 export function QuoteList() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    // 控制客户选择弹窗
+    const [dialogOpen, setDialogOpen] = useState(false);
+    // 创建报价单的加载状态
+    const [creating, setCreating] = useState(false);
 
-    useEffect(() => {
-        loadQuotes();
-    }, []);
-
-    const loadQuotes = async () => {
+    // 使用 useCallback 稳定函数引用
+    const loadQuotes = useCallback(async () => {
         setLoading(true);
         try {
             const { data } = await getQuotes();
@@ -39,21 +43,51 @@ export function QuoteList() {
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    useEffect(() => {
+        loadQuotes();
+    }, [loadQuotes]);
+
+    /**
+     * 点击新建报价按钮，打开客户选择弹窗
+     */
+    const handleCreate = () => {
+        setDialogOpen(true);
     };
 
-    const handleCreate = async () => {
+    /**
+     * 客户选择确认后，创建报价单
+     */
+    const handleCustomerSelected = async (customerId: string) => {
+        setCreating(true);
         try {
-            toast.info('请先选择客户 (功能待完善)', { description: '点击新建应弹出客户选择' });
+            const result = await createQuote({ customerId });
+            if (result.data) {
+                toast.success('报价单创建成功');
+                setDialogOpen(false);
+                // 跳转到报价单详情页
+                router.push(`/quotes/${result.data.id}`);
+            } else if (result.error) {
+                toast.error(`创建失败: ${result.error}`);
+            }
         } catch (error) {
-            // ...
+            console.error(error);
+            toast.error('创建报价单失败');
+        } finally {
+            setCreating(false);
         }
     };
+
+    // 获取用户和租户 ID
+    const userId = session?.user?.id || '';
+    const tenantId = session?.user?.tenantId || '';
 
     return (
         <div className="space-y-4 p-8">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">报价单</h2>
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} disabled={creating}>
                     <Plus className="mr-2 h-4 w-4" /> 新建报价
                 </Button>
             </div>
@@ -103,6 +137,15 @@ export function QuoteList() {
                     </TableBody>
                 </Table>
             </div>
+
+            {/* 客户选择弹窗 */}
+            <SelectCustomerDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                onConfirm={handleCustomerSelected}
+                userId={userId}
+                tenantId={tenantId}
+            />
         </div>
     );
 }

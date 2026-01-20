@@ -2,19 +2,9 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { QuoteService } from '@/services/quote.service';
 import { revalidatePath } from 'next/cache';
 
-export const syncMeasureToQuote = createSafeAction(z.object({
-    measureTaskId: z.string().uuid(),
-    quoteId: z.string().uuid(),
-    tenantId: z.string().uuid(),
-}), async (data) => {
-    const result = await QuoteService.importMeasurementData(data.quoteId, data.measureTaskId);
-
-    revalidatePath(`/quotes/${data.quoteId}`);
-    return result;
-});
+// syncMeasureToQuote removed in favor of measurement-actions.ts
 
 export const createMeasureFromQuote = createSafeAction(z.object({
     quoteId: z.string().uuid(),

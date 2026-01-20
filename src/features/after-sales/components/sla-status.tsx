@@ -81,10 +81,10 @@ export function SLAStatus({ ticket }: SLAStatusProps) {
                 {/* Main Countdown if active */}
                 {activeDeadline && activeStatus && (
                     <div className={cn("p-4 rounded-lg flex justify-between items-center border",
-                        activeStatus.status === 'overdue' ? "bg-red-50 border-red-200" :
-                            activeStatus.status === 'urgent' ? "bg-red-50 border-red-200" :
-                                activeStatus.status === 'warning' ? "bg-yellow-50 border-yellow-200" :
-                                    "bg-blue-50 border-blue-200"
+                        activeStatus.status === 'overdue' ? "glass-alert-error" :
+                            activeStatus.status === 'urgent' ? "glass-alert-error" :
+                                activeStatus.status === 'warning' ? "glass-alert-warning" :
+                                    "glass-alert-info"
                     )}>
                         <div>
                             <div className="text-sm font-medium text-slate-600">{activeLabel}</div>
@@ -121,7 +121,7 @@ function SLAStep({ label, deadline, status, isCompleted }: { label: string, dead
     return (
         <div className="flex items-center gap-3 text-sm">
             <div className={cn("flex items-center justify-center w-6 h-6 rounded-full border shrink-0",
-                isCompleted ? "bg-green-100 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-400")}>
+                isCompleted ? "glass-step-completed" : "glass-step-inactive")}>
                 {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-3 w-3" />}
             </div>
 

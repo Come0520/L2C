@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, jsonb, uuid, index } from 'drizzle-orm/pg-core';
 import { users, tenants } from './infrastructure';
 
 export const auditLogs = pgTable('audit_logs', {
@@ -13,5 +13,10 @@ export const auditLogs = pgTable('audit_logs', {
     oldValues: jsonb('old_values'),
     newValues: jsonb('new_values'),
 
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+    auditTenantIdx: index('idx_audit_logs_tenant').on(table.tenantId),
+    auditTableIdx: index('idx_audit_logs_table').on(table.tableName),
+    auditCreatedIdx: index('idx_audit_logs_created').on(table.createdAt),
+}));
+

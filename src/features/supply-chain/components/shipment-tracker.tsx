@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import Truck from 'lucide-react/dist/esm/icons/truck';

@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { measureItemSchema, createMeasureTaskSchema } from '../schemas';
 
 describe('Measurement Actions', () => {

@@ -1,1 +1,1 @@
-export const checkPermission = (role: string, permission: string) => true;
+export const checkPermission = (_role: string, _permission: string) => true;

@@ -1,14 +1,16 @@
 'use server';
 
 import { QuoteService } from '@/services/quote.service';
+import { QuoteConfigService } from '@/services/quote-config.service'; // Added import
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
 import { products } from '@/shared/api/schema/catalogs';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
+import { CustomerService } from '@/services/customer.service';
 import { auth } from '@/shared/lib/auth';
 import {
     createQuoteSchema,
@@ -18,10 +20,19 @@ import {
     createQuoteItemSchema,
     updateQuoteItemSchema,
     deleteQuoteItemSchema,
-    rejectQuoteDiscountSchema
+    rejectQuoteDiscountSchema,
+    reorderQuoteItemsSchema,
+    createQuickQuoteSchema,
+    createQuoteBundleSchema
 } from './schema';
+
+import { leads } from '@/shared/api/schema/leads';
+import { fetchQuotePlans } from '../lib/plan-loader';
+
 import { DiscountControlService } from '@/services/discount-control.service';
 import { CurtainCalculator, WallpaperCalculator, type CurtainFormula, type WallpaperFormula } from '../logic/calculator';
+import { SizeValidator } from '../logic/size-validator';
+import { AccessoryLinkageService } from '../services/accessory-linkage.service';
 
 // Helper to calculate item subtotal
 // In real app, this should call the Calculation Engine
@@ -64,42 +75,101 @@ const updateQuoteTotal = async (quoteId: string) => {
             updatedAt: new Date()
         })
         .where(eq(quotes.id, quoteId));
+
+    // 5. If this is a sub-quote (has bundleId), update the bundle total
+    if (quote.bundleId) {
+        await updateBundleTotal(quote.bundleId);
+    }
 };
 
-export const createQuote = createSafeAction(createQuoteSchema, async (data) => {
+// Helper to update bundle total
+const updateBundleTotal = async (bundleId: string) => {
+    // Sum all quotes with bundleId = bundleId
+    const subQuotes = await db.query.quotes.findMany({
+        where: eq(quotes.bundleId, bundleId)
+    });
+
+    const bundleTotal = subQuotes.reduce((acc, q) => acc + Number(q.finalAmount || 0), 0);
+
+    await db.update(quotes)
+        .set({
+            totalAmount: bundleTotal.toFixed(2),
+            finalAmount: bundleTotal.toFixed(2),
+            updatedAt: new Date()
+        })
+        .where(eq(quotes.id, bundleId));
+};
+
+export const createQuoteBundle = createSafeAction(createQuoteBundleSchema, async (data, context) => {
+    // Current implementation creates a Quote as a Bundle container
+    // or a specialized Quote type. Using standard Quote for now.
+    const quoteNo = `QB${Date.now()}`;
+    const [newBundle] = await db.insert(quotes).values({
+        quoteNo,
+        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
+        customerId: data.customerId,
+        leadId: data.leadId,
+        title: `Quote Bundle - ${quoteNo}`,
+        notes: data.remark,
+        status: 'DRAFT',
+        // summaryMode: data.summaryMode // If schema supports it
+    }).returning();
+
+    // Set rootQuoteId
+    await db.update(quotes)
+        .set({ rootQuoteId: newBundle.id })
+        .where(eq(quotes.id, newBundle.id));
+
+    revalidatePath('/quotes');
+    return newBundle;
+});
+
+export const createQuote = createSafeAction(createQuoteSchema, async (data, context) => {
     const quoteNo = `QT${Date.now()}`;
     const [newQuote] = await db.insert(quotes).values({
         quoteNo,
-        tenantId: '00000000-0000-0000-0000-000000000000', // FIXME: Use actual tenantId
+        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
         customerId: data.customerId,
         leadId: data.leadId,
         measureVariantId: data.measureVariantId,
+        bundleId: data.bundleId, // Set bundleId explicitly
         title: data.title,
         notes: data.notes,
         status: 'DRAFT',
     }).returning();
 
-    // Set rootQuoteId to itself for the first version
+    // Set rootQuoteId to itself for start of version chain
+    // (A sub-quote is still its own version chain root)
+    const rootId = newQuote.id;
+
     await db.update(quotes)
-        .set({ rootQuoteId: newQuote.id })
+        .set({ rootQuoteId: rootId })
         .where(eq(quotes.id, newQuote.id));
 
-    // Update local object to match DB state
-    newQuote.rootQuoteId = newQuote.id;
+    newQuote.rootQuoteId = rootId;
+
+    // If added to a bundle, update the bundle total
+    if (data.bundleId) {
+        await updateBundleTotal(data.bundleId);
+    }
 
     revalidatePath('/quotes');
     return newQuote;
 });
 
-export const updateQuote = createSafeAction(updateQuoteSchema, async (data) => {
+export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
     const { id, ...updateData } = data;
+    const userTenantId = context.session.user.tenantId;
 
-    // 1. Fetch current quote to get tenantId and totalAmount
+    // 1. Fetch current quote to get tenantId and totalAmount (with tenant validation)
     const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, id),
+        where: and(
+            eq(quotes.id, id),
+            eq(quotes.tenantId, userTenantId)
+        ),
     });
 
-    if (!quote) throw new Error('Quote not found');
+    if (!quote) throw new Error('报价单不存在或无权操作');
 
     const totalAmount = Number(quote.totalAmount || 0);
     const newRate = updateData.discountRate !== undefined ? updateData.discountRate : Number(quote.discountRate || 1);
@@ -130,18 +200,21 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data) => {
             rejectReason: null,
             updatedAt: new Date()
         })
-        .where(eq(quotes.id, id));
+        .where(and(
+            eq(quotes.id, id),
+            eq(quotes.tenantId, userTenantId)
+        ));
 
     revalidatePath(`/quotes/${id}`);
     revalidatePath('/quotes');
     return { success: true };
 });
 
-export const createRoom = createSafeAction(createQuoteRoomSchema, async (data) => {
+export const createRoom = createSafeAction(createQuoteRoomSchema, async (data, context) => {
     const [newRoom] = await db.insert(quoteRooms).values({
         quoteId: data.quoteId,
         name: data.name,
-        tenantId: '00000000-0000-0000-0000-000000000000', // FIXME
+        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
         measureRoomId: data.measureRoomId,
     }).returning();
 
@@ -149,31 +222,83 @@ export const createRoom = createSafeAction(createQuoteRoomSchema, async (data) =
     return newRoom;
 });
 
-export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data) => {
+export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, context) => {
     const { id, ...updateData } = data;
+    const userTenantId = context.session.user.tenantId;
+
+    // 安全检查：验证房间属于当前租户
+    const existing = await db.query.quoteRooms.findFirst({
+        where: and(
+            eq(quoteRooms.id, id),
+            eq(quoteRooms.tenantId, userTenantId)
+        ),
+    });
+    if (!existing) throw new Error('房间不存在或无权操作');
+
     const [updated] = await db.update(quoteRooms)
         .set({
             ...updateData,
         })
-        .where(eq(quoteRooms.id, id))
+        .where(and(
+            eq(quoteRooms.id, id),
+            eq(quoteRooms.tenantId, userTenantId)
+        ))
         .returning();
 
     revalidatePath(`/quotes/${updated.quoteId}`);
     return updated;
 });
 
-export const deleteRoom = createSafeAction(z.object({ id: z.string().uuid() }), async (data) => {
+export const deleteRoom = createSafeAction(z.object({ id: z.string().uuid() }), async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+
+    // 安全检查：验证房间属于当前租户
     const existing = await db.query.quoteRooms.findFirst({
-        where: eq(quoteRooms.id, data.id)
+        where: and(
+            eq(quoteRooms.id, data.id),
+            eq(quoteRooms.tenantId, userTenantId)
+        )
     });
 
-    if (!existing) throw new Error('Room not found');
+    if (!existing) throw new Error('房间不存在或无权操作');
 
-    await db.delete(quoteRooms).where(eq(quoteRooms.id, data.id));
+    // Cascade delete items in this room (with tenant check)
+    await db.delete(quoteItems)
+        .where(and(
+            eq(quoteItems.roomId, data.id),
+            eq(quoteItems.tenantId, userTenantId)
+        ));
+
+    await db.delete(quoteRooms)
+        .where(and(
+            eq(quoteRooms.id, data.id),
+            eq(quoteRooms.tenantId, userTenantId)
+        ));
+
+    // Recalculate Quote Total because items were deleted
+    await updateQuoteTotal(existing.quoteId);
+
     revalidatePath(`/quotes/${existing.quoteId}`);
     return { success: true };
 });
-export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (data) => {
+
+export const reorderQuoteItems = createSafeAction(reorderQuoteItemsSchema, async (data, context) => {
+    // We update both sortOrder and roomId (in case item was moved to another room)
+    await db.transaction(async (tx) => {
+        for (const item of data.items) {
+            await tx.update(quoteItems)
+                .set({
+                    sortOrder: item.sortOrder,
+                    roomId: data.roomId,
+                })
+                .where(eq(quoteItems.id, item.id));
+        }
+    });
+
+    revalidatePath(`/quotes/${data.quoteId}`);
+    return { success: true };
+});
+export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (data, context) => {
     let quantity = data.quantity;
     let warnings: string[] = [];
     let currentUnitPrice = data.unitPrice;
@@ -187,6 +312,7 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         });
 
         if (product) {
+            // 尝试在产品库中查找默认配件产品
             // Auto-fill basic info
             if (!currentUnitPrice && product.unitPrice) currentUnitPrice = Number(product.unitPrice);
             if (!currentProductName) currentProductName = product.name;
@@ -200,6 +326,17 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         }
     }
 
+    // 1. Fetch Config for Loss Settings
+    const quote = await db.query.quotes.findFirst({
+        where: eq(quotes.id, data.quoteId),
+        columns: { tenantId: true, createdBy: true } // Need tenant and creator to get config
+    });
+    const config = await QuoteConfigService.getMergedConfig(
+        quote?.tenantId || '00000000-0000-0000-0000-000000000000',
+        quote?.createdBy || '00000000-0000-0000-0000-000000000000'
+    );
+    const { presetLoss } = config;
+
     // Calculation Logic
     if (data.category === 'CURTAIN' && data.width && data.height) {
         const calcParams = {
@@ -208,9 +345,9 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
             foldRatio: data.foldRatio || 2,
             fabricWidth: (attributes.fabricWidth as number) || 280, // Default fallback
             formula: ((attributes.formula as string) || 'FIXED_HEIGHT') as CurtainFormula,
-            sideLoss: attributes.sideLoss as number,
-            bottomLoss: attributes.bottomLoss as number,
-            headerLoss: attributes.headerLoss as number
+            sideLoss: (attributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
+            bottomLoss: (attributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
+            headerLoss: (attributes.headerLoss as number) ?? presetLoss.curtain.headerLoss
         };
 
         const result = CurtainCalculator.calculate(calcParams);
@@ -223,7 +360,9 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
             productWidth: (attributes.fabricWidth as number) || (data.category === 'WALLPAPER' ? 53 : 280),
             rollLength: (attributes.rollLength as number) || 1000,
             patternRepeat: (attributes.patternRepeat as number) || 0,
-            formula: (data.category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula
+            formula: (data.category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula,
+            widthLoss: (attributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
+            cutLoss: (attributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss
         };
 
         const result = WallpaperCalculator.calculate(calcParams);
@@ -232,6 +371,14 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
     }
 
     const subtotal = calculateSubtotal(currentUnitPrice, quantity, data.processFee);
+
+    // Size Rationality Validation
+    if (data.width && data.height) {
+        const sizeValidation = SizeValidator.validate(Number(data.width), Number(data.height));
+        if (sizeValidation.messages.length > 0) {
+            warnings.push(...sizeValidation.messages);
+        }
+    }
 
     // Store warnings in attributes if any
     const finalAttributes = warnings.length > 0
@@ -249,16 +396,43 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         foldRatio: data.foldRatio?.toString(),
         processFee: data.processFee?.toString(),
         attributes: finalAttributes,
-        tenantId: '00000000-0000-0000-0000-000000000000', // FIXME
+        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
     }).returning();
 
     await updateQuoteTotal(data.quoteId);
+
+    // 自动配件联动 (Accessory Linkage)
+    if (newItem && (data.category === 'CURTAIN' || data.category === 'WALLPAPER')) {
+        const recommendations = await AccessoryLinkageService.getRecommendedAccessories({
+            category: data.category,
+            width: Number(data.width || 0),
+            height: Number(data.height || 0),
+            foldRatio: data.foldRatio,
+            quantity: Number(quantity)
+        });
+
+        for (const rec of recommendations) {
+            await db.insert(quoteItems).values({
+                quoteId: data.quoteId,
+                roomId: data.roomId,
+                parentId: newItem.id, // 挂载为主材的子项
+                category: rec.category,
+                productName: rec.productName,
+                productId: rec.productId,
+                unitPrice: rec.unitPrice?.toString() || '0',
+                quantity: rec.quantity.toString(),
+                subtotal: (rec.quantity * (rec.unitPrice || 0)).toString(),
+                tenantId: newItem.tenantId,
+                attributes: { _isAutoRecommended: true, remark: rec.remark }
+            });
+        }
+    }
 
     revalidatePath(`/quotes/${data.quoteId}`);
     return newItem;
 });
 
-export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data) => {
+export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data, context) => {
     // Manually extract productId and productName if they might exist in raw data but not in schema
     // or just assume standard updateData. We check schema.ts first.
     const { id, ...updateData } = data;
@@ -312,6 +486,18 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     // Merge updateData attributes last to ensure explicit overrides
     const mergedAttributes = { ...attributes, ...(updateData.attributes as Record<string, unknown> || {}) };
 
+    // 1. Fetch Config for Loss Settings (if needed for re-calc)
+    // We can fetch quote -> get config.
+    const quote = await db.query.quotes.findFirst({
+        where: eq(quotes.id, existing.quoteId),
+        columns: { tenantId: true, createdBy: true }
+    });
+    const config = await QuoteConfigService.getMergedConfig(
+        quote?.tenantId || '00000000-0000-0000-0000-000000000000',
+        quote?.createdBy || '00000000-0000-0000-0000-000000000000'
+    );
+    const { presetLoss } = config;
+
     // Trigger Calculation if dimensions changed
     if (category === 'CURTAIN' && width && height) {
         const calcParams = {
@@ -320,9 +506,9 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
             foldRatio: foldRatio,
             fabricWidth: (mergedAttributes.fabricWidth as number) || 280,
             formula: ((mergedAttributes.formula as string) || 'FIXED_HEIGHT') as CurtainFormula,
-            sideLoss: mergedAttributes.sideLoss as number,
-            bottomLoss: mergedAttributes.bottomLoss as number,
-            headerLoss: mergedAttributes.headerLoss as number
+            sideLoss: (mergedAttributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
+            bottomLoss: (mergedAttributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
+            headerLoss: (mergedAttributes.headerLoss as number) ?? presetLoss.curtain.headerLoss
         };
         const result = CurtainCalculator.calculate(calcParams);
         quantity = result.quantity;
@@ -334,7 +520,9 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
             productWidth: (mergedAttributes.fabricWidth as number) || (category === 'WALLPAPER' ? 53 : 280),
             rollLength: (mergedAttributes.rollLength as number) || 1000,
             patternRepeat: (mergedAttributes.patternRepeat as number) || 0,
-            formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula
+            formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula,
+            widthLoss: (mergedAttributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
+            cutLoss: (mergedAttributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss
         };
         const result = WallpaperCalculator.calculate(calcParams);
         quantity = result.quantity;
@@ -345,6 +533,14 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
     const fee = updateData.processFee ?? Number(existing.processFee || 0);
     const subtotal = calculateSubtotal(finalUnitPrice, quantity, fee);
+
+    // Size Rationality Validation
+    if (width && height) {
+        const sizeValidation = SizeValidator.validate(width, height);
+        if (sizeValidation.messages.length > 0) {
+            warnings.push(...sizeValidation.messages);
+        }
+    }
 
     const finalAttributes = warnings.length > 0
         ? { ...mergedAttributes, _warnings: warnings }
@@ -372,22 +568,31 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     return { success: true };
 });
 
-export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (data) => {
-    const existing = await db.query.quoteItems.findFirst({ where: eq(quoteItems.id, data.id) });
-    if (!existing) return { success: false };
+export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
 
-    await db.delete(quoteItems).where(eq(quoteItems.id, data.id));
+    // 安全检查：验证行项目属于当前租户
+    const existing = await db.query.quoteItems.findFirst({
+        where: and(
+            eq(quoteItems.id, data.id),
+            eq(quoteItems.tenantId, userTenantId)
+        )
+    });
+    if (!existing) return { success: false, error: '行项目不存在或无权操作' };
+
+    await db.delete(quoteItems)
+        .where(and(
+            eq(quoteItems.id, data.id),
+            eq(quoteItems.tenantId, userTenantId)
+        ));
     await updateQuoteTotal(existing.quoteId);
 
     revalidatePath(`/quotes/${existing.quoteId}`);
     return { success: true };
 });
 
-export const createNextVersion = createSafeAction(z.object({ quoteId: z.string() }), async (data) => {
-    const userId = '00000000-0000-0000-0000-000000000000';
-    const tenantId = '00000000-0000-0000-0000-000000000000';
-
-    const newQuote = await QuoteService.createNextVersion(data.quoteId, userId, tenantId);
+export const createNextVersion = createSafeAction(z.object({ quoteId: z.string() }), async (data, context) => {
+    const newQuote = await QuoteService.createNextVersion(data.quoteId, context.session.user.id);
     revalidatePath('/quotes');
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);
@@ -396,11 +601,8 @@ export const createNextVersion = createSafeAction(z.object({ quoteId: z.string()
 
 export const submitQuote = createSafeAction(z.object({
     id: z.string().uuid(),
-}), async (data) => {
-    const session = await auth();
-    if (!session?.user?.id || !session.user.tenantId) throw new Error('Unauthorized');
-
-    await QuoteLifecycleService.submit(data.id, session.user.tenantId, session.user.id);
+}), async (data, context) => {
+    await QuoteLifecycleService.submit(data.id, context.session.user.tenantId, context.session.user.id);
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
@@ -412,37 +614,19 @@ export const submitQuote = createSafeAction(z.object({
 export const rejectQuote = createSafeAction(z.object({
     id: z.string().uuid(),
     rejectReason: z.string().min(1),
-}), async (data) => {
-    const session = await auth();
-    if (!session?.user?.id || !session.user.tenantId) throw new Error('Unauthorized');
-
-    const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, data.id)
-    });
-
-    if (!quote) throw new Error('Quote not found');
-    // if (quote.status !== 'SUBMITTED') throw new Error('Only SUBMITTED quotes can be rejected'); 
-    // Relaxed check for now or ensure status flow is correct
-
-    const [updated] = await db.update(quotes)
-        .set({
-            status: 'REJECTED',
-            rejectReason: data.rejectReason,
-            updatedAt: new Date()
-        })
-        .where(eq(quotes.id, data.id))
-        .returning();
+}), async (data, context) => {
+    await QuoteLifecycleService.reject(data.id, data.rejectReason);
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    return updated;
+    return { success: true };
 });
 
 export const lockQuote = createSafeAction(z.object({
     id: z.string().uuid(),
     tenantId: z.string().uuid(),
     lockedBy: z.string().uuid().optional(),
-}), async (data) => {
+}), async (data, context) => {
     const quote = await db.query.quotes.findFirst({
         where: eq(quotes.id, data.id)
     });
@@ -462,13 +646,12 @@ export const lockQuote = createSafeAction(z.object({
 export const unlockQuote = createSafeAction(z.object({
     id: z.string().uuid(),
     tenantId: z.string().uuid(),
-}), async (data) => {
+}), async (data, context) => {
     const quote = await db.query.quotes.findFirst({
         where: eq(quotes.id, data.id)
     });
 
     if (!quote) throw new Error('Quote not found');
-
     const [updated] = await db.update(quotes)
         .set({ lockedAt: null, updatedAt: new Date() })
         .where(eq(quotes.id, data.id))
@@ -480,22 +663,15 @@ export const unlockQuote = createSafeAction(z.object({
 
 export const approveQuote = createSafeAction(z.object({
     id: z.string().uuid(),
-}), async (data) => {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error('Unauthorized');
-    // Check permission logic should be here or in service
-
-    await QuoteLifecycleService.approve(data.id, session.user.id);
+}), async (data, context) => {
+    await QuoteLifecycleService.approve(data.id, context.session.user.id);
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
     return { success: true };
 });
 
-export const rejectQuoteDiscount = createSafeAction(rejectQuoteDiscountSchema, async (data) => {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error('Unauthorized');
-
+export const rejectQuoteDiscount = createSafeAction(rejectQuoteDiscountSchema, async (data, context) => {
     await QuoteLifecycleService.reject(data.id, data.reason);
 
     revalidatePath(`/quotes/${data.id}`);
@@ -505,13 +681,123 @@ export const rejectQuoteDiscount = createSafeAction(rejectQuoteDiscountSchema, a
 
 export const convertQuoteToOrder = createSafeAction(z.object({
     quoteId: z.string().uuid()
-}), async (data) => {
-    const session = await auth();
-    if (!session?.user?.id || !session.user.tenantId) throw new Error('Unauthorized');
-
-    const order = await QuoteLifecycleService.convertToOrder(data.quoteId, session.user.tenantId, session.user.id);
+}), async (data, context) => {
+    const order = await QuoteLifecycleService.convertToOrder(data.quoteId, context.session.user.tenantId, context.session.user.id);
 
     revalidatePath('/orders');
     revalidatePath(`/quotes/${data.quoteId}`);
     return order;
+});
+
+export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (data, context) => {
+    const { leadId, planType, rooms } = data;
+    const tenantId = context.session.user.tenantId;
+    const userId = context.session.user.id;
+
+    // 1. Validate Lead
+    const lead = await db.query.leads.findFirst({
+        where: eq(leads.id, leadId)
+    });
+    if (!lead) throw new Error('Lead not found');
+
+    // 2. Ensure Customer exists
+    let customerId = lead.customerId;
+    if (!customerId) {
+        // Automatically create customer if missing
+        const newCustomerResult = await CustomerService.createCustomer({
+            name: lead.customerName || 'Quick Quote Customer',
+            phone: lead.customerPhone || '',
+            wechat: lead.customerWechat || null,
+            preferences: { source: 'LEAD_CONVERSION' },
+            type: 'INDIVIDUAL',
+            lifecycleStage: 'LEAD',
+            pipelineStatus: 'UNASSIGNED',
+        } as any, tenantId, userId);
+        customerId = newCustomerResult.customer.id;
+
+        await db.update(leads)
+            .set({ customerId: newCustomerResult.customer.id })
+            .where(eq(leads.id, leadId));
+    }
+
+    // 3. Create Quote
+    const quoteNo = `QQ${Date.now().toString().slice(-8)}`;
+    console.log('[createQuickQuote] Creating quote with:', {
+        quoteNo,
+        tenantId,
+        customerId,
+        leadId,
+        title: `快速报价 - ${planType}`,
+    });
+
+    let newQuote;
+    try {
+        [newQuote] = await db.insert(quotes).values({
+            quoteNo,
+            tenantId,
+            customerId,
+            leadId,
+            title: `快速报价 - ${planType}`,
+            status: 'DRAFT',
+        }).returning();
+        console.log('[createQuickQuote] Quote created:', newQuote.id);
+    } catch (insertError) {
+        console.error('[createQuickQuote] Quote insert failed:', insertError);
+        throw insertError;
+    }
+
+    await db.update(quotes)
+        .set({ rootQuoteId: newQuote.id })
+        .where(eq(quotes.id, newQuote.id));
+
+    // 4. Load Plan Data
+    const allPlans = await fetchQuotePlans(tenantId);
+
+    type MockProduct = { category?: string; name?: string; unitPrice?: number; foldRatio?: number };
+    type MockPlan = { products?: Record<string, MockProduct> };
+
+    const plan = (allPlans as Record<string, MockPlan>)[planType];
+    if (!plan) {
+        throw new Error(`Plan ${planType} not found`);
+    }
+
+    // 5. Create Rooms and Items
+    for (const roomData of rooms) {
+        const [room] = await db.insert(quoteRooms).values({
+            quoteId: newQuote.id,
+            tenantId,
+            name: roomData.name,
+        }).returning();
+
+        // Add items based on plan and room properties
+        for (const [key, product] of Object.entries(plan.products || {})) {
+            const p = product;
+
+            // Skip based on room logic
+            if (key === 'sheer' && !roomData.hasSheer) continue;
+            if (key === 'fabric' && roomData.hasFabric === false) continue;
+
+            const quantity = roomData.width * (p.foldRatio || 2); // Simple calc for mock
+            const subtotal = quantity * (p.unitPrice || 0);
+
+            await db.insert(quoteItems).values({
+                quoteId: newQuote.id,
+                roomId: room.id,
+                tenantId,
+                category: p.category || 'OTHER',
+                productName: p.name || key,
+                unitPrice: (p.unitPrice || 0).toString(),
+                quantity: quantity.toString(),
+                subtotal: subtotal.toString(),
+                width: roomData.width.toString(),
+                height: roomData.height.toString(),
+            });
+        }
+    }
+
+    // 6. Finalize Quote Total
+    await updateQuoteTotal(newQuote.id);
+
+    revalidatePath('/quotes');
+    return { id: newQuote.id, quoteNo };
 });

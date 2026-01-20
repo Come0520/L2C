@@ -1,18 +1,18 @@
 /**
- * 通用时间线组�?
+ * 通用时间线组�?
  * 支持自定义图标、颜色映射，可展开收起
  */
 
 'use client';
 
 import { useState } from 'react';
-import Circle from 'lucide-react/dist/esm/icons/circle';
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import { Circle, ChevronDown, ChevronUp } from 'lucide-react';
+
+
 import { cn, formatDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 
-// 时间线事件类�?
+// 时间线事件类�?
 export interface TimelineEvent {
     /** 事件唯一标识 */
     id: string;
@@ -22,30 +22,30 @@ export interface TimelineEvent {
     content: string;
     /** 事件时间 */
     timestamp?: Date | string | null;
-    /** 操作人名�?*/
+    /** 操作人名�?*/
     actor?: string | null;
     /** 附加结果信息 */
     result?: string | null;
-    /** 详情（可选，JSON 格式展示�?*/
+    /** 详情（可选，JSON 格式展示�?*/
     details?: Record<string, unknown> | null;
 }
 
 export interface TimelineProps {
-    /** 时间线事件列�?*/
+    /** 时间线事件列�?*/
     events: TimelineEvent[];
-    /** 图标映射：事件类�?-> 图标组件 */
+    /** 图标映射：事件类�?-> 图标组件 */
     iconMap?: Record<string, React.ElementType>;
-    /** 颜色映射：事件类�?-> CSS 类名（如 'bg-blue-500'�?*/
+    /** 颜色映射：事件类�?-> CSS 类名（如 'bg-blue-500'�?*/
     colorMap?: Record<string, string>;
-    /** 标签映射：事件类�?-> 显示标签 */
+    /** 标签映射：事件类�?-> 显示标签 */
     labelMap?: Record<string, string>;
     /** 是否支持展开收起 */
     expandable?: boolean;
-    /** 默认展示数量（仅�?expandable �?true 时有效），默�?1 */
+    /** 默认展示数量（仅�?expandable �?true 时有效），默�?1 */
     defaultExpandCount?: number;
-    /** 空状态提示文�?*/
+    /** 空状态提示文�?*/
     emptyText?: string;
-    /** 自定义类�?*/
+    /** 自定义类�?*/
     className?: string;
     /** 是否显示详情 */
     showDetails?: boolean;
@@ -54,7 +54,7 @@ export interface TimelineProps {
 }
 
 /**
- * 通用时间线组�?
+ * 通用时间线组�?
  * 可用于展示：线索跟进记录、订单状态变更、物流轨迹等
  */
 export function Timeline({
@@ -84,7 +84,7 @@ export function Timeline({
         if (IconComponent) {
             return <IconComponent className="h-4 w-4" />;
         }
-        // 最终兜底方�?
+        // 最终兜底方�?
         return <Circle className="h-4 w-4 text-gray-400" />;
     };
 
@@ -100,14 +100,14 @@ export function Timeline({
         return labelMap[type] || content;
     };
 
-    // 格式化时�?
+    // 格式化时�?
     const formatTime = (timestamp: Date | string | null | undefined) => {
         if (!timestamp) return '-';
         try {
             if (formatTimestamp) return formatTimestamp(timestamp);
             return formatDate(timestamp);
         } catch (error) {
-            // 如果格式化失败，返回原始值或占位�?
+            // 如果格式化失败，返回原始值或占位�?
             console.error('Failed to format timestamp:', error);
             return String(timestamp);
         }
@@ -131,7 +131,7 @@ export function Timeline({
 
                     return (
                         <div key={event.id} className="relative flex gap-3">
-                            {/* 连接�?*/}
+                            {/* 连接�?*/}
                             {!isLast && (
                                 <div className="absolute left-[0.45rem] top-6 h-full w-px bg-gray-200" />
                             )}
@@ -168,11 +168,11 @@ export function Timeline({
 
                                 {event.actor && (
                                     <div className="text-xs text-gray-500">
-                                        操作�? {event.actor}
+                                        操作�? {event.actor}
                                     </div>
                                 )}
 
-                                {/* 如果有标签映射，则显示原始内�?*/}
+                                {/* 如果有标签映射，则显示原始内�?*/}
                                 {labelMap[event.type] && (
                                     <p className="text-sm text-gray-600">
                                         {event.content}
@@ -207,12 +207,12 @@ export function Timeline({
                     {expanded ? (
                         <>
                             <ChevronUp className="h-3 w-3 mr-1" />
-                            收起 ({events.length - defaultExpandCount} �?
+                            收起 ({events.length - defaultExpandCount} �?
                         </>
                     ) : (
                         <>
                             <ChevronDown className="h-3 w-3 mr-1" />
-                            展开更多 ({events.length - defaultExpandCount} �?
+                            展开更多 ({events.length - defaultExpandCount} �?
                         </>
                     )}
                 </Button>
@@ -220,3 +220,4 @@ export function Timeline({
         </div>
     );
 }
+

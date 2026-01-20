@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
@@ -23,6 +23,9 @@ export function ConfirmDialog({ open: controlledOpen, onOpenChange: setControlle
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [loading, setLoading] = useState(false);
+
+    // 使用 useCallback 稳定回调引用
+    const handleClose = useCallback(() => onOpenChange?.(false), [onOpenChange]);
 
     const handleConfirm = async () => {
         setLoading(true);
@@ -55,7 +58,7 @@ export function ConfirmDialog({ open: controlledOpen, onOpenChange: setControlle
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange && onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={handleClose}>取消</Button>
                     <Button onClick={handleConfirm} disabled={loading}>
                         {loading ? '确认中...' : '确认验收'}
                     </Button>
@@ -73,6 +76,9 @@ export function RejectDialog({ open: controlledOpen, onOpenChange: setControlled
 
     const [loading, setLoading] = useState(false);
     const [reason, setReason] = useState('');
+
+    // 使用 useCallback 稳定回调引用
+    const handleRejectClose = useCallback(() => onOpenChange?.(false), [onOpenChange]);
 
     const handleReject = async () => {
         if (!reason) {
@@ -122,7 +128,7 @@ export function RejectDialog({ open: controlledOpen, onOpenChange: setControlled
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange && onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={handleRejectClose}>取消</Button>
                     <Button variant="destructive" onClick={handleReject} disabled={loading}>
                         {loading ? '提交中...' : '确认驳回'}
                     </Button>

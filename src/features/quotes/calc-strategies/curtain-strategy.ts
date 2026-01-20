@@ -92,7 +92,7 @@ export class CurtainStrategy extends BaseCalcStrategy {
         const fabricWidthCm = fabricWidth * 100; // Convert m to cm
 
         let usage = 0;
-        let details: CurtainCalcResult['details'] = {
+        const details: CurtainCalcResult['details'] = {
             finishedWidth,
             finishedHeight,
             cutWidth,

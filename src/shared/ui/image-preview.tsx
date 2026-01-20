@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
+import { Maximize2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -15,17 +15,17 @@ interface ImagePreviewProps {
     src: string;
     /** 图片替代文本 */
     alt: string;
-    /** 缩略图容器样�?*/
+    /** 缩略图容器样�?*/
     className?: string;
-    /** 放大图容器样�?*/
+    /** 放大图容器样�?*/
     zoomClassName?: string;
-    /** 缩略图占位组�?*/
+    /** 缩略图占位组�?*/
     fallback?: React.ReactNode;
 }
 
 /**
  * 通用图片预览组件 (ImagePreview)
- * 点击缩略图弹出高清大图预览�?
+ * 点击缩略图弹出高清大图预览�?
  */
 export function ImagePreview({
     src,
@@ -74,3 +74,4 @@ export function ImagePreview({
         </Dialog>
     );
 }
+

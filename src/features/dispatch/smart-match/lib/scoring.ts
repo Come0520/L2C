@@ -16,24 +16,25 @@ interface TaskRequirement {
 }
 
 /**
- * 计算工人的匹配得�?(0-100)
+ * 计算工人的匹配得分(0-100)
  */
 export function calculateWorkerScore(worker: WorkerProfile, task: TaskRequirement): number {
     let score = 0;
 
-    // 1. 技能匹�?(权重 50)
-    // 根据任务分类映射到技能标�?
+    // 1. 技能匹配(权重 50) - 使用 Set 优化查找 O(1)
+    // 根据任务分类映射到技能标签
     const requiredSkill = getRequiredSkill(task.category);
-    if (worker.skills.includes(requiredSkill)) {
+    const workerSkills = new Set(worker.skills);
+    if (workerSkills.has(requiredSkill)) {
         score += 50;
-    } else if (worker.skills.includes('ALL')) {
-        score += 40; // 全能工稍低一点优先度，留给专人专�? 或者也50.
+    } else if (workerSkills.has('ALL')) {
+        score += 40; // 全能工稍低一点优先度，留给专人专做 或者也50.
     } else {
-        return 0; // 技能不匹配直接 0 �?
+        return 0; // 技能不匹配直接 0 分
     }
 
     // 2. 负载情况 (权重 30)
-    // 假设理想负载�?0-2 单。超�?5 单负载过重�?
+    // 假设理想负载?0-2 单。超?5 单负载过重?
     if (worker.activeTaskCount === 0) {
         score += 30; // 空闲
     } else if (worker.activeTaskCount < 3) {
@@ -45,18 +46,18 @@ export function calculateWorkerScore(worker: WorkerProfile, task: TaskRequiremen
     }
 
     // 3. 服务评分 (权重 20)
-    // 5�?>20, 4�?>15, ...
+    // 5�?>20, 4�?>15, ...
     if (worker.avgRating) {
         score += (worker.avgRating / 5) * 20;
     } else {
-        score += 10; // 无评分默认给中间�?
+        score += 10; // 无评分默认给中间�?
     }
 
     return Math.max(0, Math.min(100, score));
 }
 
 function getRequiredSkill(category: string): string {
-    // 简单映射，后续可查�?
+    // 简单映射，后续可查�?
     if (category.includes('CURTAIN')) return 'CURTAIN';
     if (category.includes('WALL')) return 'WALLCLOTH';
     return 'General';

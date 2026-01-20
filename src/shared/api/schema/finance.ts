@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, paymentSchedules } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
@@ -96,6 +96,7 @@ export const arStatements = pgTable('ar_statements', {
     commissionStatus: varchar('commission_status', { length: 20 }), // PENDING/CALCULATED/PAID
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
 }, (table) => ({
     tenantIdx: index('idx_ar_statements_tenant').on(table.tenantId),
     orderIdx: index('idx_ar_statements_order').on(table.orderId),
@@ -103,7 +104,62 @@ export const arStatements = pgTable('ar_statements', {
     statusIdx: index('idx_ar_statements_status').on(table.status),
 }));
 
-// 收款单 (Payment Orders)
+// 收款单 (Receipt Bills) - 新版本，支持复杂审批
+export const receiptBills = pgTable('receipt_bills', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    receiptNo: varchar('receipt_no', { length: 50 }).notNull().unique(),
+    type: varchar('type', { length: 20 }).notNull(), // PREPAID/NORMAL
+
+    customerId: uuid('customer_id').references(() => customers.id),
+    customerName: varchar('customer_name', { length: 100 }).notNull(),
+    customerPhone: varchar('customer_phone', { length: 20 }).notNull(),
+
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+    usedAmount: decimal('used_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+    remainingAmount: decimal('remaining_amount', { precision: 12, scale: 2 }).notNull(),
+
+    status: varchar('status', { length: 20 }).notNull(), // DRAFT/PENDING_APPROVAL/APPROVED/REJECTED/VERIFIED/PARTIAL_USED/FULLY_USED
+
+    paymentMethod: varchar('payment_method', { length: 20 }).notNull(),
+    accountId: uuid('account_id').references(() => financeAccounts.id),
+    proofUrl: text('proof_url').notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
+    remark: text('remark'),
+
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    verifiedBy: uuid('verified_by').references(() => users.id),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_receipt_bills_tenant').on(table.tenantId),
+    customerIdx: index('idx_receipt_bills_customer').on(table.customerId),
+    statusIdx: index('idx_receipt_bills_status').on(table.status),
+}));
+
+// 收款单-订单关联明细 (Receipt Bill Items)
+export const receiptBillItems = pgTable('receipt_bill_items', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    receiptBillId: uuid('receipt_bill_id').references(() => receiptBills.id, { onDelete: 'cascade' }).notNull(),
+    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    statementId: uuid('statement_id').references(() => arStatements.id),
+    scheduleId: uuid('schedule_id').references(() => paymentSchedules.id),
+    orderNo: varchar('order_no', { length: 50 }).notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    receiptBillIdx: index('idx_receipt_bill_items_receipt').on(table.receiptBillId),
+    orderIdx: index('idx_receipt_bill_items_order').on(table.orderId),
+}));
+
+/**
+ * 收款单 (Payment Orders)
+ * @deprecated 请使用 receiptBills 替代。此表为遗留表，计划在 v2.0 版本移除。
+ * @see receiptBills
+ */
 export const paymentOrders = pgTable('payment_orders', {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
@@ -226,7 +282,7 @@ export const paymentBills = pgTable('payment_bills', {
     type: varchar('type', { length: 20 }).default('SUPPLIER'), // SUPPLIER/LABOR
 
     // 关联方信息
-    payeeType: varchar('payee_type', { length: 20 }).notNull(), // SUPPLIER/WORKER
+    payeeType: varchar('payee_type', { length: 20 }).notNull(), // SUPPLIER/WORKER/CUSTOMER
     payeeId: uuid('payee_id').notNull(),
     payeeName: varchar('payee_name', { length: 100 }).notNull(),
 
@@ -296,23 +352,30 @@ export const apLaborStatements = pgTable('ap_labor_statements', {
 }));
 
 // 劳务费用明细 (AP Labor Fee Details)
+// 支持正常安装费用和售后扣款记录
 export const apLaborFeeDetails = pgTable('ap_labor_fee_details', {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     statementId: uuid('statement_id').references(() => apLaborStatements.id).notNull(),
 
-    installTaskId: uuid('install_task_id').references(() => installTasks.id).notNull(),
-    installTaskNo: varchar('install_task_no', { length: 50 }).notNull(),
+    // 安装任务关联 (可选 - 扣款记录可能不关联特定安装单)
+    installTaskId: uuid('install_task_id').references(() => installTasks.id),
+    installTaskNo: varchar('install_task_no', { length: 50 }),
 
-    feeType: varchar('fee_type', { length: 20 }).notNull(), // BASE/ADDITIONAL
+    // 售后定责单关联 (用于扣款记录)
+    liabilityNoticeId: uuid('liability_notice_id'),
+    liabilityNoticeNo: varchar('liability_notice_no', { length: 50 }),
+
+    feeType: varchar('fee_type', { length: 20 }).notNull(), // BASE/ADDITIONAL/DEDUCTION
     description: varchar('description', { length: 200 }).notNull(),
     calculation: varchar('calculation', { length: 200 }).notNull(),
-    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(), // 扣款为负数
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     statementIdx: index('idx_ap_labor_fee_details_statement').on(table.statementId),
     taskIdx: index('idx_ap_labor_fee_details_task').on(table.installTaskId),
+    liabilityIdx: index('idx_ap_labor_fee_details_liability').on(table.liabilityNoticeId),
 }));
 
 // ==================== 对账管理 (Reconciliation) ====================

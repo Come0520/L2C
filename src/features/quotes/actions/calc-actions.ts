@@ -84,7 +84,7 @@ export const recalculateQuote = async (quoteId: string) => {
     return { success: true, message: 'Recalculated successfully' };
 };
 
-// Mock 获取计算结果预览
+// 获取计算结果预览
 export const getCalcPreview = async (params: any) => {
     const category = params.category || 'CURTAIN';
     const strategy = StrategyFactory.getStrategy(category);

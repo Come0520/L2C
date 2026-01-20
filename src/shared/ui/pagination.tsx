@@ -1,8 +1,7 @@
-﻿'use client';
+'use client';
 
 import { Button } from '@/shared/ui/button';
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface PaginationProps {

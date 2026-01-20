@@ -1,6 +1,8 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, integer, index, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
+import { productTemplates } from './catalogs';
 
 export const quotes = pgTable('quotes', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -9,6 +11,7 @@ export const quotes = pgTable('quotes', {
     customerId: uuid('customer_id').references(() => customers.id).notNull(),
     leadId: uuid('lead_id'), // Optional reference to lead
     measureVariantId: uuid('measure_variant_id'), // Optional reference to measure variant
+    bundleId: uuid('bundle_id'), // Optional reference to parent bundle quote
 
     // Versioning
     rootQuoteId: uuid('root_quote_id'), // Identifies the quote family
@@ -42,12 +45,17 @@ export const quotes = pgTable('quotes', {
 }, (table) => ({
     quoteTenantIdx: index('idx_quotes_tenant').on(table.tenantId),
     quoteCustomerIdx: index('idx_quotes_customer').on(table.customerId),
+    // Ensure only ONE active version per Quote Family (RootQuote)
+    // Using partial index: WHERE is_active = true
+    quoteActiveVersionIdx: uniqueIndex('idx_quotes_active_version')
+        .on(table.rootQuoteId)
+        .where(sql`is_active = true`),
 }));
 
 export const quoteRooms = pgTable('quote_rooms', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
+    quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'cascade' }).notNull(),
 
     name: varchar('name', { length: 100 }).notNull(),
     measureRoomId: uuid('measure_room_id'), // Link to measurement room if applicable
@@ -59,9 +67,9 @@ export const quoteRooms = pgTable('quote_rooms', {
 export const quoteItems = pgTable('quote_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
+    quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'cascade' }).notNull(),
     parentId: uuid('parent_id'), // For nested items (e.g. accessories under curtains)
-    roomId: uuid('room_id').references(() => quoteRooms.id), // Room is required in requirements, but make optional for safe migration or non-room items? Requirements say Required. Let's make it nullable for now to be safe or stick to requirements. Docs say "Required". I'll keep it nullable in DB to avoid breakage if migrating old data (though this is new table). Actually, let's make it nullable but logic enforces it.
+    roomId: uuid('room_id').references(() => quoteRooms.id, { onDelete: 'cascade' }), // 房间关联
 
     category: varchar('category', { length: 50 }).notNull(), // CURTAIN_FABRIC, TRACK, WALLPAPER, etc.
 
@@ -111,10 +119,8 @@ export const quotePlans = pgTable('quote_plans', {
 export const quotePlanItems = pgTable('quote_plan_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     planId: uuid('plan_id').references(() => quotePlans.id).notNull(),
-    // templateId: uuid('template_id').references(() => productTemplates.id).notNull(), // requires import
-    templateId: uuid('template_id').notNull(),
+    templateId: uuid('template_id').references(() => productTemplates.id).notNull(), // 模板关联
     overridePrice: decimal('override_price', { precision: 10, scale: 2 }),
     role: varchar('role', { length: 50 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
-

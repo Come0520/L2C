@@ -83,13 +83,18 @@ export const deleteLeadSchema = z.object({
     id: z.string(),
 });
 
+export const restoreLeadSchema = z.object({
+    id: z.string(),
+    reason: z.string().optional(), // 恢复原因
+});
+
 // ==================== Filter/Query Schemas ====================
 
 export const leadFilterSchema = z.object({
     page: z.number().default(1),
     pageSize: z.number().default(10),
     // Matching leadStatusEnum: PENDING_ASSIGNMENT, PENDING_FOLLOWUP, FOLLOWING_UP, WON, VOID, INVALID
-    status: z.enum(['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'VOID', 'INVALID']).optional(),
+    status: z.array(z.string()).optional(),
     intentionLevel: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
     search: z.string().optional(),
     salesId: z.string().optional(), // 'ME' | 'UNASSIGNED' | userId
@@ -100,6 +105,12 @@ export const leadFilterSchema = z.object({
         to: z.date().optional(),
     }).optional(),
     tags: z.array(z.string()).optional(),
+}).transform((data) => {
+    const validStatuses = ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'VOID', 'INVALID'];
+    return {
+        ...data,
+        status: data.status?.filter(s => validStatuses.includes(s)),
+    };
 });
 
 export const getLeadTimelineLogsSchema = z.object({

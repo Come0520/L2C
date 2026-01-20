@@ -1,4 +1,4 @@
-﻿export default function RolesSettingsPage() {
+export default function RolesSettingsPage() {
     return (
         <div className="space-y-6">
             <div>

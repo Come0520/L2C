@@ -8,13 +8,18 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { formatDate } from '@/shared/lib/utils';
-import { Edit, Phone, MessageSquare } from 'lucide-react';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Link from 'next/link';
 
 import { EditCustomerDialog } from '@/features/customers/components/edit-customer-dialog';
 import { CustomerAddressList } from '@/features/customers/components/customer-address-list';
 import { auth } from '@/shared/lib/auth';
+import { MaskedPhone } from '@/shared/components/masked-phone';
+import { logPhoneView } from '@/features/customers/actions/privacy-actions';
+import { MergeCustomerDialog } from '@/features/customers/components/merge-customer-dialog';
 
 export const revalidate = 60;
 
@@ -23,20 +28,39 @@ export default async function CustomerDetailPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const session = await auth();
+    const [session, resolvedParams] = await Promise.all([
+        auth(),
+        params
+    ]);
+
     const userId = session?.user?.id;
     const tenantId = session?.user?.tenantId;
+    const userRole = session?.user?.role || 'USER';
 
     if (!userId || !tenantId) {
         redirect('/auth/login');
     }
-
-    const resolvedParams = await params;
     const customer = await getCustomerDetail(resolvedParams.id);
 
     if (!customer) {
         notFound();
     }
+
+    // 权限检查：ADMIN/MANAGER 可查看，或者销售查看自己归属的客户
+    const canViewFull = userRole === 'ADMIN' || userRole === 'MANAGER' || customer.assignedSalesId === userId;
+
+    const handleViewPhone = async (customerId: string) => {
+        'use server';
+        await logPhoneView({
+            customerId,
+            viewerId: userId,
+            viewerRole: userRole,
+            tenantId,
+        });
+    };
+
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now(); // 获取当前服务器时间用于计算距上单天数 (Impure but safe in RSC for this use case)
 
     return (
         <div className="space-y-6">
@@ -62,6 +86,15 @@ export default async function CustomerDetailPage({
                         <p className="text-sm text-gray-500 mt-1">客户编号: {customer.customerNo}</p>
                     </div>
                     <div className="flex gap-2">
+                        <MergeCustomerDialog
+                            targetCustomer={customer}
+                            userId={userId}
+                            trigger={
+                                <Button variant="outline">
+                                    合并客户
+                                </Button>
+                            }
+                        />
                         <EditCustomerDialog
                             customer={customer}
                             userId={userId}
@@ -93,7 +126,15 @@ export default async function CustomerDetailPage({
                                     <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
                                         <Phone className="h-4 w-4" /> 手机号
                                     </dt>
-                                    <dd className="mt-1 text-sm text-gray-900">{customer.phone}</dd>
+                                    <dd className="mt-1 text-sm text-gray-900">
+                                        <MaskedPhone
+                                            phone={customer.phone}
+                                            customerId={customer.id}
+                                            canViewFull={canViewFull}
+                                            onViewFull={handleViewPhone}
+                                            showCallButton={true}
+                                        />
+                                    </dd>
                                 </div>
                                 <div>
                                     <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
@@ -128,7 +169,7 @@ export default async function CustomerDetailPage({
                         <Card>
                             <CardContent className="pt-6 text-center">
                                 <div className="text-2xl font-bold">
-                                    {customer.lastOrderAt ? Math.floor((Date.now() - new Date(customer.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24)) : '-'}
+                                    {customer.lastOrderAt ? Math.floor((now - new Date(customer.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24)) : '-'}
                                 </div>
                                 <div className="text-sm text-gray-500 mt-1">距上单天数</div>
                             </CardContent>
@@ -156,7 +197,7 @@ export default async function CustomerDetailPage({
                         <TabsContent value="referrals" className="mt-4">
                             <div className="space-y-2">
                                 {customer.referrals?.length > 0 ? (
-                                    customer.referrals.map((ref: any) => (
+                                    customer.referrals.map((ref: { id: string; name: string; customerNo: string; createdAt: Date | null }) => (
                                         <div key={ref.id} className="flex justify-between items-center p-3 border rounded bg-white">
                                             <div className="flex flex-col">
                                                 <Link href={`/customers/${ref.id}`} className="font-medium text-blue-600 hover:underline">
@@ -165,7 +206,7 @@ export default async function CustomerDetailPage({
                                                 <span className="text-xs text-gray-500">{ref.customerNo}</span>
                                             </div>
                                             <div className="text-sm text-gray-500">
-                                                {formatDate(ref.createdAt)}
+                                                {ref.createdAt ? formatDate(ref.createdAt) : '-'}
                                             </div>
                                         </div>
                                     ))

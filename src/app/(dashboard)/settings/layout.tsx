@@ -1,4 +1,4 @@
-﻿import { SettingsSidebar } from '@/features/settings/components/settings-sidebar';
+import { SettingsSidebar } from '@/features/settings/components/settings-sidebar';
 
 export default function SettingsLayout({
     children,

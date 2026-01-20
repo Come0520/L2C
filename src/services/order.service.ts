@@ -40,8 +40,10 @@ export class OrderService {
             if (!quote) throw new Error("Quote not found");
 
             // Strict Validation
-            if (quote.status !== 'WON') {
-                throw new Error(`Cannot convert quote with status ${quote.status}. Only WON quotes can be converted.`);
+            // Strict Validation
+            const allowedStatuses = ['APPROVED', 'ACCEPTED', 'SUBMITTED'];
+            if (!allowedStatuses.includes(quote.status || '')) {
+                throw new Error(`Cannot convert quote with status ${quote.status}. Only APPROVED, ACCEPTED or SUBMITTED quotes can be converted.`);
             }
 
             // Check availability
@@ -58,6 +60,16 @@ export class OrderService {
             const total = Number(quote.totalAmount || 0);
             const paid = Number(options?.paymentAmount || 0);
             const balance = total - paid;
+
+            // Prepare Snapshot
+            const snapshotData = {
+                quote: {
+                    ...quote,
+                    items: quote.items
+                },
+                customer: quote.customer,
+                generatedAt: new Date().toISOString()
+            };
 
             const [newOrder] = await tx.insert(orders).values({
                 tenantId,
@@ -80,6 +92,8 @@ export class OrderService {
                 paymentMethod: options?.paymentMethod,
                 paymentTime: options?.paymentAmount ? new Date() : null,
                 remark: options?.remark,
+
+                snapshotData, // Save Snapshot
 
                 isLocked: false, // Default false
 
@@ -164,5 +178,166 @@ export class OrderService {
 
             return updatedOrder;
         });
+    }
+
+    /**
+     * Request Order Cancellation
+     * Only orders in PENDING_PRODUCTION or IN_PRODUCTION can request cancellation.
+     */
+    static async requestCancellation(orderId: string, tenantId: string, userId: string, reason: string) {
+        const { submitApproval } = await import("@/features/approval/actions/submission");
+
+        return await db.transaction(async (tx) => {
+            const order = await tx.query.orders.findFirst({
+                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
+            });
+
+            if (!order) throw new Error("订单不存在");
+            if (order.status !== 'PENDING_PRODUCTION' && order.status !== 'IN_PRODUCTION') {
+                throw new Error("只有待生产或生产中的订单可以申请撤单");
+            }
+
+            // Trigger Cancellation Approval
+            const result = await submitApproval({
+                entityType: 'ORDER',
+                entityId: orderId,
+                flowCode: 'ORDER_CANCELLATION_APPROVAL',
+                comment: `申请撤单原因: ${reason}`,
+            }, tx);
+
+            if (!result.success) {
+                const errorMsg = (result as { error?: string }).error || '未知错误';
+                throw new Error(`无法发起撤单审批: ${errorMsg}`);
+            }
+
+            // Optional: Lock the order or change status to PENDING_CANCEL
+            await tx.update(orders)
+                .set({
+                    isLocked: true,
+                    updatedAt: new Date()
+                })
+                .where(eq(orders.id, orderId));
+
+            return { success: true, approvalId: (result as any).approvalId };
+        });
+    }
+
+    /**
+     * Pause Order
+     * Only orders in PENDING_PRODUCTION or IN_PRODUCTION can be paused.
+     */
+    static async pauseOrder(orderId: string, tenantId: string, reason: string) {
+        return await db.transaction(async (tx) => {
+            const order = await tx.query.orders.findFirst({
+                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
+            });
+
+            if (!order) throw new Error("订单不存在");
+            if (order.status !== 'PENDING_PRODUCTION' && order.status !== 'IN_PRODUCTION') {
+                throw new Error("只有待生产或生产中的订单可以叫停");
+            }
+
+            const [updatedOrder] = await tx.update(orders)
+                .set({
+                    status: 'PAUSED' as any,
+                    pausedAt: new Date(),
+                    pauseReason: reason,
+                    snapshotData: { ... (order.snapshotData as any || {}), previousStatus: order.status }, // Store status for resume
+                    updatedAt: new Date()
+                })
+                .where(eq(orders.id, orderId))
+                .returning();
+
+            return updatedOrder;
+        });
+    }
+
+    /**
+     * Resume Order
+     * Restore original status and update cumulative pause days.
+     */
+    static async resumeOrder(orderId: string, tenantId: string) {
+        return await db.transaction(async (tx) => {
+            const order = await tx.query.orders.findFirst({
+                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
+            });
+
+            if (!order || order.status !== 'PAUSED') throw new Error("订单未处于叫停状态");
+
+            const previousStatus = (order.snapshotData as any)?.previousStatus || 'IN_PRODUCTION';
+            const pauseStart = order.pausedAt;
+            let addedDays = 0;
+            if (pauseStart) {
+                const diffTime = Math.abs(new Date().getTime() - pauseStart.getTime());
+                addedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            }
+
+            const [updatedOrder] = await tx.update(orders)
+                .set({
+                    status: previousStatus as any,
+                    pausedAt: null,
+                    pauseReason: null,
+                    pauseCumulativeDays: (order.pauseCumulativeDays || 0) + addedDays,
+                    updatedAt: new Date()
+                })
+                .where(eq(orders.id, orderId))
+                .returning();
+
+            return updatedOrder;
+        });
+    }
+
+    /**
+     * Confirm Installation Completed
+     * Moves order to INSTALLATION_COMPLETED (or PENDING_CONFIRMATION if configured)
+     */
+    static async confirmInstallation(orderId: string, tenantId: string, updatedBy: string) {
+        return await db.transaction(async (tx) => {
+            const [updatedOrder] = await tx.update(orders)
+                .set({
+                    status: 'INSTALLATION_COMPLETED', // Or PENDING_CONFIRMATION directly? Rules say: Wait for Customer Confirmation
+                    // State machine: PENDING_INSTALL -> INSTALLATION_COMPLETED -> PENDING_CONFIRMATION
+                    // Let's assume this action moves it to INSTALLATION_COMPLETED.
+                    // And then a notification or manual trigger moves it to PENDING_CONFIRMATION?
+                    // Or simplified: Mark Installation Done -> PENDING_CONFIRMATION.
+                    // Given the requirement "1.2 Wait-for-Customer... triggers: Install Completed". 
+                    // Let's go straight to PENDING_CONFIRMATION if that's the desired flow.
+                    // ACTUALLY: State machine says PENDING_INSTALL -> INSTALLATION_COMPLETED.
+                    // Let's stick to INSTALLATION_COMPLETED first. Then trigger notification which might move it.
+                    // But requirement says: "Status Definition... PENDING_CONFIRMATION: Wait for customer acceptance".
+                    // "Transition: PENDING_INSTALL -> INSTALLATION_COMPLETED -> PENDING_CONFIRMATION".
+                    // So we need actions for each step.
+                    updatedAt: new Date()
+                })
+                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .returning();
+            return updatedOrder;
+        });
+    }
+
+    static async requestCustomerConfirmation(orderId: string, tenantId: string) {
+        return await db.update(orders)
+            .set({ status: 'PENDING_CONFIRMATION', updatedAt: new Date() })
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+            .returning();
+    }
+
+    static async customerAccept(orderId: string, tenantId: string) {
+        return await db.update(orders)
+            .set({ status: 'COMPLETED', completedAt: new Date(), updatedAt: new Date() })
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+            .returning();
+    }
+
+    static async customerReject(orderId: string, tenantId: string, reason: string) {
+        // Record rejection in history logs if possible.
+        return await db.update(orders)
+            .set({
+                status: 'INSTALLATION_REJECTED',
+                remark: reason, // Append or overwrite? Simple for now.
+                updatedAt: new Date()
+            })
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+            .returning();
     }
 }

@@ -77,7 +77,7 @@ export default function ExportTestPage() {
                     <p className="text-sm text-muted-foreground">
                         测试通用 Excel 导出按钮，支持自动表头映射和 Loading 状态。
                     </p>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    { }
                     <ExcelExportButton
                         data={mockData}
                         columns={columns as any}
@@ -107,7 +107,6 @@ export default function ExportTestPage() {
                             }
                             fileName="发货单.pdf"
                         >
-                            {/* @ts-ignore */}
                             {({ loading }: { loading: boolean }) => (
                                 <Button variant="outline" size="sm" disabled={loading}>
                                     <FileText className="mr-2 h-4 w-4" />

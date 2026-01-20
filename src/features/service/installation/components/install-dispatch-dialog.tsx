@@ -63,6 +63,10 @@ export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispa
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        await executeDispatch(values, false);
+    }
+
+    async function executeDispatch(values: z.infer<typeof formSchema>, force: boolean) {
         setIsLoading(true);
         try {
             const result = await dispatchInstallTask({
@@ -72,6 +76,7 @@ export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispa
                 scheduledTimeSlot: values.scheduledTimeSlot,
                 laborFee: values.laborFee ? parseFloat(values.laborFee) : undefined,
                 dispatcherNotes: values.dispatcherNotes,
+                force: force,
             });
 
             if (result.data?.success) {
@@ -79,7 +84,24 @@ export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispa
                 setOpen(false);
                 form.reset();
             } else {
-                toast.error(result.data?.error || result.error || '指派失败');
+                const errorMsg = result.data?.error || result.error || '指派失败';
+                if (errorMsg.startsWith('CONFLICT_SOFT:')) {
+                    // Soft conflict - ask for confirmation
+                    // Remove prefix for display
+                    const message = errorMsg.replace('CONFLICT_SOFT:', '').trim();
+                    if (confirm(`存在调度警告：${message}\n\n是否强制指派？`)) {
+                        await executeDispatch(values, true);
+                        return; // Exit current execution flow
+                    }
+                } else if (errorMsg.startsWith('LOGISTICS_NOT_READY:')) {
+                    const message = errorMsg.replace('LOGISTICS_NOT_READY:', '').trim();
+                    if (confirm(`物流状态警告：${message}\n\n是否强制指派？`)) {
+                        await executeDispatch(values, true);
+                        return;
+                    }
+                } else {
+                    toast.error(errorMsg);
+                }
             }
         } catch (_error) {
             toast.error('请求失败');

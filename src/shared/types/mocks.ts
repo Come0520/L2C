@@ -1,5 +1,5 @@
 /**
- * 测试�?Mock 类型定义
+ * 测试�?Mock 类型定义
  */
 
 import { auth } from '@/shared/lib/auth';

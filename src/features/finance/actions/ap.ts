@@ -18,6 +18,8 @@ import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createPaymentBillSchema, verifyPaymentBillSchema } from './schema';
 import { z } from 'zod';
+import { submitApproval } from '@/features/approval/actions/submission';
+import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
 
 /**
  * 获取供应商应付对账单
@@ -180,10 +182,44 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
             ...billData,
             tenantId: session.user.tenantId,
             paymentNo,
-            status: 'PENDING',
+            status: 'PENDING', // Will update if approval needed
             recordedBy: session.user.id!,
             amount: billData.amount.toString(),
         }).returning();
+
+        // Check Approval Config
+        const flowCode = billData.type === 'REFUND'
+            ? FinanceApprovalLogic.FLOW_CODES.REFUND
+            : FinanceApprovalLogic.FLOW_CODES.PAYMENT;
+
+        const isApprovalActive = await FinanceApprovalLogic.isFlowActive(session.user.tenantId, flowCode);
+        if (isApprovalActive) {
+            const approvalRes = await submitApproval({
+                entityType: 'PAYMENT_BILL',
+                entityId: paymentBillResult.id,
+                flowCode: flowCode,
+                comment: billData.type === 'REFUND' ? 'Refund Bill Created' : 'Payment Bill Created'
+            });
+
+            if (approvalRes.success) {
+                await tx.update(paymentBills)
+                    .set({ status: 'PENDING_APPROVAL' })
+                    .where(eq(paymentBills.id, paymentBillResult.id));
+
+                paymentBillResult.status = 'PENDING_APPROVAL';
+            } else {
+                // If approval submission fails, rollback or specific error? 
+                // Currently inside transaction, so exception rolls back?
+                // submitApproval is distinct transaction? 
+                // submitApproval uses `db.transaction`. Nested transactions in drizzle?
+                // Might be safer to call submitApproval AFTER this transaction or handle manually.
+                // But submitApproval creates approval records.
+                // Let's warn but keep PENDING? Or throw?
+                // Throw ensures consistency.
+                throw new Error('Failed to submit approval: ' + (approvalRes as any).error);
+            }
+        }
+
 
         if (items && items.length > 0) {
             for (const item of items) {
@@ -223,7 +259,9 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
         });
 
         if (!bill) throw new Error('付款单不存在');
-        if (bill.status !== 'PENDING') throw new Error('付款单状态不在待审核');
+        // Allow paying if PENDING (legacy) or APPROVED (workflow done)
+        const validStatuses = ['PENDING', 'APPROVED'];
+        if (!validStatuses.includes(bill.status)) throw new Error('付款单状态不可审核支付');
 
         if (status === 'REJECTED') {
             await tx.update(paymentBills)
@@ -323,31 +361,46 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
 }
 
 /**
- * 自动生成劳务结算单 (扫描已完成且未结算的安装单)
+ * 自动生成劳务结算单 (扫描已完成且未结算的安装单 + 售后扣款)
  */
 export async function generateLaborSettlement() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
+    // 导入 liabilityNotices 表
+    const { liabilityNotices } = await import('@/shared/api/schema');
+
     return await db.transaction(async (tx) => {
         const settledTaskIds = await tx.select({ id: apLaborFeeDetails.installTaskId })
             .from(apLaborFeeDetails)
-            .where(eq(apLaborFeeDetails.tenantId, session.user.tenantId));
-        const excludeIds = settledTaskIds.map(t => t.id);
+            .where(and(
+                eq(apLaborFeeDetails.tenantId, session.user.tenantId),
+                sql`${apLaborFeeDetails.installTaskId} IS NOT NULL`
+            ));
+        const excludeIds = settledTaskIds.map(t => t.id).filter(Boolean) as string[];
 
         const finishedTasks = await tx.query.installTasks.findMany({
             where: and(
                 eq(installTasks.tenantId, session.user.tenantId),
                 eq(installTasks.status, 'COMPLETED'),
-                excludeIds.length > 0 ? sql`${installTasks.id} NOT IN (${excludeIds})` : undefined
+                excludeIds.length > 0 ? sql`${installTasks.id} NOT IN (${sql.join(excludeIds.map(id => sql`${id}`), sql`,`)})` : undefined
             ),
             with: {
                 installer: true
             }
         });
 
-        if (finishedTasks.length === 0) return { count: 0 };
+        // 查询待同步的安装工定责单 (INSTALLER 类型, CONFIRMED 状态, financeStatus=PENDING)
+        const pendingLiabilities = await tx.query.liabilityNotices.findMany({
+            where: and(
+                eq(liabilityNotices.tenantId, session.user.tenantId),
+                eq(liabilityNotices.liablePartyType, 'INSTALLER'),
+                eq(liabilityNotices.status, 'CONFIRMED'),
+                eq(liabilityNotices.financeStatus, 'PENDING')
+            )
+        });
 
+        // 按工人分组任务
         const tasksByWorker = new Map<string, typeof installTasks.$inferSelect[]>();
         finishedTasks.forEach(task => {
             if (!task.installerId) return;
@@ -356,37 +409,59 @@ export async function generateLaborSettlement() {
             tasksByWorker.set(task.installerId, tasks);
         });
 
-        let settlementCount = 0;
-        for (const [workerId, tasks] of tasksByWorker.entries()) {
-            const worker = (tasks[0] as any).installer;
+        // 按工人分组扣款
+        const liabilitiesByWorker = new Map<string, typeof pendingLiabilities>();
+        pendingLiabilities.forEach(ln => {
+            if (!ln.liablePartyId) return;
+            const existing = liabilitiesByWorker.get(ln.liablePartyId) || [];
+            existing.push(ln);
+            liabilitiesByWorker.set(ln.liablePartyId, existing);
+        });
 
-            const totalAmount = tasks.reduce((sum: number, t: typeof installTasks.$inferSelect) => {
+        // 合并所有涉及的工人ID
+        const allWorkerIds = new Set([...tasksByWorker.keys(), ...liabilitiesByWorker.keys()]);
+        if (allWorkerIds.size === 0) return { count: 0, deductionCount: 0 };
+
+        let settlementCount = 0;
+        let deductionCount = 0;
+
+        for (const workerId of allWorkerIds) {
+            const tasks = tasksByWorker.get(workerId) || [];
+            const liabilities = liabilitiesByWorker.get(workerId) || [];
+
+            // 如果没有任务也没有扣款，跳过
+            if (tasks.length === 0 && liabilities.length === 0) continue;
+
+            // 计算安装费用总额
+            const taskTotal = tasks.reduce((sum, t) => {
                 const fee = parseFloat(t.actualLaborFee || '0');
-                if (isNaN(fee)) return sum;
-                return sum + fee;
+                return isNaN(fee) ? sum : sum + fee;
             }, 0);
 
-            if (totalAmount <= 0) {
-                // Might handle 0 fee tasks, but for now skip generating 0 amount statement
-                // But wait, if we skip, they remain "unsettled" forever?
-                // Maybe we should generate it even if 0, or mark them processed.
-                // For now, let's assume valid tasks have fee.
-                // If we strictly skip, next run picks them up again.
-                // Improve: if sum is 0, still settle them?
-                // Let's settle them to clear the queue.
-            }
+            // 计算扣款总额 (负数)
+            const deductionTotal = liabilities.reduce((sum, ln) => {
+                const amt = parseFloat(ln.amount || '0');
+                return isNaN(amt) ? sum : sum - amt; // 扣款为负
+            }, 0);
 
+            const totalAmount = taskTotal + deductionTotal;
+            // 从 tasks 获取 worker 信息 (installer 是关系查询结果)
+            const firstTask = tasks[0] as { installer?: { name?: string } } | undefined;
+            const workerName = firstTask?.installer?.name || 'UNKNOWN';
+
+            // 创建结算单
             const [statement] = await tx.insert(apLaborStatements).values({
                 tenantId: session.user.tenantId,
                 statementNo: `LAB-${Date.now()}-${workerId.slice(0, 4)}`,
                 workerId,
-                workerName: worker?.name || 'UNKNOWN',
-                settlementPeriod: new Date().toISOString().slice(0, 7), // YYYY-MM
+                workerName,
+                settlementPeriod: new Date().toISOString().slice(0, 7),
                 totalAmount: totalAmount.toFixed(2),
                 pendingAmount: totalAmount.toFixed(2),
                 status: 'CALCULATED',
             }).returning();
 
+            // 插入安装费用明细
             for (const task of tasks) {
                 const fee = parseFloat(task.actualLaborFee || '0').toFixed(2);
                 await tx.insert(apLaborFeeDetails).values({
@@ -400,11 +475,100 @@ export async function generateLaborSettlement() {
                     amount: fee,
                 });
             }
+
+            // 插入售后扣款明细 (负数金额)
+            for (const ln of liabilities) {
+                const deductionAmt = (-parseFloat(ln.amount || '0')).toFixed(2);
+                await tx.insert(apLaborFeeDetails).values({
+                    tenantId: session.user.tenantId,
+                    statementId: statement.id,
+                    liabilityNoticeId: ln.id,
+                    liabilityNoticeNo: ln.noticeNo,
+                    feeType: 'DEDUCTION',
+                    description: `售后扣款: ${ln.reason?.slice(0, 50) || '定责扣款'}`,
+                    calculation: `扣款: -${ln.amount}`,
+                    amount: deductionAmt,
+                });
+
+                // 更新定责单财务状态
+                await tx.update(liabilityNotices)
+                    .set({
+                        financeStatus: 'SYNCED',
+                        financeStatementId: statement.id,
+                        financeSyncedAt: new Date(),
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(liabilityNotices.id, ln.id));
+
+                deductionCount++;
+            }
+
             settlementCount++;
         }
 
         revalidatePath('/finance/ap/labor');
-        return { count: settlementCount };
+        return { count: settlementCount, deductionCount };
+    });
+}
+
+/**
+ * 创建供应商定责扣款对账单 (红字冲账)
+ * 用于处理 SUPPLIER 类型的售后定责
+ */
+export async function createSupplierLiabilityStatement(liabilityNoticeId: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+
+    const { liabilityNotices, suppliers } = await import('@/shared/api/schema');
+
+    return await db.transaction(async (tx) => {
+        // 获取定责单详情
+        const notice = await tx.query.liabilityNotices.findFirst({
+            where: and(
+                eq(liabilityNotices.id, liabilityNoticeId),
+                eq(liabilityNotices.tenantId, session.user.tenantId)
+            )
+        });
+
+        if (!notice) throw new Error('定责单不存在');
+        if (notice.liablePartyType !== 'FACTORY') throw new Error('此定责单非供应商责任');
+        if (notice.status !== 'CONFIRMED') throw new Error('定责单未确认');
+        if (notice.financeStatus === 'SYNCED') throw new Error('已同步财务系统');
+
+        // 获取供应商信息
+        const supplier = notice.liablePartyId
+            ? await tx.query.suppliers.findFirst({
+                where: eq(suppliers.id, notice.liablePartyId)
+            })
+            : null;
+
+        // 创建红字对账单 (负数金额)
+        const deductionAmount = (-parseFloat(notice.amount || '0')).toFixed(2);
+        const [statement] = await tx.insert(apSupplierStatements).values({
+            tenantId: session.user.tenantId,
+            statementNo: `AP-DEDUCT-${Date.now()}`,
+            purchaseOrderId: notice.sourcePurchaseOrderId || '00000000-0000-0000-0000-000000000000',
+            supplierId: notice.liablePartyId || '00000000-0000-0000-0000-000000000000',
+            supplierName: supplier?.name || '未知供应商',
+            totalAmount: deductionAmount,
+            paidAmount: '0',
+            pendingAmount: deductionAmount,
+            status: 'RECONCILING',
+            purchaserId: session.user.id!,
+        }).returning();
+
+        // 更新定责单财务状态
+        await tx.update(liabilityNotices)
+            .set({
+                financeStatus: 'SYNCED',
+                financeStatementId: statement.id,
+                financeSyncedAt: new Date(),
+                updatedAt: new Date(),
+            })
+            .where(eq(liabilityNotices.id, liabilityNoticeId));
+
+        revalidatePath('/finance/ap');
+        return { success: true, statementId: statement.id };
     });
 }
 
@@ -445,5 +609,92 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
         } as any).returning();
 
         return { success: true, id: statement.id };
+    });
+}
+
+/**
+ * 更新付款单 (Revise)
+ */
+export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSchema> & { id: string }) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+
+    const validatedData = createPaymentBillSchema.parse(data); // Re-validate
+    const { items, ...billData } = validatedData;
+    const { id } = data;
+
+    return await db.transaction(async (tx) => {
+        // 1. Check Existence & Status
+        const existingBill = await tx.query.paymentBills.findFirst({
+            where: and(
+                eq(paymentBills.id, id),
+                eq(paymentBills.tenantId, session.user.tenantId)
+            )
+        });
+
+        if (!existingBill) throw new Error('付款单不存在');
+
+        const editableStatuses = ['DRAFT', 'REJECTED', 'WITHDRAWN'];
+        if (!editableStatuses.includes(existingBill.status)) {
+            throw new Error('当前状态不可修改');
+        }
+
+        // 2. Update Bill
+        const [updatedBill] = await tx.update(paymentBills)
+            .set({
+                ...billData,
+                amount: billData.amount.toString(),
+                updatedAt: new Date(),
+                status: 'PENDING',
+            })
+            .where(eq(paymentBills.id, id))
+            .returning();
+
+        // 3. Update Items (Delete and Re-insert is simplest)
+        await tx.delete(paymentBillItems).where(eq(paymentBillItems.paymentBillId, id));
+
+        if (items && items.length > 0) {
+            for (const item of items) {
+                await tx.insert(paymentBillItems).values({
+                    tenantId: session.user.tenantId,
+                    paymentBillId: id,
+                    statementType: item.statementType,
+                    statementId: item.statementId,
+                    statementNo: 'PENDING', // Should fetch actual No? createPaymentBill used 'PENDING' too.
+                    amount: item.amount.toString(),
+                });
+            }
+        }
+
+        // 4. Trigger Approval (if configured)
+        const flowCode = billData.type === 'REFUND'
+            ? FinanceApprovalLogic.FLOW_CODES.REFUND
+            : FinanceApprovalLogic.FLOW_CODES.PAYMENT;
+
+        const isApprovalActive = await FinanceApprovalLogic.isFlowActive(session.user.tenantId, flowCode);
+
+        if (isApprovalActive) {
+            // Check if there is an active approval? existingBill status check ensures we are not active.
+            // Submit new approval
+            const approvalRes = await submitApproval({
+                entityType: 'PAYMENT_BILL',
+                entityId: id,
+                flowCode: flowCode,
+                comment: billData.type === 'REFUND' ? 'Refund Bill Revised' : 'Payment Bill Revised'
+            });
+
+            if (approvalRes.success) {
+                await tx.update(paymentBills)
+                    .set({ status: 'PENDING_APPROVAL' })
+                    .where(eq(paymentBills.id, id));
+
+                updatedBill.status = 'PENDING_APPROVAL';
+            } else {
+                throw new Error('Failed to submit approval: ' + (approvalRes as any).error);
+            }
+        }
+
+        revalidatePath('/finance/ap');
+        return updatedBill;
     });
 }

@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, index, decimal, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index, decimal, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 import { marketChannels } from './catalogs';
@@ -37,6 +37,9 @@ export const leads = pgTable('leads', {
     tags: text('tags').array(), // PostgreSQL array
     notes: text('notes'),
     lostReason: text('lost_reason'),
+
+    // Webhook / 外部系统集成
+    externalId: varchar('external_id', { length: 100 }), // 外部系统线索ID，用于幂等性校验
 
     // Assignment & Timeline
     assignedSalesId: uuid('assigned_sales_id').references(() => users.id),
@@ -98,6 +101,7 @@ export const leadStatusHistory = pgTable('lead_status_history', {
 
     reason: text('reason'),
 }, (table) => ({
-    leadHistoryIdx: index('idx_lead_history_lead').on(table.leadId),
+    leadHistoryTenantIdx: index('idx_lead_history_tenant').on(table.tenantId),
+    leadHistoryLeadIdx: index('idx_lead_history_lead').on(table.leadId),
 }));
 

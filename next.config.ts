@@ -20,6 +20,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // 优化包导入：自动将 barrel 导入转换为直接导入
+    // 这可以显著减少包大小和冷启动时间
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      '@radix-ui/react-icons',
+      'zod',
+      '@tanstack/react-table',
+      'react-hook-form',
+    ],
   },
 
   // Turbopack 配置 (Next.js 16 默认)
@@ -43,7 +53,39 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+
+  // 安全响应头配置
+  async headers() {
+    return [
+      {
+        // 所有路由应用安全头
+        source: '/:path*',
+        headers: [
+          // 防止 MIME 类型嗅探
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // 防止点击劫持
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // XSS 保护（旧浏览器）
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          // Referrer 策略
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // 权限策略：禁用不必要的浏览器功能
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        ],
+      },
+      {
+        // API 路由额外安全头
+        source: '/api/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // API 不允许被嵌入
+          { key: 'X-Frame-Options', value: 'DENY' },
+          // 禁止缓存敏感 API
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
-

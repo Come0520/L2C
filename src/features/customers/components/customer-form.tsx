@@ -27,20 +27,30 @@ import { useTransition } from 'react';
 import { z } from 'zod';
 
 interface CustomerFormProps {
-    onSuccess?: () => void;
+    onSuccess?: (customer?: { id: string }) => void;
     userId: string;
     tenantId: string;
-    initialData?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialData?: any; // 客户数据结构复杂，后续可定义具体类型
 }
 
 type FormValues = z.infer<typeof customerSchema>;
 
+/**
+ * 客户表单组件
+ *
+ * 用于创建和编辑客户信息，包含：
+ * - 基本信息（姓名、电话、微信等）
+ * - 客户类型和等级
+ * - 渠道来源和带单人
+ * - 地址和备注
+ */
 export function CustomerForm({ onSuccess, userId, tenantId, initialData }: CustomerFormProps) {
     const [isPending, startTransition] = useTransition();
     const isEdit = !!initialData;
 
     const form = useForm<FormValues>({
-        resolver: zodResolver(customerSchema) as any, // Cast to any to avoid strict type mismatch with FormValues
+        resolver: zodResolver(customerSchema) as any,
         defaultValues: {
             name: initialData?.name || '',
             phone: initialData?.phone || '',
@@ -50,7 +60,8 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
             level: initialData?.level || 'D',
             address: initialData?.addresses?.find((a: any) => a.isDefault)?.address || '',
             notes: initialData?.notes || '',
-            // tags: initialData?.tags || [],
+            source: initialData?.source || '',
+            referrerName: initialData?.referrerName || '',
         } as any,
     });
 
@@ -60,13 +71,15 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                 if (isEdit) {
                     await updateCustomer({ id: initialData.id, data: values }, userId);
                     toast.success('客户更新成功');
+                    onSuccess?.();
                 } else {
-                    await createCustomer(values, userId, tenantId);
+                    const result = await createCustomer(values, userId, tenantId);
                     toast.success('客户创建成功');
+                    onSuccess?.(result);
                 }
-                onSuccess?.();
-            } catch (error: any) {
-                toast.error(error.message || (isEdit ? '更新失败' : '创建失败'));
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : (isEdit ? '更新失败' : '创建失败');
+                toast.error(message);
             }
         });
     };
@@ -74,6 +87,7 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* 基本信息 */}
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -103,6 +117,7 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                     />
                 </div>
 
+                {/* 客户类型和等级 */}
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -152,6 +167,52 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                     />
                 </div>
 
+                {/* 渠道来源和带单人 */}
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="source"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>渠道来源</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="选择渠道来源" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="抖音">抖音</SelectItem>
+                                        <SelectItem value="小红书">小红书</SelectItem>
+                                        <SelectItem value="微信">微信</SelectItem>
+                                        <SelectItem value="朋友介绍">朋友介绍</SelectItem>
+                                        <SelectItem value="老客户转介绍">老客户转介绍</SelectItem>
+                                        <SelectItem value="门店自然进店">门店自然进店</SelectItem>
+                                        <SelectItem value="设计师带单">设计师带单</SelectItem>
+                                        <SelectItem value="装修公司">装修公司</SelectItem>
+                                        <SelectItem value="其他">其他</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="referrerName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>带单人</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="设计师/介绍人姓名" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {/* 微信和备用电话 */}
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -181,6 +242,7 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                     />
                 </div>
 
+                {/* 地址（仅新建时显示） */}
                 {!isEdit && (
                     <FormField
                         control={form.control}
@@ -197,6 +259,7 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                     />
                 )}
 
+                {/* 备注 */}
                 <FormField
                     control={form.control}
                     name="notes"

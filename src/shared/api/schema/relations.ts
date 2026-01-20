@@ -6,7 +6,9 @@ import {
 } from './infrastructure';
 
 import {
-    customers
+    customers,
+    phoneViewLogs,
+    customerMergeLogs
 } from './customers';
 
 import {
@@ -15,17 +17,33 @@ import {
 
 import {
     leads,
-    leadActivities
+    leadActivities,
+    leadStatusHistory
 } from './leads';
 
-import { marketChannels, products, productAttributeTemplates } from './catalogs';
-import { channels, channelContacts } from './channels';
-import { suppliers, purchaseOrders, productSuppliers, productionTasks, purchaseOrderItems } from './supply-chain';
+import { marketChannels, products, productAttributeTemplates, productPriceHistory } from './catalogs';
+import { channels, channelContacts, channelCommissions, channelSettlements, commissionAdjustments } from './channels';
+import {
+    suppliers,
+    purchaseOrders,
+    productSuppliers,
+    productionTasks,
+    purchaseOrderItems,
+    splitRouteRules,
+    channelSpecificPrices,
+    productBundles,
+    productBundleItems,
+    productPackages,
+    packageProducts,
+    fabricInventory,
+    fabricInventoryLogs
+} from './supply-chain';
 
 import {
     orders,
     orderItems,
-    paymentSchedules
+    paymentSchedules,
+    orderChanges
 } from './orders';
 
 import {
@@ -36,14 +54,17 @@ import {
 import {
     quotes,
     quoteItems,
-    quoteRooms
+    quoteRooms,
+    quotePlans,
+    quotePlanItems
 } from './quotes';
 
 import {
     approvalFlows,
     approvalNodes,
     approvals,
-    approvalTasks
+    approvalTasks,
+    approvalDelegations
 } from './approval';
 
 import {
@@ -55,8 +76,12 @@ import {
     installPhotos
 } from './service';
 
-
-
+import { workOrders, workOrderItems } from './processing';
+import { warehouses, inventory, inventoryLogs } from './inventory';
+import { notifications, notificationPreferences } from './notifications';
+import { loyaltyTransactions } from './loyalty';
+import { auditLogs } from './audit';
+import { quoteConfig } from './quote-config';
 
 import {
     financeConfigs,
@@ -72,7 +97,9 @@ import {
     apLaborStatements,
     apLaborFeeDetails,
     reconciliations,
-    reconciliationDetails
+    reconciliationDetails,
+    receiptBills,
+    receiptBillItems
 } from './finance';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -642,6 +669,14 @@ export const paymentBillItemsRelations = relations(paymentBillItems, ({ one }) =
         fields: [paymentBillItems.paymentBillId],
         references: [paymentBills.id],
     }),
+    supplierStatement: one(apSupplierStatements, {
+        fields: [paymentBillItems.statementId],
+        references: [apSupplierStatements.id],
+    }),
+    laborStatement: one(apLaborStatements, {
+        fields: [paymentBillItems.statementId],
+        references: [apLaborStatements.id],
+    }),
 }));
 
 export const apLaborStatementsRelations = relations(apLaborStatements, ({ one, many }) => ({
@@ -689,6 +724,50 @@ export const reconciliationDetailsRelations = relations(reconciliationDetails, (
         references: [reconciliations.id],
     }),
 }));
+
+export const receiptBillsRelations = relations(receiptBills, ({ one, many }) => ({
+    tenant: one(tenants, {
+        fields: [receiptBills.tenantId],
+        references: [tenants.id],
+    }),
+    customer: one(customers, {
+        fields: [receiptBills.customerId],
+        references: [customers.id],
+    }),
+    account: one(financeAccounts, {
+        fields: [receiptBills.accountId],
+        references: [financeAccounts.id],
+    }),
+    createdBy: one(users, {
+        fields: [receiptBills.createdBy],
+        references: [users.id],
+    }),
+    verifiedBy: one(users, {
+        fields: [receiptBills.verifiedBy],
+        references: [users.id],
+    }),
+    items: many(receiptBillItems),
+}));
+
+export const receiptBillItemsRelations = relations(receiptBillItems, ({ one }) => ({
+    receiptBill: one(receiptBills, {
+        fields: [receiptBillItems.receiptBillId],
+        references: [receiptBills.id],
+    }),
+    order: one(orders, {
+        fields: [receiptBillItems.orderId],
+        references: [orders.id],
+    }),
+    statement: one(arStatements, {
+        fields: [receiptBillItems.statementId],
+        references: [arStatements.id],
+    }),
+    schedule: one(paymentSchedules, {
+        fields: [receiptBillItems.scheduleId],
+        references: [paymentSchedules.id],
+    }),
+}));
+
 
 export const afterSalesTicketsRelations = relations(afterSalesTickets, ({ one, many }) => ({
     tenant: one(tenants, {
@@ -783,3 +862,167 @@ export const approvalTasksRelations = relations(approvalTasks, ({ one }) => ({
         references: [users.id],
     }),
 }));
+
+// ==================== 新增 Relations (Phase 1 整改) ====================
+
+// === 线索模块 (Leads) ===
+export const leadStatusHistoryRelations = relations(leadStatusHistory, ({ one }) => ({
+    lead: one(leads, { fields: [leadStatusHistory.leadId], references: [leads.id] }),
+    changedBy: one(users, { fields: [leadStatusHistory.changedBy], references: [users.id] }),
+}));
+
+// === 客户模块 (Customers) ===
+export const phoneViewLogsRelations = relations(phoneViewLogs, ({ one }) => ({
+    customer: one(customers, { fields: [phoneViewLogs.customerId], references: [customers.id] }),
+    viewer: one(users, { fields: [phoneViewLogs.viewerId], references: [users.id] }),
+}));
+
+export const customerMergeLogsRelations = relations(customerMergeLogs, ({ one }) => ({
+    primaryCustomer: one(customers, { fields: [customerMergeLogs.primaryCustomerId], references: [customers.id] }),
+    operator: one(users, { fields: [customerMergeLogs.operatorId], references: [users.id] }),
+}));
+
+// === 渠道模块 (Channels) ===
+export const channelCommissionsRelations = relations(channelCommissions, ({ one }) => ({
+    channel: one(channels, { fields: [channelCommissions.channelId], references: [channels.id] }),
+    settledBy: one(users, { fields: [channelCommissions.settledBy], references: [users.id] }),
+}));
+
+export const channelSettlementsRelations = relations(channelSettlements, ({ one }) => ({
+    channel: one(channels, { fields: [channelSettlements.channelId], references: [channels.id] }),
+    createdBy: one(users, { fields: [channelSettlements.createdBy], references: [users.id] }),
+    approvedBy: one(users, { fields: [channelSettlements.approvedBy], references: [users.id] }),
+}));
+
+export const commissionAdjustmentsRelations = relations(commissionAdjustments, ({ one }) => ({
+    channel: one(channels, { fields: [commissionAdjustments.channelId], references: [channels.id] }),
+    originalCommission: one(channelCommissions, { fields: [commissionAdjustments.originalCommissionId], references: [channelCommissions.id] }),
+}));
+
+// === 产品模块 (Products) ===
+export const productPriceHistoryRelations = relations(productPriceHistory, ({ one }) => ({
+    product: one(products, { fields: [productPriceHistory.productId], references: [products.id] }),
+    createdBy: one(users, { fields: [productPriceHistory.createdBy], references: [users.id] }),
+}));
+
+// === 订单模块 (Orders) ===
+export const orderChangesRelations = relations(orderChanges, ({ one }) => ({
+    order: one(orders, { fields: [orderChanges.orderId], references: [orders.id] }),
+    requestedBy: one(users, { fields: [orderChanges.requestedBy], references: [users.id] }),
+    approvedBy: one(users, { fields: [orderChanges.approvedBy], references: [users.id] }),
+}));
+
+// === 报价模块 (Quotes) ===
+export const quotePlansRelations = relations(quotePlans, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [quotePlans.tenantId], references: [tenants.id] }),
+    items: many(quotePlanItems),
+}));
+
+export const quotePlanItemsRelations = relations(quotePlanItems, ({ one }) => ({
+    plan: one(quotePlans, { fields: [quotePlanItems.planId], references: [quotePlans.id] }),
+}));
+
+// === 供应链模块 (Supply Chain) ===
+export const splitRouteRulesRelations = relations(splitRouteRules, ({ one }) => ({
+    tenant: one(tenants, { fields: [splitRouteRules.tenantId], references: [tenants.id] }),
+    createdBy: one(users, { fields: [splitRouteRules.createdBy], references: [users.id] }),
+}));
+
+export const channelSpecificPricesRelations = relations(channelSpecificPrices, ({ one }) => ({
+    tenant: one(tenants, { fields: [channelSpecificPrices.tenantId], references: [tenants.id] }),
+}));
+
+export const productBundlesRelations = relations(productBundles, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [productBundles.tenantId], references: [tenants.id] }),
+    items: many(productBundleItems),
+}));
+
+export const productBundleItemsRelations = relations(productBundleItems, ({ one }) => ({
+    bundle: one(productBundles, { fields: [productBundleItems.bundleId], references: [productBundles.id] }),
+}));
+
+export const productPackagesRelations = relations(productPackages, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [productPackages.tenantId], references: [tenants.id] }),
+    products: many(packageProducts),
+}));
+
+export const packageProductsRelations = relations(packageProducts, ({ one }) => ({
+    package: one(productPackages, { fields: [packageProducts.packageId], references: [productPackages.id] }),
+}));
+
+export const fabricInventoryRelations = relations(fabricInventory, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [fabricInventory.tenantId], references: [tenants.id] }),
+    logs: many(fabricInventoryLogs),
+}));
+
+export const fabricInventoryLogsRelations = relations(fabricInventoryLogs, ({ one }) => ({
+    inventory: one(fabricInventory, { fields: [fabricInventoryLogs.fabricInventoryId], references: [fabricInventory.id] }),
+}));
+
+// === 审批模块 (Approvals) ===
+export const approvalDelegationsRelations = relations(approvalDelegations, ({ one }) => ({
+    tenant: one(tenants, { fields: [approvalDelegations.tenantId], references: [tenants.id] }),
+    delegator: one(users, { fields: [approvalDelegations.delegatorId], references: [users.id] }),
+    delegatee: one(users, { fields: [approvalDelegations.delegateeId], references: [users.id] }),
+    flow: one(approvalFlows, { fields: [approvalDelegations.flowId], references: [approvalFlows.id] }),
+}));
+
+// === 加工模块 (Processing) ===
+export const workOrdersRelations = relations(workOrders, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [workOrders.tenantId], references: [tenants.id] }),
+    order: one(orders, { fields: [workOrders.orderId], references: [orders.id] }),
+    purchaseOrder: one(purchaseOrders, { fields: [workOrders.poId], references: [purchaseOrders.id] }),
+    supplier: one(suppliers, { fields: [workOrders.supplierId], references: [suppliers.id] }),
+    items: many(workOrderItems),
+}));
+
+export const workOrderItemsRelations = relations(workOrderItems, ({ one }) => ({
+    workOrder: one(workOrders, { fields: [workOrderItems.woId], references: [workOrders.id] }),
+    orderItem: one(orderItems, { fields: [workOrderItems.orderItemId], references: [orderItems.id] }),
+}));
+
+// === 库存模块 (Inventory) ===
+export const warehousesRelations = relations(warehouses, ({ many }) => ({
+    inventories: many(inventory),
+}));
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+    warehouse: one(warehouses, { fields: [inventory.warehouseId], references: [warehouses.id] }),
+    product: one(products, { fields: [inventory.productId], references: [products.id] }),
+}));
+
+export const inventoryLogsRelations = relations(inventoryLogs, ({ one }) => ({
+    warehouse: one(warehouses, { fields: [inventoryLogs.warehouseId], references: [warehouses.id] }),
+    product: one(products, { fields: [inventoryLogs.productId], references: [products.id] }),
+    operator: one(users, { fields: [inventoryLogs.operatorId], references: [users.id] }),
+}));
+
+// === 通知模块 (Notifications) ===
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    tenant: one(tenants, { fields: [notifications.tenantId], references: [tenants.id] }),
+    user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+    tenant: one(tenants, { fields: [notificationPreferences.tenantId], references: [tenants.id] }),
+    user: one(users, { fields: [notificationPreferences.userId], references: [users.id] }),
+}));
+
+// === 忠诚度模块 (Loyalty) ===
+export const loyaltyTransactionsRelations = relations(loyaltyTransactions, ({ one }) => ({
+    tenant: one(tenants, { fields: [loyaltyTransactions.tenantId], references: [tenants.id] }),
+    customer: one(customers, { fields: [loyaltyTransactions.customerId], references: [customers.id] }),
+    createdBy: one(users, { fields: [loyaltyTransactions.createdBy], references: [users.id] }),
+}));
+
+// === 审计模块 (Audit) ===
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+    tenant: one(tenants, { fields: [auditLogs.tenantId], references: [tenants.id] }),
+    user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
+}));
+
+// === 报价配置模块 (Quote Config) ===
+export const quoteConfigRelations = relations(quoteConfig, ({ one }) => ({
+    updatedBy: one(users, { fields: [quoteConfig.updatedBy], references: [users.id] }),
+}));
+

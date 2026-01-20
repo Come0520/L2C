@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const channelSchema = z.object({
     name: z.string().min(1, '请输入渠道名称'),
     code: z.string().min(1, '请输入渠道编号'),
-    channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY']),
+    category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL']).default('OFFLINE'),
+    channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY', 'DOUYIN', 'XIAOHONGSHU', 'STORE', 'OTHER']),
     level: z.enum(['S', 'A', 'B', 'C']).default('C'),
     contactName: z.string().min(1, '请输入核心联系人'),
     phone: z.string().min(1, '请输入联系电话'),

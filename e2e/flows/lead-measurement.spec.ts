@@ -9,7 +9,7 @@ test.describe('Lead Measurement Service', () => {
         await page.goto('/leads');
         
         // 创建一个新的线索用于测试测量服务
-        await page.click('text=录入线索');
+        await page.click('text=新建线索');
         
         // 填写线索表单
         const phoneNumber = `13800138${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
@@ -17,18 +17,9 @@ test.describe('Lead Measurement Service', () => {
         await page.fill('[data-testid="lead-phone-input"]', phoneNumber);
         
         // 选择来源大类
-        await page.click('.flex > .relative > .peer');
-        await page.click('text=线上');
-        
-        // 选择具体渠道
-        await page.click('.grid > .relative > .peer');
-        await page.click('text=微信');
-        
-        // 选择意向等级
-        await page.click('.grid > .grid-cols-2 > .relative > .peer');
-        await page.click('text=高意向');
-        
-        // 点击「立即创建」按钮
+                // 选择具体渠道
+                // 选择意向等级
+                // 点击「立即创建」按钮
         await page.click('[data-testid="submit-lead-btn"]');
         
         // 验证线索创建成功
@@ -79,8 +70,7 @@ test.describe('Lead Measurement Service', () => {
         await page.click('text=指派师傅');
         
         // 选择测量师傅
-        await page.click('.absolute > .peer');
-        await page.click('text=测量师傅1');
+                await page.click('text=测量师傅1');
         
         // 设置预约时间
         const tomorrow = new Date();

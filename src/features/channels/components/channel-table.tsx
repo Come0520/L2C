@@ -1,5 +1,3 @@
-'use client';
-
 import {
     Table,
     TableBody,
@@ -10,11 +8,31 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Edit2, Eye, UserPlus } from 'lucide-react';
+import { Edit2, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { MaskedPhone } from '@/shared/components/masked-phone';
+import { logPhoneView } from '@/features/customers/actions/privacy-actions';
+
+interface Channel {
+    id: string;
+    name: string;
+    code: string;
+    channelType: string;
+    level: string;
+    contactName: string;
+    phone: string;
+    totalLeads: number;
+    totalDealAmount: string | number;
+    status: string;
+}
 
 interface ChannelTableProps {
-    data: any[]; // To be narrowed with types
+    data: Channel[];
+    currentUser?: {
+        id: string;
+        tenantId: string;
+        role: string;
+    };
     onEdit?: (id: string) => void;
 }
 
@@ -31,9 +49,25 @@ const LEVEL_MAP: Record<string, string> = {
     C: 'C级 (潜在)',
 };
 
-export function ChannelTable({ data }: ChannelTableProps) {
+export function ChannelTable({ data, currentUser }: ChannelTableProps) {
+    // 权限检查
+    const canViewFull = () => {
+        if (!currentUser) return false;
+        return currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
+    };
+
+    const handleViewPhone = async (channelId: string) => {
+        if (!currentUser) return;
+        await logPhoneView({
+            customerId: channelId, // 渠道商暂借用 customerId 接口或后续扩展
+            viewerId: currentUser.id,
+            viewerRole: currentUser.role,
+            tenantId: currentUser.tenantId,
+        });
+    };
+
     return (
-        <div className="rounded-md border bg-white">
+        <div className="rounded-md border glass-liquid">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -60,8 +94,15 @@ export function ChannelTable({ data }: ChannelTableProps) {
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                <div>{item.contactName}</div>
-                                <div className="text-xs text-gray-500">{item.phone}</div>
+                                <div className="font-medium">{item.contactName}</div>
+                                <div className="text-xs text-gray-500">
+                                    <MaskedPhone
+                                        phone={item.phone}
+                                        customerId={item.id}
+                                        canViewFull={canViewFull()}
+                                        onViewFull={handleViewPhone}
+                                    />
+                                </div>
                             </TableCell>
                             <TableCell>{item.totalLeads}</TableCell>
                             <TableCell>¥{item.totalDealAmount}</TableCell>
@@ -98,3 +139,4 @@ export function ChannelTable({ data }: ChannelTableProps) {
         </div>
     );
 }
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -51,9 +51,16 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
         return statusSteps.findIndex(step => step.key === data.status);
     };
 
-    const handleStatusChange = (newStatus: string) => {
+    // 使用 useCallback 稳定回调引用，避免子组件重渲染
+    const handleStatusChange = useCallback((newStatus: string) => {
         onUpdateStatus?.(data.id, newStatus);
-    };
+    }, [onUpdateStatus, data.id]);
+
+    const handleConfirmOrder = useCallback(() => handleStatusChange('IN_PRODUCTION'), [handleStatusChange]);
+    const handleMarkReady = useCallback(() => handleStatusChange('READY'), [handleStatusChange]);
+    const handleConfirmDelivered = useCallback(() => handleStatusChange('DELIVERED'), [handleStatusChange]);
+    const handleOpenLogistics = useCallback(() => setShowLogisticsDialog(true), []);
+    const handleOpenQuoteUpload = useCallback(() => setShowQuoteUpload(true), []);
 
     return (
         <div className="space-y-6">
@@ -64,23 +71,23 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
                 </div>
                 <div className="flex gap-2">
                     {data.status === 'DRAFT' && (
-                        <Button onClick={() => handleStatusChange('IN_PRODUCTION')}>
+                        <Button onClick={handleConfirmOrder}>
                             确认下单
                         </Button>
                     )}
                     {data.status === 'IN_PRODUCTION' && (
-                        <Button onClick={() => handleStatusChange('READY')}>
+                        <Button onClick={handleMarkReady}>
                             备货完成
                         </Button>
                     )}
                     {data.status === 'READY' && (
-                        <Button onClick={() => setShowLogisticsDialog(true)}>
+                        <Button onClick={handleOpenLogistics}>
                             <Truck className="mr-2 h-4 w-4" />
                             填写物流
                         </Button>
                     )}
                     {data.status === 'SHIPPED' && (
-                        <Button variant="outline" onClick={() => handleStatusChange('DELIVERED')}>
+                        <Button variant="outline" onClick={handleConfirmDelivered}>
                             确认到货
                         </Button>
                     )}
@@ -109,7 +116,7 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
                                     </span>
                                     {index < statusSteps.length - 1 && (
                                         <div className={`absolute top-5 left-1/2 w-full h-0.5 ${index < getCurrentStepIndex() ? 'bg-primary' : 'bg-muted'
-                                            }`} style={{ width: '100%' }} />
+                                            }`} />
                                     )}
                                 </div>
                             );

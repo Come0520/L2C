@@ -36,10 +36,10 @@ interface OrderTableProps {
 
 export const OrderTable = React.memo(function OrderTable({ data }: OrderTableProps) {
     return (
-        <div className="rounded-md border bg-white">
+        <div className="glass-table overflow-hidden">
             <Table>
                 <TableHeader>
-                    <TableRow className="bg-muted/50">
+                    <TableRow className="glass-table-header">
                         <TableHead className="w-[180px]">订单号</TableHead>
                         <TableHead>客户姓名</TableHead>
                         <TableHead className="text-right">订单金额</TableHead>
@@ -59,7 +59,7 @@ export const OrderTable = React.memo(function OrderTable({ data }: OrderTablePro
                         </TableRow>
                     ) : (
                         data.map((order) => (
-                            <TableRow key={order.id} className="hover:bg-muted/30">
+                            <TableRow key={order.id} className="glass-row-hover">
                                 <TableCell className="font-mono font-medium">
                                     <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline">
                                         {order.orderNo}

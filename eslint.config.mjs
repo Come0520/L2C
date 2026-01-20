@@ -5,6 +5,26 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      // 允许下划线前缀的参数和变量不使用
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_"
+      }],
+      // 降级 any 类型为警告，允许项目逐步清理
+      "@typescript-eslint/no-explicit-any": "warn",
+      // 允许 require() 导入（用于工具脚本和测试）
+      "@typescript-eslint/no-require-imports": "off",
+      // 允许 @ts-ignore 和 @ts-expect-error 注释
+      "@typescript-eslint/ban-ts-comment": "off",
+      // 允许 JSX 中使用未转义的引号
+      "react/no-unescaped-entities": "off",
+      // 禁用 react-compiler 规则（实验性功能）
+      "react-compiler/react-compiler": "off"
+    }
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

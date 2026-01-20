@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Card, CardHeader, CardContent, CardFooter } from '@/shared/ui/card';
-import { Loader2, Lock, Phone } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import Phone from 'lucide-react/dist/esm/icons/phone';
 import { toast } from 'sonner';
 
 export default function LoginPage() {

@@ -1,14 +1,18 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, date, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, date, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 import { quotes, quoteItems } from './quotes';
 import { products } from './catalogs';
+import { leads } from './leads';
+import { purchaseOrders, suppliers } from './supply-chain';
 import {
     orderStatusEnum,
     productCategoryEnum,
     paymentMethodEnum,
     paymentScheduleStatusEnum,
-    orderSettlementTypeEnum
+    orderSettlementTypeEnum,
+    changeRequestTypeEnum,
+    changeRequestStatusEnum
 } from './enums';
 
 export const orders = pgTable('orders', {
@@ -19,7 +23,7 @@ export const orders = pgTable('orders', {
     quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
     quoteVersionId: uuid('quote_version_id').notNull(), // Should reference quote_versions if exists, or just UUID
 
-    leadId: uuid('lead_id'), // Optional link to lead
+    leadId: uuid('lead_id').references(() => leads.id), // 线索关联
 
     customerId: uuid('customer_id').references(() => customers.id).notNull(),
     customerName: varchar('customer_name', { length: 100 }), // Denormalized for quick access
@@ -53,24 +57,34 @@ export const orders = pgTable('orders', {
     salesId: uuid('sales_id').references(() => users.id),
 
     remark: text('remark'),
+    snapshotData: jsonb('snapshot_data'),
+    logistics: jsonb('logistics'), // Stores tracking info (carrier, trackingNo, traces)
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+
+    // Pause functionality
+    pausedAt: timestamp('paused_at', { withTimezone: true }),
+    pauseReason: text('pause_reason'),
+    pauseCumulativeDays: integer('pause_cumulative_days').default(0),
+
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
     orderTenantIdx: index('idx_orders_tenant').on(table.tenantId),
     orderCustomerIdx: index('idx_orders_customer').on(table.customerId),
     orderQuoteIdx: index('idx_orders_quote').on(table.quoteId),
     orderNoIdx: index('idx_orders_order_no').on(table.orderNo),
+    orderStatusIdx: index('idx_orders_status').on(table.status),
+    orderSalesIdx: index('idx_orders_sales').on(table.salesId),
 }));
 
 export const orderItems = pgTable('order_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }).notNull(),
 
     quoteItemId: uuid('quote_item_id').references(() => quoteItems.id).notNull(),
 
@@ -87,14 +101,18 @@ export const orderItems = pgTable('order_items', {
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
     subtotal: decimal('subtotal', { precision: 12, scale: 2 }).notNull(),
 
-    // Split logic
-    poId: uuid('po_id'), // Will reference purchase_orders later
-    supplierId: uuid('supplier_id'), // Will reference suppliers
+    // 拆单关联 (Split logic)
+    poId: uuid('po_id').references(() => purchaseOrders.id), // 采购单关联
+    supplierId: uuid('supplier_id').references(() => suppliers.id), // 供应商关联
 
     status: varchar('status', { length: 50 }).default('PENDING'), // Item level status
 
     remark: text('remark'),
     sortOrder: integer('sort_order').default(0),
+
+    // Snapshot fields
+    attributes: jsonb('attributes').default({}),
+    calculationParams: jsonb('calculation_params'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -104,7 +122,7 @@ export const orderItems = pgTable('order_items', {
 export const paymentSchedules = pgTable('payment_schedules', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }).notNull(),
     statementId: uuid('statement_id'), // Link to AR Statement (avoid circular ref)
 
     name: varchar('name', { length: 100 }).notNull(), // Deposit, Balance, etc.
@@ -121,3 +139,29 @@ export const paymentSchedules = pgTable('payment_schedules', {
 }, (table) => ({
     paymentSchedulesOrderIdx: index('idx_payment_schedules_order').on(table.orderId),
 }));
+
+export const orderChanges = pgTable('order_changes', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    orderId: uuid('order_id').references(() => orders.id).notNull(),
+
+    type: changeRequestTypeEnum('type').notNull(),
+    reason: text('reason').notNull(),
+    status: changeRequestStatusEnum('status').default('PENDING'),
+
+    diffAmount: decimal('diff_amount', { precision: 12, scale: 2 }).default('0'),
+
+    originalData: jsonb('original_data'), // Snapshot of items before change
+    newData: jsonb('new_data'), // Proposed new items
+
+    requestedBy: uuid('requested_by').references(() => users.id),
+    approvedBy: uuid('approved_by').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    orderChangesOrderIdx: index('idx_order_changes_order').on(table.orderId),
+    orderChangesStatusIdx: index('idx_order_changes_status').on(table.status),
+}));
+

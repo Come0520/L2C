@@ -38,7 +38,8 @@ type FormValues = z.infer<typeof createFinanceAccountSchema>;
 interface AccountDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    initialData?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialData?: any; // 账户数据结构复杂，后续可定义具体类型
 }
 
 export function AccountDialog({ open, onOpenChange, initialData }: AccountDialogProps) {
@@ -91,8 +92,9 @@ export function AccountDialog({ open, onOpenChange, initialData }: AccountDialog
                     toast.success('账户创建成功');
                 }
                 onOpenChange(false);
-            } catch (error: any) {
-                toast.error(error.message || '操作失败');
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '操作失败';
+                toast.error(message);
             }
         });
     };

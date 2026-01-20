@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,8 +69,8 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     // Fetch product suppliers
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const fetchProductSuppliers = async () => {
+
+    const fetchProductSuppliers = useCallback(async () => {
         setIsLoading(true);
         try {
             const result = await getProductSuppliers({ productId });
@@ -85,7 +85,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [productId]);
 
     // Fetch all available suppliers for the dropdown
     useEffect(() => {
@@ -99,7 +99,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
         if (productId) {
             fetchProductSuppliers();
         }
-    }, [productId]);
+    }, [productId, fetchProductSuppliers]);
 
     const form = useForm({
         resolver: zodResolver(addSupplierSchema),
@@ -192,7 +192,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
                                             <FormItem>
                                                 <FormLabel>采购价</FormLabel>
                                                 <FormControl>
-                                                    {/* @ts-ignore */}
+                                                    {/* @ts-expect-error */}
                                                     <Input type="number" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
@@ -206,7 +206,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
                                             <FormItem>
                                                 <FormLabel>货期 (天)</FormLabel>
                                                 <FormControl>
-                                                    {/* @ts-ignore */}
+                                                    {/* @ts-expect-error */}
                                                     <Input type="number" {...field} />
                                                 </FormControl>
                                                 <FormMessage />

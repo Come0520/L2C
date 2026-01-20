@@ -1,5 +1,7 @@
-
-
+import { db } from '@/shared/api/db';
+import { tenants } from '@/shared/api/schema/infrastructure';
+import { eq } from 'drizzle-orm';
+import { TenantSettings } from '@/shared/types/tenant-settings';
 
 export class DiscountControlService {
     /**
@@ -9,9 +11,13 @@ export class DiscountControlService {
      * @returns true if approval is required
      */
     static async checkRequiresApproval(tenantId: string, rate: number): Promise<boolean> {
-        // TODO: specific logic fetching from tenant settings
-        // For now, default policy: any discount below 0.8 (more than 20% off) requires approval
-        return rate < 0.8;
+        const tenant = await db.query.tenants.findFirst({
+            where: eq(tenants.id, tenantId)
+        });
+        const settings = (tenant?.settings || {}) as TenantSettings;
+        const minDiscountRate = settings.quoteConfig?.minDiscountRate ?? 0.90;
+
+        return rate < minDiscountRate;
     }
 
     /**
@@ -21,14 +27,14 @@ export class DiscountControlService {
      * @returns 
      */
     static async validateMinimumDiscount(tenantId: string, rate: number): Promise<{ isValid: boolean; message?: string }> {
-        // TODO: specific logic fetching from tenant settings
-        // For now, absolute minimum rate is 0.5 (50% off)
-        const MIN_RATE = 0.5;
+        // Hard Stop limit (e.g. 50% usually) - This could also be in settings
+        // For now, let's keep a hard safety net or read from settings if available
+        const ABSOLUTE_MIN = 0.5;
 
-        if (rate < MIN_RATE) {
+        if (rate < ABSOLUTE_MIN) {
             return {
                 isValid: false,
-                message: `折扣过低，系统最低允许折扣率为 ${MIN_RATE}`
+                message: `折扣过低，系统最低允许折扣率为 ${ABSOLUTE_MIN} (安全红线)`
             };
         }
 

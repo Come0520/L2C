@@ -1,7 +1,7 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
-import { poTypeEnum } from './enums';
+import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum } from './enums';
 import { afterSalesTickets } from './after-sales';
 
 export const suppliers = pgTable('suppliers', {
@@ -65,12 +65,14 @@ export const purchaseOrders = pgTable('purchase_orders', {
     poTenantIdx: index('idx_po_tenant').on(table.tenantId),
     poOrderIdx: index('idx_po_order').on(table.orderId),
     poAfterSalesIdx: index('idx_po_after_sales').on(table.afterSalesId),
+    poSupplierIdx: index('idx_po_supplier').on(table.supplierId),
+    poStatusIdx: index('idx_po_status').on(table.status),
 }));
 
 export const purchaseOrderItems = pgTable('purchase_order_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    poId: uuid('po_id').references(() => purchaseOrders.id).notNull(),
+    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
 
     orderItemId: uuid('order_item_id').references(() => orderItems.id), // Optional for direct PO creation
     productId: uuid('product_id'),
@@ -200,4 +202,95 @@ export const productionTasks = pgTable('production_tasks', {
 }, (table) => ({
     ptTenantIdx: index('idx_production_tasks_tenant').on(table.tenantId),
     ptOrderIdx: index('idx_production_tasks_order').on(table.orderId),
+}));
+
+// =============================================
+// 套餐模块 (Product Packages)
+// =============================================
+
+// 商品套餐表 (Product Packages)
+export const productPackages = pgTable('product_packages', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    packageNo: varchar('package_no', { length: 50 }).unique().notNull(),
+    packageName: varchar('package_name', { length: 200 }).notNull(),
+    packageType: packageTypeEnum('package_type').notNull(),
+    packagePrice: decimal('package_price', { precision: 12, scale: 2 }).notNull(),
+    originalPrice: decimal('original_price', { precision: 12, scale: 2 }),
+    description: text('description'),
+    rules: jsonb('rules').default({}),  // 套餐规则 JSONB
+    overflowMode: packageOverflowModeEnum('overflow_mode').default('DISCOUNT'),
+    overflowPrice: decimal('overflow_price', { precision: 12, scale: 2 }),
+    overflowDiscountRate: decimal('overflow_discount_rate', { precision: 5, scale: 4 }),
+    isActive: boolean('is_active').default(true),
+    startDate: timestamp('start_date', { withTimezone: true }),
+    endDate: timestamp('end_date', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    pkgTenantIdx: index('idx_packages_tenant').on(table.tenantId),
+    pkgNoIdx: index('idx_packages_no').on(table.packageNo),
+}));
+
+// 套餐商品关联表 (Package Products)
+export const packageProducts = pgTable('package_products', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    packageId: uuid('package_id').references(() => productPackages.id).notNull(),
+    productId: uuid('product_id').notNull(),
+    isRequired: boolean('is_required').default(false),
+    minQuantity: decimal('min_quantity', { precision: 10, scale: 2 }),
+    maxQuantity: decimal('max_quantity', { precision: 10, scale: 2 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    ppPackageIdx: index('idx_package_products_package').on(table.packageId),
+    ppProductIdx: index('idx_package_products_product').on(table.productId),
+}));
+
+// =============================================
+// 面料库存模块 (Fabric Inventory)
+// =============================================
+
+// 面料库存表 (Fabric Inventory)
+export const fabricInventory = pgTable('fabric_inventory', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    fabricProductId: uuid('fabric_product_id').notNull(),
+    fabricSku: varchar('fabric_sku', { length: 100 }).notNull(),
+    fabricName: varchar('fabric_name', { length: 200 }).notNull(),
+    fabricColor: varchar('fabric_color', { length: 50 }),
+    fabricWidth: decimal('fabric_width', { precision: 10, scale: 2 }),
+    fabricRollLength: decimal('fabric_roll_length', { precision: 10, scale: 2 }),
+    batchNo: varchar('batch_no', { length: 50 }),
+    purchaseOrderId: uuid('purchase_order_id'),
+    supplierId: uuid('supplier_id'),
+    availableQuantity: decimal('available_quantity', { precision: 12, scale: 2 }).notNull(),
+    reservedQuantity: decimal('reserved_quantity', { precision: 12, scale: 2 }).default('0'),
+    totalQuantity: decimal('total_quantity', { precision: 12, scale: 2 }).notNull(),
+    purchaseDate: timestamp('purchase_date', { withTimezone: true }),
+    expiryDate: timestamp('expiry_date', { withTimezone: true }),
+    warehouseLocation: varchar('warehouse_location', { length: 100 }),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    fiTenantIdx: index('idx_fabric_inventory_tenant').on(table.tenantId),
+    fiProductIdx: index('idx_fabric_inventory_product').on(table.fabricProductId),
+}));
+
+// 面料库存流水表 (Fabric Inventory Logs)
+export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    fabricInventoryId: uuid('fabric_inventory_id').references(() => fabricInventory.id).notNull(),
+    logType: fabricInventoryLogTypeEnum('log_type').notNull(),
+    quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
+    beforeQuantity: decimal('before_quantity', { precision: 12, scale: 2 }).notNull(),
+    afterQuantity: decimal('after_quantity', { precision: 12, scale: 2 }).notNull(),
+    referenceId: uuid('reference_id'),
+    referenceType: varchar('reference_type', { length: 50 }),
+    remark: text('remark'),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    filInventoryIdx: index('idx_fabric_logs_inventory').on(table.fabricInventoryId),
 }));

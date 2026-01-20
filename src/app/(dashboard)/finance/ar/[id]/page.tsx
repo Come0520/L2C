@@ -1,4 +1,3 @@
-
 import { getARStatement } from "@/features/finance/actions/ar";
 import { DashboardPageHeader } from "@/shared/ui/dashboard-page-header";
 import { Badge } from "@/shared/ui/badge";
@@ -8,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { PaymentOrderDialog } from "@/features/finance/components/PaymentOrderDialog";
+import { ReceiptBillDialog } from "@/features/finance/components/receipt-bill-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 export default async function ARStatementDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,11 +54,12 @@ export default async function ARStatementDetailPage({ params }: { params: Promis
                         </Link>
                     </Button>
                     {statement.status !== 'PAID' && statement.status !== 'CANCELLED' && (
-                        <PaymentOrderDialog
+                        <ReceiptBillDialog
                             orderId={statement.orderId}
                             customerName={statement.customerName}
                             customerId={statement.customerId}
                             amount={statement.pendingAmount}
+                            initialStatement={statement}
                             trigger={<Button>登记收款</Button>}
                         />
                     )}

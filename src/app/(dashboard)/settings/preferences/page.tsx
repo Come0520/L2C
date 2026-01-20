@@ -1,4 +1,4 @@
-﻿export default function PreferencesSettingsPage() {
+export default function PreferencesSettingsPage() {
     return (
         <div className="space-y-6">
             <div>

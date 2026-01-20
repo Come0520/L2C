@@ -4,9 +4,16 @@ import { Card, CardHeader, CardContent } from '@/shared/ui/card';
 import { OrderStatusBadge } from '@/features/orders/components/order-status-badge';
 import { OrderTimeline } from '@/features/orders/components/order-timeline';
 import { OrderDetailActions } from '@/features/orders/components/order-detail-actions';
+import { SnapshotComparison } from '@/features/orders/components/snapshot-view';
+import { LogisticsCard } from '@/features/orders/components/logistics-card';
 import { getOrderById } from '@/features/orders/actions';
 import { getAvailableWorkers } from '@/features/service/measurement/actions/queries';
-import { ArrowLeft, MapPin, User, Calendar, DollarSign, Package } from 'lucide-react';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import User from 'lucide-react/dist/esm/icons/user';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Package from 'lucide-react/dist/esm/icons/package';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
@@ -20,18 +27,21 @@ export default async function OrderDetailPage({
 }) {
     const { id } = await params;
 
-    const result = await getOrderById(id);
+    // 并行启动所有独立请求 (消除 Waterfall)
+    const [result, workersResult, session] = await Promise.all([
+        getOrderById(id),
+        getAvailableWorkers(),
+        auth()
+    ]);
 
     if (!result.success || !result.data) {
         notFound();
     }
 
     const order = result.data as any;
-    const workersResult = await getAvailableWorkers();
     const workers = workersResult.success && workersResult.data ? workersResult.data : [];
 
     // Check Profit View Permission
-    const session = await auth();
     try {
         await checkPermission(session, 'finance:profit:view');
     } catch {
@@ -69,7 +79,7 @@ export default async function OrderDetailPage({
                         </div>
                     </div>
                 </div>
-                <OrderDetailActions order={order} workers={workers} />
+                <OrderDetailActions order={order} />
             </div>
 
             {/* Main Content Grid */}
@@ -90,6 +100,15 @@ export default async function OrderDetailPage({
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
+                            {/* Snapshot Comparison View */}
+                            {order.snapshotData && (
+                                <div className="p-4 border-b border-slate-100">
+                                    <SnapshotComparison
+                                        currentItems={order.items || []}
+                                        snapshotData={order.snapshotData}
+                                    />
+                                </div>
+                            )}
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50/80 text-slate-500 font-medium border-b">
@@ -234,6 +253,9 @@ export default async function OrderDetailPage({
                             <OrderTimeline currentStatus={order.status} />
                         </CardContent>
                     </Card>
+
+                    {/* Logistics Card */}
+                    <LogisticsCard orderId={order.id} logistics={order.logistics} />
 
                     {/* Quick Access Card for Related Docs */}
                     <Card className="shadow-sm border-dashed bg-slate-50/30">

@@ -4,8 +4,16 @@ export const createQuoteSchema = z.object({
     customerId: z.string().uuid(),
     leadId: z.string().uuid().optional(),
     measureVariantId: z.string().uuid().optional(),
+    bundleId: z.string().uuid().optional(),
     title: z.string().max(200).optional(),
     notes: z.string().optional(),
+});
+
+export const createQuoteBundleSchema = z.object({
+    customerId: z.string().uuid(),
+    leadId: z.string().uuid().optional(),
+    summaryMode: z.string().optional(),
+    remark: z.string().optional(),
 });
 
 export const updateQuoteSchema = z.object({
@@ -83,6 +91,15 @@ export const updateQuoteItemSchema = z.object({
     sortOrder: z.number().int().optional(),
 });
 
+export const reorderQuoteItemsSchema = z.object({
+    quoteId: z.string().uuid(),
+    roomId: z.string().uuid().nullable(),
+    items: z.array(z.object({
+        id: z.string().uuid(),
+        sortOrder: z.number().int(),
+    })),
+});
+
 export const deleteQuoteItemSchema = z.object({
     id: z.string().uuid(),
 });
@@ -97,4 +114,18 @@ export const rejectQuoteDiscountSchema = z.object({
     tenantId: z.string().uuid(),
     rejectedBy: z.string().uuid(),
     reason: z.string().min(1, 'Reason is required'),
+});
+
+export const createQuickQuoteSchema = z.object({
+    leadId: z.string(),
+    planType: z.string(),
+    rooms: z.array(z.object({
+        name: z.string(),
+        width: z.number().positive(),
+        height: z.number().positive(),
+        hasSheer: z.boolean().default(false),
+        hasBox: z.boolean().default(false),
+        windowType: z.string().default('STRAIGHT'),
+        hasFabric: z.boolean().default(true),
+    })),
 });

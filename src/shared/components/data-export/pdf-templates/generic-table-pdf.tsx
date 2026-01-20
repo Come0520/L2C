@@ -1,6 +1,6 @@
 'use client';
 
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
     page: {
@@ -30,18 +30,37 @@ const styles = StyleSheet.create({
     },
 });
 
-interface Column {
+/**
+ * 表格行数据类型
+ */
+type TableRow = Record<string, unknown>;
+
+/**
+ * 表格列定义
+ */
+interface Column<T extends TableRow = TableRow> {
     header: string;
-    accessorKey: string | ((row: any) => any);
+    accessorKey: string | ((row: T) => unknown);
 }
 
-interface GenericTablePdfProps {
+/**
+ * GenericTablePdf 组件属性
+ */
+interface GenericTablePdfProps<T extends TableRow = TableRow> {
     title: string;
-    columns: Column[];
-    data: any[];
+    columns: Column<T>[];
+    data: T[];
 }
 
-export function GenericTablePdf({ title, columns, data }: GenericTablePdfProps) {
+/**
+ * 通用表格 PDF 导出组件
+ * @param props - 组件属性
+ */
+export function GenericTablePdf<T extends TableRow = TableRow>({
+    title,
+    columns,
+    data
+}: GenericTablePdfProps<T>) {
     const colWidth = `${100 / (columns.length || 1)}%`;
 
     return (
@@ -81,7 +100,7 @@ export function GenericTablePdf({ title, columns, data }: GenericTablePdfProps) 
                             {columns.map((col, colIndex) => {
                                 const value = typeof col.accessorKey === 'function'
                                     ? col.accessorKey(row)
-                                    : row[col.accessorKey as string];
+                                    : row[col.accessorKey as keyof T];
 
                                 return (
                                     <View

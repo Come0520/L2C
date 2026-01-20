@@ -1,4 +1,4 @@
-﻿export type ReminderModule = 'LEAD' | 'ORDER' | 'MEASURE' | 'INSTALL' | 'AR' | 'AP';
+export type ReminderModule = 'LEAD' | 'ORDER' | 'MEASURE' | 'INSTALL' | 'AR' | 'AP';
 
 export const STATUS_OPTIONS: Record<ReminderModule, { value: string; label: string }[]> = {
     LEAD: [

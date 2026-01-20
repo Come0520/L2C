@@ -19,7 +19,7 @@ import {
 import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
 import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SupplierDialog } from './supplier-dialog';
 import { deleteSupplier } from '../actions/mutations';
 import { toast } from 'sonner';
@@ -60,7 +60,8 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
     const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = async () => {
+    // 使用 useCallback 稳定回调引用
+    const handleDelete = useCallback(async () => {
         if (!deletingSupplierId) return;
         setIsDeleting(true);
         try {
@@ -71,12 +72,17 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
                 toast.success('供应商已删除');
                 setDeletingSupplierId(null);
             }
-        } catch (error) {
+        } catch (_error) {
             toast.error('删除成功'); // Optimistic or error handling? Assuming success if no throw
         } finally {
             setIsDeleting(false);
         }
-    };
+    }, [deletingSupplierId]);
+
+    const handleConfirmDelete = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        handleDelete();
+    }, [handleDelete]);
 
     return (
         <div className="space-y-4">
@@ -171,10 +177,7 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleDelete();
-                            }}
+                            onClick={handleConfirmDelete}
                             className="bg-red-600 hover:bg-red-700"
                             disabled={isDeleting}
                         >

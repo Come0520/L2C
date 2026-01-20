@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Checkbox } from "@/shared/ui/checkbox";
 

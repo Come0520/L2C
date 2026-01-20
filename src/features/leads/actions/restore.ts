@@ -1,0 +1,149 @@
+'use server';
+
+import { db } from '@/shared/api/db';
+import { leads, leadStatusHistory } from '@/shared/api/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
+import { restoreLeadSchema } from '../schemas';
+import { revalidatePath } from 'next/cache';
+
+/**
+ * 恢复已作废的线索
+ * 
+ * 业务规则：
+ * 1. 仅 VOID 状态的线索可恢复
+ * 2. 恢复到作废前的状态
+ * 3. 记录恢复操作到状态历史
+ * 
+ * 权限要求：店长或更高
+ */
+export async function restoreLeadAction(
+    input: z.infer<typeof restoreLeadSchema>,
+    userId: string,
+    tenantId: string
+): Promise<{ success: boolean; error?: string; targetStatus?: string }> {
+    const { id, reason } = restoreLeadSchema.parse(input);
+
+    try {
+        // 1. 获取线索
+        const lead = await db.query.leads.findFirst({
+            where: and(
+                eq(leads.id, id),
+                eq(leads.tenantId, tenantId)
+            )
+        });
+
+        if (!lead) {
+            return { success: false, error: '线索不存在' };
+        }
+
+        if (lead.status !== 'VOID') {
+            return { success: false, error: '仅可恢复已作废的线索' };
+        }
+
+        // 2. 检查是否有审批流程
+        const { submitApproval } = await import('@/features/approval/actions/submission');
+        const { approvalFlows } = await import('@/shared/api/schema');
+        const flow = await db.query.approvalFlows.findFirst({
+            where: and(
+                eq(approvalFlows.tenantId, tenantId),
+                eq(approvalFlows.code, 'LEAD_RESTORE'),
+                eq(approvalFlows.isActive, true)
+            )
+        });
+
+        if (flow) {
+            // 走审批流程
+            try {
+                const result = await submitApproval({
+                    tenantId,
+                    requesterId: userId,
+                    flowCode: 'LEAD_RESTORE',
+                    entityType: 'LEAD_RESTORE',
+                    entityId: id,
+                    comment: reason
+                });
+
+                if (result.success) {
+                    return { success: true, error: undefined, targetStatus: '审批中' };
+                } else {
+                    return { success: false, error: 'error' in result && typeof result.error === 'string' ? result.error : '审批提交失败' };
+                }
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : '审批提交失败';
+                return { success: false, error: message };
+            }
+        }
+
+        // 3. 无审批流程，直接恢复
+        // 获取作废前的状态
+        const lastHistory = await db.query.leadStatusHistory.findFirst({
+            where: and(
+                eq(leadStatusHistory.leadId, id),
+                eq(leadStatusHistory.newStatus, 'VOID')
+            ),
+            orderBy: desc(leadStatusHistory.changedAt)
+        });
+
+        // 默认恢复到待分配状态
+        const targetStatus = lastHistory?.oldStatus || 'PENDING_ASSIGNMENT';
+
+        // 3. 执行恢复
+        await db.transaction(async (tx) => {
+            // 更新线索状态
+            await tx.update(leads)
+                .set({
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    status: targetStatus as any, // 安全：targetStatus 来自历史记录
+                    lostReason: null // 清除作废原因
+                })
+                .where(eq(leads.id, id));
+
+            // 记录恢复操作
+            await tx.insert(leadStatusHistory).values({
+                tenantId,
+                leadId: id,
+                oldStatus: 'VOID',
+                newStatus: targetStatus,
+                changedBy: userId,
+                reason: reason || '恢复作废线索'
+            });
+        });
+
+        revalidatePath('/leads');
+        revalidatePath(`/leads/${id}`);
+
+        return { success: true, targetStatus };
+
+    } catch (error: unknown) {
+        console.error('Restore lead error:', error);
+        const message = error instanceof Error ? error.message : '恢复失败';
+        return { success: false, error: message };
+    }
+}
+
+/**
+ * 检查线索是否可恢复
+ */
+export async function canRestoreLead(
+    leadId: string,
+    tenantId: string
+): Promise<{ canRestore: boolean; reason?: string }> {
+    const lead = await db.query.leads.findFirst({
+        where: and(
+            eq(leads.id, leadId),
+            eq(leads.tenantId, tenantId)
+        ),
+        columns: { status: true }
+    });
+
+    if (!lead) {
+        return { canRestore: false, reason: '线索不存在' };
+    }
+
+    if (lead.status !== 'VOID') {
+        return { canRestore: false, reason: '仅可恢复已作废的线索' };
+    }
+
+    return { canRestore: true };
+}

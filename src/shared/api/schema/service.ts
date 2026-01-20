@@ -1,9 +1,11 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 
 import { orders } from './orders';
 import { customers } from './customers';
 import { leads } from './leads';
+import { approvals } from './approval';
+import { afterSalesTickets } from './after-sales';
 import {
     measureTaskStatusEnum,
     measureSheetStatusEnum,
@@ -36,6 +38,9 @@ export const measureTasks = pgTable('measure_tasks', {
 
     assignedWorkerId: uuid('assigned_worker_id').references(() => users.id),
 
+    versionDisplay: varchar('version_display', { length: 20 }),
+    parentId: uuid('parent_id').references((): AnyPgColumn => measureTasks.id), // 版本自引用
+
     round: integer('round').default(1).notNull(),
     remark: text('remark'),
     rejectCount: integer('reject_count').default(0).notNull(),
@@ -43,7 +48,7 @@ export const measureTasks = pgTable('measure_tasks', {
 
     isFeeExempt: boolean('is_fee_exempt').default(false),
     feeCheckStatus: feeCheckStatusEnum('fee_check_status').default('NONE'),
-    feeApprovalId: uuid('fee_approval_id'),
+    feeApprovalId: uuid('fee_approval_id').references(() => approvals.id), // 审批关联
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
@@ -57,7 +62,7 @@ export const measureTasks = pgTable('measure_tasks', {
 export const measureSheets = pgTable('measure_sheets', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    taskId: uuid('task_id').references(() => measureTasks.id).notNull(),
+    taskId: uuid('task_id').references(() => measureTasks.id, { onDelete: 'cascade' }).notNull(),
 
     status: measureSheetStatusEnum('status').default('DRAFT'),
     round: integer('round').notNull(),
@@ -73,7 +78,7 @@ export const measureSheets = pgTable('measure_sheets', {
 export const measureItems = pgTable('measure_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    sheetId: uuid('sheet_id').references(() => measureSheets.id).notNull(),
+    sheetId: uuid('sheet_id').references(() => measureSheets.id, { onDelete: 'cascade' }).notNull(),
 
     roomName: varchar('room_name', { length: 100 }).notNull(),
     windowType: windowTypeEnum('window_type').notNull(),
@@ -100,7 +105,7 @@ export const installTasks = pgTable('install_tasks', {
     taskNo: varchar('task_no', { length: 50 }).unique().notNull(),
     sourceType: installTaskSourceTypeEnum('source_type').default('ORDER').notNull(),
     orderId: uuid('order_id').references(() => orders.id).notNull(),
-    afterSalesId: uuid('after_sales_id'),
+    afterSalesId: uuid('after_sales_id').references((): AnyPgColumn => afterSalesTickets.id), // 售后关联（延迟引用解决循环依赖）
     customerId: uuid('customer_id').references(() => customers.id).notNull(),
     customerName: varchar('customer_name', { length: 100 }),
     customerPhone: varchar('customer_phone', { length: 20 }),
@@ -167,7 +172,7 @@ export const installTasks = pgTable('install_tasks', {
 export const installItems = pgTable('install_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    installTaskId: uuid('install_task_id').references(() => installTasks.id).notNull(),
+    installTaskId: uuid('install_task_id').references(() => installTasks.id, { onDelete: 'cascade' }).notNull(),
     orderItemId: uuid('order_item_id'),
 
     productName: varchar('product_name', { length: 200 }).notNull(),
@@ -186,7 +191,7 @@ export const installItems = pgTable('install_items', {
 export const installPhotos = pgTable('install_photos', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    installTaskId: uuid('install_task_id').references(() => installTasks.id).notNull(),
+    installTaskId: uuid('install_task_id').references(() => installTasks.id, { onDelete: 'cascade' }).notNull(),
 
     photoType: installPhotoTypeEnum('photo_type').notNull(),
     photoUrl: text('photo_url').notNull(),
@@ -195,5 +200,21 @@ export const installPhotos = pgTable('install_photos', {
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
+
+export const measureTaskSplits = pgTable('measure_task_splits', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+
+    originalTaskId: uuid('original_task_id').references(() => measureTasks.id).notNull(),
+    newTaskId: uuid('new_task_id').references(() => measureTasks.id).notNull(),
+
+    reason: text('reason'),
+
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    splitTenantIdx: index('idx_measure_task_splits_tenant').on(table.tenantId),
+    splitOriginalTaskIdx: index('idx_measure_task_splits_original').on(table.originalTaskId),
+}));
 
 

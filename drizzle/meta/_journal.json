@@ -57,6 +57,62 @@
       "when": 1768631068386,
       "tag": "0007_fearless_stephen_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768652515027,
+      "tag": "0008_harsh_brood",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1768654743989,
+      "tag": "0009_peaceful_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1768659689301,
+      "tag": "0010_wealthy_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1768696490244,
+      "tag": "0011_motionless_bloodstorm",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1768750860311,
+      "tag": "0012_yielding_jack_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1768827369629,
+      "tag": "0013_nervous_ezekiel_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1768877136705,
+      "tag": "0014_cloudy_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1768878159862,
+      "tag": "0015_great_romulus",
+      "breakpoints": true
     }
   ]
 }

@@ -1,40 +1,64 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { cn } from '@/shared/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Check, MailOpen, Bell } from 'lucide-react';
+import { Check, MailOpen, Bell, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { markAsReadAction, markAllAsReadAction } from '../actions';
-import { useRouter } from 'next/navigation';
+import { markAsReadAction, markAllAsReadAction, getNotificationsAction } from '../actions';
 import { toast } from 'sonner';
 import { Notification } from '../types';
 
 interface NotificationListProps {
-    notifications: Notification[];
-    onRefresh?: () => void;
+    initialNotifications: Notification[];
+    total: number;
 }
 
-export function NotificationList({ notifications, onRefresh }: NotificationListProps) {
-    const router = useRouter();
+export function NotificationList({ initialNotifications, total }: NotificationListProps) {
+    const [list, setList] = useState<Notification[]>(initialNotifications);
+    const [page, setPage] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(initialNotifications.length < total);
+
+    const loadMore = async () => {
+        if (isLoading || !hasMore) return;
+        setIsLoading(true);
+        try {
+            const res = await getNotificationsAction({ page: page + 1, limit: 20, onlyUnread: false });
+            if (res?.data?.data) {
+                const newItems = res.data.data;
+                setList(prev => [...prev, ...newItems]);
+                setPage(p => p + 1);
+                if (list.length + newItems.length >= res.data.meta.total) {
+                    setHasMore(false);
+                }
+            }
+        } catch {
+            toast.error('加载通知失败');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleMarkAsRead = async (id: string) => {
-        await markAsReadAction({ ids: [id] });
-        onRefresh?.();
-        router.refresh();
+        const res = await markAsReadAction({ ids: [id] });
+        if (res?.data?.success) {
+            setList(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        }
     };
 
     const handleMarkAllRead = async () => {
-        await markAllAsReadAction({});
-        toast.success('全部已读');
-        onRefresh?.();
-        router.refresh();
+        const res = await markAllAsReadAction({});
+        if (res?.data?.success) {
+            setList(prev => prev.map(n => ({ ...n, isRead: true })));
+            toast.success('全部已读');
+        }
     };
 
-    if (!notifications?.length) {
+    if (!list?.length) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground h-[400px]">
                 <Bell className="w-12 h-12 mb-4 opacity-20" />
@@ -53,12 +77,12 @@ export function NotificationList({ notifications, onRefresh }: NotificationListP
             </div>
             <ScrollArea className="h-[600px] px-2">
                 <div className="space-y-3 pb-4">
-                    {notifications.map((n) => (
+                    {list.map((n) => (
                         <div
                             key={n.id}
                             className={cn(
                                 "relative flex gap-4 p-4 rounded-lg border transition-all hover:bg-muted/50",
-                                n.isRead ? "bg-white/50 opacity-60" : "bg-card shadow-sm border-l-4 border-l-primary"
+                                n.isRead ? "glass-step-inactive opacity-60" : "bg-card shadow-sm border-l-4 border-l-primary"
                             )}
                         >
                             {/* Unread Dot */}
@@ -71,9 +95,9 @@ export function NotificationList({ notifications, onRefresh }: NotificationListP
 
                             <div className={cn(
                                 "mt-1 p-2 rounded-full h-fit shrink-0",
-                                n.type === 'ALERT' ? "bg-red-100 text-red-600" :
-                                    n.type === 'APPROVAL' ? "bg-amber-100 text-amber-600" :
-                                        "bg-blue-100 text-blue-600"
+                                n.type === 'ALERT' ? "glass-alert-error" :
+                                    n.type === 'APPROVAL' ? "glass-alert-warning" :
+                                        "glass-alert-info"
                             )}>
                                 <Bell className="w-4 h-4" />
                             </div>
@@ -111,6 +135,24 @@ export function NotificationList({ notifications, onRefresh }: NotificationListP
                             </div>
                         </div>
                     ))}
+
+                    {hasMore && (
+                        <div className="p-2 flex justify-center">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={loadMore}
+                                disabled={isLoading}
+                                className="w-full text-muted-foreground"
+                            >
+                                {isLoading ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 加载中...</>
+                                ) : (
+                                    "加载更多"
+                                )}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </ScrollArea>
         </div>

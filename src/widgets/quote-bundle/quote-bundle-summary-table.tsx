@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Card, CardContent } from "../../shared/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../shared/ui/table";

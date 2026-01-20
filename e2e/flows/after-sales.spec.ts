@@ -7,8 +7,8 @@ test.describe('After-sales Management', () => {
     });
 
     test('should display after-sales ticket list', async ({ page }) => {
-        // 验证页面标题
-        await expect(page.getByRole('heading', { name: /售后/ })).toBeVisible();
+        // 验证页面标题 (使用 first() 避免匹配多个 heading)
+        await expect(page.getByRole('heading', { name: /售后/ }).first()).toBeVisible();
 
         // 验证列表表头存在
         await expect(page.getByRole('columnheader', { name: /工单号/ })).toBeVisible();

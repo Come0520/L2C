@@ -58,7 +58,8 @@ export const verifyPaymentOrderSchema = z.object({
 // ==================== 付款单 (AP / Payment Bill) ====================
 
 export const createPaymentBillSchema = z.object({
-    payeeType: z.enum(['SUPPLIER', 'WORKER']),
+    type: z.enum(['SUPPLIER', 'LABOR', 'REFUND']).default('SUPPLIER'),
+    payeeType: z.enum(['SUPPLIER', 'WORKER', 'CUSTOMER']),
     payeeId: z.string().uuid(),
     payeeName: z.string().min(1, '收款方名称不能为空'),
     amount: z.number().min(0.01, '付款金额必须大于0'),

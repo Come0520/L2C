@@ -30,26 +30,26 @@ export function OrderTimeline({ currentStatus }: { currentStatus: string }) {
                         {index < steps.length - 1 && (
                             <div className={cn(
                                 "absolute left-[11px] top-6 bottom-0 w-[2px]",
-                                isCompleted ? "bg-primary" : "bg-gray-200"
+                                isCompleted ? "bg-primary" : "bg-border"
                             )} />
                         )}
                         <div className="mt-1 relative z-10">
                             {isCompleted ? (
-                                <CheckCircle2 className="h-6 w-6 text-primary bg-white rounded-full" />
+                                <CheckCircle2 className="h-6 w-6 text-primary bg-card rounded-full" />
                             ) : isCurrent ? (
-                                <Clock className="h-6 w-6 text-blue-500 bg-white rounded-full" />
+                                <Clock className="h-6 w-6 text-primary bg-card rounded-full" />
                             ) : (
-                                <Circle className="h-6 w-6 text-gray-300 bg-white rounded-full" />
+                                <Circle className="h-6 w-6 text-muted bg-card rounded-full" />
                             )}
                         </div>
                         <div className="pb-6">
                             <div className={cn(
                                 "font-medium",
-                                isCurrent ? "text-blue-600" : isCompleted ? "text-gray-900" : "text-gray-400"
+                                isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
                             )}>
                                 {step.label}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">
+                            <div className="text-xs text-muted-foreground mt-1">
                                 {step.description}
                                 {isCurrent && " (当前阶段)"}
                             </div>

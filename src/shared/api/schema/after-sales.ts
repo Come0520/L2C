@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, varchar, text, timestamp, decimal, index, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders } from './orders';
 import { afterSalesStatusEnum, liablePartyTypeEnum, liabilityStatusEnum, liabilityReasonCategoryEnum } from './enums';
@@ -47,6 +47,8 @@ export const afterSalesTickets = pgTable('after_sales_tickets', {
     orderIdx: index('idx_as_order').on(table.orderId),
     customerIdx: index('idx_as_customer').on(table.customerId),
     ticketNoIdx: index('idx_as_ticket_no').on(table.ticketNo),
+    statusIdx: index('idx_as_status').on(table.status),
+    assignedToIdx: index('idx_as_assigned_to').on(table.assignedTo),
 }));
 
 export const liabilityNotices = pgTable('liability_notices', {
@@ -86,6 +88,11 @@ export const liabilityNotices = pgTable('liability_notices', {
     arbitrationResult: text('arbitration_result'),
     arbitratedBy: uuid('arbitrated_by').references(() => users.id),
     arbitratedAt: timestamp('arbitrated_at', { withTimezone: true }),
+
+    // 财务同步状态 (Finance Sync)
+    financeStatus: varchar('finance_status', { length: 20 }).default('PENDING'), // PENDING/SYNCED/FAILED
+    financeStatementId: uuid('finance_statement_id'), // 关联生成的对账单ID
+    financeSyncedAt: timestamp('finance_synced_at', { withTimezone: true }),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

@@ -3,7 +3,9 @@
 import { db } from '@/shared/api/db';
 import { cache } from 'react';
 import { quotes } from '@/shared/api/schema/quotes';
-import { eq, desc, and, or } from 'drizzle-orm';
+import { customers } from '@/shared/api/schema/customers';
+import { customerAddresses } from '@/shared/api/schema/customer-addresses';
+import { eq, desc, and, or, ilike, inArray, gte, lte, count } from 'drizzle-orm';
 import { users } from '@/shared/api/schema/infrastructure';
 import { auditLogs } from '@/shared/api/schema/audit';
 
@@ -20,27 +22,68 @@ export const getQuotes = cache(async ({
     page = 1,
     pageSize = 10,
     status,
+    search,
+    customerId,
+    dateRange,
 }: {
     page?: number;
     pageSize?: number;
     status?: string;
+    search?: string;
+    customerId?: string;
+    dateRange?: { from?: Date; to?: Date };
 } = {}) => {
-
-    // Current tenant context should be handled by authentication/middleware, 
-    // assuming we filter by tenant if necessary. 
-    // For now, listing all for simplicity or verify how tenant context is passed.
-    // Usually via auth().
-
     const offset = (page - 1) * pageSize;
-
     const conditions = [];
-    if (status) {
+
+    // 1. Status Filter
+    if (status && status !== 'ALL') {
         conditions.push(eq(quotes.status, status));
     }
-    // Search logic not implemented yet due to complexity with joined tables
 
+    // 2. Customer Filter
+    if (customerId) {
+        conditions.push(eq(quotes.customerId, customerId));
+    }
+
+    // 3. Date Range Filter
+    if (dateRange?.from) {
+        conditions.push(gte(quotes.createdAt, dateRange.from));
+    }
+    if (dateRange?.to) {
+        // Include the whole end day
+        const endDate = new Date(dateRange.to);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(quotes.createdAt, endDate));
+    }
+
+    // 4. Keyword Search (QuoteNo OR Customer Name/Phone OR Address)
+    if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+
+        // Subquery to find matching customer IDs
+        const matchingCustomerIds = db
+            .select({ id: customers.id })
+            .from(customers)
+            .leftJoin(customerAddresses, eq(customers.id, customerAddresses.customerId))
+            .where(or(
+                ilike(customers.name, term),
+                ilike(customers.phone, term),
+                ilike(customerAddresses.address, term),
+                ilike(customerAddresses.community, term)
+            ));
+
+        conditions.push(or(
+            ilike(quotes.quoteNo, term),
+            inArray(quotes.customerId, matchingCustomerIds)
+        ));
+    }
+
+    const whereCondition = conditions.length ? and(...conditions) : undefined;
+
+    // Fetch Data
     const data = await db.query.quotes.findMany({
-        where: conditions.length ? and(...conditions) : undefined,
+        where: whereCondition,
         limit: pageSize,
         offset: offset,
         orderBy: [desc(quotes.createdAt)],
@@ -50,8 +93,25 @@ export const getQuotes = cache(async ({
         },
     });
 
-    // Total count logic omitted for brevity, can be added.
-    return { data };
+    // Fetch Total Count for Pagination
+    // Note: db.query doesn't return count directly, need separate query
+    // Optimizing by reusing the where condition
+    const countResult = await db
+        .select({ count: count() })
+        .from(quotes)
+        .where(whereCondition);
+
+    const total = countResult[0]?.count || 0;
+
+    return {
+        data,
+        meta: {
+            page,
+            pageSize,
+            total,
+            totalPages: Math.ceil(total / pageSize)
+        }
+    };
 });
 
 

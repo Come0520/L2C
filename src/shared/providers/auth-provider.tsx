@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Auth Provider
  * 为客户端组件提供 Session 上下文
  */

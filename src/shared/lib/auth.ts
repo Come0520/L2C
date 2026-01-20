@@ -26,9 +26,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const { username, password } = parsed.data;
 
                 const user = await db.query.users.findFirst({
-                    where: or(
-                        eq(users.email, username),
-                        eq(users.phone, username)
+                    where: and(
+                        or(
+                            eq(users.email, username),
+                            eq(users.phone, username)
+                        ),
+                        // 安全修复：检查用户是否已被禁用
+                        eq(users.isActive, true)
                     ),
                 });
 
@@ -62,13 +66,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token: 'https://api.weixin.qq.com/sns/oauth2/access_token',
             userinfo: 'https://api.weixin.qq.com/sns/userinfo',
             profile(profile) {
+                // 微信登录用户默认无租户归属，需通过邀请链接绑定
+                // 员工：管理员分享的员工邀请二维码
+                // 客户：客户详情页的客户邀请链接
                 return {
                     id: profile.openid,
                     name: profile.nickname,
                     email: null,
                     image: profile.headimgurl,
-                    role: 'GUEST', // Wechat login default role until bound
-                    tenantId: 'DEFAULT', // Needs logic to bind tenant
+                    role: '__UNBOUND__',      // 待通过邀请链接确定
+                    tenantId: '__UNBOUND__',  // 待通过邀请链接绑定
                 }
             },
         }

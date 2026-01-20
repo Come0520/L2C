@@ -14,6 +14,8 @@ import {
 } from '@/shared/api/schema';
 import { eq, and, desc, asc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
+import { checkSchedulingConflict } from './logic/conflict-detection';
+import { checkLogisticsReady } from './logic/logistics-check';
 
 // --- Schemas ---
 
@@ -36,8 +38,18 @@ const dispatchTaskSchema = z.object({
     installerId: z.string().min(1, "必须选择安装师"),
     scheduledDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
     scheduledTimeSlot: z.string().optional(),
-    laborFee: z.number().optional(),
+    laborFee: z.number().optional(), // 保留向后兼容
+    feeBreakdown: z.object({
+        baseFee: z.number().min(0, "基础费不能为负数"),
+        additionalFees: z.array(z.object({
+            type: z.enum(['HIGH_ALTITUDE', 'LONG_DISTANCE', 'SPECIAL_WALL', 'OTHER']),
+            amount: z.number().min(0),
+            description: z.string().optional(),
+            quantity: z.number().optional(),
+        })).optional(),
+    }).optional(),
     dispatcherNotes: z.string().optional(),
+    force: z.boolean().optional(),
 });
 
 const checkInTaskSchema = z.object({
@@ -56,6 +68,7 @@ const checkOutTaskSchema = z.object({
         longitude: z.number(),
         address: z.string().optional(),
     }).optional(),
+    customerSignatureUrl: z.string().optional(),
 });
 
 const confirmInstallationSchema = z.object({
@@ -220,6 +233,46 @@ export const dispatchInstallTaskAction = createSafeAction(dispatchTaskSchema, as
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
+        // 1. Check Conflicts
+        if (data.scheduledDate && data.scheduledTimeSlot) {
+            const conflict = await checkSchedulingConflict(
+                data.installerId,
+                data.scheduledDate,
+                data.scheduledTimeSlot,
+                data.id
+            );
+
+            if (conflict.hasConflict) {
+                if (conflict.conflictType === 'HARD') {
+                    return { success: false, error: conflict.message }; // Hard block
+                }
+                if (conflict.conflictType === 'SOFT' && !data.force) {
+                    return { success: false, error: `CONFLICT_SOFT: ${conflict.message}` };
+                }
+            }
+        }
+
+        // 2. Check Logistics (Optimization: fetch orderId first)
+        // We need existing task to get orderId to check logistics
+        // But we are about to update it.
+        // Let's fetch it.
+        const existingTask = await db.query.installTasks.findFirst({
+            where: and(eq(installTasks.id, data.id), eq(installTasks.tenantId, session.user.tenantId)),
+            columns: { orderId: true }
+        });
+
+        if (existingTask) {
+            const logistics = await checkLogisticsReady(existingTask.orderId);
+            if (!logistics.ready && !data.force) {
+                return { success: false, error: `LOGISTICS_NOT_READY: ${logistics.message}` };
+            }
+
+            // Update logistics status
+            await db.update(installTasks)
+                .set({ logisticsReadyStatus: logistics.ready })
+                .where(eq(installTasks.id, data.id));
+        }
+
         const installer = await db.query.users.findFirst({
             where: eq(users.id, data.installerId),
         });
@@ -237,7 +290,7 @@ export const dispatchInstallTaskAction = createSafeAction(dispatchTaskSchema, as
                 notes: data.dispatcherNotes,
             })
             .where(and(
-                eq(installTasks.id, data.id),
+                eq(installTasks.id, data.id), // No force logic needed here, just update
                 eq(installTasks.tenantId, session.user.tenantId)
             ));
 
@@ -256,8 +309,37 @@ export const checkInInstallTaskAction = createSafeAction(checkInTaskSchema, asyn
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
-        // TODO: 集成地理围栏验证 (Verify Geofence)
+        // 获取任务信息
+        const task = await db.query.installTasks.findFirst({
+            where: and(
+                eq(installTasks.id, data.id),
+                eq(installTasks.tenantId, session.user.tenantId)
+            ),
+            columns: {
+                id: true,
+                scheduledDate: true,
+            }
+        });
 
+        if (!task) {
+            return { success: false, error: '任务不存在' };
+        }
+
+        // 迟到检测
+        let isLate = false;
+        let lateMinutes = 0;
+
+        if (task.scheduledDate) {
+            const { calculateLateMinutes } = await import('@/shared/lib/gps-utils');
+            const scheduledTime = new Date(task.scheduledDate);
+            const checkInTime = new Date();
+
+            lateMinutes = calculateLateMinutes(scheduledTime, checkInTime);
+            isLate = lateMinutes > 0;
+        }
+
+        // 更新任务状态
+        // 注意：GPS 距离校验需要 schema 添加 addressLocation 字段后启用
         await db.update(installTasks)
             .set({
                 status: 'PENDING_VISIT', // 状态变更为：上门/施工中
@@ -271,9 +353,24 @@ export const checkInInstallTaskAction = createSafeAction(checkInTaskSchema, asyn
             ));
 
         revalidatePath('/service/installation');
-        return { success: true, message: "签到成功" };
+
+        // 构建返回消息
+        let message = '签到成功';
+        if (isLate) {
+            message += `，迟到 ${lateMinutes} 分钟`;
+        }
+
+        return {
+            success: true,
+            message,
+            data: {
+                isLate,
+                lateMinutes,
+            }
+        };
     } catch (_error) {
-        return { success: false, error: "签到异常" };
+        console.error('签到异常:', _error);
+        return { success: false, error: '签到异常' };
     }
 });
 
@@ -286,12 +383,28 @@ export const checkOutInstallTaskAction = createSafeAction(checkOutTaskSchema, as
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
+        const task = await db.query.installTasks.findFirst({
+            where: and(
+                eq(installTasks.id, data.id),
+                eq(installTasks.tenantId, session.user.tenantId)
+            )
+        });
+
+        if (!task) return { success: false, error: "任务不存在" };
+
+        const checklistStatus = task.checklistStatus as any;
+        if (!checklistStatus?.allCompleted) {
+            return { success: false, error: "请先完成所有标准化作业检查项" };
+        }
+
         await db.update(installTasks)
             .set({
                 status: 'PENDING_CONFIRM', // 完工待确认
                 checkOutAt: new Date(),
                 actualEndAt: new Date(), // 默认签退即结束施工
                 checkOutLocation: data.location,
+                customerSignatureUrl: data.customerSignatureUrl,
+                signedAt: data.customerSignatureUrl ? new Date() : undefined,
             })
             .where(and(
                 eq(installTasks.id, data.id),
@@ -398,6 +511,51 @@ export const updateInstallItemStatusAction = createSafeAction(updateInstallItemS
     }
 });
 
+const checklistItemSchema = z.object({
+    id: z.string(),
+    label: z.string(),
+    isChecked: z.boolean(),
+    photoUrl: z.string().optional(),
+    required: z.boolean().default(true),
+});
+
+const updateChecklistSchema = z.object({
+    taskId: z.string(),
+    items: z.array(checklistItemSchema),
+});
+
+/**
+ * 更新安装清单状态
+ */
+const updateInstallChecklistAction = createSafeAction(updateChecklistSchema, async (data, ctx) => {
+    const session = ctx.session;
+    if (!session?.user?.tenantId) return { success: false, error: '未授权' };
+
+    try {
+        const allCompleted = data.items.every(item => item.required ? item.isChecked : true);
+
+        await db.update(installTasks)
+            .set({
+                checklistStatus: {
+                    items: data.items,
+                    allCompleted,
+                    updatedAt: new Date().toISOString()
+                },
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(installTasks.id, data.taskId),
+                eq(installTasks.tenantId, session.user.tenantId)
+            ));
+
+        revalidatePath('/service/installation');
+        return { success: true, message: "清单状态已更新" };
+    } catch (_error) {
+        return { success: false, error: "更新清单失败" };
+    }
+});
+
+
 
 /**
  * 获取可用师傅列表
@@ -431,5 +589,5 @@ export const checkInInstallTask = checkInInstallTaskAction;
 export const confirmInstallation = confirmInstallationAction;
 export const rejectInstallation = rejectInstallationAction;
 export const updateInstallItemStatus = updateInstallItemStatusAction;
+export const updateInstallChecklist = updateInstallChecklistAction;
 export const getRecommendedWorkers = getInstallWorkersAction;
-

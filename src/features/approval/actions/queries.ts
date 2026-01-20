@@ -4,8 +4,7 @@ import { db } from "@/shared/api/db";
 import {
     approvals,
     approvalTasks,
-    approvalFlows,
-    approvalNodes
+    approvalFlows
 } from "@/shared/api/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { auth } from "@/shared/lib/auth";
@@ -85,6 +84,21 @@ export async function getApprovalDetails(id: string) {
         });
 
         return { success: true, data: { approval, tasks } };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function getApprovalFlows() {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: [] };
+
+    try {
+        const flows = await db.query.approvalFlows.findMany({
+            where: eq(approvalFlows.tenantId, session.user.tenantId),
+            orderBy: [desc(approvalFlows.updatedAt)]
+        });
+        return { success: true, data: flows };
     } catch (e: any) {
         return { success: false, error: e.message };
     }

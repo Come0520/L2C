@@ -1,4 +1,4 @@
-﻿/**
+/**
  * L2C Environment Configuration
  */
 export const env = {
@@ -24,6 +24,10 @@ export const env = {
     SMS_TEMPLATE_CODE: process.env.SMS_TEMPLATE_CODE || '',
 
     // NextAuth
-    AUTH_SECRET: process.env.AUTH_SECRET || 'secret',
+    AUTH_SECRET: process.env.AUTH_SECRET || '', // 必须在环境变量中设置
     AUTH_URL: process.env.AUTH_URL || 'http://localhost:3000',
+
+    // 微信小程序
+    WX_APPID: process.env.WX_APPID || '',
+    WX_APPSECRET: process.env.WX_APPSECRET || '',
 };

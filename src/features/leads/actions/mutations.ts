@@ -65,8 +65,9 @@ export async function createLead(input: z.infer<typeof createLeadSchema>, userId
         revalidatePath('/leads');
         return { success: true, data: result.lead };
 
-    } catch (error: any) {
-        return { success: false, error: error.message };
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { success: false, error: message };
     }
 }
 
@@ -139,7 +140,7 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>, 
         const lead = await tx.query.leads.findFirst({ where: eq(leads.id, leadId) });
         if (!lead) throw new Error('Lead not found');
 
-        let activityType: "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT" | "SYSTEM" = type as any;
+        let activityType: "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT" | "SYSTEM" = type === 'OTHER' ? 'SYSTEM' : (type as "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT");
         if (type === 'OTHER') {
             activityType = 'SYSTEM';
         }
@@ -301,9 +302,11 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>, user
             .where(eq(leads.id, leadId));
 
         if (lead.channelId) {
+            // 安全修复：使用 COALESCE 和数值处理，避免 sql.raw() 拼接用户输入
+            const estimatedAmountNum = parseFloat(lead.estimatedAmount || '0') || 0;
             await tx.update(channels)
                 .set({
-                    totalDealAmount: sql`${channels.totalDealAmount} + ${sql.raw(lead.estimatedAmount || '0')}`
+                    totalDealAmount: sql`COALESCE(${channels.totalDealAmount}, '0')::decimal + ${estimatedAmountNum}::decimal`
                 })
                 .where(and(eq(channels.id, lead.channelId), eq(channels.tenantId, tenantId)));
         }
@@ -326,7 +329,7 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>, user
 
 export async function importLeads(data: any[], userId: string, tenantId: string) {
     let successCount = 0;
-    let errors: { row: number, error: string }[] = [];
+    const errors: { row: number, error: string }[] = [];
 
     // Batch processing
     // For large imports, we might want to chunk this, but for Phase 1 (~hundreds), loop is fine.
@@ -376,8 +379,9 @@ export async function importLeads(data: any[], userId: string, tenantId: string)
             } else {
                 successCount++;
             }
-        } catch (err: any) {
-            errors.push({ row: i + 1, error: err.message || 'Unknown error' });
+        } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : 'Unknown error';
+            errors.push({ row: i + 1, error: errMsg });
         }
     }
 

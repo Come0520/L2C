@@ -4,16 +4,16 @@ import { Badge } from '@/shared/ui/status-badge';
 import { cn } from '@/shared/utils';
 
 const statusMap: Record<string, { label: string; className: string }> = {
-    'PENDING_PO': { label: '待下单', className: 'bg-gray-100 text-gray-800 border-gray-200' },
-    'IN_PRODUCTION': { label: '生产中', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-    'PENDING_DELIVERY': { label: '待发货', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-    'DISPATCHING': { label: '发货中', className: 'bg-purple-100 text-purple-800 border-purple-200' },
-    'SHIPPED': { label: '已发货', className: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-    'PENDING_INSTALL': { label: '待安装', className: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-    'COMPLETED': { label: '已完成', className: 'bg-green-100 text-green-800 border-green-200' },
-    'CLOSED': { label: '已关闭', className: 'bg-slate-100 text-slate-800 border-slate-200' },
-    'CANCELLED': { label: '已取消', className: 'bg-red-100 text-red-800 border-red-200' },
-    'DRAFT': { label: '草稿', className: 'bg-gray-50 text-gray-600 border-gray-100' },
+    'PENDING_PO': { label: '待下单', className: 'glass-step-inactive text-muted-foreground' },
+    'IN_PRODUCTION': { label: '生产中', className: 'glass-alert-info' },
+    'PENDING_DELIVERY': { label: '待发货', className: 'glass-alert-warning' },
+    'DISPATCHING': { label: '发货中', className: 'bg-purple-500/10 text-purple-600 border-purple-500/20 border' },
+    'SHIPPED': { label: '已发货', className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20 border' },
+    'PENDING_INSTALL': { label: '待安装', className: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20 border' },
+    'COMPLETED': { label: '已完成', className: 'glass-alert-success' },
+    'CLOSED': { label: '已关闭', className: 'glass-step-inactive text-muted-foreground opacity-75' },
+    'CANCELLED': { label: '已取消', className: 'glass-alert-error' },
+    'DRAFT': { label: '草稿', className: 'bg-muted/30 text-muted-foreground border-border border' },
 };
 
 export function OrderStatusBadge({ status, className }: { status: string; className?: string }) {

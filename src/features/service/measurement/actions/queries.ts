@@ -1,9 +1,9 @@
-﻿'use server';
+'use server';
 
 import { db } from '@/shared/api/db';
-import { measureTasks, measureSheets, measureItems, users } from '@/shared/api/schema';
+import { measureTasks, measureSheets, users } from '@/shared/api/schema';
 import { eq, and, desc, or, ilike, count } from 'drizzle-orm';
-import { z } from 'zod';
+
 
 /**
  * 获取测量任务列表
@@ -18,7 +18,7 @@ export async function getMeasureTasks(filters: {
     const whereConditions = [];
 
     if (status) {
-        // @ts-ignore - 兼容枚举
+        // @ts-expect-error - 兼容枚举类型不匹配
         whereConditions.push(eq(measureTasks.status, status));
     }
 
@@ -104,4 +104,65 @@ export async function getMeasureTaskVersions(taskId: string) {
         orderBy: [desc(measureSheets.round), desc(measureSheets.variant)],
     });
     return { success: true, data: sheets };
+}
+
+/**
+ * 检查测量任务的费用状态 (定金检查)
+ */
+export async function checkMeasureFeeStatus(taskId: string) {
+    const task = await db.query.measureTasks.findFirst({
+        where: eq(measureTasks.id, taskId),
+        with: {
+            customer: {
+                with: {
+                    orders: true
+                }
+            },
+            lead: true
+        }
+    });
+
+    if (!task) return { success: false, error: 'Task not found' };
+
+    // 1. 检查是否获免
+    if (task.isFeeExempt) {
+        return {
+            success: true,
+            feeStatus: 'WAIVED',
+            canDispatch: true,
+            message: '已获免测量费'
+        };
+    }
+
+    // 2. 检查是否有已支付的定金订单
+    // TODO: Require 'type' field in orders schema to distinguish EARNEST_MONEY orders strictly.
+    // For now, checking for any PAID order with sufficient amount.
+    const earnestOrder = task.customer.orders.find(o =>
+        o.status === 'PAID' &&
+        // @ts-expect-error - Assuming 'type' might be added later or using naming convention logic if needed
+        (o['type'] === 'EARNEST_MONEY' || o.orderNo.startsWith('EM'))
+    );
+
+    // 假设标准测量费 (未来应从配置读取)
+    const STANDARD_MEASURE_FEE = 200;
+
+    // Fallback: If no strict earnest money order, check if ANY paid order covers the fee (loose check)
+    const hasSufficientPayment = (earnestOrder && Number(earnestOrder.totalAmount) >= STANDARD_MEASURE_FEE) ||
+        task.customer.orders.some(o => o.status === 'PAID' && Number(o.totalAmount) >= STANDARD_MEASURE_FEE);
+
+    if (hasSufficientPayment) {
+        return {
+            success: true,
+            feeStatus: 'PAID',
+            canDispatch: true,
+            message: '定金已支付'
+        };
+    }
+
+    return {
+        success: true,
+        feeStatus: 'PENDING',
+        canDispatch: false,
+        message: '需支付定金或申请豁免'
+    };
 }

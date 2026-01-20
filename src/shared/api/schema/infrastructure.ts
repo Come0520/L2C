@@ -25,6 +25,7 @@ export const users = pgTable('users', {
     dashboardConfig: jsonb('dashboard_config').default({}),
     isActive: boolean('is_active').default(true),
     avatarUrl: text('avatar_url'),
+    notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

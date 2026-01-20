@@ -10,10 +10,7 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Eye from 'lucide-react/dist/esm/icons/eye';
-import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import { Plus, Eye, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 

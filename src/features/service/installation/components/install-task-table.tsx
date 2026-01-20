@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
     Table,
@@ -17,6 +17,7 @@ interface InstallTask {
     address: string | null;
     status: string;
     scheduledDate: Date | string | null;
+    logisticsReadyStatus?: boolean | null;
 }
 
 interface InstallTaskTableProps {
@@ -32,6 +33,7 @@ export function InstallTaskTable({ data }: InstallTaskTableProps) {
                         <TableHead>客户 (Customer)</TableHead>
                         <TableHead>安装地址 (Address)</TableHead>
                         <TableHead>状态 (Status)</TableHead>
+                        <TableHead>物流 (Logistics)</TableHead>
                         <TableHead>预约时间 (Scheduled)</TableHead>
                         <TableHead className="text-right">操作 (Actions)</TableHead>
                     </TableRow>
@@ -50,6 +52,13 @@ export function InstallTaskTable({ data }: InstallTaskTableProps) {
                                 <TableCell>{item.address || '无地址'}</TableCell>
                                 <TableCell>
                                     <Badge variant="outline">{item.status}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    {item.logisticsReadyStatus ? (
+                                        <Badge className="bg-green-100 text-green-800 border-green-200">货齐</Badge>
+                                    ) : (
+                                        <Badge variant="secondary">备货中</Badge>
+                                    )}
                                 </TableCell>
                                 <TableCell>
                                     {item.scheduledDate

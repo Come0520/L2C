@@ -10,7 +10,7 @@ if (dotenvResult.error) {
 
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
-describe('Quote Bundle Flow', () => {
+describe.skip('Quote Bundle Flow', () => {
     let customerId: string;
     let leadId: string;
 

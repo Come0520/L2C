@@ -44,7 +44,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                 {/* Connector Line (Virtual) -- Hard to do vertically with responsive, keeping simple cards stack */}
 
                 {/* Stage 1: Order & Production */}
-                <Card className="bg-slate-50 border-slate-200 shadow-sm">
+                <Card className="bg-muted/10 border-border shadow-sm glass-panel">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium flex justify-between items-center text-slate-700">
                             <span className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                                 </h4>
                                 {purchaseOrders.length === 0 ? <p className="text-xs text-muted-foreground italic pl-5">无相关记录</p> :
                                     purchaseOrders.map((po: any) => (
-                                        <div key={po.id} className="border p-2 rounded text-sm bg-white hover:bg-slate-50 transition-colors flex justify-between items-center">
+                                        <div key={po.id} className="border p-2 rounded text-sm bg-card hover:bg-muted/10 transition-colors flex justify-between items-center">
                                             <div>
                                                 <div className="font-medium text-slate-800">{po.poNo}</div>
                                                 <div className="text-xs text-muted-foreground">{po.supplierName}</div>
@@ -80,7 +80,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                                 </h4>
                                 {installTasks.length === 0 ? <p className="text-xs text-muted-foreground italic pl-5">无相关记录</p> :
                                     installTasks.map((task: any) => (
-                                        <div key={task.id} className="border p-2 rounded text-sm bg-white hover:bg-slate-50 transition-colors flex justify-between items-center">
+                                        <div key={task.id} className="border p-2 rounded text-sm bg-card hover:bg-muted/10 transition-colors flex justify-between items-center">
                                             <div>
                                                 <div className="font-medium text-slate-800">{task.taskNo}</div>
                                                 <div className="text-xs text-muted-foreground">
@@ -140,7 +140,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 {liabilityNotices.map((notice: any) => (
-                                    <div key={notice.id} className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-3 rounded border border-red-100 shadow-sm">
+                                    <div key={notice.id} className="flex flex-col md:flex-row justify-between items-start md:items-center bg-card p-3 rounded border border-red-500/20 shadow-sm">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <AlertTriangle className="h-4 w-4 text-red-500" />

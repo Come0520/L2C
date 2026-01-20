@@ -13,6 +13,7 @@ import {
 } from '@/shared/ui/dialog';
 import { checkOutInstallTaskAction } from '../actions';
 import { toast } from 'sonner';
+import { SignatureCanvas } from './signature-canvas';
 
 interface SubmitInstallCompletionDialogProps {
     taskId: string;
@@ -21,48 +22,83 @@ interface SubmitInstallCompletionDialogProps {
 
 export function SubmitInstallCompletionDialog({ taskId, trigger }: SubmitInstallCompletionDialogProps) {
     const [open, setOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    // const [isLoading, setIsLoading] = useState(false);
+    const [step, setStep] = useState<'CONFIRM' | 'SIGN'>('CONFIRM');
+    const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
 
     async function handleConfirm() {
-        setIsLoading(true);
+        // setIsLoading(true);
         try {
-            // Check out effectively submits completion for review
             const result = await checkOutInstallTaskAction({
                 id: taskId,
-                // Location is optional schema wise, passing empty for now or could add geo-location later
+                customerSignatureUrl: signatureUrl || undefined,
             });
 
             if (result.data?.success) {
                 toast.success(result.data.message || '已提交完工申请');
                 setOpen(false);
+                // Reset state
+                setStep('CONFIRM');
+                setSignatureUrl(null);
             } else {
                 toast.error(result.data?.error || result.error || '提交失败');
             }
         } catch (_error) {
             toast.error('请求失败');
         } finally {
-            setIsLoading(false);
+            // setIsLoading(false);
         }
     }
 
+    const handleSignatureConfirm = (blob: Blob) => {
+        // Convert blob to Data URL for storage (simulating upload for now)
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+            const base64data = reader.result as string;
+            setSignatureUrl(base64data);
+            handleConfirm(); // Auto submit after signature
+        };
+    };
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(val) => {
+            setOpen(val);
+            if (!val) {
+                setStep('CONFIRM');
+                setSignatureUrl(null);
+            }
+        }}>
             <DialogTrigger asChild>
                 {trigger || <Button>提交完工</Button>}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>确认提交完工申请？</DialogTitle>
                     <DialogDescription>
-                        确认所有安装项已完成并拍摄照片后，点击提交待销售验收。
+                        {step === 'CONFIRM'
+                            ? "确认所有安装项已完成并拍摄照片后，点击下一步进行客户验收签字。"
+                            : "请客户在下方区域签字确认验收。"}
                     </DialogDescription>
                 </DialogHeader>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
-                    <Button onClick={handleConfirm} disabled={isLoading}>
-                        {isLoading ? '提交中...' : '确认提交'}
-                    </Button>
-                </DialogFooter>
+
+                {step === 'SIGN' && (
+                    <div className="py-2">
+                        <SignatureCanvas
+                            onConfirm={handleSignatureConfirm}
+                            onCancel={() => setStep('CONFIRM')}
+                        />
+                    </div>
+                )}
+
+                {step === 'CONFIRM' && (
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+                        <Button onClick={() => setStep('SIGN')}>
+                            下一步 (客户签字)
+                        </Button>
+                    </DialogFooter>
+                )}
             </DialogContent>
         </Dialog>
     );

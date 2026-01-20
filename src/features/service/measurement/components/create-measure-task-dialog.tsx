@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
@@ -6,26 +6,28 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
+import { Switch } from '@/shared/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { toast } from 'sonner';
 import { createMeasureTask } from '../actions/mutations';
 import Plus from 'lucide-react/dist/esm/icons/plus';
-import { DatePicker } from '@/shared/ui/date-picker'; // Assuming DatePicker exists or use Input type="datetime-local"
 
 export function CreateMeasureTaskDialog() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Simple state for now, ideally use react-hook-form + zod
     const [formData, setFormData] = useState({
         leadId: '',
         customerId: '',
         scheduledAt: new Date(),
+        isFeeExempt: false,
+        type: 'BLIND',
         remark: ''
     });
 
     const handleCreate = async () => {
         if (!formData.leadId || !formData.customerId) {
-            toast.error('Lead ID and Customer ID are required');
+            toast.error('请填写线索和客户 ID');
             return;
         }
 
@@ -35,17 +37,21 @@ export function CreateMeasureTaskDialog() {
                 leadId: formData.leadId,
                 customerId: formData.customerId,
                 scheduledAt: formData.scheduledAt.toISOString(),
+                isFeeExempt: formData.isFeeExempt,
+                type: formData.type as any,
                 remark: formData.remark,
-            }, 'user-id-placeholder', 'tenant-id-placeholder'); // User/Tenant ID should come from context/auth
+            }, 'user-id-placeholder', 'tenant-id-placeholder');
 
             if (res.success) {
-                toast.success('测量任务已创建');
+                toast.success(formData.isFeeExempt && formData.type !== 'SALES_SELF' ? '任务已提交审批' : '测量任务已创建');
                 setOpen(false);
-                setFormData({ leadId: '', customerId: '', scheduledAt: new Date(), remark: '' });
+                setFormData({ leadId: '', customerId: '', scheduledAt: new Date(), isFeeExempt: false, type: 'BLIND', remark: '' });
+            } else {
+                toast.error((res as any).error || '创建失败');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error('创建失败');
+            toast.error(error.message || '创建失败');
         } finally {
             setLoading(false);
         }
@@ -64,33 +70,38 @@ export function CreateMeasureTaskDialog() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="leadId" className="text-right">
-                            线索 ID
-                        </Label>
+                        <Label htmlFor="leadId" className="text-right">线索 ID</Label>
                         <Input
                             id="leadId"
                             value={formData.leadId}
                             onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
                             className="col-span-3"
-                            placeholder="UUID"
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="customerId" className="text-right">
-                            客户 ID
-                        </Label>
+                        <Label htmlFor="customerId" className="text-right">客户 ID</Label>
                         <Input
                             id="customerId"
                             value={formData.customerId}
                             onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
                             className="col-span-3"
-                            placeholder="UUID"
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="scheduledAt" className="text-right">
-                            预约时间
-                        </Label>
+                        <Label htmlFor="type" className="text-right">测量类型</Label>
+                        <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="选择类型" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="BLIND">上门测量</SelectItem>
+                                <SelectItem value="QUOTE_BASED">基于报价测量</SelectItem>
+                                <SelectItem value="SALES_SELF">销售自测</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="scheduledAt" className="text-right">预约时间</Label>
                         <div className="col-span-3">
                             <Input
                                 type="datetime-local"
@@ -100,9 +111,18 @@ export function CreateMeasureTaskDialog() {
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="remark" className="text-right">
-                            备注
-                        </Label>
+                        <Label htmlFor="isFeeExempt" className="text-right">免收测量费</Label>
+                        <div className="col-span-3 flex items-center space-x-2">
+                            <Switch
+                                id="isFeeExempt"
+                                checked={formData.isFeeExempt}
+                                onCheckedChange={(checked) => setFormData({ ...formData, isFeeExempt: checked })}
+                            />
+                            <span className="text-sm text-muted-foreground">免收且非自测需审批</span>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="remark" className="text-right">备注</Label>
                         <Textarea
                             id="remark"
                             value={formData.remark}
@@ -114,7 +134,7 @@ export function CreateMeasureTaskDialog() {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
                     <Button onClick={handleCreate} disabled={loading}>
-                        {loading ? '创建中...' : '创建'}
+                        {loading ? '处理中...' : (formData.isFeeExempt && formData.type !== 'SALES_SELF' ? '提交审批' : '创建')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

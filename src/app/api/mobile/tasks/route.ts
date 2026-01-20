@@ -2,25 +2,27 @@
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, desc } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
-// Mock Auth Check Helper
-// Accepts "Authorization: Bearer mk_USERID_TS"
-function getWorkerIdFromHeader(request: Request): string | null {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer mk_')) return null;
-    const token = authHeader.split(' ')[1];
-    const parts = token.split('_');
-    if (parts.length >= 2) return parts[1]; // Return embedded UserID
-    return null;
-}
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     try {
-        const workerId = getWorkerIdFromHeader(request);
-        if (!workerId) {
-            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        // 1. 认证
+        const authResult = await authenticateMobile(request);
+        if (!authResult.success) {
+            return authResult.response;
         }
+        const { session } = authResult;
+
+        // 2. 权限检查 - 仅限工人访问任务列表? 
+        // 实际上任务列表可能根据角色返回不同内容，这里先假设主要是工人
+        // 或者通用查询。根据之前的逻辑是查 measureTasks 和 installTasks，这通常是工人的任务。
+        const roleCheck = requireWorker(session);
+        if (!roleCheck.allowed) {
+            return roleCheck.response;
+        }
+
+        const workerId = session.userId;
 
         // Fetch Measure Tasks
         const mTasks = await db.query.measureTasks.findMany({

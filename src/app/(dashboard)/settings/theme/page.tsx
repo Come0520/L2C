@@ -1,4 +1,4 @@
-﻿export default function ThemeSettingsPage() {
+export default function ThemeSettingsPage() {
     return (
         <div className="space-y-6">
             <div>

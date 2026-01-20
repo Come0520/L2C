@@ -17,7 +17,8 @@ describe('Quote Bundle Aggregation', () => {
     // Dynamic imports
     let createQuoteBundle: (data: unknown) => Promise<{ success: boolean; data: { id: string } }>;
     let getQuoteBundleById: (id: string) => Promise<{ success: boolean; data: unknown }>;
-    let createQuote: (data: unknown) => Promise<{ success: boolean; data: unknown }>;
+    let createQuote: (data: unknown) => Promise<{ success: boolean; data: any }>;
+    let createQuoteItem: (data: unknown) => Promise<{ success: boolean; data: any }>;
     let db: unknown;
 
     beforeAll(async () => {
@@ -46,6 +47,7 @@ describe('Quote Bundle Aggregation', () => {
             createQuoteBundle = actions.createQuoteBundle;
             getQuoteBundleById = actions.getQuoteBundleById;
             createQuote = actions.createQuote;
+            createQuoteItem = actions.createQuoteItem;
 
             // Get Customer
             const customer = await db.query.customers.findFirst({
@@ -63,7 +65,7 @@ describe('Quote Bundle Aggregation', () => {
             console.error('Setup failed', e);
             throw e;
         }
-    });
+    }, 30000);
 
     it('should aggregate totals when adding quotes', async () => {
         if (!customerId) return;
@@ -78,36 +80,60 @@ describe('Quote Bundle Aggregation', () => {
         const bundleId = bundle.data.id;
 
         // 2. Add Quote 1 (Curtain: 1000)
-        await createQuote({
+        const quote1 = await createQuote({
             customerId,
             leadId,
             bundleId,
-            category: 'CURTAIN',
-            totalAmount: 1000,
-            discountAmount: 0,
-            finalAmount: 1000,
-            measurementFee: 0,
-            installationFee: 0,
-            freightFee: 0,
+            title: 'Quote 1',
         });
+
+        if (!quote1.success || !quote1.data) {
+            console.error('Create Quote 1 Failed:', quote1);
+            throw new Error(`Create Quote 1 Failed: ${quote1.error}`);
+        }
+
+        const item1 = await createQuoteItem({
+            quoteId: quote1.data.id,
+            category: 'CURTAIN',
+            productName: 'Test Curtain',
+            unitPrice: 1000,
+            quantity: 1,
+            width: 0,
+            height: 0
+        });
+
+        if (!item1.success) {
+            console.error('Create Item 1 Failed:', item1);
+            throw new Error(`Create Item 1 Failed: ${item1.error}`);
+        }
 
         // Verify Bundle Total = 1000
         let b = await getQuoteBundleById({ id: bundleId });
+        console.log('Bundle Check 1:', b);
         expect(Number(b.data.totalAmount)).toBe(1000);
         expect(Number(b.data.finalAmount)).toBe(1000);
 
         // 3. Add Quote 2 (Wallcloth: 500)
-        await createQuote({
+        const quote2 = await createQuote({
             customerId,
             leadId,
             bundleId,
+            title: 'Quote 2',
+        });
+
+        if (!quote2.success || !quote2.data) {
+            console.error('Create Quote 2 Failed:', quote2);
+            throw new Error(`Create Quote 2 Failed: ${quote2.error}`);
+        }
+
+        await createQuoteItem({
+            quoteId: quote2.data.id,
             category: 'WALLCLOTH',
-            totalAmount: 500,
-            discountAmount: 0,
-            finalAmount: 500,
-            measurementFee: 0,
-            installationFee: 0,
-            freightFee: 0,
+            productName: 'Test Wallcloth',
+            unitPrice: 500,
+            quantity: 1,
+            width: 0,
+            height: 0
         });
 
         // Verify Bundle Total = 1500

@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
@@ -248,12 +248,176 @@ export const confirmLiabilityNotice = createSafeAction(confirmLiabilitySchema, a
             .where(eq(afterSalesTickets.id, notice.afterSalesId));
 
         revalidatePath(`/after-sales/${notice.afterSalesId}`);
+
+        // 财务联动: 供应商立即生成扣款对账单
+        if (notice.liablePartyType === 'FACTORY' && notice.liablePartyId) {
+            try {
+                const { createSupplierLiabilityStatement } = await import('@/features/finance/actions/ap');
+                await createSupplierLiabilityStatement(data.noticeId);
+            } catch (err) {
+                console.error('[财务联动失败] 供应商扣款:', err);
+                // 不阻断主流程，但记录错误
+            }
+        }
+        // 安装工定责由 generateLaborSettlement 批量处理，此处不立即触发
+
         return { success: true, message: "定责单已确认，工单扣款金额已更新" };
     });
 });
+
 
 
 // Placeholder exports to match previous file exports if needed, or remove them
 export const closeResolutionCostClosure = createSafeAction(z.any(), async () => ({ success: true }));
 export const checkTicketFinancialClosure = createSafeAction(z.any(), async () => ({ success: true }));
 export const createExchangeOrder = createSafeAction(z.any(), async () => ({ success: true }));
+
+// ============================================================
+// [AfterSales-01] 售后质量分析报表
+// ============================================================
+
+import { count, sum, sql } from 'drizzle-orm';
+
+const getQualityAnalyticsSchema = z.object({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+});
+
+/**
+ * 获取售后质量分析报表
+ * 按责任方统计售后数量和成本
+ */
+export const getAfterSalesQualityAnalytics = createSafeAction(getQualityAnalyticsSchema, async (params, { session }) => {
+    const tenantId = session.user.tenantId;
+
+    // 按责任方类型统计定责单
+    const liabilityByParty = await db
+        .select({
+            liablePartyType: liabilityNotices.liablePartyType,
+            count: count(liabilityNotices.id),
+            totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
+        })
+        .from(liabilityNotices)
+        .where(and(
+            eq(liabilityNotices.tenantId, tenantId),
+            eq(liabilityNotices.status, 'CONFIRMED')
+        ))
+        .groupBy(liabilityNotices.liablePartyType);
+
+    // 按工单类型统计
+    const ticketsByType = await db
+        .select({
+            type: afterSalesTickets.type,
+            count: count(afterSalesTickets.id),
+        })
+        .from(afterSalesTickets)
+        .where(eq(afterSalesTickets.tenantId, tenantId))
+        .groupBy(afterSalesTickets.type);
+
+    // 按状态统计
+    const ticketsByStatus = await db
+        .select({
+            status: afterSalesTickets.status,
+            count: count(afterSalesTickets.id),
+        })
+        .from(afterSalesTickets)
+        .where(eq(afterSalesTickets.tenantId, tenantId))
+        .groupBy(afterSalesTickets.status);
+
+    // 责任方类型映射
+    const partyTypeLabels: Record<string, string> = {
+        FACTORY: '工厂',
+        INSTALLER: '安装工',
+        LOGISTICS: '物流',
+        CUSTOMER: '客户',
+        SALESPERSON: '销售',
+        OTHER: '其他',
+    };
+
+    return {
+        liabilityByParty: liabilityByParty.map(item => ({
+            partyType: item.liablePartyType,
+            partyTypeLabel: partyTypeLabels[item.liablePartyType || ''] || item.liablePartyType,
+            count: Number(item.count),
+            totalAmount: parseFloat(item.totalAmount?.toString() || '0'),
+        })),
+        ticketsByType: ticketsByType.map(item => ({
+            type: item.type,
+            count: Number(item.count),
+        })),
+        ticketsByStatus: ticketsByStatus.map(item => ({
+            status: item.status,
+            count: Number(item.count),
+        })),
+        summary: {
+            totalLiabilityAmount: liabilityByParty.reduce((sum, item) =>
+                sum + parseFloat(item.totalAmount?.toString() || '0'), 0),
+            totalLiabilityCount: liabilityByParty.reduce((sum, item) =>
+                sum + Number(item.count), 0),
+        }
+    };
+});
+
+// ============================================================
+// [AfterSales-02] 保修期自动判定
+// ============================================================
+
+const checkWarrantySchema = z.object({
+    orderId: z.string().uuid(),
+});
+
+/**
+ * 检查订单是否在保修期内
+ * 根据订单完成日期自动计算
+ */
+export const checkWarrantyStatus = createSafeAction(checkWarrantySchema, async ({ orderId }, { session }) => {
+    const tenantId = session.user.tenantId;
+
+    // 获取订单信息
+    const order = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.id, orderId),
+            eq(orders.tenantId, tenantId)
+        ),
+        columns: {
+            id: true,
+            orderNo: true,
+            status: true,
+            completedAt: true,
+            createdAt: true,
+        }
+    });
+
+    if (!order) {
+        return { error: '订单不存在' };
+    }
+
+    // 默认保修期：12个月
+    const warrantyMonths = 12;
+    const now = new Date();
+
+    // 使用完成日期或创建日期作为保修起点
+    const warrantyStartDate = order.completedAt ? new Date(order.completedAt) : (order.createdAt ? new Date(order.createdAt) : new Date());
+    const warrantyEndDate = new Date(warrantyStartDate);
+    warrantyEndDate.setMonth(warrantyEndDate.getMonth() + warrantyMonths);
+
+    const isInWarranty = now <= warrantyEndDate;
+    const daysRemaining = isInWarranty
+        ? Math.ceil((warrantyEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+    const daysExpired = !isInWarranty
+        ? Math.ceil((now.getTime() - warrantyEndDate.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
+    return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        warrantyStartDate: warrantyStartDate.toISOString().slice(0, 10),
+        warrantyEndDate: warrantyEndDate.toISOString().slice(0, 10),
+        warrantyMonths,
+        isInWarranty,
+        daysRemaining: isInWarranty ? daysRemaining : null,
+        daysExpired: !isInWarranty ? daysExpired : null,
+        statusLabel: isInWarranty ? '保修期内' : `已过保 ${daysExpired} 天`,
+    };
+});

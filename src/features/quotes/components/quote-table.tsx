@@ -1,4 +1,6 @@
-﻿'use client';
+'use client';
+
+import React from 'react';
 
 import {
     Table,
@@ -29,7 +31,7 @@ interface QuoteTableProps {
     data: Quote[];
 }
 
-export function QuoteTable({ data }: QuoteTableProps) {
+export const QuoteTable = React.memo(function QuoteTable({ data }: QuoteTableProps) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -79,4 +81,4 @@ export function QuoteTable({ data }: QuoteTableProps) {
             </Table>
         </div>
     );
-}
+});

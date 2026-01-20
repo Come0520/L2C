@@ -8,7 +8,13 @@ import { SubmitInstallCompletionDialog } from '@/features/service/installation/c
 import { ConfirmInstallDialog, RejectInstallDialog } from '@/features/service/installation/components/confirm-reject-dialogs';
 import { InstallPhotoGallery } from '@/features/service/installation/components/install-photo-gallery';
 import { InstallItemsTable } from '@/features/service/installation/components/install-items-table';
-import { Calendar, User, MapPin, Package, Star, FileText } from 'lucide-react';
+import { InstallChecklist } from '@/features/service/installation/components/install-checklist';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import User from 'lucide-react/dist/esm/icons/user';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Star from 'lucide-react/dist/esm/icons/star';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
 
 
 export const dynamic = 'force-dynamic';
@@ -146,6 +152,22 @@ export default async function InstallTaskDetailPage({
                     photos={galleryPhotos}
                     allowUpload={allowEdit}
                 />
+
+                {/* Checklist - 仅在待上门或施工中显示 */}
+                {(task.status === 'PENDING_VISIT' || task.status === 'DISPATCHING') && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>标准化作业清单</CardTitle>
+                            <CardDescription>师傅需完成以下检查项后才能签退</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <InstallChecklist
+                                taskId={task.id}
+                                initialStatus={task.checklistStatus as any}
+                            />
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             {/* 评价信息 */}

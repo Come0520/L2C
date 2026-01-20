@@ -14,14 +14,16 @@ import { toast } from 'sonner';
 interface ProductDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    initialData?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initialData?: any; // 产品数据结构复杂，后续可定义具体类型
     onSuccess: () => void;
 }
 
 export function ProductDialog({ open, onOpenChange, initialData, onSuccess }: ProductDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (values: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleSubmit = async (values: any) => { // 表单值由 ProductForm 控制
         setIsLoading(true);
         try {
             if (initialData?.id) {
@@ -41,7 +43,8 @@ export function ProductDialog({ open, onOpenChange, initialData, onSuccess }: Pr
             }
             onSuccess();
             onOpenChange(false);
-        } catch (error: any) {
+        } catch (error: unknown) {
+            console.error('Product operation failed:', error);
             toast.error('操作失败');
         } finally {
             setIsLoading(false);

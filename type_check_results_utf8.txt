@@ -1,0 +1,4 @@
+﻿
+> l2c@0.1.0 type-check C:\Users\bigey\Documents\Antigravity\L2C
+> tsc --noEmit
+

@@ -32,7 +32,7 @@ export const AceternityTabs = ({
     const [localActiveTab, setLocalActiveTab] = useState(activeTab ?? defaultActiveValue);
 
     // Sync local state when prop changes from external source
-    // 这是一个合理的模式：同步受�?prop 到本�?state 用于乐观更新
+    // 这是一个合理的模式：同步受�?prop 到本�?state 用于乐观更新
     useEffect(() => {
         if (activeTab !== undefined && activeTab !== localActiveTab) {
             setLocalActiveTab(activeTab);
@@ -57,11 +57,11 @@ export const AceternityTabs = ({
     const handleTabClick = (value: string) => {
         if (value === localActiveTab) return;
 
-        // Immediate Visual Update (Optimistic) - 立即更新本地状态触发动�?
+        // Immediate Visual Update (Optimistic) - 立即更新本地状态触发动�?
         setLocalActiveTab(value);
 
-        // 使用 requestAnimationFrame 确保动画开始后再触发数据获�?
-        // 这保证了 Pill 动画可以在下一帧立即开始，不被主线程工作阻�?
+        // 使用 requestAnimationFrame 确保动画开始后再触发数据获�?
+        // 这保证了 Pill 动画可以在下一帧立即开始，不被主线程工作阻�?
         requestAnimationFrame(() => {
             onTabChange?.(value);
         });
@@ -121,12 +121,12 @@ export const AceternityTabs = ({
                                         damping: 30,
                                         mass: 0.8,
                                     }}
-                                    // 移除 backdrop-blur，使用纯色背景消�?GPU 压力
+                                    // 移除 backdrop-blur，使用纯色背景消�?GPU 压力
                                     className={cn(
                                         'absolute inset-0 bg-white dark:bg-zinc-800 rounded-full shadow-md z-0',
                                         activeTabClassName
                                     )}
-                                    // 提示浏览器优�?transform
+                                    // 提示浏览器优�?transform
                                     style={{ willChange: 'transform' }}
                                 />
                             )}

@@ -30,7 +30,7 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
 
     return (
         <div className="relative flex items-center group" ref={containerRef}>
-            {/* Logo 区域 - �?Logo 作为触发�?*/}
+            {/* Logo 区域 - �?Logo 作为触发�?*/}
             <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
@@ -51,7 +51,7 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
                 </div>
             </button>
 
-            {/* 系统标题 - 不触发切�?*/}
+            {/* 系统标题 - 不触发切�?*/}
             <AnimatePresence mode="wait">
                 {open && (
                     <motion.span
@@ -65,7 +65,7 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
                 )}
             </AnimatePresence>
 
-            {/* Pill Nav 主题选择�?- 悬浮�?Logo 右侧上方层级 */}
+            {/* Pill Nav 主题选择�?- 悬浮�?Logo 右侧上方层级 */}
             <AnimatePresence>
                 {isMenuOpen && (
                     <motion.div

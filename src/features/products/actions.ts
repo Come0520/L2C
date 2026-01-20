@@ -19,7 +19,8 @@ export const {
     createProduct,
     updateProduct,
     deleteProduct,
-    activateProduct
+    activateProduct,
+    batchCreateProducts
 } = mutations;
 
 // Re-export template actions
@@ -33,5 +34,45 @@ export const {
     getProductSuppliers,
     addProductSupplier,
     updateProductSupplier,
-    removeProductSupplier
+    removeProductSupplier,
+    // [Product-03] 供应商关联增强
+    compareSupplierPrices,
+    autoSwitchDefaultSupplier
 } = manageSuppliers;
+
+// 套餐管理
+import * as packageActions from './actions/package-actions';
+export const {
+    getPackages,
+    getPackageById,
+    createPackage,
+    updatePackage,
+    deletePackage,
+    togglePackageStatus,
+    getPackageProducts,
+    addPackageProduct,
+    removePackageProduct,
+    calculatePackagePrice
+} = packageActions;
+
+// 组合商品管理
+import * as bundleActions from './actions/bundle-actions';
+export const {
+    getBundles,
+    getBundleById,
+    createBundle,
+    updateBundle,
+    deleteBundle,
+    updateBundleItems,
+    calculateBundleCost
+} = bundleActions;
+
+// 渠道专属价管理
+import * as channelPriceActions from './actions/channel-price-actions';
+export const {
+    getChannelPrices,
+    addChannelPrice,
+    updateChannelPrice,
+    removeChannelPrice,
+    getProductPriceForChannel
+} = channelPriceActions;

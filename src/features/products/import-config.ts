@@ -1,13 +1,16 @@
 
 import { z } from 'zod';
 import { ExcelImporterProps } from '@/shared/components/excel-import/types';
+import { productCategoryEnum } from '@/shared/api/schema/enums';
 
 export const productImportSchema = z.object({
     name: z.string().min(1, '名称不能为空'),
     sku: z.string().min(1, 'SKU不能为空'),
-    category: z.string().optional(),
-    retailPrice: z.coerce.number().optional(),
-    purchasePrice: z.coerce.number().optional(),
+    category: z.enum(productCategoryEnum.enumValues),
+    unit: z.string().default('件'),
+    retailPrice: z.coerce.number().min(0).default(0),
+    purchasePrice: z.coerce.number().min(0).default(0),
+    description: z.string().optional(),
 });
 
 export type ProductImportItem = z.infer<typeof productImportSchema>;

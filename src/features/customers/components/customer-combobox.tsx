@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Check from 'lucide-react/dist/esm/icons/check';
 import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
 import Plus from 'lucide-react/dist/esm/icons/plus';
@@ -16,6 +16,9 @@ import {
 import { CreateCustomerDialog } from './create-customer-dialog';
 import { getCustomers } from '@/features/customers/actions/queries';
 
+/**
+ * 防抖 Hook
+ */
 function useDebounceValue<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -40,16 +43,31 @@ interface CustomerComboboxProps {
     tenantId: string;
 }
 
+/**
+ * 客户选择下拉框组件
+ *
+ * 支持搜索现有客户和快速新建客户
+ * 新建客户后会自动选中该客户
+ */
 export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }: CustomerComboboxProps) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounceValue(search, 500);
+    const queryClient = useQueryClient();
 
     const { data: customerData, isLoading } = useQuery({
         queryKey: ['customers', debouncedSearch],
         queryFn: async () => {
-            const res = await getCustomers({ page: 1, pageSize: 15, search: debouncedSearch || undefined });
-            return res.data;
+            const res = await getCustomers({
+                page: 1,
+                pageSize: 15,
+                search: debouncedSearch || undefined,
+                type: undefined,
+                level: undefined,
+                lifecycleStage: undefined,
+                pipelineStatus: undefined,
+            });
+            return res?.data || [];
         },
         enabled: open,
     });
@@ -59,9 +77,25 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
 
     const selectedCustomer = data.find((c: any) => c.id === value);
 
+    /**
+     * 处理客户选择
+     */
     const handleSelect = (customer: any) => {
         onChange(customer.id, customer);
         setOpen(false);
+    };
+
+    /**
+     * 处理新建客户成功
+     * 自动选中新建的客户
+     */
+    const handleCustomerCreated = (customer?: { id: string }) => {
+        if (customer?.id) {
+            // 刷新客户列表缓存
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            // 自动选中新建的客户
+            onChange(customer.id, customer);
+        }
     };
 
     return (
@@ -137,6 +171,7 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
                 }
                 userId={userId}
                 tenantId={tenantId}
+                onSuccess={handleCustomerCreated}
             />
         </div>
     );

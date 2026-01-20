@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';

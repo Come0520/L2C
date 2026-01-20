@@ -73,7 +73,9 @@ export class AnalyticsService {
         // 3. Quotes Created
         // 4. Orders Confirmed
 
-        const timeFilter = (col: any) => range ? and(gte(col, range.start), lte(col, range.end)) : undefined;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const timeFilter = (col: any) =>
+            range ? and(gte(col, range.start), lte(col, range.end)) : undefined;
 
         const [totalLeads] = await db
             .select({ count: count() })

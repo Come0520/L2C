@@ -208,6 +208,32 @@ async function main() {
         }
         console.log(`✅ Dictionaries: ${dicts.length} entries created/verified`);
 
+        // ===== 9. 创建审批流程 =====
+        const approvalFlowsData = [
+            { code: 'GENERAL', name: '通用审批', description: '通用业务审批流程' },
+            { code: 'QUOTE_DISCOUNT', name: '报价折扣审批', description: '报价折扣超出限额时的审批' },
+        ];
+
+        const defaultDefinition = {
+            nodes: [
+                { id: '1', type: 'start', position: { x: 250, y: 50 }, data: { label: '开始' } },
+                { id: '2', type: 'end', position: { x: 250, y: 300 }, data: { label: '结束' } }
+            ],
+            edges: []
+        };
+
+        for (const flow of approvalFlowsData) {
+            await db.insert(schema.approvalFlows).values({
+                tenantId: tenant.id,
+                code: flow.code,
+                name: flow.name,
+                description: flow.description,
+                isActive: true,
+                definition: defaultDefinition
+            }).onConflictDoNothing();
+        }
+        console.log(`✅ Approval Flows: ${approvalFlowsData.length} flows created/verified`);
+
         console.log('');
         console.log('🎉 E2E Test Data Seeding Complete!');
         console.log('');

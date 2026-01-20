@@ -13,31 +13,47 @@ interface LeadRelatedCardsProps {
 }
 
 export async function LeadRelatedCards({ leadId, tenantId }: LeadRelatedCardsProps) {
+    // 使用 try-catch 防止查询失败导致整个页面崩溃
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let measurements: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let leadQuotes: any[] = [];
+
     // 1. Fetch Measurements
-    const measurements = await db.query.measureTasks.findMany({
-        where: and(
-            eq(measureTasks.leadId, leadId),
-            eq(measureTasks.tenantId, tenantId)
-        ),
-        orderBy: [desc(measureTasks.createdAt)],
-        with: {
-            assignedWorker: true,
-        },
-        limit: 5
-    });
+    try {
+        measurements = await db.query.measureTasks.findMany({
+            where: and(
+                eq(measureTasks.leadId, leadId),
+                eq(measureTasks.tenantId, tenantId)
+            ),
+            orderBy: [desc(measureTasks.createdAt)],
+            with: {
+                assignedWorker: true,
+            },
+            limit: 5
+        });
+    } catch (error) {
+        console.error('[LeadRelatedCards] Error fetching measurements:', error);
+        // 继续执行，仅显示空状态
+    }
 
     // 2. Fetch Quotes
-    const leadQuotes = await db.query.quotes.findMany({
-        where: and(
-            eq(quotes.leadId, leadId),
-            eq(quotes.tenantId, tenantId)
-        ),
-        orderBy: [desc(quotes.createdAt)],
-        with: {
-            creator: true,
-        },
-        limit: 5
-    });
+    try {
+        leadQuotes = await db.query.quotes.findMany({
+            where: and(
+                eq(quotes.leadId, leadId),
+                eq(quotes.tenantId, tenantId)
+            ),
+            orderBy: [desc(quotes.createdAt)],
+            with: {
+                creator: true,
+            },
+            limit: 5
+        });
+    } catch (error) {
+        console.error('[LeadRelatedCards] Error fetching quotes:', error);
+        // 继续执行，仅显示空状态
+    }
 
     return (
         <div className="space-y-6">

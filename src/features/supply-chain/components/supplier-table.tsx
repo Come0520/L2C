@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
     Table,
@@ -33,10 +33,10 @@ interface SupplierTableProps {
 
 export function SupplierTable({ data, onEdit, onToggleStatus }: SupplierTableProps) {
     return (
-        <div className="rounded-md border bg-white">
+        <div className="glass-table overflow-hidden">
             <Table>
                 <TableHeader>
-                    <TableRow className="bg-slate-50">
+                    <TableRow className="glass-table-header">
                         <TableHead className="w-[130px]">供应商编号</TableHead>
                         <TableHead className="w-[200px]">供应商名称</TableHead>
                         <TableHead className="w-[120px]">联系人</TableHead>
@@ -55,7 +55,7 @@ export function SupplierTable({ data, onEdit, onToggleStatus }: SupplierTablePro
                         </TableRow>
                     ) : (
                         data.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-slate-50/50">
+                            <TableRow key={item.id} className="glass-row-hover">
                                 <TableCell className="font-mono text-xs text-blue-600">{item.supplierNo}</TableCell>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.contactPerson || '-'}</TableCell>

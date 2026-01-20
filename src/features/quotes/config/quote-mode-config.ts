@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 export const CURTAIN_QUOTE_FIELDS = [
     { id: 'roomType', label: 'Room Type', group: 'basic', required: true },

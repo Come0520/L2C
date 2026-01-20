@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Quote Calculation Service
  * Core logic associated with Quote logic
  */

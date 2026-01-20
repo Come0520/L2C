@@ -1,13 +1,15 @@
 'use server';
 
-import OSS from 'ali-oss';
+// import OSS from 'ali-oss';
 import { env } from '@/shared/config/env';
 
 /**
  * 获取 OSS STS 临时授权 Token
  * 有效期：15分钟 (900秒，阿里云 STS 最小值)
  */
-export async function getOSSToken() {
+export async function getOSSToken(): Promise<{ success: true; data: any } | { success: false; error: string }> {
+    return { success: false, error: 'OSS Upload temporarily disabled for update' };
+    /*
     try {
         if (!env.OSS_ACCESS_KEY_ID || !env.OSS_ACCESS_KEY_SECRET || !env.OSS_ROLE_ARN) {
             console.error('Missing Aliyun configuration');
@@ -47,4 +49,5 @@ export async function getOSSToken() {
         console.error('STS Token Error:', error);
         return { success: false, error: 'Failed to generate STS token' };
     }
+    */
 }

@@ -4,9 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/shared/lib/utils';
-import Bell from 'lucide-react/dist/esm/icons/bell';
-import Search from 'lucide-react/dist/esm/icons/search';
-import User from 'lucide-react/dist/esm/icons/user';
+import { Bell, Search, User } from 'lucide-react';
 
 import { Button } from '@/shared/ui/button';
 

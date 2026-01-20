@@ -1,11 +1,13 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 
 // 枚举常量
 export const WINDOW_TYPES = ['STRAIGHT', 'L_SHAPE', 'U_SHAPE', 'ARC'] as const;
 export const INSTALL_TYPES = ['TOP', 'SIDE'] as const;
 export const WALL_MATERIALS = ['CONCRETE', 'WOOD', 'GYPSUM'] as const;
-export const MEASURE_TASK_STATUS = ['PENDING', 'DISPATCHING', 'PENDING_VISIT', 'PENDING_CONFIRM', 'COMPLETED', 'CANCELLED'] as const;
+export const MEASURE_TASK_STATUS = ['PENDING_APPROVAL', 'PENDING', 'DISPATCHING', 'PENDING_VISIT', 'PENDING_CONFIRM', 'COMPLETED', 'CANCELLED'] as const;
 export const MEASURE_SHEET_STATUS = ['DRAFT', 'CONFIRMED', 'ARCHIVED'] as const;
+export const MEASURE_TYPES = ['QUOTE_BASED', 'BLIND', 'SALES_SELF'] as const;
+export const PRODUCT_CATEGORIES = ['CURTAIN', 'WALLPAPER', 'WALLCLOTH', 'MATTRESS', 'OTHER', 'CURTAIN_FABRIC', 'CURTAIN_SHEER', 'CURTAIN_TRACK', 'MOTOR', 'CURTAIN_ACCESSORY', 'WALLCLOTH_ACCESSORY', 'WALLPANEL', 'WINDOWPAD', 'STANDARD'] as const;
 
 // 基础明细校验
 export const measureItemSchema = z.object({
@@ -38,6 +40,8 @@ export const createMeasureTaskSchema = z.object({
     leadId: z.string().uuid(),
     customerId: z.string().uuid(),
     scheduledAt: z.string().datetime().or(z.date()),
+    isFeeExempt: z.boolean().default(false),
+    type: z.enum(MEASURE_TYPES).default('BLIND'),
     remark: z.string().optional(),
 });
 
@@ -55,6 +59,8 @@ export const checkInSchema = z.object({
         lat: z.number(),
         lng: z.number(),
         address: z.string().optional(),
+        distance: z.number().optional().describe('距离客户地址的距离(米)'),
+        isLate: z.boolean().optional().describe('是否迟到'),
     }),
 });
 
@@ -64,3 +70,20 @@ export const reviewMeasureTaskSchema = z.object({
     action: z.enum(['APPROVE', 'REJECT']),
     reason: z.string().optional(),
 });
+
+// 拆单校验
+export const splitMeasureTaskSchema = z.object({
+    originalTaskId: z.string().uuid().describe('原始测量任务 ID'),
+    splits: z.array(z.object({
+        category: z.enum(PRODUCT_CATEGORIES).describe('品类'),
+        workerId: z.string().uuid().optional().describe('指派的测量师 ID'),
+    })).min(2, '拆单至少需要两个品类'),
+    reason: z.string().optional().describe('拆单原因'),
+});
+
+// 费用豁免申请校验
+export const feeWaiverSchema = z.object({
+    taskId: z.string().uuid(),
+    reason: z.string().min(1, '请输入豁免原因'),
+});
+

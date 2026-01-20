@@ -1,3 +1,3 @@
-﻿export function mockDb() {
+export function mockDb() {
     return {};
 }

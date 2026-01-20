@@ -30,18 +30,18 @@ export function SmartDuplicateCheck({ isOpen, onOpenChange, conflictData, onStra
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Duplicate Lead Detected</AlertDialogTitle>
+                    <AlertDialogTitle>检测到重复线索</AlertDialogTitle>
                     <AlertDialogDescription>
-                        A {type === 'PHONE' ? 'customer' : 'lead'} with this {type.toLowerCase()} already exists:
+                        检测到该{type === 'PHONE' ? '手机号' : '地址'}已存在:
                         <span className="font-semibold"> {existingEntity.name}</span>
-                        {existingEntity.owner && ` (Owner: ${existingEntity.owner})`}.
+                        {existingEntity.owner && ` (负责人: ${existingEntity.owner})`}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                    <AlertDialogCancel onClick={() => onStrategySelect('CANCEL')}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => onStrategySelect('CANCEL')}>取消</AlertDialogCancel>
 
                     <AlertDialogAction onClick={() => onStrategySelect('LINK')}>
-                        Link to Existing
+                        查看详情
                     </AlertDialogAction>
 
                     {/* Only allow overwrite if user has permission (handled by parent logic preferably) */}

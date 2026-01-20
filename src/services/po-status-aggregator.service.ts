@@ -55,20 +55,20 @@ export class POStatusAggregator {
             return 'FABRIC_PURCHASING';
         }
 
-        const allFinishedReady = finishedPOs.every(p => p.status === 'READY' || p.status === 'SHIPPED' || p.status === 'DELIVERED');
-        const allFabricStocked = fabricPOs.every(p => p.status === 'STOCKED' || p.status === 'DELIVERED');
-        const allStockReady = stockPOs.every(p => p.status === 'READY' || p.status === 'SHIPPED' || p.status === 'DELIVERED');
+        const allFinishedReady = finishedPOs.every(p => ['READY', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(p.status));
+        const allFabricStocked = fabricPOs.every(p => ['STOCKED', 'DELIVERED', 'COMPLETED'].includes(p.status));
+        const allStockReady = stockPOs.every(p => ['READY', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(p.status));
 
         if (allFinishedReady && allFabricStocked && allStockReady) {
-            return 'PENDING_DELIVERY';
+            return 'PENDING_DELIVERY'; // Production done, ready to ship to customer
         }
 
-        const allShipped = allPOs.every(p => p.status === 'SHIPPED' || p.status === 'DELIVERED');
+        const allShipped = allPOs.every(p => ['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(p.status));
         if (allShipped) {
             return 'SHIPPED';
         }
 
-        const allDelivered = allPOs.every(p => p.status === 'DELIVERED');
+        const allDelivered = allPOs.every(p => ['DELIVERED', 'COMPLETED'].includes(p.status));
         if (allDelivered) {
             return 'PENDING_INSTALL';
         }

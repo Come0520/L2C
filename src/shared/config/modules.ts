@@ -1,4 +1,4 @@
-﻿import { PERMISSIONS } from './permissions';
+import { PERMISSIONS } from './permissions';
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
 import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
@@ -13,7 +13,7 @@ export interface ModuleConfig {
     code: string;
     name: string;
     path: string;
-    icon?: any;
+    icon?: React.ComponentType<{ className?: string }>;
     permissions?: string[];
     children?: ModuleConfig[];
 }

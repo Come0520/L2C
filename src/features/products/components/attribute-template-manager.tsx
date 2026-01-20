@@ -32,14 +32,25 @@ import Save from 'lucide-react/dist/esm/icons/save';
 import { toast } from 'sonner';
 
 // Schema for a single field definition
+// [Product-01] 扩展属性类型支持
 const attributeFieldSchema = z.object({
     key: z.string().min(1, 'Key is required').regex(/^[a-zA-Z0-9_]+$/, 'Key must be alphanumeric'),
     label: z.string().min(1, 'Label is required'),
-    type: z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'SELECT']),
+    type: z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'SELECT', 'DATE', 'TEXTAREA', 'COLOR', 'IMAGE', 'RANGE']),
     required: z.boolean().default(false),
-    options: z.array(z.string()).optional(), // Only for SELECT
-    unit: z.string().optional(),
+    options: z.array(z.string()).optional(), // For SELECT type
+    unit: z.string().optional(), // For NUMBER/RANGE types
     placeholder: z.string().optional(),
+    // [Product-01] 新增数值类型配置
+    min: z.number().optional(), // For NUMBER/RANGE
+    max: z.number().optional(), // For NUMBER/RANGE
+    step: z.number().optional(), // For NUMBER/RANGE
+    // [Product-01] 新增文本类型配置
+    maxLength: z.number().optional(), // For STRING/TEXTAREA
+    rows: z.number().optional(), // For TEXTAREA
+    // [Product-01] 新增说明文本
+    description: z.string().optional(), // Help text
+    defaultValue: z.any().optional(), // Default value
 });
 
 // Overall schema for the form
@@ -54,10 +65,12 @@ export function AttributeTemplateManager() {
     const [selectedCategory, setSelectedCategory] = useState<string>('CURTAIN_FABRIC');
     const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm({
-        resolver: zodResolver(templateFormSchema),
+    const form = useForm<TemplateFormValues>({
+        // 注意: zod 4 与 @hookform/resolvers 存在类型不兼容问题，运行时正常
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        resolver: zodResolver(templateFormSchema) as any,
         defaultValues: {
-            category: 'CURTAIN_FABRIC',
+            category: 'CURTAIN_FABRIC' as const,
             templateSchema: [],
         },
     });
@@ -96,7 +109,8 @@ export function AttributeTemplateManager() {
     const onSubmit = async (values: TemplateFormValues) => {
         setIsLoading(true);
         try {
-            const result = await upsertAttributeTemplate(values);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = await upsertAttributeTemplate(values as any);
             if (result.error) {
                 toast.error(result.error);
             } else {
@@ -140,7 +154,7 @@ export function AttributeTemplateManager() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="space-y-4">
                             {fields.map((field, index) => (
-                                <div key={field.id} className="flex gap-4 p-4 border rounded-md bg-slate-50 items-start">
+                                <div key={field.id} className="flex gap-4 p-4 border rounded-md bg-muted/10 items-start">
                                     <div className="grid grid-cols-4 gap-4 flex-1">
                                         <FormField
                                             control={form.control}
@@ -176,9 +190,14 @@ export function AttributeTemplateManager() {
                                                         </FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="STRING">文本</SelectItem>
+                                                            <SelectItem value="TEXTAREA">多行文本</SelectItem>
                                                             <SelectItem value="NUMBER">数值</SelectItem>
+                                                            <SelectItem value="RANGE">范围数值</SelectItem>
                                                             <SelectItem value="BOOLEAN">布尔 (开关)</SelectItem>
                                                             <SelectItem value="SELECT">下拉选项</SelectItem>
+                                                            <SelectItem value="DATE">日期</SelectItem>
+                                                            <SelectItem value="COLOR">颜色选择</SelectItem>
+                                                            <SelectItem value="IMAGE">图片上传</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />
@@ -217,6 +236,120 @@ export function AttributeTemplateManager() {
                                                 />
                                             </div>
                                         )}
+                                        {/* [Product-01] NUMBER/RANGE 类型的扩展配置 */}
+                                        {['NUMBER', 'RANGE'].includes(form.watch(`templateSchema.${index}.type`)) && (
+                                            <div className="col-span-4 grid grid-cols-3 gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.min`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">最小值</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="0"
+                                                                    value={field.value ?? ''}
+                                                                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.max`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">最大值</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="100"
+                                                                    value={field.value ?? ''}
+                                                                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.step`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">步长</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="1"
+                                                                    value={field.value ?? ''}
+                                                                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                        {/* [Product-01] TEXTAREA 类型的扩展配置 */}
+                                        {form.watch(`templateSchema.${index}.type`) === 'TEXTAREA' && (
+                                            <div className="col-span-4 grid grid-cols-2 gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.rows`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">行数</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="3"
+                                                                    value={field.value ?? ''}
+                                                                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`templateSchema.${index}.maxLength`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">最大字数</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="500"
+                                                                    value={field.value ?? ''}
+                                                                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                        {/* [Product-01] 描述字段 */}
+                                        <div className="col-span-4">
+                                            <FormField
+                                                control={form.control}
+                                                name={`templateSchema.${index}.description`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">帮助说明 (可选)</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                {...field}
+                                                                value={field.value ?? ''}
+                                                                placeholder="给用户的填写提示..."
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
                                         <div className="col-span-4 flex items-center gap-4">
                                             <FormField
                                                 control={form.control}

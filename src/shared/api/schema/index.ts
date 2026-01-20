@@ -1,4 +1,4 @@
-﻿export * from './enums';
+export * from './enums';
 export * from './infrastructure';
 export * from './catalogs';
 export * from './customers';
@@ -18,3 +18,5 @@ export * from './relations';
 export * from './notifications';
 export * from './loyalty';
 export * from './types';
+export * from './quote-config';
+export * from './inventory';

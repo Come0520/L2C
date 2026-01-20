@@ -1,4 +1,4 @@
-﻿export type PlanType = 'ECONOMIC' | 'COMFORT' | 'LUXURY';
+export type PlanType = 'ECONOMIC' | 'COMFORT' | 'LUXURY';
 
 export interface ProductConfig {
     name: string;

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Database Connection Configuration
  * Uses Drizzle ORM with Postgres.js
  */

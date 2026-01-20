@@ -12,7 +12,42 @@ export const productCategoryEnum = pgEnum('product_category', [
     'CURTAIN_SHEER',
     'CURTAIN_TRACK',
     'MOTOR',
-    'CURTAIN_ACCESSORY'
+    'CURTAIN_ACCESSORY',
+    'WALLCLOTH_ACCESSORY',  // 墙布辅料
+    'WALLPANEL',            // 墙咔
+    'WINDOWPAD',            // 飘窗垫
+    'STANDARD',              // 标品
+    'SERVICE'               // 服务/费用
+]);
+
+// 商品类型枚举（成品/定制）
+export const productTypeEnum = pgEnum('product_type', [
+    'FINISHED',  // 成品商品（直接采购）
+    'CUSTOM'     // 定制商品（需二次加工）
+]);
+
+// 套餐类型枚举
+export const packageTypeEnum = pgEnum('package_type', [
+    'QUANTITY',       // 数量套餐
+    'COMBO',          // 组合套餐
+    'CATEGORY',       // 品类套餐
+    'TIME_LIMITED'    // 限时套餐
+]);
+
+// 套餐超出处理模式枚举
+export const packageOverflowModeEnum = pgEnum('package_overflow_mode', [
+    'FIXED_PRICE',  // 固定单价（超出部分按设定单价）
+    'IGNORE',       // 不计费（封顶模式）
+    'ORIGINAL',     // 原价
+    'DISCOUNT'      // 折扣
+]);
+
+// 面料库存流水类型枚举
+export const fabricInventoryLogTypeEnum = pgEnum('fabric_inventory_log_type', [
+    'PURCHASE_IN',     // 面料入库
+    'PROCESSING_OUT',  // 面料出库
+    'ADJUSTMENT',      // 库存调整
+    'RETURN'           // 面料退库
 ]);
 
 export const orderStatusEnum = pgEnum('order_status', [
@@ -22,10 +57,16 @@ export const orderStatusEnum = pgEnum('order_status', [
     'QUOTED',
     'SIGNED',
     'PAID',
+    'PENDING_PO', // Waiting for Purchase Order generation
     'PENDING_PRODUCTION',
     'IN_PRODUCTION',
+    'PAUSED',
+    'PENDING_APPROVAL',
     'PENDING_DELIVERY',
     'PENDING_INSTALL',
+    'INSTALLATION_COMPLETED', // Installed, waiting for customer acceptance
+    'PENDING_CONFIRMATION',   // Same as above, but explicit "Wait for Confirmation" state
+    'INSTALLATION_REJECTED',  // Customer rejected installation
     'COMPLETED',
     'CANCELLED'
 ]);
@@ -83,7 +124,16 @@ export const leadActivityTypeEnum = pgEnum('lead_activity_type', [
 ]);
 
 
-export const channelTypeEnum = pgEnum('channel_type', ['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY']);
+export const channelCategoryEnum = pgEnum('channel_category', ['ONLINE', 'OFFLINE', 'REFERRAL']);
+export const channelTypeEnum = pgEnum('channel_type', [
+    'DECORATION_CO',
+    'DESIGNER',
+    'CROSS_INDUSTRY',
+    'DOUYIN',       // New
+    'XIAOHONGSHU',  // New
+    'STORE',        // New (Self-operated Store)
+    'OTHER'
+]);
 export const channelLevelEnum = pgEnum('channel_level', ['S', 'A', 'B', 'C']);
 export const commissionTypeEnum = pgEnum('commission_type', ['FIXED', 'TIERED']);
 export const cooperationModeEnum = pgEnum('cooperation_mode', ['BASE_PRICE', 'COMMISSION']);
@@ -91,6 +141,7 @@ export const channelSettlementTypeEnum = pgEnum('channel_settlement_type', ['PRE
 
 // Measurement Enums
 export const measureTaskStatusEnum = pgEnum('measure_task_status', [
+    'PENDING_APPROVAL',
     'PENDING',
     'DISPATCHING',
     'PENDING_VISIT',
@@ -206,9 +257,10 @@ export const notificationChannelEnum = pgEnum('notification_channel', [
     'IN_APP',
     'EMAIL',
     'SMS',
-    'WECHAT',
-    'WECHAT',
-    'LARK'
+    'WECHAT', // Official Account
+    'WECHAT_MINI', // Mini Program
+    'LARK',
+    'SYSTEM'
 ]);
 
 export const notificationTypeEnum = pgEnum('notification_type_enum', [
@@ -295,3 +347,30 @@ export const installPhotoTypeEnum = pgEnum('install_photo_type', [
     'DETAIL'
 ]);
 
+// Approval Enums
+export const approverRoleEnum = pgEnum('approver_role', [
+    'STORE_MANAGER',
+    'ADMIN', // Boss/Admin
+    'FINANCE',
+    'PURCHASING',
+    'DISPATCHER'
+]);
+
+export const approvalNodeModeEnum = pgEnum('approval_node_mode', ['ANY', 'ALL', 'MAJORITY']);
+export const approvalTimeoutActionEnum = pgEnum('approval_timeout_action', ['REMIND', 'AUTO_PASS', 'AUTO_REJECT']);
+export const delegationTypeEnum = pgEnum('delegation_type', ['GLOBAL', 'FLOW']);
+
+export const changeRequestTypeEnum = pgEnum('change_request_type', [
+    'FIELD_CHANGE',    // 现场变化
+    'CUSTOMER_CHANGE', // 客户需求变化
+    'STOCK_OUT',       // 缺货
+    'OTHER'
+]);
+
+export const changeRequestStatusEnum = pgEnum('change_request_status', [
+    'PENDING',
+    'PENDING_APPROVAL',
+    'APPROVED',
+    'REJECTED',
+    'CANCELLED'
+]);

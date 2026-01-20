@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';

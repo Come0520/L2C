@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 附件项类型定义
  */
 export interface AttachmentItem {

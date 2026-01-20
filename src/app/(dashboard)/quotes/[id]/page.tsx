@@ -17,19 +17,22 @@ export default async function QuoteDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const result = await getQuote(id);
+
+    // 并行获取报价和用户配置 (消除 Waterfall)
+    const [result, config] = await Promise.all([
+        getQuote(id),
+        getMyQuoteConfig()
+    ]);
+
     const quote = result.data;
 
     if (!quote) {
         notFound();
     }
 
-    // Fetch Versions
+    // Fetch Versions (依赖 quote.rootQuoteId，无法并行)
     const rootId = quote.rootQuoteId || quote.id;
     const versions = await getQuoteVersions(rootId);
-
-    // Fetch User Config (Batch 6)
-    const config = await getMyQuoteConfig();
 
     return (
         <div className="max-w-[1600px] mx-auto pb-10">

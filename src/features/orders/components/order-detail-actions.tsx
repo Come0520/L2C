@@ -26,11 +26,13 @@ import { useRouter } from 'next/navigation';
 import { ChangeOrderDialog } from '@/features/orders/components/change-order-dialog';
 import { SplitOrderDialog } from '@/features/orders/components/split-order-dialog';
 import { DeliveryRequestDialog } from '@/features/orders/components/delivery-request-dialog';
+import { CancelOrderDialog } from '@/features/orders/components/cancel-order-dialog';
 import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
 
 interface OrderDetailActionsProps {
     order: {
         id: string;
+        orderNo?: string;
         status: string;
         items?: Array<{
             id: string;
@@ -157,9 +159,16 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                         />
                     </div>
                     <DropdownMenuItem>编辑订单</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">取消订单</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* 撤单按钮 */}
+            <CancelOrderDialog
+                orderId={order.id}
+                orderNo={order.orderNo || order.id}
+                orderStatus={order.status}
+                onSuccess={() => router.refresh()}
+            />
 
             {/* 拆单对话框 */}
             <SplitOrderDialog

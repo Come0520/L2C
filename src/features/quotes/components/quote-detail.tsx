@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+
+
 import { QuoteItemsTable } from './quote-items-table';
-import { QuoteSummary } from './quote-summary';
+
 import { QuoteVersionHistory } from './quote-version-history';
 import { QuoteToOrderButton } from './quote-to-order-button';
 import { updateQuote, submitQuote, approveQuote, rejectQuote } from '@/features/quotes/actions/mutations';
@@ -21,11 +21,14 @@ import { QuoteVersionCompare } from './quote-version-compare';
 import { QuoteConfig } from '@/services/quote-config.service';
 import { toggleQuoteMode } from '@/features/quotes/actions/config-actions';
 import { QuoteConfigDialog } from './quote-config-dialog';
-import { getQuoteAuditLogs, getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
-import { format } from 'date-fns';
+import { getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
 
-import { MeasureDataImportDialog } from './measure-data-import-dialog'; // Import
-import { Download } from 'lucide-react'; // Import Ruler icon
+
+import { MeasureDataImportDialog } from './measure-data-import-dialog';
+import { QuoteBottomSummaryBar } from './quote-bottom-summary-bar';
+import { CustomerInfoDrawer } from './customer-info-drawer';
+import { QuoteCategoryTabs, QuoteCategory, ViewMode } from './quote-category-tabs';
+import { Download } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,7 +48,7 @@ const PDFDownloadLink = dynamic(
 
 type QuoteData = NonNullable<Awaited<ReturnType<typeof getQuote>>['data']>;
 type QuoteVersion = Awaited<ReturnType<typeof getQuoteVersions>>[number];
-type QuoteLog = Awaited<ReturnType<typeof getQuoteAuditLogs>>[number];
+
 
 interface QuoteDetailProps {
     quote: QuoteData;
@@ -55,27 +58,14 @@ interface QuoteDetailProps {
 
 export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetailProps) {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState('space');
     const [config, setConfig] = useState<QuoteConfig | undefined>(initialConfig);
-    const [auditLogs, setAuditLogs] = useState<QuoteLog[]>([]);
-    const [importDialogOpen, setImportDialogOpen] = useState(false); // Measure Import
-    const [excelImportOpen, setExcelImportOpen] = useState(false); // Excel Import
+    const [importDialogOpen, setImportDialogOpen] = useState(false);
+    const [excelImportOpen, setExcelImportOpen] = useState(false);
+    // 品类和视图模式状态
+    const [activeCategory, setActiveCategory] = useState<QuoteCategory>('CURTAIN');
+    const [viewMode, setViewMode] = useState<ViewMode>('category');
     const mode = config?.mode || 'simple';
-    const isReadOnly = !quote.isActive; // STRICT: Only active quote is editable
-
-    // Update config when initialConfig changes, but avoid direct setState in render or effect if possible
-    // Here we use useEffect for data fetching and state syncing
-    useEffect(() => {
-        const loadLogs = async () => {
-            try {
-                const logs = await getQuoteAuditLogs(quote.id);
-                setAuditLogs(logs);
-            } catch (err) {
-                console.error("Failed to load logs", err);
-            }
-        };
-        loadLogs();
-    }, [quote.id]);
+    const isReadOnly = !quote.isActive;
 
     const handleToggleMode = async () => {
         const newMode = mode === 'simple' ? 'advanced' : 'simple';
@@ -98,8 +88,6 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
         );
     };
 
-    // handlers...
-    const handleAddRoom = () => { }; // Mock for now if missing
     const handleSave = () => toast.success("Saved");
 
     return (
@@ -283,110 +271,88 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 onSuccess={() => router.refresh()}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-6">
-                    {/* Basic Info Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>基础信息</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium">客户姓名</label>
-                                <Input defaultValue={quote.customer?.name} disabled />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">客户电话</label>
-                                <Input defaultValue={quote.customer?.phone} disabled />
-                            </div>
-                            <div className="col-span-2">
-                                <label className="text-sm font-medium">报价标题</label>
-                                <Input
-                                    defaultValue={quote.title || ''}
-                                    onBlur={(e) => updateQuote({ id: quote.id, title: e.target.value })}
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <label className="text-sm font-medium">备注</label>
-                                <Input
-                                    defaultValue={quote.notes || ''}
-                                    onBlur={(e) => updateQuote({ id: quote.id, notes: e.target.value })}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* 客户信息抽屉（默认收起） */}
+            <CustomerInfoDrawer
+                customer={{
+                    id: quote.customer?.id || '',
+                    name: quote.customer?.name || '未知客户',
+                    phone: quote.customer?.phone || undefined,
+                    address: quote.customer?.address || undefined,
+                }}
+                className="mb-6"
+            />
 
-                    {/* View Switcher & Items */}
-                    <Tabs defaultValue="space" value={activeTab} onValueChange={setActiveTab}>
-                        <div className="flex items-center justify-between mb-2">
-                            <TabsList>
-                                <TabsTrigger value="space">空间视图</TabsTrigger>
-                                <TabsTrigger value="category">品类视图</TabsTrigger>
-                            </TabsList>
-                        </div>
-
-                        <TabsContent value="space">
-                            <QuoteItemsTable
-                                quoteId={quote.id}
-                                rooms={quote.rooms || []}
-                                items={[
-                                    ...(quote.items || []),
-                                    ...(quote.rooms || []).flatMap((r) => r.items || [])
-                                ]}
-                                mode={mode}
-                                visibleFields={config?.visibleFields}
-                                readOnly={isReadOnly}
-                                dimensionLimits={config?.dimensionLimits}
-                            />
-                        </TabsContent>
-                        <TabsContent value="versions" className="mt-4">
-                            <QuoteVersionHistory
-                                currentQuoteId={quote.id} // Fixed prop name from currentVersion to currentQuoteId? Check definition. 
-                                version={quote.version}
-                                versions={versions.map(v => ({
-                                    id: v.id,
-                                    version: v.version,
-                                    status: v.status || 'DRAFT',
-                                    createdAt: v.createdAt || new Date()
-                                }))}
-                            />
-                        </TabsContent>
-                        <TabsContent value="category">
-                            <div className="p-8 text-center text-muted-foreground border rounded-md">
-                                品类视图开发中...
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+            {/* 报价标题和备注 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label className="text-sm font-medium block mb-1">报价标题</label>
+                    <Input
+                        defaultValue={quote.title || ''}
+                        placeholder="输入报价标题"
+                        onBlur={(e) => updateQuote({ id: quote.id, title: e.target.value })}
+                    />
                 </div>
-
-                <div className="space-y-6">
-                    <QuoteSummary quote={quote} />
-
-                    {/* Operation Log Placeholder */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">操作日志</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {auditLogs.length > 0 ? (
-                                    auditLogs.map((log) => (
-                                        <div key={log.id} className="text-sm border-l-2 border-primary/20 pl-3 py-1">
-                                            <div className="flex justify-between text-xs text-muted-foreground">
-                                                <span>{log.userName || 'System'}</span>
-                                                <span>{format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm')}</span>
-                                            </div>
-                                            <div className="mt-1 font-medium">{log.action === 'CREATE' ? '创建了报价单' : log.action === 'UPDATE' ? '修改了报价单' : log.action}</div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-sm text-muted-foreground text-center py-4">暂无操作日志</div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div>
+                    <label className="text-sm font-medium block mb-1">备注</label>
+                    <Input
+                        defaultValue={quote.notes || ''}
+                        placeholder="输入备注信息"
+                        onBlur={(e) => updateQuote({ id: quote.id, notes: e.target.value })}
+                    />
                 </div>
             </div>
+
+            {/* 品类 Tabs 导航 */}
+            <QuoteCategoryTabs
+                activeCategory={activeCategory}
+                onCategoryChange={setActiveCategory}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                className="mb-4"
+            />
+
+            {/* 报价内容区 */}
+            <div className="pb-24">
+                {viewMode === 'category' ? (
+                    // 品类优先视图：当前品类下的所有空间
+                    <QuoteItemsTable
+                        quoteId={quote.id}
+                        rooms={quote.rooms || []}
+                        items={[
+                            ...(quote.items || []),
+                            ...(quote.rooms || []).flatMap((r) => r.items || [])
+                        ].filter(item => {
+                            // 按品类筛选商品（暂时显示全部，后续根据 item.category 过滤）
+                            return true;
+                        })}
+                        mode={mode}
+                        visibleFields={config?.visibleFields}
+                        readOnly={isReadOnly}
+                        dimensionLimits={config?.dimensionLimits}
+                    />
+                ) : (
+                    // 空间优先视图：按空间组织，每个空间内包含不同品类
+                    <QuoteItemsTable
+                        quoteId={quote.id}
+                        rooms={quote.rooms || []}
+                        items={[
+                            ...(quote.items || []),
+                            ...(quote.rooms || []).flatMap((r) => r.items || [])
+                        ]}
+                        mode={mode}
+                        visibleFields={config?.visibleFields}
+                        readOnly={isReadOnly}
+                        dimensionLimits={config?.dimensionLimits}
+                    />
+                )}
+            </div>
+
+            {/* 底部吸底汇总栏 */}
+            <QuoteBottomSummaryBar
+                totalAmount={quote.totalAmount || 0}
+                discountAmount={quote.discountAmount || 0}
+                finalAmount={quote.finalAmount || 0}
+            />
         </div >
     );
 }

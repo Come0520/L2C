@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -25,7 +25,7 @@ import { getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
 
 
 import { MeasureDataImportDialog } from './measure-data-import-dialog';
-import { QuoteBottomSummaryBar } from './quote-bottom-summary-bar';
+import { QuoteBottomSummaryBar, CategoryBreakdown } from './quote-bottom-summary-bar';
 import { CustomerInfoDrawer } from './customer-info-drawer';
 import { QuoteCategoryTabs, QuoteCategory, ViewMode } from './quote-category-tabs';
 import { QuoteExportMenu } from './quote-export-menu';
@@ -62,6 +62,49 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     const [viewMode, setViewMode] = useState<ViewMode>('category');
     const mode = config?.mode || 'simple';
     const isReadOnly = !quote.isActive;
+
+    // 计算品类汇总
+    const categoryBreakdown = useMemo<CategoryBreakdown[]>(() => {
+        const allItems = [
+            ...(quote.items || []),
+            ...(quote.rooms || []).flatMap((r) => r.items || [])
+        ].filter(item => !item.parentId); // 只计算主商品，不计算附件
+
+        const categoryMap = new Map<string, { label: string; count: number; subtotal: number }>();
+
+        const getCategoryLabel = (cat: string) => {
+            switch (cat) {
+                case 'CURTAIN': return '窗帘';
+                case 'WALLCLOTH': return '墙布';
+                case 'WALLPAPER': return '墙纸';
+                case 'WALL_PANEL': return '墙員';
+                case 'STANDARD': return '标品';
+                default: return '其他';
+            }
+        };
+
+        allItems.forEach(item => {
+            const cat = item.category || 'OTHER';
+            const existing = categoryMap.get(cat);
+            if (existing) {
+                existing.count += 1;
+                existing.subtotal += Number(item.subtotal || 0);
+            } else {
+                categoryMap.set(cat, {
+                    label: getCategoryLabel(cat),
+                    count: 1,
+                    subtotal: Number(item.subtotal || 0)
+                });
+            }
+        });
+
+        return Array.from(categoryMap.entries()).map(([category, data]) => ({
+            category,
+            label: data.label,
+            itemCount: data.count,
+            subtotal: data.subtotal
+        }));
+    }, [quote.items, quote.rooms]);
 
     const handleToggleMode = async () => {
         const newMode = mode === 'simple' ? 'advanced' : 'simple';
@@ -365,6 +408,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 totalAmount={quote.totalAmount || 0}
                 discountAmount={quote.discountAmount || 0}
                 finalAmount={quote.finalAmount || 0}
+                categoryBreakdown={categoryBreakdown}
             />
         </div >
     );

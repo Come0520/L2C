@@ -100,7 +100,9 @@ import {
     reconciliations,
     reconciliationDetails,
     receiptBills,
-    receiptBillItems
+    receiptBillItems,
+    creditNotes,
+    debitNotes
 } from './finance';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({

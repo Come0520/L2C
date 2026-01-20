@@ -465,3 +465,96 @@ export const reconciliationDetails = pgTable('reconciliation_details', {
     docIdx: index('idx_reconciliation_details_doc').on(table.documentId),
 }));
 
+// ==================== 逆向流程 (Refunds/Adjustments) ====================
+
+/**
+ * 贷项通知单 (Credit Notes)
+ * 用于客户退款、折让等场景，减少客户应收款
+ * 
+ * 业务场景：
+ * - 客户退货退款
+ * - 销售折让
+ * - 价格调整（减少）
+ */
+export const creditNotes = pgTable('credit_notes', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    creditNoteNo: varchar('credit_note_no', { length: 50 }).notNull().unique(),
+
+    // 关联信息
+    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    customerName: varchar('customer_name', { length: 100 }).notNull(),
+    orderId: uuid('order_id').references(() => orders.id), // 关联原订单（可选）
+    arStatementId: uuid('ar_statement_id').references(() => arStatements.id), // 关联AR对账单
+
+    // 类型和金额
+    type: varchar('type', { length: 20 }).notNull(), // REFUND/DISCOUNT/ADJUSTMENT
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+
+    // 原因和说明
+    reason: varchar('reason', { length: 200 }).notNull(),
+    description: text('description'),
+
+    // 状态流转
+    status: varchar('status', { length: 20 }).notNull().default('DRAFT'), // DRAFT/PENDING/APPROVED/REJECTED/APPLIED
+
+    // 审批信息
+    appliedAt: timestamp('applied_at', { withTimezone: true }), // 生效时间
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    approvedBy: uuid('approved_by').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+
+    remark: text('remark'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_credit_notes_tenant').on(table.tenantId),
+    customerIdx: index('idx_credit_notes_customer').on(table.customerId),
+    statusIdx: index('idx_credit_notes_status').on(table.status),
+}));
+
+/**
+ * 借项通知单 (Debit Notes)
+ * 用于供应商退款、扣款等场景，减少对供应商应付款
+ * 
+ * 业务场景：
+ * - 供应商质量问题扣款
+ * - 采购退货
+ * - 价格调整（减少应付）
+ */
+export const debitNotes = pgTable('debit_notes', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    debitNoteNo: varchar('debit_note_no', { length: 50 }).notNull().unique(),
+
+    // 关联信息
+    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(),
+    supplierName: varchar('supplier_name', { length: 100 }).notNull(),
+    purchaseOrderId: uuid('purchase_order_id').references(() => purchaseOrders.id), // 关联原采购单
+    apStatementId: uuid('ap_statement_id').references(() => apSupplierStatements.id), // 关联AP对账单
+
+    // 类型和金额
+    type: varchar('type', { length: 20 }).notNull(), // RETURN/QUALITY_DEDUCTION/ADJUSTMENT
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+
+    // 原因和说明
+    reason: varchar('reason', { length: 200 }).notNull(),
+    description: text('description'),
+
+    // 状态流转
+    status: varchar('status', { length: 20 }).notNull().default('DRAFT'), // DRAFT/PENDING/APPROVED/REJECTED/APPLIED
+
+    // 审批信息
+    appliedAt: timestamp('applied_at', { withTimezone: true }), // 生效时间
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    approvedBy: uuid('approved_by').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+
+    remark: text('remark'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_debit_notes_tenant').on(table.tenantId),
+    supplierIdx: index('idx_debit_notes_supplier').on(table.supplierId),
+    statusIdx: index('idx_debit_notes_status').on(table.status),
+}));

@@ -6,30 +6,49 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import Search from 'lucide-react/dist/esm/icons/search';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
-import Filter from 'lucide-react/dist/esm/icons/filter';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import { cn } from '@/shared/lib/utils';
 
 import { OrderTable } from './order-table';
+import { OrderAdvancedFilter, type OrderFilters } from './orders-advanced-filter';
 import { getOrders } from '../actions/orders';
 import { toast } from 'sonner';
+
+/**
+ * 订单状态Tabs配置
+ */
+const ORDER_STATUS_TABS = [
+    { key: 'ALL', label: '全部' },
+    { key: 'PENDING_PURCHASE', label: '待采购' },
+    { key: 'IN_PRODUCTION', label: '生产中' },
+    { key: 'PENDING_DELIVERY', label: '待发货' },
+    { key: 'PENDING_INSTALL', label: '待安装' },
+    { key: 'COMPLETED', label: '已完成' },
+    { key: 'CANCELLED', label: '已取消' },
+] as const;
+
+type OrderStatusTab = typeof ORDER_STATUS_TABS[number]['key'];
 
 /**
  * 订单列表组件
  * 
  * 功能：
- * 1. 服务端分页（默认每页 20 条）
- * 2. React Query 客户端缓存
- * 3. 平滑分页切换 (keepPreviousData)
+ * 1. 状态Tabs切换筛选
+ * 2. 高级筛选（销售人员/渠道/设计师/带单人/地址）
+ * 3. 服务端分页（默认每页 20 条）
+ * 4. React Query 客户端缓存
  */
 export function OrderList() {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
+    const [statusTab, setStatusTab] = useState<OrderStatusTab>('ALL');
+    const [filters, setFilters] = useState<OrderFilters>({});
     const pageSize = 20;
 
     // 使用 React Query 进行数据获取和缓存
     const { data, isLoading, isFetching, refetch } = useQuery({
-        queryKey: ['orders', page, pageSize, search],
+        queryKey: ['orders', page, pageSize, search, statusTab, filters],
         queryFn: async () => {
             const result = await getOrders(page, pageSize);
             if (!result || !Array.isArray(result.data)) {
@@ -37,8 +56,8 @@ export function OrderList() {
             }
             return result;
         },
-        placeholderData: keepPreviousData, // 切换页面时保持旧数据显示
-        staleTime: 30 * 1000, // 30秒内数据视为新鲜
+        placeholderData: keepPreviousData,
+        staleTime: 30 * 1000,
     });
 
     const orders = data?.data || [];
@@ -56,8 +75,37 @@ export function OrderList() {
         toast.success('已刷新');
     }, [refetch]);
 
+    const handleStatusTabChange = useCallback((tab: OrderStatusTab) => {
+        setStatusTab(tab);
+        setPage(1); // 切换Tab时重置页码
+    }, []);
+
+    const handleFiltersChange = useCallback((newFilters: OrderFilters) => {
+        setFilters(newFilters);
+        setPage(1); // 筛选变更时重置页码
+    }, []);
+
     return (
         <div className="space-y-4">
+            {/* 状态Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg overflow-x-auto">
+                {ORDER_STATUS_TABS.map((tab) => (
+                    <button
+                        key={tab.key}
+                        onClick={() => handleStatusTabChange(tab.key)}
+                        className={cn(
+                            'px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap',
+                            statusTab === tab.key
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        )}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* 搜索和筛选栏 */}
             <div className="flex flex-wrap items-center justify-between gap-4 glass-layout-card p-4 rounded-lg border shadow-sm">
                 <div className="flex items-center flex-1 min-w-[300px] gap-2">
                     <div className="relative flex-1 max-w-sm">
@@ -69,9 +117,14 @@ export function OrderList() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="icon">
-                        <Filter className="h-4 w-4" />
-                    </Button>
+                    <OrderAdvancedFilter
+                        filters={filters}
+                        onFiltersChange={handleFiltersChange}
+                        salesOptions={[]}
+                        channelOptions={[]}
+                        designerOptions={[]}
+                        referrerOptions={[]}
+                    />
                     <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isFetching}>
                         <RotateCcw className={isFetching ? "animate-spin h-4 w-4" : "h-4 w-4"} />
                     </Button>

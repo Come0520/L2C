@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -13,7 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { ProductAutocomplete } from './product-autocomplete';
 import { QuoteItemDialog } from './quote-item-dialog';
-import { useState } from 'react';
+import { QuoteRoomAccordion } from './quote-room-accordion';
 import { CurtainCalculator, WallpaperCalculator, CurtainFormula, WallpaperFormula } from '@/features/quotes/logic/calculator';
 
 export interface QuoteItem {
@@ -350,6 +350,31 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 's
 
     const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    // 空间展开状态（聚焦模式：默认只展开第一个）
+    const [expandedRoomIds, setExpandedRoomIds] = useState<Set<string>>(() => {
+        return rooms.length > 0 ? new Set([rooms[0].id]) : new Set();
+    });
+
+    // 计算空间小计（包含所有主商品+附件）
+    const getRoomSubtotal = useCallback((roomId: string) => {
+        const roomItems = items.filter(item => item.roomId === roomId);
+        return roomItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+    }, [items]);
+
+    // 切换空间展开状态（聚焦模式）
+    const handleToggleRoom = useCallback((roomId: string) => {
+        setExpandedRoomIds(prev => {
+            const next = new Set(prev);
+            if (next.has(roomId)) {
+                next.delete(roomId);
+            } else {
+                // 聚焦模式：展开当前，收起其他
+                next.clear();
+                next.add(roomId);
+            }
+            return next;
+        });
+    }, []);
 
     const handleOpenAddDialog = (roomId: string | null) => {
         setActiveRoomId(roomId);
@@ -514,61 +539,58 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, mode = 's
                 </div>
             )}
 
-            {rooms.map(room => (
-                <div key={room.id} className="glass-table overflow-hidden shadow-sm">
-                    <div className="glass-section-header px-4 py-2 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            {readOnly ? (
-                                <span className="text-sm font-semibold">{room.name}</span>
-                            ) : (
-                                <Input
-                                    className="h-8 w-48 bg-white/50 border-transparent hover:border-slate-300 focus:bg-white text-sm font-medium transition-all"
-                                    defaultValue={room.name}
-                                    onBlur={(e) => handleRoomRename(room.id, e.target.value)}
-                                />
-                            )}
-                        </div>
-                        {!readOnly && (
-                            <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenAddDialog(room.id)}>
-                                    <Plus className="w-4 h-4 mr-1" /> 添加商品
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteRoom(room.id)}>
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="glass-table-header">
-                                    <TableHead className="w-[25%] px-4 h-9">商品</TableHead>
-                                    <TableHead className="w-[15%] h-9">尺寸 (cm)</TableHead>
-                                    {showFold && <TableHead className="w-[8%] h-9">倍数</TableHead>}
-                                    {showProcessFee && <TableHead className="w-[10%] h-9">加工费</TableHead>}
-                                    <TableHead className="w-[12%] h-9">数量</TableHead>
-                                    <TableHead className="text-right w-[10%] h-9">单价</TableHead>
-                                    <TableHead className="text-right w-[10%] h-9">小计</TableHead>
-                                    {showRemark && <TableHead className="h-9">备注</TableHead>}
-                                    <TableHead className="w-[80px] h-9"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {itemsByRoom.mapping[room.id]?.length > 0 ? (
-                                    renderRows(itemsByRoom.mapping[room.id])
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="text-center text-muted-foreground h-24 italic py-8 border-none">
-                                            此空间暂无明细数据
-                                        </TableCell>
+            {rooms.map(room => {
+                const isExpanded = expandedRoomIds.has(room.id);
+                const roomItemCount = (itemsByRoom.mapping[room.id] || []).length;
+                const roomSubtotal = getRoomSubtotal(room.id);
+
+                return (
+                    <QuoteRoomAccordion
+                        key={room.id}
+                        room={{
+                            id: room.id,
+                            name: room.name,
+                            itemCount: roomItemCount,
+                            subtotal: roomSubtotal,
+                        }}
+                        isExpanded={isExpanded}
+                        onToggle={handleToggleRoom}
+                        readOnly={readOnly}
+                        onRename={handleRoomRename}
+                        onDelete={handleDeleteRoom}
+                        onAddProduct={(roomId) => handleOpenAddDialog(roomId)}
+                    >
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="glass-table-header">
+                                        <TableHead className="w-[25%] px-4 h-9">商品</TableHead>
+                                        <TableHead className="w-[15%] h-9">尺寸 (cm)</TableHead>
+                                        {showFold && <TableHead className="w-[8%] h-9">倍数</TableHead>}
+                                        {showProcessFee && <TableHead className="w-[10%] h-9">加工费</TableHead>}
+                                        <TableHead className="w-[12%] h-9">数量</TableHead>
+                                        <TableHead className="text-right w-[10%] h-9">单价</TableHead>
+                                        <TableHead className="text-right w-[10%] h-9">小计</TableHead>
+                                        {showRemark && <TableHead className="h-9">备注</TableHead>}
+                                        <TableHead className="w-[80px] h-9"></TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-            ))}
+                                </TableHeader>
+                                <TableBody>
+                                    {itemsByRoom.mapping[room.id]?.length > 0 ? (
+                                        renderRows(itemsByRoom.mapping[room.id])
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={9} className="text-center text-muted-foreground h-24 italic py-8 border-none">
+                                                此空间暂无明细数据
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </QuoteRoomAccordion>
+                );
+            })}
 
             {itemsByRoom.unassigned.length > 0 && (
                 <div className="glass-table overflow-hidden shadow-sm">

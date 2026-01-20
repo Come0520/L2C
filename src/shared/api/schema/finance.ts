@@ -28,7 +28,7 @@ export const financeAccounts = pgTable('finance_accounts', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     accountNo: varchar('account_no', { length: 50 }).notNull(), // 账户编号
     accountName: varchar('account_name', { length: 100 }).notNull(),
-    accountType: varchar('account_type', { length: 20 }).notNull(), // BANK/WECHAT/ALIPAY/CASH
+    accountType: varchar('account_type', { length: 20 }).notNull(), // BANK/WECHAT/ALIPAY/CASH/VIRTUAL (虚拟账户，如用户待结余额)
     accountNumber: varchar('account_number', { length: 100 }), // 账号/卡号
     bankName: varchar('bank_name', { length: 100 }), // 开户行
     branchName: varchar('branch_name', { length: 100 }), // 开户支行

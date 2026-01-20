@@ -228,3 +228,163 @@ export async function getInternalTransfers(page = 1, pageSize = 20) {
 
     return { success: true, data: transfers };
 }
+
+/**
+ * 取消/冲销资金调拨
+ * 
+ * 业务逻辑：
+ * 1. 仅允许冲销已完成的调拨单
+ * 2. 创建反向流水记录
+ * 3. 恢复双方账户余额
+ */
+export async function cancelInternalTransfer(transferId: string, reason?: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未授权' };
+        }
+
+        const tenantId = session.user.tenantId;
+        const _userId = session.user.id;
+
+        return await db.transaction(async (tx) => {
+            // 1. 获取调拨单
+            const transfer = await tx.query.internalTransfers.findFirst({
+                where: and(
+                    eq(internalTransfers.id, transferId),
+                    eq(internalTransfers.tenantId, tenantId)
+                ),
+                with: {
+                    fromAccount: true,
+                    toAccount: true,
+                }
+            });
+
+            if (!transfer) {
+                return { success: false, error: '调拨单不存在' };
+            }
+
+            if (transfer.status !== 'COMPLETED') {
+                return { success: false, error: '仅已完成的调拨单可冲销' };
+            }
+
+            const amount = Number(transfer.amount);
+
+            // 2. 获取当前账户余额
+            const fromAccount = await tx.query.financeAccounts.findFirst({
+                where: eq(financeAccounts.id, transfer.fromAccountId)
+            });
+            const toAccount = await tx.query.financeAccounts.findFirst({
+                where: eq(financeAccounts.id, transfer.toAccountId)
+            });
+
+            if (!fromAccount || !toAccount) {
+                return { success: false, error: '关联账户不存在' };
+            }
+
+            const fromBalance = Number(fromAccount.balance);
+            const toBalance = Number(toAccount.balance);
+
+            // 检查目标账户余额是否足够冲销
+            if (toBalance < amount) {
+                return { success: false, error: `目标账户余额不足，无法冲销。当前余额: ¥${toBalance.toLocaleString()}` };
+            }
+
+            // 3. 恢复源账户余额（加回）
+            await tx.update(financeAccounts)
+                .set({ balance: sql`${financeAccounts.balance} + ${amount}` })
+                .where(eq(financeAccounts.id, transfer.fromAccountId));
+
+            // 4. 扣减目标账户余额
+            await tx.update(financeAccounts)
+                .set({ balance: sql`${financeAccounts.balance} - ${amount}` })
+                .where(eq(financeAccounts.id, transfer.toAccountId));
+
+            // 5. 创建冲销流水 - 源账户收入
+            await tx.insert(accountTransactions).values({
+                tenantId,
+                transactionNo: generateTransactionNo('REV-IN'),
+                accountId: transfer.fromAccountId,
+                transactionType: 'INCOME',
+                amount: String(amount),
+                balanceBefore: String(fromBalance),
+                balanceAfter: String(fromBalance + amount),
+                relatedType: 'TRANSFER_REVERSAL',
+                relatedId: transfer.id,
+                remark: `冲销调拨: ${transfer.transferNo}${reason ? ` (${reason})` : ''}`,
+            });
+
+            // 6. 创建冲销流水 - 目标账户支出
+            await tx.insert(accountTransactions).values({
+                tenantId,
+                transactionNo: generateTransactionNo('REV-OUT'),
+                accountId: transfer.toAccountId,
+                transactionType: 'EXPENSE',
+                amount: String(amount),
+                balanceBefore: String(toBalance),
+                balanceAfter: String(toBalance - amount),
+                relatedType: 'TRANSFER_REVERSAL',
+                relatedId: transfer.id,
+                remark: `冲销调拨: ${transfer.transferNo}${reason ? ` (${reason})` : ''}`,
+            });
+
+            // 7. 更新调拨单状态为已取消
+            await tx.update(internalTransfers)
+                .set({
+                    status: 'CANCELLED',
+                    remark: transfer.remark
+                        ? `${transfer.remark}｜冲销原因: ${reason || '无'}`
+                        : `冲销原因: ${reason || '无'}`,
+                    updatedAt: new Date(),
+                })
+                .where(eq(internalTransfers.id, transferId));
+
+            revalidatePath('/finance');
+            revalidatePath('/finance/transfers');
+
+            return {
+                success: true,
+                message: '调拨单已冲销',
+                data: {
+                    transferNo: transfer.transferNo,
+                    amount,
+                }
+            };
+        });
+    } catch (error) {
+        console.error('冲销调拨失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '冲销失败'
+        };
+    }
+}
+
+/**
+ * 获取调拨单详情
+ */
+export async function getInternalTransfer(id: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权' };
+    }
+
+    const transfer = await db.query.internalTransfers.findFirst({
+        where: and(
+            eq(internalTransfers.id, id),
+            eq(internalTransfers.tenantId, session.user.tenantId)
+        ),
+        with: {
+            fromAccount: true,
+            toAccount: true,
+            createdByUser: { columns: { name: true } },
+            approvedByUser: { columns: { name: true } },
+        }
+    });
+
+    if (!transfer) {
+        return { success: false, error: '调拨单不存在' };
+    }
+
+    return { success: true, data: transfer };
+}

@@ -808,6 +808,65 @@ export const receiptBillItemsRelations = relations(receiptBillItems, ({ one }) =
     }),
 }));
 
+// 贷项通知单关系 (Credit Notes Relations)
+export const creditNotesRelations = relations(creditNotes, ({ one }) => ({
+    tenant: one(tenants, {
+        fields: [creditNotes.tenantId],
+        references: [tenants.id],
+    }),
+    customer: one(customers, {
+        fields: [creditNotes.customerId],
+        references: [customers.id],
+    }),
+    order: one(orders, {
+        fields: [creditNotes.orderId],
+        references: [orders.id],
+    }),
+    arStatement: one(arStatements, {
+        fields: [creditNotes.arStatementId],
+        references: [arStatements.id],
+    }),
+    createdByUser: one(users, {
+        fields: [creditNotes.createdBy],
+        references: [users.id],
+        relationName: 'creditNoteCreator',
+    }),
+    approvedByUser: one(users, {
+        fields: [creditNotes.approvedBy],
+        references: [users.id],
+        relationName: 'creditNoteApprover',
+    }),
+}));
+
+// 借项通知单关系 (Debit Notes Relations)
+export const debitNotesRelations = relations(debitNotes, ({ one }) => ({
+    tenant: one(tenants, {
+        fields: [debitNotes.tenantId],
+        references: [tenants.id],
+    }),
+    supplier: one(suppliers, {
+        fields: [debitNotes.supplierId],
+        references: [suppliers.id],
+    }),
+    purchaseOrder: one(purchaseOrders, {
+        fields: [debitNotes.purchaseOrderId],
+        references: [purchaseOrders.id],
+    }),
+    apStatement: one(apSupplierStatements, {
+        fields: [debitNotes.apStatementId],
+        references: [apSupplierStatements.id],
+    }),
+    createdByUser: one(users, {
+        fields: [debitNotes.createdBy],
+        references: [users.id],
+        relationName: 'debitNoteCreator',
+    }),
+    approvedByUser: one(users, {
+        fields: [debitNotes.approvedBy],
+        references: [users.id],
+        relationName: 'debitNoteApprover',
+    }),
+}));
 
 export const afterSalesTicketsRelations = relations(afterSalesTickets, ({ one, many }) => ({
     tenant: one(tenants, {

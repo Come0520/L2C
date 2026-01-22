@@ -6,19 +6,43 @@ import { Button } from '@/shared/ui/button';
 import { ArrowLeftRight } from 'lucide-react';
 
 /**
- * 报价单支持的品类类型
+ * 报价单支持的品类类型（SUMMARY 为汇总页）
  */
-export type QuoteCategory = 'CURTAIN' | 'WALLCLOTH' | 'WALLPAPER' | 'WALL_PANEL' | 'STANDARD';
+export type QuoteCategory = 'SUMMARY' | 'CURTAIN' | 'WALLCLOTH' | 'WALLPAPER' | 'WALL_PANEL' | 'WINDOWPAD' | 'STANDARD';
 
 /**
  * 品类配置
  */
 const CATEGORY_CONFIG: Record<QuoteCategory, { label: string; icon?: string }> = {
+    SUMMARY: { label: '汇总' },
     CURTAIN: { label: '窗帘' },
     WALLCLOTH: { label: '墙布' },
     WALLPAPER: { label: '墙纸' },
     WALL_PANEL: { label: '墙咔' },
+    WINDOWPAD: { label: '飘窗垫' },
     STANDARD: { label: '标品' },
+};
+
+/**
+ * UI 标签页到数据库商品品类的映射
+ * 用于限制在某个标签页下只能添加对应品类的商品
+ * 注意：SUMMARY 不需要映射，因为它是汇总页
+ * 
+ * 完整映射检查（对应 productCategoryEnum）:
+ * - CURTAIN: 窗帘相关品类
+ * - WALLCLOTH: 墙布相关品类
+ * - WALLPAPER: 墙纸
+ * - WALL_PANEL: 墙咔
+ * - WINDOWPAD: 飘窗垫
+ * - STANDARD: 标品/床垫/服务/其他
+ */
+export const CATEGORY_TO_PRODUCT_CATEGORIES: Record<Exclude<QuoteCategory, 'SUMMARY'>, string[]> = {
+    CURTAIN: ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER', 'CURTAIN_TRACK', 'CURTAIN_ACCESSORY', 'MOTOR'],
+    WALLCLOTH: ['WALLCLOTH', 'WALLCLOTH_ACCESSORY'],
+    WALLPAPER: ['WALLPAPER'],
+    WALL_PANEL: ['WALLPANEL'],
+    WINDOWPAD: ['WINDOWPAD'],  // 飘窗垫独立标签页
+    STANDARD: ['STANDARD', 'SERVICE', 'OTHER', 'MATTRESS'],  // 标品、床垫、服务、其他
 };
 
 /**

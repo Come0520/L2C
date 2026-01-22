@@ -1,4 +1,5 @@
-import { useMemo, memo, useState, useCallback } from 'react';
+import { useMemo, memo, useState, useCallback, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -12,9 +13,41 @@ import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { ProductAutocomplete } from './product-autocomplete';
-import { QuoteItemDialog } from './quote-item-dialog';
 import { QuoteRoomAccordion } from './quote-room-accordion';
+import { RoomSelectorWithConfig } from './room-selector-popover';
+import { QuoteInlineAddRow } from './quote-inline-add-row';
 import { CurtainCalculator, WallpaperCalculator, CurtainFormula, WallpaperFormula } from '@/features/quotes/logic/calculator';
+import { QuoteItemAdvancedDrawer } from './quote-item-advanced-drawer';
+import { QuoteItemExpandRow } from './quote-item-expand-row';
+import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
+
+/** 计算结果详情接口 */
+interface CalcResult {
+    finishedWidth?: number;
+    finishedHeight?: number;
+    cutWidth?: number;
+    cutHeight?: number;
+    stripCount?: number;
+    fabricWidthCm?: number;
+    quantity?: number;
+    warning?: string;
+}
+
+/** 商品属性接口 */
+interface QuoteItemAttributes {
+    calcResult?: CalcResult;
+    _warnings?: string;
+    productImage?: string;
+    fabricWidth?: number;
+    rollLength?: number;
+    patternRepeat?: number;
+    formula?: CurtainFormula | 'WALLPAPER' | 'WALLCLOTH';
+    sideLoss?: number;
+    bottomLoss?: number;
+    headerLoss?: number;
+    [key: string]: unknown;
+}
 
 export interface QuoteItem {
     id: string;
@@ -32,42 +65,65 @@ export interface QuoteItem {
     processFee?: string | number;
     subtotal: string | number;
     remark?: string;
-    attributes?: Record<string, any>;
+    attributes?: QuoteItemAttributes;
     children?: QuoteItem[];
-    [key: string]: any; // Allow for UI-only flags like _matched
 }
 
 interface QuoteItemRowProps {
     item: QuoteItem;
     level: number;
     readOnly: boolean;
+    showImage: boolean;
+    showWidth: boolean;
+    showHeight: boolean;
     showFold: boolean;
     showProcessFee: boolean;
+    showQuantity: boolean;
+    showUnitPrice: boolean;
+    showAmount: boolean;
     showRemark: boolean;
     handleUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
     handleDelete: (id: string) => Promise<void>;
     handleAddAccessory: (parentId: string, roomId: string | null) => Promise<void>;
-    handleProductSelect: (id: string, product: Record<string, any>) => Promise<void>;
+    handleProductSelect: (id: string, product: ProductSearchResult) => Promise<void>;
     handleClientCalc: (item: QuoteItem, field: string, value: number) => number | null;
+    handleAdvancedEdit: (item: QuoteItem) => void;
     renderChildren: (nodes: QuoteItem[], level: number) => React.ReactNode;
+    /** 行展开状态 */
+    isExpanded: boolean;
+    /** 切换展开状态 */
+    onToggleExpand: () => void;
+    /** 表格列数（用于 colSpan） */
+    colSpan: number;
 }
 
 const QuoteItemRow = memo(({
     item,
     level,
     readOnly,
+    showImage,
+    showWidth,
+    showHeight,
     showFold,
     showProcessFee,
+    showQuantity,
+    showUnitPrice,
+    showAmount,
     showRemark,
     handleUpdate,
     handleDelete,
     handleAddAccessory,
     handleProductSelect,
     handleClientCalc,
-    renderChildren
+    handleAdvancedEdit,
+    renderChildren,
+    isExpanded,
+    onToggleExpand,
+    colSpan,
 }: QuoteItemRowProps) => {
     const warning = item.attributes?.calcResult?.warning || item.attributes?._warnings;
     const calcDetails = item.attributes?.calcResult;
+    const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
 
     return (
         <>
@@ -94,21 +150,25 @@ const QuoteItemRow = memo(({
                                 />
                             </div>
                         )}
-                        {!readOnly && (item.attributes?.productImage ? (
+                        {!readOnly && showImage && (item.attributes?.productImage ? (
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <div className="ml-2 w-8 h-8 rounded border bg-muted shrink-0 cursor-zoom-in overflow-hidden relative group">
-                                        <img
-                                            src={item.attributes.productImage}
+                                        <Image
+                                            src={String(item.attributes.productImage)}
                                             alt="Product"
+                                            width={32}
+                                            height={32}
                                             className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                         />
                                     </div>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-64 p-0 overflow-hidden border-none shadow-xl" side="right">
-                                    <img
-                                        src={item.attributes.productImage}
+                                    <Image
+                                        src={String(item.attributes.productImage)}
                                         alt="Preview"
+                                        width={256}
+                                        height={256}
                                         className="w-full h-auto"
                                     />
                                 </PopoverContent>
@@ -131,37 +191,43 @@ const QuoteItemRow = memo(({
                         )}
                     </div>
                 </TableCell>
-                <TableCell className="p-2">
-                    <div className="flex items-center space-x-1">
-                        <Input
-                            disabled={readOnly}
-                            type="number"
-                            className="w-16 h-8 text-right px-1 bg-transparent/50"
-                            defaultValue={Number(item.width) || ''}
-                            placeholder="宽"
-                            onBlur={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (isNaN(val)) return;
-                                const qty = handleClientCalc(item, 'width', val);
-                                handleUpdate(item.id, { width: val, quantity: qty ?? undefined });
-                            }}
-                        />
-                        <span className="text-muted-foreground text-xs">x</span>
-                        <Input
-                            disabled={readOnly}
-                            type="number"
-                            className="w-16 h-8 text-right px-1 bg-transparent/50"
-                            defaultValue={Number(item.height) || ''}
-                            placeholder="高"
-                            onBlur={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (isNaN(val)) return;
-                                const qty = handleClientCalc(item, 'height', val);
-                                handleUpdate(item.id, { height: val, quantity: qty ?? undefined });
-                            }}
-                        />
-                    </div>
-                </TableCell>
+                {(showWidth || showHeight) && (
+                    <TableCell className="p-2">
+                        <div className="flex items-center space-x-1">
+                            {showWidth && (
+                                <Input
+                                    disabled={readOnly}
+                                    type="number"
+                                    className="w-16 h-8 text-right px-1 bg-transparent/50"
+                                    defaultValue={Number(item.width) || ''}
+                                    placeholder="宽"
+                                    onBlur={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        if (isNaN(val)) return;
+                                        const qty = handleClientCalc(item, 'width', val);
+                                        handleUpdate(item.id, { width: val, quantity: qty ?? undefined });
+                                    }}
+                                />
+                            )}
+                            {showWidth && showHeight && <span className="text-muted-foreground text-xs">x</span>}
+                            {showHeight && (
+                                <Input
+                                    disabled={readOnly}
+                                    type="number"
+                                    className="w-16 h-8 text-right px-1 bg-transparent/50"
+                                    defaultValue={Number(item.height) || ''}
+                                    placeholder="高"
+                                    onBlur={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        if (isNaN(val)) return;
+                                        const qty = handleClientCalc(item, 'height', val);
+                                        handleUpdate(item.id, { height: val, quantity: qty ?? undefined });
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </TableCell>
+                )}
 
                 {showFold && (
                     <TableCell className="p-2">
@@ -197,75 +263,81 @@ const QuoteItemRow = memo(({
                     </TableCell>
                 )}
 
-                <TableCell className="p-2">
-                    <div className="flex items-center gap-1">
+                {showQuantity && (
+                    <TableCell className="p-2">
+                        <div className="flex items-center gap-1">
+                            <Input
+                                disabled={readOnly}
+                                type="number"
+                                className="w-16 h-8 text-right px-1 bg-transparent/50 font-medium text-primary"
+                                defaultValue={Number(item.quantity)}
+                                onBlur={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (isNaN(val)) return;
+                                    handleUpdate(item.id, { quantity: val });
+                                }}
+                            />
+                            {calcDetails && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
+                                            <Info className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="glass-popover w-64 p-0 overflow-hidden" side="right">
+                                        <div className="glass-section-header p-3">
+                                            <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-center">计算详情</h4>
+                                        </div>
+                                        <div className="p-3 space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">成品展示:</span>
+                                                <span className="font-mono">{calcDetails.finishedWidth} x {calcDetails.finishedHeight} cm</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">预留净尺寸:</span>
+                                                <span className="font-mono text-primary">{calcDetails.cutWidth} x {calcDetails.cutHeight} cm</span>
+                                            </div>
+                                            {calcDetails.stripCount !== undefined && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">消耗份数:</span>
+                                                    <span className="font-mono">{calcDetails.stripCount}</span>
+                                                </div>
+                                            )}
+                                            {calcDetails.fabricWidthCm !== undefined && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">参考幅宽:</span>
+                                                    <span className="font-mono">{calcDetails.fabricWidthCm} cm</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                        </div>
+                    </TableCell>
+                )}
+                {showUnitPrice && (
+                    <TableCell className="text-right p-2">
                         <Input
                             disabled={readOnly}
                             type="number"
-                            className="w-16 h-8 text-right px-1 bg-transparent/50 font-medium text-primary"
-                            defaultValue={Number(item.quantity)}
+                            className="w-20 h-8 text-right px-1 bg-transparent/50"
+                            defaultValue={Number(item.unitPrice)}
                             onBlur={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (isNaN(val)) return;
-                                handleUpdate(item.id, { quantity: val });
+                                handleUpdate(item.id, { unitPrice: val });
                             }}
                         />
-                        {calcDetails && (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
-                                        <Info className="w-3.5 h-3.5" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="glass-popover w-64 p-0 overflow-hidden" side="right">
-                                    <div className="glass-section-header p-3">
-                                        <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-center">计算详情</h4>
-                                    </div>
-                                    <div className="p-3 space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">成品展示:</span>
-                                            <span className="font-mono">{calcDetails.finishedWidth} x {calcDetails.finishedHeight} cm</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">预留净尺寸:</span>
-                                            <span className="font-mono text-primary">{calcDetails.cutWidth} x {calcDetails.cutHeight} cm</span>
-                                        </div>
-                                        {calcDetails.stripCount !== undefined && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">消耗份数:</span>
-                                                <span className="font-mono">{calcDetails.stripCount}</span>
-                                            </div>
-                                        )}
-                                        {calcDetails.fabricWidthCm !== undefined && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">参考幅宽:</span>
-                                                <span className="font-mono">{calcDetails.fabricWidthCm} cm</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    </div>
-                </TableCell>
-                <TableCell className="text-right p-2">
-                    <Input
-                        disabled={readOnly}
-                        type="number"
-                        className="w-20 h-8 text-right px-1 bg-transparent/50"
-                        defaultValue={Number(item.unitPrice)}
-                        onBlur={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (isNaN(val)) return;
-                            handleUpdate(item.id, { unitPrice: val });
-                        }}
-                    />
-                </TableCell>
-                <TableCell className="text-right font-medium p-2">
-                    <span className="font-mono text-slate-700 dark:text-slate-100">
-                        ¥{Number(item.subtotal).toFixed(2)}
-                    </span>
-                </TableCell>
+                    </TableCell>
+                )}
+                {showAmount && (
+                    <TableCell className="text-right font-medium p-2">
+                        <span className="font-mono text-slate-700 dark:text-slate-100">
+                            ¥{Number(item.subtotal).toFixed(2)}
+                        </span>
+                    </TableCell>
+                )}
 
                 {showRemark && (
                     <TableCell className="p-2">
@@ -287,6 +359,21 @@ const QuoteItemRow = memo(({
                                     <Plus className="w-4 h-4" />
                                 </Button>
                             )}
+                            {/* 展开/折叠按钮（仅主商品且为窗帘类显示） */}
+                            {level === 0 && isCurtain && (
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className={cn("h-7 w-7", isExpanded ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary")}
+                                    onClick={onToggleExpand}
+                                    title={isExpanded ? "收起高级配置" : "展开高级配置"}
+                                >
+                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleAdvancedEdit(item)} title="高级配置">
+                                <Settings className="w-4 h-4" />
+                            </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item.id)}>
                                 <Trash2 className="w-4 h-4" />
                             </Button>
@@ -294,6 +381,24 @@ const QuoteItemRow = memo(({
                     )}
                 </TableCell>
             </TableRow>
+            {/* 行内展开区域（高级配置） */}
+            {level === 0 && isExpanded && (
+                <QuoteItemExpandRow
+                    itemId={item.id}
+                    productName={item.productName}
+                    category={item.category}
+                    attributes={item.attributes as Record<string, unknown>}
+                    foldRatio={Number(item.foldRatio) || 2}
+                    processFee={Number(item.processFee) || 0}
+                    remark={item.remark}
+                    attachments={[]} // TODO: 从 children 中提取附件
+                    readOnly={readOnly}
+                    isExpanded={isExpanded}
+                    onToggle={onToggleExpand}
+                    onSave={() => {/* 刷新数据 */ }}
+                    colSpan={colSpan}
+                />
+            )}
             {item.children && item.children.length > 0 && renderChildren(item.children, level + 1)}
         </>
     );
@@ -321,37 +426,95 @@ const buildTree = (items: QuoteItem[]): QuoteItem[] => {
     return rootItems;
 };
 
+/** 房间数据结构 */
+interface RoomData {
+    id: string;
+    name: string;
+    [key: string]: unknown;
+}
+
 interface QuoteItemsTableProps {
     quoteId: string;
-    rooms: any[];
-    items: any[];
+    rooms: RoomData[];
+    items: QuoteItem[];
     onItemUpdate?: () => void;
-    onAddRoom?: () => void;
+    onAddRoom?: (name: string) => void;
     mode?: 'simple' | 'advanced';
     visibleFields?: string[];
     readOnly?: boolean;
-    dimensionLimits?: any;
+    dimensionLimits?: { heightWarning: number; heightMax: number; widthWarning: number; widthMax: number; enabled: boolean };
+    /** 允许添加的商品品类列表（过滤商品选择器） */
+    allowedCategories?: string[];
 }
 
-export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom, mode = 'simple', visibleFields, readOnly = false, dimensionLimits }: QuoteItemsTableProps) {
+export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom, mode = 'simple', visibleFields, readOnly = false, allowedCategories }: QuoteItemsTableProps) {
 
+    // 字段可见性判断
     const isFieldVisible = (field: string) => {
         if (visibleFields && visibleFields.length > 0) {
             return visibleFields.includes(field);
         }
-        return mode !== 'simple';
+        return mode !== 'simple'; // 默认为非简易模式显示所有? 或者根据默认配置
     };
 
+    const _showProductSku = isFieldVisible('productSku');
+    const showImage = isFieldVisible('imageUrl');
+    const showWidth = isFieldVisible('width');
+    const showHeight = isFieldVisible('height');
     const showFold = isFieldVisible('foldRatio');
     const showProcessFee = isFieldVisible('processFee');
-    const showRemark = isFieldVisible('remark');
 
-    const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const showQuantity = isFieldVisible('quantity');
+    const showUnitPrice = isFieldVisible('unitPrice');
+    const showAmount = isFieldVisible('amount') || isFieldVisible('subtotal'); // Handle both keys
+    const showRemark = isFieldVisible('remarks') || isFieldVisible('remark');
+
+    // 高级编辑抽屉状态
+    const [advancedDrawerOpen, setAdvancedDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<QuoteItem | null>(null);
+
     // 空间展开状态（聚焦模式：默认只展开第一个）
     const [expandedRoomIds, setExpandedRoomIds] = useState<Set<string>>(() => {
         return rooms.length > 0 ? new Set([rooms[0].id]) : new Set();
     });
+
+    // 行展开状态（快速/高级报价切换）
+    const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set());
+
+    // 跟踪之前的空间 ID 集合，用于检测新增空间
+    const prevRoomIdsRef = useRef<Set<string>>(new Set(rooms.map(r => r.id)));
+
+    // 自动展开新创建的空间
+    useEffect(() => {
+        const currentRoomIds = new Set(rooms.map(r => r.id));
+        const prevRoomIds = prevRoomIdsRef.current;
+
+        // 检测新增的空间
+        let newRoomId: string | null = null;
+        for (const roomId of currentRoomIds) {
+            if (!prevRoomIds.has(roomId)) {
+                newRoomId = roomId;
+                break; // 每次只处理一个新空间
+            }
+        }
+
+        // 更新 ref
+        prevRoomIdsRef.current = currentRoomIds;
+
+        // 使用 requestAnimationFrame 延迟状态更新，避免级联渲染
+        if (newRoomId) {
+            const roomToExpand = newRoomId;
+            requestAnimationFrame(() => {
+                setExpandedRoomIds(new Set([roomToExpand]));
+            });
+        }
+    }, [rooms]);
+
+
+    const handleAdvancedEdit = useCallback((item: QuoteItem) => {
+        setEditingItem(item);
+        setAdvancedDrawerOpen(true);
+    }, []);
 
     // 计算空间小计（包含所有主商品+附件）
     const getRoomSubtotal = useCallback((roomId: string) => {
@@ -373,11 +536,6 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
             return next;
         });
     }, []);
-
-    const handleOpenAddDialog = (roomId: string | null) => {
-        setActiveRoomId(roomId);
-        setIsDialogOpen(true);
-    };
 
     const tree = useMemo(() => buildTree(items), [items]);
 
@@ -404,13 +562,13 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
         }
     };
 
-    const handleUpdate = async (id: string, data: any) => {
+    const handleUpdate = async (id: string, data: Record<string, unknown>) => {
         if (readOnly) return;
         try {
             await updateQuoteItem({ id, ...data });
             toast.success('已更新');
             if (onItemUpdate) onItemUpdate();
-        } catch (error) {
+        } catch (_error) {
             console.error("Failed to update item");
             toast.error('更新失败');
         }
@@ -422,7 +580,7 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
             await updateRoom({ id, name });
             toast.success('空间已重命名');
             if (onItemUpdate) onItemUpdate();
-        } catch (error) {
+        } catch (_error) {
             toast.error('重命名失败');
         }
     };
@@ -455,17 +613,17 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
             });
             toast.success('附件添加成功');
             if (onItemUpdate) onItemUpdate();
-        } catch (error) {
+        } catch (_error) {
             toast.error('添加失败');
         }
     };
 
-    const handleProductSelect = async (id: string, product: any) => {
+    const handleProductSelect = async (id: string, product: ProductSearchResult) => {
         if (readOnly) return;
         await handleUpdate(id, {
             productId: product.id,
             productName: product.name,
-            unitPrice: product.unitPrice ? parseFloat(product.unitPrice) : undefined,
+            unitPrice: product.unitPrice ? parseFloat(String(product.unitPrice)) : undefined,
             attributes: {
                 ...product.specs,
                 productImage: product.images?.[0]
@@ -473,15 +631,31 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
         });
     };
 
-    const handleClientCalc = (item: any, field: string, value: number) => {
+    const handleClientCalc = (item: QuoteItem, field: string, value: number) => {
+        // ... (保持不变)
         const newItem = { ...item, [field]: value };
         const category = newItem.category;
 
-        if (category === 'CURTAIN' || category === 'WALLPAPER' || category === 'WALLCLOTH') {
-            const attributes = newItem.attributes || {};
-            let result: any = null;
+        // 调试日志
+        console.log('[handleClientCalc] 触发计算', {
+            field,
+            value,
+            category,
+            width: newItem.width,
+            height: newItem.height,
+            foldRatio: newItem.foldRatio,
+        });
 
-            if (category === 'CURTAIN') {
+        // 窗帘类品类：支持 CURTAIN, CURTAIN_FABRIC, CURTAIN_SHEER
+        const isCurtainCategory = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category);
+        // 墙纸/墙布类品类
+        const isWallCategory = ['WALLPAPER', 'WALLCLOTH'].includes(category);
+
+        if (isCurtainCategory || isWallCategory) {
+            const attributes = (newItem.attributes || {}) as Record<string, unknown>;
+            let result: { quantity: number; warning?: string } | null = null;
+
+            if (isCurtainCategory) {
                 result = CurtainCalculator.calculate({
                     measuredWidth: Number(newItem.width) || 0,
                     measuredHeight: Number(newItem.height) || 0,
@@ -492,7 +666,8 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                     bottomLoss: Number(attributes.bottomLoss),
                     headerLoss: Number(attributes.headerLoss)
                 });
-            } else if (category === 'WALLPAPER' || category === 'WALLCLOTH') {
+                console.log('[handleClientCalc] 窗帘计算结果', result);
+            } else if (isWallCategory) {
                 result = WallpaperCalculator.calculate({
                     measuredWidth: Number(newItem.width) || 0,
                     measuredHeight: Number(newItem.height) || 0,
@@ -501,31 +676,75 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                     patternRepeat: Number(attributes.patternRepeat) || 0,
                     formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula
                 });
+                console.log('[handleClientCalc] 墙纸/墙布计算结果', result);
             }
 
-            if (result) return result.quantity;
+            // 确保返回有效数值，NaN 返回 null
+            if (result && typeof result.quantity === 'number' && !isNaN(result.quantity)) {
+                return result.quantity;
+            }
+            console.log('[handleClientCalc] 计算结果无效，返回 null', result?.quantity);
+            return null;
+        } else {
+            console.log('[handleClientCalc] 品类不匹配，跳过计算', category);
         }
         return null;
     };
 
-    const renderRows = (nodes: any[], level = 0): React.ReactNode => {
-        return nodes.map(item => (
-            <QuoteItemRow
-                key={item.id}
-                item={item}
-                level={level}
-                readOnly={readOnly}
-                showFold={showFold}
-                showProcessFee={showProcessFee}
-                showRemark={showRemark}
-                handleUpdate={handleUpdate}
-                handleDelete={handleDelete}
-                handleAddAccessory={handleAddAccessory}
-                handleProductSelect={handleProductSelect}
-                handleClientCalc={handleClientCalc}
-                renderChildren={renderRows}
-            />
-        ));
+    const renderRows = (nodes: QuoteItem[], level = 0): React.ReactNode => {
+        // 计算表格列数
+        const columnCount = 2 + // 商品名称 + 操作列
+            (showImage ? 0 : 0) + // 图片内嵌在商品名称列
+            ((showWidth || showHeight) ? 1 : 0) +
+            (showFold ? 1 : 0) +
+            (showProcessFee ? 1 : 0) +
+            (showQuantity ? 1 : 0) +
+            (showUnitPrice ? 1 : 0) +
+            (showAmount ? 1 : 0) +
+            (showRemark ? 1 : 0);
+
+        return nodes.map(item => {
+            const isItemExpanded = expandedItemIds.has(item.id);
+            const toggleItemExpand = () => {
+                setExpandedItemIds(prev => {
+                    const next = new Set(prev);
+                    if (next.has(item.id)) {
+                        next.delete(item.id);
+                    } else {
+                        next.add(item.id);
+                    }
+                    return next;
+                });
+            };
+
+            return (
+                <QuoteItemRow
+                    key={item.id}
+                    item={item}
+                    level={level}
+                    readOnly={readOnly}
+                    showImage={showImage}
+                    showWidth={showWidth}
+                    showHeight={showHeight}
+                    showFold={showFold}
+                    showProcessFee={showProcessFee}
+                    showQuantity={showQuantity}
+                    showUnitPrice={showUnitPrice}
+                    showAmount={showAmount}
+                    showRemark={showRemark}
+                    handleUpdate={handleUpdate}
+                    handleDelete={handleDelete}
+                    handleAddAccessory={handleAddAccessory}
+                    handleProductSelect={handleProductSelect}
+                    handleClientCalc={handleClientCalc}
+                    handleAdvancedEdit={handleAdvancedEdit}
+                    renderChildren={renderRows}
+                    isExpanded={isItemExpanded}
+                    onToggleExpand={toggleItemExpand}
+                    colSpan={columnCount}
+                />
+            );
+        });
     };
 
     return (
@@ -535,14 +754,9 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                     <p className="text-sm">暂无报价文件明细</p>
                     <p className="text-xs opacity-60 mt-1">请先添加空间或从产品库导入主材</p>
                     {!readOnly && onAddRoom && (
-                        <Button
-                            variant="outline"
-                            className="mt-4"
-                            onClick={onAddRoom}
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            添加空间
-                        </Button>
+                        <div className="mt-4">
+                            <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
+                        </div>
                     )}
                 </div>
             )}
@@ -550,10 +764,7 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
             {/* 顶部操作栏：添加空间按钮 */}
             {(rooms.length > 0 || itemsByRoom.unassigned.length > 0) && !readOnly && onAddRoom && (
                 <div className="flex justify-start">
-                    <Button variant="outline" size="sm" onClick={onAddRoom}>
-                        <Plus className="w-4 h-4 mr-1" />
-                        添加空间
-                    </Button>
+                    <RoomSelectorWithConfig onSelect={onAddRoom} align="start" />
                 </div>
             )}
 
@@ -576,19 +787,18 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                         readOnly={readOnly}
                         onRename={handleRoomRename}
                         onDelete={handleDeleteRoom}
-                        onAddProduct={(roomId) => handleOpenAddDialog(roomId)}
                     >
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="glass-table-header">
                                         <TableHead className="w-[25%] px-4 h-9">商品</TableHead>
-                                        <TableHead className="w-[15%] h-9">尺寸 (cm)</TableHead>
+                                        {(showWidth || showHeight) && <TableHead className="w-[15%] h-9">尺寸 (cm)</TableHead>}
                                         {showFold && <TableHead className="w-[8%] h-9">倍数</TableHead>}
                                         {showProcessFee && <TableHead className="w-[10%] h-9">加工费</TableHead>}
-                                        <TableHead className="w-[12%] h-9">数量</TableHead>
-                                        <TableHead className="text-right w-[10%] h-9">单价</TableHead>
-                                        <TableHead className="text-right w-[10%] h-9">小计</TableHead>
+                                        {showQuantity && <TableHead className="w-[12%] h-9">数量</TableHead>}
+                                        {showUnitPrice && <TableHead className="text-right w-[10%] h-9">单价</TableHead>}
+                                        {showAmount && <TableHead className="text-right w-[10%] h-9">小计</TableHead>}
                                         {showRemark && <TableHead className="h-9">备注</TableHead>}
                                         <TableHead className="w-[80px] h-9"></TableHead>
                                     </TableRow>
@@ -598,11 +808,22 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                                         renderRows(itemsByRoom.mapping[room.id])
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center text-muted-foreground h-24 italic py-8 border-none">
-                                                此空间暂无明细数据
+                                            <TableCell colSpan={9} className="text-center text-muted-foreground h-16 italic py-4 border-none">
+                                                此空间暂无明细，请添加商品
                                             </TableCell>
                                         </TableRow>
                                     )}
+                                    {/* 行内添加商品行 - 放在商品行下方 */}
+                                    <QuoteInlineAddRow
+                                        quoteId={quoteId}
+                                        roomId={room.id}
+                                        onSuccess={onItemUpdate}
+                                        readOnly={readOnly}
+                                        showFold={showFold}
+                                        showProcessFee={showProcessFee}
+                                        showRemark={showRemark}
+                                        allowedCategories={allowedCategories}
+                                    />
                                 </TableBody>
                             </Table>
                         </div>
@@ -620,12 +841,12 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                             <TableHeader>
                                 <TableRow className="glass-table-header">
                                     <TableHead className="w-[25%] px-4 h-9">商品</TableHead>
-                                    <TableHead className="w-[15%] h-9">尺寸</TableHead>
+                                    {(showWidth || showHeight) && <TableHead className="w-[15%] h-9">尺寸 (cm)</TableHead>}
                                     {showFold && <TableHead className="w-[8%] h-9">倍数</TableHead>}
                                     {showProcessFee && <TableHead className="w-[10%] h-9">加工费</TableHead>}
-                                    <TableHead className="w-[12%] h-9">数量</TableHead>
-                                    <TableHead className="text-right w-[10%] h-9">单价</TableHead>
-                                    <TableHead className="text-right w-[10%] h-9">小计</TableHead>
+                                    {showQuantity && <TableHead className="w-[12%] h-9">数量</TableHead>}
+                                    {showUnitPrice && <TableHead className="text-right w-[10%] h-9">单价</TableHead>}
+                                    {showAmount && <TableHead className="text-right w-[10%] h-9">小计</TableHead>}
                                     {showRemark && <TableHead className="h-9">备注</TableHead>}
                                     <TableHead className="w-[80px] h-9"></TableHead>
                                 </TableRow>
@@ -638,15 +859,13 @@ export function QuoteItemsTable({ quoteId, rooms, items, onItemUpdate, onAddRoom
                 </div>
             )}
 
-            <QuoteItemDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                quoteId={quoteId}
-                roomId={activeRoomId}
+            <QuoteItemAdvancedDrawer
+                open={advancedDrawerOpen}
+                onOpenChange={setAdvancedDrawerOpen}
+                item={editingItem}
                 onSuccess={onItemUpdate}
-                dimensionLimits={dimensionLimits}
-                visibleFields={visibleFields}
             />
         </div>
     );
+
 }

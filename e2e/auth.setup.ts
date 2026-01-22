@@ -24,7 +24,7 @@ setup('authenticate', async ({ page }) => {
     // 等待跳转到工作台
     try {
         console.log('Waiting for redirect to workbench...');
-        await expect(page).toHaveURL(/.*dashboard/, { timeout: 15000 });
+        await expect(page).toHaveURL(/.*workbench/, { timeout: 15000 });
         console.log('Authentication successful');
     } catch (e) {
         console.error('Authentication failed, taking screenshot...');

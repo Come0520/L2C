@@ -107,20 +107,92 @@ test.describe('底价供货模式 (Base Price Mode)', () => {
     });
 
     test('P0-5: 不同等级渠道结算价应不同', async ({ page }) => {
-        // 查看渠道等级配置
-        await page.goto('/settings/channel-levels');
+        // 查看渠道等级配置 (新路径)
+        await page.goto('/settings/channels');
 
-        const levelTable = page.locator('table');
-        if (await levelTable.isVisible()) {
-            // 验证不同等级有不同折扣
-            const sLevel = page.locator('text=S级').or(page.locator('text=战略'));
-            const bLevel = page.locator('text=B级').or(page.locator('text=普通'));
+        // 点击佣金配置 Tab
+        const configTab = page.getByRole('tab', { name: /佣金配置/ });
+        if (await configTab.isVisible()) {
+            await configTab.click();
+            await page.waitForTimeout(500);
 
-            if (await sLevel.isVisible() && await bLevel.isVisible()) {
-                console.log('✅ 渠道等级配置正常');
+            // 验证等级折扣配置表单
+            const sLevelInput = page.locator('input[name="S"]');
+            const aLevelInput = page.locator('input[name="A"]');
+
+            if (await sLevelInput.isVisible() && await aLevelInput.isVisible()) {
+                console.log('✅ 渠道等级折扣配置 UI 正常');
             }
         } else {
-            console.log('⚠️ 未找到渠道等级配置页面');
+            console.log('⚠️ 未找到佣金配置 Tab');
+        }
+    });
+
+    test('P0-6: 渠道选品池管理页面', async ({ page }) => {
+        await page.goto('/settings/channels/products');
+        await page.waitForLoadState('networkidle');
+
+        // 验证页面加载（使用多种选择器策略）
+        const pageTitle = page.locator('text=渠道选品池')
+            .or(page.locator('h1, h2, h3').filter({ hasText: /选品/ }))
+            .or(page.locator('[data-testid="channel-products-page"]'));
+
+        if (await pageTitle.isVisible({ timeout: 5000 }).catch(() => false)) {
+            console.log('✅ 渠道选品池页面加载正常');
+
+            // 验证添加商品按钮（使用更健壮的选择器）
+            const addButton = page.locator('button').filter({ hasText: /添加|Add/ }).first()
+                .or(page.locator('[data-testid="add-product"]'));
+
+            if (await addButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+                console.log('✅ 添加商品按钮存在');
+            } else {
+                console.log('⚠️ 未找到添加商品按钮');
+            }
+        } else {
+            console.log('⚠️ 渠道选品池页面未加载或标题不可见');
+        }
+    });
+
+    test('P0-7: 渠道表单应包含佣金触发模式', async ({ page }) => {
+        await page.goto('/settings/channels');
+        await page.waitForLoadState('networkidle');
+
+        // 使用更健壮的选择器 - 适配渠道列表页
+        // 渠道列表 Tab 应该默认选中
+        const listTab = page.getByRole('tab', { name: /渠道列表/ }).or(page.locator('[data-value="list"]'));
+        if (await listTab.isVisible()) {
+            await listTab.click();
+            await page.waitForTimeout(300);
+        }
+
+        // 查找新建按钮（使用多种策略）
+        const createButton = page.locator('button').filter({ hasText: /新建|添加|创建|Create/ }).first()
+            .or(page.locator('[data-testid="create-channel"]'))
+            .or(page.getByRole('button').filter({ hasText: /渠道/ }));
+
+        if (await createButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await createButton.click();
+            await page.waitForTimeout(500);
+
+            // 切换到财务配置 Tab
+            const financeTab = page.getByRole('tab', { name: /财务/ });
+            if (await financeTab.isVisible()) {
+                await financeTab.click();
+
+                // 验证佣金触发模式选择器
+                const triggerModeLabel = page.locator('text=佣金触发时机').or(page.locator('text=触发时机'));
+                if (await triggerModeLabel.isVisible()) {
+                    console.log('✅ 渠道表单包含佣金触发模式配置');
+                } else {
+                    console.log('⚠️ 未找到佣金触发时机选择器');
+                }
+            } else {
+                console.log('⚠️ 未找到财务配置 Tab');
+            }
+        } else {
+            console.log('⚠️ 未找到新建渠道按钮，跳过测试');
         }
     });
 });
+

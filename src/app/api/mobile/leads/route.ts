@@ -8,7 +8,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { leads } from '@/shared/api/schema';
-import { eq, and, isNull, desc, or, ilike } from 'drizzle-orm';
+import { eq, and, isNull, desc, or, ilike, count } from 'drizzle-orm';
 import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
@@ -77,12 +77,12 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // 6. 统计总数
-        const allLeads = await db.query.leads.findMany({
-            where: and(...baseConditions),
-            columns: { id: true }
-        });
-        const total = allLeads.length;
+        // 6. 统计总数（使用 count() 优化性能）
+        const [totalResult] = await db
+            .select({ total: count() })
+            .from(leads)
+            .where(and(...baseConditions));
+        const total = totalResult?.total || 0;
 
         // 7. 格式化响应
         const items = leadList.map(lead => ({

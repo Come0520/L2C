@@ -59,7 +59,7 @@ export default async function MeasureTaskDetailPage({
     // 模拟操作日志数据 (TODO: 从数据库查询)
     const mockOperationLogs = [
         { id: '1', action: 'CREATE', detail: '创建测量任务', operatorName: '系统', createdAt: task.createdAt || new Date() },
-        ...(task.assignedWorkerId ? [{ id: '2', action: 'DISPATCH', detail: `指派给 ${task.assignedWorker?.name || '测量师'}`, operatorName: '派单员', createdAt: task.updatedAt || new Date() }] : []),
+        ...(task.assignedWorker ? [{ id: '2', action: 'DISPATCH', detail: `指派给 ${task.assignedWorker?.name || '测量师'}`, operatorName: '派单员', createdAt: task.updatedAt || new Date() }] : []),
         ...(task.checkInAt ? [{ id: '3', action: 'CHECK_IN', detail: '测量师现场签到', operatorName: task.assignedWorker?.name || '测量师', createdAt: task.checkInAt }] : []),
     ];
 
@@ -79,7 +79,7 @@ export default async function MeasureTaskDetailPage({
             </div>
 
             {/* 状态 Tabs */}
-            <MeasureStatusTabs currentStatus={task.status} />
+            <MeasureStatusTabs currentStatus={String(task.status)} />
 
             {/* 费用告警 */}
             {!canDispatch && task.status === 'PENDING' && (

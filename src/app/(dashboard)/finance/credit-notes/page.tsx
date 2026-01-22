@@ -1,9 +1,9 @@
 import { getCreditNotes } from '@/features/finance/actions/credit-notes';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Card, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Plus, Receipt, Clock, CheckCircle2, XCircle, FileCheck } from 'lucide-react';
-import { formatDate } from '@/shared/lib/date';
+import { formatDate } from '@/shared/lib/utils';
 
 /**
  * 贷项通知单管理页面
@@ -68,7 +68,7 @@ export default async function CreditNotesPage() {
                                         <StatusBadge status={note.status} />
                                     </td>
                                     <td className="p-3 text-sm text-muted-foreground">
-                                        {formatDate(note.createdAt)}
+                                        {note.createdAt ? formatDate(note.createdAt) : '-'}
                                     </td>
                                     <td className="p-3 text-center">
                                         {note.status === 'PENDING' && (

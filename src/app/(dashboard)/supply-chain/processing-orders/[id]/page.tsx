@@ -19,7 +19,7 @@ export default async function ProcessingOrderDetailPage({
     if (!res.success || !res.data) {
         return <div>Processing Order Not Found</div>;
     }
-    const po = res.data;
+    const po = res.data as any;
 
     // Fetch related shipments
     const shipmentsRes = await getShipments({ referenceId: po.id }); // Should return shipments linked to this PO

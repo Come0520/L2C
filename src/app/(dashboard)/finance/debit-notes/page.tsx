@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Plus, FileText, Clock, CheckCircle2, XCircle, FileCheck } from 'lucide-react';
-import { formatDate } from '@/shared/lib/date';
+import { formatDate } from '@/shared/lib/utils';
 
 /**
  * 借项通知单管理页面
@@ -68,7 +68,7 @@ export default async function DebitNotesPage() {
                                         <StatusBadge status={note.status} />
                                     </td>
                                     <td className="p-3 text-sm text-muted-foreground">
-                                        {formatDate(note.createdAt)}
+                                        {note.createdAt ? formatDate(note.createdAt) : '-'}
                                     </td>
                                     <td className="p-3 text-center">
                                         {note.status === 'PENDING' && (

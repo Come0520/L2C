@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Plus, FileCheck2, AlertTriangle, Clock, CheckCircle2, Send } from 'lucide-react';
-import { formatDate } from '@/shared/lib/date';
+import { formatDate } from '@/shared/lib/utils';
 
 /**
  * 对账确认管理页面
@@ -92,7 +92,7 @@ export default async function StatementConfirmationsPage() {
                                         </div>
                                     </div>
                                     <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                                        创建于 {formatDate(confirmation.createdAt)}
+                                        创建于 {confirmation.createdAt ? formatDate(confirmation.createdAt) : '-'}
                                         {confirmation.sentAt && ` · 发送于 ${formatDate(confirmation.sentAt)}`}
                                         {confirmation.confirmedAt && ` · 确认于 ${formatDate(confirmation.confirmedAt)}`}
                                     </div>

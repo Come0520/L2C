@@ -44,13 +44,11 @@ function generateCurtainFabricProducts(): ProductData[] {
 
                 const images = [
                     `https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex}`,
-                    `https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 1}`,
-                    `https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 2}`,
                 ];
 
                 products.push({
                     name: `${color}${pattern}${material}窗帘布`,
-                    sku: `FAB-${skuIndex.toString().padStart(3, '0')}`,
+                    sku: `E2E-FAB-${skuIndex.toString().padStart(3, '0')}`,
                     basePrice: price.toString(),
                     costPrice: costPrice.toString(),
                     unit: 'm',
@@ -97,12 +95,11 @@ function generateCurtainSheerProducts(): ProductData[] {
 
             const images = [
                 `https://images.unsplash.com/photo-1505693416388-b0346f3e2d9b?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 1000}`,
-                `https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 1001}`,
             ];
 
             products.push({
                 name: `${color}${material}纱帘`,
-                sku: `SHEER-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-SHEER-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: price.toString(),
                 costPrice: costPrice.toString(),
                 unit: 'm',
@@ -146,7 +143,7 @@ function generateCurtainTrackProducts(): ProductData[] {
 
             products.push({
                 name: `${material}${type}`,
-                sku: `TRACK-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-TRACK-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: price.toString(),
                 costPrice: costPrice.toString(),
                 unit: 'm',
@@ -192,7 +189,7 @@ function generateCurtainAccessoryProducts(): ProductData[] {
 
             products.push({
                 name: `${accessory.name}${i}号`,
-                sku: `ACC-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-ACC-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: (accessory.price + (i - 1) * 5).toString(),
                 costPrice: costPrice.toString(),
                 unit: accessory.unit,
@@ -226,12 +223,11 @@ function generateWallpaperProducts(): ProductData[] {
 
             const images = [
                 `https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 4000}`,
-                `https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop&auto=format&q=80&sig=${skuIndex + 4001}`,
             ];
 
             products.push({
                 name: `${style}${color}墙纸`,
-                sku: `WP-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-WP-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: price.toString(),
                 costPrice: costPrice.toString(),
                 unit: 'roll',
@@ -274,7 +270,7 @@ function generateWallPanelProducts(): ProductData[] {
 
             products.push({
                 name: `${material}${style}墙板`,
-                sku: `PANEL-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-PANEL-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: price.toString(),
                 costPrice: costPrice.toString(),
                 unit: 'm²',
@@ -315,7 +311,7 @@ function generateMotorProducts(): ProductData[] {
 
         products.push({
             name: `${motor.name}`,
-            sku: `MOTOR-${skuIndex.toString().padStart(3, '0')}`,
+            sku: `E2E-MOTOR-${skuIndex.toString().padStart(3, '0')}`,
             basePrice: motor.price.toString(),
             costPrice: costPrice.toString(),
             unit: '套',
@@ -355,7 +351,7 @@ function generateWindowPadProducts(): ProductData[] {
 
             products.push({
                 name: `${material}${color}飘窗垫`,
-                sku: `PAD-${skuIndex.toString().padStart(3, '0')}`,
+                sku: `E2E-PAD-${skuIndex.toString().padStart(3, '0')}`,
                 basePrice: price.toString(),
                 costPrice: costPrice.toString(),
                 unit: '套',
@@ -380,17 +376,19 @@ function generateWindowPadProducts(): ProductData[] {
 }
 
 async function main() {
-    console.log('🌱 开始播种更多商品数据...\n');
+    console.log('🌱 开始为 E2E 测试租户播种商品数据...\n');
 
+    // 查找 E2E 测试租户
     const tenant = await db.query.tenants.findFirst({
-        where: eq(schema.tenants.code, 'DEMO')
+        where: eq(schema.tenants.code, 'E2E_TEST')
     });
+
     if (!tenant) {
-        console.error('❌ Error: Demo Tenant not found. Please run full seed first.');
-        return;
+        console.error('❌ Error: E2E 测试租户不存在');
+        process.exit(1);
     }
 
-    console.log(`🏢 Tenant: ${tenant.name} (${tenant.code})\n`);
+    console.log(`🏢 租户: ${tenant.name} (${tenant.code})\n`);
 
     const allProducts: ProductData[] = [
         ...generateCurtainFabricProducts(),

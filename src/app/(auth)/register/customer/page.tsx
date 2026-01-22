@@ -5,7 +5,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -15,7 +15,8 @@ import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2, UserCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { validateInviteToken, registerCustomer } from '@/features/settings/actions/invite';
 
-export default function CustomerRegisterPage() {
+// 包装组件，用于 Suspense
+function CustomerRegisterContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
@@ -239,3 +240,17 @@ export default function CustomerRegisterPage() {
         </div>
     );
 }
+
+// 导出包装后的组件
+export default function CustomerRegisterPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        }>
+            <CustomerRegisterContent />
+        </Suspense>
+    );
+}
+

@@ -3,7 +3,7 @@
  */
 
 import { notFound, redirect } from 'next/navigation';
-import { getLeadDetail, getChannels } from '@/features/leads/actions';
+import { getLeadById, getChannels } from '@/features/leads/actions';
 
 import { Button } from '@/shared/ui/button';
 import { StatusBadge } from '@/shared/ui/status-badge';
@@ -43,27 +43,19 @@ export default async function LeadDetailPage({
         redirect('/auth/login');
     }
 
-    console.log('[DEBUG] Page Component params.id:', resolvedParams.id);
-    console.log('[DEBUG] Page Component user:', userId);
-
     let lead, channels;
     try {
-        console.log('[DEBUG-PAGE] Fetching lead with ID:', resolvedParams.id);
-
-        [lead, channels] = await Promise.all([
-            getLeadDetail(resolvedParams.id),
+        const [leadResult, channelsData] = await Promise.all([
+            getLeadById({ id: resolvedParams.id }),
             getChannels(),
         ]);
 
-        if (!lead) {
-            console.log('[DEBUG-PAGE] Lead NOT found for ID:', resolvedParams.id);
-            console.error(`[${new Date().toISOString()}] Lead not found for ID: ${resolvedParams.id}`);
+        if (!leadResult.success || !leadResult.data) {
             notFound();
-        } else {
-            console.log('[DEBUG-PAGE] Lead found:', lead?.id);
         }
+        lead = leadResult.data;
+        channels = channelsData;
     } catch (error: unknown) {
-        console.error('[DEBUG-PAGE] Error in page:', error);
         console.error(`[${new Date().toISOString()}] Error fetching lead detail:`, error);
         throw error;
     }
@@ -101,8 +93,6 @@ export default async function LeadDetailPage({
                         />
                         <AddFollowupDialog
                             leadId={lead.id}
-                            userId={userId}
-                            tenantId={tenantId}
                             trigger={
                                 <Button variant="outline" size="sm">
                                     <Plus className="h-4 w-4 mr-2" />
@@ -138,8 +128,6 @@ export default async function LeadDetailPage({
                 <LeadStatusBar
                     status={lead.status || 'PENDING_ASSIGNMENT'}
                     leadId={lead.id}
-                    userId={userId}
-                    tenantId={tenantId}
                 />
             </div>
 

@@ -6,31 +6,10 @@ import {
     WebhookLeadPayload,
     WebhookResponse
 } from '@/features/leads/logic/webhook-handler';
+import { checkRateLimit, isRedisConfigured } from '@/shared/lib/rate-limit';
 
-// 限流配置：每分钟每个 Token 最多 100 次请求
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// 限流配置常量
 const RATE_LIMIT = 100;
-const RATE_WINDOW_MS = 60 * 1000; // 1 分钟
-
-/**
- * 检查限流
- */
-function checkRateLimit(token: string): { allowed: boolean; remaining: number; resetAt: Date } {
-    const now = Date.now();
-    let record = rateLimitMap.get(token);
-
-    if (!record || now > record.resetAt) {
-        record = { count: 0, resetAt: now + RATE_WINDOW_MS };
-        rateLimitMap.set(token, record);
-    }
-
-    record.count++;
-    return {
-        allowed: record.count <= RATE_LIMIT,
-        remaining: Math.max(0, RATE_LIMIT - record.count),
-        resetAt: new Date(record.resetAt)
-    };
-}
 
 /**
  * POST /api/v1/leads/webhook
@@ -54,8 +33,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 2. 限流检查
-        const rateCheck = checkRateLimit(accessToken);
+        // 2. 限流检查（优先使用 Redis，自动降级到内存）
+        const rateCheck = await checkRateLimit(accessToken);
         if (!rateCheck.allowed) {
             return NextResponse.json(
                 {
@@ -64,7 +43,8 @@ export async function POST(request: NextRequest) {
                     data: {
                         limit: RATE_LIMIT,
                         remaining: rateCheck.remaining,
-                        reset_at: rateCheck.resetAt.toISOString()
+                        reset_at: rateCheck.resetAt.toISOString(),
+                        rate_limit_source: rateCheck.source // 调试信息：显示使用的限流来源
                     }
                 },
                 { status: 429 }
@@ -130,6 +110,11 @@ export async function GET() {
     return NextResponse.json({
         code: 200,
         message: 'Leads Webhook API is running',
-        version: 'v1'
+        version: 'v1',
+        rate_limit: {
+            enabled: true,
+            limit_per_minute: RATE_LIMIT,
+            storage: isRedisConfigured() ? 'redis' : 'memory'
+        }
     });
 }

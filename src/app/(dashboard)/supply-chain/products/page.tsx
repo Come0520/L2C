@@ -20,17 +20,44 @@ import { AttributeTemplateManager } from '@/features/products/components/attribu
 import { PageHeader } from '@/components/ui/page-header';
 
 
+import { productCategoryEnum } from '@/shared/api/schema/enums';
+import { ScrollArea, ScrollBar } from '@/shared/ui/scroll-area';
+
+const CATEGORY_LABELS: Record<string, string> = {
+    'CURTAIN': '窗帘',
+    'WALLPAPER': '墙纸',
+    'WALLCLOTH': '墙布',
+    'MATTRESS': '床垫',
+    'OTHER': '其他',
+    'CURTAIN_FABRIC': '窗帘面料',
+    'CURTAIN_SHEER': '窗纱',
+    'CURTAIN_TRACK': '窗帘轨道',
+    'MOTOR': '电机',
+    'CURTAIN_ACCESSORY': '窗帘辅料',
+    'WALLCLOTH_ACCESSORY': '墙布辅料',
+    'WALLPANEL': '墙咔',
+    'WINDOWPAD': '飘窗垫',
+    'STANDARD': '标品',
+    'SERVICE': '服务/费用'
+};
+
 export default function ProductsPage() {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState('');
+    const [category, setCategory] = useState<string>('ALL');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<any>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const result = await getProducts({ page: 1, pageSize: 50, search: query });
+            const result = await getProducts({
+                page: 1,
+                pageSize: 50,
+                search: query,
+                category: category === 'ALL' ? undefined : category
+            });
             if (result.error) {
                 toast.error(result.error);
                 return;
@@ -42,7 +69,7 @@ export default function ProductsPage() {
         } finally {
             setLoading(false);
         }
-    }, [query]);
+    }, [query, category]);
 
     useEffect(() => {
         fetchData();
@@ -109,6 +136,24 @@ export default function ProductsPage() {
                 </TabsList>
 
                 <TabsContent value="products" className="space-y-6 pt-4">
+                    <Tabs defaultValue="ALL" className="w-full" onValueChange={(val) => {
+                        setCategory(val);
+                        // Reset query is optional, but usually good to keep search. 
+                        // fetchData will be triggered by useEffect when category changes
+                    }}>
+                        <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                            <TabsList className="w-full justify-start h-auto p-2 bg-background">
+                                <TabsTrigger value="ALL">全部</TabsTrigger>
+                                {productCategoryEnum.enumValues.map((cat) => (
+                                    <TabsTrigger key={cat} value={cat}>
+                                        {CATEGORY_LABELS[cat] || cat}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                    </Tabs>
+
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2 flex-1 max-w-sm">
                             <div className="relative flex-1">

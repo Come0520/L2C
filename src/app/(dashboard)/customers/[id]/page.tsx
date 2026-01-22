@@ -53,9 +53,6 @@ export default async function CustomerDetailPage({
         'use server';
         await logPhoneView({
             customerId,
-            viewerId: userId,
-            viewerRole: userRole,
-            tenantId,
         });
     };
 

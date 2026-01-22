@@ -4,7 +4,7 @@ import { DashboardPageHeader } from "@/shared/ui/dashboard-page-header";
 import { Badge } from "@/shared/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
-import { ArrowLeft } from "lucide-react";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";

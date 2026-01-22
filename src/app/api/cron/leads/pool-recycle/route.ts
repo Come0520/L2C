@@ -17,11 +17,20 @@ import { executePoolRecycleJob } from '@/features/leads/logic/pool-recycle-job';
  */
 export async function GET(request: Request) {
     try {
-        // 验证 Cron Secret (可选，用于安全性)
+        // 验证 Cron Secret (强制要求配置)
         const authHeader = request.headers.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
 
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        // 安全修复：强制要求配置 CRON_SECRET
+        if (!cronSecret) {
+            console.error('[Pool Recycle] CRON_SECRET 未配置，拒绝请求');
+            return NextResponse.json(
+                { error: 'Server configuration error: CRON_SECRET not set' },
+                { status: 500 }
+            );
+        }
+
+        if (authHeader !== `Bearer ${cronSecret}`) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }

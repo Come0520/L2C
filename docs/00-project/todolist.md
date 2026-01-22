@@ -34,6 +34,14 @@
 
 ## 📝 剩余任务
 
+### 报价单模块 (Quotes)
+
+- [ ] **[Quote-01] 空间视图切换功能未实现**
+  - 文件：`src/features/quotes/components/quote-detail.tsx` (L401-446)
+  - 问题：`viewMode` 状态虽然有切换，但两个分支 props 完全相同
+  - 待办：给 `QuoteItemsTable` 添加 `viewMode` prop，实现品类优先 vs 空间优先的不同渲染逻辑
+  - 相关：按 `activeCategory` 过滤商品的逻辑也未实现（filter 始终返回 true）
+
 ### 运维与安全 (Ops & Security)
 - [ ] **[Ops-01] 自动化数据库备份策略**
   - 使用 pg_dump + S3/Local

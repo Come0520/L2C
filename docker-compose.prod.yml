@@ -1,24 +1,31 @@
 # ========================================
 # L2C 生产环境 Docker Compose
+# 包含 PgBouncer 连接池
 # ========================================
 
 services:
   # Next.js 应用
+  # 注意: 多实例部署请使用 Docker Swarm 或 Kubernetes
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: l2c-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=production
+      # 使用 .env 中已编码的 DATABASE_URL
       - DATABASE_URL=${DATABASE_URL}
+      - DB_MAX_CONNECTIONS=5 # 每个实例减少到 5 个连接
       - AUTH_SECRET=${AUTH_SECRET}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - AUTH_URL=${AUTH_URL:-http://localhost:3000}
+      # Aliyun OSS
+      - OSS_REGION=${OSS_REGION}
+      - OSS_BUCKET=${OSS_BUCKET}
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
     networks:
       - l2c-network
@@ -29,6 +36,48 @@ services:
       retries: 3
       start_period: 40s
 
+  # PgBouncer 连接池
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: l2c-pgbouncer
+    restart: unless-stopped
+    ports:
+      - "6432:5432"
+    environment:
+      # 数据库连接 (分离配置避免特殊字符问题)
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-l2c_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-l2c}
+
+      # 连接池配置 (Transaction 模式)
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+      RESERVE_POOL_TIMEOUT: 3
+      MAX_DB_CONNECTIONS: 30
+      MAX_USER_CONNECTIONS: 30
+
+      # 连接生命周期
+      SERVER_IDLE_TIMEOUT: 600
+      SERVER_LIFETIME: 3600
+
+      # 认证
+      AUTH_TYPE: scram-sha-256
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-h", "localhost", "-p", "5432" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - l2c-network
+
   # PostgreSQL 数据库
   postgres:
     image: postgres:17-alpine
@@ -38,6 +87,23 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-l2c}
       POSTGRES_USER: ${POSTGRES_USER:-l2c_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=50" # 减少最大连接数
+      - "-c"
+      - "shared_buffers=256MB" # 共享缓冲区
+      - "-c"
+      - "effective_cache_size=768MB" # 有效缓存大小
+      - "-c"
+      - "work_mem=16MB" # 工作内存
+      - "-c"
+      - "maintenance_work_mem=128MB" # 维护工作内存
+      - "-c"
+      - "log_statement=ddl" # 仅记录 DDL 操作
+      - "-c"
+      - "idle_in_transaction_session_timeout=30000" # 30秒事务超时
     volumes:
       - l2c_postgres_data:/var/lib/postgresql/data
     networks:

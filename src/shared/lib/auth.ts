@@ -1,7 +1,9 @@
 import NextAuth, { Session } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { unstable_cache } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { users, roles } from '@/shared/api/schema';
+import { auditLogs } from '@/shared/api/schema/audit';
 import { eq, or, and } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
 import { z } from 'zod';
@@ -105,19 +107,61 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 /**
  * 权限检查函数 (RBAC via DB)
+ * @param session - 会话对象
+ * @param permissionName - 权限名称
+ * @param options - 可选配置
+ *   - audit: 是否记录审计日志
+ *   - action: 审计日志中的操作描述
+ *   - resourceType: 资源类型
+ *   - resourceId: 资源 ID
  */
-import { unstable_cache } from 'next/cache';
 
-export const checkPermission = async (session: Session | null, permissionName: string) => {
+
+export interface CheckPermissionOptions {
+    audit?: boolean;
+    action?: string;
+    resourceType?: string;
+    resourceId?: string;
+}
+
+export const checkPermission = async (
+    session: Session | null,
+    permissionName: string,
+    options?: CheckPermissionOptions
+) => {
     if (!session?.user?.role) {
         return false;
     }
 
-    if (session.user.role === 'ADMIN') {
-        return true;
+    const hasPermission = session.user.role === 'ADMIN' || await checkRolePermission(session, permissionName);
+
+    // 如果需要审计日志记录
+    if (options?.audit && session.user.tenantId) {
+        try {
+            await db.insert(auditLogs).values({
+                tenantId: session.user.tenantId,
+                tableName: options.resourceType || 'PERMISSION_CHECK',
+                recordId: options.resourceId || permissionName,
+                action: options.action || 'ACCESS',
+                userId: session.user.id,
+                changedFields: {
+                    permission: permissionName,
+                    granted: hasPermission,
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        } catch (e) {
+            console.error('Audit log for permission check failed:', e);
+        }
     }
 
-    // Cache permission lookup
+    return hasPermission;
+};
+
+/**
+ * 内部权限检查（带缓存）
+ */
+const checkRolePermission = async (session: Session, permissionName: string): Promise<boolean> => {
     const getRolePermissions = unstable_cache(
         async (roleCode: string, tenantId: string) => {
             const role = await db.query.roles.findFirst({
@@ -143,5 +187,3 @@ export const checkPermission = async (session: Session | null, permissionName: s
         return false;
     }
 };
-
-

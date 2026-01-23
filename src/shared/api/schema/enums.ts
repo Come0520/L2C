@@ -73,13 +73,15 @@ export const orderStatusEnum = pgEnum('order_status', [
 ]);
 
 export const quoteStatusEnum = pgEnum('quote_status', [
-    'DRAFT',
-    'PENDING_APPROVAL', // New
-    'PENDING_CUSTOMER', // New
-    'SUBMITTED',
-    'ACCEPTED',
-    'REJECTED',
-    'EXPIRED'
+    'DRAFT',            // 草稿
+    'PENDING_APPROVAL', // 待审批（风险触发）
+    'APPROVED',         // 已批准
+    'PENDING_CUSTOMER', // 待客户确认
+    'ACCEPTED',         // 客户已接受
+    'REJECTED',         // 已拒绝/驳回
+    'LOCKED',           // 已锁定（转单前）
+    'ORDERED',          // 已转订单
+    'EXPIRED'           // 已过期
 ]);
 
 export const quotePlanTypeEnum = pgEnum('quote_plan_type', ['ECONOMIC', 'COMFORT', 'LUXURY']);
@@ -141,6 +143,13 @@ export const channelLevelEnum = pgEnum('channel_level', ['S', 'A', 'B', 'C']);
 export const commissionTypeEnum = pgEnum('commission_type', ['FIXED', 'TIERED']);
 export const cooperationModeEnum = pgEnum('cooperation_mode', ['BASE_PRICE', 'COMMISSION']);
 export const channelSettlementTypeEnum = pgEnum('channel_settlement_type', ['PREPAY', 'MONTHLY']);
+
+// 佣金触发模式枚举
+export const commissionTriggerModeEnum = pgEnum('commission_trigger_mode', [
+    'ORDER_CREATED',    // 订单创建时
+    'ORDER_COMPLETED',  // 订单完成时
+    'PAYMENT_COMPLETED' // 收款完成时（默认）
+]);
 
 // Measurement Enums
 export const measureTaskStatusEnum = pgEnum('measure_task_status', [
@@ -449,3 +458,43 @@ export const workOrderItemStatusEnum = pgEnum('work_order_item_status', [
     'CANCELLED'     // 已取消
 ]);
 
+// [NEW] 供应商类型枚举
+export const supplierTypeEnum = pgEnum('supplier_type', [
+    'SUPPLIER',     // 供应商（面料、配件供应）
+    'PROCESSOR',    // 加工厂（窗帘加工）
+    'BOTH'          // 同时具备供应和加工能力
+]);
+
+// [NEW] Labor Pricing Enums
+export const laborRateEntityTypeEnum = pgEnum('labor_rate_entity_type', [
+    'TENANT',
+    'WORKER'
+]);
+
+export const laborCategoryEnum = pgEnum('labor_category', [
+    'CURTAIN',          // 窗帘安装
+    'WALLPAPER',        // 墙纸安装
+    'WALLCLOTH',        // 墙布安装
+    'WALLPANEL',        // 墙咔安装
+    'MEASURE_LEAD',     // 线索测量（销售/简单测量）
+    'MEASURE_PRECISE',  // 精准测量（技师上门）
+    'OTHER'
+]);
+
+export const laborUnitTypeEnum = pgEnum('labor_unit_type', [
+    'WINDOW',       // 按窗户数
+    'SQUARE_METER', // 按平米
+    'FIXED',        // 固定金额 (e.g. 起步费 component, though base_fee is separate column) - actually usually just WINDOW/SQUARE_METER for unit_price. 
+    // Let's stick to implementation plan: WINDOW, SQUARE_METER.
+    // Maybe 'METER' for tracks? Plan says WINDOW/SQUARE_METER.
+]);
+
+// [NEW] 师傅技能类型枚举
+export const workerSkillTypeEnum = pgEnum('worker_skill_type', [
+    'MEASURE_CURTAIN',    // 测量窗帘
+    'INSTALL_CURTAIN',    // 安装窗帘
+    'MEASURE_WALLCLOTH',  // 测量墙布
+    'INSTALL_WALLCLOTH',  // 安装墙布
+    'MEASURE_WALLPANEL',  // 测量墙咔
+    'INSTALL_WALLPANEL',  // 安装墙咔
+]);

@@ -11,6 +11,7 @@ import { ExcelImportDialog } from '@/features/leads/components/excel-import-dial
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 export const revalidate = 60;
 
@@ -95,7 +96,7 @@ export default async function LeadsPage({
                 </div>
             </div>
 
-            <Suspense fallback={<div>Loading leads...</div>}>
+            <Suspense fallback={<TableSkeleton />}>
                 <LeadTable
                     data={leadsResult.data}
                     page={page}

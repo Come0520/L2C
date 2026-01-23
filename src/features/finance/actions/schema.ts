@@ -62,6 +62,7 @@ export const createPaymentBillSchema = z.object({
     payeeType: z.enum(['SUPPLIER', 'WORKER', 'CUSTOMER']),
     payeeId: z.string().uuid(),
     payeeName: z.string().min(1, '收款方名称不能为空'),
+    orderId: z.string().uuid().optional(),
     amount: z.number().min(0.01, '付款金额必须大于0'),
     paymentMethod: z.string().min(1, '支付方式不能为空'),
     accountId: z.string().uuid().optional(),
@@ -82,3 +83,23 @@ export const verifyPaymentBillSchema = z.object({
     status: z.enum(['VERIFIED', 'REJECTED']),
     remark: z.string().optional(),
 });
+
+// ==================== 对账分层定义 (Reconciliation Layers) ====================
+/**
+ * L1 业务核销 - 实时核销层
+ * - 订单与收款单的实时匹配
+ * - 单笔或批量核销
+ * - 即时更新账单状态
+ * 
+ * L2 账单确认 - 周期对账层
+ * - 按周/月生成对账汇总
+ * - 客户确认机制
+ * - 开票关联
+ */
+export const RECONCILIATION_LAYERS = {
+    L1_BUSINESS_WRITEOFF: 'L1_BUSINESS_WRITEOFF', // 业务核销
+    L2_STATEMENT_CONFIRM: 'L2_STATEMENT_CONFIRM', // 账单确认
+} as const;
+
+export type ReconciliationLayer = keyof typeof RECONCILIATION_LAYERS;
+

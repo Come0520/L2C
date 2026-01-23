@@ -10,7 +10,7 @@ import {
     DialogTrigger,
 } from '@/shared/ui/dialog';
 import { Upload, FileDown, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Dynamically imported - Removed
 import { toast } from 'sonner';
 import { importLeads } from '../actions';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
@@ -34,7 +34,7 @@ const FIELD_MAPPING: Record<string, string> = {
     '备注': 'remark'
 };
 
-export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDialogProps) {
+export function ExcelImportDialog({ userId: _userId, tenantId: _tenantId, onSuccess }: ExcelImportDialogProps) {
     const [open, setOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [previewData, setPreviewData] = useState<any[]>([]);
@@ -42,7 +42,8 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
     const [isUploading, setIsUploading] = useState(false);
     const [importResult, setImportResult] = useState<{ successCount: number; errors: any[] } | null>(null);
 
-    const downloadTemplate = () => {
+    const downloadTemplate = async () => {
+        const XLSX = await import('xlsx');
         const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADER, ['张三', '13800138000', 'wx123', '万科城', '1栋101', '50000', '老客户推荐']]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "线索导入模版");
@@ -57,8 +58,9 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
         setImportResult(null);
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const XLSX = await import('xlsx');
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -89,6 +91,7 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
         reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const XLSX = await import('xlsx');
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
@@ -111,7 +114,7 @@ export function ExcelImportDialog({ userId, tenantId, onSuccess }: ExcelImportDi
                     return newRow;
                 });
 
-                const result = await importLeads(mappedData, userId, tenantId);
+                const result = await importLeads(mappedData);
                 setImportResult(result);
 
                 if (result.successCount > 0) {

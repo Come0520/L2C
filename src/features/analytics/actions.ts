@@ -47,7 +47,7 @@ const orderTrendSchema = z.object({
 /**
  * 获取核心指标数据
  */
-export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, async (params, { session }) => {
+const getDashboardStatsAction = cache(createSafeAction(dashboardStatsSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -59,14 +59,14 @@ export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, as
         lte(orders.createdAt, endDate),
     ];
 
-    // 濡傛灉鏄櫘閫氶攢鍞紝鍙兘鐪嬭嚜宸辩殑鏁版嵁
+    // 如果是普通销售，只能看自己的数据
     if (params.salesId || session.user.role !== 'MANAGER') {
         conditions.push(eq(orders.salesId, params.salesId || session.user.id));
     }
 
     const whereClause = and(...conditions);
 
-    // 鏈湀閿€鍞
+    // 本月销售额
     const salesResult = await db
         .select({
             totalAmount: sql<string>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
@@ -75,7 +75,7 @@ export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, as
         .from(orders)
         .where(whereClause);
 
-    // 杞寲鐜囪绠楋紙绾跨储鏁帮級
+    // 转化率计算（线索数）
     const leadConditions = [
         eq(leads.tenantId, session.user.tenantId),
         gte(leads.createdAt, startDate),
@@ -94,7 +94,7 @@ export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, as
     const wonOrders = Number(salesResult[0]?.orderCount || 0);
     const conversionRate = totalLeads > 0 ? ((wonOrders / totalLeads) * 100).toFixed(2) : '0';
 
-    // 寰呮敹娆?
+    // 待收款
     const arResult = await db
         .select({
             pendingAmount: sql<string>`COALESCE(SUM(CAST(${arStatements.pendingAmount} AS DECIMAL)), 0)`,
@@ -107,7 +107,7 @@ export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, as
             )
         );
 
-    // 寰呬粯娆撅紙閲囪喘鍗曪級
+    // 待付款（采购单）
     const apResult = await db
         .select({
             pendingCost: sql<string>`COALESCE(SUM(CAST(${purchaseOrders.totalAmount} AS DECIMAL)), 0)`,
@@ -133,10 +133,14 @@ export const getDashboardStats = cache(createSafeAction(dashboardStatsSchema, as
     };
 }));
 
+export async function getDashboardStats(params: z.infer<typeof dashboardStatsSchema>) {
+    return getDashboardStatsAction(params);
+}
+
 /**
- * 鑾峰彇閿€鍞紡鏂楁暟鎹?
+ * 获取销售漏斗数据
  */
-export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (params, { session }) => {
+const getSalesFunnelAction = cache(createSafeAction(salesFunnelSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -144,7 +148,7 @@ export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (p
 
     const salesId = params.salesId || (session.user.role !== 'MANAGER' ? session.user.id : undefined);
 
-    // 绾跨储鏁?
+    // 线索数
     const leadConditions = [
         eq(leads.tenantId, session.user.tenantId),
         gte(leads.createdAt, startDate),
@@ -157,7 +161,7 @@ export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (p
         .from(leads)
         .where(and(...leadConditions));
 
-    // 娴嬮噺鏁?
+    // 测量数
     const measureCount = await db
         .select({ count: sql<number>`COUNT(DISTINCT ${measureTasks.leadId})` })
         .from(measureTasks)
@@ -171,7 +175,7 @@ export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (p
             )
         );
 
-    // 鎶ヤ环鏁?
+    // 报价数
     const quoteConditions = [
         eq(quotes.tenantId, session.user.tenantId),
         gte(quotes.createdAt, startDate),
@@ -184,7 +188,7 @@ export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (p
         .from(quotes)
         .where(and(...quoteConditions));
 
-    // 鎴愪氦鏁?
+    // 成交数
     const orderConditions = [
         eq(orders.tenantId, session.user.tenantId),
         gte(orders.createdAt, startDate),
@@ -200,19 +204,23 @@ export const getSalesFunnel = cache(createSafeAction(salesFunnelSchema, async (p
     return {
         success: true,
         data: [
-            { stage: '绾跨储', count: Number(leadCount[0]?.count || 0) },
-            { stage: '娴嬮噺', count: Number(measureCount[0]?.count || 0) },
-            { stage: '鎶ヤ环', count: Number(quoteCount[0]?.count || 0) },
-            { stage: '鎴愪氦', count: Number(orderCount[0]?.count || 0) },
+            { stage: '线索', count: Number(leadCount[0]?.count || 0) },
+            { stage: '测量', count: Number(measureCount[0]?.count || 0) },
+            { stage: '报价', count: Number(quoteCount[0]?.count || 0) },
+            { stage: '成交', count: Number(orderCount[0]?.count || 0) },
         ]
     };
 }));
 
+export async function getSalesFunnel(params: z.infer<typeof salesFunnelSchema>) {
+    return getSalesFunnelAction(params);
+}
+
 /**
- * 鑾峰彇涓氱哗鎺掑悕
+ * 获取业绩排名
  */
-export const getLeaderboard = cache(createSafeAction(leaderboardSchema, async (params, { session }) => {
-    checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL); // 浠呭簵闀垮彲瑙?
+const getLeaderboardAction = cache(createSafeAction(leaderboardSchema, async (params, { session }) => {
+    checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL); // 仅店长可见
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = params.endDate ? new Date(params.endDate) : new Date();
@@ -242,17 +250,21 @@ export const getLeaderboard = cache(createSafeAction(leaderboardSchema, async (p
         data: leaderboard.map((item, index) => ({
             rank: index + 1,
             salesId: item.salesId,
-            salesName: item.salesName || '鏈煡',
+            salesName: item.salesName || '未知',
             totalAmount: item.totalAmount,
             orderCount: item.orderCount,
         }))
     };
 }));
 
+export async function getLeaderboard(params: z.infer<typeof leaderboardSchema>) {
+    return getLeaderboardAction(params);
+}
+
 /**
- * 鑾峰彇璁㈠崟瓒嬪娍鏁版嵁
+ * 获取订单趋势数据
  */
-export const getOrderTrend = cache(createSafeAction(orderTrendSchema, async (params, { session }) => {
+const getOrderTrendAction = cache(createSafeAction(orderTrendSchema, async (params, { session }) => {
     checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = new Date(params.startDate);
@@ -297,6 +309,10 @@ export const getOrderTrend = cache(createSafeAction(orderTrendSchema, async (par
     };
 }));
 
+export async function getOrderTrend(params: z.infer<typeof orderTrendSchema>) {
+    return getOrderTrendAction(params);
+}
+
 // ==================== 新增：交付效率统计 ====================
 
 import { installTasks, channels } from '@/shared/api/schema';
@@ -309,7 +325,7 @@ const deliveryEfficiencySchema = z.object({
 /**
  * 获取交付效率数据 (测量/安装)
  */
-export const getDeliveryEfficiency = cache(createSafeAction(deliveryEfficiencySchema, async (params, { session }) => {
+const getDeliveryEfficiencyAction = cache(createSafeAction(deliveryEfficiencySchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -402,6 +418,10 @@ export const getDeliveryEfficiency = cache(createSafeAction(deliveryEfficiencySc
     };
 }));
 
+export async function getDeliveryEfficiency(params: z.infer<typeof deliveryEfficiencySchema>) {
+    return getDeliveryEfficiencyAction(params);
+}
+
 // ==================== 新增：客户来源分布统计 ====================
 
 const customerSourceSchema = z.object({
@@ -412,7 +432,7 @@ const customerSourceSchema = z.object({
 /**
  * 获取客户来源分布数据
  */
-export const getCustomerSourceDistribution = cache(createSafeAction(customerSourceSchema, async (params, { session }) => {
+const getCustomerSourceDistributionAction = cache(createSafeAction(customerSourceSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -468,6 +488,10 @@ export const getCustomerSourceDistribution = cache(createSafeAction(customerSour
     };
 }));
 
+export async function getCustomerSourceDistribution(params: z.infer<typeof customerSourceSchema>) {
+    return getCustomerSourceDistributionAction(params);
+}
+
 // ==================== 新增：利润率计算 (Profit Margin) ====================
 
 // 注意：orderItems 和 products 已导入用于未来扩展，暂未使用
@@ -486,7 +510,7 @@ const profitMarginSchema = z.object({
  * - 毛利 = 销售收入 - 采购成本
  * - 毛利率 = 毛利 / 销售收入 * 100%
  */
-export const getProfitMarginAnalysis = cache(createSafeAction(profitMarginSchema, async (params, { session }) => {
+const getProfitMarginAnalysisAction = cache(createSafeAction(profitMarginSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW_ALL);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -566,6 +590,10 @@ export const getProfitMarginAnalysis = cache(createSafeAction(profitMarginSchema
     };
 }));
 
+export async function getProfitMarginAnalysis(params: z.infer<typeof profitMarginSchema>) {
+    return getProfitMarginAnalysisAction(params);
+}
+
 // ==================== 新增：售后健康度指标 (After-Sales Health) ====================
 
 import { liabilityNotices, afterSalesTickets } from '@/shared/api/schema/after-sales';
@@ -583,7 +611,7 @@ const afterSalesHealthSchema = z.object({
  * - 客诉率 = 客诉工单数 / 总订单数
  * - 责任分布 = 按责任方统计的定责单分布
  */
-export const getAfterSalesHealth = cache(createSafeAction(afterSalesHealthSchema, async (params, { session }) => {
+const getAfterSalesHealthAction = cache(createSafeAction(afterSalesHealthSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.ANALYTICS.VIEW);
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -688,4 +716,8 @@ export const getAfterSalesHealth = cache(createSafeAction(afterSalesHealthSchema
         }
     };
 }));
+
+export async function getAfterSalesHealth(params: z.infer<typeof afterSalesHealthSchema>) {
+    return getAfterSalesHealthAction(params);
+}
 

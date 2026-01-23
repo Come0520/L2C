@@ -49,3 +49,12 @@ export type ProductDetailResponse = {
 
 export * from './actions';
 export * from './schema';
+
+// 组件导出
+export { PackageManager } from './components/package-manager';
+export { PackageFormDialog } from './components/package-form-dialog';
+export { AttributeTemplateManager } from './components/attribute-template-manager';
+export { ChannelPriceManager } from './components/channel-price-manager';
+export { BundleManager } from './components/bundle-manager';
+export { ChannelDiscountManager } from './components/channel-discount-manager';
+

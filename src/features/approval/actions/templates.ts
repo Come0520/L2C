@@ -10,7 +10,7 @@ import { publishApprovalFlow } from './flow';
 
 const initializeTemplatesSchema = z.object({});
 
-export const initializeDefaultTemplates = createSafeAction(
+const initializeDefaultTemplatesActionInternal = createSafeAction(
     initializeTemplatesSchema,
     async (_, { session }) => {
         const { tenantId } = session.user;
@@ -27,12 +27,7 @@ export const initializeDefaultTemplates = createSafeAction(
                         {
                             id: 'approver-1',
                             type: 'approver',
-                            data: {
-                                label: '店长审批',
-                                approverType: 'ROLE',
-                                approverValue: 'STORE_MANAGER',
-                                approverMode: 'ANY'
-                            },
+                            data: { label: '店长审批', approverType: 'ROLE', approverValue: 'STORE_MANAGER', approverMode: 'ANY' },
                             position: { x: 250, y: 200 }
                         },
                         { id: 'end', type: 'end', data: { label: '结束' }, position: { x: 250, y: 350 } }
@@ -53,12 +48,7 @@ export const initializeDefaultTemplates = createSafeAction(
                         {
                             id: 'approver-1',
                             type: 'approver',
-                            data: {
-                                label: '财务审核',
-                                approverType: 'ROLE',
-                                approverValue: 'FINANCE',
-                                approverMode: 'ANY'
-                            },
+                            data: { label: '财务审核', approverType: 'ROLE', approverValue: 'FINANCE', approverMode: 'ANY' },
                             position: { x: 250, y: 200 }
                         },
                         { id: 'end', type: 'end', data: { label: '结束' }, position: { x: 250, y: 350 } }
@@ -79,23 +69,13 @@ export const initializeDefaultTemplates = createSafeAction(
                         {
                             id: 'approver-1',
                             type: 'approver',
-                            data: {
-                                label: '财务初审',
-                                approverType: 'ROLE',
-                                approverValue: 'FINANCE',
-                                approverMode: 'ANY'
-                            },
+                            data: { label: '财务初审', approverType: 'ROLE', approverValue: 'FINANCE', approverMode: 'ANY' },
                             position: { x: 250, y: 200 }
                         },
                         {
                             id: 'approver-2',
                             type: 'approver',
-                            data: {
-                                label: '老板终审',
-                                approverType: 'ROLE',
-                                approverValue: 'ADMIN',
-                                approverMode: 'ALL'
-                            },
+                            data: { label: '老板终审', approverType: 'ROLE', approverValue: 'ADMIN', approverMode: 'ALL' },
                             position: { x: 250, y: 350 }
                         },
                         { id: 'end', type: 'end', data: { label: '结束' }, position: { x: 250, y: 500 } }
@@ -112,7 +92,6 @@ export const initializeDefaultTemplates = createSafeAction(
         let createdCount = 0;
 
         for (const tmpl of templates) {
-            // Check if exists
             const existing = await db.query.approvalFlows.findFirst({
                 where: and(
                     eq(approvalFlows.code, tmpl.code),
@@ -130,7 +109,6 @@ export const initializeDefaultTemplates = createSafeAction(
                     isActive: true
                 }).returning();
 
-                // Automatically publish it to generate nodes
                 await publishApprovalFlow({ flowId: newFlow.id });
                 createdCount++;
             }
@@ -140,3 +118,7 @@ export const initializeDefaultTemplates = createSafeAction(
         return { success: true, message: `已初始化 ${createdCount} 个模板` };
     }
 );
+
+export async function initializeDefaultTemplates() {
+    return initializeDefaultTemplatesActionInternal({});
+}

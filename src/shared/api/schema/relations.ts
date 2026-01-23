@@ -22,7 +22,7 @@ import {
 } from './leads';
 
 import { marketChannels, products, productAttributeTemplates, productPriceHistory } from './catalogs';
-import { channels, channelContacts, channelCommissions, channelSettlements, commissionAdjustments } from './channels';
+import { channels, channelContacts, channelCommissions, channelSettlements, commissionAdjustments, channelCategories } from './channels';
 import {
     suppliers,
     purchaseOrders,
@@ -56,7 +56,10 @@ import {
     quoteItems,
     quoteRooms,
     quotePlans,
-    quotePlanItems
+    quotePlanItems,
+    quoteTemplates,
+    quoteTemplateRooms,
+    quoteTemplateItems
 } from './quotes';
 
 import {
@@ -82,6 +85,9 @@ import { notifications, notificationPreferences } from './notifications';
 import { loyaltyTransactions } from './loyalty';
 import { auditLogs } from './audit';
 import { quoteConfig } from './quote-config';
+import { laborRates } from './labor-pricing';
+import { workerSkills } from './worker-skills';
+import { systemSettings, systemSettingsHistory } from './system-settings';
 
 import {
     financeConfigs,
@@ -249,10 +255,32 @@ export const productAttributeTemplatesRelations = relations(productAttributeTemp
     }),
 }));
 
+export const channelCategoriesRelations = relations(channelCategories, ({ one, many }) => ({
+    tenant: one(tenants, {
+        fields: [channelCategories.tenantId],
+        references: [tenants.id],
+    }),
+    channels: many(channels),
+}));
+
 export const channelsRelations = relations(channels, ({ one, many }) => ({
     tenant: one(tenants, {
         fields: [channels.tenantId],
         references: [tenants.id],
+    }),
+    // 多层级关系
+    parent: one(channels, {
+        fields: [channels.parentId],
+        references: [channels.id],
+        relationName: 'channelHierarchy',
+    }),
+    children: many(channels, {
+        relationName: 'channelHierarchy',
+    }),
+    // 关联渠道类型
+    category: one(channelCategories, {
+        fields: [channels.categoryId],
+        references: [channelCategories.id],
     }),
     contacts: many(channelContacts),
     assignedManager: one(users, {
@@ -1125,3 +1153,47 @@ export const quoteConfigRelations = relations(quoteConfig, ({ one }) => ({
     updatedBy: one(users, { fields: [quoteConfig.updatedBy], references: [users.id] }),
 }));
 
+// === 劳务工费模块 (Labor Pricing) ===
+export const laborRatesRelations = relations(laborRates, ({ one }) => ({
+    tenant: one(tenants, { fields: [laborRates.tenantId], references: [tenants.id] }),
+}));
+
+// === 师傅技能模块 (Worker Skills) ===
+export const workerSkillsRelations = relations(workerSkills, ({ one }) => ({
+    tenant: one(tenants, { fields: [workerSkills.tenantId], references: [tenants.id] }),
+    worker: one(users, { fields: [workerSkills.workerId], references: [users.id] }),
+}));
+
+// === 报价模板模块 (Quote Templates) ===
+export const quoteTemplatesRelations = relations(quoteTemplates, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [quoteTemplates.tenantId], references: [tenants.id] }),
+    creator: one(users, { fields: [quoteTemplates.createdBy], references: [users.id] }),
+    sourceQuote: one(quotes, { fields: [quoteTemplates.sourceQuoteId], references: [quotes.id] }),
+    rooms: many(quoteTemplateRooms),
+    items: many(quoteTemplateItems),
+}));
+
+export const quoteTemplateRoomsRelations = relations(quoteTemplateRooms, ({ one, many }) => ({
+    tenant: one(tenants, { fields: [quoteTemplateRooms.tenantId], references: [tenants.id] }),
+    template: one(quoteTemplates, { fields: [quoteTemplateRooms.templateId], references: [quoteTemplates.id] }),
+    items: many(quoteTemplateItems),
+}));
+
+export const quoteTemplateItemsRelations = relations(quoteTemplateItems, ({ one }) => ({
+    tenant: one(tenants, { fields: [quoteTemplateItems.tenantId], references: [tenants.id] }),
+    template: one(quoteTemplates, { fields: [quoteTemplateItems.templateId], references: [quoteTemplates.id] }),
+    room: one(quoteTemplateRooms, { fields: [quoteTemplateItems.roomId], references: [quoteTemplateRooms.id] }),
+    product: one(products, { fields: [quoteTemplateItems.productId], references: [products.id] }),
+}));
+
+// === 系统设置模块 (System Settings) ===
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+    tenant: one(tenants, { fields: [systemSettings.tenantId], references: [tenants.id] }),
+    updater: one(users, { fields: [systemSettings.updatedBy], references: [users.id] }),
+}));
+
+export const systemSettingsHistoryRelations = relations(systemSettingsHistory, ({ one }) => ({
+    tenant: one(tenants, { fields: [systemSettingsHistory.tenantId], references: [tenants.id] }),
+    setting: one(systemSettings, { fields: [systemSettingsHistory.settingId], references: [systemSettings.id] }),
+    changer: one(users, { fields: [systemSettingsHistory.changedBy], references: [users.id] }),
+}));

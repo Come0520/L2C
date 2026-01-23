@@ -100,13 +100,16 @@ const updateBundleTotal = async (bundleId: string) => {
         .where(eq(quotes.id, bundleId));
 };
 
-export const createQuoteBundle = createSafeAction(createQuoteBundleSchema, async (data, context) => {
+export const createQuoteBundleActionInternal = createSafeAction(createQuoteBundleSchema, async (data, context) => {
     // Current implementation creates a Quote as a Bundle container
     // or a specialized Quote type. Using standard Quote for now.
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+
     const quoteNo = `QB${Date.now()}`;
     const [newBundle] = await db.insert(quotes).values({
         quoteNo,
-        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
+        tenantId, // 🔒 安全修复：必须有租户
         customerId: data.customerId,
         leadId: data.leadId,
         title: `Quote Bundle - ${quoteNo}`,
@@ -125,11 +128,18 @@ export const createQuoteBundle = createSafeAction(createQuoteBundleSchema, async
     return newBundle;
 });
 
-export const createQuote = createSafeAction(createQuoteSchema, async (data, context) => {
+export async function createQuoteBundle(params: z.infer<typeof createQuoteBundleSchema>) {
+    return createQuoteBundleActionInternal(params);
+}
+
+const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+
     const quoteNo = `QT${Date.now()}`;
     const [newQuote] = await db.insert(quotes).values({
         quoteNo,
-        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
+        tenantId, // 🔒 安全修复：必须有租户
         customerId: data.customerId,
         leadId: data.leadId,
         measureVariantId: data.measureVariantId,
@@ -159,6 +169,9 @@ export const createQuote = createSafeAction(createQuoteSchema, async (data, cont
     return newQuote;
 });
 
+export async function createQuote(params: z.infer<typeof createQuoteSchema>) {
+    return createQuoteActionInternal(params);
+}
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
     const { id, ...updateData } = data;
     const userTenantId = context.session.user.tenantId;
@@ -212,17 +225,34 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
     return { success: true };
 });
 
-export const createRoom = createSafeAction(createQuoteRoomSchema, async (data, context) => {
+export const createRoomActionInternal = createSafeAction(createQuoteRoomSchema, async (data, context) => {
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+
+    // 🔒 安全修复：校验 Quote 归属
+    const quote = await db.query.quotes.findFirst({
+        where: and(
+            eq(quotes.id, data.quoteId),
+            eq(quotes.tenantId, tenantId)
+        ),
+        columns: { id: true }
+    });
+    if (!quote) throw new Error('报价单不存在或无权操作');
+
     const [newRoom] = await db.insert(quoteRooms).values({
         quoteId: data.quoteId,
         name: data.name,
-        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
+        tenantId, // Use verified tenant
         measureRoomId: data.measureRoomId,
     }).returning();
 
     revalidatePath(`/quotes/${data.quoteId}`);
     return newRoom;
 });
+
+export async function createRoom(params: z.infer<typeof createQuoteRoomSchema>) {
+    return createRoomActionInternal(params);
+}
 
 export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, context) => {
     const { id, ...updateData } = data;
@@ -285,22 +315,53 @@ export const deleteRoom = createSafeAction(z.object({ id: z.string().uuid() }), 
 });
 
 export const reorderQuoteItems = createSafeAction(reorderQuoteItemsSchema, async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+    if (!userTenantId) throw new Error('未授权访问：缺少租户信息');
+
+    // 🔒 P2 安全修复：校验报价单归属
+    const quote = await db.query.quotes.findFirst({
+        where: and(
+            eq(quotes.id, data.quoteId),
+            eq(quotes.tenantId, userTenantId)
+        ),
+        columns: { id: true }
+    });
+    if (!quote) throw new Error('报价单不存在或无权操作');
+
     // We update both sortOrder and roomId (in case item was moved to another room)
     await db.transaction(async (tx) => {
         for (const item of data.items) {
+            // 仅更新属于当前租户的明细项
             await tx.update(quoteItems)
                 .set({
                     sortOrder: item.sortOrder,
                     roomId: data.roomId,
                 })
-                .where(eq(quoteItems.id, item.id));
+                .where(and(
+                    eq(quoteItems.id, item.id),
+                    eq(quoteItems.tenantId, userTenantId)
+                ));
         }
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
     return { success: true };
 });
-export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (data, context) => {
+const createQuoteItemActionInternal = createSafeAction(createQuoteItemSchema, async (data, context) => {
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+
+    // 🔒 安全修复：校验 Quote 归属 (Prevent IDOR)
+    const quote = await db.query.quotes.findFirst({
+        where: and(
+            eq(quotes.id, data.quoteId),
+            eq(quotes.tenantId, tenantId)
+        ),
+        columns: { tenantId: true, createdBy: true }
+    });
+
+    if (!quote) throw new Error('报价单不存在或无权操作');
+
     let quantity = data.quantity;
     let warnings: string[] = [];
     let currentUnitPrice = data.unitPrice;
@@ -328,14 +389,10 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         }
     }
 
-    // 1. Fetch Config for Loss Settings
-    const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, data.quoteId),
-        columns: { tenantId: true, createdBy: true } // Need tenant and creator to get config
-    });
+    // 1. Fetch Config for Loss Settings (use safe quote)
     const config = await QuoteConfigService.getMergedConfig(
-        quote?.tenantId || '00000000-0000-0000-0000-000000000000',
-        quote?.createdBy || '00000000-0000-0000-0000-000000000000'
+        quote.tenantId,
+        quote.createdBy || '00000000-0000-0000-0000-000000000000'
     );
     const { presetLoss } = config;
 
@@ -344,17 +401,27 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         const calcParams = {
             measuredWidth: data.width,
             measuredHeight: data.height,
-            foldRatio: data.foldRatio || 2,
+            foldRatio: data.foldRatio || presetLoss.curtain.defaultFoldRatio || 2,
             fabricWidth: (attributes.fabricWidth as number) || 280, // Default fallback
             formula: ((attributes.formula as string) || 'FIXED_HEIGHT') as CurtainFormula,
             sideLoss: (attributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
             bottomLoss: (attributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
-            headerLoss: (attributes.headerLoss as number) ?? presetLoss.curtain.headerLoss
+            headerLossWrapped: presetLoss.curtain.headerLossWrapped ?? presetLoss.curtain.headerLoss ?? 20,
+            headerLossAttached: presetLoss.curtain.headerLossAttached ?? 7,
+            headerType: ((attributes.headerType as string) || presetLoss.curtain.defaultHeaderType || 'WRAPPED') as 'WRAPPED' | 'ATTACHED',
+            heightWarningThreshold: presetLoss.curtain.heightWarningThreshold ?? 275,
+            unitPrice: currentUnitPrice,
         };
 
         const result = CurtainCalculator.calculate(calcParams);
         quantity = result.quantity;
         if (result.warnings.length) warnings = result.warnings;
+
+        // 存储超高预警标志 and 替代方案
+        if (result.heightOverflow && result.alternatives) {
+            attributes._heightOverflow = true;
+            attributes._alternatives = result.alternatives;
+        }
     } else if ((data.category === 'WALLPAPER' || data.category === 'WALLCLOTH') && data.width && data.height) {
         const calcParams = {
             measuredWidth: data.width,
@@ -398,7 +465,7 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
         foldRatio: data.foldRatio?.toString(),
         processFee: data.processFee?.toString(),
         attributes: finalAttributes,
-        tenantId: context.session.user.tenantId || '00000000-0000-0000-0000-000000000000',
+        tenantId, // Verified tenantId
     }).returning();
 
     await updateQuoteTotal(data.quoteId);
@@ -424,7 +491,7 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
                 unitPrice: rec.unitPrice?.toString() || '0',
                 quantity: rec.quantity.toString(),
                 subtotal: (rec.quantity * (rec.unitPrice || 0)).toString(),
-                tenantId: newItem.tenantId,
+                tenantId: newItem.tenantId, // Use the already correct tenantId from parent item
                 attributes: { _isAutoRecommended: true, remark: rec.remark }
             });
         }
@@ -434,27 +501,36 @@ export const createQuoteItem = createSafeAction(createQuoteItemSchema, async (da
     return newItem;
 });
 
+export async function createQuoteItem(params: z.infer<typeof createQuoteItemSchema>) {
+    return createQuoteItemActionInternal(params);
+}
+
 export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+    if (!userTenantId) throw new Error('未授权访问：缺少租户信息');
+
     // Manually extract productId and productName if they might exist in raw data but not in schema
-    // or just assume standard updateData. We check schema.ts first.
     const { id, ...updateData } = data;
-    const rawData = data as Record<string, unknown>; // Use Record instead of any
+    const rawData = data as Record<string, unknown>;
     const productId = rawData.productId as string | undefined;
     const productNameFromUI = rawData.productName as string | undefined;
 
-    // Fetch existing item
+    // 🔒 P2 安全修复：校验明细项归属
     const existing = await db.query.quoteItems.findFirst({
-        where: eq(quoteItems.id, id)
+        where: and(
+            eq(quoteItems.id, id),
+            eq(quoteItems.tenantId, userTenantId)
+        )
     });
 
-    if (!existing) throw new Error('Item not found');
+    if (!existing) throw new Error('Item not found or permission denied');
 
     // Initialize variables from existing item
     const category = existing.category;
     const width = updateData.width ?? Number(existing.width);
     const height = updateData.height ?? Number(existing.height);
     const foldRatio = updateData.foldRatio ?? Number(existing.foldRatio) ?? 2;
-    const attributes = { ...(existing.attributes as Record<string, unknown> || {}) }; // Use const for base attributes
+    const attributes = { ...(existing.attributes as Record<string, unknown> || {}) };
     let unitPrice = Number(existing.unitPrice);
     let productName = existing.productName;
 
@@ -616,7 +692,7 @@ export const submitQuote = createSafeAction(z.object({
 export const rejectQuote = createSafeAction(z.object({
     id: z.string().uuid(),
     rejectReason: z.string().min(1),
-}), async (data, context) => {
+}), async (data, _context) => {
     await QuoteLifecycleService.reject(data.id, data.rejectReason);
 
     revalidatePath(`/quotes/${data.id}`);
@@ -626,18 +702,26 @@ export const rejectQuote = createSafeAction(z.object({
 
 export const lockQuote = createSafeAction(z.object({
     id: z.string().uuid(),
-    tenantId: z.string().uuid(),
-    lockedBy: z.string().uuid().optional(),
+    lockedBy: z.string().uuid().optional(), // Consider if this should also be from context?
 }), async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+
     const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, data.id)
+        where: and(
+            eq(quotes.id, data.id),
+            eq(quotes.tenantId, userTenantId)
+        )
     });
 
-    if (!quote) throw new Error('Quote not found');
+    if (!quote) throw new Error('Quote not found or permission denied');
     if (quote.lockedAt) throw new Error('Quote is already locked');
 
     const [updated] = await db.update(quotes)
-        .set({ lockedAt: new Date(), updatedAt: new Date() })
+        .set({
+            lockedAt: new Date(),
+            updatedAt: new Date(),
+            // lockedBy: context.session.user.id // Maybe?
+        })
         .where(eq(quotes.id, data.id))
         .returning();
 
@@ -647,13 +731,18 @@ export const lockQuote = createSafeAction(z.object({
 
 export const unlockQuote = createSafeAction(z.object({
     id: z.string().uuid(),
-    tenantId: z.string().uuid(),
 }), async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+
     const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, data.id)
+        where: and(
+            eq(quotes.id, data.id),
+            eq(quotes.tenantId, userTenantId)
+        )
     });
 
-    if (!quote) throw new Error('Quote not found');
+    if (!quote) throw new Error('Quote not found or permission denied');
+
     const [updated] = await db.update(quotes)
         .set({ lockedAt: null, updatedAt: new Date() })
         .where(eq(quotes.id, data.id))
@@ -803,4 +892,27 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
 
     revalidatePath('/quotes');
     return { id: newQuote.id, quoteNo };
+});
+
+export const copyQuote = createSafeAction(z.object({
+    quoteId: z.string().uuid(),
+    targetCustomerId: z.string().optional(),
+}), async (data, context) => {
+    const userTenantId = context.session.user.tenantId;
+
+    // Security check: Ensure user can access the source quote
+    const sourceQuote = await db.query.quotes.findFirst({
+        where: and(
+            eq(quotes.id, data.quoteId),
+            eq(quotes.tenantId, userTenantId)
+        ),
+        columns: { id: true }
+    });
+
+    if (!sourceQuote) throw new Error('报价单不存在或无权操作');
+
+    const newQuote = await QuoteService.copyQuote(data.quoteId, context.session.user.id, data.targetCustomerId);
+
+    revalidatePath('/quotes');
+    return newQuote;
 });

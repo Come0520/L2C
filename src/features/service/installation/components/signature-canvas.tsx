@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useMemo } from 'react';
-import ReactSignatureCanvas from 'react-signature-canvas';
+import dynamic from 'next/dynamic';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/utils';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
@@ -14,8 +14,13 @@ interface SignatureCanvasProps {
     className?: string;
 }
 
+const ReactSignatureCanvas = dynamic(() => import('react-signature-canvas'), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
+}) as any;
+
 export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCanvasProps) {
-    const sigCanvas = useRef<ReactSignatureCanvas>(null);
+    const sigCanvas = useRef<any>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 500, height: 200 });
 
@@ -47,7 +52,7 @@ export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCan
         }
 
         // Get blob (standard format)
-        sigCanvas.current?.getTrimmedCanvas().toBlob((blob) => {
+        sigCanvas.current?.getTrimmedCanvas().toBlob((blob: Blob | null) => {
             if (blob) {
                 onConfirm(blob);
             }

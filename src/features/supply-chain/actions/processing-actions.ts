@@ -9,14 +9,16 @@ import {
     orderItems,
     products
 } from "@/shared/api/schema";
-import { eq, and, desc, ilike, or, count } from "drizzle-orm";
-import { auth } from "@/shared/lib/auth";
+import { eq, and, desc, count } from "drizzle-orm";
+import { auth, checkPermission } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
+import { PERMISSIONS } from "@/shared/config/permissions";
 
 /**
  * 加工单状态枚举
+ * 与数据库 workOrderStatusEnum 保持一致
  */
-export type ProcessingOrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type ProcessingOrderStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
 /**
  * 获取加工单列表
@@ -29,6 +31,13 @@ export async function getProcessingOrders(params: {
 }) {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
+    } catch {
+        return { success: false, error: '无供应链查看权限', data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+    }
 
     const { page = 1, pageSize = 20, status, search } = params;
     const tenantId = session.user.tenantId;
@@ -82,7 +91,7 @@ export async function getProcessingOrders(params: {
     const data = filteredResults.map(r => ({
         id: r.wo.id,
         processingNo: r.wo.woNo,
-        status: r.wo.status,
+        status: r.wo.status || 'PENDING',
         processorName: r.supplier?.name || '未知加工厂',
         order: {
             id: r.order?.id,
@@ -110,6 +119,13 @@ export async function getProcessingOrders(params: {
 export async function getProcessingOrderById({ id }: { id: string }) {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
+    } catch {
+        return { success: false, error: '无供应链查看权限' };
+    }
 
     const result = await db.select({
         wo: workOrders,
@@ -172,10 +188,17 @@ export async function updateProcessingOrderStatus(id: string, status: Processing
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.MANAGE);
+    } catch {
+        return { success: false, error: '无供应链管理权限' };
+    }
+
     await db.update(workOrders)
         .set({
             status,
-            ...(status === 'IN_PROGRESS' ? { startAt: new Date() } : {}),
+            ...(status === 'PROCESSING' ? { startAt: new Date() } : {}),
             ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
             updatedAt: new Date(),
         })

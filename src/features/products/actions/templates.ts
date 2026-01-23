@@ -21,6 +21,8 @@ const attributeFieldSchema = z.object({
     options: z.array(z.string()).optional(), // Only for SELECT
     unit: z.string().optional(),
     placeholder: z.string().optional(),
+    // 报价单快速录入时显示此字段
+    showInQuote: z.boolean().default(false),
 });
 
 const templateSchemaZod = z.object({
@@ -36,7 +38,7 @@ const getTemplateSchemaZod = z.object({
 /**
  * 设置或更新品类属性模板
  */
-export const upsertAttributeTemplate = createSafeAction(templateSchemaZod, async (data, { session }) => {
+const upsertAttributeTemplateActionInternal = createSafeAction(templateSchemaZod, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS);
 
     const existing = await db.query.productAttributeTemplates.findFirst({
@@ -66,10 +68,14 @@ export const upsertAttributeTemplate = createSafeAction(templateSchemaZod, async
     return { success: true };
 });
 
+export async function upsertAttributeTemplate(params: z.infer<typeof templateSchemaZod>) {
+    return upsertAttributeTemplateActionInternal(params);
+}
+
 /**
  * 获取品类属性模板
  */
-export const getAttributeTemplate = createSafeAction(getTemplateSchemaZod, async ({ category }, { session }) => {
+const getAttributeTemplateActionInternal = createSafeAction(getTemplateSchemaZod, async ({ category }, { session }) => {
     // Both ADMIN and PRODUCTS manager can view templates to render forms
     // checkPermission(session, PERMISSIONS.PRODUCTS.VIEW) || checkPermission(session, PERMISSIONS.ADMIN.SETTINGS) 
     // Optimization: Allow view if user has valid session, specific permission logic can be looser for reading config
@@ -84,3 +90,7 @@ export const getAttributeTemplate = createSafeAction(getTemplateSchemaZod, async
 
     return template || { category, templateSchema: [] };
 });
+
+export async function getAttributeTemplate(params: z.infer<typeof getTemplateSchemaZod>) {
+    return getAttributeTemplateActionInternal(params);
+}

@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
-import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum, purchaseOrderStatusEnum, paymentStatusEnum } from './enums';
+import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum, purchaseOrderStatusEnum, paymentStatusEnum, supplierTypeEnum } from './enums';
 import { afterSalesTickets } from './after-sales';
 
 export const suppliers = pgTable('suppliers', {
@@ -9,6 +9,8 @@ export const suppliers = pgTable('suppliers', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     supplierNo: varchar('supplier_no', { length: 50 }).unique().notNull(),
     name: varchar('name', { length: 200 }).notNull(),
+    // 供应商类型：供应商/加工厂/两者兼备
+    supplierType: supplierTypeEnum('supplier_type').default('SUPPLIER'),
     contactPerson: varchar('contact_person', { length: 100 }),
     phone: varchar('phone', { length: 50 }),
     paymentPeriod: varchar('payment_period', { length: 50 }).default('CASH'), // 月结/现结
@@ -16,11 +18,20 @@ export const suppliers = pgTable('suppliers', {
     address: text('address'),
     remark: text('remark'),
 
+    // [NEW] 加工厂专属字段
+    processingPrices: jsonb('processing_prices'), // 加工费价格表, 结构: { items: [{ name: string, unit: string, price: number }] }
+    contractUrl: text('contract_url'), // 合同文件 URL
+    contractExpiryDate: timestamp('contract_expiry_date', { withTimezone: true }), // 合同到期日期
+    businessLicenseUrl: text('business_license_url'), // 营业执照 URL
+    bankAccount: varchar('bank_account', { length: 100 }), // 银行账号
+    bankName: varchar('bank_name', { length: 100 }), // 开户银行
+
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     supplierTenantIdx: index('idx_suppliers_tenant').on(table.tenantId),
+    supplierTypeIdx: index('idx_suppliers_type').on(table.supplierType),
 }));
 
 export const purchaseOrders = pgTable('purchase_orders', {
@@ -294,3 +305,39 @@ export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
 }, (table) => ({
     filInventoryIdx: index('idx_fabric_logs_inventory').on(table.fabricInventoryId),
 }));
+
+// =============================================
+// 渠道等级折扣模块 (Channel Level Discounts)
+// =============================================
+
+/**
+ * 渠道等级折扣覆盖表
+ * 
+ * 用于按品类或商品覆盖全局的渠道等级折扣配置
+ * 全局默认折扣存储在 tenants.settings JSONB 中
+ */
+export const channelDiscountOverrides = pgTable('channel_discount_overrides', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+
+    // 覆盖范围：CATEGORY=品类覆盖, PRODUCT=商品覆盖
+    scope: varchar('scope', { length: 20 }).notNull(),
+    // 目标ID：品类代码（如 CURTAIN_FABRIC）或商品UUID
+    targetId: varchar('target_id', { length: 100 }).notNull(),
+    // 目标名称（冗余存储，方便查询显示）
+    targetName: varchar('target_name', { length: 200 }),
+
+    // S/A/B/C 四级折扣率（百分比，如 95 表示 95%）
+    sLevelDiscount: decimal('s_level_discount', { precision: 5, scale: 2 }),
+    aLevelDiscount: decimal('a_level_discount', { precision: 5, scale: 2 }),
+    bLevelDiscount: decimal('b_level_discount', { precision: 5, scale: 2 }),
+    cLevelDiscount: decimal('c_level_discount', { precision: 5, scale: 2 }),
+
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    cdoTenantIdx: index('idx_channel_discount_overrides_tenant').on(table.tenantId),
+    cdoScopeTargetIdx: index('idx_channel_discount_overrides_scope_target').on(table.scope, table.targetId),
+}));
+

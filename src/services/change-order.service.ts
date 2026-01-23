@@ -131,22 +131,21 @@ export class ChangeOrderService {
                 .where(eq(orderChanges.id, requestId))
                 .returning();
 
-            // 2. Apply Changes Logic
+            // 2. Apply Changes Logic - 添加租户隔离
             if (request.type === 'FIELD_CHANGE' && request.newData) {
-                // Example: newData = { totalAmount: 1000, remark: "Discount" }
                 await tx.update(orders)
                     .set({
                         ...(request.newData as Record<string, unknown>),
                         updatedAt: new Date()
                     })
-                    .where(eq(orders.id, request.orderId));
+                    .where(and(eq(orders.id, request.orderId), eq(orders.tenantId, tenantId)));
             }
 
-            // 3. 自动更新订单金额（如有差价）
+            // 3. 自动更新订单金额（如有差价）- 添加租户隔离
             const diffAmount = parseFloat(request.diffAmount || '0');
             if (diffAmount !== 0) {
                 const order = await tx.query.orders.findFirst({
-                    where: eq(orders.id, request.orderId),
+                    where: and(eq(orders.id, request.orderId), eq(orders.tenantId, tenantId)),
                     columns: { totalAmount: true, balanceAmount: true }
                 });
 
@@ -160,7 +159,7 @@ export class ChangeOrderService {
                             balanceAmount: String(currentBalance + diffAmount),
                             updatedAt: new Date()
                         })
-                        .where(eq(orders.id, request.orderId));
+                        .where(and(eq(orders.id, request.orderId), eq(orders.tenantId, tenantId)));
                 }
             }
 

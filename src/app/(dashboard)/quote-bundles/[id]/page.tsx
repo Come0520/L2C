@@ -4,6 +4,7 @@ import { fetchQuotePlans } from '@/features/quotes/lib/plan-loader';
 import { getQuoteBundleById } from '@/features/quotes/actions/queries';
 import { QuoteBundleDetailView } from '@/features/quotes/components/quote-bundle-detail-view';
 import { notFound } from 'next/navigation';
+import { DetailSkeleton } from '@/shared/ui/skeleton-variants';
 
 export default async function QuoteBundleDetailPage({
     params,
@@ -24,7 +25,7 @@ export default async function QuoteBundleDetailPage({
     }
 
     return (
-        <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading Bundle...</div>}>
+        <Suspense fallback={<DetailSkeleton />}>
             <QuoteBundleDetailView bundle={result.data} plans={plans} />
         </Suspense>
     );

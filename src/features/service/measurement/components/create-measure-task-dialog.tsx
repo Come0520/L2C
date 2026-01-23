@@ -9,7 +9,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Switch } from '@/shared/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { toast } from 'sonner';
-import { createMeasureTask } from '../actions/mutations';
+import { createMeasureTask } from '../actions/create-task';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 
 export function CreateMeasureTaskDialog() {
@@ -38,18 +38,16 @@ export function CreateMeasureTaskDialog() {
                 customerId: formData.customerId,
                 scheduledAt: formData.scheduledAt.toISOString(),
                 isFeeExempt: formData.isFeeExempt,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                type: formData.type as any, // 测量类型枚举
+                type: formData.type as 'QUOTE_BASED' | 'BLIND' | 'SALES_SELF',
                 remark: formData.remark,
-            }, 'user-id-placeholder', 'tenant-id-placeholder');
+            });
 
             if (res.success) {
                 toast.success(formData.isFeeExempt && formData.type !== 'SALES_SELF' ? '任务已提交审批' : '测量任务已创建');
                 setOpen(false);
                 setFormData({ leadId: '', customerId: '', scheduledAt: new Date(), isFeeExempt: false, type: 'BLIND', remark: '' });
             } else {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                toast.error((res as any).error || '创建失败');
+                toast.error('error' in res ? res.error : '创建失败');
             }
         } catch (error: unknown) {
             console.error(error);

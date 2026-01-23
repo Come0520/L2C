@@ -3,6 +3,7 @@ import { quotes } from '@/shared/api/schema/quotes';
 import { eq } from 'drizzle-orm';
 import { tenants } from '@/shared/api/schema/infrastructure';
 import { checkDiscountRisk } from '@/features/quotes/logic/risk-control';
+import { getSetting } from "@/features/settings/actions/system-settings-actions";
 import { TenantSettings } from '@/shared/types/tenant-settings';
 
 export interface RiskCheckResult {
@@ -26,19 +27,29 @@ export class RiskControlService {
 
         if (!quote) throw new Error('Quote not found');
 
-        // 2. Fetch Tenant Config
+        // 2. Fetch Tenant Config (Legacy fallback and merged with new system settings)
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, tenantId)
         });
 
+        // 优先从新设置系统获取关键参数
+        const discountThreshold = await getSetting('QUOTE_DISCOUNT_THRESHOLD') as number || 0.8;
+        const lowMarginThreshold = await getSetting('QUOTE_LOW_MARGIN_THRESHOLD') as number || 0.15;
+
         const settings = (tenant?.settings || {}) as TenantSettings;
+        // 覆盖/补充设置
+        const mergedSettings = {
+            ...settings,
+            discountThreshold,
+            lowMarginThreshold
+        };
 
         // 3. Domain Logic Calculation
         const result = checkDiscountRisk(
             quote.items,
             Number(quote.finalAmount || 0),
             Number(quote.totalAmount || 0),
-            settings
+            mergedSettings
         );
 
         return {

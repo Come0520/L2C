@@ -42,12 +42,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function ProductsPage() {
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<string>('ALL');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<any>(null);
+    const [editingProduct, setEditingProduct] = useState<unknown>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -81,7 +81,7 @@ export default function ProductsPage() {
         setIsDialogOpen(true);
     };
 
-    const handleEdit = (product: any) => {
+    const handleEdit = (product: unknown) => {
         setEditingProduct(product);
         setIsDialogOpen(true);
     };
@@ -95,7 +95,7 @@ export default function ProductsPage() {
             }
             toast.success(!currentStatus ? '产品已上架' : '产品已下架');
             fetchData();
-        } catch (error) {
+        } catch (_error) {
             toast.error('操作失败');
         }
     };
@@ -110,7 +110,7 @@ export default function ProductsPage() {
             }
             toast.success('产品已删除');
             fetchData();
-        } catch (error) {
+        } catch (_error) {
             toast.error('删除失败');
         }
     };

@@ -74,7 +74,7 @@ export function SplitTaskDialog({ originalTaskId, trigger }: SplitTaskDialogProp
                 setOpen(false);
                 form.reset();
             } else {
-                toast.error('拆单失败', { description: (result as any)?.error || '未知错误' });
+                toast.error('拆单失败', { description: (result && 'error' in result ? result.error : '未知错误') as string });
             }
         });
     }

@@ -39,7 +39,7 @@ const getProductSuppliersSchema = z.object({
 /**
  * 查询产品的关联供应商列表
  */
-export const getProductSuppliers = createSafeAction(getProductSuppliersSchema, async ({ productId }, { session }) => {
+const getProductSuppliersActionInternal = createSafeAction(getProductSuppliersSchema, async ({ productId }, { session }) => {
     // Permission check: View products or supply chain
     // if (!session?.user) throw new Error('Unauthorized'); 
 
@@ -64,10 +64,14 @@ export const getProductSuppliers = createSafeAction(getProductSuppliersSchema, a
     return result;
 });
 
+export async function getProductSuppliers(params: z.infer<typeof getProductSuppliersSchema>) {
+    return getProductSuppliersActionInternal(params);
+}
+
 /**
  * 添加供应商关联
  */
-export const addProductSupplier = createSafeAction(addProductSupplierSchema, async (data, { session }) => {
+const addProductSupplierActionInternal = createSafeAction(addProductSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     // Check if relation already exists
@@ -108,17 +112,25 @@ export const addProductSupplier = createSafeAction(addProductSupplierSchema, asy
     return { success: true };
 });
 
+export async function addProductSupplier(params: z.infer<typeof addProductSupplierSchema>) {
+    return addProductSupplierActionInternal(params);
+}
+
 /**
  * 更新供应商关联信息 (价格, 货期, 默认状态)
  */
-export const updateProductSupplier = createSafeAction(updateProductSupplierSchema, async (data, { session }) => {
+const updateProductSupplierActionInternal = createSafeAction(updateProductSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
+    // P0 修复：查询时添加租户验证
     const current = await db.query.productSuppliers.findFirst({
-        where: eq(productSuppliers.id, data.id)
+        where: and(
+            eq(productSuppliers.id, data.id),
+            eq(productSuppliers.tenantId, session.user.tenantId)
+        )
     });
 
-    if (!current) return { error: '关联记录不存在' };
+    if (!current) return { error: '关联记录不存在或无权访问' };
 
     // Handle default toggle logic
     if (data.isDefault) {
@@ -139,16 +151,23 @@ export const updateProductSupplier = createSafeAction(updateProductSupplierSchem
             ...(data.leadTimeDays !== undefined ? { leadTimeDays: data.leadTimeDays } : {}),
             ...(data.isDefault !== undefined ? { isDefault: data.isDefault } : {}),
         })
-        .where(eq(productSuppliers.id, data.id));
+        .where(and(
+            eq(productSuppliers.id, data.id),
+            eq(productSuppliers.tenantId, session.user.tenantId)  // P0 修复：租户隔离
+        ));
 
     revalidatePath(`/supply-chain/products`);
     return { success: true };
 });
 
+export async function updateProductSupplier(params: z.infer<typeof updateProductSupplierSchema>) {
+    return updateProductSupplierActionInternal(params);
+}
+
 /**
  * 移除供应商关联
  */
-export const removeProductSupplier = createSafeAction(removeProductSupplierSchema, async ({ id }, { session }) => {
+const removeProductSupplierActionInternal = createSafeAction(removeProductSupplierSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     await db.delete(productSuppliers)
@@ -163,6 +182,10 @@ export const removeProductSupplier = createSafeAction(removeProductSupplierSchem
     return { success: true };
 });
 
+export async function removeProductSupplier(params: z.infer<typeof removeProductSupplierSchema>) {
+    return removeProductSupplierActionInternal(params);
+}
+
 // ============================================================
 // [Product-03] 产品供应商关联增强
 // ============================================================
@@ -175,7 +198,7 @@ const compareSupplierPricesSchema = z.object({
  * 比较产品的多个供应商价格
  * 返回价格排序、价差分析、推荐供应商
  */
-export const compareSupplierPrices = createSafeAction(compareSupplierPricesSchema, async ({ productId }, { session }) => {
+const compareSupplierPricesActionInternal = createSafeAction(compareSupplierPricesSchema, async ({ productId }, { session }) => {
     const result = await db
         .select({
             id: productSuppliers.id,
@@ -244,6 +267,10 @@ export const compareSupplierPrices = createSafeAction(compareSupplierPricesSchem
     };
 });
 
+export async function compareSupplierPrices(params: z.infer<typeof compareSupplierPricesSchema>) {
+    return compareSupplierPricesActionInternal(params);
+}
+
 const autoSwitchDefaultSupplierSchema = z.object({
     productId: z.string().uuid(),
     strategy: z.enum(['LOWEST_PRICE', 'SHORTEST_LEAD_TIME', 'BALANCED']).default('BALANCED'),
@@ -253,7 +280,7 @@ const autoSwitchDefaultSupplierSchema = z.object({
  * 自动切换到最优供应商
  * 策略：LOWEST_PRICE (最低价), SHORTEST_LEAD_TIME (最短货期), BALANCED (综合考虑)
  */
-export const autoSwitchDefaultSupplier = createSafeAction(autoSwitchDefaultSupplierSchema, async ({ productId, strategy }, { session }) => {
+const autoSwitchDefaultSupplierActionInternal = createSafeAction(autoSwitchDefaultSupplierSchema, async ({ productId, strategy }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     const supplierList = await db
@@ -344,3 +371,7 @@ export const autoSwitchDefaultSupplier = createSafeAction(autoSwitchDefaultSuppl
         strategy,
     };
 });
+
+export async function autoSwitchDefaultSupplier(params: z.infer<typeof autoSwitchDefaultSupplierSchema>) {
+    return autoSwitchDefaultSupplierActionInternal(params);
+}

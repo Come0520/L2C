@@ -18,7 +18,7 @@ interface ChannelFormProps {
     tenantId: string;
 }
 
-export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
+export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormProps) {
     const router = useRouter();
     const form = useForm<ChannelInput>({
         resolver: zodResolver(channelSchema) as any,
@@ -41,10 +41,10 @@ export function ChannelForm({ initialData, tenantId }: ChannelFormProps) {
     const onSubmit = async (data: ChannelInput) => {
         try {
             if (initialData?.id) {
-                await updateChannel(initialData.id, data, tenantId);
+                await updateChannel(initialData.id, data);
                 toast.success('渠道更新成功');
             } else {
-                await createChannel(data, tenantId);
+                await createChannel(data);
                 toast.success('渠道创建成功');
             }
             router.push('/channels');

@@ -13,7 +13,7 @@ const getExpirationInfoSchema = z.object({
     quoteId: z.string().uuid()
 });
 
-export const getQuoteExpirationInfo = createSafeAction(getExpirationInfoSchema, async (data) => {
+const getQuoteExpirationInfoActionInternal = createSafeAction(getExpirationInfoSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -24,6 +24,10 @@ export const getQuoteExpirationInfo = createSafeAction(getExpirationInfoSchema, 
     return await QuoteService.getExpirationInfo(data.quoteId);
 });
 
+export async function getQuoteExpirationInfo(params: z.infer<typeof getExpirationInfoSchema>) {
+    return getQuoteExpirationInfoActionInternal(params);
+}
+
 /**
  * 刷新过期报价的价格 (Refresh Expired Quote Prices)
  * 当客户重新确认过期报价时使用
@@ -33,7 +37,7 @@ const refreshPricesSchema = z.object({
     validDays: z.number().int().min(1).max(90).default(7)
 });
 
-export const refreshExpiredQuotePrices = createSafeAction(refreshPricesSchema, async (data) => {
+const refreshExpiredQuotePricesActionInternal = createSafeAction(refreshPricesSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -46,6 +50,10 @@ export const refreshExpiredQuotePrices = createSafeAction(refreshPricesSchema, a
     return result;
 });
 
+export async function refreshExpiredQuotePrices(params: z.infer<typeof refreshPricesSchema>) {
+    return refreshExpiredQuotePricesActionInternal(params);
+}
+
 /**
  * 批量过期处理 (Batch Expire Overdue Quotes)
  * 仅限管理员使用，用于手动触发或定时任务
@@ -54,7 +62,7 @@ const batchExpireSchema = z.object({
     tenantId: z.string().uuid().optional()
 });
 
-export const batchExpireOverdueQuotes = createSafeAction(batchExpireSchema, async (data) => {
+const batchExpireOverdueQuotesActionInternal = createSafeAction(batchExpireSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -70,6 +78,10 @@ export const batchExpireOverdueQuotes = createSafeAction(batchExpireSchema, asyn
     return result;
 });
 
+export async function batchExpireOverdueQuotes(params: z.infer<typeof batchExpireSchema>) {
+    return batchExpireOverdueQuotesActionInternal(params);
+}
+
 /**
  * 设置报价有效期 (Set Quote Valid Until)
  */
@@ -78,7 +90,7 @@ const setValidUntilSchema = z.object({
     validDays: z.number().int().min(1).max(90)
 });
 
-export const setQuoteValidUntil = createSafeAction(setValidUntilSchema, async (data) => {
+const setQuoteValidUntilActionInternal = createSafeAction(setValidUntilSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -99,3 +111,7 @@ export const setQuoteValidUntil = createSafeAction(setValidUntilSchema, async (d
     revalidatePath(`/quotes/${data.quoteId}`);
     return { success: true, validUntil };
 });
+
+export async function setQuoteValidUntil(params: z.infer<typeof setValidUntilSchema>) {
+    return setQuoteValidUntilActionInternal(params);
+}

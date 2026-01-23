@@ -21,12 +21,15 @@ import {
     DollarSign,
     Headphones,
     Truck,
-    ClipboardCheck
+    ClipboardCheck,
+    User
 } from 'lucide-react';
 
 import { motion } from "motion/react";
 import { AnimatedList } from "@/shared/ui/animated-list";
 import { LogoWithThemeSwitcher } from "@/shared/ui/theme-pill-nav";
+import { useTenant } from "@/shared/providers/tenant-provider";
+import Image from "next/image";
 
 /**
  * 导航链接配置
@@ -115,7 +118,7 @@ export function AppSidebar() {
                     {/* 导航链接 - 使用 AnimatedList */}
                     <div className="flex-1 overflow-y-auto overflow-x-hidden mt-4 px-1">
                         <AnimatedList
-                            items={navLinks.map((link, index) => {
+                            items={navLinks.map((link) => {
                                 const isActive = pathname === link.href ||
                                     (link.href !== "/" && pathname.startsWith(link.href));
                                 return (
@@ -136,17 +139,13 @@ export function AppSidebar() {
                     </div>
                 </div>
 
-                {/* 底部用户信息 */}
+                {/* 底部用户信息 - 指向独立的用户设置页面 */}
                 <div className="border-t border-white/10 dark:border-white/5 pt-4 px-2">
                     <NavLink
-                        href="/settings/preferences"
+                        href="/profile/settings"
                         label="个人设置"
-                        icon={() => (
-                            <div className="h-7 w-7 shrink-0 rounded-full bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-sm font-medium">
-                                U
-                            </div>
-                        )}
-                        isActive={false}
+                        icon={User}
+                        isActive={pathname === '/profile/settings' || pathname.startsWith('/profile/')}
                     />
                 </div>
             </SidebarBody>
@@ -159,21 +158,33 @@ export function AppSidebar() {
  */
 function LogoWrapper() {
     const { open, animate } = useSidebar();
+    const { tenant } = useTenant();
 
     return (
         <div className={cn(
             "flex items-center transition-all duration-300",
             animate && !open ? "justify-center" : "justify-start gap-3"
         )}>
-            <LogoWithThemeSwitcher />
+            {tenant?.logoUrl ? (
+                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg">
+                    <Image
+                        src={tenant.logoUrl}
+                        alt={tenant.name || "Logo"}
+                        fill
+                        className="object-cover"
+                    />
+                </div>
+            ) : (
+                <LogoWithThemeSwitcher />
+            )}
             <motion.span
                 animate={{
                     display: animate ? (open ? "inline-block" : "none") : "inline-block",
                     opacity: animate ? (open ? 1 : 0) : 1,
                 }}
-                className="font-serif font-semibold text-xl bg-linear-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent whitespace-pre"
+                className="font-serif font-semibold text-xl bg-linear-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent whitespace-normal leading-tight"
             >
-                L2C System
+                {tenant?.name || "L2C System"}
             </motion.span>
         </div>
     );

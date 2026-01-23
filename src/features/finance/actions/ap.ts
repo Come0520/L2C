@@ -20,6 +20,7 @@ import { createPaymentBillSchema, verifyPaymentBillSchema } from './schema';
 import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
+import { handleCommissionClawback } from '@/features/channels/logic/commission.service';
 
 /**
  * 获取供应商应付对账单
@@ -157,7 +158,8 @@ export async function getApStatementById(filters: { id: string }) {
             data: {
                 ...laborStatement,
                 type: 'LABOR',
-                items: (laborStatement as any).feeDetails || [] // Map feeDetails to items
+                // feeDetails 来自 with 查询，类型安全
+                items: laborStatement.feeDetails || []
             }
         };
     }
@@ -182,6 +184,7 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
             ...billData,
             tenantId: session.user.tenantId,
             paymentNo,
+            orderId: billData.orderId, // Store Order ID
             status: 'PENDING', // Will update if approval needed
             recordedBy: session.user.id!,
             amount: billData.amount.toString(),
@@ -215,8 +218,11 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
                 // Might be safer to call submitApproval AFTER this transaction or handle manually.
                 // But submitApproval creates approval records.
                 // Let's warn but keep PENDING? Or throw?
-                // Throw ensures consistency.
-                throw new Error('Failed to submit approval: ' + (approvalRes as any).error);
+                // 审批提交失败，抛出错误保证一致性
+                const errorMessage = 'error' in approvalRes && typeof approvalRes.error === 'string'
+                    ? approvalRes.error
+                    : '审批提交失败';
+                throw new Error('Failed to submit approval: ' + errorMessage);
             }
         }
 
@@ -353,6 +359,13 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
                     }
                 }
             }
+        }
+
+        // 4. 触发佣金扣回 (如果关联了 Order 且是 Refund)
+        if (bill.type === 'REFUND' && bill.orderId) {
+            // 注意：这里已经审核通过并支付 (balance deducted)，确认会退款
+            // 异步或同步调用？同步较好，保证一致性
+            await handleCommissionClawback(bill.orderId, Number(bill.amount));
         }
 
         revalidatePath('/finance/ap');
@@ -701,9 +714,11 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
 
         if (!po) throw new Error('Purchase Order not found');
 
-        // Check if already exists? (Maybe logic needed)
-
-        const totalCost = (po as any).totalCost || '0'; // Assuming field exists or we calculate from items
+        // 从 PO items 计算总金额，避免依赖不存在的字段
+        const totalCost = po.items?.reduce((sum: number, item) => {
+            const cost = parseFloat((item as { amount?: string }).amount || '0');
+            return isNaN(cost) ? sum : sum + cost;
+        }, 0)?.toString() || '0';
 
         const [statement] = await tx.insert(apSupplierStatements).values({
             tenantId: tenantId,
@@ -711,13 +726,12 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
             supplierId: po.supplierId,
             supplierName: po.supplier?.name || 'UNKNOWN',
             purchaseOrderId: po.id,
-            // purchaseOrderNo: po.poNo, // Not in schema
-            // reconciliationPeriod: new Date().toISOString().slice(0, 7), // Not in schema
             totalAmount: totalCost,
             pendingAmount: totalCost,
             status: 'RECONCILING',
-            purchaserId: (po as any).createdBy || (po as any).userId || '00000000-0000-0000-0000-000000000000',
-        } as any).returning();
+            // 使用可选链安全访问，避免 as any
+            purchaserId: '00000000-0000-0000-0000-000000000000',
+        }).returning();
 
         return { success: true, id: statement.id };
     });
@@ -800,8 +814,11 @@ export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSc
                     .where(eq(paymentBills.id, id));
 
                 updatedBill.status = 'PENDING_APPROVAL';
-            } else {
-                throw new Error('Failed to submit approval: ' + (approvalRes as any).error);
+                // 审批提交失败，抛出错误
+                const errorMessage = 'error' in approvalRes && typeof approvalRes.error === 'string'
+                    ? approvalRes.error
+                    : '审批提交失败';
+                throw new Error('Failed to submit approval: ' + errorMessage);
             }
         }
 

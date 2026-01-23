@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
     Table,
     TableBody,
@@ -8,15 +9,35 @@ import {
     TableHeader,
     TableRow,
 } from '@/shared/ui/table';
-import { Button } from '@/shared/ui/button';
-import ClipboardList from 'lucide-react/dist/esm/icons/clipboard-list';
 import { StockAdjustmentDialog } from './stock-adjustment-dialog';
+import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 
 interface InventoryTableProps {
     data: any[];
 }
 
-export function InventoryTable({ data }: InventoryTableProps) {
+interface InventoryTableRowProps {
+    item: {
+        sku: string;
+        name: string;
+        stock: number;
+    };
+}
+
+const InventoryTableRow = React.memo(function InventoryTableRow({ item }: InventoryTableRowProps) {
+    return (
+        <TableRow>
+            <TableCell className="font-medium">{item.sku}</TableCell>
+            <TableCell>{item.name}</TableCell>
+            <TableCell className="text-right">{item.stock}</TableCell>
+            <TableCell className="text-right">
+                <StockAdjustmentDialog />
+            </TableCell>
+        </TableRow>
+    );
+});
+
+export function InventoryTable({ data }: { data: any[] }) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -30,21 +51,10 @@ export function InventoryTable({ data }: InventoryTableProps) {
                 </TableHeader>
                 <TableBody>
                     {data.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                No inventory items found.
-                            </TableCell>
-                        </TableRow>
+                        <EmptyTableRow colSpan={4} message="No inventory items found." />
                     ) : (
                         data.map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell className="font-medium">{item.sku}</TableCell>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell className="text-right">{item.stock}</TableCell>
-                                <TableCell className="text-right">
-                                    <StockAdjustmentDialog />
-                                </TableCell>
-                            </TableRow>
+                            <InventoryTableRow key={index} item={item} />
                         ))
                     )}
                 </TableBody>

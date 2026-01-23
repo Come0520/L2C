@@ -1,3 +1,4 @@
+import { describe, test, expect } from 'vitest';
 import { checkDiscountRisk } from '../logic/risk-control';
 import { QuoteItem } from '@/shared/api/schema/quotes';
 
@@ -42,15 +43,22 @@ describe('Discount Risk Control', () => {
     });
 
     test('should detect low margin (Soft Stop)', () => {
+        // Final: 220, Cost: 200 => Margin: 20/220 = 0.09 < 0.15
+        // 同时: Discount = 220/400 = 0.55 < 0.8 (也触发折扣风险)
         const result = checkDiscountRisk(
             mockItems,
-            220, // Final: 220, Cost: 200 => Margin: 20/220 = 0.09 < 0.15
+            220,
             400,
             mockSettings
         );
         expect(result.isRisk).toBe(true);
         expect(result.hardStop).toBe(false);
-        expect(result.reason[0]).toContain('低于最低毛利限制');
+        // 折扣检查先于毛利检查触发，所以 reason[0] 是折扣相关
+        // reason 数组中应同时包含折扣和毛利警告
+        expect(result.reason.length).toBeGreaterThanOrEqual(1);
+        // 确保至少有一个原因包含毛利相关信息
+        const hasMarginWarning = result.reason.some(r => r.includes('毛利'));
+        expect(hasMarginWarning).toBe(true);
     });
 
     test('should block negative margin (Hard Stop)', () => {

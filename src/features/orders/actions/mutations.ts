@@ -4,6 +4,8 @@ import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
+import { checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -21,11 +23,13 @@ import {
 } from '../action-schemas';
 import { OrderService } from '@/services/order.service';
 
-export const updateOrderStatus = createSafeAction(updateOrderStatusSchema, async (data, ctx) => {
+const updateOrderStatusActionInternal = createSafeAction(updateOrderStatusSchema, async (data, ctx) => {
     const { session } = ctx;
     if (!session.user.tenantId) throw new Error('Unauthorized');
 
-    // 安全检查：验证订单属于当前租户
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+
     const order = await db.query.orders.findFirst({
         where: and(
             eq(orders.id, data.id),
@@ -36,7 +40,8 @@ export const updateOrderStatus = createSafeAction(updateOrderStatusSchema, async
 
     await db.update(orders)
         .set({
-            status: data.status as any, // Cast to enum type if needed
+            // 类型安全：使用 enum 值列表验证
+            status: data.status as typeof orders.status._.data,
             updatedAt: new Date(),
         })
         .where(
@@ -49,19 +54,16 @@ export const updateOrderStatus = createSafeAction(updateOrderStatusSchema, async
     revalidatePath('/orders');
     revalidatePath(`/orders/${data.id}`);
 
-    return {
-        success: true,
-        id: data.id,
-        newStatus: data.status
-    };
+    return { success: true, id: data.id, newStatus: data.status };
 });
+
+export async function updateOrderStatus(params: z.infer<typeof updateOrderStatusSchema>) {
+    return updateOrderStatusActionInternal(params);
+}
 
 // Phase 2: Cancellation & Pause Actions
 
-/**
- * 申请撤单
- */
-export const requestOrderCancellation = createSafeAction(requestOrderCancellationSchema, async (data, ctx) => {
+const requestOrderCancellationActionInternal = createSafeAction(requestOrderCancellationSchema, async (data, ctx) => {
     const { session } = ctx;
     if (!session.user.tenantId || !session.user.id) throw new Error('Unauthorized');
 
@@ -78,10 +80,11 @@ export const requestOrderCancellation = createSafeAction(requestOrderCancellatio
     return { success: true, approvalId: result.approvalId };
 });
 
-/**
- * 叫停生产
- */
-export const pauseOrder = createSafeAction(pauseOrderSchema, async (data, ctx) => {
+export async function requestOrderCancellation(params: z.infer<typeof requestOrderCancellationSchema>) {
+    return requestOrderCancellationActionInternal(params);
+}
+
+const pauseOrderActionInternal = createSafeAction(pauseOrderSchema, async (data, ctx) => {
     const { session } = ctx;
     if (!session.user.tenantId) throw new Error('Unauthorized');
 
@@ -97,10 +100,11 @@ export const pauseOrder = createSafeAction(pauseOrderSchema, async (data, ctx) =
     return { success: true };
 });
 
-/**
- * 恢复生产
- */
-export const resumeOrder = createSafeAction(resumeOrderSchema, async (data, ctx) => {
+export async function pauseOrder(params: z.infer<typeof pauseOrderSchema>) {
+    return pauseOrderActionInternal(params);
+}
+
+const resumeOrderActionInternal = createSafeAction(resumeOrderSchema, async (data, ctx) => {
     const { session } = ctx;
     if (!session.user.tenantId) throw new Error('Unauthorized');
 
@@ -114,3 +118,7 @@ export const resumeOrder = createSafeAction(resumeOrderSchema, async (data, ctx)
 
     return { success: true };
 });
+
+export async function resumeOrder(params: z.infer<typeof resumeOrderSchema>) {
+    return resumeOrderActionInternal(params);
+}

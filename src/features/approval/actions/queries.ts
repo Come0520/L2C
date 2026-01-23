@@ -7,12 +7,17 @@ import {
     approvalFlows
 } from "@/shared/api/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { auth } from "@/shared/lib/auth";
+import { createSafeAction } from '@/shared/lib/server-action';
+import { z } from 'zod';
 
-export async function getPendingApprovals() {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: [] };
+// Schema 定义
+const emptySchema = z.object({});
+const getApprovalDetailsSchema = z.object({
+    id: z.string().uuid(),
+});
 
+// createSafeAction 内部实现
+const getPendingApprovalsInternal = createSafeAction(emptySchema, async (_params, { session }) => {
     try {
         const tasks = await db.query.approvalTasks.findMany({
             where: and(
@@ -31,16 +36,14 @@ export async function getPendingApprovals() {
             orderBy: [desc(approvalTasks.createdAt)]
         });
         return { success: true, data: tasks };
-    } catch (e: any) {
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
         console.error("getPendingApprovals error", e);
-        return { success: false, error: e.message };
+        return { success: false, error: message };
     }
-}
+});
 
-export async function getApprovalHistory() {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: [] };
-
+const getApprovalHistoryInternal = createSafeAction(emptySchema, async (_params, { session }) => {
     try {
         const myApprovals = await db.query.approvals.findMany({
             where: and(
@@ -53,19 +56,17 @@ export async function getApprovalHistory() {
             orderBy: [desc(approvals.createdAt)]
         });
         return { success: true, data: myApprovals };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { success: false, error: message };
     }
-}
+});
 
-export async function getApprovalDetails(id: string) {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" };
-
+const getApprovalDetailsInternal = createSafeAction(getApprovalDetailsSchema, async (params, { session }) => {
     try {
         const approval = await db.query.approvals.findFirst({
             where: and(
-                eq(approvals.id, id),
+                eq(approvals.id, params.id),
                 eq(approvals.tenantId, session.user.tenantId)
             ),
             with: {
@@ -76,7 +77,7 @@ export async function getApprovalDetails(id: string) {
         if (!approval) return { success: false, error: "Not found" };
 
         const tasks = await db.query.approvalTasks.findMany({
-            where: eq(approvalTasks.approvalId, id),
+            where: eq(approvalTasks.approvalId, params.id),
             with: {
                 node: true,
             },
@@ -84,22 +85,38 @@ export async function getApprovalDetails(id: string) {
         });
 
         return { success: true, data: { approval, tasks } };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { success: false, error: message };
     }
-}
+});
 
-export async function getApprovalFlows() {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: [] };
-
+const getApprovalFlowsInternal = createSafeAction(emptySchema, async (_params, { session }) => {
     try {
         const flows = await db.query.approvalFlows.findMany({
             where: eq(approvalFlows.tenantId, session.user.tenantId),
             orderBy: [desc(approvalFlows.updatedAt)]
         });
         return { success: true, data: flows };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { success: false, error: message };
     }
+});
+
+// 导出函数
+export async function getPendingApprovals() {
+    return getPendingApprovalsInternal({});
+}
+
+export async function getApprovalHistory() {
+    return getApprovalHistoryInternal({});
+}
+
+export async function getApprovalDetails(id: string) {
+    return getApprovalDetailsInternal({ id });
+}
+
+export async function getApprovalFlows() {
+    return getApprovalFlowsInternal({});
 }

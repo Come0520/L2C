@@ -2,52 +2,86 @@
 
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
-import { createSafeAction } from '@/shared/lib/server-action';
-import { z } from 'zod';
+import { eq } from 'drizzle-orm'
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import type { AttributionModel } from './schema';
 
-export const attributionSettingsSchema = z.object({
-    attributionModel: z.enum(['FIRST_TOUCH', 'LAST_TOUCH']).default('LAST_TOUCH'),
-});
 
-export type AttributionSettings = z.infer<typeof attributionSettingsSchema>;
+/**
+ * 渠道归因设置相关 Server Actions
+ */
 
+/** 归因设置类型（本地使用） */
+interface AttributionSettings {
+    attributionModel: AttributionModel;
+}
+
+/**
+ * 获取归因设置
+ */
 export async function getAttributionSettings(): Promise<AttributionSettings> {
     const session = await auth();
-    if (!session?.user?.tenantId) return { attributionModel: 'LAST_TOUCH' };
+    if (!session?.user?.tenantId) {
+        return { attributionModel: 'LAST_TOUCH' };
+    }
 
     const tenant = await db.query.tenants.findFirst({
         where: eq(tenants.id, session.user.tenantId),
         columns: { settings: true }
     });
 
-    const settings = tenant?.settings as Record<string, any>;
+    const settings = tenant?.settings as Record<string, unknown>;
+    const model = settings?.channelAttributionModel as AttributionModel;
+
     return {
-        attributionModel: settings?.channelAttributionModel || 'LAST_TOUCH'
+        attributionModel: model || 'LAST_TOUCH'
     };
 }
 
-export const updateAttributionSettingsAction = createSafeAction(attributionSettingsSchema, async (data, { session }) => {
-    const tenantId = session.user.tenantId;
+/**
+ * 更新归因设置
+ */
+export async function updateAttributionSettingsAction(
+    data: AttributionSettings
+): Promise<{ success: boolean; error?: string; data?: { success: boolean } }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未登录' };
+        }
 
-    // Get current settings
-    const currentTenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, tenantId),
-        columns: { settings: true }
-    });
+        // 权限检查：需要设置管理权限
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
 
-    const currentSettings = (currentTenant?.settings as Record<string, any>) || {};
+        // 验证输入
+        if (!['FIRST_TOUCH', 'LAST_TOUCH'].includes(data.attributionModel)) {
+            return { success: false, error: '无效的归因模型' };
+        }
 
-    // Merge new setting
-    const newSettings = {
-        ...currentSettings,
-        channelAttributionModel: data.attributionModel
-    };
 
-    await db.update(tenants)
-        .set({ settings: newSettings, updatedAt: new Date() })
-        .where(eq(tenants.id, tenantId));
+        // 获取当前设置
+        const currentTenant = await db.query.tenants.findFirst({
+            where: eq(tenants.id, session.user.tenantId),
+            columns: { settings: true }
+        });
 
-    return { success: true };
-});
+        const currentSettings = (currentTenant?.settings as Record<string, unknown>) || {};
+
+        // 合并新设置
+        const newSettings = {
+            ...currentSettings,
+            channelAttributionModel: data.attributionModel
+        };
+
+        // 更新数据库
+        await db.update(tenants)
+            .set({ settings: newSettings, updatedAt: new Date() })
+            .where(eq(tenants.id, session.user.tenantId));
+
+        return { success: true, data: { success: true } };
+    } catch (error) {
+        console.error('更新归因设置失败:', error);
+        return { success: false, error: '更新失败' };
+    }
+}

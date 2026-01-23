@@ -7,6 +7,10 @@ const globalSearchSchema = z.object({
     query: z.string()
 });
 
-export const globalSearch = createSafeAction(globalSearchSchema, async ({ query }) => {
+const globalSearchActionInternal = createSafeAction(globalSearchSchema, async ({ query: _query }) => {
     return { success: true, data: [] };
 });
+
+export async function globalSearch(params: z.infer<typeof globalSearchSchema>) {
+    return globalSearchActionInternal(params);
+}

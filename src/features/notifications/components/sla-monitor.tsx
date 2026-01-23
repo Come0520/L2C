@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/shared/ui/card';
-import { runSLACheckAction } from '../actions';
+import { runSLACheck as runSLACheckAction } from '../actions';
 import { toast } from 'sonner';
 import { Loader2, BellRing, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
@@ -27,7 +27,7 @@ export function SLAMonitor() {
         if (isLoading) return;
         setIsLoading(true);
         try {
-            const res = await runSLACheckAction({});
+            const res = await runSLACheckAction();
             if (res?.data?.success) {
                 toast.success('SLA Check Completed');
                 setLastResult(res.data.data as unknown as SLACheckResult[]);

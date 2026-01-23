@@ -7,12 +7,30 @@ export const createSupplierSchema = z.object({
     paymentPeriod: z.enum(['CASH', 'MONTHLY']).default('CASH'),
     address: z.string().optional(),
     remark: z.string().optional(),
+
+    // [NEW] 供应商类型
+    supplierType: z.enum(['SUPPLIER', 'PROCESSOR', 'BOTH']).default('SUPPLIER'),
+
+    // [NEW] 加工厂专属字段
+    processingPrices: z.object({
+        items: z.array(z.object({
+            name: z.string().min(1, "工艺名称不能为空"),
+            unit: z.string().default("元/米"),
+            price: z.coerce.number().min(0, "价格不能为负数")
+        }))
+    }).optional(),
+    contractUrl: z.string().optional(),
+    contractExpiryDate: z.coerce.date().optional(),
+    businessLicenseUrl: z.string().optional(),
+    bankAccount: z.string().optional(),
+    bankName: z.string().optional(),
 });
 
 export const getSuppliersSchema = z.object({
     page: z.number().min(1).default(1),
     pageSize: z.number().min(1).max(100).default(20),
     query: z.string().optional(),
+    type: z.enum(['SUPPLIER', 'PROCESSOR', 'BOTH']).optional(), // [NEW] 类型筛选
 });
 
 export const getSupplierByIdSchema = z.object({

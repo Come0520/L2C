@@ -7,7 +7,8 @@ import { z } from 'zod';
 import { customerSchema, updateCustomerSchema, mergeCustomersSchema } from '../schemas';
 import { revalidatePath } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Zod schemas for Addresses (define here or import if centralized)
 const addressSchema = z.object({
@@ -38,6 +39,10 @@ const updateAddressSchema = addressSchema.partial().extend({
  */
 export async function createCustomer(input: z.infer<typeof customerSchema>, userId: string, tenantId: string) {
     const data = customerSchema.parse(input);
+
+    // 权限检查：需要客户创建权限
+    const session = await auth();
+    if (session) await checkPermission(session, PERMISSIONS.CUSTOMER.CREATE);
 
     try {
         // 将渠道来源和带单人存储到 preferences JSON 字段
@@ -73,6 +78,9 @@ export async function updateCustomer(input: z.infer<typeof updateCustomerSchema>
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // 权限检查：需要客户编辑权限
+    await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+
     const { id, data } = updateCustomerSchema.parse(input);
 
     // 安全检查：验证客户属于当前租户
@@ -97,8 +105,29 @@ export async function updateCustomer(input: z.infer<typeof updateCustomerSchema>
     return updated;
 }
 
-export async function addCustomerAddress(input: z.infer<typeof createAddressSchema>, tenantId: string) {
+/**
+ * 添加客户地址
+ * 
+ * 安全检查：需要 CUSTOMER.EDIT 权限
+ */
+export async function addCustomerAddress(input: z.infer<typeof createAddressSchema>) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // 权限检查
+    await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+
+    const tenantId = session.user.tenantId;
     const data = createAddressSchema.parse(input);
+
+    // 验证客户属于当前租户
+    const customer = await db.query.customers.findFirst({
+        where: and(
+            eq(customers.id, data.customerId),
+            eq(customers.tenantId, tenantId)
+        )
+    });
+    if (!customer) throw new Error('客户不存在或无权操作');
 
     return await db.transaction(async (tx) => {
         if (data.isDefault) {
@@ -167,6 +196,9 @@ export async function deleteCustomerAddress(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // 权限检查：需要客户编辑权限
+    await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+
     // 安全检查：验证地址属于当前租户
     const existingAddr = await db.query.customerAddresses.findFirst({
         where: and(
@@ -183,15 +215,43 @@ export async function deleteCustomerAddress(id: string) {
         ));
 }
 
+/**
+ * 设置默认地址
+ * 
+ * 安全检查：需要 CUSTOMER.EDIT 权限
+ */
 export async function setDefaultAddress(id: string, customerId: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // 权限检查
+    await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+
+    const tenantId = session.user.tenantId;
+
+    // 验证地址和客户属于当前租户
+    const address = await db.query.customerAddresses.findFirst({
+        where: and(
+            eq(customerAddresses.id, id),
+            eq(customerAddresses.tenantId, tenantId)
+        )
+    });
+    if (!address) throw new Error('地址不存在或无权操作');
+
     await db.transaction(async (tx) => {
         await tx.update(customerAddresses)
             .set({ isDefault: false })
-            .where(eq(customerAddresses.customerId, customerId));
+            .where(and(
+                eq(customerAddresses.customerId, customerId),
+                eq(customerAddresses.tenantId, tenantId)
+            ));
 
         await tx.update(customerAddresses)
             .set({ isDefault: true })
-            .where(eq(customerAddresses.id, id));
+            .where(and(
+                eq(customerAddresses.id, id),
+                eq(customerAddresses.tenantId, tenantId)
+            ));
     });
     revalidatePath(`/customers/${customerId}`);
 }

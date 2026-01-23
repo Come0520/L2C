@@ -15,10 +15,7 @@ import {
     updateSupplierSchema
 } from '../schemas';
 
-/**
- * 供应商管理 - 创建
- */
-export const createSupplier = createSafeAction(createSupplierSchema, async (data, { session }) => {
+const createSupplierActionInternal = createSafeAction(createSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
 
     const existing = await db.query.suppliers.findFirst({
@@ -38,6 +35,15 @@ export const createSupplier = createSafeAction(createSupplierSchema, async (data
         tenantId: session.user.tenantId,
         supplierNo,
         name: data.name,
+        // [NEW] 供应商类型和加工厂字段
+        supplierType: data.supplierType,
+        processingPrices: data.processingPrices,
+        contractUrl: data.contractUrl,
+        contractExpiryDate: data.contractExpiryDate,
+        businessLicenseUrl: data.businessLicenseUrl,
+        bankAccount: data.bankAccount,
+        bankName: data.bankName,
+
         contactPerson: data.contactPerson,
         phone: data.phone,
         paymentPeriod: data.paymentPeriod,
@@ -50,14 +56,24 @@ export const createSupplier = createSafeAction(createSupplierSchema, async (data
     return { id: supplier.id };
 });
 
-/**
- * 获取供应商列表
- */
-export const getSuppliers = createSafeAction(getSuppliersSchema, async (params, { session }) => {
+export async function createSupplier(params: z.infer<typeof createSupplierSchema>) {
+    return createSupplierActionInternal(params);
+}
+
+const getSuppliersActionInternal = createSafeAction(getSuppliersSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
     const offset = (params.page - 1) * params.pageSize;
     const conditions = [eq(suppliers.tenantId, session.user.tenantId)];
+
+    // [NEW] 类型筛选
+    if (params.type && params.type !== 'BOTH') {
+        if (params.type === 'PROCESSOR') {
+            conditions.push(sql`${suppliers.supplierType} IN ('PROCESSOR', 'BOTH')`);
+        } else if (params.type === 'SUPPLIER') {
+            conditions.push(sql`${suppliers.supplierType} IN ('SUPPLIER', 'BOTH')`);
+        }
+    }
 
     if (params.query) {
         conditions.push(sql`(${suppliers.name} ILIKE ${`%${params.query}%`} OR ${suppliers.supplierNo} ILIKE ${`%${params.query}%`})`);
@@ -88,10 +104,11 @@ export const getSuppliers = createSafeAction(getSuppliersSchema, async (params, 
     };
 });
 
-/**
- * 获取供应商详情
- */
-export const getSupplierById = createSafeAction(getSupplierByIdSchema, async ({ id }, { session }) => {
+export async function getSuppliers(params: z.infer<typeof getSuppliersSchema>) {
+    return getSuppliersActionInternal(params);
+}
+
+const getSupplierByIdActionInternal = createSafeAction(getSupplierByIdSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
 
     const supplier = await db.query.suppliers.findFirst({
@@ -106,10 +123,11 @@ export const getSupplierById = createSafeAction(getSupplierByIdSchema, async ({ 
     return supplier;
 });
 
-/**
- * 供应商管理 - 更新
- */
-export const updateSupplier = createSafeAction(updateSupplierSchema, async (data, { session }) => {
+export async function getSupplierById(params: z.infer<typeof getSupplierByIdSchema>) {
+    return getSupplierByIdActionInternal(params);
+}
+
+const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
 
     const { id, ...updates } = data;
@@ -131,6 +149,10 @@ export const updateSupplier = createSafeAction(updateSupplierSchema, async (data
     return { id: supplier.id };
 });
 
+export async function updateSupplier(params: z.infer<typeof updateSupplierSchema>) {
+    return updateSupplierActionInternal(params);
+}
+
 // ============================================================
 // [Supply-02] 供应商评价体系
 // ============================================================
@@ -145,11 +167,7 @@ const getSupplierRatingSchema = z.object({
     endDate: z.string().optional(),
 });
 
-/**
- * 获取供应商评价指标
- * 包含：交期准时率、质量合格率、综合评分
- */
-export const getSupplierRating = createSafeAction(getSupplierRatingSchema, async ({ supplierId, startDate, endDate }, { session }) => {
+const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema, async ({ supplierId, startDate, endDate }, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
     const tenantId = session.user.tenantId;
 
@@ -172,7 +190,7 @@ export const getSupplierRating = createSafeAction(getSupplierRatingSchema, async
         dateConditions.push(lte(purchaseOrders.createdAt, new Date(endDate)));
     }
 
-    // 1. 交期准时率：已交付的 PO 中，实际交付日期 <= 预期交付日期的比例
+    // 1. 交期准时率
     const allDeliveredPOs = await db.query.purchaseOrders.findMany({
         where: and(
             eq(purchaseOrders.supplierId, supplierId),
@@ -188,19 +206,17 @@ export const getSupplierRating = createSafeAction(getSupplierRatingSchema, async
     });
 
     const totalDelivered = allDeliveredPOs.length;
-    // 简化逻辑：假设在 7 天内交付为准时
     const defaultLeadDays = 7;
     const onTimeCount = allDeliveredPOs.filter(po => {
         if (!po.shippedAt || !po.createdAt) return false;
         const shipped = new Date(po.shippedAt);
-        // 没有预期交付日期字段，使用创建日期 + 默认天数
         const expected = new Date(new Date(po.createdAt).getTime() + defaultLeadDays * 24 * 60 * 60 * 1000);
         return shipped <= expected;
     }).length;
 
     const onTimeRate = totalDelivered > 0 ? Math.round((onTimeCount / totalDelivered) * 100) : null;
 
-    // 2. 质量合格率：通过定责单判断，工厂责任的定责单越少越好
+    // 2. 质量合格率
     const qualityIssues = await db
         .select({ count: count(liabilityNotices.id) })
         .from(liabilityNotices)
@@ -209,29 +225,22 @@ export const getSupplierRating = createSafeAction(getSupplierRatingSchema, async
             eq(afterSalesTickets.tenantId, tenantId),
             eq(liabilityNotices.liablePartyType, 'FACTORY'),
             eq(liabilityNotices.status, 'CONFIRMED'),
-            // 需要关联到供应商，但定责单可能没有直接的供应商 ID
-            // 这里简化为统计所有工厂责任的定责单
         ));
 
     const issueCount = Number(qualityIssues[0]?.count || 0);
-
-    // 质量合格率 = 1 - (质量问题数 / 总交付数)，最低为 0%
     const qualityRate = totalDelivered > 0
         ? Math.max(0, Math.round((1 - issueCount / totalDelivered) * 100))
         : null;
 
-    // 3. 综合评分（满分 100）
-    // 交期权重 40%，质量权重 60%
+    // 3. 综合评分
     const overallScore = (onTimeRate !== null && qualityRate !== null)
         ? Math.round(onTimeRate * 0.4 + qualityRate * 0.6)
         : null;
 
-    // 星级评定（1-5星）
     const starRating = overallScore !== null
         ? (overallScore >= 90 ? 5 : overallScore >= 75 ? 4 : overallScore >= 60 ? 3 : overallScore >= 40 ? 2 : 1)
         : null;
 
-    // 评价标签
     const ratingLabel = starRating !== null
         ? { 5: '优秀', 4: '良好', 3: '合格', 2: '待改进', 1: '不合格' }[starRating]
         : '数据不足';
@@ -239,39 +248,27 @@ export const getSupplierRating = createSafeAction(getSupplierRatingSchema, async
     return {
         supplierId,
         supplierName: supplier.name,
-        metrics: {
-            onTimeRate,
-            qualityRate,
-            overallScore,
-            starRating,
-            ratingLabel,
-        },
-        details: {
-            totalDeliveredPOs: totalDelivered,
-            onTimePOs: onTimeCount,
-            qualityIssueCount: issueCount,
-        },
-        period: {
-            startDate: startDate || '全部',
-            endDate: endDate || '至今',
-        }
+        metrics: { onTimeRate, qualityRate, overallScore, starRating, ratingLabel },
+        details: { totalDeliveredPOs: totalDelivered, onTimePOs: onTimeCount, qualityIssueCount: issueCount },
+        period: { startDate: startDate || '全部', endDate: endDate || '至今' }
     };
 });
 
-/**
- * 获取所有供应商评价排名
- */
-export const getSupplierRankings = createSafeAction(z.object({}), async (_, { session }) => {
+export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>) {
+    return getSupplierRatingActionInternal(params);
+}
+
+const getSupplierRankingsSchema = z.object({});
+
+const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSchema, async (_params, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
     const tenantId = session.user.tenantId;
 
-    // 获取所有供应商
     const allSuppliers = await db.query.suppliers.findMany({
         where: eq(suppliers.tenantId, tenantId),
         columns: { id: true, name: true, supplierNo: true }
     });
 
-    // 统计每个供应商的交付情况
     const poStats = await db
         .select({
             supplierId: purchaseOrders.supplierId,
@@ -286,7 +283,6 @@ export const getSupplierRankings = createSafeAction(z.object({}), async (_, { se
 
     const statsMap = new Map(poStats.map(s => [s.supplierId, Number(s.totalCount)]));
 
-    // 构建排名
     const rankings = allSuppliers.map(s => ({
         id: s.id,
         name: s.name,
@@ -294,8 +290,9 @@ export const getSupplierRankings = createSafeAction(z.object({}), async (_, { se
         deliveredPOs: statsMap.get(s.id) || 0,
     })).sort((a, b) => b.deliveredPOs - a.deliveredPOs);
 
-    return {
-        rankings,
-        total: rankings.length,
-    };
+    return { rankings, total: rankings.length };
 });
+
+export async function getSupplierRankings() {
+    return getSupplierRankingsActionInternal({});
+}

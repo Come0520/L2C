@@ -1,7 +1,10 @@
+'use server';
+
 import { db } from '@/shared/api/db';
 import { products, productSuppliers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
+import { auth } from '@/shared/lib/auth';
 
 interface CostBreakdown {
     purchaseCost: number;
@@ -20,14 +23,25 @@ interface PriceAnalysis {
 
 /**
  * 计算产品综合成本
+ * 需要认证后才能调用
  */
 export const calculateProductCost = async (productId: string, supplierId?: string): Promise<CostBreakdown> => {
+    // 认证检查
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error('未授权');
+    }
+
+    // 查询产品时添加租户隔离
     const product = await db.query.products.findFirst({
-        where: eq(products.id, productId),
+        where: and(
+            eq(products.id, productId),
+            eq(products.tenantId, session.user.tenantId)
+        ),
     });
 
     if (!product) {
-        throw new Error('产品不存在');
+        throw new Error('产品不存在或无权访问');
     }
 
     let purchasePrice = new Decimal(product.purchasePrice || 0);

@@ -15,8 +15,8 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
 
         const variants = {
             primary: "bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-[length:200%_auto] text-white border-none shadow-[0_0_20px_rgba(124,58,237,0.5)]",
-            secondary: "bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20",
-            ghost: "bg-transparent text-gray-300 hover:text-white hover:bg-white/5"
+            secondary: "bg-slate-100 dark:bg-white/10 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20",
+            ghost: "bg-transparent text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-transparent"
         };
 
         const sizes = {

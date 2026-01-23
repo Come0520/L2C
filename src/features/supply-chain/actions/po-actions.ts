@@ -7,33 +7,84 @@ import {
     suppliers
 } from "@/shared/api/schema";
 import { eq, and } from "drizzle-orm";
-import { auth } from "@/shared/lib/auth";
+import { auth, checkPermission } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
 import { createApFromPoInternal } from "@/features/finance/actions/ap";
 import { POStatusAggregator } from "@/services/po-status-aggregator.service";
+import { PERMISSIONS } from "@/shared/config/permissions";
+import { z } from "zod";
 
-// Create PO
-export async function createPO(data: {
-    supplierId: string;
-    orderId?: string;
-    items: { productId: string; quantity: number; unitCost: number }[]
-}) {
+// ============ Zod Schemas ============
+const createPOSchema = z.object({
+    supplierId: z.string().uuid('无效的供应商 ID'),
+    orderId: z.string().uuid().optional(),
+    items: z.array(z.object({
+        productId: z.string().uuid('无效的产品 ID'),
+        quantity: z.number().int().positive('数量必须为正整数'),
+        unitCost: z.number().nonnegative('单价不能为负'),
+    })).min(1, '至少需要一个采购项'),
+});
+
+const updatePoStatusSchema = z.object({
+    poId: z.string().uuid('无效的采购单 ID'),
+    status: z.enum(['DRAFT', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED']),
+});
+
+const batchUpdatePoStatusSchema = z.object({
+    poIds: z.array(z.string().uuid()).min(1, '至少选择一个采购单'),
+    status: z.enum(['DRAFT', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED']),
+});
+
+const batchDeleteDraftPOsSchema = z.object({
+    poIds: z.array(z.string().uuid()).min(1, '至少选择一个采购单'),
+});
+
+const createMergedPOSchema = z.object({
+    supplierId: z.string().uuid('无效的供应商 ID'),
+    items: z.array(z.object({
+        productId: z.string().uuid(),
+        productName: z.string().min(1),
+        quantity: z.number().int().positive(),
+        unitCost: z.number().nonnegative(),
+    })).min(1, '至少需要一个采购项'),
+    sourceOrderIds: z.array(z.string().uuid()),
+});
+
+// Create PO - 创建采购单
+export async function createPO(input: z.infer<typeof createPOSchema>) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
+
+    // 输入验证
+    const parseResult = createPOSchema.safeParse(input);
+    if (!parseResult.success) {
+        return { success: false, error: parseResult.error.issues[0]?.message || '输入验证失败' };
+    }
+    const data = parseResult.data;
 
     return db.transaction(async (tx) => {
-        // 1. Validate Supplier
+        // 1. 验证供应商 (包含租户隔离)
         const supplier = await tx.query.suppliers.findFirst({
-            where: eq(suppliers.id, data.supplierId)
+            where: and(
+                eq(suppliers.id, data.supplierId),
+                eq(suppliers.tenantId, session.user.tenantId)
+            )
         });
-        if (!supplier) return { success: false, error: 'Supplier not found' };
+        if (!supplier) return { success: false, error: '供应商不存在或无权访问' };
 
         // 2. Fetch Products for names
         const productIds = data.items.map(i => i.productId);
         const productList = await tx.query.products.findMany({
             where: (products, { inArray }) => inArray(products.id, productIds)
         });
-        const productMap = new Map(productList.map((p: any) => [p.id, p]));
+        const productMap = new Map<string, { id: string; name: string }>(productList.map((p) => [p.id, { id: p.id, name: p.name }]));
 
         // 3. Create Header
         const poNo = `PO-${Date.now()}`;
@@ -84,7 +135,14 @@ export async function addPOLogistics(data: {
     remark?: string;
 }) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
 
     return db.transaction(async (tx) => {
         const po = await tx.query.purchaseOrders.findFirst({
@@ -94,7 +152,7 @@ export async function addPOLogistics(data: {
             )
         });
 
-        if (!po) return { success: false, error: 'PO not found' };
+        if (!po) return { success: false, error: '采购单不存在' };
 
         const [updatedPO] = await tx.update(purchaseOrders)
             .set({
@@ -114,10 +172,17 @@ export async function addPOLogistics(data: {
     });
 }
 
-// Get PO by ID
+// Get PO by ID - 获取采购单详情
 export async function getPoById(data: { id: string }) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
+    } catch {
+        return { success: false, error: '无供应链查看权限' };
+    }
 
     const po = await db.query.purchaseOrders.findFirst({
         where: and(
@@ -125,27 +190,35 @@ export async function getPoById(data: { id: string }) {
             eq(purchaseOrders.tenantId, session.user.tenantId)
         ),
         with: {
-            // items: true, // DB schema usually returns items if relation is defined. 
-            // Wait, purchaseOrders relation to items is likely "items".
-            // Let's verify schema if needed, but "items: true" is safe guess if relation exists.
             items: true,
             order: true,
             creator: true,
-            // supplier: true?
         }
     });
 
-    if (!po) return { success: false, error: 'PO not found' };
+    if (!po) return { success: false, error: '采购单不存在' };
 
-    // Add missing names if needed (e.g. supplierName is on PO, so no need to join supplier if not needed)
-    // But page asks for po.supplierName which is on PO table.
     return { success: true, data: po };
 }
 
-// Update PO Status
-export async function updatePoStatus(data: { poId: string; status: 'DRAFT' | 'IN_PRODUCTION' | 'READY' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' }) {
+// Update PO Status - 更新采购单状态
+export async function updatePoStatus(input: z.infer<typeof updatePoStatusSchema>) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
+
+    // 输入验证
+    const parseResult = updatePoStatusSchema.safeParse(input);
+    if (!parseResult.success) {
+        return { success: false, error: parseResult.error.issues[0]?.message || '输入验证失败' };
+    }
+    const data = parseResult.data;
 
     return db.transaction(async (tx) => {
         const po = await tx.query.purchaseOrders.findFirst({
@@ -202,7 +275,7 @@ type PendingItem = {
  */
 export async function getPendingPurchasePool() {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
     const tenantId = session.user.tenantId;
 
@@ -263,22 +336,34 @@ export async function getPendingPurchasePool() {
 /**
  * 跨订单合并采购 - 将多个订单的同一产品合并到一个采购单
  */
-export async function createMergedPurchaseOrder(data: {
-    supplierId: string;
-    items: { productId: string; productName: string; quantity: number; unitCost: number }[];
-    sourceOrderIds: string[];
-}) {
+export async function createMergedPurchaseOrder(input: z.infer<typeof createMergedPOSchema>) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
+
+    // 输入验证
+    const parseResult = createMergedPOSchema.safeParse(input);
+    if (!parseResult.success) {
+        return { success: false, error: parseResult.error.issues[0]?.message || '输入验证失败' };
+    }
+    const data = parseResult.data;
     const tenantId = session.user.tenantId;
 
     return db.transaction(async (tx) => {
-        // 验证供应商
+        // 验证供应商 (包含租户隔离)
         const supplier = await tx.query.suppliers.findFirst({
-            where: eq(suppliers.id, data.supplierId)
+            where: and(
+                eq(suppliers.id, data.supplierId),
+                eq(suppliers.tenantId, tenantId)
+            )
         });
-        if (!supplier) return { success: false, error: '供应商不存在' };
+        if (!supplier) return { success: false, error: '供应商不存在或无权访问' };
 
         // 创建合并采购单（不关联单一订单）
         const poNo = `PO-MERGED-${Date.now()}`;
@@ -322,13 +407,23 @@ export async function createMergedPurchaseOrder(data: {
 /**
  * 批量更新采购单状态
  */
-export async function batchUpdatePoStatus(data: {
-    poIds: string[];
-    status: 'DRAFT' | 'IN_PRODUCTION' | 'READY' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
-}) {
+export async function batchUpdatePoStatus(input: z.infer<typeof batchUpdatePoStatusSchema>) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
+
+    // 输入验证
+    const parseResult = batchUpdatePoStatusSchema.safeParse(input);
+    if (!parseResult.success) {
+        return { success: false, error: parseResult.error.issues[0]?.message || '输入验证失败' };
+    }
+    const data = parseResult.data;
     const tenantId = session.user.tenantId;
 
     return db.transaction(async (tx) => {
@@ -377,10 +472,23 @@ export async function batchUpdatePoStatus(data: {
 /**
  * 批量删除草稿状态的采购单
  */
-export async function batchDeleteDraftPOs(data: { poIds: string[] }) {
+export async function batchDeleteDraftPOs(input: z.infer<typeof batchDeleteDraftPOsSchema>) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    } catch {
+        return { success: false, error: '无采购单管理权限' };
+    }
+
+    // 输入验证
+    const parseResult = batchDeleteDraftPOsSchema.safeParse(input);
+    if (!parseResult.success) {
+        return { success: false, error: parseResult.error.issues[0]?.message || '输入验证失败' };
+    }
+    const data = parseResult.data;
     const tenantId = session.user.tenantId;
 
     return db.transaction(async (tx) => {

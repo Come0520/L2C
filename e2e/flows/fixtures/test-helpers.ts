@@ -41,12 +41,42 @@ export async function createLead(
         await intentionSelect.selectOption({ label: intention });
     }
 
-    // 点击「创建线索」按钮
-    await page.click('button:has-text("创建线索")');
+    // 点击提交按钮 (尝试匹配多种常见文本)
+    const submitBtn = page.locator('button:has-text("创建线索"), button:has-text("确定"), button:has-text("提交")').last();
+    if (await submitBtn.isVisible()) {
+        await submitBtn.click();
+    } else {
+        // 尝试查找对话框底部的确认按钮
+        const dialogSubmit = page.locator('[role="dialog"] button[type="submit"], dialog button[type="submit"]');
+        if (await dialogSubmit.isVisible()) {
+            await dialogSubmit.click();
+        } else {
+            // 最后尝试通过 class 查找
+            await page.click('.confirm-btn, .submit-btn');
+        }
+    }
+
+    // 检查是否有错误提示
+    const errorToast = page.locator('.toast-error, [data-type="error"]');
+    if (await errorToast.isVisible({ timeout: 2000 })) {
+        const errorText = await errorToast.textContent();
+        throw new Error(`创建线索失败: ${errorText}`);
+    }
 
     // 等待对话框关闭
     const dialog = page.locator('[role="dialog"], dialog');
-    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    try {
+        await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    } catch (e) {
+        // 如果对话框还显示，可能是因为有表单验证错误
+        console.error('⚠️ 创建线索对话框未关闭，检查是否有验证错误...');
+        const fieldErrors = page.locator('.text-red-500, .error-message');
+        if (await fieldErrors.count() > 0) {
+            const errorTexts = await fieldErrors.allTextContents();
+            throw new Error(`表单验证失败: ${errorTexts.join(', ')}`);
+        }
+        throw e;
+    }
 
     // 等待列表刷新
     await page.waitForLoadState('networkidle');

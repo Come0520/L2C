@@ -1,8 +1,8 @@
-'use server';
+// 公海回收定时任务 - 内部业务逻辑（由 Cron 调用，非 Server Action）
 
 import { db } from '@/shared/api/db';
 import { leads, leadStatusHistory, tenants } from '@/shared/api/schema';
-import { eq, and, lt, isNull, notInArray, sql } from 'drizzle-orm';
+import { eq, and, lt, isNull } from 'drizzle-orm';
 
 /**
  * 租户 SLA 配置

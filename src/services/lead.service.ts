@@ -4,6 +4,7 @@ import { eq, and, sql, notInArray } from "drizzle-orm";
 import { CustomerService } from "./customer.service";
 import { randomBytes } from 'crypto';
 import { format } from 'date-fns';
+import { getSetting } from "@/features/settings/actions/system-settings-actions";
 
 export class LeadService {
 
@@ -29,40 +30,42 @@ export class LeadService {
         lead: typeof leads.$inferSelect;
     }> {
 
-        // 1. Check Active Lead Uniqueness
-        // Only block if the lead exists and is active (not WON or VOID)
-        const activeLead = await db.query.leads.findFirst({
-            where: and(
-                eq(leads.customerPhone, data.customerPhone),
-                eq(leads.tenantId, tenantId),
-                notInArray(leads.status, ['WON', 'VOID'])
-            )
-        });
-
-        if (activeLead) {
-            return { isDuplicate: true, duplicateReason: 'PHONE', lead: activeLead };
-        }
-
-        // 2. 地址/楼盘唯一性检查（第二识别键）
-        // 仅对活跃线索做拦截，已关闭的线索允许重复地址
-        if (data.community && data.address) {
-            const existingAddress = await db.query.leads.findFirst({
+        // 读取消重配置（使用统一的键名 LEAD_DUPLICATE_STRATEGY）
+        const deduplicationSetting = await getSetting('LEAD_DUPLICATE_STRATEGY') as string;
+        // 消重策略：NONE=不校验, AUTO_LINK=自动关联(复用为查重), REJECT=拒绝
+        if (deduplicationSetting !== 'NONE') {
+            const activeLead = await db.query.leads.findFirst({
                 where: and(
-                    eq(leads.community, data.community),
-                    eq(leads.address, data.address),
+                    eq(leads.customerPhone, data.customerPhone),
                     eq(leads.tenantId, tenantId),
-                    notInArray(leads.status, ['WON', 'VOID']) // 修复：仅检查活跃线索
+                    notInArray(leads.status, ['WON', 'VOID'])
                 )
             });
-            if (existingAddress) {
-                return { isDuplicate: true, duplicateReason: 'ADDRESS', lead: existingAddress };
+
+            if (activeLead) {
+                return { isDuplicate: true, duplicateReason: 'PHONE', lead: activeLead };
+            }
+            // 地址查重：检查是否启用了第二键查重
+            const enableSecondKeyCheck = await getSetting('ENABLE_SECOND_KEY_DUPLICATE_CHECK') as boolean;
+            if (enableSecondKeyCheck && data.community && data.address) {
+                const existingAddress = await db.query.leads.findFirst({
+                    where: and(
+                        eq(leads.community, data.community),
+                        eq(leads.address, data.address),
+                        eq(leads.tenantId, tenantId),
+                        notInArray(leads.status, ['WON', 'VOID'])
+                    )
+                });
+                if (existingAddress) {
+                    return { isDuplicate: true, duplicateReason: 'ADDRESS', lead: existingAddress };
+                }
             }
         }
 
         // 3. Auto-link to existing customer
         let customerId = data.customerId;
         if (!customerId && data.customerPhone) {
-            const existingCustomer = await CustomerService.findByPhone(data.customerPhone);
+            const existingCustomer = await CustomerService.findByPhone(data.customerPhone, tenantId);
             if (existingCustomer) {
                 customerId = existingCustomer.id;
             }
@@ -76,13 +79,18 @@ export class LeadService {
         // 如果没有指定销售，且未成交，尝试自动分配
         if (!assignedSalesId && initialStatus === 'PENDING_ASSIGNMENT') {
             try {
-                // 动态导入以避免循环依赖 (如果 logic 引用了 service)
-                const { distributeToNextSales } = await import('@/features/leads/logic/distribution-engine');
-                const distribution = await distributeToNextSales(tenantId);
+                // 读取自动分配配置（使用统一的键名 LEAD_AUTO_ASSIGN_RULE）
+                const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE') as string;
 
-                if (distribution.salesId) {
-                    assignedSalesId = distribution.salesId;
-                    initialStatus = 'PENDING_FOLLOWUP';
+                if (assignRule !== 'MANUAL') {
+                    // 动态导入以避免循环依赖
+                    const { distributeToNextSales } = await import('@/features/leads/logic/distribution-engine');
+                    const distribution = await distributeToNextSales(tenantId);
+
+                    if (distribution.salesId) {
+                        assignedSalesId = distribution.salesId;
+                        initialStatus = 'PENDING_FOLLOWUP';
+                    }
                 }
             } catch (error) {
                 console.error('Auto-distribution failed:', error);

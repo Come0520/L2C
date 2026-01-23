@@ -2,102 +2,45 @@
 
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { format } from 'date-fns';
-import { randomBytes } from 'crypto';
+import { generateMeasureNo } from '../utils';
 import {
-    createMeasureTaskSchema,
     dispatchMeasureTaskSchema,
     checkInSchema
 } from '../schemas';
-import { submitApproval } from '@/features/approval/actions/submission';
 
-// 生成测量单号: MS + YYYYMMDD + 6位随机十六进制
-async function generateMeasureNo() {
-    const prefix = `MS${format(new Date(), 'yyyyMMdd')}`;
-    const random = randomBytes(3).toString('hex').toUpperCase();
-    return `${prefix}${random}`;
-}
-
-/**
- * 创建测量任务
- * 
- * 费用准入校验流程：
- * 1. 检查测量费用准入（是否申请免费）
- * 2. 如果申请免费且非销售自测，需要审批
- * 3. 否则允许创建，测量费现场收取
- */
-export async function createMeasureTask(input: z.infer<typeof createMeasureTaskSchema>, userId: string, tenantId: string) {
-    const data = createMeasureTaskSchema.parse(input);
-
-    // 费用准入校验
-    const { checkMeasureFeeAdmission } = await import('../logic/fee-admission');
-    const admission = await checkMeasureFeeAdmission(data.leadId, tenantId, data.isFeeExempt);
-
-    const measureNo = await generateMeasureNo();
-
-    // 判断是否需要审批: 免费测量且非销售自测需要店长审批
-    const needsApproval = data.isFeeExempt && data.type !== 'SALES_SELF';
-    const status = needsApproval ? 'PENDING_APPROVAL' : 'PENDING';
-
-    return await db.transaction(async (tx) => {
-        const [newTask] = await tx.insert(measureTasks).values({
-            tenantId,
-            measureNo,
-            leadId: data.leadId,
-            customerId: data.customerId,
-            scheduledAt: new Date(data.scheduledAt),
-            remark: data.remark ? `${data.remark}\n\n[费用准入] ${admission.message}` : `[费用准入] ${admission.message}`,
-            isFeeExempt: data.isFeeExempt,
-            type: data.type,
-            status,
-        }).returning();
-
-        if (needsApproval) {
-            // 提交审批流
-            const approvalResult = await submitApproval({
-                entityType: 'MEASURE_TASK',
-                entityId: newTask.id,
-                flowCode: 'FREE_MEASURE_APPROVAL',
-                comment: `申请免费测量: ${measureNo}`,
-            }, tx);
-
-            if (!approvalResult.success) {
-                // Determine error message safely
-                const errorMessage = 'error' in approvalResult ? approvalResult.error : 'Approval submission failed';
-                throw new Error(`Failed to submit approval: ${errorMessage}`);
-            }
-
-            // 更新任务关联的 feeApprovalId
-            // approvalResult is union, if success is true, approvalId exists
-            if ('approvalId' in approvalResult) {
-                await tx.update(measureTasks)
-                    .set({ feeApprovalId: approvalResult.approvalId })
-                    .where(eq(measureTasks.id, newTask.id));
-            }
-        }
-
-        return newTask;
-    }).then((newTask) => {
-        revalidatePath('/service/measurement');
-        return {
-            success: true,
-            data: newTask,
-            admission, // 返回费用准入信息
-        };
-    }).catch((error) => {
-        console.error('Error creating measure task:', error);
-        return { success: false, error: error.message };
-    });
-}
+// generateMeasureNo 移除，createMeasureTask 移除
 
 /**
  * 指派测量任务
  */
 export async function dispatchMeasureTask(input: z.infer<typeof dispatchMeasureTaskSchema>) {
+    // 🔒 安全校验：获取当前用户身份
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
     const { id, assignedWorkerId, scheduledAt } = dispatchMeasureTaskSchema.parse(input);
+
+    // 🔒 安全校验：验证任务归属当前租户
+    const task = await db.query.measureTasks.findFirst({
+        where: and(
+            eq(measureTasks.id, id),
+            eq(measureTasks.tenantId, tenantId)
+        ),
+        columns: { id: true, status: true }
+    });
+
+    if (!task) {
+        return { success: false, error: '任务不存在或无权访问' };
+    }
+
+    // TODO: 添加角色校验，确保只有派单员/管理员可以指派
 
     const [updated] = await db.update(measureTasks)
         .set({
@@ -117,6 +60,33 @@ export async function dispatchMeasureTask(input: z.infer<typeof dispatchMeasureT
  * 测量师接单
  */
 export async function acceptMeasureTask(id: string) {
+    // 🔒 安全校验：获取当前用户身份
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
+
+    // 🔒 安全校验：验证任务归属当前租户
+    const task = await db.query.measureTasks.findFirst({
+        where: and(
+            eq(measureTasks.id, id),
+            eq(measureTasks.tenantId, tenantId)
+        ),
+        columns: { id: true, assignedWorkerId: true, status: true }
+    });
+
+    if (!task) {
+        return { success: false, error: '任务不存在或无权访问' };
+    }
+
+    // 🔒 安全校验：只有被指派的测量师才能接单
+    if (task.assignedWorkerId !== userId) {
+        return { success: false, error: '只有被指派的测量师才能接单' };
+    }
+
     const [updated] = await db.update(measureTasks)
         .set({
             status: 'PENDING_VISIT',
@@ -232,13 +202,16 @@ export async function splitMeasureTask(input: z.infer<typeof splitMeasureTaskSch
         const userId = session.user.id;
 
         return await db.transaction(async (tx) => {
-            // 1. 获取原任务信息
+            // 1. 获取原任务信息（🔒 强制租户隔离）
             const originalTask = await tx.query.measureTasks.findFirst({
-                where: eq(measureTasks.id, data.originalTaskId),
+                where: and(
+                    eq(measureTasks.id, data.originalTaskId),
+                    eq(measureTasks.tenantId, tenantId) // 🔒 租户校验
+                ),
             });
 
             if (!originalTask) {
-                throw new Error('原任务不存在');
+                throw new Error('任务不存在或无权访问');
             }
 
             if (originalTask.status === 'COMPLETED' || originalTask.status === 'CANCELLED') {

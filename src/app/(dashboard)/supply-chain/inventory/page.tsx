@@ -5,6 +5,7 @@ import { Separator } from '@/shared/ui/separator';
 import { Button } from '@/shared/ui/button';
 import { PlusIcon, ArrowRightLeftIcon } from 'lucide-react';
 import { AdjustInventoryDialog } from '@/features/supply-chain/components/adjust-inventory-dialog';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 export const metadata = {
     title: '库存查询',
@@ -50,7 +51,7 @@ export default function InventoryPage() {
             </div>
             <Separator />
 
-            <Suspense fallback={<div>Loading inventory...</div>}>
+            <Suspense fallback={<TableSkeleton />}>
                 <InventoryData />
             </Suspense>
         </div>

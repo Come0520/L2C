@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import {
     Table,
     TableBody,
@@ -29,17 +31,75 @@ interface ProductTableProps {
     onDelete: (id: string) => void;
 }
 
-export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: ProductTableProps) {
-    const getCategoryLabel = (category: string) => {
-        const labels: Record<string, string> = {
-            'WALLPAPER': '墙纸',
-            'WALLCLOTH': '墙布',
-            'CURTAIN_FABRIC': '窗帘面料',
-            'CURTAIN_ACCESSORY': '窗帘配件',
-            'STANDARD': '标准成品',
-        };
-        return labels[category] || category;
+const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+        'WALLPAPER': '墙纸',
+        'WALLCLOTH': '墙布',
+        'CURTAIN_FABRIC': '窗帘面料',
+        'CURTAIN_ACCESSORY': '窗帘配件',
+        'STANDARD': '标准成品',
     };
+    return labels[category] || category;
+};
+
+interface ProductTableRowProps {
+    item: any;
+    onEdit: (product: any) => void;
+    onToggleStatus: (id: string, currentStatus: boolean) => void;
+    onDelete: (id: string) => void;
+}
+
+const ProductTableRow = React.memo(function ProductTableRow({ item, onEdit, onToggleStatus, onDelete }: ProductTableRowProps) {
+    return (
+        <TableRow key={item.id}>
+            <TableCell className="font-medium">
+                <div>{item.name}</div>
+                <div className="text-xs text-muted-foreground">{item.description}</div>
+            </TableCell>
+            <TableCell>{item.sku}</TableCell>
+            <TableCell>
+                <Badge variant="outline">{getCategoryLabel(item.category)}</Badge>
+            </TableCell>
+            <TableCell>¥{item.purchasePrice}</TableCell>
+            <TableCell>¥{item.retailPrice}</TableCell>
+            <TableCell>¥{item.floorPrice}</TableCell>
+            <TableCell>
+                <Badge variant={item.isActive ? "success" : "secondary"}>
+                    {item.isActive ? '上架中' : '已下架'}
+                </Badge>
+            </TableCell>
+            <TableCell className="text-right">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(item)}>
+                            <Edit className="mr-2 h-4 w-4" /> 编辑
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onToggleStatus(item.id, item.isActive)}>
+                            {item.isActive ? (
+                                <><PowerOff className="mr-2 h-4 w-4" /> 下架</>
+                            ) : (
+                                <><Power className="mr-2 h-4 w-4" /> 上架</>
+                            )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => onDelete(item.id)}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" /> 删除
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    );
+});
+
+export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: ProductTableProps) {
 
     return (
         <div className="rounded-md border glass-liquid">
@@ -65,51 +125,13 @@ export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: Product
                         </TableRow>
                     ) : (
                         data.map((item) => (
-                            <TableRow key={item.id}>
-                                <TableCell className="font-medium">
-                                    <div>{item.name}</div>
-                                    <div className="text-xs text-muted-foreground">{item.description}</div>
-                                </TableCell>
-                                <TableCell>{item.sku}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">{getCategoryLabel(item.category)}</Badge>
-                                </TableCell>
-                                <TableCell>¥{item.purchasePrice}</TableCell>
-                                <TableCell>¥{item.retailPrice}</TableCell>
-                                <TableCell>¥{item.floorPrice}</TableCell>
-                                <TableCell>
-                                    <Badge variant={item.isActive ? "success" : "secondary"}>
-                                        {item.isActive ? '上架中' : '已下架'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => onEdit(item)}>
-                                                <Edit className="mr-2 h-4 w-4" /> 编辑
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => onToggleStatus(item.id, item.isActive)}>
-                                                {item.isActive ? (
-                                                    <><PowerOff className="mr-2 h-4 w-4" /> 下架</>
-                                                ) : (
-                                                    <><Power className="mr-2 h-4 w-4" /> 上架</>
-                                                )}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="text-destructive"
-                                                onClick={() => onDelete(item.id)}
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" /> 删除
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
+                            <ProductTableRow
+                                key={item.id}
+                                item={item}
+                                onEdit={onEdit}
+                                onToggleStatus={onToggleStatus}
+                                onDelete={onDelete}
+                            />
                         ))
                     )}
                 </TableBody>

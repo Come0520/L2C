@@ -350,7 +350,7 @@ export function AttributeTemplateManager() {
                                                 )}
                                             />
                                         </div>
-                                        <div className="col-span-4 flex items-center gap-4">
+                                        <div className="col-span-4 flex items-center gap-6">
                                             <FormField
                                                 control={form.control}
                                                 name={`templateSchema.${index}.required`}

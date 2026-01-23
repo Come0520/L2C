@@ -4,6 +4,8 @@ import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { ApprovalDelegationService } from "@/services/approval-delegation.service";
+import { getSetting } from "@/features/settings/actions/system-settings-actions";
+import { addDays } from 'date-fns';
 
 // Helper type for Transaction
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -30,7 +32,7 @@ function evaluateConditions(conditions: Condition[], payload: Record<string, unk
             case 'ne': return value != cond.value;
             case 'gt': return Number(value) > Number(cond.value);
             case 'lt': return Number(value) < Number(cond.value);
-            case 'in': return Array.isArray(cond.value) && (cond.value as any[]).includes(value);
+            case 'in': return Array.isArray(cond.value) && cond.value.includes(value as string);
             default: return true;
         }
     });
@@ -120,6 +122,10 @@ export async function submitApproval(payload: {
             // approverIds = await resolveRoleApprovers(firstNode.approverRole, tenantId);
         }
 
+        // Read Timeout Setting
+        const timeoutDays = await getSetting('APPROVAL_TIMEOUT_DAYS') as number || 3;
+        const timeoutAt = addDays(new Date(), timeoutDays);
+
         for (const userId of approverIds) {
             // Check for Delegation
             const actualApproverId = await ApprovalDelegationService.getEffectiveApprover(userId, flow.id);
@@ -129,7 +135,8 @@ export async function submitApproval(payload: {
                 approvalId: approval.id,
                 nodeId: firstNode.id,
                 approverId: actualApproverId,
-                status: 'PENDING'
+                status: 'PENDING',
+                timeoutAt
             });
         }
 

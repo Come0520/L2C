@@ -70,7 +70,7 @@ export async function getNotificationsPure(session: SessionUser, params: GetNoti
     };
 }
 
-export const getNotificationsAction = createSafeAction(getNotificationsSchema, async (params, { session }) => {
+const getNotificationsActionInternal = createSafeAction(getNotificationsSchema, async (params, { session }) => {
     const result = await getNotificationsPure(session.user, params);
     return {
         success: true,
@@ -78,7 +78,11 @@ export const getNotificationsAction = createSafeAction(getNotificationsSchema, a
     };
 });
 
-export const getUnreadCountAction = createSafeAction(z.object({}), async (params, { session }) => {
+export async function getNotifications(params: z.infer<typeof getNotificationsSchema>) {
+    return getNotificationsActionInternal(params);
+}
+
+const getUnreadCountActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
 
@@ -94,7 +98,11 @@ export const getUnreadCountAction = createSafeAction(z.object({}), async (params
     return { success: true, data: { count } };
 });
 
-export const markAsReadAction = createSafeAction(markAsReadSchema, async (params, { session }) => {
+export async function getUnreadCount() {
+    return getUnreadCountActionInternal({});
+}
+
+const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (params, { session }) => {
     const { ids } = params;
     const userId = session.user.id;
 
@@ -110,7 +118,11 @@ export const markAsReadAction = createSafeAction(markAsReadSchema, async (params
     return { success: true };
 });
 
-export const markAllAsReadAction = createSafeAction(z.object({}), async (params, { session }) => {
+export async function markAsRead(params: z.infer<typeof markAsReadSchema>) {
+    return markAsReadActionInternal(params);
+}
+
+const markAllAsReadActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
     const userId = session.user.id;
 
     await db.update(notifications)
@@ -123,9 +135,13 @@ export const markAllAsReadAction = createSafeAction(z.object({}), async (params,
     return { success: true };
 });
 
+export async function markAllAsRead() {
+    return markAllAsReadActionInternal({});
+}
+
 import { slaChecker } from './sla-checker';
 
-export const runSLACheckAction = createSafeAction(z.object({}), async (params, { session }) => {
+const runSLACheckActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
     const role = session.user.role;
     if (role !== 'ADMIN' && role !== 'MANAGER') {
         throw new Error('Unauthorized: Only Admin or Manager can run SLA checks.');
@@ -134,6 +150,10 @@ export const runSLACheckAction = createSafeAction(z.object({}), async (params, {
     const results = await slaChecker.runAllChecks();
     return { success: true, data: results };
 });
+
+export async function runSLACheck() {
+    return runSLACheckActionInternal({});
+}
 
 // ============================================
 // [Notify-04] 通知偏好设置 Actions
@@ -171,7 +191,7 @@ const NOTIFICATION_CHANNELS = [
 /**
  * 获取用户的通知偏好设置
  */
-export const getNotificationPreferencesAction = createSafeAction(
+const getNotificationPreferencesActionInternal = createSafeAction(
     z.object({}),
     async (params, { session }) => {
         const userId = session.user.id;
@@ -198,6 +218,10 @@ export const getNotificationPreferencesAction = createSafeAction(
     }
 );
 
+export async function getNotificationPreferences() {
+    return getNotificationPreferencesActionInternal({});
+}
+
 /**
  * 更新用户的通知偏好设置
  */
@@ -206,7 +230,7 @@ const updatePreferenceSchema = z.object({
     channels: z.array(z.enum(NOTIFICATION_CHANNELS))
 });
 
-export const updateNotificationPreferenceAction = createSafeAction(
+const updateNotificationPreferenceActionInternal = createSafeAction(
     updatePreferenceSchema,
     async (data, { session }) => {
         const userId = session.user.id;
@@ -247,6 +271,10 @@ export const updateNotificationPreferenceAction = createSafeAction(
     }
 );
 
+export async function updateNotificationPreference(data: z.infer<typeof updatePreferenceSchema>) {
+    return updateNotificationPreferenceActionInternal(data);
+}
+
 /**
  * 批量更新用户的通知偏好设置
  */
@@ -257,7 +285,7 @@ const batchUpdatePreferencesSchema = z.object({
     )
 });
 
-export const batchUpdateNotificationPreferencesAction = createSafeAction(
+const batchUpdateNotificationPreferencesActionInternal = createSafeAction(
     batchUpdatePreferencesSchema,
     async (data, { session }) => {
         const userId = session.user.id;
@@ -297,3 +325,14 @@ export const batchUpdateNotificationPreferencesAction = createSafeAction(
         return { success: true };
     }
 );
+
+export async function batchUpdateNotificationPreferences(data: z.infer<typeof batchUpdatePreferencesSchema>) {
+    return batchUpdateNotificationPreferencesActionInternal(data);
+}
+
+// 别名导出，兼容旧的消费方命名
+export { getNotifications as getNotificationsAction };
+export { markAsRead as markAsReadAction };
+export { markAllAsRead as markAllAsReadAction };
+export { getNotificationPreferences as getNotificationPreferencesAction };
+export { updateNotificationPreference as updateNotificationPreferenceAction };

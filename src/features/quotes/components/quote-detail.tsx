@@ -24,7 +24,10 @@ import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { toast } from 'sonner';
 import { Ruler, Save } from 'lucide-react';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
-import { QuoteVersionCompare } from './quote-version-compare';
+const QuoteVersionCompare = dynamic(
+    () => import('./quote-version-compare').then((mod) => mod.QuoteVersionCompare),
+    { ssr: false, loading: () => <div className="h-96 w-full animate-pulse bg-muted rounded-lg" /> }
+);
 
 import { QuoteConfig } from '@/services/quote-config.service';
 // toggleQuoteMode removed
@@ -38,19 +41,17 @@ import { CustomerInfoDrawer } from './customer-info-drawer';
 import { QuoteCategoryTabs, QuoteCategory, ViewMode, CATEGORY_TO_PRODUCT_CATEGORIES } from './quote-category-tabs';
 import { QuoteSummaryTab } from './quote-summary-tab';
 import { QuoteExportMenu } from './quote-export-menu';
-import { Download } from 'lucide-react';
+import { Download, Layout } from 'lucide-react';
 import { DropdownMenuItem } from '@/shared/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
-import { QuotePdfDocument } from './quote-pdf';
 
 import { QuoteExcelImportDialog } from './quote-excel-import-dialog';
 import { QuoteExpirationBanner } from './quote-expiration-banner';
 import { SaveAsTemplateDialog } from './save-as-template-dialog';
-import { Layout } from 'lucide-react';
 
-const PDFDownloadLink = dynamic(
-    () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
-    { ssr: false, loading: () => <span className="text-xs">Loading PDF...</span> }
+const QuotePdfDownloader = dynamic(
+    () => import('./quote-pdf-downloader').then((mod) => mod.QuotePdfDownloader),
+    { ssr: false, loading: () => <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" />Loading...</Button> }
 );
 
 type QuoteData = NonNullable<Awaited<ReturnType<typeof getQuote>>['data']>;
@@ -162,7 +163,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                                 versions={versions.map(v => ({
                                     ...v,
                                     status: v.status || 'DRAFT',
-                                    createdAt: v.createdAt || new Date(),
+                                    createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
                                     totalAmount: (v as { totalAmount?: number | string }).totalAmount,
                                     finalAmount: (v as { finalAmount?: number | string }).finalAmount
                                 }))}
@@ -218,7 +219,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                                     ...v,
                                     totalAmount: (v as any).totalAmount ? Number((v as any).totalAmount) : 0,
                                     status: v.status || 'DRAFT',
-                                    createdAt: v.createdAt || new Date()
+                                    createdAt: v.createdAt ? new Date(v.createdAt) : new Date()
                                 }))}
                             />
                         )}
@@ -253,13 +254,13 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                                 title: quote.title,
                                 customer: quote.customer,
                                 items: quote.items?.map(item => ({
-                                    productName: item.productName,
+                                    productName: item.productName || '未命名商品',
                                     width: item.width,
                                     height: item.height,
                                     quantity: item.quantity,
                                     unitPrice: item.unitPrice,
                                     subtotal: item.subtotal,
-                                    roomId: item.roomId,
+                                    roomId: item.roomId || '',
                                 })),
                                 rooms: quote.rooms?.map(r => ({ id: r.id, name: r.name })),
                                 totalAmount: quote.totalAmount,
@@ -270,22 +271,28 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                             renderPdfButtons={
                                 <>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <PDFDownloadLink
-                                            document={<QuotePdfDocument quote={quote} mode="customer" />}
-                                            fileName={`报价单_${quote.quoteNo}_客户版.pdf`}
-                                            className="flex items-center w-full"
+                                        <QuotePdfDownloader
+                                            quote={quote}
+                                            mode="customer"
+                                            className="w-full justify-start text-sm font-normal px-2 py-1.5 h-auto border-0 focus:bg-accent focus:text-accent-foreground"
                                         >
-                                            <Download className="mr-2 h-4 w-4" /> 客户版 PDF
-                                        </PDFDownloadLink>
+                                            <div className="flex items-center w-full">
+                                                <Download className="mr-2 h-4 w-4" />
+                                                <span>客户版 PDF</span>
+                                            </div>
+                                        </QuotePdfDownloader>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <PDFDownloadLink
-                                            document={<QuotePdfDocument quote={quote} mode="internal" />}
-                                            fileName={`报价单_${quote.quoteNo}_内部版.pdf`}
-                                            className="flex items-center w-full"
+                                        <QuotePdfDownloader
+                                            quote={quote}
+                                            mode="internal"
+                                            className="w-full justify-start text-sm font-normal px-2 py-1.5 h-auto border-0 focus:bg-accent focus:text-accent-foreground"
                                         >
-                                            <Download className="mr-2 h-4 w-4" /> 内部版 PDF
-                                        </PDFDownloadLink>
+                                            <div className="flex items-center w-full">
+                                                <Download className="mr-2 h-4 w-4" />
+                                                <span>内部版 PDF</span>
+                                            </div>
+                                        </QuotePdfDownloader>
                                     </DropdownMenuItem>
                                 </>
                             }

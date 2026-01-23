@@ -8,24 +8,9 @@ import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { revalidatePath } from 'next/cache';
 
-// ==================== 对账分层定义 (Reconciliation Layers) ====================
-/**
- * L1 业务核销 - 实时核销层
- * - 订单与收款单的实时匹配
- * - 单笔或批量核销
- * - 即时更新账单状态
- * 
- * L2 账单确认 - 周期对账层
- * - 按周/月生成对账汇总
- * - 客户确认机制
- * - 开票关联
- */
-export const RECONCILIATION_LAYERS = {
-    L1_BUSINESS_WRITEOFF: 'L1_BUSINESS_WRITEOFF', // 业务核销
-    L2_STATEMENT_CONFIRM: 'L2_STATEMENT_CONFIRM', // 账单确认
-} as const;
-
-export type ReconciliationLayer = keyof typeof RECONCILIATION_LAYERS;
+// 对账分层定义从 schema.ts 导入
+// export { RECONCILIATION_LAYERS, type ReconciliationLayer } from './schema';
+// 注意：'use server' 文件不能重新导出，需要直接从 schema.ts 导入
 
 /**
  * 获取对账单列表
@@ -83,14 +68,10 @@ const aggregateStatementsSchema = z.object({
     title: z.string().optional(),
 });
 
-/**
- * 多订单聚合对账 - 按客户和时间范围生成汇总对账单
- */
-export const generateAggregatedStatement = createSafeAction(aggregateStatementsSchema, async (params, { session }) => {
+const generateAggregatedStatementActionInternal = createSafeAction(aggregateStatementsSchema, async (params, { session }) => {
     const { customerIds, startDate, endDate, title } = params;
     const tenantId = session.user.tenantId;
 
-    // 查询符合条件的应收账单
     const conditions = [
         eq(arStatements.tenantId, tenantId),
         gte(arStatements.createdAt, new Date(startDate)),
@@ -103,17 +84,13 @@ export const generateAggregatedStatement = createSafeAction(aggregateStatementsS
 
     const statements = await db.query.arStatements.findMany({
         where: and(...conditions),
-        with: {
-            customer: true,
-            order: true,
-        }
+        with: { customer: true, order: true }
     });
 
     if (statements.length === 0) {
         return { error: '没有找到符合条件的账单' };
     }
 
-    // 按客户分组汇总
     const customerSummary: Record<string, {
         customerId: string;
         customerName: string;
@@ -144,7 +121,6 @@ export const generateAggregatedStatement = createSafeAction(aggregateStatementsS
         customerSummary[cid].statementIds.push(stmt.id);
     }
 
-    // 生成周期对账单字符串
     const periodTitle = title || `${startDate.slice(0, 10)} 至 ${endDate.slice(0, 10)} 对账汇总`;
 
     revalidatePath('/finance/reconciliation');
@@ -164,15 +140,16 @@ export const generateAggregatedStatement = createSafeAction(aggregateStatementsS
     };
 });
 
+export async function generateAggregatedStatement(params: z.infer<typeof aggregateStatementsSchema>) {
+    return generateAggregatedStatementActionInternal(params);
+}
+
 const generatePeriodStatementsSchema = z.object({
     period: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY']),
     baseDate: z.string().optional(), // 基准日期，默认今天
 });
 
-/**
- * 自动生成账单周期 - 按周/双周/月生成对账单
- */
-export const generatePeriodStatements = createSafeAction(generatePeriodStatementsSchema, async (params, { session }) => {
+const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodStatementsSchema, async (params, { session }) => {
     const { period, baseDate } = params;
     const tenantId = session.user.tenantId;
 
@@ -196,7 +173,6 @@ export const generatePeriodStatements = createSafeAction(generatePeriodStatement
             break;
     }
 
-    // 查询该周期内未对账的订单
     const pendingStatements = await db.query.arStatements.findMany({
         where: and(
             eq(arStatements.tenantId, tenantId),
@@ -207,16 +183,10 @@ export const generatePeriodStatements = createSafeAction(generatePeriodStatement
                 isNull(arStatements.status)
             )
         ),
-        with: {
-            customer: true,
-        }
+        with: { customer: true }
     });
 
-    const periodLabel = {
-        WEEKLY: '周',
-        BIWEEKLY: '双周',
-        MONTHLY: '月度',
-    }[period];
+    const periodLabel = { WEEKLY: '周', BIWEEKLY: '双周', MONTHLY: '月度' }[period];
 
     return {
         success: true,
@@ -237,6 +207,10 @@ export const generatePeriodStatements = createSafeAction(generatePeriodStatement
     };
 });
 
+export async function generatePeriodStatements(params: z.infer<typeof generatePeriodStatementsSchema>) {
+    return generatePeriodStatementsActionInternal(params);
+}
+
 // ============================================================
 // [Finance-01] 多单据核销逻辑
 // ============================================================
@@ -255,19 +229,10 @@ const batchWriteOffSchema = z.object({
     remark: z.string().optional(),
 });
 
-/**
- * 多单据批量核销
- * 
- * 业务逻辑：
- * 1. 一笔收款可核销多张账单
- * 2. 自动分配核销金额（按账单金额比例）
- * 3. 记录核销明细
- */
-export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params, { session }) => {
+const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async (params, { session }) => {
     const { statementIds, receiptId, allocations, remark } = params;
     const tenantId = session.user.tenantId;
 
-    // 1. 查询收款单
     const { receiptBills } = await import('@/shared/api/schema/finance');
     const receipt = await db.query.receiptBills.findFirst({
         where: and(
@@ -280,7 +245,6 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
         return { error: '收款单不存在' };
     }
 
-    // 2. 查询待核销账单
     const statements = await db.query.arStatements.findMany({
         where: and(
             eq(arStatements.tenantId, tenantId),
@@ -292,7 +256,6 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
         return { error: '没有找到要核销的账单' };
     }
 
-    // 3. 计算可用核销金额
     const receiptAmount = parseFloat(receipt.totalAmount || '0');
     const usedAmount = parseFloat(receipt.usedAmount || '0');
     const availableAmount = receiptAmount - usedAmount;
@@ -301,12 +264,10 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
         return { error: '收款单可用金额不足' };
     }
 
-    // 4. 计算核销分配
     type AllocationItem = { statementId: string; amount: number; statementNo: string };
     let finalAllocations: AllocationItem[] = [];
 
     if (allocations && allocations.length > 0) {
-        // 使用指定分配
         const totalAllocated = allocations.reduce((sum, a) => sum + a.amount, 0);
         if (totalAllocated > availableAmount) {
             return { error: `分配金额 (${totalAllocated}) 超出可用金额 (${availableAmount})` };
@@ -316,7 +277,6 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
             statementNo: statements.find(s => s.id === a.statementId)?.statementNo || '',
         }));
     } else {
-        // 自动分配：按账单待收金额比例
         const totalPending = statements.reduce((sum, s) => sum + parseFloat(s.pendingAmount || '0'), 0);
         const remaining = Math.min(availableAmount, totalPending);
 
@@ -336,7 +296,6 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
         }
     }
 
-    // 5. 执行核销（更新账单状态）
     const writeOffResults: { statementId: string; statementNo: string; amount: number; success: boolean }[] = [];
 
     for (const alloc of finalAllocations) {
@@ -365,7 +324,6 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
         });
     }
 
-    // 6. 更新收款单已用金额
     const totalWrittenOff = writeOffResults.reduce((sum, r) => sum + r.amount, 0);
     const newUsedAmount = usedAmount + totalWrittenOff;
     const newReceiptStatus = newUsedAmount >= receiptAmount ? 'FULLY_USED' : 'PARTIAL_USED';
@@ -391,6 +349,10 @@ export const batchWriteOff = createSafeAction(batchWriteOffSchema, async (params
     };
 });
 
+export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>) {
+    return batchWriteOffActionInternal(params);
+}
+
 // ============================================================
 // [Finance-01] 跨期对账处理
 // ============================================================
@@ -406,30 +368,18 @@ const crossPeriodReconciliationSchema = z.object({
     customerId: z.string().uuid().optional(),
 });
 
-/**
- * 跨期对账处理
- * 
- * 业务场景：
- * 1. 客户上月欠款延续到本月
- * 2. 合并多期账单
- * 3. 账期调整
- */
-export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliationSchema, async (params, { session }) => {
+const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReconciliationSchema, async (params, { session }) => {
     const { originalStartDate, originalEndDate, newEndDate, customerId } = params;
     const tenantId = session.user.tenantId;
 
-    // 查询原账期内未结清账单
     const conditions = [
         eq(arStatements.tenantId, tenantId),
         gte(arStatements.createdAt, new Date(originalStartDate)),
         lte(arStatements.createdAt, new Date(originalEndDate)),
+        // 筛选未结清的账单状态：PENDING_RECON（待对账）或 PARTIAL（部分收款）
         or(
-             
-            eq(arStatements.status, 'PENDING' as any),
-             
-            eq(arStatements.status, 'PARTIAL' as any),
-             
-            eq(arStatements.status, 'PENDING_RECON' as any)
+            eq(arStatements.status, 'PENDING_RECON'),
+            eq(arStatements.status, 'PARTIAL')
         ),
     ];
 
@@ -439,20 +389,13 @@ export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliat
 
     const pendingStatements = await db.query.arStatements.findMany({
         where: and(...conditions),
-        with: {
-            customer: true,
-        }
+        with: { customer: true }
     });
 
     if (pendingStatements.length === 0) {
-        return {
-            success: true,
-            message: '该账期内无未结清账单',
-            movedCount: 0,
-        };
+        return { success: true, message: '该账期内无未结清账单', movedCount: 0 };
     }
 
-    // 汇总信息
     const summary = {
         originalPeriod: `${originalStartDate} 至 ${originalEndDate}`,
         newPeriod: `${originalStartDate} 至 ${newEndDate}`,
@@ -463,11 +406,7 @@ export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliat
 
     for (const stmt of pendingStatements) {
         const cid = stmt.customerId;
-        const existing = summary.customerBreakdown.get(cid) || {
-            name: stmt.customerName || '未知',
-            count: 0,
-            amount: 0
-        };
+        const existing = summary.customerBreakdown.get(cid) || { name: stmt.customerName || '未知', count: 0, amount: 0 };
         existing.count++;
         existing.amount += parseFloat(stmt.pendingAmount || '0');
         summary.customerBreakdown.set(cid, existing);
@@ -485,4 +424,8 @@ export const crossPeriodReconciliation = createSafeAction(crossPeriodReconciliat
         })),
     };
 });
+
+export async function crossPeriodReconciliation(params: z.infer<typeof crossPeriodReconciliationSchema>) {
+    return crossPeriodReconciliationActionInternal(params);
+}
 

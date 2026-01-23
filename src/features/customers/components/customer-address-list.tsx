@@ -29,7 +29,7 @@ interface AddressListProps {
     tenantId: string;
 }
 
-export function CustomerAddressList({ addresses, customerId, tenantId }: AddressListProps) {
+export function CustomerAddressList({ addresses, customerId, tenantId: _tenantId }: AddressListProps) {
     const [isAddOpen, setAddOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
 
@@ -54,7 +54,7 @@ export function CustomerAddressList({ addresses, customerId, tenantId }: Address
                 await addCustomerAddress({
                     customerId,
                     ...newAddress,
-                }, tenantId);
+                });
                 toast.success('地址添加成功');
                 setAddOpen(false);
                 setNewAddress({

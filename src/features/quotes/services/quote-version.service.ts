@@ -1,6 +1,6 @@
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
-import { eq, and, ne, sql, lt } from 'drizzle-orm';
+import { eq, and, lt, InferInsertModel } from 'drizzle-orm';
 
 /**
  * 报价单版本与生命周期增强服务 (Quote Version & Lifecycle Enhancement Service)
@@ -76,31 +76,68 @@ export class QuoteVersionService {
             // 5. 复制行明细 (Clone Items) - 处理嵌套关系已在此逻辑中简化，实际需考虑 parentId 映射
             const itemMap = new Map<string, string>();
 
+            type NewQuoteItem = InferInsertModel<typeof quoteItems>;
+
             // 先复制没有 parentId 的主行
             const mainItems = currentQuote.items.filter(i => !i.parentId);
             for (const item of mainItems) {
-                const [newItem] = await tx.insert(quoteItems).values({
-                    ...item,
-                    id: undefined,
+                // 显式构造新对象，避免 spread 不兼容类型
+                const newItemData: NewQuoteItem = {
+                    tenantId: item.tenantId,
                     quoteId: newQuote.id,
-                    roomId: item.roomId ? roomMap.get(item.roomId) : null,
                     parentId: null,
-                    createdAt: undefined,
-                } as any).returning();
+                    roomId: item.roomId ? roomMap.get(item.roomId) : null,
+                    category: item.category,
+                    productId: item.productId,
+                    productName: item.productName,
+                    productSku: item.productSku,
+                    roomName: item.roomName,
+                    unit: item.unit,
+                    unitPrice: item.unitPrice,
+                    costPrice: item.costPrice,
+                    quantity: item.quantity,
+                    width: item.width,
+                    height: item.height,
+                    foldRatio: item.foldRatio,
+                    processFee: item.processFee,
+                    subtotal: item.subtotal,
+                    attributes: item.attributes,
+                    calculationParams: item.calculationParams,
+                    remark: item.remark,
+                    sortOrder: item.sortOrder,
+                };
+                const [newItem] = await tx.insert(quoteItems).values(newItemData).returning();
                 itemMap.set(item.id, newItem.id);
             }
 
             // 再复制子行 (Accessories)
             const accessoryItems = currentQuote.items.filter(i => i.parentId);
             for (const item of accessoryItems) {
-                await tx.insert(quoteItems).values({
-                    ...item,
-                    id: undefined,
+                const newItemData: NewQuoteItem = {
+                    tenantId: item.tenantId,
                     quoteId: newQuote.id,
-                    roomId: item.roomId ? roomMap.get(item.roomId) : null,
                     parentId: item.parentId ? itemMap.get(item.parentId) : null,
-                    createdAt: undefined,
-                } as any);
+                    roomId: item.roomId ? roomMap.get(item.roomId) : null,
+                    category: item.category,
+                    productId: item.productId,
+                    productName: item.productName,
+                    productSku: item.productSku,
+                    roomName: item.roomName,
+                    unit: item.unit,
+                    unitPrice: item.unitPrice,
+                    costPrice: item.costPrice,
+                    quantity: item.quantity,
+                    width: item.width,
+                    height: item.height,
+                    foldRatio: item.foldRatio,
+                    processFee: item.processFee,
+                    subtotal: item.subtotal,
+                    attributes: item.attributes,
+                    calculationParams: item.calculationParams,
+                    remark: item.remark,
+                    sortOrder: item.sortOrder,
+                };
+                await tx.insert(quoteItems).values(newItemData);
             }
 
             return newQuote;
@@ -116,7 +153,7 @@ export class QuoteVersionService {
         const result = await db.update(quotes)
             .set({ status: 'EXPIRED' })
             .where(and(
-                eq(quotes.status, 'SUBMITTED'), // 已提交给客户的才需要过期
+                eq(quotes.status, 'PENDING_CUSTOMER'), // 已提交给客户的才需要过期
                 lt(quotes.validUntil, now)
             ))
             .returning({ id: quotes.id });
@@ -126,25 +163,35 @@ export class QuoteVersionService {
 
     /**
      * 设置为主版本 (Set Active Version)
+     * @param quoteId - 报价单 ID
+     * @param tenantId - 租户 ID（用于安全验证）
      */
-    static async activate(quoteId: string) {
+    static async activate(quoteId: string, tenantId?: string) {
         return await db.transaction(async (tx) => {
             const quote = await tx.query.quotes.findFirst({
-                where: eq(quotes.id, quoteId)
+                where: tenantId
+                    ? and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
+                    : eq(quotes.id, quoteId)
             });
-            if (!quote) throw new Error('Quote not found');
+            if (!quote) throw new Error('报价单不存在或无权操作');
 
             const rootQuoteId = quote.rootQuoteId || quote.id;
 
-            // 降级同家族所有版本
+            // 降级同家族所有版本（限定相同租户）
             await tx.update(quotes)
                 .set({ isActive: false })
-                .where(eq(quotes.rootQuoteId, rootQuoteId));
+                .where(tenantId
+                    ? and(eq(quotes.rootQuoteId, rootQuoteId), eq(quotes.tenantId, tenantId))
+                    : eq(quotes.rootQuoteId, rootQuoteId)
+                );
 
             // 激活当前版本
             await tx.update(quotes)
                 .set({ isActive: true })
-                .where(eq(quotes.id, quoteId));
+                .where(tenantId
+                    ? and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
+                    : eq(quotes.id, quoteId)
+                );
         });
     }
 }

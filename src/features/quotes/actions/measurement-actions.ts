@@ -52,7 +52,7 @@ export async function getImportableMeasureTasks(quoteId: string) {
     return { success: true, data: tasks };
 }
 
-export const previewMeasurementImport = createSafeAction(previewImportSchema, async (data) => {
+const previewMeasurementImportActionInternal = createSafeAction(previewImportSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -60,7 +60,11 @@ export const previewMeasurementImport = createSafeAction(previewImportSchema, as
     return result;
 });
 
-export const executeMeasurementImport = createSafeAction(executeImportSchema, async (data) => {
+export async function previewMeasurementImport(params: z.infer<typeof previewImportSchema>) {
+    return previewMeasurementImportActionInternal(params);
+}
+
+const executeMeasurementImportActionInternal = createSafeAction(executeImportSchema, async (data) => {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
@@ -69,3 +73,7 @@ export const executeMeasurementImport = createSafeAction(executeImportSchema, as
     revalidatePath(`/quotes/${data.quoteId}`);
     return result;
 });
+
+export async function executeMeasurementImport(params: z.infer<typeof executeImportSchema>) {
+    return executeMeasurementImportActionInternal(params);
+}

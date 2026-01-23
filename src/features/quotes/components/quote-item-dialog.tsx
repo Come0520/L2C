@@ -28,6 +28,23 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { DimensionLimits } from '@/services/quote-config.service';
 import { getHeightStatus, getWidthStatus, validateDimensions } from '@/features/quotes/utils/dimension-validation';
+import { HeightOverflowDialog } from './height-overflow-dialog';
+import type { AlternativeSolution } from '../logic/calculator';
+
+/**
+ * 产品接口类型 (Product Interface)
+ * 用于类型安全的产品选择
+ */
+interface ProductItem {
+    id: string;
+    name: string;
+    sku: string;
+    retailPrice?: string | number;
+    unitPrice?: string | number;
+    specs?: Record<string, unknown>;
+    images?: string[];
+    defaultFoldRatio?: number;
+}
 
 interface QuoteItemDialogProps {
     open: boolean;
@@ -56,10 +73,10 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
     // Helper to check visibility
     const isVisible = (field: string) => !visibleFields || visibleFields.includes(field);
 
-    const [category, setCategory] = useState<string>('CURTAIN');
-    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [category, setCategory] = useState<string>('CURTAIN_FABRIC');
+    const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
     const [productOpen, setProductOpen] = useState(false);
-    const [products, setProducts] = useState<any[]>([]);
+    const [products, setProducts] = useState<ProductItem[]>([]);;
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -69,6 +86,13 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
     const [height, setHeight] = useState<number>(0);
     const [foldRatio, setFoldRatio] = useState<number>(2.0);
     const [remark, setRemark] = useState('');
+
+    // 超高弹窗状态 (Height Overflow Dialog State)
+    const [heightOverflowOpen, setHeightOverflowOpen] = useState(false);
+    const [alternatives, setAlternatives] = useState<AlternativeSolution[]>([]);
+    const [selectedHeaderType, setSelectedHeaderType] = useState<'WRAPPED' | 'ATTACHED'>('WRAPPED');
+    const [selectedBottomLoss, setSelectedBottomLoss] = useState<number>(10);
+    const [heightOverflowConfirmed, setHeightOverflowConfirmed] = useState(false);
 
     // 尺寸校验状态 (Dimension Validation States)
     const heightStatus = useMemo(() => getHeightStatus(height, limits), [height, limits]);
@@ -83,14 +107,14 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                 const res = await getProducts({
                     page: 1,
                     pageSize: 20,
-                    category: category as any,
+                    category: category,
                     search: searchQuery,
                     isActive: true
                 });
                 // createSafeAction 返回 { data: { data: [], total, ... }, success }
                 // 需要解构两层才能获取到产品数组
                 const productList = res?.data?.data ?? [];
-                setProducts(productList as any[]);
+                setProducts(productList as ProductItem[]);
             } catch (err) {
                 console.error(err);
                 toast.error("Failed to load products");
@@ -121,6 +145,68 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
             toast.warning(dimensionCheck.message);
         }
 
+        // 超高预检测 - 窗帘品类时动态计算是否需要弹窗
+        if (['CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) && !heightOverflowConfirmed) {
+            const fabricWidth = (selectedProduct?.specs?.fabricWidth as number) || 280;
+            const headerLoss = selectedHeaderType === 'WRAPPED' ? 20 : 7;
+            const bottomLoss = selectedBottomLoss;
+            const maxEffectiveHeight = fabricWidth - headerLoss - bottomLoss;
+
+            if (height > maxEffectiveHeight) {
+                // 生成替代方案并打开弹窗
+                const altSolutions: AlternativeSolution[] = [];
+                const wFinished = width * foldRatio;
+                const baseQty = (wFinished + 10) / 100; // 基础用料
+                const unitPrice = Number(selectedProduct?.retailPrice || selectedProduct?.unitPrice || 0);
+
+                // 方案1：贴布带
+                const maxH1 = fabricWidth - 7 - bottomLoss;
+                if (height <= maxH1) {
+                    altSolutions.push({
+                        name: '改用贴布带',
+                        description: '帘头改为贴布带 (7cm)，保留标准底边',
+                        headerType: 'ATTACHED',
+                        headerLoss: 7,
+                        bottomLoss: bottomLoss,
+                        quantity: Number(baseQty.toFixed(2)),
+                        priceDiff: 0,
+                        recommended: true,
+                    });
+                }
+
+                // 方案2：小底边
+                const smallBottom = 5;
+                const maxH2 = fabricWidth - headerLoss - smallBottom;
+                if (height <= maxH2) {
+                    altSolutions.push({
+                        name: '减小底边',
+                        description: `保留包布带，底边减至 ${smallBottom}cm`,
+                        headerType: 'WRAPPED',
+                        headerLoss: 20,
+                        bottomLoss: smallBottom,
+                        quantity: Number(baseQty.toFixed(2)),
+                        priceDiff: 0,
+                    });
+                }
+
+                // 方案3：拼接
+                const splicedQty = baseQty * 2;
+                altSolutions.push({
+                    name: '接布拼接',
+                    description: '需要拼接工艺，用料翻倍',
+                    headerType: 'WRAPPED',
+                    headerLoss: 20,
+                    bottomLoss: bottomLoss,
+                    quantity: Number(splicedQty.toFixed(2)),
+                    priceDiff: Number(((splicedQty - baseQty) * unitPrice).toFixed(0)),
+                });
+
+                setAlternatives(altSolutions);
+                setHeightOverflowOpen(true);
+                return; // 等待用户选择
+            }
+        }
+
         try {
             await createQuoteItem({
                 quoteId,
@@ -133,13 +219,17 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                 quantity,
                 width,
                 height,
-                foldRatio: category === 'CURTAIN' ? foldRatio : undefined,
+                foldRatio: ['CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) ? foldRatio : undefined,
                 remark,
                 attributes: {
                     ...selectedProduct.specs,
-                    productImage: selectedProduct.images?.[0]
+                    productImage: selectedProduct.images?.[0],
+                    // 传递帘头工艺和底边配置
+                    headerType: selectedHeaderType,
+                    bottomLoss: selectedBottomLoss,
                 }
             });
+
             toast.success("报价项添加成功");
             onOpenChange(false);
             if (onSuccess) onSuccess();
@@ -149,6 +239,7 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
             setWidth(0);
             setHeight(0);
             setQuantity(1);
+            setHeightOverflowConfirmed(false);
         } catch (error) {
             console.error(error);
             toast.error("添加失败");
@@ -174,10 +265,15 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                                 <SelectValue placeholder="Select Category" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="CURTAIN">窗帘 (Curtain)</SelectItem>
-                                <SelectItem value="WALLPAPER">墙纸 (Wallpaper)</SelectItem>
-                                <SelectItem value="WALLCLOTH">墙布 (Wallcloth)</SelectItem>
-                                <SelectItem value="ACCESSORY">附件 (Accessory)</SelectItem>
+                                <SelectItem value="CURTAIN_FABRIC">窗帘面料</SelectItem>
+                                <SelectItem value="CURTAIN_SHEER">纱帘</SelectItem>
+                                <SelectItem value="CURTAIN_TRACK">窗帘轨道</SelectItem>
+                                <SelectItem value="CURTAIN_ACCESSORY">窗帘配件</SelectItem>
+                                <SelectItem value="MOTOR">电机</SelectItem>
+                                <SelectItem value="WALLCLOTH">墙布</SelectItem>
+                                <SelectItem value="WALLPANEL">墙板</SelectItem>
+                                <SelectItem value="WINDOWPAD">飘窗垫</SelectItem>
+                                <SelectItem value="STANDARD">标品</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -295,7 +391,7 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                         </div>
                     </div>
 
-                    {category === 'CURTAIN' && isVisible('foldRatio') && (
+                    {['CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) && isVisible('foldRatio') && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">褶皱倍数</Label>
                             <Input
@@ -308,10 +404,10 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                         </div>
                     )}
 
-                    {category === 'CURTAIN' && isVisible('installType') && (
+                    {['CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) && isVisible('installType') && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">安装方式</Label>
-                            <Select onValueChange={(val) => { /* Update State (missing state) */ }}>
+                            <Select onValueChange={(_val) => { /* Update State (missing state) */ }}>
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue placeholder="顶装/侧装" />
                                 </SelectTrigger>
@@ -350,6 +446,28 @@ export function QuoteItemDialog({ open, onOpenChange, quoteId, roomId, onSuccess
                     <Button onClick={handleSubmit}>Add Item</Button>
                 </DialogFooter>
             </DialogContent>
+
+            {/* 超高方案对比弹窗 */}
+            <HeightOverflowDialog
+                open={heightOverflowOpen}
+                onOpenChange={setHeightOverflowOpen}
+                alternatives={alternatives}
+                baseQuantity={quantity}
+                unitPrice={Number(selectedProduct?.retailPrice || selectedProduct?.unitPrice || 0)}
+                onSelectSolution={(solution) => {
+                    setSelectedHeaderType(solution.headerType);
+                    setSelectedBottomLoss(solution.bottomLoss);
+                    setHeightOverflowConfirmed(true);
+                    toast.success(`已应用方案: ${solution.name}`);
+                    // 延迟触发提交，让状态更新完成
+                    setTimeout(() => handleSubmit(), 100);
+                }}
+                onIgnore={() => {
+                    setHeightOverflowConfirmed(true);
+                    toast.info('已继续使用当前设置');
+                    setTimeout(() => handleSubmit(), 100);
+                }}
+            />
         </Dialog>
     );
 }

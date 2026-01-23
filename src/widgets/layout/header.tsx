@@ -2,17 +2,21 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { cn } from '@/shared/lib/utils';
+import { Session } from 'next-auth';
 import { Bell, Search, User } from 'lucide-react';
 
 import { Button } from '@/shared/ui/button';
+import { UserMenu } from './user-menu';
 
 /**
  * 顶部导航栏组件
  * 显示当前页面标题、搜索、通知和用户菜单
  */
-export function Header() {
+interface HeaderProps {
+    session?: Session | null;
+}
+
+export function Header({ session }: HeaderProps) {
     const pathname = usePathname();
 
     // 根据路径获取页面标题
@@ -62,14 +66,18 @@ export function Header() {
                     <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
                 </Button>
 
-                {/* 用户头像 */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 hover:opacity-90"
-                >
-                    <User className="h-4 w-4 text-white" />
-                </Button>
+                {/* 用户菜单 */}
+                {session ? (
+                    <UserMenu session={session} />
+                ) : (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-primary-600 hover:opacity-90"
+                    >
+                        <User className="h-4 w-4 text-white" />
+                    </Button>
+                )}
             </div>
         </header>
     );

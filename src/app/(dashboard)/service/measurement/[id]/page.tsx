@@ -44,7 +44,7 @@ export default async function MeasureTaskDetailPage({
     const canDispatch = feeCheck?.canDispatch ?? true;
 
     // 获取版本历史 (容错处理，如果表列不存在则返回空)
-    let versions: any[] = [];
+    let versions: Array<{ id: string; versionDisplay?: string; round?: number; variant?: string }> = [];
     try {
         const versionsResult = await getMeasureTaskVersions(id);
         versions = versionsResult.data || [];
@@ -100,7 +100,7 @@ export default async function MeasureTaskDetailPage({
                     </CardHeader>
                     <CardContent className="py-2">
                         <div className="flex gap-2">
-                            {versions.map((v: any) => (
+                            {versions.map((v) => (
                                 <Badge key={v.id} variant={v.id === latestSheet?.id ? 'default' : 'outline'}>
                                     {v.versionDisplay || `V${v.round}.${v.variant}`}
                                 </Badge>

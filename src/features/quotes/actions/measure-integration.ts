@@ -6,12 +6,14 @@ import { revalidatePath } from 'next/cache';
 
 // syncMeasureToQuote removed in favor of measurement-actions.ts
 
-export const createMeasureFromQuote = createSafeAction(z.object({
+const createMeasureFromQuoteSchema = z.object({
     quoteId: z.string().uuid(),
     tenantId: z.string().uuid(),
     customerId: z.string().uuid(),
     leadId: z.string().uuid(), // Required per schema
-}), async (data) => {
+});
+
+const createMeasureFromQuoteActionInternal = createSafeAction(createMeasureFromQuoteSchema, async (data) => {
     const { db } = await import('@/shared/api/db');
     const { measureTasks } = await import('@/shared/api/schema/service');
 
@@ -35,3 +37,7 @@ export const createMeasureFromQuote = createSafeAction(z.object({
         measureTaskId: measureTask.id
     };
 });
+
+export async function createMeasureFromQuote(params: z.infer<typeof createMeasureFromQuoteSchema>) {
+    return createMeasureFromQuoteActionInternal(params);
+}

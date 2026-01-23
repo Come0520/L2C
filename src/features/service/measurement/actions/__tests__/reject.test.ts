@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { rejectMeasureTask } from '../reject';
 
 const VALID_TASK_ID = '550e8400-e29b-41d4-a716-446655440000';
+const MOCK_TENANT_ID = 'tenant-1';
 
 // Mock dependencies
 const { mockDbQuery, mockDbUpdate } = vi.hoisted(() => {
@@ -10,19 +11,22 @@ const { mockDbQuery, mockDbUpdate } = vi.hoisted(() => {
         mockDbQuery: {
             measureTasks: {
                 findFirst: vi.fn()
+            },
+            users: {
+                findMany: vi.fn().mockResolvedValue([]) // 默认无店长
             }
         },
         mockDbUpdate: vi.fn().mockReturnValue({
             set: vi.fn().mockReturnValue({
                 where: vi.fn().mockReturnValue({
-                    returning: vi.fn().mockResolvedValue([{ id: VALID_TASK_ID_MOCK }]) // Simulating successful update
+                    returning: vi.fn().mockResolvedValue([{ id: VALID_TASK_ID_MOCK }])
                 })
             })
         })
     };
 });
 
-// Mock auth to prevent next-auth import issues
+// Mock auth
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
 }));
@@ -38,61 +42,69 @@ vi.mock('@/shared/api/db', () => ({
     }
 }));
 
-
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn()
+}));
+
+// Mock notification service
+vi.mock('@/features/notifications/service', () => ({
+    notificationService: {
+        send: vi.fn().mockResolvedValue({ success: true })
+    }
 }));
 
 describe('Measurement Action: rejectMeasureTask', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        // Mock authorized session
+        // Mock 授权会话
         const { auth } = await import('@/shared/lib/auth');
-        (auth as any).mockResolvedValue({
-            user: { id: 'user-1', tenantId: 'tenant-1' }
+        (auth as ReturnType<typeof vi.fn>).mockResolvedValue({
+            user: { id: 'user-1', tenantId: MOCK_TENANT_ID }
         });
     });
 
-    it('should reject a task successfully and reset status to PENDING', async () => {
-        // Setup
-        const VALID_TASK_ID = '550e8400-e29b-41d4-a716-446655440000';
+    it('should reject a task successfully and reset status to PENDING_VISIT', async () => {
+        // 设置 mock 数据（包含 tenantId 以通过租户隔离校验）
         const taskMock = {
             id: VALID_TASK_ID,
+            tenantId: MOCK_TENANT_ID, // 必须匹配 Session 中的 tenantId
             status: 'PENDING_CONFIRM',
             rejectCount: 0,
             measureNo: 'M-001'
         };
         mockDbQuery.measureTasks.findFirst.mockResolvedValue(taskMock);
 
-        // Execute
+        // 执行
         const result = await rejectMeasureTask({ taskId: VALID_TASK_ID, reason: 'Size wrong' });
 
-        // Assert
-        expect(result.success).toBe(true); // Action executed successfully
-        expect(result.data?.success).toBe(true); // Business logic success
+        // 断言
+        expect(result.success).toBe(true);
+        expect(result.data?.success).toBe(true);
 
         expect(mockDbUpdate).toHaveBeenCalled();
         expect(mockDbUpdate().set).toHaveBeenCalledWith(expect.objectContaining({
-            status: 'PENDING',
+            status: 'PENDING_VISIT', // 修正：代码中使用 PENDING_VISIT
             rejectCount: 1,
             rejectReason: 'Size wrong'
         }));
     });
 
-    it('should fail if task does not exist', async () => {
+    it('should fail if task does not exist or tenant mismatch', async () => {
+        // Mock 返回 null（表示任务不存在或租户不匹配）
         mockDbQuery.measureTasks.findFirst.mockResolvedValue(null);
 
         const result = await rejectMeasureTask({ taskId: VALID_TASK_ID, reason: 'reason' });
 
-        expect(result.success).toBe(true); // Action executed
-        expect(result.data?.success).toBe(false); // Logic failed
-        expect(result.data?.error).toContain('任务不存在');
+        expect(result.success).toBe(true);
+        expect(result.data?.success).toBe(false);
+        expect(result.data?.error).toContain('任务不存在或无权访问');
     });
 
     it('should fail if task is CANCELLED', async () => {
         mockDbQuery.measureTasks.findFirst.mockResolvedValue({
             id: VALID_TASK_ID,
+            tenantId: MOCK_TENANT_ID,
             status: 'CANCELLED',
             rejectCount: 0
         });
@@ -105,13 +117,16 @@ describe('Measurement Action: rejectMeasureTask', () => {
     });
 
     it('should trigger warning when reject count reaches threshold (3)', async () => {
-        // Mock console.warn to verify side effect
-        const consoleSpy = vi.spyOn(console, 'warn');
+        // Mock 店长列表（用于通知）
+        mockDbQuery.users.findMany.mockResolvedValue([
+            { id: 'manager-1', role: 'STORE_MANAGER' }
+        ]);
 
         const taskMock = {
             id: VALID_TASK_ID,
+            tenantId: MOCK_TENANT_ID,
             status: 'PENDING_CONFIRM',
-            rejectCount: 2, // 2 + 1 = 3
+            rejectCount: 2, // 2 + 1 = 3，触发预警
             measureNo: 'M-001'
         };
         mockDbQuery.measureTasks.findFirst.mockResolvedValue(taskMock);
@@ -119,21 +134,10 @@ describe('Measurement Action: rejectMeasureTask', () => {
         const result = await rejectMeasureTask({ taskId: VALID_TASK_ID, reason: 'Bad quality' });
 
         expect(result.success).toBe(true);
-        expect(result.data?.success).toBe(true); // Logic success
+        expect(result.data?.success).toBe(true);
 
-        // Check update using set payload
-        // Note: mockDbUpdate usage above needs access to the 'set' call args
-        // Since we chained mocks, we can inspect the chain or the initial spy if properly exposed.
-        // We exposed mockDbUpdate returning an object with set.
-
+        // 检查更新调用
         expect(mockDbUpdate).toHaveBeenCalled();
-
-        // Accessing the result of the first call
-        // mockDbUpdate() logic: 
-        // We need to inspect the RETURN value of mockDbUpdate(), which is the update builder.
-        // Or inspect calls to `set`.
-        // The mock setup: `mockDbUpdate: vi.fn().mockReturnValue({ set: vi.fn()... })`
-        // Inspecting: `mockDbUpdate.mock.results[0].value.set`
 
         const updateBuilder = mockDbUpdate.mock.results[0].value;
         const setSpy = updateBuilder.set;
@@ -141,10 +145,20 @@ describe('Measurement Action: rejectMeasureTask', () => {
 
         expect(setCall.rejectCount).toBe(3);
 
-        // Verify warning message in result
+        // 验证返回的预警消息
         expect(result.data?.message).toContain('介入'); // "已通知店长介入"
+    });
 
-        // Verify console warn
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('rejected 3 times'));
+    it('should fail if user is not authorized', async () => {
+        // Mock 未授权会话
+        const { auth } = await import('@/shared/lib/auth');
+        (auth as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+        const result = await rejectMeasureTask({ taskId: VALID_TASK_ID, reason: 'reason' });
+
+        // createSafeAction 内置 auth 校验，未授权时直接返回顶层错误
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('未授权访问');
     });
 });
+

@@ -5,6 +5,10 @@
 
 /* Premium Typography - Cormorant Infant (Serif) & Jost (Sans) */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap');
+/* Cute Typography - Fredoka (Heading) & Quicksand (Sans) */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@300..700&display=swap');
+/* Parchment Typography - EB Garamond (Scholarly) */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
 
 @import "tailwindcss";
 
@@ -13,6 +17,9 @@
   /* Typography */
   --font-sans: "Jost", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-serif: "Cormorant Infant", serif;
+  --font-cute: "Fredoka", sans-serif;
+  --font-cute-body: "Quicksand", sans-serif;
+  --font-parchment: "EB Garamond", "Noto Serif SC", "STKaiti", serif;
 
   /* Color Palette - SaaS Premium (Mapped to Slate/Blue/Orange) */
   --color-primary-500: #2563EB;
@@ -76,6 +83,66 @@
   /* Fluid Animations */
   --curve-fluid: cubic-bezier(0.4, 0.0, 0.2, 1);
   --duration-morph: 400ms;
+
+  /* Claymorphism System - Deepened & Warm */
+  --clay-bg: #fff5f0;
+  /* Warm Peach/Almond */
+  --clay-bg-secondary: #ffeadf;
+
+  /* Inflated effect: Two inner shadows (top-left highlight, bottom-right shadow) + deep large outer shadow */
+  --clay-shadow-out:
+    12px 12px 24px rgba(234, 184, 158, 0.4),
+    -8px -8px 20px #ffffff;
+
+  --clay-shadow-in:
+    inset 4px 4px 8px rgba(255, 255, 255, 0.8),
+    inset -4px -4px 12px rgba(206, 149, 119, 0.3);
+
+  --clay-radius: 3rem;
+  /* More rounded pill-like */
+
+  --clay-bg-dark: #2d2420;
+  /* Warm Dark Brown/Earth */
+  --clay-shadow-out-dark:
+    12px 12px 24px rgba(0, 0, 0, 0.5),
+    -4px -4px 12px rgba(255, 255, 255, 0.05);
+
+  --clay-shadow-in-dark:
+    inset 4px 4px 8px rgba(255, 255, 255, 0.05),
+    inset -4px -4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Cute-alism System - Playful & Vibrant */
+  --cute-bg: #fffcfd;
+  /* Soft pink-ish white */
+  --cute-bg-canvas: #fff5f8;
+  --cute-primary: #ff85a1;
+  /* Candy Pink */
+  --cute-primary-dark: #ff5c81;
+  --cute-secondary: #a2d2ff;
+  /* Sky Blue */
+  --cute-accent: #ffd166;
+  /* Cheese Yellow */
+  --cute-success: #b9e769;
+  /* Mint Green */
+  --cute-radius: 4rem;
+  --cute-shadow: 0 15px 30px rgba(255, 133, 161, 0.15);
+  --cute-shadow-hover: 0 25px 45px rgba(255, 133, 161, 0.25);
+
+  /* Parchmentism System - Eye-Care & Scholarly */
+  --parchment-bg: #fbfaf5;
+  /* Rice paper yellow */
+  --parchment-ink: #2c2c2c;
+  --parchment-bamboo: #1d3a1d;
+  /* Deep Forest Green */
+  --parchment-gold: #b28e23;
+  /* Ochre/Gold */
+  --parchment-cinnabar: #a63d40;
+  /* Red Seal */
+  --parchment-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.05),
+    0 2px 4px rgba(0, 0, 0, 0.02);
+  --parchment-radius: 0.5rem;
+  /* More formal/sharp than cute */
 
   /* Antigravity (Warm Tech) Core */
   --parchment-bg: #fbfbf9;
@@ -176,21 +243,369 @@
   }
 }
 
+/* Claymorphism Color Muting - Reduce contrast for a harmonious look */
+[data-style="clay"] {
+  --color-emerald-500: #82a392;
+  /* Muted Sage */
+  --color-emerald-600: #6d8a7c;
+  --color-amber-500: #d4a373;
+  /* Soft Terracotta */
+  --color-blue-500: #7a8ba3;
+  /* Dusty Blue */
+  --color-purple-500: #9a8cad;
+  /* Muted Lavender */
+  --color-red-500: #c28e8e;
+  /* Dusty Rose */
+  --color-primary-500: #6b82a3;
+  /* Muted Primary Blue */
+  --color-primary-600: #556a8a;
+
+  --color-text-primary: #5c5552;
+  /* Softer text color for clay */
+  --color-muted-foreground: #a39996;
+}
+
+/* Claymorphism Overrides */
+[data-style="clay"] body {
+  background-color: var(--clay-bg) !important;
+  color: var(--color-text-primary);
+  /* Clay-like grain texture + Subtle dot grid */
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 0),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-size: 24px 24px, auto;
+  background-blend-mode: overlay;
+}
+
+[data-style="clay"] .liquid-mesh-bg {
+  background: transparent !important;
+  opacity: 0.5;
+  /* Show mesh subtly through clay tint */
+}
+
+[data-style="clay"] .aurora-animate {
+  display: block;
+  opacity: 0.1;
+  filter: blur(60px);
+}
+
+[data-style="clay"] .glass-liquid,
+[data-style="clay"] .glass-table,
+[data-style="clay"] .glass-empty-state,
+[data-style="clay"] .glass-popover,
+[data-style="clay"] .card {
+  background: var(--clay-bg);
+  border: 2px solid #ffffff;
+  /* Soft rim light */
+  box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
+  /* Combined for depth */
+  border-radius: var(--clay-radius);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-style="clay"] .glass-liquid::before,
+[data-style="clay"] .glass-table::before,
+[data-style="clay"] .glass-empty-state::before,
+[data-style="clay"] .glass-popover::before {
+  display: none;
+}
+
+[data-style="clay"] .input-base,
+[data-style="clay"] .glass-input {
+  background: var(--clay-bg);
+  border: none;
+  box-shadow: var(--clay-shadow-in);
+  border-radius: 1.25rem;
+}
+
+[data-style="clay"] button:not(.ghost) {
+  box-shadow: var(--clay-shadow-out);
+  border-radius: 3rem;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Bouncy spring-like */
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--clay-bg);
+  color: var(--color-primary-600);
+}
+
+[data-style="clay"] button:not(.ghost):hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 15px 15px 30px rgba(234, 184, 158, 0.5), -10px -10px 25px #ffffff;
+}
+
+[data-style="clay"] button:not(.ghost):active {
+  box-shadow: var(--clay-shadow-in);
+  transform: scale(0.96);
+}
+
+.dark[data-style="clay"] .glass-liquid,
+.dark[data-style="clay"] .glass-table,
+.dark[data-style="clay"] .glass-empty-state,
+.dark[data-style="clay"] .glass-popover,
+.dark[data-style="clay"] .card {
+  background: var(--clay-bg-dark);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: var(--clay-shadow-out-dark), var(--clay-shadow-in-dark);
+}
+
+.dark[data-style="clay"] .input-base,
+.dark[data-style="clay"] .glass-input {
+  background: var(--clay-bg-dark);
+  box-shadow: var(--clay-shadow-in-dark);
+}
+
+.dark[data-style="clay"] button:not(.ghost) {
+  box-shadow: var(--clay-shadow-out-dark);
+  background: var(--clay-bg-dark);
+  color: var(--color-primary-400);
+}
+
+.dark[data-style="clay"] button:not(.ghost):active {
+  box-shadow: var(--clay-shadow-in-dark);
+}
+
+/* Layout Unified for Clay - Ensuring deep differentiation */
+[data-style="clay"] aside,
+[data-style="clay"] header,
+[data-style="clay"] .glass-table {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-style="clay"] .glass-table {
+  background: var(--clay-bg);
+  box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
+  border: none;
+  border-radius: var(--clay-radius);
+}
+
+/* ==================== Cute-alism Overrides ==================== */
+[data-style="cute"] {
+  --color-primary-500: var(--cute-primary);
+  --color-primary-600: var(--cute-primary-dark);
+  --color-secondary-500: var(--cute-secondary);
+  --color-emerald-500: var(--cute-success);
+  --color-amber-500: var(--cute-accent);
+  --color-red-500: #ff6b81;
+}
+
+[data-style="cute"] body {
+  background-color: var(--cute-bg-canvas) !important;
+  font-family: var(--font-cute-body);
+  /* Cute Dot Grid */
+  background-image: radial-gradient(var(--cute-primary) 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+
+[data-style="cute"] h1,
+[data-style="cute"] h2,
+[data-style="cute"] h3,
+[data-style="cute"] .font-serif {
+  font-family: var(--font-cute);
+  letter-spacing: -0.02em;
+}
+
+[data-style="cute"] .liquid-mesh-bg {
+  display: none;
+  /* Solid cute background preferred */
+}
+
+[data-style="cute"] .aurora-animate {
+  opacity: 0.1;
+  filter: blur(80px);
+}
+
+[data-style="cute"] .glass-liquid,
+[data-style="cute"] .glass-table,
+[data-style="cute"] .glass-empty-state,
+[data-style="cute"] .glass-popover,
+[data-style="cute"] .card {
+  background: #ffffff;
+  border: 4px solid var(--cute-bg-canvas);
+  box-shadow: var(--cute-shadow);
+  border-radius: var(--cute-radius);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-style="cute"] .card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: var(--cute-shadow-hover);
+}
+
+[data-style="cute"] button:not(.ghost) {
+  border-radius: 9999px;
+  box-shadow: var(--cute-shadow);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1.5);
+  border: none;
+  background: var(--cute-primary);
+  color: white;
+  font-weight: 700;
+}
+
+[data-style="cute"] button:not(.ghost):hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: var(--cute-shadow-hover);
+  background: var(--cute-primary-dark);
+}
+
+[data-style="cute"] button:not(.ghost):active {
+  transform: scale(0.85);
+  transition-duration: 0.1s;
+}
+
+[data-style="cute"] aside,
+[data-style="cute"] header {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(10px);
+  border-color: var(--cute-bg-canvas) !important;
+}
+
+/* ==================== Parchmentism Overrides ==================== */
+[data-style="parchment"] {
+  --color-primary-500: var(--parchment-bamboo);
+  --color-primary-600: #142a14;
+  --color-secondary-500: var(--parchment-gold);
+  --color-emerald-500: var(--parchment-bamboo);
+  --color-amber-500: var(--parchment-gold);
+  --color-red-500: var(--parchment-cinnabar);
+  --background: var(--parchment-bg);
+  --foreground: var(--parchment-ink);
+}
+
+[data-style="parchment"] body {
+  background-color: var(--parchment-bg) !important;
+  color: var(--parchment-ink);
+  font-family: var(--font-parchment);
+  /* Clean subtle parchment gradient - no noise */
+  background-image:
+    linear-gradient(180deg,
+      rgba(251, 250, 245, 1) 0%,
+      rgba(248, 245, 235, 1) 50%,
+      rgba(245, 240, 228, 1) 100%);
+  background-attachment: fixed;
+}
+
+[data-style="parchment"] h1,
+[data-style="parchment"] h2,
+[data-style="parchment"] h3,
+[data-style="parchment"] .font-serif,
+[data-style="parchment"] .font-sans {
+  font-family: var(--font-parchment);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+[data-style="parchment"] .liquid-mesh-bg,
+[data-style="parchment"] .aurora-animate {
+  display: none;
+  /* Clean static parchment look */
+}
+
+/* Scroll Card Effect */
+[data-style="parchment"] .glass-liquid,
+[data-style="parchment"] .glass-table,
+[data-style="parchment"] .glass-empty-state,
+[data-style="parchment"] .glass-popover,
+[data-style="parchment"] .card {
+  background:
+    linear-gradient(90deg,
+      rgba(0, 0, 0, 0.05) 0%,
+      transparent 5%,
+      transparent 95%,
+      rgba(0, 0, 0, 0.05) 100%),
+    var(--parchment-bg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.02);
+  border-radius: var(--parchment-radius);
+  color: var(--parchment-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  position: relative;
+}
+
+/* Scroll Ends Decorative Lines */
+[data-style="parchment"] .card::before,
+[data-style="parchment"] .card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--parchment-bamboo);
+  opacity: 0.2;
+}
+
+[data-style="parchment"] .card::before {
+  left: 4px;
+}
+
+[data-style="parchment"] .card::after {
+  right: 4px;
+}
+
+[data-style="parchment"] button:not(.ghost) {
+  border-radius: 4px;
+  background: var(--parchment-bamboo);
+  color: #fbfaf5 !important;
+  /* 高对比度白字 */
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-family: var(--font-parchment);
+  letter-spacing: 0.1em;
+  transition: all 0.2s ease;
+}
+
+[data-style="parchment"] button:not(.ghost):hover {
+  background: #142a14;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Tab 按钮高可读性覆盖 - 适配 Aceternity Tabs */
+/* 所有 Tab 按钮的文字 - 使用白色确保高对比度 */
+[data-style="parchment"] .tab-text {
+  color: #fbfaf5 !important;
+  /* 宣纸白文字 */
+}
+
+/* Tab 激活背景 - 深竹绿底 */
+[data-style="parchment"] .tab-active-bg {
+  background: var(--parchment-bamboo) !important;
+}
+
+[data-style="parchment"] aside,
+[data-style="parchment"] header {
+  background: var(--parchment-bg) !important;
+  border-bottom: 2px solid var(--parchment-bamboo) !important;
+  border-right-color: var(--parchment-bamboo) !important;
+  box-shadow: none !important;
+}
+
+[data-style="parchment"] aside {
+  border-right: 2px solid var(--parchment-bamboo) !important;
+}
+
 /* ==================== Liquid Background Aurora V3 ==================== */
 .liquid-mesh-bg {
-  background: #f8fafc;
+  background: var(--background);
   background-image:
+    linear-gradient(rgba(37, 99, 235, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px),
     radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%),
     radial-gradient(at 100% 0%, #f0f9ff 0px, transparent 50%),
     radial-gradient(at 100% 100%, #fae8ff 0px, transparent 50%),
     radial-gradient(at 0% 100%, #e0f2fe 0px, transparent 50%),
     radial-gradient(at 50% 50%, #ffffff 0px, transparent 50%);
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   position: fixed;
   inset: 0;
   z-index: -50;
-  /* Lower z-index to stay behind everything */
   pointer-events: none;
-  /* Ensure clicks pass through */
 }
 
 .aurora-animate {

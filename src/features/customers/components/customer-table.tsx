@@ -62,9 +62,6 @@ export const CustomerTable = React.memo(function CustomerTable({ data, currentUs
     const handleViewPhone = async (customerId: string) => {
         await logPhoneView({
             customerId,
-            viewerId: currentUser.id,
-            viewerRole: currentUser.role,
-            tenantId: currentUser.tenantId,
         });
     };
 

@@ -64,7 +64,7 @@ interface ReceiptBillDialogProps {
     customerName?: string;
     customerPhone?: string;
     amount?: string | number;
-     
+
     initialStatement?: any; // 保持向后兼容，后续可定义具体类型
 }
 
@@ -85,7 +85,7 @@ export function ReceiptBillDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-     
+
     const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
 
     useEffect(() => {
@@ -106,6 +106,13 @@ export function ReceiptBillDialog({
             proofUrl: '',
         },
     });
+
+    const initialStatementId = initialStatement?.id;
+    const initialStatementPendingAmount = initialStatement?.pendingAmount;
+    const initialStatementCustomerId = initialStatement?.customerId;
+    const initialStatementCustomerName = initialStatement?.customerName;
+    const initialStatementCustomerPhone = initialStatement?.customer?.phone;
+    const initialStatementOrderId = initialStatement?.orderId;
 
     useEffect(() => {
         if (open) {
@@ -128,37 +135,41 @@ export function ReceiptBillDialog({
                 });
             } else if (initialStatement) {
                 form.reset({
-                    customerId: initialStatement.customerId,
-                    customerName: initialStatement.customerName,
-                    customerPhone: initialStatement.customer?.phone || '',
+                    customerId: initialStatementCustomerId || '',
+                    customerName: initialStatementCustomerName || '',
+                    customerPhone: initialStatementCustomerPhone || '',
                     type: 'NORMAL',
-                    totalAmount: parseFloat(initialStatement.pendingAmount),
+                    totalAmount: initialStatementPendingAmount ? parseFloat(initialStatementPendingAmount) : 0,
                     paymentMethod: 'WECHAT',
                     receivedAt: new Date(),
                     proofUrl: '',
                     items: [
                         {
-                            orderId: initialStatement.orderId,
-                            amount: parseFloat(initialStatement.pendingAmount),
-                            statementId: initialStatement.id,
+                            orderId: initialStatementOrderId || '',
+                            amount: initialStatementPendingAmount ? parseFloat(initialStatementPendingAmount) : 0,
+                            statementId: initialStatementId,
                         }
                     ]
                 });
             }
         }
-    }, [open, orderId, customerId, customerName, customerPhone, amount, initialStatement, form]);
+    }, [
+        open, orderId, customerId, customerName, customerPhone, amount, form,
+        initialStatementId, initialStatementPendingAmount, initialStatementCustomerId,
+        initialStatementCustomerName, initialStatementCustomerPhone, initialStatementOrderId
+    ]);
 
     const onSubmit = (values: FormValues) => {
         startTransition(async () => {
             try {
-                 
+
                 const result = await createAndSubmitReceipt(values as any); // Action 输入与 Zod 类型可能不匹配
                 if (result.success) {
                     toast.success('收款单已提交审批');
                     onOpenChange?.(false);
                     form.reset();
                 } else {
-                     
+
                     toast.error((result as any).error || '提交失败');
                 }
             } catch (error: unknown) {

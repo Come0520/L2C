@@ -5,6 +5,6 @@ export async function formatQuoteNo(type: string, date: Date) {
     return `${type}-${date.getTime()}`;
 }
 
-export async function validateQuoteData(data: any) {
+export async function validateQuoteData(_data: unknown) {
     return true;
 }

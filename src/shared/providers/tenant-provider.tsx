@@ -5,15 +5,16 @@
 
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { getTenantInfo } from '@/features/settings/actions/tenant-info';
 
 // 租户信息接口
 export interface Tenant {
     id: string;
     name: string;
     code: string;
-    logoUrl?: string;
+    logoUrl?: string | null;
     settings?: Record<string, unknown>;
 }
 
@@ -30,35 +31,33 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     const [tenant, setTenant] = useState<Tenant | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchTenant = async (): Promise<void> => {
+    const fetchTenant = useCallback(async (): Promise<void> => {
         if (!session?.user?.tenantId) return;
 
         try {
-            // 暂时模拟获取租户信息
-            // 实际应调�?API: GET /api/tenants/current
-            // 或者从 Session 中直接解析更多租户信�?
-
-            // 模拟延迟
-            // await new Promise(resolve => setTimeout(resolve, 100));
-
-            setTenant({
-                id: session.user.tenantId,
-                name: '示例租户', // TODO: Fetch from API
-                code: 'demo',
-                settings: {},
-            });
+            const result = await getTenantInfo();
+            if (result.success) {
+                setTenant({
+                    id: result.data.id,
+                    name: result.data.name,
+                    code: result.data.code,
+                    logoUrl: result.data.logoUrl,
+                    settings: {}, // 暂时使用空对象，后续需要可根据 TenantInfo 扩展
+                });
+            }
         } catch (error) {
             console.error('Failed to fetch tenant:', error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [session?.user?.tenantId]);
 
     useEffect(() => {
         if (status === 'loading') return;
 
         if (status === 'unauthenticated') {
             setIsLoading(false);
+            setTenant(null);
             return;
         }
 
@@ -66,11 +65,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             fetchTenant();
         } else {
             setIsLoading(false);
-            // 如果已登录但没有租户 ID，可能需要跳转到租户选择或创建页
-            // router.push('/onboarding');
+            setTenant(null);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session, status]);
+    }, [session, status, fetchTenant]);
 
     return (
         <TenantContext.Provider

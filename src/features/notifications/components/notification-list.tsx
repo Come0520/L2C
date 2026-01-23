@@ -51,7 +51,7 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
     };
 
     const handleMarkAllRead = async () => {
-        const res = await markAllAsReadAction({});
+        const res = await markAllAsReadAction();
         if (res?.data?.success) {
             setList(prev => prev.map(n => ({ ...n, isRead: true })));
             toast.success('全部已读');

@@ -1,6 +1,7 @@
 import { db } from "@/shared/api/db";
-import { orders, orderItems } from "@/shared/api/schema/orders";
+import { orders, orderItems } from "@/shared/api/schema";
 import { quotes } from "@/shared/api/schema/quotes";
+import { OrderStateMachine } from '@/features/orders/logic/order-state-machine';
 import { eq, and } from "drizzle-orm";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
@@ -37,17 +38,23 @@ export class OrderService {
                             product: true
                         }
                     },
-                    customer: true
+
+                    customer: true,
+                    lead: true // Fetch Lead info
                 }
             });
 
             if (!quote) throw new Error("Quote not found");
 
-            // Strict Validation
-            // Strict Validation
-            const allowedStatuses = ['APPROVED', 'ACCEPTED', 'SUBMITTED'];
+            // 规则 1: 待客户确认状态禁止转化
+            if (quote.status === 'PENDING_CUSTOMER') {
+                throw new Error('无法转订单：待客户确认的报价单不能直接转订单，请等待客户确认后再操作。');
+            }
+
+            // 规则 2: 只有已批准/已接受状态可以转化
+            const allowedStatuses = ['APPROVED', 'ACCEPTED'];
             if (!allowedStatuses.includes(quote.status || '')) {
-                throw new Error(`Cannot convert quote with status ${quote.status}. Only APPROVED, ACCEPTED or SUBMITTED quotes can be converted.`);
+                throw new Error(`无法转订单：报价单状态为 ${quote.status}。只有“已批准”、“已接受”或“待客户确认”状态的报价单可以转订单。`);
             }
 
             // Check availability
@@ -85,6 +92,11 @@ export class OrderService {
                 customerName: quote.customer.name, // Use relation
                 customerPhone: quote.customer.phone, // Use relation
                 deliveryAddress: options?.paymentProofImg ? undefined : undefined, // Simplify
+
+                // Populate Channel Info from Lead
+                channelId: quote.lead?.channelId,
+                channelContactId: quote.lead?.channelContactId,
+                // channelCooperationMode: We might need to fetch channel to get this default, or leave null to use channel default at runtime
 
                 totalAmount: quote.totalAmount,
                 paidAmount: options?.paymentAmount || '0',
@@ -170,6 +182,14 @@ export class OrderService {
 
             if (!order) throw new Error("Order not found");
 
+            // 状态机验证
+            if (order.status) {
+                const isValid = OrderStateMachine.validateTransition(order.status as any, newStatus as any);
+                if (!isValid) {
+                    throw new Error(`Invalid status transition from ${order.status} to ${newStatus}`);
+                }
+            }
+
             const [updatedOrder] = await tx.update(orders)
                 .set({
                     status: newStatus as typeof orders.$inferSelect.status,
@@ -178,7 +198,8 @@ export class OrderService {
                 .where(eq(orders.id, orderId))
                 .returning();
 
-            if (newStatus === 'CONFIRMED') {
+            // PENDING_PO logic (replaced CONFIRMED which seems invalid)
+            if (newStatus === 'PENDING_PO') {
                 await POSplitService.splitOrderToPOs(orderId, tenantId, userId);
             }
 

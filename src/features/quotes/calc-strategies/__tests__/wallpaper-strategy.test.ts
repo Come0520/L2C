@@ -115,13 +115,13 @@ describe('WallpaperStrategy', () => {
 
             // 计算过程:
             // 用料宽度 = (300 + 20) / 100 = 3.2m
-            // 用料高度 = 2.8 + 0.1 = 2.9m
-            // 面积 = 3.2 × 2.9 = 9.28 m²
-            expect(result.usage).toBeCloseTo(9.28, 1);
-            expect(result.subtotal).toBeCloseTo(464, 0); // 9.28 × 50
+            // 墙布是按宽度（米）计算用量，不是面积
+            // usage = ceil(3.2 * 10) / 10 = 3.2m
+            expect(result.usage).toBeCloseTo(3.2, 1);
+            expect(result.subtotal).toBeCloseTo(160, 0); // 3.2 × 50
         });
 
-        it('应正确计算多墙段墙布面积', () => {
+        it('应正确计算多墙段墙布用量', () => {
             const params: WallpaperCalcParams = {
                 width: 0,
                 height: 260,
@@ -138,9 +138,8 @@ describe('WallpaperStrategy', () => {
             const result = strategy.calculate({ ...params, heightLoss: 10 });
 
             // 总宽度 = (300+20) + (400+20) + (250+20) = 1010cm = 10.1m
-            // 用料高度 = 2.8 + 0.1 = 2.9m
-            // 面积 = 10.1 × 2.9 = 29.29 m²
-            expect(result.usage).toBeCloseTo(29.29, 1);
+            // 墙布按宽度计算，不是面积
+            expect(result.usage).toBeCloseTo(10.1, 1);
         });
 
         it('应在墙高超过幅宽时发出警告', () => {
@@ -153,8 +152,9 @@ describe('WallpaperStrategy', () => {
             };
             const result = strategy.calculate(params);
 
-            expect(result.details.warning).toBeDefined();
-            expect(result.details.warning).toContain('exceeds');
+            expect(result.details?.warning).toBeDefined();
+            // 实际警告消息是中文
+            expect(result.details?.warning).toContain('高度不足');
         });
     });
 

@@ -16,7 +16,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/shared/ui/button';
-import { Plus, Save, Loader2, Check } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Check from 'lucide-react/dist/esm/icons/check';
 import { NodeConfigPanel } from './node-config-panel';
 import { ApprovalNode } from '../schema';
 import { saveFlowDefinition, publishApprovalFlow } from '../actions/flow';
@@ -106,7 +109,7 @@ export function ApprovalFlowDesigner({ flowId, initialData }: ApprovalFlowDesign
             const definition = {
                 nodes: nodes.map((n: Node) => ({
                     id: n.id,
-                    type: n.type,
+                    type: n.type as any,
                     data: n.data,
                     position: n.position
                 })),
@@ -137,7 +140,7 @@ export function ApprovalFlowDesigner({ flowId, initialData }: ApprovalFlowDesign
             const definition = {
                 nodes: nodes.map((n: Node) => ({
                     id: n.id,
-                    type: n.type,
+                    type: n.type as any,
                     data: n.data,
                     position: n.position
                 })),

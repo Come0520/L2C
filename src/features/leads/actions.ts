@@ -2,7 +2,7 @@
 
 import {
     getLeads,
-    getLeadDetail,
+    getLeadById,
     getLeadTimeline,
     getChannels
 } from './actions/queries';
@@ -21,7 +21,7 @@ import {
 
 export {
     getLeads,
-    getLeadDetail,
+    getLeadById,
     getLeadTimeline,
     getChannels,
     createLead,

@@ -5,6 +5,16 @@ import { leads } from '@/shared/api/schema';
 import { eq, and, or, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
+import {
+    SOURCE_WEIGHTS,
+    INTENTION_WEIGHTS,
+    DEFAULT_SOURCE_SCORE,
+    UNKNOWN_CHANNEL_SCORE,
+    DEFAULT_INTENTION_SCORE,
+    calculateBudgetScore,
+    getStarRating,
+    getPriorityLabel
+} from '../config/scoring-config';
 
 // ============================================================
 // [Lead-01] 线索评分模型优化
@@ -14,33 +24,13 @@ const calculateLeadScoreSchema = z.object({
     leadId: z.string().uuid(),
 });
 
-/**
- * 来源权重配置
- */
-const SOURCE_WEIGHTS: Record<string, number> = {
-    REFERRAL: 30,        // 转介绍
-    REPEAT: 25,          // 老客户复购
-    ONLINE_AD: 15,       // 线上广告
-    OFFLINE_EVENT: 20,   // 线下活动
-    WALK_IN: 10,         // 自然进店
-    PHONE_INQUIRY: 12,   // 电话咨询
-    OTHER: 5,
-};
-
-/**
- * 意向度权重
- */
-const INTENTION_WEIGHTS: Record<string, number> = {
-    HIGH: 35,
-    MEDIUM: 20,
-    LOW: 10,
-};
+// 评分权重配置已移至 ../config/scoring-config.ts
 
 /**
  * 计算线索评分
  * 基于：意向度 + 预算 + 来源权重
  */
-export const calculateLeadScore = createSafeAction(calculateLeadScoreSchema, async ({ leadId }, { session }) => {
+const calculateLeadScoreInternal = createSafeAction(calculateLeadScoreSchema, async ({ leadId }, { session }) => {
     const tenantId = session.user.tenantId;
 
     const lead = await db.query.leads.findFirst({
@@ -55,34 +45,23 @@ export const calculateLeadScore = createSafeAction(calculateLeadScoreSchema, asy
     }
 
     // 1. 来源分数 (0-30) - 此处简化为使用默认值，实际应关联查询 channel
-    const sourceScore = lead.channelId ? 15 : SOURCE_WEIGHTS['OTHER'];
+    const sourceScore = lead.channelId ? UNKNOWN_CHANNEL_SCORE : DEFAULT_SOURCE_SCORE;
 
     // 2. 意向度分数 (0-35)
-    const intentionScore = INTENTION_WEIGHTS[lead.intentionLevel || 'LOW'] || 10;
+    const intentionScore = INTENTION_WEIGHTS[lead.intentionLevel || 'LOW'] || DEFAULT_INTENTION_SCORE;
 
     // 3. 预算分数 (0-35)
     const budget = parseFloat(lead.estimatedAmount?.toString() || '0');
-    let budgetScore = 0;
-    if (budget >= 50000) {
-        budgetScore = 35;
-    } else if (budget >= 20000) {
-        budgetScore = 28;
-    } else if (budget >= 10000) {
-        budgetScore = 20;
-    } else if (budget >= 5000) {
-        budgetScore = 12;
-    } else if (budget > 0) {
-        budgetScore = 5;
-    }
+    const budgetScore = calculateBudgetScore(budget);
 
     // 总分 (0-100)
     const totalScore = sourceScore + intentionScore + budgetScore;
 
     // 星级评定 (1-5星)
-    const starRating = totalScore >= 80 ? 5 : totalScore >= 60 ? 4 : totalScore >= 40 ? 3 : totalScore >= 20 ? 2 : 1;
+    const starRating = getStarRating(totalScore);
 
     // 优先级标签
-    const priorityLabel = totalScore >= 70 ? '热门线索' : totalScore >= 50 ? '优质线索' : totalScore >= 30 ? '普通线索' : '待培育';
+    const priorityLabel = getPriorityLabel(totalScore);
 
     return {
         leadId,
@@ -102,6 +81,10 @@ export const calculateLeadScore = createSafeAction(calculateLeadScoreSchema, asy
     };
 });
 
+export async function calculateLeadScore(data: z.infer<typeof calculateLeadScoreSchema>) {
+    return calculateLeadScoreInternal(data);
+}
+
 // ============================================================
 // [Lead-02] 批量导入去重增强
 // ============================================================
@@ -116,7 +99,7 @@ const checkDuplicateSchema = z.object({
  * 检查线索是否重复
  * 手机号 + 地址组合去重
  */
-export const checkLeadDuplicate = createSafeAction(checkDuplicateSchema, async (params, { session }) => {
+const checkLeadDuplicateInternal = createSafeAction(checkDuplicateSchema, async (params, { session }) => {
     const { phone, address, name } = params;
     const tenantId = session.user.tenantId;
 
@@ -198,6 +181,10 @@ export const checkLeadDuplicate = createSafeAction(checkDuplicateSchema, async (
     };
 });
 
+export async function checkLeadDuplicate(data: z.infer<typeof checkDuplicateSchema>) {
+    return checkLeadDuplicateInternal(data);
+}
+
 /**
  * 批量检查去重
  */
@@ -210,7 +197,7 @@ const batchCheckDuplicateSchema = z.object({
     })),
 });
 
-export const batchCheckLeadDuplicates = createSafeAction(batchCheckDuplicateSchema, async ({ items }, { session }) => {
+const batchCheckLeadDuplicatesInternal = createSafeAction(batchCheckDuplicateSchema, async ({ items }, { session }) => {
     const tenantId = session.user.tenantId;
 
     // 先收集所有手机号进行批量查询
@@ -253,3 +240,7 @@ export const batchCheckLeadDuplicates = createSafeAction(batchCheckDuplicateSche
         results,
     };
 });
+
+export async function batchCheckLeadDuplicates(data: z.infer<typeof batchCheckDuplicateSchema>) {
+    return batchCheckLeadDuplicatesInternal(data);
+}

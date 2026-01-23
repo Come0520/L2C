@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Search from 'lucide-react/dist/esm/icons/search';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
+import Link from 'next/link';
 
 export const revalidate = 60;
 
@@ -50,16 +52,16 @@ export default async function ProcessingOrdersPage({
                     <Tabs defaultValue={status || 'ALL'} className="w-auto">
                         <TabsList>
                             <TabsTrigger value="ALL" asChild>
-                                <a href="/supply-chain/processing-orders?status=ALL">全部</a>
+                                <Link href="/supply-chain/processing-orders?status=ALL">全部</Link>
                             </TabsTrigger>
                             <TabsTrigger value="PENDING" asChild>
-                                <a href="/supply-chain/processing-orders?status=PENDING">待加工</a>
+                                <Link href="/supply-chain/processing-orders?status=PENDING">待加工</Link>
                             </TabsTrigger>
                             <TabsTrigger value="IN_PROGRESS" asChild>
-                                <a href="/supply-chain/processing-orders?status=IN_PROGRESS">加工中</a>
+                                <Link href="/supply-chain/processing-orders?status=IN_PROGRESS">加工中</Link>
                             </TabsTrigger>
                             <TabsTrigger value="COMPLETED" asChild>
-                                <a href="/supply-chain/processing-orders?status=COMPLETED">已完成</a>
+                                <Link href="/supply-chain/processing-orders?status=COMPLETED">已完成</Link>
                             </TabsTrigger>
                         </TabsList>
                     </Tabs>
@@ -80,7 +82,7 @@ export default async function ProcessingOrdersPage({
                 </div>
 
                 {/* 加工单列表 */}
-                <Suspense fallback={<div className="text-center py-8">加载中...</div>}>
+                <Suspense fallback={<TableSkeleton />}>
                     <ProcessingOrderTable data={result.data} />
                 </Suspense>
 

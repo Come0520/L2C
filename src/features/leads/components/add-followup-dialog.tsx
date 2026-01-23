@@ -32,38 +32,16 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { auth } from '@/shared/lib/auth'; // CANNOT use auth in Client Component. Need to pass userId/tenantId or handle in server action via session() call inside action (better).
-// But my action `addFollowup` takes userId, tenantId as args.
-// I should wrap the action to inject user if possible, or pass props.
-// Ideally actions use `auth()` inside. But I passed them as args.
-// I'll assume props are passed OR I will refactor action to use `auth()`.
-// For now, I'll update action to use `auth()` if I can, OR pass them as props to this component.
-// `[id]/page.tsx` is server component, it can pass userId/tenantId.
-// BUT `[id]/page.tsx` didn't pass them in existing code.
-// I need updates in `page.tsx`.
+// Server Action (addFollowup) 内部已使用 auth() 获取用户信息，无需从客户端传递
 
-// Let's stick passing props.
 interface AddFollowupDialogProps {
     leadId: string;
     trigger: React.ReactNode;
-    userId?: string; // Optional for now to avoid breaking types immediately, but required for logic
-    tenantId?: string;
 }
-
-// Wait, server actions run on server. `auth()` works on server.
-// `mutations.ts` functions currently take userId as arg.
-// I can make a wrapper action or just update `mutations.ts` to use `auth()` internally.
-// Using `auth()` internally is safer and cleaner.
-// I already updated `mutations.ts` to `import 'server-only'`. `auth()` is available.
-// I should Refactor `mutations.ts` to remove userId/tenantId params and use `auth()`.
-// This is best practice.
-// BUT I don't want to rewrite `mutations.ts` AGAIN if I can avoid it.
-// I will pass userId/tenantId from `page.tsx` to this component.
-// `page.tsx` has `session`.
 
 type FormValues = z.infer<typeof addLeadFollowupSchema>;
 
-export function AddFollowupDialog({ leadId, trigger, userId, tenantId }: AddFollowupDialogProps) {
+export function AddFollowupDialog({ leadId, trigger }: AddFollowupDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
 
@@ -77,14 +55,10 @@ export function AddFollowupDialog({ leadId, trigger, userId, tenantId }: AddFoll
     });
 
     const onSubmit = (values: FormValues) => {
-        if (!userId || !tenantId) {
-            toast.error('用户信息缺失');
-            return;
-        }
-
         startTransition(async () => {
             try {
-                await addLeadFollowup(values, userId, tenantId);
+                // Server Action 内部使用 auth() 获取用户信息
+                await addLeadFollowup(values);
                 toast.success('跟进记录添加成功');
                 setOpen(false);
                 form.reset();

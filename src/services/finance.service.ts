@@ -14,6 +14,8 @@ import {
 } from "@/shared/api/schema";
 import { eq, and, inArray, type InferSelectModel } from "drizzle-orm";
 import { Decimal } from "decimal.js";
+import { getFinanceConfigCached } from "@/features/finance/services/finance-config-service";
+import { isWithinAllowedDifference } from "@/features/finance/services/finance-config-utils";
 
 export interface CreatePaymentOrderData {
     customerId?: string;
@@ -218,8 +220,19 @@ export class FinanceService {
                         const total = new Decimal(statement.totalAmount);
                         const pending = total.minus(receivedAfter);
 
+                        // 读取财务配置，判断是否允许小额差异
                         let newStatus = statement.status;
-                        if (pending.lte(0)) {
+                        let allowDifference = false;
+                        try {
+                            const financeConfig = await getFinanceConfigCached(tenantId);
+                            allowDifference = isWithinAllowedDifference(financeConfig, pending.toNumber());
+                        } catch {
+                            // 配置读取失败，使用严格判断
+                            allowDifference = false;
+                        }
+
+                        // 判断状态：完全付清或差异在允许范围内 → PAID
+                        if (pending.lte(0) || allowDifference) {
                             newStatus = 'PAID';
                         } else if (receivedAfter.gt(0)) {
                             newStatus = 'PARTIAL';
@@ -230,7 +243,7 @@ export class FinanceService {
                                 receivedAmount: receivedAfter.toString(),
                                 pendingAmount: pending.toString(),
                                 status: newStatus,
-                                completedAt: pending.lte(0) ? new Date() : null,
+                                completedAt: (pending.lte(0) || allowDifference) ? new Date() : null,
                             })
                             .where(eq(arStatements.id, statement.id));
 

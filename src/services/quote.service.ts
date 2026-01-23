@@ -2,7 +2,7 @@ import { db } from "@/shared/api/db";
 import { quotes, quoteItems, quoteRooms } from "@/shared/api/schema/quotes";
 import { measureSheets, measureItems } from "@/shared/api/schema/service";
 import { tenants } from "@/shared/api/schema/infrastructure";
-import { eq, and, InferSelectModel } from "drizzle-orm";
+import { eq, and, desc, sql, ne, InferSelectModel } from 'drizzle-orm';
 
 type MeasureItem = InferSelectModel<typeof measureItems>;
 type QuoteItemWithMatched = InferSelectModel<typeof quoteItems> & { _matched?: boolean };
@@ -30,6 +30,44 @@ interface TenantSettings {
 
 export class QuoteService {
 
+    /**
+     * Activate a specific version of a quote, deactivating others in the same version chain.
+     * @param quoteId - The ID of the quote version to activate.
+     * @param tenantId - The tenant ID to ensure ownership.
+     */
+    static async activateVersion(quoteId: string, tenantId: string) {
+        return await db.transaction(async (tx) => {
+            // 1. Get the quote to find rootId
+            const quote = await tx.query.quotes.findFirst({
+                where: and(
+                    eq(quotes.id, quoteId),
+                    eq(quotes.tenantId, tenantId)
+                )
+            });
+
+            if (!quote) throw new Error('Quote not found');
+
+            // 2. Deactivate all other versions in the chain
+            // 使用 isActive 字段而不是 status 来控制版本激活状态
+            if (quote.rootQuoteId) {
+                await tx.update(quotes)
+                    .set({ isActive: false, updatedAt: new Date() })
+                    .where(and(
+                        eq(quotes.rootQuoteId, quote.rootQuoteId),
+                        eq(quotes.isActive, true),
+                        ne(quotes.id, quoteId)
+                    ));
+            }
+
+            // 3. Activate target version
+            const [activated] = await tx.update(quotes)
+                .set({ isActive: true, updatedAt: new Date() })
+                .where(eq(quotes.id, quoteId))
+                .returning();
+
+            return activated;
+        });
+    }
     /**
      * Create a new version of an existing quote.
      */
@@ -128,6 +166,110 @@ export class QuoteService {
             }
 
             return newQuote;
+        });
+    }
+
+    /**
+     * 复制报价单为新的独立报价单
+     * 与 createNextVersion 不同，这会创建一个全新的版本链（独立的报价单）
+     * 
+     * @param quoteId - 源报价单 ID
+     * @param userId - 创建者用户 ID
+     * @param targetCustomerId - 可选，目标客户 ID（用于为不同客户复制报价）
+     */
+    static async copyQuote(quoteId: string, userId: string, targetCustomerId?: string) {
+        return await db.transaction(async (tx) => {
+            // 1. 获取原始报价单及其所有部件
+            const originalQuote = await tx.query.quotes.findFirst({
+                where: eq(quotes.id, quoteId),
+                with: {
+                    rooms: true,
+                    items: true
+                }
+            });
+
+            if (!originalQuote) throw new Error("报价单不存在");
+
+            // 2. 生成新的报价单号（完全独立，不继承原报价单号）
+            const newQuoteNo = `QT${Date.now()}`;
+
+            // 3. 创建新的报价单（独立版本链，version = 1）
+            const newQuoteData = {
+                tenantId: originalQuote.tenantId,
+                customerId: targetCustomerId || originalQuote.customerId,
+                quoteNo: newQuoteNo,
+                version: 1, // 新报价单从版本 1 开始
+                totalAmount: originalQuote.totalAmount?.toString() || '0',
+                finalAmount: originalQuote.finalAmount?.toString() || '0',
+                discountAmount: originalQuote.discountAmount?.toString() || '0',
+                discountRate: originalQuote.discountRate?.toString() || '1',
+                status: 'DRAFT' as const,
+                parentQuoteId: null, // 无父报价单（独立副本）
+                rootQuoteId: null as string | null, // 将在插入后设置为自身 ID
+                isActive: true,
+                createdBy: userId,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                notes: originalQuote.notes ? `[复制自 ${originalQuote.quoteNo}] ${originalQuote.notes}` : `复制自 ${originalQuote.quoteNo}`,
+                title: originalQuote.title,
+            };
+
+            const [newQuote] = await tx.insert(quotes).values(newQuoteData).returning();
+
+            // 4. 设置 rootQuoteId 为自身（新的版本链根）
+            await tx.update(quotes)
+                .set({ rootQuoteId: newQuote.id })
+                .where(eq(quotes.id, newQuote.id));
+
+            // 5. 复制空间并建立 ID 映射
+            const roomIdMap = new Map<string, string>();
+            for (const room of originalQuote.rooms) {
+                const [newRoom] = await tx.insert(quoteRooms).values({
+                    tenantId: originalQuote.tenantId,
+                    quoteId: newQuote.id,
+                    name: room.name,
+                    measureRoomId: room.measureRoomId,
+                    sortOrder: room.sortOrder,
+                    createdAt: new Date()
+                }).returning();
+                roomIdMap.set(room.id, newRoom.id);
+            }
+
+            // 6. 复制报价项并处理 parentId 映射
+            const itemIdMap = new Map<string, string>();
+            const sortedItems = [...originalQuote.items].sort((a, b) => {
+                // 主商品优先（parentId == null）
+                if (!a.parentId && b.parentId) return -1;
+                if (a.parentId && !b.parentId) return 1;
+                return 0;
+            });
+
+            for (const item of sortedItems) {
+                const newItemData = {
+                    tenantId: newQuote.tenantId,
+                    quoteId: newQuote.id,
+                    roomId: item.roomId ? roomIdMap.get(item.roomId) : null,
+                    parentId: item.parentId ? itemIdMap.get(item.parentId) : null,
+                    category: item.category,
+                    productId: item.productId,
+                    productName: item.productName,
+                    unit: item.unit,
+                    unitPrice: item.unitPrice?.toString() || '0',
+                    quantity: item.quantity?.toString() || '0',
+                    width: item.width?.toString() || null,
+                    height: item.height?.toString() || null,
+                    foldRatio: item.foldRatio?.toString() || null,
+                    processFee: item.processFee?.toString() || null,
+                    subtotal: item.subtotal?.toString() || '0',
+                    remark: item.remark,
+                    attributes: item.attributes,
+                    createdAt: new Date()
+                };
+                const [newItem] = await tx.insert(quoteItems).values(newItemData).returning();
+                itemIdMap.set(item.id, newItem.id);
+            }
+
+            return { ...newQuote, rootQuoteId: newQuote.id };
         });
     }
 
@@ -476,7 +618,7 @@ export class QuoteService {
         // 检查是否需要过期（validUntil 已过期且状态不是已确认/已拒绝）
         const now = new Date();
         const validUntil = quote.validUntil;
-        const canExpire = quote.status === 'DRAFT' || quote.status === 'SUBMITTED';
+        const canExpire = quote.status === 'DRAFT' || quote.status === 'PENDING_APPROVAL' || quote.status === 'PENDING_CUSTOMER';
 
         if (validUntil && validUntil < now && canExpire) {
             // 更新状态为 EXPIRED
@@ -508,7 +650,7 @@ export class QuoteService {
         // 构建查询条件
         const conditions = [
             lt(quotes.validUntil, now),
-            inArray(quotes.status, ['DRAFT', 'SUBMITTED'])
+            inArray(quotes.status, ['DRAFT', 'PENDING_APPROVAL', 'PENDING_CUSTOMER'])
         ];
 
         if (tenantId) {
@@ -663,7 +805,7 @@ export class QuoteService {
             const diffMs = validUntil.getTime() - now.getTime();
             daysUntilExpiry = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-            if (daysUntilExpiry < 0 && (quote.status === 'DRAFT' || quote.status === 'SUBMITTED')) {
+            if (daysUntilExpiry < 0 && (quote.status === 'DRAFT' || quote.status === 'PENDING_APPROVAL' || quote.status === 'PENDING_CUSTOMER')) {
                 isExpired = true;
             }
         }

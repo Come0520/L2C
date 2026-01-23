@@ -75,7 +75,7 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, userId, tenan
                     onSuccess?.();
                 }
             } else {
-                const res = await createLead(values, userId, tenantId);
+                const res = await createLead(values);
                 if (!res.success && res.status === 'DUPLICATE') {
                     setConflictData({
                         type: res.conflict.type as 'PHONE' | 'ADDRESS',

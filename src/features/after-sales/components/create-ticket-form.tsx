@@ -46,15 +46,19 @@ export function CreateTicketForm() {
     });
 
     const onSubmit = async (values: FormValues) => {
-        const result = await createAfterSalesTicket(values);
+        try {
+            const result = await createAfterSalesTicket(values);
 
-        if (result.data?.success) {
-            toast.success('创建成功', { description: result.data.message });
-            router.push(`/after-sales/${result.data.data?.id}`);
-        } else {
-            toast.error('创建失败', {
-                description: result.error || result.data?.message,
-            });
+            if (result.data?.success) {
+                toast.success('创建成功', { description: result.data.message });
+                router.push(`/after-sales/${result.data.data?.id}`);
+            } else {
+                toast.error('创建失败', {
+                    description: result.error || result.data?.message,
+                });
+            }
+        } catch (err: any) {
+            toast.error('提交过程中发生错误', { description: err.message });
         }
     };
 

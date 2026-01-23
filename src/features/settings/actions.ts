@@ -9,30 +9,50 @@ const mockActionSchema = z.object({
     data: z.any().optional()
 });
 
-export const updateUserSettings = createSafeAction(mockActionSchema, async (data) => {
+const updateUserSettingsAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings');
     return { success: true, message: "Settings updated in recovery mode" };
 });
 
-export const createUser = createSafeAction(mockActionSchema, async (data) => {
+export async function updateUserSettings(data: z.infer<typeof mockActionSchema>) {
+    return updateUserSettingsAction(data);
+}
+
+const createUserAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings/users');
     return { success: true, message: "User created in recovery mode" };
 });
 
-export const updateUser = createSafeAction(mockActionSchema, async (data) => {
+export async function createUser(data: z.infer<typeof mockActionSchema>) {
+    return createUserAction(data);
+}
+
+const updateUserAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings/users');
     return { success: true, message: "User updated in recovery mode" };
 });
 
-export const deleteUser = createSafeAction(mockActionSchema, async (data) => {
+export async function updateUser(data: z.infer<typeof mockActionSchema>) {
+    return updateUserAction(data);
+}
+
+const deleteUserAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings/users');
     return { success: true, message: "User deleted in recovery mode" };
 });
 
-export const updateTenantProfile = createSafeAction(mockActionSchema, async (data) => {
+export async function deleteUser(data: z.infer<typeof mockActionSchema>) {
+    return deleteUserAction(data);
+}
+
+const updateTenantProfileAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings/general');
     return { success: true, message: "Tenant profile updated in recovery mode" };
 });
+
+export async function updateTenantProfile(data: z.infer<typeof mockActionSchema>) {
+    return updateTenantProfileAction(data);
+}
 
 // --- 渠道管理 Actions ---
 
@@ -44,7 +64,7 @@ import { auth } from '@/shared/lib/auth';
 /**
  * 获取所有渠道
  */
-export const getChannels = async () => {
+export async function getChannels() {
     const session = await auth();
     if (!session?.user?.tenantId) return { success: false, error: '未授权', data: [] };
 
@@ -62,12 +82,12 @@ export const getChannels = async () => {
         console.error('获取渠道列表失败:', _error);
         return { success: false, error: '获取渠道列表失败', data: [] };
     }
-};
+}
 
 /**
  * 获取渠道分类（顶级渠道）
  */
-export const getChannelCategories = async () => {
+export async function getChannelCategories() {
     const session = await auth();
     if (!session?.user?.tenantId) return { success: false, error: '未授权', data: [] };
 
@@ -84,7 +104,7 @@ export const getChannelCategories = async () => {
         console.error('获取渠道分类失败:', _error);
         return { success: false, error: '获取渠道分类失败', data: [] };
     }
-};
+}
 
 const channelSchema = z.object({
     id: z.string().optional(),
@@ -97,7 +117,7 @@ const channelSchema = z.object({
 /**
  * 创建渠道
  */
-export const createChannel = createSafeAction(channelSchema, async (data, ctx) => {
+const createChannelAction = createSafeAction(channelSchema, async (data, ctx) => {
     const session = ctx.session;
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -118,10 +138,14 @@ export const createChannel = createSafeAction(channelSchema, async (data, ctx) =
     }
 });
 
+export async function createChannel(data: z.infer<typeof channelSchema>) {
+    return createChannelAction(data);
+}
+
 /**
  * 更新渠道
  */
-export const updateChannel = createSafeAction(channelSchema, async (data, ctx) => {
+const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) => {
     const session = ctx.session;
     if (!session?.user?.tenantId || !data.id) return { success: false, error: '未授权或缺少 ID' };
 
@@ -158,10 +182,14 @@ export const updateChannel = createSafeAction(channelSchema, async (data, ctx) =
     }
 });
 
+export async function updateChannel(data: z.infer<typeof channelSchema>) {
+    return updateChannelAction(data);
+}
+
 /**
  * 删除渠道
  */
-export const deleteChannel = createSafeAction(z.object({ id: z.string() }), async (data, ctx) => {
+const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async (data, ctx) => {
     const session = ctx.session;
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -190,4 +218,8 @@ export const deleteChannel = createSafeAction(z.object({ id: z.string() }), asyn
         return { success: false, error: '删除渠道失败' };
     }
 });
+
+export async function deleteChannel(data: { id: string }) {
+    return deleteChannelAction(data);
+}
 

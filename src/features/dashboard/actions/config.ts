@@ -42,10 +42,7 @@ export async function getDashboardConfig(): Promise<DashboardLayoutConfig> {
     return DEFAULT_DASHBOARD_CONFIG;
 }
 
-/**
- * 保存用户的仪表盘配置
- */
-export const saveDashboardConfigAction = createSafeAction(dashboardConfigSchema, async (data, { session }) => {
+const saveDashboardConfigActionInternal = createSafeAction(dashboardConfigSchema, async (data, { session }) => {
     const userId = session.user.id;
 
     await db.update(users)
@@ -57,6 +54,10 @@ export const saveDashboardConfigAction = createSafeAction(dashboardConfigSchema,
 
     return { success: true };
 });
+
+export async function saveDashboardConfigAction(params: z.infer<typeof dashboardConfigSchema>) {
+    return saveDashboardConfigActionInternal(params);
+}
 
 /**
  * 重置仪表盘配置为默认

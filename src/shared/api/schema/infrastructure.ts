@@ -1,10 +1,34 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+
+// 租户状态枚举
+export const tenantStatusEnum = pgEnum('tenant_status', [
+    'pending_approval',  // 待审批
+    'active',            // 已激活
+    'rejected',          // 已拒绝
+    'suspended',         // 已暂停
+]);
 
 export const tenants = pgTable('tenants', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 100 }).notNull(),
     code: varchar('code', { length: 50 }).unique().notNull(),
     logoUrl: text('logo_url'),
+
+    // 租户状态
+    status: tenantStatusEnum('status').default('active').notNull(),
+
+    // 申请信息
+    applicantName: varchar('applicant_name', { length: 100 }),
+    applicantPhone: varchar('applicant_phone', { length: 20 }),
+    applicantEmail: varchar('applicant_email', { length: 255 }),
+    region: varchar('region', { length: 100 }), // 地区
+    businessDescription: text('business_description'),
+
+    // 审批信息
+    reviewedBy: uuid('reviewed_by'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectReason: text('reject_reason'),
+
     // Settings JSON structure:
     // interface TenantSettings {
     //     mfa?: {
@@ -17,6 +41,7 @@ export const tenants = pgTable('tenants', {
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
+
 
 export const users = pgTable('users', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -33,6 +58,7 @@ export const users = pgTable('users', {
     isActive: boolean('is_active').default(true),
     avatarUrl: text('avatar_url'),
     notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
+    isPlatformAdmin: boolean('is_platform_admin').default(false), // 平台超级管理员标识
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

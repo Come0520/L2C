@@ -10,7 +10,8 @@
 import { db } from '@/shared/api/db';
 import { creditNotes, arStatements } from '@/shared/api/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -49,6 +50,9 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
+
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
         const [creditNote] = await db.insert(creditNotes).values({
             tenantId,
@@ -94,6 +98,9 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
+
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
         // 获取贷项通知单
         const creditNote = await db.query.creditNotes.findFirst({

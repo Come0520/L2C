@@ -17,23 +17,27 @@ interface ChannelListProps {
     categories?: any[];
 }
 
+/**
+ * 渠道列表组件
+ * 展示渠道配置数据表格
+ */
 export function ChannelList({ data, categories }: ChannelListProps) {
     return (
         <div className="rounded-md border">
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Channel Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>渠道名称</TableHead>
+                        <TableHead>分类</TableHead>
+                        <TableHead>状态</TableHead>
+                        <TableHead className="text-right">操作</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {data.length === 0 ? (
                         <TableRow>
                             <TableCell colSpan={4} className="h-24 text-center">
-                                No channels found.
+                                暂无渠道数据
                             </TableCell>
                         </TableRow>
                     ) : (
@@ -43,7 +47,7 @@ export function ChannelList({ data, categories }: ChannelListProps) {
                                 <TableCell>{item.category}</TableCell>
                                 <TableCell>
                                     <Badge variant={item.isActive ? "default" : "secondary"}>
-                                        {item.isActive ? 'Active' : 'Inactive'}
+                                        {item.isActive ? '启用' : '停用'}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">

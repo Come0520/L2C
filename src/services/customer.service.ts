@@ -14,10 +14,11 @@ export class CustomerService {
     /**
      * 通过手机号查找客户
      * @param phone 手机号
+     * @param tenantId 租户 ID（必须提供以确保租户隔离）
      */
-    static async findByPhone(phone: string) {
+    static async findByPhone(phone: string, tenantId: string) {
         const customer = await db.query.customers.findFirst({
-            where: eq(customers.phone, phone),
+            where: and(eq(customers.phone, phone), eq(customers.tenantId, tenantId)),
         });
         return customer || null;
     }

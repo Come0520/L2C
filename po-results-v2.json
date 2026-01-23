@@ -1,0 +1,713 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\playwright.config.ts",
+    "rootDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 11
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.setup\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 11
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 16,
+    "webServer": {
+      "command": "pnpm dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3681,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "Navigating to login page...\n"
+                    },
+                    {
+                      "text": "PAGE LOG: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold\n"
+                    },
+                    {
+                      "text": "PAGE LOG: [HMR] connected\n"
+                    },
+                    {
+                      "text": "Login page loaded\n"
+                    },
+                    {
+                      "text": "Form filled, clicking submit...\n"
+                    },
+                    {
+                      "text": "Waiting for login response...\n"
+                    },
+                    {
+                      "text": "PAGE LOG: [Fast Refresh] rebuilding\n"
+                    },
+                    {
+                      "text": "PAGE LOG: [Fast Refresh] done in 120ms\n"
+                    },
+                    {
+                      "text": "Waiting for redirect to workbench...\n"
+                    },
+                    {
+                      "text": "Authentication successful\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-01-23T05:29:55.605Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-60f085b113a677673906",
+          "file": "auth.setup.ts",
+          "line": 6,
+          "column": 6
+        }
+      ]
+    },
+    {
+      "title": "flows\\purchase-order.spec.ts",
+      "file": "flows/purchase-order.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "閲囪喘鍗曟祦绋?(Supply Chain PO)",
+          "file": "flows/purchase-order.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "搴斿湪閲囪喘鍗曞垪琛ㄩ〉姝ｅ父鏄剧ず鏁版嵁骞舵敮鎸佺瓫閫?,
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4986,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鉁?閲囪喘鍗曞垪琛ㄦ暟鎹姞杞芥垚鍔焅n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-3e0a777e43b31b372118",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 19,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸侀噰璐崟鐘舵€佹祦杞? 涓嬪崟纭",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "timedOut",
+                      "duration": 60022,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts",
+                            "column": 24,
+                            "line": 68
+                          },
+                          "message": "Error: page.waitForURL: Test timeout of 60000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n\n  66 |                 await draftRow.click();\n  67 |             }\n> 68 |             await page.waitForURL(/\\/supply-chain\\/purchase-orders\\/.+/);\n     |                        ^\n  69 |\n  70 |             // 楠岃瘉鐢盶"鑽夌\"杞负\"宸蹭笅鍗昞"\n  71 |             const orderBtn = page.getByRole('button', { name: /纭涓嬪崟|杞负宸蹭笅鍗? });\n    at C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts:68:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.179Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\test-results\\flows-purchase-order-閲囪喘鍗曟祦绋?Supply-Chain-PO-搴旀敮鎸侀噰璐崟鐘舵€佹祦杞?涓嬪崟纭-chromium\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-aaf753202064117f5a84",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 47,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸佸～鍐欑墿娴佷俊鎭笌纭鍙戣揣",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 3964,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.129Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-43954894dc6b1cd1f9a7",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 94,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸佸埌璐х‘璁や笌鍏ュ簱",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3574,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.168Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-497e4005b09cd8f64969",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 134,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸佸鍑洪噰璐崟 (PDF/鍥剧墖)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 4,
+                      "status": "failed",
+                      "duration": 18234,
+                      "error": {
+                        "message": "TimeoutError: locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('a').first()\u001b[22m\n",
+                        "stack": "TimeoutError: locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('a').first()\u001b[22m\n\n    at C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts:173:49",
+                        "location": {
+                          "file": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts",
+                          "column": 49,
+                          "line": 173
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 171 |\u001b[39m\n \u001b[90m 172 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[36mawait\u001b[39m firstRow\u001b[33m.\u001b[39misVisible()) {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 173 |\u001b[39m             \u001b[36mawait\u001b[39m firstRow\u001b[33m.\u001b[39mlocator(\u001b[32m'a'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 174 |\u001b[39m\n \u001b[90m 175 |\u001b[39m             \u001b[90m// 鏌ユ壘瀵煎嚭鎸夐挳\u001b[39m\n \u001b[90m 176 |\u001b[39m             \u001b[36mconst\u001b[39m exportBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[35m/瀵煎嚭|涓嬭浇/\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts",
+                            "column": 49,
+                            "line": 173
+                          },
+                          "message": "TimeoutError: locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('a').first()\u001b[22m\n\n\n  171 |\n  172 |         if (await firstRow.isVisible()) {\n> 173 |             await firstRow.locator('a').first().click();\n      |                                                 ^\n  174 |\n  175 |             // 鏌ユ壘瀵煎嚭鎸夐挳\n  176 |             const exportBtn = page.getByRole('button', { name: /瀵煎嚭|涓嬭浇/ });\n    at C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts:173:49"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.212Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\test-results\\flows-purchase-order-閲囪喘鍗曟祦绋?Supply-Chain-PO-搴旀敮鎸佸鍑洪噰璐崟-PDF-鍥剧墖--chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\e2e\\flows\\purchase-order.spec.ts",
+                        "column": 49,
+                        "line": 173
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-cfa1da1422606917de18",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 168,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "閲囪喘鍗曞叧鑱旈€昏緫 (璁㈠崟鏈ㄦ《鏁堝簲)",
+          "file": "flows/purchase-order.spec.ts",
+          "line": 184,
+          "column": 6,
+          "specs": [
+            {
+              "title": "搴旈獙璇侀噰璐崟鐘舵€佸璁㈠崟鐘舵€佺殑椹卞姩閫昏緫",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 5,
+                      "status": "passed",
+                      "duration": 2751,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.194Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-4bf331472067bd72668a",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 185,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "渚涘簲閾炬壒閲忔搷浣?(Supply-01 Enhancement)",
+          "file": "flows/purchase-order.spec.ts",
+          "line": 214,
+          "column": 6,
+          "specs": [
+            {
+              "title": "搴旀敮鎸佸緟閲囪喘姹犻〉闈㈠睍绀哄拰绛涢€?,
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 6,
+                      "status": "passed",
+                      "duration": 4638,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鈿狅笍 寰呴噰璐睜椤甸潰灏氭湭瀹炵幇锛岃烦杩嘰n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.184Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-5921420bb1245de373c6",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 215,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸佹壒閲忛€夋嫨閲囪喘鍗?,
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 7,
+                      "status": "passed",
+                      "duration": 4871,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鈿狅笍 鎵归噺閫夋嫨鍔熻兘灏氭湭瀹炵幇\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.186Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-27427286927796307bfc",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 231,
+              "column": 9
+            },
+            {
+              "title": "搴旀敮鎸佸悎骞堕噰璐崟鍒涘缓",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 8,
+                      "status": "passed",
+                      "duration": 4814,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鈿狅笍 鍚堝苟閲囪喘鍔熻兘鎸夐挳涓嶅彲瑙乗n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.198Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-d0f0b54536b593b7452f",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 252,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "渚涘簲鍟嗚瘎浠?(Supply-02 Enhancement)",
+          "file": "flows/purchase-order.spec.ts",
+          "line": 277,
+          "column": 6,
+          "specs": [
+            {
+              "title": "搴斿湪渚涘簲鍟嗚鎯呴〉灞曠ず璇勪环鎸囨爣",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 9,
+                      "status": "passed",
+                      "duration": 4340,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鈿狅笍 渚涘簲鍟嗚娌℃湁鍙偣鍑荤殑閾炬帴\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.219Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-48898f64bcc7c082cc3a",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 278,
+              "column": 9
+            },
+            {
+              "title": "搴斿湪渚涘簲鍟嗗垪琛ㄩ〉灞曠ず璇勫垎鎺掑悕",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 10,
+                      "status": "passed",
+                      "duration": 4368,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "鈿狅笍 渚涘簲鍟嗚瘎鍒嗗垪灏氭湭娣诲姞\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-23T05:30:01.171Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8b17d727cf4f56474897-a903fc0fae7f7fe565d6",
+              "file": "flows/purchase-order.spec.ts",
+              "line": 322,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-23T05:29:53.933Z",
+    "duration": 69276.652,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

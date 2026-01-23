@@ -2,7 +2,8 @@
 
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -128,6 +129,13 @@ export async function updateARPaymentConfig(config: ARPaymentConfig) {
         return { success: false, error: '未授权' };
     }
 
+    // 权限校验：需要设置管理权限
+    try {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
+    }
+
     const validated = arPaymentSchema.safeParse(config);
     if (!validated.success) {
         return { success: false, error: validated.error.message };
@@ -163,6 +171,13 @@ export async function updateAPPaymentConfig(config: APPaymentConfig) {
         return { success: false, error: '未授权' };
     }
 
+    // 权限校验：需要设置管理权限
+    try {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
+    }
+
     const validated = apPaymentSchema.safeParse(config);
     if (!validated.success) {
         return { success: false, error: validated.error.message };
@@ -196,6 +211,13 @@ export async function updateWorkflowModeConfig(config: WorkflowModeConfig) {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
+    }
+
+    // 权限校验：需要设置管理权限
+    try {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
     }
 
     const validated = workflowModeSchema.safeParse(config);

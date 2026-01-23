@@ -53,7 +53,7 @@ export function NotificationPreferencesForm() {
     useEffect(() => {
         async function loadPreferences() {
             try {
-                const result = await getNotificationPreferencesAction({});
+                const result = await getNotificationPreferencesAction();
                 if (result.success) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const responseData = result as any;

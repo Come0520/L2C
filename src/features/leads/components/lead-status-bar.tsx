@@ -10,8 +10,6 @@ import { restoreLeadAction } from '../actions/restore';
 interface LeadStatusBarProps {
     status: string;
     leadId?: string;
-    userId?: string;
-    tenantId?: string;
 }
 
 // 状态顺序：待分配 -> 待跟进 -> 跟进中 -> 已成交 (WON) / 已作废 (VOID) is separate
@@ -22,14 +20,14 @@ const STATUS_STEPS = [
     { value: 'WON', label: '已成交' },
 ];
 
-function RestoreButton({ leadId, userId, tenantId }: { leadId: string, userId: string, tenantId: string }) {
+function RestoreButton({ leadId }: { leadId: string }) {
     const [isPending, startTransition] = useTransition();
 
     const handleRestore = () => {
         if (!confirm('确定要恢复该线索吗？这将把状态重置为作废前的状态。')) return;
 
         startTransition(async () => {
-            const res = await restoreLeadAction({ id: leadId, reason: '用户手动恢复' }, userId, tenantId);
+            const res = await restoreLeadAction({ id: leadId, reason: '用户手动恢复' });
             if (res.success) {
                 toast.success(`线索已恢复，当前状态：${res.targetStatus}`);
             } else {
@@ -51,7 +49,7 @@ function RestoreButton({ leadId, userId, tenantId }: { leadId: string, userId: s
     );
 }
 
-export function LeadStatusBar({ status, leadId, userId, tenantId }: LeadStatusBarProps) {
+export function LeadStatusBar({ status, leadId }: LeadStatusBarProps) {
     // Determine current step index
     let currentIndex = STATUS_STEPS.findIndex(s => s.value === status);
 
@@ -66,8 +64,8 @@ export function LeadStatusBar({ status, leadId, userId, tenantId }: LeadStatusBa
             {isVoid ? (
                 <div className="glass-alert-error flex items-center justify-between p-2 text-red-600 rounded-md">
                     <span className="font-medium">当前状态：已作废 ({status === 'VOID' ? '手动作废' : '无效'})</span>
-                    {leadId && userId && tenantId && status === 'VOID' && (
-                        <RestoreButton leadId={leadId} userId={userId} tenantId={tenantId} />
+                    {leadId && status === 'VOID' && (
+                        <RestoreButton leadId={leadId} />
                     )}
                 </div>
             ) : (

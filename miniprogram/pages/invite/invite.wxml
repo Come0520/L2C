@@ -1,0 +1,83 @@
+<!--pages/invite/invite.wxml-->
+<view class="container">
+  <!-- 未激活提示 -->
+  <view wx:if="{{tenantStatus !== 'active'}}" class="card empty-state">
+    <view class="empty-icon">🔒</view>
+    <view class="empty-text">企业审批通过后才能邀请员工</view>
+    <button class="btn btn-outline mt-32" bindtap="goToStatus">
+      查看审批状态
+    </button>
+  </view>
+
+  <!-- 已激活 - 邀请功能 -->
+  <view wx:else>
+    <!-- 生成邀请 -->
+    <view class="card">
+      <view class="section-title">邀请员工加入</view>
+      <view class="section-desc">员工扫码或点击链接即可加入您的企业</view>
+
+      <!-- 角色选择 -->
+      <view class="form-group mt-32">
+        <text class="form-label">选择角色</text>
+        <picker mode="selector" range="{{roleOptions}}" range-key="label" bindchange="onRoleChange">
+          <view class="form-input picker-input">
+            {{selectedRole.label || '选择员工角色'}}
+            <text class="picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 邀请二维码 -->
+      <view wx:if="{{inviteCode}}" class="qrcode-section">
+        <image class="qrcode" src="{{qrcodeUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" />
+        <view class="qrcode-tip">长按保存二维码或分享给员工</view>
+        
+        <view class="invite-link-box">
+          <text class="invite-link">{{inviteLink}}</text>
+          <button class="copy-btn" size="mini" bindtap="copyLink">复制</button>
+        </view>
+
+        <view class="expire-tip">
+          有效期至：{{expireTime}}
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button 
+        class="btn btn-primary mt-32" 
+        bindtap="generateInvite"
+        loading="{{generating}}"
+      >
+        {{inviteCode ? '重新生成' : '生成邀请码'}}
+      </button>
+    </view>
+
+    <!-- 邀请记录 -->
+    <view class="card" wx:if="{{inviteList.length > 0}}">
+      <view class="section-title">邀请记录</view>
+      
+      <view class="invite-list">
+        <view class="invite-item" wx:for="{{inviteList}}" wx:key="id">
+          <view class="invite-info">
+            <view class="invite-name">{{item.name || item.phone}}</view>
+            <view class="invite-meta">
+              <text class="invite-role">{{item.roleName}}</text>
+              <text class="invite-time">{{item.joinTime}}</text>
+            </view>
+          </view>
+          <view class="invite-status badge-{{item.statusClass}}">
+            {{item.statusText}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="card" wx:if="{{inviteList.length === 0 && !loading}}">
+      <view class="empty-state">
+        <view class="empty-icon">👥</view>
+        <view class="empty-text">还没有邀请记录</view>
+      </view>
+    </view>
+  </view>
+</view>

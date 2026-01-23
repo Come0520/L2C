@@ -104,16 +104,15 @@ export const deleteQuoteItemSchema = z.object({
     id: z.string().uuid(),
 });
 
+// 报价转订单 schema（tenantId 从 context 获取）
 export const convertQuoteToOrderSchema = z.object({
     quoteId: z.string().uuid(),
-    tenantId: z.string().uuid(),
 });
 
+// 拒绝报价折扣 schema（tenantId 和 rejectedBy 从 context 获取）
 export const rejectQuoteDiscountSchema = z.object({
     id: z.string().uuid(),
-    tenantId: z.string().uuid(),
-    rejectedBy: z.string().uuid(),
-    reason: z.string().min(1, 'Reason is required'),
+    reason: z.string().min(1, '必须提供拒绝原因'),
 });
 
 export const createQuickQuoteSchema = z.object({

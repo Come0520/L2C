@@ -3,8 +3,10 @@ import { Inter } from 'next/font/google';
 import { cn } from '@/shared/utils';
 import { AuthProvider } from '@/shared/providers/auth-provider';
 import { ThemeProvider } from '@/shared/providers/theme-provider';
+import StyleProvider from '@/shared/providers/style-provider';
 import { ProgressBarProvider } from '@/shared/providers/progress-bar-provider';
 import { QueryProvider } from '@/shared/providers/query-provider';
+import { TenantProvider } from '@/shared/providers/tenant-provider';
 import { Toaster } from '@/shared/ui/sonner';
 import './globals.css';
 import '@/lib/zod-i18n';
@@ -30,19 +32,23 @@ export default function RootLayout({
                 <div className="fixed inset-0 liquid-mesh-bg -z-20" />
                 <div className="fixed inset-0 aurora-animate -z-10" />
                 <AuthProvider>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="system"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        <ProgressBarProvider>
-                            <QueryProvider>
-                                {children}
-                            </QueryProvider>
-                        </ProgressBarProvider>
-                        <Toaster />
-                    </ThemeProvider>
+                    <StyleProvider>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <ProgressBarProvider>
+                                <QueryProvider>
+                                    <TenantProvider>
+                                        {children}
+                                    </TenantProvider>
+                                </QueryProvider>
+                            </ProgressBarProvider>
+                            <Toaster />
+                        </ThemeProvider>
+                    </StyleProvider>
                 </AuthProvider>
             </body>
         </html>

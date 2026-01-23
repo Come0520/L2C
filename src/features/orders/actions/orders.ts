@@ -1,13 +1,14 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { cache } from 'react';
 import { orders, orderItems } from '@/shared/api/schema/orders';
 
-import { quotes } from '@/shared/api/schema/quotes';
+
 import { eq, sql, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import type { Session } from 'next-auth'; // Explicit import
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Action Schemas
 const createOrderSchema = z.object({
@@ -28,45 +29,101 @@ const updateLogisticsSchema = z.object({
 import { OrderService } from '@/services/order.service';
 import { LogisticsService } from '@/services/logistics.service';
 
+/**
+ * 辅助函数：安全获取用户的 tenantId
+ */
+function getTenantId(session: Session | null): string {
+    const tenantId = session?.user?.tenantId;
+    if (!tenantId) {
+        throw new Error('Unauthorized: 缺少租户信息');
+    }
+    return tenantId;
+}
+
 export async function createOrderFromQuote(input: z.infer<typeof createOrderSchema>) {
     const session = await auth();
     const user = session?.user;
     if (!user || !user.id) throw new Error('Unauthorized');
-    // Assuming tenantId is available on user or we fetch it. 
-    // Auth logic typically puts tenantId on session.user. 
-    // If not, we might need to fetch it or pass it.
-    // For now assuming user.tenantId exists or we need to fix auth types.
-    // Let's assume user.tenantId is widely used or we mock it for now if missing.
-    // Checking `createOrderFromQuote` original: `tenantId: quote.tenantId`.
-    // So we can get tenantId from the quote itself inside the Service!
-    // But Service needs tenantId to find the quote safely (multitenancy).
-    // We should pass tenantId. If session doesn't have it, we might be in trouble.
-    // Let's assume we pass a placeholder or get it.
-    // Actually, `createOrderFromQuote` used `quote.tenantId` AFTER fetching quote.
-    // So we can pass `user.tenantId` if available.
 
-    // Fallback: If we trust the ID, maybe service can just fetch by ID?
-    // But safer to pass tenantId.
-    // Let's look at `auth.ts` or similar usage?
-    // `session?.user` usually has it.
+    const tenantId = getTenantId(session);
 
-    const tenantId = (user as any).tenantId; // safe cast
+    // 权限检查：需要订单创建权限
+    await checkPermission(session, PERMISSIONS.ORDER.CREATE);
 
-    const { quoteId, ...options } = input;
+    // 验证输入
+    const validatedInput = createOrderSchema.parse(input);
+    const { quoteId, ...options } = validatedInput;
 
     try {
+        // 获取报价单信息以判断收款状态
+        const quote = await db.query.quotes.findFirst({
+            where: (quotes, { eq, and }) => and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
+        });
+
+        if (!quote) {
+            throw new Error('报价单不存在');
+        }
+
+        // 计算收款状态
+        const paidAmount = parseFloat(options?.paymentAmount || '0');
+        const totalAmount = parseFloat(quote.totalAmount || '0');
+        const isFullyPaid = paidAmount >= totalAmount && totalAmount > 0;
+
+        if (!isFullyPaid) {
+            // 非全款：触发审批流程
+            const { submitApproval } = await import('@/features/approval/actions/submission');
+            const result = await submitApproval({
+                entityType: 'QUOTE',
+                entityId: quoteId,
+                flowCode: 'QUOTE_TO_ORDER_APPROVAL',
+                comment: `报价单转订单申请 (已收款: ¥${paidAmount.toFixed(2)}, 总金额: ¥${totalAmount.toFixed(2)})`,
+            });
+
+            if (!result.success) {
+                const errorMsg = 'error' in result ? result.error : '未知错误';
+                throw new Error(`审批提交失败: ${errorMsg}`);
+            }
+
+            // 返回审批中状态
+            return {
+                pendingApproval: true,
+                approvalId: 'approvalId' in result ? result.approvalId : null,
+                message: '已提交审批，请等待审批通过后订单将自动创建。'
+            };
+        }
+
+        // 全款：直接转订单
         const order = await OrderService.convertFromQuote(quoteId, tenantId, user.id, options);
+
+        // 触发佣金计算 (TRIGGER: ORDER_CREATED)
+        // 仅当渠道配置为 "ORDER_CREATED" 模式时才会实际生成
+        await checkAndGenerateCommission(order.id, 'ORDER_CREATED');
+
         return order;
-    } catch (e: any) {
-        throw new Error(e.message || 'Failed to create order');
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to create order';
+        throw new Error(message);
     }
 }
 
-export const getOrders = cache(async (page = 1, pageSize = 20, _search?: string) => {
+/**
+ * 获取订单列表
+ * 已修复：添加租户隔离和权限检查
+ */
+export async function getOrders(page = 1, pageSize = 20, _search?: string) {
+    const session = await auth();
+    if (!session?.user) throw new Error('Unauthorized');
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单查看权限
+    await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+
     const offset = (page - 1) * pageSize;
 
-    // 查询订单数据
+    // 查询订单数据 - 添加租户隔离
     const data = await db.query.orders.findMany({
+        where: eq(orders.tenantId, tenantId),
         limit: pageSize,
         offset: offset,
         orderBy: [desc(orders.createdAt)],
@@ -76,9 +133,10 @@ export const getOrders = cache(async (page = 1, pageSize = 20, _search?: string)
         }
     });
 
-    // 查询总数
+    // 查询总数 - 添加租户隔离
     const countResult = await db.select({ count: sql<number>`count(*)` })
-        .from(orders);
+        .from(orders)
+        .where(eq(orders.tenantId, tenantId));
     const total = countResult[0]?.count ?? 0;
 
     return {
@@ -88,12 +146,23 @@ export const getOrders = cache(async (page = 1, pageSize = 20, _search?: string)
         pageSize,
         totalPages: Math.ceil(total / pageSize),
     };
-});
+}
 
+/**
+ * 获取订单详情
+ * 已修复：添加租户隔离和权限检查
+ */
+export async function getOrder(id: string) {
+    const session = await auth();
+    if (!session?.user) throw new Error('Unauthorized');
 
-export const getOrder = cache(async (id: string) => {
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单查看权限
+    await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+
     return await db.query.orders.findFirst({
-        where: eq(orders.id, id),
+        where: and(eq(orders.id, id), eq(orders.tenantId, tenantId)),
         with: {
             items: true,
             customer: true,
@@ -101,7 +170,7 @@ export const getOrder = cache(async (id: string) => {
             paymentSchedules: true,
         }
     });
-});
+}
 
 
 const splitOrderSchema = z.object({
@@ -113,21 +182,31 @@ const splitOrderSchema = z.object({
     })),
 });
 
+/**
+ * 拆单操作
+ * 已修复：添加租户隔离和权限检查
+ */
 export async function splitOrder(input: z.infer<typeof splitOrderSchema>) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
     const userId = session.user.id;
 
-    const { orderId, items } = input;
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
-    // 1. Verify order exists and is in correct status
+    // 验证输入
+    const validatedInput = splitOrderSchema.parse(input);
+    const { orderId, items } = validatedInput;
+
+    // 1. 验证订单存在且属于当前租户 - 添加租户隔离
     const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
         with: { items: true }
     });
 
-    if (!order) throw new Error('订单不存在');
+    if (!order) throw new Error('订单不存在或无权操作');
     if (order.status !== 'PENDING_PO') throw new Error('订单状态不允许拆单');
 
     // 2. Group items by supplier
@@ -147,7 +226,7 @@ export async function splitOrder(input: z.infer<typeof splitOrderSchema>) {
         const poItemsData = [];
 
         for (const splitItem of supplierItems) {
-            const orderItem = order.items?.find((oi: any) => oi.id === splitItem.itemId);
+            const orderItem = order.items?.find((oi) => oi.id === splitItem.itemId);
             if (!orderItem) continue;
 
             const qty = parseFloat(splitItem.quantity);
@@ -203,17 +282,17 @@ export async function splitOrder(input: z.infer<typeof splitOrderSchema>) {
         createdPOs.push(newPO.id);
     }
 
-    // 4. Update order status if all items have been split
+    // 4. 更新订单状态 - 添加租户隔离
     const updatedOrder = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
         with: { items: true }
     });
 
-    const allItemsHavePO = updatedOrder?.items?.every((item: any) => item.poId);
+    const allItemsHavePO = updatedOrder?.items?.every((item) => item.poId);
     if (allItemsHavePO) {
         await db.update(orders)
             .set({ status: 'PENDING_DELIVERY', updatedAt: new Date() })
-            .where(eq(orders.id, orderId));
+            .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
     }
 
     return {
@@ -232,17 +311,29 @@ const requestDeliverySchema = z.object({
     remark: z.string().optional(),
 });
 
+/**
+ * 请求发货
+ * 已修复：添加租户隔离和权限检查
+ */
 export async function requestDelivery(input: z.infer<typeof requestDeliverySchema>) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
-    const { orderId, company, trackingNo, remark } = input;
+    const tenantId = getTenantId(session);
 
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+
+    // 验证输入
+    const validatedInput = requestDeliverySchema.parse(input);
+    const { orderId, company, trackingNo, remark } = validatedInput;
+
+    // 查询订单 - 添加租户隔离
     const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
     });
 
-    if (!order) throw new Error('订单不存在');
+    if (!order) throw new Error('订单不存在或无权操作');
     if (order.status !== 'PENDING_DELIVERY') throw new Error('订单状态不正确');
 
     await db.update(orders)
@@ -257,87 +348,129 @@ export async function requestDelivery(input: z.infer<typeof requestDeliverySchem
             },
             updatedAt: new Date()
         })
-        .where(eq(orders.id, orderId));
+        .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
 
     return { success: true };
 }
 
+/**
+ * 更新物流信息
+ * 已修复：添加权限检查
+ */
 export async function updateLogistics(input: z.infer<typeof updateLogisticsSchema>) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
 
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+
+    // 验证输入
+    const validatedInput = updateLogisticsSchema.parse(input);
+
     try {
-        const result = await LogisticsService.updateLogisticsInfo(input.orderId, input.company, input.trackingNo);
+        const result = await LogisticsService.updateLogisticsInfo(validatedInput.orderId, validatedInput.company, validatedInput.trackingNo);
         return { success: true, data: result };
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error(e);
-        return { success: false, error: e.message };
+        const message = e instanceof Error ? e.message : '更新物流信息失败';
+        return { success: false, error: message };
     }
 }
 
+/**
+ * 确认安装完成
+ * 已修复：添加权限检查和类型安全
+ */
 export async function confirmInstallationAction(orderId: string) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
     await OrderService.confirmInstallation(orderId, tenantId, session.user.id);
     return { success: true };
 }
 
+/**
+ * 请求客户确认
+ * 已修复：添加权限检查和类型安全
+ */
 export async function requestCustomerConfirmationAction(orderId: string) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
     await OrderService.requestCustomerConfirmation(orderId, tenantId);
     return { success: true };
 }
 
+
+import { checkAndGenerateCommission } from '@/features/channels/logic/commission.service';
+
+/**
+ * 客户接受安装
+ * 已修复：添加权限检查和类型安全
+ */
 export async function customerAcceptAction(orderId: string) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
     await OrderService.customerAccept(orderId, tenantId);
+
+    // 触发佣金计算 (TRIGGER: ORDER_COMPLETED)
+    await checkAndGenerateCommission(orderId, 'ORDER_COMPLETED');
+
     return { success: true };
 }
 
-
+/**
+ * 客户拒绝安装
+ * 已修复：添加权限检查和类型安全
+ */
 export async function customerRejectAction(orderId: string, reason: string) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
     await OrderService.customerReject(orderId, tenantId, reason);
     return { success: true };
 }
 
+/**
+ * 确认订单排产
+ * 已修复：添加权限检查和类型安全
+ */
 export async function confirmOrderProduction(input: { orderId: string }) {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
-    const tenantId = (session.user as any).tenantId;
+
+    const tenantId = getTenantId(session);
+
+    // 权限检查：需要订单编辑权限
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
     const order = await db.query.orders.findFirst({
         where: and(eq(orders.id, input.orderId), eq(orders.tenantId, tenantId))
     });
 
-    if (!order) throw new Error('订单不存在');
+    if (!order) throw new Error('订单不存在或无权操作');
 
-    // Business Rule Check: Deposit
-    // Business Rule Check: Deposit (TODO: Schema missing productionTrigger/depositRatio)
-    /*
-    if ((order as any).productionTrigger === 'DEPOSIT_REQUIRED') {
-        const total = Number(order.totalAmount || 0);
-        const paid = Number(order.paidAmount || 0);
-        const requiredDeposit = total * Number((order as any).depositRatio || 0);
-
-        // Allow small floating point margin or strict check? Strict for currency.
-        if (paid < requiredDeposit) {
-            throw new Error(`需支付定金 (¥${requiredDeposit.toFixed(2)}) 才可排产`);
-        }
-    }
-    */
-
-    await OrderService.updateOrderStatus(input.orderId, 'IN_PRODUCTION', tenantId, session.user.id);
+    await OrderService.updateOrderStatus(input.orderId, 'PENDING_PRODUCTION', tenantId, session.user.id);
     return { success: true };
 }

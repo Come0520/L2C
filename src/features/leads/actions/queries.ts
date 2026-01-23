@@ -5,14 +5,22 @@ import { leads, leadActivities, marketChannels } from '@/shared/api/schema';
 import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { leadFilterSchema, getLeadTimelineLogsSchema } from '../schemas';
+import { auth } from '@/shared/lib/auth';
 
 export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
+    // 认证检查：获取当前用户的租户 ID
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    const tenantId = session.user.tenantId;
+
     const filters = leadFilterSchema.parse(input);
 
     const whereConditions = [];
 
-    // Tenant Filter (Assumed from context or passed, usually headers but for now simple)
-    // whereConditions.push(eq(leads.tenantId, tenantId)); 
+    // 租户隔离：必须过滤租户 ID
+    whereConditions.push(eq(leads.tenantId, tenantId));
 
     // Status Filter
     if (filters.status && filters.status.length > 0) {
@@ -94,43 +102,62 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
     };
 }
 
-export async function getLeadDetail(id: string) {
-    console.log('[DEBUG] getLeadDetail called with ID:', id);
-    try {
-        const lead = await db.query.leads.findFirst({
-            where: eq(leads.id, id),
-            with: {
-                assignedSales: true,
-                sourceChannel: true,
-                sourceSub: true,
-                customer: true,
-                referrerCustomer: true,
-            }
-        });
-        console.log('[DEBUG] getLeadDetail result:', lead ? 'FOUND' : 'NOT FOUND', lead?.id);
-        if (!lead) {
-            // Check if ANY lead exists to verify DB connection
-            const count = await db.select({ count: sql`count(*)` }).from(leads);
-            console.log('[DEBUG] Total leads in DB:', count[0]?.count);
-            // Check raw query for this ID
-            const raw = await db.select().from(leads).where(eq(leads.id, id));
-            console.log('[DEBUG] Raw query result:', raw);
+/**
+ * 获取线索详情（内部函数，不直接暴露）
+ * 调用者负责确保 tenantId 来自可信来源
+ * @param id 线索 ID
+ * @param tenantId 租户 ID（由调用者从 session 获取）
+ */
+async function getLeadDetailInternal(id: string, tenantId: string) {
+    const lead = await db.query.leads.findFirst({
+        where: and(
+            eq(leads.id, id),
+            eq(leads.tenantId, tenantId)  // 租户隔离
+        ),
+        with: {
+            assignedSales: true,
+            sourceChannel: true,
+            sourceSub: true,
+            customer: true,
+            referrerCustomer: true,
         }
-        return lead;
-    } catch (error) {
-        console.error('[DEBUG] getLeadDetail ERROR:', error);
-        throw error;
-    }
+    });
+    return lead;
 }
 
 export async function getLeadById({ id }: { id: string }) {
-    const lead = await getLeadDetail(id);
+    // 认证检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: 'Unauthorized' };
+    }
+
+    const lead = await getLeadDetailInternal(id, session.user.tenantId);
     if (!lead) return { success: false, error: 'Lead not found' };
     return { success: true, data: lead };
 }
 
 export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsSchema>) {
+    // 认证检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+
     const { leadId } = input;
+
+    // 验证线索属于当前租户
+    const lead = await db.query.leads.findFirst({
+        where: and(
+            eq(leads.id, leadId),
+            eq(leads.tenantId, session.user.tenantId)
+        ),
+        columns: { id: true }
+    });
+
+    if (!lead) {
+        throw new Error('Lead not found or access denied');
+    }
 
     const activities = await db.query.leadActivities.findMany({
         where: eq(leadActivities.leadId, leadId),
@@ -143,7 +170,17 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
     return activities;
 }
 
+/**
+ * 获取市场渠道列表
+ * 安全修复：添加认证检查
+ */
 export async function getChannels(parentId?: string) {
+    // 认证检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+
     const where = parentId
         ? eq(marketChannels.parentId, parentId)
         : sql`${marketChannels.parentId} IS NULL`; // Top level

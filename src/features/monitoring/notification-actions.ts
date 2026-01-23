@@ -46,7 +46,7 @@ const getUnreadCountSchema = z.object({});
 /**
  * 创建系统通知
  */
-export const createNotification = createSafeAction(createNotificationSchema, async (params, { session }) => {
+const createNotificationActionInternal = createSafeAction(createNotificationSchema, async (params, { session }) => {
     checkPermission(session, PERMISSIONS.NOTIFICATION.CREATE);
 
     // Map legacy type string to NotificationType enum
@@ -72,15 +72,19 @@ export const createNotification = createSafeAction(createNotificationSchema, asy
         });
 
         return { success: true };
-    } catch (error) {
+    } catch (_error) {
         return { success: false, error: 'Failed to create notification' };
     }
 });
 
+export async function createNotification(params: z.infer<typeof createNotificationSchema>) {
+    return createNotificationActionInternal(params);
+}
+
 /**
  * 获取我的通知
  */
-export const getMyNotifications = createSafeAction(getMyNotificationsSchema, async ({ limit }, { session }) => {
+const getMyNotificationsActionInternal = createSafeAction(getMyNotificationsSchema, async ({ limit }, { session }) => {
     const result = await db.query.notifications.findMany({
         where: and(
             eq(notifications.tenantId, session.user.tenantId),
@@ -93,10 +97,14 @@ export const getMyNotifications = createSafeAction(getMyNotificationsSchema, asy
     return { success: true, data: result };
 });
 
+export async function getMyNotifications(params: z.infer<typeof getMyNotificationsSchema>) {
+    return getMyNotificationsActionInternal(params);
+}
+
 /**
  * 标记通知已读
  */
-export const markNotificationAsRead = createSafeAction(markNotificationAsReadSchema, async ({ id }, { session }) => {
+const markNotificationAsReadActionInternal = createSafeAction(markNotificationAsReadSchema, async ({ id }, { session }) => {
     await db.update(notifications)
         .set({
             isRead: true,
@@ -111,10 +119,14 @@ export const markNotificationAsRead = createSafeAction(markNotificationAsReadSch
     return { success: true };
 });
 
+export async function markNotificationAsRead(params: z.infer<typeof markNotificationAsReadSchema>) {
+    return markNotificationAsReadActionInternal(params);
+}
+
 /**
  * 获取未读数量
  */
-export const getUnreadCount = createSafeAction(getUnreadCountSchema, async (params, { session }) => {
+const getUnreadCountActionInternal = createSafeAction(getUnreadCountSchema, async (params, { session }) => {
     const result = await db.select({
         count: sql<number>`count(*)`
     })
@@ -126,3 +138,7 @@ export const getUnreadCount = createSafeAction(getUnreadCountSchema, async (para
 
     return { success: true, data: Number(result[0].count) };
 });
+
+export async function getUnreadCount() {
+    return getUnreadCountActionInternal({});
+}

@@ -6,7 +6,8 @@ import { splitRouteRules, suppliers } from '@/shared/api/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
 import { z } from 'zod';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Schema for splitting rule input
 export const splitRuleSchema = z.object({
@@ -23,13 +24,19 @@ export type SplitRuleInput = z.infer<typeof splitRuleSchema>;
 async function requireUser() {
     const session = await auth();
     if (!session?.user) {
-        throw new Error('Unauthorized');
+        throw new Error('未授权');
     }
     return session.user;
 }
 
 export async function getSplitRules() {
     const user = await requireUser();
+
+    // 权限检查
+    const session = await auth();
+    if (session) {
+        await checkPermission(session, PERMISSIONS.SETTINGS.VIEW);
+    }
 
     return await db.select()
         .from(splitRouteRules)
@@ -39,6 +46,12 @@ export async function getSplitRules() {
 
 export async function createSplitRule(input: SplitRuleInput) {
     const user = await requireUser();
+
+    // 权限检查
+    const session = await auth();
+    if (session) {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    }
 
     const validated = splitRuleSchema.parse(input);
 
@@ -59,6 +72,12 @@ export async function createSplitRule(input: SplitRuleInput) {
 
 export async function updateSplitRule(id: string, input: SplitRuleInput) {
     const user = await requireUser();
+
+    // 权限检查
+    const session = await auth();
+    if (session) {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    }
 
     const validated = splitRuleSchema.parse(input);
 
@@ -94,6 +113,12 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
 
 export async function deleteSplitRule(id: string) {
     const user = await requireUser();
+
+    // 权限检查
+    const session = await auth();
+    if (session) {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    }
 
     // 安全检查：验证规则属于当前租户
     const existingRule = await db.query.splitRouteRules.findFirst({

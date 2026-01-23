@@ -50,7 +50,7 @@ export function CreateTransferDialog({ trigger }: CreateTransferDialogProps) {
         queryKey: ['finance-accounts'],
         queryFn: async () => {
             const res = await getFinanceAccounts();
-            return res.success ? (res.data || []) : [];
+            return res || [];
         },
         enabled: open,
     });
@@ -124,7 +124,7 @@ export function CreateTransferDialog({ trigger }: CreateTransferDialogProps) {
                                 <SelectValue placeholder="选择转出账户" />
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map((acc) => (
+                                {accounts.map((acc: any) => (
                                     <SelectItem key={acc.id} value={acc.id}>
                                         {acc.accountName} (¥{Number(acc.balance || 0).toLocaleString()})
                                     </SelectItem>
@@ -140,7 +140,7 @@ export function CreateTransferDialog({ trigger }: CreateTransferDialogProps) {
                                 <SelectValue placeholder="选择转入账户" />
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map((acc) => (
+                                {accounts.map((acc: any) => (
                                     <SelectItem key={acc.id} value={acc.id}>
                                         {acc.accountName}
                                     </SelectItem>

@@ -196,8 +196,8 @@ export async function processApproval(payload: {
                         const roleUsers = await tx.query.users.findMany({
                             where: and(
                                 eq(users.tenantId, session.user.tenantId),
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                eq(users.role, nextNode.approverRole as any)
+                                // 类型安全：approverRole 来自数据库 enum 字段，与 users.role 兼容
+                                eq(users.role, nextNode.approverRole)
                             )
                         });
                         nextApprovers = roleUsers.map(u => u.id);
@@ -236,8 +236,8 @@ export async function processApproval(payload: {
                     // Business Callback
                     if (task.approval.entityType === 'QUOTE') {
                         await tx.update(quotes)
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            .set({ status: 'APPROVED' as any })
+                            // 类型安全：使用 quotes.status 的正确 enum 值
+                            .set({ status: 'APPROVED' })
                             .where(eq(quotes.id, task.approval.entityId));
                     } else if (task.approval.entityType === 'RECEIPT_BILL') {
                         // Workflow approved -> Mark as APPROVED
@@ -288,7 +288,8 @@ export async function processApproval(payload: {
 
                         await tx.update(leads)
                             .set({
-                                status: targetStatus as any,
+                                // 类型安全：targetStatus 来自历史记录或默认值，符合 leadStatusEnum
+                                status: targetStatus as typeof leads.status._.data,
                                 lostReason: null
                             })
                             .where(eq(leads.id, task.approval.entityId));

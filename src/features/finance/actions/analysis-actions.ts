@@ -18,7 +18,7 @@ const getOrderProfitSchema = z.object({
     orderId: z.string()
 });
 
-export const getOrderProfitability = createSafeAction(getOrderProfitSchema, async ({ orderId }, { session }) => {
+const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, async ({ orderId }, { session }) => {
     // Ensure permission
     await checkPermission(session, PERMISSIONS.FINANCE.VIEW);
 
@@ -131,3 +131,7 @@ export const getOrderProfitability = createSafeAction(getOrderProfitSchema, asyn
         }
     };
 });
+
+export async function getOrderProfitability(params: z.infer<typeof getOrderProfitSchema>) {
+    return getOrderProfitabilityInternal(params);
+}

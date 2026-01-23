@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "c5f45d70db0706018209b227bc835cc69f9822f6eb534d50f0dae7e91f33d826%7Ccc4bdbf34982aeb99f7d169cf597c4321ed58d9bb27df344df404219c13339cb",
+      "value": "04009131d6c95576bd024739b31b6f7716a74eea1050753b86de20dadff7df7b%7Cbd5ce813e04f2e7f73e1ab6652f677aa49150c6192d79ce77f3ac659a9065b49",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,14 +22,24 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiZ0xfM3IxRXlHaWpHS3JrMllVMVBOMWZUMV9DUHIwTzZ4UU9uWFVwbXF6N0FGV2dsQkJ4aXVTVXJNOE5FSkRQbHNIelFuY0NtV19hNkpyZTZsbnFoalEifQ..UYoP6LmeXjPJgWzHGxzx0g.shA8gd-MsznzUTZ9tVQTc6r-tEqiWrb54ronrgBt3LnIp-nbQxJPYZLNpWm3LmTPcKztaZRxE2rTH55G-6VF8g6DbT0ftdZWmQEa4aZO24J2EqZNs2RfMpkiGUK5r6FLBSfoXDfI_XIxv1P7MgHr64cZWYCwKQ1nKdHT9KPuDfk0Y_9rBL8KZ6hFnk0mHM6pFR1GNUUPww_KW1nTfcZPJZvyxvQVFUFjYxxgwR5ycalcpoTI5Vyaz44Sgz0redIr-Dsz0ayOKSPGEEKRzDUNYLrp-Q8Jgc0IhZH4P7DqD1B3mJgy5TCqrI0l_IggyTVTrBDi9QOl3-EwYit6nZLeHr5wEtolTseAuD2utgshPtU.s5jkXcxXTQ_5y8TuSgnKPd_BHIswKUgtVNM6vjdy_fA",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiZ0xfM3IxRXlHaWpHS3JrMllVMVBOMWZUMV9DUHIwTzZ4UU9uWFVwbXF6N0FGV2dsQkJ4aXVTVXJNOE5FSkRQbHNIelFuY0NtV19hNkpyZTZsbnFoalEifQ..pxffx4OuEakBHBmV-cIOFg.FJuk4PSSLotiaCzqMwMNriZF9LvIJ7-E66hF1eW16THHjx61-j6XVEVT4_pkc3HyAIOUgPKgkvbgt6YqYQcMoY8ReeOt1W0pVjT2Aa5CVOYCdmmN_ZPjAEFIUatLcYFqbtaS-uNSPdjeJzA-i_lCWTvawktnqaPh4GpNSCEuGe8uSC5Sc70hyQbys7dPBlH-WjLIV53jFvQltyBgoHUi8YOavNf8zpYfgLUnmwjZ8w3d8CED086xILO8IDSxLzON9bLpV9wgKvNOyEQMTRpV_Rw9jD2LV6xm82uwTWvjOZQHDE1dFE6XCcO7eNufx1D5bufrp-fae02C581LG8ahFg.VlygFDrPZt13E09R19ZB-Rhv5S4f6oudQiVXMC1eI2w",
       "domain": "localhost",
       "path": "/",
-      "expires": 1771487304.35465,
+      "expires": 1771764696.53758,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     }
   ],
-  "origins": []
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "l2c-ui-style",
+          "value": "glass"
+        }
+      ]
+    }
+  ]
 }

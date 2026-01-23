@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm';
 
 async function main() {
   // Dynamic import to ensure env vars are loaded before db connection is initialized
-  const { db } = await import('@/shared/api/db');
+  const { db } = await import('../src/shared/api/db');
 
   console.log('Initializing Inventory Tables...');
 

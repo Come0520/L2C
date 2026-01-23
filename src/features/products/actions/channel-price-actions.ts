@@ -79,6 +79,47 @@ export async function getChannelPrices(productId: string) {
 }
 
 /**
+ * 获取所有渠道专属价列表（用于设置页面）
+ */
+export async function getAllChannelPrices() {
+    try {
+        const tenantId = await getTenantIdFromSession();
+        if (!tenantId) return { success: false, error: '未授权' };
+
+        const data = await db
+            .select({
+                id: channelSpecificPrices.id,
+                productId: channelSpecificPrices.productId,
+                channelId: channelSpecificPrices.channelId,
+                specialPrice: channelSpecificPrices.specialPrice,
+                isActive: channelSpecificPrices.isActive,
+                createdAt: channelSpecificPrices.createdAt,
+                channel: {
+                    id: marketChannels.id,
+                    name: marketChannels.name,
+                    code: marketChannels.code,
+                },
+                product: {
+                    id: products.id,
+                    name: products.name,
+                    sku: products.sku,
+                    retailPrice: products.retailPrice,
+                }
+            })
+            .from(channelSpecificPrices)
+            .leftJoin(marketChannels, eq(channelSpecificPrices.channelId, marketChannels.id))
+            .leftJoin(products, eq(channelSpecificPrices.productId, products.id))
+            .where(eq(channelSpecificPrices.tenantId, tenantId))
+            .orderBy(desc(channelSpecificPrices.createdAt));
+
+        return { success: true, data };
+    } catch (error) {
+        console.error('获取所有渠道专属价失败:', error);
+        return { success: false, error: '获取渠道专属价列表失败' };
+    }
+}
+
+/**
  * 添加渠道专属价
  */
 export async function addChannelPrice(productId: string, input: z.infer<typeof channelPriceSchema>) {

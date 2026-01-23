@@ -71,8 +71,22 @@ export const {
 import * as channelPriceActions from './actions/channel-price-actions';
 export const {
     getChannelPrices,
+    getAllChannelPrices,
     addChannelPrice,
     updateChannelPrice,
     removeChannelPrice,
     getProductPriceForChannel
 } = channelPriceActions;
+
+// 渠道等级折扣管理
+import * as channelDiscountActions from './actions/channel-discount-actions';
+export const {
+    getGlobalDiscountConfig,
+    updateGlobalDiscountConfig,
+    getDiscountOverrides,
+    createDiscountOverride,
+    updateDiscountOverride,
+    deleteDiscountOverride,
+    getProductDiscountRate
+} = channelDiscountActions;
+

@@ -18,7 +18,7 @@ import {
 /**
  * 创建产品
  */
-export const createProduct = createSafeAction(createProductSchema, async (data, { session }) => {
+const createProductActionInternal = createSafeAction(createProductSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     // 检查 SKU 唯一性
@@ -64,10 +64,14 @@ export const createProduct = createSafeAction(createProductSchema, async (data, 
     return { id: product.id };
 });
 
+export async function createProduct(params: z.infer<typeof createProductSchema>) {
+    return createProductActionInternal(params);
+}
+
 /**
  * 更新产品
  */
-export const updateProduct = createSafeAction(updateProductSchema, async (data, { session }) => {
+const updateProductActionInternal = createSafeAction(updateProductSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     const { id, ...updates } = data;
@@ -110,10 +114,14 @@ export const updateProduct = createSafeAction(updateProductSchema, async (data, 
     return { id: product.id };
 });
 
+export async function updateProduct(params: z.infer<typeof updateProductSchema>) {
+    return updateProductActionInternal(params);
+}
+
 /**
  * 删除产品
  */
-export const deleteProduct = createSafeAction(deleteProductSchema, async ({ id }, { session }) => {
+const deleteProductActionInternal = createSafeAction(deleteProductSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     await db.delete(products)
@@ -126,10 +134,14 @@ export const deleteProduct = createSafeAction(deleteProductSchema, async ({ id }
     return { success: true };
 });
 
+export async function deleteProduct(params: z.infer<typeof deleteProductSchema>) {
+    return deleteProductActionInternal(params);
+}
+
 /**
  * 上架/下架产品
  */
-export const activateProduct = createSafeAction(activateProductSchema, async ({ id, isActive }, { session }) => {
+const activateProductActionInternal = createSafeAction(activateProductSchema, async ({ id, isActive }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     await db.update(products)
@@ -143,12 +155,19 @@ export const activateProduct = createSafeAction(activateProductSchema, async ({ 
     return { success: true };
 });
 
+export async function activateProduct(params: z.infer<typeof activateProductSchema>) {
+    return activateProductActionInternal(params);
+}
+
 /**
  * 批量创建产品
  */
-export const batchCreateProducts = createSafeAction(
-    z.array(createProductSchema),
+const batchCreateProductsSchema = z.array(createProductSchema);
+
+const batchCreateProductsActionInternal = createSafeAction(
+    batchCreateProductsSchema,
     async (items, { session }) => {
+        // ... (implementation same as before)
         await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
         const tenantId = session.user!.tenantId;
         const userId = session.user!.id;
@@ -214,3 +233,7 @@ export const batchCreateProducts = createSafeAction(
         return results;
     }
 );
+
+export async function batchCreateProducts(params: z.infer<typeof batchCreateProductsSchema>) {
+    return batchCreateProductsActionInternal(params);
+}

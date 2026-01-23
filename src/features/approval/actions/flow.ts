@@ -4,16 +4,30 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { approvalFlows, approvalNodes } from '@/shared/api/schema/approval';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { flattenApprovalGraph } from '../lib/graph-utils';
 import { revalidatePath } from 'next/cache';
+import type { ApprovalNode, ApprovalEdge } from '../schema';
+
+const flowNodeSchema = z.object({
+    id: z.string(),
+    type: z.string(),
+    data: z.record(z.string(), z.unknown()),
+    position: z.object({ x: z.number(), y: z.number() }),
+});
+
+const flowEdgeSchema = z.object({
+    id: z.string(),
+    source: z.string(),
+    target: z.string(),
+    type: z.string().optional(),
+});
 
 const saveFlowDefinitionSchema = z.object({
     flowId: z.string(),
     definition: z.object({
-        nodes: z.array(z.any()),
-        edges: z.array(z.any()),
+        nodes: z.array(flowNodeSchema),
+        edges: z.array(flowEdgeSchema),
     }),
 });
 
@@ -23,20 +37,17 @@ const createFlowSchema = z.object({
     description: z.string().optional(),
 });
 
-export const createApprovalFlow = createSafeAction(
+const createApprovalFlowActionInternal = createSafeAction(
     createFlowSchema,
     async ({ name, code, description }, { session }) => {
         const { tenantId } = session.user;
         if (!tenantId) throw new Error('Unauthorized');
 
-        // Check duplicate code
         const existing = await db.query.approvalFlows.findFirst({
             where: and(eq(approvalFlows.code, code), eq(approvalFlows.tenantId, tenantId))
         });
 
         if (existing) {
-            // If exists, maybe we should error or return existing?
-            // For now, return existing compatible
             return existing;
         }
 
@@ -45,7 +56,7 @@ export const createApprovalFlow = createSafeAction(
             name,
             code,
             description,
-            definition: { nodes: [], edges: [] }, // Init empty
+            definition: { nodes: [], edges: [] },
             isActive: false,
         }).returning();
 
@@ -54,34 +65,38 @@ export const createApprovalFlow = createSafeAction(
     }
 );
 
-export const saveFlowDefinition = createSafeAction(
+export async function createApprovalFlow(params: z.infer<typeof createFlowSchema>) {
+    return createApprovalFlowActionInternal(params);
+}
+
+const saveFlowDefinitionActionInternal = createSafeAction(
     saveFlowDefinitionSchema,
     async ({ flowId, definition }, { session }) => {
         const { tenantId } = session.user;
         if (!tenantId) throw new Error('Unauthorized');
 
         await db.update(approvalFlows)
-            .set({
-                definition,
-                updatedAt: new Date(),
-            })
+            .set({ definition, updatedAt: new Date() })
             .where(eq(approvalFlows.id, flowId));
 
         return { success: true };
     }
 );
 
+export async function saveFlowDefinition(params: z.infer<typeof saveFlowDefinitionSchema>) {
+    return saveFlowDefinitionActionInternal(params);
+}
+
 const publishFlowSchema = z.object({
     flowId: z.string(),
 });
 
-export const publishApprovalFlow = createSafeAction(
+const publishApprovalFlowActionInternal = createSafeAction(
     publishFlowSchema,
     async ({ flowId }, { session }) => {
         const { tenantId } = session.user;
         if (!tenantId) throw new Error('Unauthorized');
 
-        // 1. Fetch Definition
         const flow = await db.query.approvalFlows.findFirst({
             where: and(eq(approvalFlows.id, flowId), eq(approvalFlows.tenantId, tenantId))
         });
@@ -90,37 +105,33 @@ export const publishApprovalFlow = createSafeAction(
             throw new Error('Flow definition not found');
         }
 
-        const definition = flow.definition as { nodes: any[], edges: any[] };
+        // 类型安全：将数据库中的 definition 转换为正确的类型
+        const definition = flow.definition as { nodes: ApprovalNode[], edges: ApprovalEdge[] };
 
-        // 2. Flatten Graph to Nodes
         const flatNodes = flattenApprovalGraph(definition.nodes, definition.edges);
 
-        // 3. Update DB in Transaction
         await db.transaction(async (tx) => {
-            // Clear existing nodes
             await tx.delete(approvalNodes)
                 .where(eq(approvalNodes.flowId, flowId));
 
-            // Insert new nodes
             if (flatNodes.length > 0) {
                 await tx.insert(approvalNodes).values(
                     flatNodes.map(node => ({
                         tenantId,
                         flowId,
                         name: node.name,
-                        approverRole: node.approverType === 'ROLE' ? node.approverValue as any : undefined,
+                        // 类型安全：使用 approverRoleEnum 定义的值
+                        approverRole: node.approverType === 'ROLE' ? node.approverValue as 'ADMIN' | 'STORE_MANAGER' | 'FINANCE' | 'PURCHASING' | 'DISPATCHER' : undefined,
                         approverUserId: node.approverType === 'USER' ? node.approverValue : undefined,
                         conditions: node.conditions,
                         sortOrder: node.sortOrder,
                         nodeType: 'APPROVAL',
-                        // Defaults
                         approverMode: node.approverMode || 'ANY',
                         timeoutAction: 'REMIND' as const
                     }))
                 );
             }
 
-            // Activate Flow
             await tx.update(approvalFlows)
                 .set({ isActive: true, updatedAt: new Date() })
                 .where(eq(approvalFlows.id, flowId));
@@ -130,3 +141,7 @@ export const publishApprovalFlow = createSafeAction(
         return { success: true };
     }
 );
+
+export async function publishApprovalFlow(params: z.infer<typeof publishFlowSchema>) {
+    return publishApprovalFlowActionInternal(params);
+}

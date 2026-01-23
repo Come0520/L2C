@@ -1,8 +1,9 @@
 'use server';
 
+import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { products, suppliers, auditLogs } from '@/shared/api/schema';
-import { eq, desc, and, sql, ilike } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -11,7 +12,7 @@ import { getProductsSchema, getProductSchema } from '../schema';
 /**
  * 获取产品列表
  */
-export const getProducts = createSafeAction(getProductsSchema, async (params, { session }) => {
+const getProductsActionInternal = createSafeAction(getProductsSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.VIEW);
 
     const offset = (params.page - 1) * params.pageSize;
@@ -44,8 +45,12 @@ export const getProducts = createSafeAction(getProductsSchema, async (params, { 
     const productWithSuppliers = await Promise.all(
         data.map(async (p) => {
             if (!p.defaultSupplierId) return { ...p, supplier: null };
+            // P1 修复：供应商查询添加租户验证
             const supplier = await db.query.suppliers.findFirst({
-                where: eq(suppliers.id, p.defaultSupplierId)
+                where: and(
+                    eq(suppliers.id, p.defaultSupplierId),
+                    eq(suppliers.tenantId, session.user!.tenantId)
+                )
             });
             return { ...p, supplier };
         })
@@ -67,10 +72,14 @@ export const getProducts = createSafeAction(getProductsSchema, async (params, { 
     };
 });
 
+export async function getProducts(params: z.infer<typeof getProductsSchema>) {
+    return getProductsActionInternal(params);
+}
+
 /**
  * 获取产品详情
  */
-export const getProductById = createSafeAction(getProductSchema, async ({ id }, { session }) => {
+const getProductByIdActionInternal = createSafeAction(getProductSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.VIEW);
 
     const product = await db.query.products.findFirst({
@@ -92,3 +101,7 @@ export const getProductById = createSafeAction(getProductSchema, async ({ id }, 
 
     return { ...product, logs };
 });
+
+export async function getProductById(params: z.infer<typeof getProductSchema>) {
+    return getProductByIdActionInternal(params);
+}

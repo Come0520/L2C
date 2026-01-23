@@ -14,6 +14,7 @@ import { GradeDiscountConfigForm } from '@/features/channels/components/grade-di
 import Link from 'next/link';
 import { Button } from '@/shared/ui/button';
 import { ExternalLink } from 'lucide-react';
+import { ListSkeleton } from '@/shared/ui/skeleton-variants';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,7 @@ export default async function ChannelsPage() {
                     <div className="flex justify-end">
                         <ChannelFormWrapper categories={categories} />
                     </div>
-                    <Suspense fallback={<div>加载中...</div>}>
+                    <Suspense fallback={<ListSkeleton />}>
                         <ChannelListWrapper
                             initialData={channels}
                             categories={categories}

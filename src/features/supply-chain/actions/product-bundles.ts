@@ -13,10 +13,9 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { createProductBundleSchema, updateProductBundleSchema } from '../schemas';
 
-export const createProductBundle = createSafeAction(createProductBundleSchema, async (data, { session }) => {
+const createProductBundleActionInternal = createSafeAction(createProductBundleSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
-    // Check SKU uniqueness
     const existing = await db.query.productBundles.findFirst({
         where: and(
             eq(productBundles.tenantId, session.user.tenantId),
@@ -55,7 +54,11 @@ export const createProductBundle = createSafeAction(createProductBundleSchema, a
     });
 });
 
-export const updateProductBundle = createSafeAction(updateProductBundleSchema, async (data, { session }) => {
+export async function createProductBundle(params: Parameters<typeof createProductBundleActionInternal>[0]) {
+    return createProductBundleActionInternal(params);
+}
+
+const updateProductBundleActionInternal = createSafeAction(updateProductBundleSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     const { id, items, ...updates } = data;
@@ -77,7 +80,6 @@ export const updateProductBundle = createSafeAction(updateProductBundleSchema, a
         if (!bundle) throw new Error('Bundle not found');
 
         if (items) {
-            // Replace all items
             await tx.delete(productBundleItems)
                 .where(eq(productBundleItems.bundleId, id));
 
@@ -99,7 +101,11 @@ export const updateProductBundle = createSafeAction(updateProductBundleSchema, a
     });
 });
 
-export const deleteProductBundle = createSafeAction(updateProductBundleSchema.pick({ id: true }), async ({ id }, { session }) => {
+export async function updateProductBundle(params: Parameters<typeof updateProductBundleActionInternal>[0]) {
+    return updateProductBundleActionInternal(params);
+}
+
+const deleteProductBundleActionInternal = createSafeAction(updateProductBundleSchema.pick({ id: true }), async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     await db.transaction(async (tx) => {
@@ -116,3 +122,7 @@ export const deleteProductBundle = createSafeAction(updateProductBundleSchema.pi
     revalidatePath('/supply-chain/products');
     return { success: true };
 });
+
+export async function deleteProductBundle(params: { id: string }) {
+    return deleteProductBundleActionInternal(params);
+}

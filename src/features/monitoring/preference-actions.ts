@@ -3,10 +3,8 @@
 import { db } from '@/shared/api/db';
 import { notificationPreferences } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { NotificationType } from '@/shared/api/schema';
 
 // Schema Definition
 const updatePreferenceSchema = z.object({
@@ -27,7 +25,7 @@ export async function getNotificationPreferences(userId: string) {
 /**
  * 更新单项通知偏好
  */
-export const updateNotificationPreference = createSafeAction(updatePreferenceSchema, async (data, { session }) => {
+const updateNotificationPreferenceActionInternal = createSafeAction(updatePreferenceSchema, async (data, { session }) => {
     // Users can always manage their own preferences
 
     // Check if preference exists
@@ -56,3 +54,7 @@ export const updateNotificationPreference = createSafeAction(updatePreferenceSch
 
     return { success: true };
 });
+
+export async function updateNotificationPreference(data: z.infer<typeof updatePreferenceSchema>) {
+    return updateNotificationPreferenceActionInternal(data);
+}

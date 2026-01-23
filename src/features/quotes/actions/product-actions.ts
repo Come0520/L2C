@@ -3,6 +3,8 @@
 import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema/catalogs';
 import { ilike, or, and, eq } from 'drizzle-orm';
+import type { ProductCategory } from '@/shared/api/schema/types';
+import { matchesPinyin } from '@/features/quotes/utils/pinyin-search';
 
 export interface ProductSearchResult {
     id: string;
@@ -15,26 +17,67 @@ export interface ProductSearchResult {
     images?: string[];
 }
 
-export async function searchProducts(query: string, category?: string): Promise<ProductSearchResult[]> {
-    if (!query && !category) return [];
-    // Allow searching with at least 1 character for flexibility
-    if (query && query.length < 1) return [];
+/**
+ * 商品搜索函数
+ * 支持：中文模糊匹配、拼音首字母搜索、完整拼音搜索
+ * 
+ * @param query - 搜索词（支持中文、拼音首字母、完整拼音）
+ * @param category - 商品品类筛选（单一品类）
+ * @param recentProductIds - 最近使用的商品ID列表（用于优先排序）
+ * @param allowedCategories - 允许的品类列表（多品类过滤，优先于 category）
+ */
+export async function searchProducts(
+    query: string,
+    category?: string,
+    recentProductIds?: string[],
+    allowedCategories?: string[]
+): Promise<ProductSearchResult[]> {
+    // 🔒 安全校验：添加认证和租户隔离
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return []; // 未授权返回空结果
+    }
+    const tenantId = session.user.tenantId;
 
-    const term = `%${query.trim()}%`;
-    const conditions = [
-        or(
-            ilike(products.name, term),
-            ilike(products.sku, term)
-        )
-    ];
+    const hasQuery = query && query.trim().length > 0;
+    const normalizedQuery = query?.trim().toLowerCase() || '';
 
-    if (category) {
-        conditions.push(eq(products.category, category as any)); // productCategoryEnum can be tricky with string input
+    // 判断是否为纯拼音/英文搜索（用于决定是否使用客户端拼音匹配）
+    const isPinyinQuery = /^[a-zA-Z]+$/.test(normalizedQuery);
+
+    const conditions = [];
+
+    // 🔒 租户隔离：只返回当前租户的商品
+    conditions.push(eq(products.tenantId, tenantId));
+
+    // 如果有搜索词且不是纯拼音，使用数据库模糊匹配
+    if (hasQuery && !isPinyinQuery) {
+        const term = `%${normalizedQuery}%`;
+        conditions.push(
+            or(
+                ilike(products.name, term),
+                ilike(products.sku, term)
+            )
+        );
     }
 
-    const results = await db.query.products.findMany({
-        where: and(...conditions),
-        limit: 10,
+    // 品类过滤：优先使用 allowedCategories，否则回退到 category
+    if (allowedCategories && allowedCategories.length > 0) {
+        // 使用 inArray 进行多品类过滤
+        const { inArray } = await import('drizzle-orm');
+        conditions.push(inArray(products.category, allowedCategories as ProductCategory[]));
+    } else if (category) {
+        conditions.push(eq(products.category, category as ProductCategory));
+    }
+
+    // 获取候选商品（拼音搜索时获取更多候选）
+    const limit = isPinyinQuery ? 100 : 20;
+
+    let results = await db.query.products.findMany({
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        limit,
+        orderBy: (products, { desc }) => [desc(products.updatedAt)],
         columns: {
             id: true,
             name: true,
@@ -45,7 +88,34 @@ export async function searchProducts(query: string, category?: string): Promise<
             specs: true,
             images: true,
         }
-    });
+    }) as ProductSearchResult[];
 
-    return results as ProductSearchResult[];
+    // 如果是拼音搜索，在服务端进行拼音匹配过滤
+    if (isPinyinQuery && hasQuery) {
+        results = results.filter(product =>
+            matchesPinyin(product.name, normalizedQuery) ||
+            product.sku.toLowerCase().includes(normalizedQuery)
+        );
+    }
+
+    // 智能排序：最近使用的商品优先
+    if (recentProductIds && recentProductIds.length > 0) {
+        const recentSet = new Set(recentProductIds);
+        const recentIndexMap = new Map(recentProductIds.map((id, idx) => [id, idx]));
+
+        results.sort((a, b) => {
+            const aIsRecent = recentSet.has(a.id);
+            const bIsRecent = recentSet.has(b.id);
+
+            if (aIsRecent && !bIsRecent) return -1;
+            if (!aIsRecent && bIsRecent) return 1;
+            if (aIsRecent && bIsRecent) {
+                return (recentIndexMap.get(a.id) || 0) - (recentIndexMap.get(b.id) || 0);
+            }
+            return 0;
+        });
+    }
+
+    // 返回最多15条结果
+    return results.slice(0, 15);
 }

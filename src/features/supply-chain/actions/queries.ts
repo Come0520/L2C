@@ -10,7 +10,7 @@ import { getSuppliersSchema, getSupplierByIdSchema } from '../schemas';
 
 export async function getSuppliers(input: { page?: number; pageSize?: number; query?: string }) {
     const session = await auth();
-    if (!session?.user) throw new Error('Unauthorized');
+    if (!session?.user) throw new Error('未授权');
 
     // View permission check
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
@@ -47,7 +47,7 @@ export async function getSuppliers(input: { page?: number; pageSize?: number; qu
 
 export async function getSupplierById(id: string) {
     const session = await auth();
-    if (!session?.user) throw new Error('Unauthorized');
+    if (!session?.user) throw new Error('未授权');
 
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
@@ -81,7 +81,7 @@ export async function getPurchaseOrders(input?: {
     search?: string;
 }) {
     const session = await auth();
-    if (!session?.user) throw new Error('Unauthorized');
+    if (!session?.user) throw new Error('未授权');
 
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 

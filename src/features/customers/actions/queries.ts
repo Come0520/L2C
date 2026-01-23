@@ -5,12 +5,23 @@ import { customers } from '@/shared/api/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getCustomersSchema } from '@/features/customers/schemas';
+import { auth } from '@/shared/lib/auth';
 
+/**
+ * 获取客户列表
+ * 
+ * 安全检查：自动从 session 获取 tenantId 实现租户隔离
+ */
 export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    const tenantId = session.user.tenantId;
     const { page, pageSize, search, type, level, assignedSalesId } = getCustomersSchema.parse(params);
     const offset = (page - 1) * pageSize;
 
-    const whereConditions = [];
+    // 首先添加租户隔离条件
+    const whereConditions = [eq(customers.tenantId, tenantId)];
 
     if (search) {
         whereConditions.push(
@@ -23,14 +34,16 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
     }
 
     if (level) {
-        whereConditions.push(eq(customers.level, level as any));
+        if (['A', 'B', 'C', 'D'].includes(level)) {
+            whereConditions.push(eq(customers.level, level as 'A' | 'B' | 'C' | 'D'));
+        }
     }
 
     if (assignedSalesId) {
         whereConditions.push(eq(customers.assignedSalesId, assignedSalesId));
     }
 
-    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    const whereClause = and(...whereConditions);
 
     const data = await db.query.customers.findMany({
         where: whereClause,
@@ -61,9 +74,19 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
     };
 }
 
+/**
+ * 获取客户详情
+ * 
+ * 安全检查：自动从 session 获取 tenantId 实现租户隔离
+ */
 export async function getCustomerDetail(id: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    const tenantId = session.user.tenantId;
+
     const customer = await db.query.customers.findFirst({
-        where: eq(customers.id, id),
+        where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
         with: {
             assignedSales: true,
             creator: true,
@@ -83,7 +106,7 @@ export async function getCustomerDetail(id: string) {
 // [Customer-01] 客户画像增强
 // ============================================================
 
-import { orders, arStatements } from '@/shared/api/schema';
+import { orders } from '@/shared/api/schema';
 import { sum, count, max } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 
@@ -91,14 +114,9 @@ const getCustomerProfileSchema = z.object({
     customerId: z.string().uuid(),
 });
 
-/**
- * 获取客户画像统计数据
- * 包含：累计交易金额、最近购买时间、购买频次、RFM 价值标签
- */
-export const getCustomerProfile = createSafeAction(getCustomerProfileSchema, async ({ customerId }, { session }) => {
+const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSchema, async ({ customerId }, { session }) => {
     const tenantId = session.user.tenantId;
 
-    // 获取客户基本信息
     const customer = await db.query.customers.findFirst({
         where: and(
             eq(customers.id, customerId),
@@ -114,7 +132,6 @@ export const getCustomerProfile = createSafeAction(getCustomerProfileSchema, asy
         return { error: '客户不存在' };
     }
 
-    // 统计订单数据
     const orderStats = await db
         .select({
             orderCount: count(orders.id),
@@ -129,7 +146,6 @@ export const getCustomerProfile = createSafeAction(getCustomerProfileSchema, asy
 
     const stats = orderStats[0] || { orderCount: 0, totalAmount: '0', lastOrderDate: null };
 
-    // 计算 RFM 指标
     const now = new Date();
     const lastOrder = stats.lastOrderDate ? new Date(stats.lastOrderDate) : null;
     const daysSinceLastOrder = lastOrder
@@ -139,12 +155,10 @@ export const getCustomerProfile = createSafeAction(getCustomerProfileSchema, asy
     const totalAmount = parseFloat(stats.totalAmount?.toString() || '0');
     const orderCount = Number(stats.orderCount) || 0;
 
-    // RFM 评分（简化版）
     const recencyScore = daysSinceLastOrder <= 30 ? 5 : daysSinceLastOrder <= 90 ? 4 : daysSinceLastOrder <= 180 ? 3 : daysSinceLastOrder <= 365 ? 2 : 1;
     const frequencyScore = orderCount >= 10 ? 5 : orderCount >= 5 ? 4 : orderCount >= 3 ? 3 : orderCount >= 1 ? 2 : 1;
     const monetaryScore = totalAmount >= 100000 ? 5 : totalAmount >= 50000 ? 4 : totalAmount >= 20000 ? 3 : totalAmount >= 5000 ? 2 : 1;
 
-    // 价值标签
     const rfmAvg = (recencyScore + frequencyScore + monetaryScore) / 3;
     let valueLabel: 'HIGH_VALUE' | 'POTENTIAL' | 'NORMAL' | 'SLEEPING' | 'LOST';
     if (rfmAvg >= 4) {
@@ -192,6 +206,10 @@ export const getCustomerProfile = createSafeAction(getCustomerProfileSchema, asy
     };
 });
 
+export async function getCustomerProfile(params: z.infer<typeof getCustomerProfileSchema>) {
+    return getCustomerProfileActionInternal(params);
+}
+
 // ============================================================
 // [Customer-03] 转介绍追踪
 // ============================================================
@@ -200,13 +218,9 @@ const getReferralChainSchema = z.object({
     customerId: z.string().uuid(),
 });
 
-/**
- * 获取转介绍关系链
- */
-export const getReferralChain = createSafeAction(getReferralChainSchema, async ({ customerId }, { session }) => {
+const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, async ({ customerId }, { session }) => {
     const tenantId = session.user.tenantId;
 
-    // 获取客户及其推荐人
     const customer = await db.query.customers.findFirst({
         where: and(
             eq(customers.id, customerId),
@@ -216,7 +230,7 @@ export const getReferralChain = createSafeAction(getReferralChainSchema, async (
             referrer: true,
             referrals: {
                 with: {
-                    referrals: true, // 二级推荐
+                    referrals: true,
                 }
             }
         }
@@ -226,7 +240,6 @@ export const getReferralChain = createSafeAction(getReferralChainSchema, async (
         return { error: '客户不存在' };
     }
 
-    // 构建推荐链
     const referralTree = {
         customer: {
             id: customer.id,
@@ -245,9 +258,12 @@ export const getReferralChain = createSafeAction(getReferralChainSchema, async (
         })),
         stats: {
             directReferralsCount: customer.referrals?.length || 0,
-            // TODO: 计算推荐奖励
         }
     };
 
     return referralTree;
 });
+
+export async function getReferralChain(params: z.infer<typeof getReferralChainSchema>) {
+    return getReferralChainActionInternal(params);
+}

@@ -19,15 +19,11 @@ const fieldDiscoverySchema = z.object({
     })
 });
 
-/**
- * 提交现场发现（二次营销机会）
- */
-export const submitFieldDiscoveryAction = createSafeAction(fieldDiscoverySchema, async (data, ctx) => {
+const submitFieldDiscoveryActionInternal = createSafeAction(fieldDiscoverySchema, async (data, ctx) => {
     const session = ctx.session;
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
-        // 获取现有的 fieldDiscovery 数据
         const task = await db.query.installTasks.findFirst({
             where: and(
                 eq(installTasks.id, data.taskId),
@@ -37,7 +33,7 @@ export const submitFieldDiscoveryAction = createSafeAction(fieldDiscoverySchema,
 
         if (!task) return { success: false, error: '任务不存在' };
 
-        const existingDiscoveries = (task.fieldDiscovery as { discoveries?: any[] })?.discoveries || [];
+        const existingDiscoveries = (task.fieldDiscovery as { discoveries?: unknown[] })?.discoveries || [];
         const newDiscovery = {
             ...data.discovery,
             id: `discovery_${Date.now()}`,
@@ -47,9 +43,7 @@ export const submitFieldDiscoveryAction = createSafeAction(fieldDiscoverySchema,
 
         await db.update(installTasks)
             .set({
-                fieldDiscovery: {
-                    discoveries: [...existingDiscoveries, newDiscovery]
-                },
+                fieldDiscovery: { discoveries: [...existingDiscoveries, newDiscovery] },
                 updatedAt: new Date(),
             })
             .where(and(
@@ -64,3 +58,7 @@ export const submitFieldDiscoveryAction = createSafeAction(fieldDiscoverySchema,
         return { success: false, error: '记录失败' };
     }
 });
+
+export async function submitFieldDiscoveryAction(params: z.infer<typeof fieldDiscoverySchema>) {
+    return submitFieldDiscoveryActionInternal(params);
+}

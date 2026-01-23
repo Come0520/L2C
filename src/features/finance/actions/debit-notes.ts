@@ -10,7 +10,8 @@
 import { db } from '@/shared/api/db';
 import { debitNotes, apSupplierStatements } from '@/shared/api/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -49,6 +50,9 @@ export async function createDebitNote(input: z.infer<typeof createDebitNoteSchem
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
+
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
         const [debitNote] = await db.insert(debitNotes).values({
             tenantId,
@@ -94,6 +98,10 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
+
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+
 
         // 获取借项通知单
         const debitNote = await db.query.debitNotes.findFirst({

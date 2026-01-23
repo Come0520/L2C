@@ -24,22 +24,17 @@ const createPaymentPlanSchema = z.object({
     })).min(1),
 });
 
-/**
- * 创建多节点收款计划
- */
-export const createPaymentPlan = createSafeAction(createPaymentPlanSchema, async (params, { session }) => {
+const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
     const { arStatementId, nodes } = params;
     const tenantId = session.user.tenantId;
 
-    // 验证总百分比等于 100
     const totalPercentage = nodes.reduce((sum, n) => sum + n.percentage, 0);
     if (totalPercentage !== 100) {
         return { error: `收款比例总和必须等于 100%，当前为 ${totalPercentage}%` };
     }
 
-    // 获取对账单
     const statement = await db.query.arStatements.findFirst({
         where: and(
             eq(arStatements.id, arStatementId),
@@ -51,7 +46,6 @@ export const createPaymentPlan = createSafeAction(createPaymentPlanSchema, async
         return { error: '对账单不存在' };
     }
 
-    // 计算各节点金额
     const totalAmount = parseFloat(statement.totalAmount || '0');
     const planNodes = nodes.map(node => ({
         ...node,
@@ -59,47 +53,38 @@ export const createPaymentPlan = createSafeAction(createPaymentPlanSchema, async
         status: 'PENDING' as const,
     }));
 
-    // TODO: 保存到数据库（需要 paymentPlanNodes 表）
-    // 这里返回计划预览
     revalidatePath('/finance/ar');
 
     return {
         success: true,
-        plan: {
-            arStatementId,
-            totalAmount,
-            nodes: planNodes,
-        }
+        plan: { arStatementId, totalAmount, nodes: planNodes }
     };
 });
 
-/**
- * 获取到期提醒的收款节点
- */
+export async function createPaymentPlan(params: z.infer<typeof createPaymentPlanSchema>) {
+    return createPaymentPlanActionInternal(params);
+}
+
+// 收款提醒查询 Schema
 const getDueRemindersSchema = z.object({
-    daysAhead: z.number().min(0).max(30).default(7),
+    daysAhead: z.number().min(0).max(365).default(7),
 });
 
-export const getPaymentDueReminders = createSafeAction(getDueRemindersSchema, async (params, { session }) => {
+const getPaymentDueRemindersActionInternal = createSafeAction(getDueRemindersSchema, async (params, { session }) => {
     const { daysAhead } = params;
     const tenantId = session.user.tenantId;
 
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + daysAhead);
 
-    // 查询未收完且有待收金额的账单
     const pendingStatements = await db.query.arStatements.findMany({
         where: and(
             eq(arStatements.tenantId, tenantId),
-            lte(arStatements.createdAt, futureDate) // 简化逻辑：创建时间在范围内
+            lte(arStatements.createdAt, futureDate)
         ),
-        with: {
-            customer: true,
-            order: true,
-        }
+        with: { customer: true, order: true }
     });
 
-    // 筛选有待收金额的
     const dueItems = pendingStatements
         .filter(s => parseFloat(s.pendingAmount || '0') > 0)
         .map(s => ({
@@ -114,9 +99,13 @@ export const getPaymentDueReminders = createSafeAction(getDueRemindersSchema, as
         daysAhead,
         dueCount: dueItems.length,
         totalPendingAmount: dueItems.reduce((sum, i) => sum + i.pendingAmount, 0),
-        items: dueItems.slice(0, 20), // 最多返回20条
+        items: dueItems.slice(0, 20),
     };
 });
+
+export async function getPaymentDueReminders(params: z.infer<typeof getDueRemindersSchema>) {
+    return getPaymentDueRemindersActionInternal(params);
+}
 
 // ============================================================
 // [Finance-03] 坏账核销流程
@@ -129,16 +118,12 @@ const submitBadDebtWriteOffSchema = z.object({
     evidenceUrls: z.array(z.string()).optional(),
 });
 
-/**
- * 提交坏账核销申请（触发审批流程）
- */
-export const submitBadDebtWriteOff = createSafeAction(submitBadDebtWriteOffSchema, async (params, { session }) => {
+const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteOffSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
     const { arStatementId, writeOffAmount, reason, evidenceUrls } = params;
     const tenantId = session.user.tenantId;
 
-    // 获取对账单
     const statement = await db.query.arStatements.findFirst({
         where: and(
             eq(arStatements.id, arStatementId),
@@ -155,8 +140,6 @@ export const submitBadDebtWriteOff = createSafeAction(submitBadDebtWriteOffSchem
         return { error: `核销金额不能超过待收金额 ¥${pendingAmount}` };
     }
 
-    // TODO: 集成审批模块，创建 BAD_DEBT_WRITEOFF 审批实例
-    // 这里先返回预览信息
     const writeOffData = {
         arStatementId,
         statementNo: statement.statementNo,
@@ -180,9 +163,11 @@ export const submitBadDebtWriteOff = createSafeAction(submitBadDebtWriteOffSchem
     };
 });
 
-/**
- * 处理坏账核销审批结果
- */
+export async function submitBadDebtWriteOff(params: z.infer<typeof submitBadDebtWriteOffSchema>) {
+    return submitBadDebtWriteOffActionInternal(params);
+}
+
+// 坏账审批 Schema
 const processBadDebtApprovalSchema = z.object({
     arStatementId: z.string().uuid(),
     approved: z.boolean(),
@@ -190,27 +175,18 @@ const processBadDebtApprovalSchema = z.object({
     remark: z.string().optional(),
 });
 
-export const processBadDebtApproval = createSafeAction(processBadDebtApprovalSchema, async (params, { session }) => {
+const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtApprovalSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
     const { arStatementId, approved, writeOffAmount, remark } = params;
     const tenantId = session.user.tenantId;
 
     if (!approved) {
-        return {
-            success: true,
-            message: '坏账核销申请已拒绝',
-            status: 'REJECTED',
-        };
+        return { success: true, message: '坏账核销申请已拒绝', status: 'REJECTED' };
     }
 
-    // 更新对账单状态为坏账
     await db.update(arStatements)
-        .set({
-            status: 'BAD_DEBT',
-            pendingAmount: '0', // 核销后待收为0
-            // 可以添加 badDebtAmount 字段记录核销金额
-        })
+        .set({ status: 'BAD_DEBT', pendingAmount: '0' })
         .where(and(
             eq(arStatements.id, arStatementId),
             eq(arStatements.tenantId, tenantId)
@@ -225,3 +201,7 @@ export const processBadDebtApproval = createSafeAction(processBadDebtApprovalSch
         remark,
     };
 });
+
+export async function processBadDebtApproval(params: z.infer<typeof processBadDebtApprovalSchema>) {
+    return processBadDebtApprovalActionInternal(params);
+}

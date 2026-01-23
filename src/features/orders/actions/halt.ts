@@ -184,16 +184,15 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
             );
         }
 
-        // 更新订单状态
+        // 更新订单状态 - 添加租户隔离
         await db.update(orders)
             .set({
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                status: previousStatus as any,
+                status: previousStatus as typeof orders.$inferSelect.status,
                 pausedAt: null,
                 pauseReason: null,
                 pauseCumulativeDays: (order.pauseCumulativeDays || 0) + daysToAdd,
             })
-            .where(eq(orders.id, data.orderId));
+            .where(and(eq(orders.id, data.orderId), eq(orders.tenantId, tenantId)));
 
         revalidatePath('/orders');
         revalidatePath(`/orders/${data.orderId}`);

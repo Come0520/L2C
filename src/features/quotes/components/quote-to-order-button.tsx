@@ -45,14 +45,25 @@ export function QuoteToOrderButton({ quoteId, defaultAmount }: QuoteToOrderButto
     const handleConvert = () => {
         startTransition(async () => {
             try {
-                const order = await createOrderFromQuote({
+                const result = await createOrderFromQuote({
                     quoteId,
                     paymentMethod,
                     paymentAmount,
                     remark,
                     // Note: paymentProofImg/confirmationImg could be added here if we had a file uploader
                 });
-                if (order?.id) {
+
+                // 检查是否是审批中状态
+                if ('pendingApproval' in result && result.pendingApproval) {
+                    toast.info(result.message || '已提交审批，请等待审批通过。');
+                    setOpen(false);
+                    router.refresh();
+                    return;
+                }
+
+                // 正常订单创建成功
+                if ('id' in result && result.id) {
+                    const order = result as { id: string; orderNo: string };
                     toast.success(`订单 ${order.orderNo} 创建成功`);
                     setOpen(false);
                     router.push(`/orders/${order.id}`);

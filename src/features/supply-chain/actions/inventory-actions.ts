@@ -35,14 +35,21 @@ const getInventorySchema = z.object({
 
 // --- Actions ---
 
-/**
- * 调整库存 (盘点/手动调整)
- */
-export const adjustInventory = createSafeAction(adjustInventorySchema, async (data, { session }) => {
+const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
 
+    // 校验仓库是否属于当前租户
+    const warehouse = await db.query.warehouses.findFirst({
+        where: and(
+            eq(warehouses.id, data.warehouseId),
+            eq(warehouses.tenantId, session.user.tenantId)
+        ),
+    });
+    if (!warehouse) {
+        throw new Error('仓库不存在或无权访问');
+    }
+
     return await db.transaction(async (tx) => {
-        // 1. Get current stock
         const currentStock = await tx.query.inventory.findFirst({
             where: and(
                 eq(inventory.warehouseId, data.warehouseId),
@@ -57,13 +64,9 @@ export const adjustInventory = createSafeAction(adjustInventorySchema, async (da
             throw new Error('库存不足，无法进行扣减');
         }
 
-        // 2. Update stock
         if (currentStock) {
             await tx.update(inventory)
-                .set({
-                    quantity: newQty,
-                    updatedAt: new Date(),
-                })
+                .set({ quantity: newQty, updatedAt: new Date() })
                 .where(eq(inventory.id, currentStock.id));
         } else {
             await tx.insert(inventory).values({
@@ -74,7 +77,6 @@ export const adjustInventory = createSafeAction(adjustInventorySchema, async (da
             });
         }
 
-        // 3. Log transaction
         await tx.insert(inventoryLogs).values({
             tenantId: session.user.tenantId,
             warehouseId: data.warehouseId,
@@ -92,15 +94,37 @@ export const adjustInventory = createSafeAction(adjustInventorySchema, async (da
     });
 });
 
-/**
- * 库存调拨
- */
-export const transferInventory = createSafeAction(transferInventorySchema, async (data, { session }) => {
+export async function adjustInventory(params: z.infer<typeof adjustInventorySchema>) {
+    return adjustInventoryActionInternal(params);
+}
+
+const transferInventoryActionInternal = createSafeAction(transferInventorySchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
+
+    // 校验源仓库和目标仓库是否属于当前租户
+    const [sourceWarehouse, targetWarehouse] = await Promise.all([
+        db.query.warehouses.findFirst({
+            where: and(
+                eq(warehouses.id, data.fromWarehouseId),
+                eq(warehouses.tenantId, session.user.tenantId)
+            ),
+        }),
+        db.query.warehouses.findFirst({
+            where: and(
+                eq(warehouses.id, data.toWarehouseId),
+                eq(warehouses.tenantId, session.user.tenantId)
+            ),
+        }),
+    ]);
+    if (!sourceWarehouse) {
+        throw new Error('源仓库不存在或无权访问');
+    }
+    if (!targetWarehouse) {
+        throw new Error('目标仓库不存在或无权访问');
+    }
 
     return await db.transaction(async (tx) => {
         for (const item of data.items) {
-            // 1. Deduct from Source
             const sourceStock = await tx.query.inventory.findFirst({
                 where: and(
                     eq(inventory.warehouseId, data.fromWarehouseId),
@@ -129,7 +153,6 @@ export const transferInventory = createSafeAction(transferInventorySchema, async
                 operatorId: session.user.id,
             });
 
-            // 2. Add to Target
             const targetStock = await tx.query.inventory.findFirst({
                 where: and(
                     eq(inventory.warehouseId, data.toWarehouseId),
@@ -171,16 +194,14 @@ export const transferInventory = createSafeAction(transferInventorySchema, async
     });
 });
 
-/**
- * 获取库存列表
- */
-export const getInventoryLevels = createSafeAction(getInventorySchema, async (data, { session }) => {
+export async function transferInventory(params: z.infer<typeof transferInventorySchema>) {
+    return transferInventoryActionInternal(params);
+}
+
+const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
-    const filters = [
-        eq(inventory.tenantId, session.user.tenantId)
-    ];
-
+    const filters = [eq(inventory.tenantId, session.user.tenantId)];
     if (data.warehouseId) {
         filters.push(eq(inventory.warehouseId, data.warehouseId));
     }
@@ -205,6 +226,10 @@ export const getInventoryLevels = createSafeAction(getInventorySchema, async (da
     return results;
 });
 
+export async function getInventoryLevels(params: z.infer<typeof getInventorySchema>) {
+    return getInventoryLevelsActionInternal(params);
+}
+
 // ============================================================
 // [Supply-04] 库存预警机制
 // ============================================================
@@ -214,15 +239,7 @@ const checkInventoryAlertsSchema = z.object({
     alertThreshold: z.number().min(0).default(10), // 默认预警阈值
 });
 
-/**
- * 检查低库存预警
- * 
- * 业务逻辑：
- * 1. 查询所有低于安全库存的产品
- * 2. 按预警等级分类（紧急/警告/正常）
- * 3. 返回需要补货的产品列表
- */
-export const checkInventoryAlerts = createSafeAction(checkInventoryAlertsSchema, async (data, { session }) => {
+const checkInventoryAlertsActionInternal = createSafeAction(checkInventoryAlertsSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
     const baseFilters = [eq(inventory.tenantId, session.user.tenantId)];
@@ -245,7 +262,6 @@ export const checkInventoryAlerts = createSafeAction(checkInventoryAlertsSchema,
         .leftJoin(products, eq(inventory.productId, products.id))
         .where(and(...baseFilters));
 
-    // 分类预警等级
     const alerts: {
         level: 'CRITICAL' | 'WARNING' | 'OK';
         item: typeof allInventory[number];
@@ -265,7 +281,6 @@ export const checkInventoryAlerts = createSafeAction(checkInventoryAlertsSchema,
         }
     }
 
-    // 按预警等级排序（紧急优先）
     alerts.sort((a, b) => {
         const order = { CRITICAL: 0, WARNING: 1, OK: 2 };
         return order[a.level] - order[b.level];
@@ -278,9 +293,13 @@ export const checkInventoryAlerts = createSafeAction(checkInventoryAlertsSchema,
             criticalCount: alerts.filter(a => a.level === 'CRITICAL').length,
             warningCount: alerts.filter(a => a.level === 'WARNING').length,
         },
-        alerts: alerts.slice(0, 50), // 最多返回 50 条
+        alerts: alerts.slice(0, 50),
     };
 });
+
+export async function checkInventoryAlerts(params: z.infer<typeof checkInventoryAlertsSchema>) {
+    return checkInventoryAlertsActionInternal(params);
+}
 
 const setminStockSchema = z.object({
     productId: z.string(),
@@ -288,10 +307,7 @@ const setminStockSchema = z.object({
     minStock: z.number().min(0),
 });
 
-/**
- * 设置产品安全库存
- */
-export const setminStock = createSafeAction(setminStockSchema, async (data, { session }) => {
+const setminStockActionInternal = createSafeAction(setminStockSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
 
     const existing = await db.query.inventory.findFirst({
@@ -304,10 +320,7 @@ export const setminStock = createSafeAction(setminStockSchema, async (data, { se
 
     if (existing) {
         await db.update(inventory)
-            .set({
-                minStock: data.minStock,
-                updatedAt: new Date(),
-            })
+            .set({ minStock: data.minStock, updatedAt: new Date() })
             .where(eq(inventory.id, existing.id));
     } else {
         await db.insert(inventory).values({
@@ -322,6 +335,10 @@ export const setminStock = createSafeAction(setminStockSchema, async (data, { se
     revalidatePath('/supply-chain/inventory');
     return { success: true, message: `安全库存已设置为 ${data.minStock}` };
 });
+
+export async function setminStock(params: z.infer<typeof setminStockSchema>) {
+    return setminStockActionInternal(params);
+}
 
 /**
  * 获取需要补货的产品列表

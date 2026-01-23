@@ -6,8 +6,25 @@ interface FlatNode {
     approverType: 'ROLE' | 'USER' | 'CREATOR_MANAGER' | null;
     approverValue: string | null;
     approverMode: 'ANY' | 'ALL' | 'MAJORITY';
-    conditions: any[];
+    conditions: Condition[];
     sortOrder: number;
+}
+
+// 条件对象接口
+interface Condition {
+    field: string;
+    operator: string;
+    value: string;
+}
+
+// 节点 data 字段接口
+interface NodeData {
+    isStart?: boolean;
+    label?: string;
+    approverType?: 'ROLE' | 'USER' | 'CREATOR_MANAGER';
+    approverValue?: string;
+    approverMode?: 'ANY' | 'ALL' | 'MAJORITY';
+    condition?: string;
 }
 
 /**
@@ -21,7 +38,8 @@ interface FlatNode {
  * 3. Handle Condition Nodes by attaching conditions to subsequent Approver Nodes.
  */
 export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[]): FlatNode[] {
-    const startNode = nodes.find(n => n.type === 'start' || (n.data as any).isStart);
+    const nodeData = (n: ApprovalNode): NodeData => (n.data || {}) as NodeData;
+    const startNode = nodes.find(n => n.type === 'start' || nodeData(n).isStart);
     if (!startNode) return [];
 
     const flatNodes: FlatNode[] = [];
@@ -29,7 +47,7 @@ export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[
     let currentLevel = 0;
 
     // Queue for BFS: { nodeId, inheritedConditions, level }
-    let queue: { id: string; conditions: any[]; level: number }[] = [
+    let queue: { id: string; conditions: Condition[]; level: number }[] = [
         { id: startNode.id, conditions: [], level: 1 }
     ];
 
@@ -49,12 +67,13 @@ export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[
 
         // Process Node
         if (node.type === 'approver') {
+            const data = nodeData(node);
             flatNodes.push({
                 id: node.id,
-                name: node.data?.label || '审批节点',
-                approverType: (node.data?.approverType as any) || 'USER',
-                approverValue: node.data?.approverValue || null,
-                approverMode: node.data?.approverMode || 'ANY',
+                name: data.label || '审批节点',
+                approverType: data.approverType || 'USER',
+                approverValue: data.approverValue || null,
+                approverMode: data.approverMode || 'ANY',
                 conditions: current.conditions, // Apply accumulated conditions
                 sortOrder: currentLevel + 1 // Simple increment for now
             });

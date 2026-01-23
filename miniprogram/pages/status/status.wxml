@@ -1,0 +1,95 @@
+<!--pages/status/status.wxml-->
+<view class="container">
+  <!-- 状态卡片 -->
+  <view class="status-card card">
+    <!-- 待审批 -->
+    <view wx:if="{{status === 'pending_approval'}}" class="status-content">
+      <view class="status-icon pending">⏳</view>
+      <view class="status-title">审批中</view>
+      <view class="status-desc">
+        您的企业入驻申请正在审核中
+        <text class="highlight">预计1-3个工作日</text>
+        完成审核
+      </view>
+      <view class="status-time">提交时间：{{submitTime}}</view>
+    </view>
+
+    <!-- 已通过 -->
+    <view wx:elif="{{status === 'active'}}" class="status-content">
+      <view class="status-icon success">✅</view>
+      <view class="status-title">审批通过</view>
+      <view class="status-desc">
+        恭喜！您的企业已成功入驻 L2C 销售管理系统
+      </view>
+      <view class="status-time">审批时间：{{reviewTime}}</view>
+      
+      <button class="btn btn-primary mt-32" bindtap="goToInvite">
+        开始邀请员工
+      </button>
+    </view>
+
+    <!-- 已拒绝 -->
+    <view wx:elif="{{status === 'rejected'}}" class="status-content">
+      <view class="status-icon error">❌</view>
+      <view class="status-title">审批未通过</view>
+      <view class="status-desc">{{rejectReason || '详情请联系客服'}}</view>
+      <view class="status-time">审批时间：{{reviewTime}}</view>
+      
+      <button class="btn btn-outline mt-32" bindtap="reApply">
+        重新申请
+      </button>
+    </view>
+
+    <!-- 未申请 -->
+    <view wx:else class="status-content">
+      <view class="status-icon">📋</view>
+      <view class="status-title">尚未申请</view>
+      <view class="status-desc">您还没有提交企业入驻申请</view>
+      
+      <button class="btn btn-primary mt-32" bindtap="goToRegister">
+        立即申请入驻
+      </button>
+    </view>
+  </view>
+
+  <!-- 企业信息 -->
+  <view wx:if="{{tenantInfo}}" class="card">
+    <view class="section-title">企业信息</view>
+    <view class="info-list">
+      <view class="info-item">
+        <text class="info-label">企业名称</text>
+        <text class="info-value">{{tenantInfo.name}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">企业代码</text>
+        <text class="info-value">{{tenantInfo.code}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">联系人</text>
+        <text class="info-value">{{tenantInfo.applicantName}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">联系电话</text>
+        <text class="info-value">{{tenantInfo.applicantPhone}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">所在地区</text>
+        <text class="info-value">{{tenantInfo.region}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订阅提醒 -->
+  <view class="card subscribe-card" wx:if="{{status === 'pending_approval'}}">
+    <view class="subscribe-content">
+      <view class="subscribe-icon">🔔</view>
+      <view class="subscribe-text">
+        <view class="subscribe-title">开启审批通知</view>
+        <view class="subscribe-desc">审批结果将第一时间推送给您</view>
+      </view>
+    </view>
+    <button class="btn btn-secondary" size="mini" bindtap="subscribeNotification">
+      订阅通知
+    </button>
+  </view>
+</view>

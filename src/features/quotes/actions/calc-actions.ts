@@ -1,19 +1,42 @@
 'use server';
 
-// createSafeAction 和 z 导入已移除（未使用）
-
-
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
-import { eq } from 'drizzle-orm';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { revalidatePath } from 'next/cache';
+import type { QuoteItemAttributes } from '@/shared/api/types/quote-types';
 
-// Mock 重新计算报价 - 现在实现真实逻辑
-export const recalculateQuote = async (quoteId: string) => {
-    // 1. Fetch Quote & Items
+/**
+ * 计算预览参数接口
+ */
+interface CalcPreviewParams {
+    category?: string;
+    measuredWidth?: number;
+    measuredHeight?: number;
+    unitPrice?: number;
+    fabricType?: string;
+    fabricWidth?: number;
+    foldRatio?: number;
+    [key: string]: unknown; // 允许扩展参数
+}
+
+// 重新计算报价 - 现在实现真实逻辑
+export async function recalculateQuote(quoteId: string) {
+    // 🔒 安全校验：添加认证和租户隔离
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, message: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
+    // 1. Fetch Quote & Items (添加租户隔离)
+    const { and, eq } = await import('drizzle-orm');
     const quote = await db.query.quotes.findFirst({
-        where: eq(quotes.id, quoteId),
+        where: and(
+            eq(quotes.id, quoteId),
+            eq(quotes.tenantId, tenantId) // 🔒 强制租户过滤
+        ),
         with: {
             items: true
         }
@@ -22,17 +45,17 @@ export const recalculateQuote = async (quoteId: string) => {
     if (!quote) return { success: false, message: 'Quote not found' };
 
     let totalAmount = 0;
-    const updates: Promise<any>[] = [];
+    const updates: Promise<unknown>[] = [];
 
     // 2. Iterate and Calculate
     for (const item of quote.items) {
         // Need specific params from item attributes
         // Assuming item.attributes holds the calc params
-        const params = item.attributes as any || {};
+        const params = (item.attributes as QuoteItemAttributes) || {};
 
         // Merge with item basic info if needed
-        const parsedWidth = parseFloat(item.width as any);
-        const parsedHeight = parseFloat(item.height as any);
+        const parsedWidth = parseFloat(item.width as string);
+        const parsedHeight = parseFloat(item.height as string);
 
         const fullParams = {
             ...params,
@@ -42,8 +65,8 @@ export const recalculateQuote = async (quoteId: string) => {
             width: parsedWidth,
             height: parsedHeight,
 
-            unitPrice: parseFloat(item.unitPrice as any),
-            fabricType: (item.attributes as any)?.fabricType || 'FIXED_HEIGHT' // Fallback
+            unitPrice: parseFloat(item.unitPrice as string),
+            fabricType: (item.attributes as QuoteItemAttributes & { fabricType?: string })?.fabricType || 'FIXED_HEIGHT' // Fallback
         };
 
         const strategy = StrategyFactory.getStrategy(item.category || 'STANDARD');
@@ -60,7 +83,7 @@ export const recalculateQuote = async (quoteId: string) => {
                     quantity: result.usage.toString(),
                     subtotal: newSubtotal.toString(),
                     attributes: {
-                        ...(item.attributes as any),
+                        ...(item.attributes as QuoteItemAttributes),
                         calcResult: result.details
                     }
                 })
@@ -81,12 +104,12 @@ export const recalculateQuote = async (quoteId: string) => {
 
     revalidatePath(`/quotes/${quoteId}`);
     return { success: true, message: 'Recalculated successfully' };
-};
+}
 
 // 获取计算结果预览
-export const getCalcPreview = async (params: any) => {
+export async function getCalcPreview(params: CalcPreviewParams) {
     const category = params.category || 'CURTAIN';
     const strategy = StrategyFactory.getStrategy(category);
     const result = strategy.calculate(params);
     return { data: result };
-};
+}

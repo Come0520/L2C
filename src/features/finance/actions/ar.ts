@@ -12,20 +12,22 @@ import { z } from 'zod';
 
 /**
  * 获取应收对账单列表
+ * 
+ * 注：使用标准 select 查询替代 relational query API，
+ * 以避免 Drizzle ORM 0.45.x lateral join 兼容性问题
  */
 export async function getARStatements() {
     try {
         const session = await auth();
         if (!session?.user?.tenantId) throw new Error('未授权');
 
-        const result = await db.query.arStatements.findMany({
-            where: eq(arStatements.tenantId, session.user.tenantId),
-            with: {
-                order: true,
-                customer: true,
-            },
-            orderBy: [desc(arStatements.createdAt)],
-        });
+        // 直接查询 arStatements，不使用 relational query，避免 lateral join 问题
+        const result = await db
+            .select()
+            .from(arStatements)
+            .where(eq(arStatements.tenantId, session.user.tenantId))
+            .orderBy(desc(arStatements.createdAt));
+
         return result;
     } catch (error) {
         console.error('❌ getARStatements Error:', error);
@@ -64,9 +66,18 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     const validatedData = createPaymentOrderSchema.parse(data);
     const { items, ...orderData } = validatedData;
 
-    // Convert to service format
-    const serviceData: any = {
-        ...orderData,
+    // 转换为服务层格式，显式构建符合 CreatePaymentOrderData 接口的对象
+    const serviceData: Parameters<typeof FinanceService.createPaymentOrder>[0] = {
+        customerId: orderData.customerId,
+        customerName: orderData.customerName,
+        customerPhone: orderData.customerPhone,
+        totalAmount: String(orderData.totalAmount),
+        type: orderData.type,
+        paymentMethod: orderData.paymentMethod,
+        accountId: orderData.accountId,
+        proofUrl: orderData.proofUrl,
+        receivedAt: orderData.receivedAt,
+        remark: orderData.remark,
         items: items?.map(item => ({
             orderId: item.orderId,
             amount: item.amount
@@ -82,7 +93,14 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
 
     const { id, status, remark } = verifyPaymentOrderSchema.parse(data);
 
-    return await FinanceService.verifyPaymentOrder(id, status as any, session.user.tenantId, session.user.id!, remark);
+    // 类型安全：Schema 定义 status 为 'VERIFIED' | 'REJECTED'，与服务层一致
+    return await FinanceService.verifyPaymentOrder(
+        id,
+        status,
+        session.user.tenantId,
+        session.user.id!,
+        remark
+    );
 }
 
 // calculateCommission moved to FinanceService
@@ -116,7 +134,7 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
         }
 
         const tenantId = session.user.tenantId;
-        const userId = session.user.id!;
+        const _userId = session.user.id!;
 
         return await db.transaction(async (tx) => {
             // 1. 获取原对账单

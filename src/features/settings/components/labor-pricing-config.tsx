@@ -1,370 +1,242 @@
 'use client';
 
+import { useState, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { toast } from 'sonner';
-import { Loader2, Save, Plus, Trash2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useState } from 'react';
+import { Loader2, Save } from 'lucide-react';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/shared/ui/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/shared/ui/select';
+import { getTenantLaborRates, batchUpsertTenantLaborRates } from '@/features/service/installation/actions/pricing-actions';
 
 /**
- * 劳务工费定价配置
+ * 劳务工费定价配置（重构版）
  * 
  * 功能：
- * 1. 按产品类型设置基础安装单价
- * 2. 附加费用配置（高空作业费、夜间费等）
- * 3. 区域差异系数
+ * 1. 按产品品类设置基础单价
+ * 2. 支持"按窗户数"或"按面积"计费模式
+ * 3. 测量任务支持起步费
  */
 
-// 劳务定价 Schema
-const laborPricingSchema = z.object({
-    // 窗帘安装基础费用
-    curtainBasePrice: z.number().min(0, '不能为负'),
-    curtainPricePerSquareMeter: z.number().min(0, '不能为负'),
+// 品类配置定义
+const CATEGORIES = [
+    { key: 'CURTAIN', label: '窗帘安装', defaultUnit: 'WINDOW' },
+    { key: 'WALLPAPER', label: '墙纸安装', defaultUnit: 'SQUARE_METER' },
+    { key: 'WALLCLOTH', label: '墙布安装', defaultUnit: 'SQUARE_METER' },
+    { key: 'WALLPANEL', label: '墙咔安装', defaultUnit: 'SQUARE_METER' },
+    { key: 'MEASURE_LEAD', label: '线索测量', defaultUnit: 'WINDOW' },
+    { key: 'MEASURE_PRECISE', label: '精准测量', defaultUnit: 'WINDOW' },
+] as const;
 
-    // 墙纸安装基础费用
-    wallpaperBasePrice: z.number().min(0, '不能为负'),
-    wallpaperPricePerSquareMeter: z.number().min(0, '不能为负'),
+type CategoryKey = typeof CATEGORIES[number]['key'];
 
-    // 附加费用
-    highRiseExtraFee: z.number().min(0, '不能为负'), // 高空作业费 (6楼+)
-    weekendExtraRatio: z.number().min(0).max(2, '最大200%'), // 周末加班系数
-    nightExtraRatio: z.number().min(0).max(2, '最大200%'), // 夜间施工系数
-    urgentExtraRatio: z.number().min(0).max(2, '最大200%'), // 紧急订单系数
-
-    // 其他
-    minOrderAmount: z.number().min(0, '不能为负'), // 起步价
-    maxDailyTasks: z.number().min(1).max(20), // 每人每日最大任务数
-});
-
-type LaborPricingFormData = z.infer<typeof laborPricingSchema>;
-
-interface LaborPricingConfigProps {
-    initialValues?: Partial<LaborPricingFormData>;
-    onSave?: (data: LaborPricingFormData) => Promise<void>;
+interface RateRow {
+    category: CategoryKey;
+    unitPrice: number;
+    baseFee: number;
+    unitType: 'WINDOW' | 'SQUARE_METER' | 'FIXED';
 }
 
-export function LaborPricingConfig({ initialValues, onSave }: LaborPricingConfigProps) {
-    const [isLoading, setIsLoading] = useState(false);
+interface LaborPricingConfigProps {
+    entityType?: 'TENANT' | 'WORKER';
+    entityId?: string;
+}
 
-    const form = useForm<LaborPricingFormData>({
-        resolver: zodResolver(laborPricingSchema),
-        defaultValues: {
-            // 窗帘默认值
-            curtainBasePrice: initialValues?.curtainBasePrice ?? 50,
-            curtainPricePerSquareMeter: initialValues?.curtainPricePerSquareMeter ?? 30,
+export function LaborPricingConfig({ entityType = 'TENANT', entityId }: LaborPricingConfigProps) {
+    const [isPending, startTransition] = useTransition();
+    const [isLoading, setIsLoading] = useState(true);
+    const [rates, setRates] = useState<RateRow[]>([]);
 
-            // 墙纸默认值
-            wallpaperBasePrice: initialValues?.wallpaperBasePrice ?? 60,
-            wallpaperPricePerSquareMeter: initialValues?.wallpaperPricePerSquareMeter ?? 15,
-
-            // 附加费用默认值
-            highRiseExtraFee: initialValues?.highRiseExtraFee ?? 50,
-            weekendExtraRatio: initialValues?.weekendExtraRatio ?? 1.5,
-            nightExtraRatio: initialValues?.nightExtraRatio ?? 1.8,
-            urgentExtraRatio: initialValues?.urgentExtraRatio ?? 1.3,
-
-            // 其他默认值
-            minOrderAmount: initialValues?.minOrderAmount ?? 100,
-            maxDailyTasks: initialValues?.maxDailyTasks ?? 6,
-        },
-    });
-
-    const onSubmit = async (data: LaborPricingFormData) => {
-        try {
+    // 初始化加载
+    useEffect(() => {
+        async function loadRates() {
             setIsLoading(true);
-            if (onSave) {
-                await onSave(data);
-            } else {
-                // TODO: 调用后端 Action 保存配置
-                console.log('保存劳务工费配置:', data);
+            try {
+                const result = await getTenantLaborRates();
+                if (result.success && result.data) {
+                    // 将数据库数据映射为表格行
+                    const existingRates = new Map(
+                        result.data.map((r) => [r.category, r])
+                    );
+
+                    const initialRates: RateRow[] = CATEGORIES.map((cat) => {
+                        const existing = existingRates.get(cat.key);
+                        return {
+                            category: cat.key,
+                            unitPrice: existing ? parseFloat(existing.unitPrice || '0') : 0,
+                            baseFee: existing ? parseFloat(existing.baseFee || '0') : 0,
+                            unitType: (existing?.unitType || cat.defaultUnit) as RateRow['unitType'],
+                        };
+                    });
+
+                    setRates(initialRates);
+                } else {
+                    // 使用默认值
+                    setRates(
+                        CATEGORIES.map((cat) => ({
+                            category: cat.key,
+                            unitPrice: 0,
+                            baseFee: 0,
+                            unitType: cat.defaultUnit as RateRow['unitType'],
+                        }))
+                    );
+                }
+            } catch (error) {
+                console.error('加载工费配置失败:', error);
+                toast.error('加载工费配置失败');
+            } finally {
+                setIsLoading(false);
             }
-            toast.success('劳务工费配置已保存');
-        } catch (error) {
-            toast.error('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
-        } finally {
-            setIsLoading(false);
         }
+
+        loadRates();
+    }, [entityType, entityId]);
+
+    // 更新单条规则
+    const updateRate = (category: CategoryKey, field: keyof RateRow, value: number | string) => {
+        setRates((prev) =>
+            prev.map((r) =>
+                r.category === category
+                    ? { ...r, [field]: field === 'unitType' ? value : Number(value) || 0 }
+                    : r
+            )
+        );
     };
 
+    // 保存所有规则
+    const handleSave = () => {
+        startTransition(async () => {
+            try {
+                const result = await batchUpsertTenantLaborRates(rates);
+                if (result.success) {
+                    toast.success('工费配置已保存');
+                } else {
+                    toast.error(result.error || '保存失败');
+                }
+            } catch (error) {
+                console.error('保存工费配置失败:', error);
+                toast.error('保存失败');
+            }
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
-        <div className="space-y-6">
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    {/* 窗帘安装费用 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>窗帘安装费用</CardTitle>
-                            <CardDescription>设置窗帘产品的基础安装单价</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="curtainBasePrice"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>基础上门费（元/次）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={10}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            每次上门的固定费用
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="curtainPricePerSquareMeter"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>面积单价（元/㎡）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={5}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            按安装面积计算的单价
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* 墙纸安装费用 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>墙纸安装费用</CardTitle>
-                            <CardDescription>设置墙纸产品的基础安装单价</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="wallpaperBasePrice"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>基础上门费（元/次）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={10}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="wallpaperPricePerSquareMeter"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>面积单价（元/㎡）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={5}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* 附加费用系数 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>附加费用</CardTitle>
-                            <CardDescription>设置特殊情况下的费用加成</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="highRiseExtraFee"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>高空作业费（元/次）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={10}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            6楼以上加收
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="weekendExtraRatio"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>周末加班系数</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={3}
-                                                step={0.1}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 1)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            周末施工费用 = 基础费用 × 系数
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="nightExtraRatio"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>夜间施工系数</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={3}
-                                                step={0.1}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 1)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            夜间（18:00后）施工费用系数
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="urgentExtraRatio"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>紧急订单系数</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={3}
-                                                step={0.1}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 1)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            24小时内需完成的订单
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* 其他设置 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>其他设置</CardTitle>
-                            <CardDescription>劳务调度相关参数</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="minOrderAmount"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>最低起步价（元）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={10}
-                                                {...field}
-                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            单次上门最低收费
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="maxDailyTasks"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>每人每日最大任务数</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={20}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 6)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            用于调度系统排期
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end">
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Save className="mr-2 h-4 w-4" />
-                            )}
-                            保存配置
-                        </Button>
+        <Card>
+            <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-lg">劳务工费定价</CardTitle>
+                        <CardDescription className="text-sm">
+                            {entityType === 'TENANT'
+                                ? '设置租户标准工费，作为所有师傅的默认定价'
+                                : '设置该师傅的个性化工费（覆盖标准价）'
+                            }
+                        </CardDescription>
                     </div>
-                </form>
-            </Form>
-        </div>
+                    <Button onClick={handleSave} disabled={isPending} size="sm">
+                        {isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                        )}
+                        保存配置
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[180px]">品类</TableHead>
+                                <TableHead className="w-[150px]">计费模式</TableHead>
+                                <TableHead className="w-[120px]">单价 (元)</TableHead>
+                                <TableHead className="w-[120px]">起步费 (元)</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rates.map((rate) => {
+                                const catConfig = CATEGORIES.find((c) => c.key === rate.category);
+                                const isMeasure = rate.category.startsWith('MEASURE');
+
+                                return (
+                                    <TableRow key={rate.category}>
+                                        <TableCell className="font-medium">
+                                            {catConfig?.label || rate.category}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select
+                                                value={rate.unitType}
+                                                onValueChange={(v) => updateRate(rate.category, 'unitType', v)}
+                                            >
+                                                <SelectTrigger className="h-8">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="WINDOW">按窗户</SelectItem>
+                                                    <SelectItem value="SQUARE_METER">按平米</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                step={1}
+                                                value={rate.unitPrice}
+                                                onChange={(e) => updateRate(rate.category, 'unitPrice', e.target.value)}
+                                                className="h-8 w-24"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {isMeasure ? (
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={10}
+                                                    value={rate.baseFee}
+                                                    onChange={(e) => updateRate(rate.category, 'baseFee', e.target.value)}
+                                                    className="h-8 w-24"
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground">—</span>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <p className="mt-4 text-xs text-muted-foreground">
+                    💡 提示：测量任务支持"起步费"，安装任务仅按单价计费。远程费在派单时单独填写。
+                </p>
+            </CardContent>
+        </Card>
     );
 }

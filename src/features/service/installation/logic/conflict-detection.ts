@@ -72,26 +72,30 @@ function calculateDistance(
  * 调度冲突检测
  * - 硬冲突：同一师傅同一时段已有任务（禁止派单）
  * - 软冲突：地理距离 > 50km 且时间间隔 < 2小时 或 当日任务 >= 3 个（警告但允许强制派单）
+ * 
+ * @param tenantId - 租户 ID（必须从 session 获取）
  */
 export async function checkSchedulingConflict(
     installerId: string,
     scheduledDate: Date,
     timeSlot: string,
     currentTaskId?: string,
-    targetAddress?: { latitude: number; longitude: number }
+    targetAddress?: { latitude: number; longitude: number },
+    tenantId?: string  // 新增：租户隔离参数
 ): Promise<ConflictResult> {
     const startOfDay = new Date(scheduledDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(scheduledDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // 查询师傅当日所有任务（排除当前编辑的任务）
+    // 查询师傅当日所有任务（排除当前编辑的任务，限定租户范围）
     const existingTasks = await db.query.installTasks.findMany({
         where: and(
             eq(installTasks.installerId, installerId),
             gte(installTasks.scheduledDate, startOfDay),
             lte(installTasks.scheduledDate, endOfDay),
             currentTaskId ? not(eq(installTasks.id, currentTaskId)) : undefined,
+            tenantId ? eq(installTasks.tenantId, tenantId) : undefined,  // 租户隔离
         )
     });
 

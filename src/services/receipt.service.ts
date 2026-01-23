@@ -10,6 +10,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { submitApproval } from "@/features/approval/actions/submission";
+import { checkAndGenerateCommission } from "@/features/channels/logic/commission.service";
 
 export interface CreateReceiptBillData {
     customerId?: string;
@@ -229,9 +230,12 @@ export class ReceiptService {
                             })
                             .where(eq(arStatements.id, statement.id));
 
-                        // 5. Trigger Commission Calculation if needed
-                        // (Assuming calculateCommission is accessible or moved to a shared place)
-                        // For now we omit or assume it's handled.
+                        // 5. 触发渠道佣金结算 (Trigger Commission Calculation)
+                        // 当款项全部结清时触发
+                        if (pending.lte(0) && item.orderId) {
+                            // 注意：佣金生成逻辑内部有完善的幂等性检查，可以直接调用
+                            await checkAndGenerateCommission(item.orderId, 'PAYMENT_COMPLETED');
+                        }
                     }
                 }
             }

@@ -1,58 +1,132 @@
-export type CalculatorDetails =
-    | { formula: CurtainFormula; hFinished: number; wFinished: number; wCut: number; hCut: number; }
-    | { formula: WallpaperFormula };
+/**
+ * 窗帘/墙纸计算引擎 (Curtain/Wallpaper Calculator)
+ * 支持智能方案对比和租户配置
+ */
 
-export interface CalculatorResult {
-    quantity: number;
-    warnings: string[];
-    details: CalculatorDetails;
-}
+// ============ 类型定义 ============
 
 export type CurtainFormula = 'FIXED_HEIGHT' | 'FIXED_WIDTH';
 export type WallpaperFormula = 'WALLPAPER' | 'WALLCLOTH';
+export type HeaderType = 'WRAPPED' | 'ATTACHED';
 
+/**
+ * 替代方案（超高时计算多种解决方案）
+ */
+export interface AlternativeSolution {
+    /** 方案名称 */
+    name: string;
+    /** 方案描述 */
+    description: string;
+    /** 帘头工艺 */
+    headerType: HeaderType;
+    /** 帘头损耗 (cm) */
+    headerLoss: number;
+    /** 底边损耗 (cm) */
+    bottomLoss: number;
+    /** 计算用料 (m) */
+    quantity: number;
+    /** 差价估算（相对于基准方案） */
+    priceDiff: number;
+    /** 是否推荐 */
+    recommended?: boolean;
+}
+
+export interface CurtainDetails {
+    formula: CurtainFormula;
+    hFinished: number;
+    wFinished: number;
+    wCut: number;
+    hCut: number;
+    headerType: HeaderType;
+}
+
+export interface WallpaperDetails {
+    formula: WallpaperFormula;
+}
+
+export type CalculatorDetails = CurtainDetails | WallpaperDetails;
+
+export interface CalculatorResult {
+    /** 计算用量 */
+    quantity: number;
+    /** 警告消息 */
+    warnings: string[];
+    /** 计算明细 */
+    details: CalculatorDetails;
+    /** 替代方案（超高时返回多方案对比） */
+    alternatives?: AlternativeSolution[];
+    /** 是否触发超高预警 */
+    heightOverflow?: boolean;
+}
+
+/**
+ * 窗帘计算参数
+ */
 export interface CurtainParams {
-    measuredWidth: number;   // 测量宽度 (cm)
-    measuredHeight: number;  // 测量高度 (cm)
-    foldRatio: number;       // 褶皱倍数 (1.5-3.5)
-    fabricWidth: number;     // 面料幅宽 (cm)
-    formula: CurtainFormula; // 定高/定宽
+    /** 测量宽度 (cm) */
+    measuredWidth: number;
+    /** 测量高度 (cm) */
+    measuredHeight: number;
+    /** 褶皱倍数 */
+    foldRatio: number;
+    /** 面料幅宽 (cm) */
+    fabricWidth: number;
+    /** 计算公式 */
+    formula: CurtainFormula;
 
-    // Configurable Loss
-    sideLoss?: number;       // 单边损耗 (default: 5cm)
-    bottomLoss?: number;     //底边损耗 (default: 10cm)
-    headerLoss?: number;     // 帘头损耗 (default: 20cm for WRAPPED)
+    // 损耗配置
+    /** 侧边损耗 (cm) */
+    sideLoss?: number;
+    /** 底边损耗 (cm) */
+    bottomLoss?: number;
+    /** 包布带帘头损耗 (cm) */
+    headerLossWrapped?: number;
+    /** 贴布带帘头损耗 (cm) */
+    headerLossAttached?: number;
+    /** 当前使用的帘头工艺 */
+    headerType?: HeaderType;
+    /** 定高阈值 (cm) */
+    heightWarningThreshold?: number;
 
-    // Advanced
-    splitType?: 'SINGLE' | 'DOUBLE' | 'MULTI'; // 单开/对开/多开
+    // 兼容旧版
+    headerLoss?: number;
+
+    /** 开合方式 */
+    splitType?: 'SINGLE' | 'DOUBLE' | 'MULTI';
+    /** 单价（用于计算差价） */
+    unitPrice?: number;
 }
 
 export interface WallpaperParams {
-    measuredWidth: number;   // 测量宽度 (cm)
-    measuredHeight: number;  // 测量高度 (cm)
-
-    productWidth: number;    // 商品幅宽 (cm) - 墙纸定宽，墙布定高
-    rollLength?: number;     // 卷长 (cm) - 仅墙纸
-    patternRepeat?: number;  // 花距 (cm) - 仅墙纸
-
+    measuredWidth: number;
+    measuredHeight: number;
+    productWidth: number;
+    rollLength?: number;
+    patternRepeat?: number;
     formula: WallpaperFormula;
-
-    // Loss
-    widthLoss?: number;      // 宽度损耗 (default: 20cm)
-    cutLoss?: number;        // 裁剪损耗 (default: 10cm)
+    widthLoss?: number;
+    cutLoss?: number;
 }
 
-const CONSTANTS = {
-    DEFAULT_SIDE_LOSS: 5,
-    DEFAULT_BOTTOM_LOSS: 10,
-    DEFAULT_HEADER_LOSS: 20, // Wrapped
-    DEFAULT_WIDTH_LOSS: 20,
-    DEFAULT_CUT_LOSS: 10,
+// ============ 默认值（仅作为后备，优先使用配置传入） ============
+
+const DEFAULTS = {
+    SIDE_LOSS: 5,
+    BOTTOM_LOSS: 10,
+    HEADER_LOSS_WRAPPED: 20,
+    HEADER_LOSS_ATTACHED: 7,
+    WIDTH_LOSS: 20,
+    CUT_LOSS: 10,
     HEIGHT_WARNING_THRESHOLD: 275,
 };
 
+// ============ 窗帘计算器 ============
+
 export const CurtainCalculator = {
-    calculate: (params: CurtainParams): CalculatorResult => {
+    /**
+     * 计算窗帘用料
+     */
+    calculate(params: CurtainParams): CalculatorResult {
         const warnings: string[] = [];
         const {
             measuredWidth,
@@ -61,89 +135,170 @@ export const CurtainCalculator = {
             fabricWidth,
             formula,
             splitType = 'DOUBLE',
+            unitPrice = 0,
         } = params;
 
-        const sideLoss = params.sideLoss ?? CONSTANTS.DEFAULT_SIDE_LOSS;
-        const headerLoss = params.headerLoss ?? CONSTANTS.DEFAULT_HEADER_LOSS;
-        const bottomLoss = params.bottomLoss ?? CONSTANTS.DEFAULT_BOTTOM_LOSS;
+        // 获取配置参数（优先使用传入值，否则使用默认值）
+        const sideLoss = params.sideLoss ?? DEFAULTS.SIDE_LOSS;
+        const bottomLoss = params.bottomLoss ?? DEFAULTS.BOTTOM_LOSS;
+        const headerLossWrapped = params.headerLossWrapped ?? params.headerLoss ?? DEFAULTS.HEADER_LOSS_WRAPPED;
+        const headerLossAttached = params.headerLossAttached ?? DEFAULTS.HEADER_LOSS_ATTACHED;
+        const headerType = params.headerType ?? 'WRAPPED';
+        const _heightThreshold = params.heightWarningThreshold ?? DEFAULTS.HEIGHT_WARNING_THRESHOLD;
+
+        // 根据当前工艺选择帘头损耗
+        const currentHeaderLoss = headerType === 'WRAPPED' ? headerLossWrapped : headerLossAttached;
 
         // 1. 成品尺寸
-        // H_finished = H_measured - CLR (Assuming CLR is handled outside or passed as net height? 
-        // Docs say H_finished = H_meas - CLR. Let's assume input measuredHeight is already net or we need CLR param.
-        // Simplified: Assume input IS the height to cover for now, or add CLR param.
-        // Let's stick to input height as "Height used for calculation".
         const hFinished = measuredHeight;
         const wFinished = measuredWidth * foldRatio;
 
         // 2. 裁剪尺寸
-        // Width Cut
-        const splitCount = splitType === 'SINGLE' ? 1 : (splitType === 'DOUBLE' ? 2 : 2); // Multi simplified as 2 for now logic
-        // const wCut = wFinished + (splitCount * sideLoss * 2); // Unused 
-        // Docs: "Double(2 pieces) add 10cm; Single(1 piece) add 5cm". 
-        // If Side Loss is 5cm/side.
-        // Single: 1 piece * 2 sides * 5cm = 10cm? Or docs mean total side loss?
-        // Docs: "SIDE_LOSS: 5cm/side". "Example: Double add 10cm; Single add 5cm".
-        // This implies Single adds 1x5cm? Or does it mean "Total addition"?
-        // Usually Single curtain has 2 sides (left/right). Double has 4 sides total.
-        // Let's interpret Docs: "Double (2 pieces) add 10cm" -> maybe means 5cm * 2pcs? or 2.5cm * 4 sides?
-        // Let's follow "SIDE_LOSS: 5cm/side". 
-        // Logic: Total Side Loss = Pieces * 2 sides * SideLoss?
-        // If 2 pieces, 4 sides. 4 * 5 = 20cm.
-        // Docs example "Double add 10cm" contradicts "5cm/side" unless "5cm/side" is "5cm per piece"? 
-        // Or "5cm total per piece"?
-        // Let's trust the Example: Double -> 10cm, Single -> 5cm.
-        // This suggests: Loss = Pieces * 5cm.
-        const totalSideLoss = splitCount * sideLoss; // Matches example if sideLoss=5
-
+        const splitCount = splitType === 'SINGLE' ? 1 : 2;
+        const totalSideLoss = splitCount * sideLoss;
         const finalWCut = wFinished + totalSideLoss;
-
-        // Height Cut
-        const hCut = hFinished + headerLoss + bottomLoss;
+        const hCut = hFinished + currentHeaderLoss + bottomLoss;
 
         let quantity = 0;
+        let alternatives: AlternativeSolution[] | undefined;
+        let heightOverflow = false;
 
         // 3. 算法分支
         if (formula === 'FIXED_HEIGHT') {
             // 定高面料: 买宽
-            // Check High Warning
-            // Max effective height = FabricWidth - HeaderLoss - BottomLoss
-            const maxEffectiveHeight = fabricWidth - headerLoss - bottomLoss;
+            const maxEffectiveHeight = fabricWidth - currentHeaderLoss - bottomLoss;
+
             if (hFinished > maxEffectiveHeight) {
-                if (hFinished <= maxEffectiveHeight + 13) {
-                    warnings.push('建议让渡帘头 (改为贴布带)');
+                heightOverflow = true;
+
+                // 生成替代方案
+                alternatives = this.generateAlternatives({
+                    hFinished,
+                    wFinished,
+                    fabricWidth,
+                    sideLoss,
+                    splitCount,
+                    headerLossWrapped,
+                    headerLossAttached,
+                    bottomLoss,
+                    unitPrice,
+                });
+
+                if (hFinished <= maxEffectiveHeight + (headerLossWrapped - headerLossAttached)) {
+                    warnings.push('高度超限，建议使用贴布带工艺');
                 } else {
-                    warnings.push('超高预警: 需要拼接或特殊工艺');
+                    warnings.push('超高预警：需选择替代方案（贴布带/小底边/拼接）');
                 }
             }
 
-            // Q = W_cut / 100 (cm -> m)
             quantity = finalWCut / 100;
 
         } else if (formula === 'FIXED_WIDTH') {
             // 定宽面料: 买高
-            // Widths needed = ceil(W_cut / fabricWidth)
             const numWidths = Math.ceil(finalWCut / fabricWidth);
-
-            // Q = N * H_cut / 100
             quantity = (numWidths * hCut) / 100;
         }
 
         return {
-            quantity: Number(quantity.toFixed(2)), // Round to 2 decimal
+            quantity: Number(quantity.toFixed(2)),
             warnings,
             details: {
                 hFinished,
                 wFinished,
                 wCut: finalWCut,
                 hCut,
-                formula
-            }
+                formula,
+                headerType,
+            },
+            alternatives,
+            heightOverflow,
         };
-    }
+    },
+
+    /**
+     * 生成超高替代方案
+     */
+    generateAlternatives(opts: {
+        hFinished: number;
+        wFinished: number;
+        fabricWidth: number;
+        sideLoss: number;
+        splitCount: number;
+        headerLossWrapped: number;
+        headerLossAttached: number;
+        bottomLoss: number;
+        unitPrice: number;
+    }): AlternativeSolution[] {
+        const {
+            hFinished,
+            wFinished,
+            fabricWidth,
+            sideLoss,
+            splitCount,
+            headerLossWrapped,
+            headerLossAttached,
+            bottomLoss,
+            unitPrice,
+        } = opts;
+
+        const totalSideLoss = splitCount * sideLoss;
+        const solutions: AlternativeSolution[] = [];
+        const SMALL_BOTTOM = 5; // 小底边
+
+        // 方案1：改用贴布带
+        const _hCut1 = hFinished + headerLossAttached + bottomLoss;
+        const maxH1 = fabricWidth - headerLossAttached - bottomLoss;
+        if (hFinished <= maxH1) {
+            const qty1 = (wFinished + totalSideLoss) / 100;
+            solutions.push({
+                name: '改用贴布带',
+                description: `帘头改为贴布带 (${headerLossAttached}cm)，保留标准底边`,
+                headerType: 'ATTACHED',
+                headerLoss: headerLossAttached,
+                bottomLoss: bottomLoss,
+                quantity: Number(qty1.toFixed(2)),
+                priceDiff: 0,
+                recommended: true,
+            });
+        }
+
+        // 方案2：小底边
+        const _hCut2 = hFinished + headerLossWrapped + SMALL_BOTTOM;
+        const maxH2 = fabricWidth - headerLossWrapped - SMALL_BOTTOM;
+        if (hFinished <= maxH2) {
+            const qty2 = (wFinished + totalSideLoss) / 100;
+            solutions.push({
+                name: '减小底边',
+                description: `保留包布带，底边减至 ${SMALL_BOTTOM}cm`,
+                headerType: 'WRAPPED',
+                headerLoss: headerLossWrapped,
+                bottomLoss: SMALL_BOTTOM,
+                quantity: Number(qty2.toFixed(2)),
+                priceDiff: 0,
+            });
+        }
+
+        // 方案3：拼接
+        const _hCut3 = hFinished + headerLossWrapped + bottomLoss;
+        const qty3 = ((wFinished + totalSideLoss) / 100) * 2; // 双倍用料
+        solutions.push({
+            name: '接布拼接',
+            description: '需要拼接工艺，用料翻倍',
+            headerType: 'WRAPPED',
+            headerLoss: headerLossWrapped,
+            bottomLoss: bottomLoss,
+            quantity: Number(qty3.toFixed(2)),
+            priceDiff: Number((qty3 * unitPrice - (wFinished + totalSideLoss) / 100 * unitPrice).toFixed(2)),
+        });
+
+        return solutions;
+    },
 };
 
+// ============ 墙纸/墙布计算器 ============
+
 export const WallpaperCalculator = {
-    calculate: (params: WallpaperParams): CalculatorResult => {
+    calculate(params: WallpaperParams): CalculatorResult {
         const warnings: string[] = [];
         const {
             measuredWidth,
@@ -151,27 +306,18 @@ export const WallpaperCalculator = {
             productWidth,
             rollLength,
             patternRepeat = 0,
-            formula
+            formula,
         } = params;
 
-        const widthLoss = params.widthLoss ?? CONSTANTS.DEFAULT_WIDTH_LOSS;
-
+        const widthLoss = params.widthLoss ?? DEFAULTS.WIDTH_LOSS;
         let quantity = 0;
 
         if (formula === 'WALLPAPER') {
-            // 墙纸: 计卷
             if (!rollLength) throw new Error('Wallpaper requires rollLength');
 
-            const cutLoss = params.cutLoss ?? CONSTANTS.DEFAULT_CUT_LOSS;
-
-            // 1. Strips
+            const cutLoss = params.cutLoss ?? DEFAULTS.CUT_LOSS;
             const widthWithLoss = measuredWidth + widthLoss;
             const nStrips = Math.ceil(widthWithLoss / productWidth);
-
-            // 2. Per Roll
-            // H_base = H_meas + H_loss
-            // H_loss = cutLoss 
-            // Note: Docs says "Width Loss default 20cm", "Cut Loss default 10cm/strip"
 
             const hBase = measuredHeight + cutLoss;
             let hStrip = hBase;
@@ -185,7 +331,6 @@ export const WallpaperCalculator = {
 
             if (stripsPerRoll === 0) {
                 warnings.push('单卷长度不足以裁剪一幅');
-                // Fallback logic could be handled, but strictly return 0 or infinity?
                 quantity = 0;
             } else {
                 const nRolls = Math.ceil(nStrips / stripsPerRoll);
@@ -193,43 +338,21 @@ export const WallpaperCalculator = {
             }
 
         } else if (formula === 'WALLCLOTH') {
-            // 墙布: 计平米 (但实际可能是算延长米 * 定高? Docs say "Qty = Area")
-            // Docs 6.1.2: "Qty field auto fills with Area"
-            // Docs 6.1.2 Formula: Total = (WallWidth * FabricWidth) * UnitPrice
-            // Wait, usually Wallcloth is sold by "Length" if it is "Fixed Height".
-            // Docs Sec 6.1.2 says: "Basic Prop: Unit m2". "Default Spec: Fixed Height 2.8m".
-            // "Calc Logic: If WallHeight < FabricWidth, seamless."
-            // "Calc Area: WallWidth * FabricWidth = Consumed Area".
-            // "Special Note: Although sold by m2, actual cutting is by linear meter. System ensure Quantity field fills this Area."
-            // So Quantity = WallWidth * FabricWidth? 
-            // Yes, because Price is per m2. 
-            // If Price was per Linear Meter, Qty would be WallWidth.
-            // But here Qty is Area.
-
-            // Width Loss logic
             const widthWithLoss = measuredWidth + widthLoss;
 
-            // If H > FabricWidth ??
             if (measuredHeight > productWidth) {
                 warnings.push('墙高超过墙布幅宽，需拼接');
             }
 
-            // Area = Width(m) * Height(m) ?? 
-            // Docs: "WallWidth(m) * FabricWidth(fixed height)"
-            // So it calculates the area of the bounding box defined by [WallWidth+Loss] x [FabricFixedHeight]
-
             const qWidthM = widthWithLoss / 100;
-            const qHeightM = productWidth / 100; // Fixed Height is used as height factor
-
+            const qHeightM = productWidth / 100;
             quantity = qWidthM * qHeightM;
         }
 
         return {
             quantity: Number(quantity.toFixed(2)),
             warnings,
-            details: {
-                formula
-            }
+            details: { formula },
         };
-    }
+    },
 };

@@ -16,34 +16,27 @@ import {
 import { revalidatePath } from 'next/cache';
 import { format } from 'date-fns';
 import { LeadService } from '@/services/lead.service';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
-// Helper to generate Lead No: LD + YYYYMMDD + 6 random hex chars (Keep if needed or remove if unused)
-// createLead uses Service now, so this might be unused. 
-// But let's check if convertLead needs it? No.
-// We'll keep it commented out or remove it to avoid lints, but better just remove it.
-// async function generateLeadNo(tenantId: string) { ... }
+export async function createLead(input: z.infer<typeof createLeadSchema>) {
+    // 安全修复：强制从 Session 获取身份信息，不再信任前端参数
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.CREATE);
 
-export async function createLead(input: z.infer<typeof createLeadSchema>, userId: string, tenantId: string) {
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
     const data = createLeadSchema.parse(input);
 
     try {
+        // 构造 LeadService 输入：转换字段名和处理可选值
         const result = await LeadService.createLead({
             ...data,
-            customerName: data.customerName,
-            customerPhone: data.customerPhone,
-            customerWechat: data.customerWechat ?? null,
-            community: data.community ?? null,
-            houseType: data.houseType ?? null,
-            address: data.address ?? null,
-            sourceChannelId: data.sourceChannelId ?? null,
-            sourceSubId: data.sourceSubId ?? null,
-            sourceDetail: data.sourceDetail ?? null,
-            intentionLevel: data.intentionLevel ?? null,
             estimatedAmount: data.estimatedAmount ? String(data.estimatedAmount) : null,
-            channelId: data.channelId ?? null,
-            channelContactId: data.channelContactId ?? null,
             notes: data.remark ?? null,
-            tags: data.tags ?? null,
         }, tenantId, userId);
 
         if (result.isDuplicate) {
@@ -71,7 +64,23 @@ export async function createLead(input: z.infer<typeof createLeadSchema>, userId
 }
 
 export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+
     const { id, ...data } = updateLeadSchema.parse(input);
+
+    // 租户隔离：验证线索属于当前租户
+    const existingLead = await db.query.leads.findFirst({
+        where: and(eq(leads.id, id), eq(leads.tenantId, session.user.tenantId)),
+        columns: { id: true }
+    });
+    if (!existingLead) {
+        throw new Error('Lead not found or access denied');
+    }
 
     const [updated] = await db.update(leads)
         .set({
@@ -90,7 +99,6 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
             channelContactId: data.channelContactId,
             notes: data.remark ?? null,
             tags: data.tags ?? null,
-            // updatedAt handled by hook
         })
         .where(eq(leads.id, id))
         .returning();
@@ -101,11 +109,21 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
 }
 
 export async function assignLead(input: z.infer<typeof assignLeadSchema>, userId: string) {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.ASSIGN);
+
     const { id, salesId } = assignLeadSchema.parse(input);
 
     return await db.transaction(async (tx) => {
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, id) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离
+        const lead = await tx.query.leads.findFirst({
+            where: and(eq(leads.id, id), eq(leads.tenantId, session.user.tenantId))
+        });
+        if (!lead) throw new Error('Lead not found or access denied');
 
         const [updated] = await tx.update(leads)
             .set({
@@ -132,12 +150,24 @@ export async function assignLead(input: z.infer<typeof assignLeadSchema>, userId
     });
 }
 
-export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>, userId: string, tenantId: string) {
+export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) {
+    // 安全修复：强制从 Session 获取身份信息
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
     const { leadId, type, content, nextFollowupAt, quoteId, purchaseIntention, customerLevel } = addLeadFollowupSchema.parse(input);
 
     await db.transaction(async (tx) => {
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, leadId) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离
+        const lead = await tx.query.leads.findFirst({
+            where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId))
+        });
+        if (!lead) throw new Error('Lead not found or access denied');
 
         let activityType: "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT" | "SYSTEM" = type === 'OTHER' ? 'SYSTEM' : (type as "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT");
         if (type === 'OTHER') {
@@ -187,11 +217,21 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>, 
 }
 
 export async function voidLead(input: z.infer<typeof voidLeadSchema>, userId: string) {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.DELETE);
+
     const { id, reason } = voidLeadSchema.parse(input);
 
     await db.transaction(async (tx) => {
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, id) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离
+        const lead = await tx.query.leads.findFirst({
+            where: and(eq(leads.id, id), eq(leads.tenantId, session.user.tenantId))
+        });
+        if (!lead) throw new Error('Lead not found or access denied');
 
         await tx.update(leads)
             .set({
@@ -214,9 +254,19 @@ export async function voidLead(input: z.infer<typeof voidLeadSchema>, userId: st
 }
 
 export async function releaseToPool(leadId: string, userId: string) {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.TRANSFER);
+
     await db.transaction(async (tx) => {
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, leadId) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离
+        const lead = await tx.query.leads.findFirst({
+            where: and(eq(leads.id, leadId), eq(leads.tenantId, session.user.tenantId))
+        });
+        if (!lead) throw new Error('Lead not found or access denied');
 
         await tx.update(leads)
             .set({
@@ -239,9 +289,20 @@ export async function releaseToPool(leadId: string, userId: string) {
 }
 
 export async function claimFromPool(leadId: string, userId: string) {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+
     await db.transaction(async (tx) => {
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, leadId) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离 + FOR UPDATE 锁防止竞态条件
+        const [lead] = await tx.select().from(leads)
+            .where(and(eq(leads.id, leadId), eq(leads.tenantId, session.user.tenantId)))
+            .for('update');
+
+        if (!lead) throw new Error('Lead not found or access denied');
 
         if (lead.assignedSalesId) {
             throw new Error('Lead already assigned');
@@ -268,14 +329,26 @@ export async function claimFromPool(leadId: string, userId: string) {
     revalidatePath('/leads');
 }
 
-export async function convertLead(input: z.infer<typeof convertLeadSchema>, userId: string, tenantId: string) {
+export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
+    // 安全修复：强制从 Session 获取身份信息
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.MANAGE);
+
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
     const { leadId, customerId } = convertLeadSchema.parse(input);
 
     return await db.transaction(async (tx) => {
         let targetCustomerId = customerId;
 
-        const lead = await tx.query.leads.findFirst({ where: eq(leads.id, leadId) });
-        if (!lead) throw new Error('Lead not found');
+        // 租户隔离
+        const lead = await tx.query.leads.findFirst({
+            where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId))
+        });
+        if (!lead) throw new Error('Lead not found or access denied');
 
         if (!targetCustomerId) {
             const customerNo = `C${format(new Date(), 'yyyyMMdd')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
@@ -326,12 +399,21 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>, user
     });
 }
 
-export async function importLeads(data: unknown[], userId: string, tenantId: string) {
+export async function importLeads(data: unknown[]) {
+    // 安全修复：强制从 Session 获取身份信息
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.IMPORT);
+
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
+
     let successCount = 0;
     const errors: { row: number, error: string }[] = [];
 
     // Batch processing
-    // For large imports, we might want to chunk this, but for Phase 1 (~hundreds), loop is fine.
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
 

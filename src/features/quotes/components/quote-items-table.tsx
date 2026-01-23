@@ -17,7 +17,13 @@ import { QuoteRoomAccordion } from './quote-room-accordion';
 import { RoomSelectorWithConfig } from './room-selector-popover';
 import { QuoteInlineAddRow } from './quote-inline-add-row';
 import { CurtainCalculator, WallpaperCalculator, CurtainFormula, WallpaperFormula } from '@/features/quotes/logic/calculator';
-import { QuoteItemAdvancedDrawer } from './quote-item-advanced-drawer';
+import dynamic from 'next/dynamic';
+// import { QuoteItemAdvancedDrawer } from './quote-item-advanced-drawer';
+
+const QuoteItemAdvancedDrawer = dynamic(
+    () => import('./quote-item-advanced-drawer').then((mod) => mod.QuoteItemAdvancedDrawer),
+    { ssr: false }
+);
 import { QuoteItemExpandRow } from './quote-item-expand-row';
 import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';

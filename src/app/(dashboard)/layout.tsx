@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-background">
+        <div className="flex h-screen w-full overflow-hidden bg-transparent">
             {/* 侧边栏导航 */}
             <AppSidebar />
 

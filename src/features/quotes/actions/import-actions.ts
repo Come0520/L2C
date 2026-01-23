@@ -19,15 +19,27 @@ interface ImportItem {
 export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]) {
     if (!items || items.length === 0) return { successCount: 0, errors: [] };
 
+    // 🔒 安全校验：添加认证和租户隔离
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { successCount: 0, errors: ['未授权访问'] };
+    }
+    const sessionTenantId = session.user.tenantId;
+
     try {
         await db.transaction(async (tx) => {
-            // 0. Fetch Tenant ID from Quote
+            // 🔒 安全校验：验证报价单属于当前租户
+            const { and } = await import('drizzle-orm');
             const quote = await tx.query.quotes.findFirst({
-                where: eq(quotes.id, quoteId),
+                where: and(
+                    eq(quotes.id, quoteId),
+                    eq(quotes.tenantId, sessionTenantId) // 强制租户过滤
+                ),
                 columns: { tenantId: true }
             });
 
-            if (!quote) throw new Error('Quote not found');
+            if (!quote) throw new Error('报价单不存在或无权访问');
             const { tenantId } = quote;
 
             // 1. Group by Room Name

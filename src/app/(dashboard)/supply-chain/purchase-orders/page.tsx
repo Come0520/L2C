@@ -9,6 +9,7 @@ import { EnhancedPOTable } from '@/features/supply-chain/components/enhanced-po-
 import { PageHeader } from '@/components/ui/page-header';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 export const revalidate = 60;
 
@@ -50,7 +51,7 @@ export default async function PurchaseOrdersPage({
                 />
             </div>
             <div className="flex-1 p-6">
-                <Suspense fallback={<div className="text-center py-8">加载中...</div>}>
+                <Suspense fallback={<TableSkeleton />}>
                     <EnhancedPOTable data={result.data} />
                 </Suspense>
 

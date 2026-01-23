@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema/orders';
 import { leads } from '@/shared/api/schema/leads';
 import { channels } from '@/shared/api/schema/channels';
-import { receiptBills } from '@/shared/api/schema/finance';
+import { receiptBills, receiptBillItems } from '@/shared/api/schema/finance';
 import { eq, and, sum } from 'drizzle-orm';
 import { getTenantBusinessConfig } from '@/features/settings/actions/tenant-config';
 
@@ -31,15 +31,21 @@ export interface PaymentCheckResult {
  * 业务逻辑:
  * 1. 月结渠道: 检查渠道已欠款 + 本单金额 ≤ 授信额度
  * 2. 现结渠道: 检查本单是否全款结清，或根据配置决定是否允许欠款安装
+ * 
+ * @param tenantId - 租户 ID（用于租户隔离验证）
  */
-export async function checkPaymentBeforeInstall(orderId: string): Promise<PaymentCheckResult> {
+export async function checkPaymentBeforeInstall(orderId: string, tenantId?: string): Promise<PaymentCheckResult> {
     // 获取租户配置
     const config = await getTenantBusinessConfig();
     const arConfig = config.arPayment;
 
-    // 获取订单信息
+    // 获取订单信息 - 包含租户隔离
+    const whereConditions = tenantId
+        ? and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
+        : eq(orders.id, orderId);
+
     const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
+        where: whereConditions,
         columns: {
             id: true,
             tenantId: true,
@@ -52,13 +58,15 @@ export async function checkPaymentBeforeInstall(orderId: string): Promise<Paymen
         return { passed: false, reason: '订单不存在' };
     }
 
-    // 计算已收款金额
+    // 计算已收款金额 (通过 receiptBillItems 关联查询)
+    // 注意：receiptBills 已通过 orderId 关联，间接限定租户
     const receipts = await db.select({
-        total: sum(receiptBills.amount),
+        total: sum(receiptBillItems.amount),
     })
-        .from(receiptBills)
+        .from(receiptBillItems)
+        .innerJoin(receiptBills, eq(receiptBillItems.receiptBillId, receiptBills.id))
         .where(and(
-            eq(receiptBills.orderId, orderId),
+            eq(receiptBillItems.orderId, orderId),
             eq(receiptBills.status, 'VERIFIED')
         ));
 

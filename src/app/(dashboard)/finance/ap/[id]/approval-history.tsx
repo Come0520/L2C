@@ -7,7 +7,8 @@ import { Badge } from '@/shared/ui/badge';
 
 export async function ApApprovalHistory({ entityId, entityType }: { entityId: string; entityType: string }) {
     const approval = await db.query.approvals.findFirst({
-        where: (t, { eq, and }) => and(eq(t.entityId, entityId), eq(t.entityType, entityType as any)),
+        // entityType 存储为字符串，直接传入进行比较
+        where: (t, { eq, and }) => and(eq(t.entityId, entityId), eq(t.entityType, entityType)),
         with: {
             tasks: {
                 with: {
@@ -41,7 +42,7 @@ export async function ApApprovalHistory({ entityId, entityType }: { entityId: st
                     {/* Vertical Line */}
                     <div className="absolute left-2 top-2 bottom-2 w-px bg-muted"></div>
 
-                    {approval.tasks.map((task: any) => (
+                    {approval.tasks.map((task) => (
                         <div key={task.id} className="relative pl-6">
                             <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${task.status === 'APPROVED' ? 'bg-green-500 border-green-500' :
                                 task.status === 'REJECTED' ? 'bg-red-500 border-red-500' :

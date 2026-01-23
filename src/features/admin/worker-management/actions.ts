@@ -8,6 +8,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import type { Session } from 'next-auth';
 
 const updateWorkerSchema = z.object({
     id: z.string(),
@@ -22,7 +23,7 @@ const updateWorkerSchema = z.object({
 /**
  * 获取师傅列表
  */
-export async function getWorkers(params: { page: number; pageSize: number; search?: string }, session: any) {
+export async function getWorkers(params: { page: number; pageSize: number; search?: string }, session: Session) {
     await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
 
     const { page, pageSize, search } = params;
@@ -72,7 +73,7 @@ export async function getWorkers(params: { page: number; pageSize: number; searc
 /**
  * 获取师傅详情
  */
-export async function getWorkerById(id: string, session: any) {
+export async function getWorkerById(id: string, session: Session) {
     await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
 
     const worker = await db.query.users.findFirst({
@@ -86,10 +87,7 @@ export async function getWorkerById(id: string, session: any) {
     return worker;
 }
 
-/**
- * 更新师傅信息
- */
-export const updateWorker = createSafeAction(updateWorkerSchema, async (data, { session }) => {
+const updateWorkerActionInternal = createSafeAction(updateWorkerSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
 
     const { id, ...updates } = data;
@@ -105,17 +103,20 @@ export const updateWorker = createSafeAction(updateWorkerSchema, async (data, { 
         ))
         .returning();
 
-    // Log action
     await db.insert(auditLogs).values({
         tenantId: session.user.tenantId,
         action: 'UPDATE_WORKER',
         tableName: 'users',
         recordId: id,
         userId: session.user.id,
-        newValues: updates as any,
+        newValues: updates as Record<string, unknown>,
         createdAt: new Date(),
     });
 
     revalidatePath('/admin/settings/workers');
     return { success: true, data: updated };
 });
+
+export async function updateWorker(params: z.infer<typeof updateWorkerSchema>) {
+    return updateWorkerActionInternal(params);
+}

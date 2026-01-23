@@ -29,7 +29,7 @@ const deleteSupplierSchema = z.object({
     id: z.string().uuid(),
 });
 
-export const createSupplier = createSafeAction(createSupplierSchema, async (data, { session }) => {
+const createSupplierActionInternal = createSafeAction(createSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.MANAGE);
 
     const [supplier] = await db.insert(suppliers).values({
@@ -46,16 +46,17 @@ export const createSupplier = createSafeAction(createSupplierSchema, async (data
     return { id: supplier.id };
 });
 
-export const updateSupplier = createSafeAction(updateSupplierSchema, async (data, { session }) => {
+export async function createSupplier(params: z.infer<typeof createSupplierSchema>) {
+    return createSupplierActionInternal(params);
+}
+
+const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.MANAGE);
 
     const { id, ...updates } = data;
 
     const [supplier] = await db.update(suppliers)
-        .set({
-            ...updates,
-            updatedAt: new Date(),
-        })
+        .set({ ...updates, updatedAt: new Date() })
         .where(and(
             eq(suppliers.id, id),
             eq(suppliers.tenantId, session.user.tenantId)
@@ -68,7 +69,11 @@ export const updateSupplier = createSafeAction(updateSupplierSchema, async (data
     return { id: supplier.id };
 });
 
-export const deleteSupplier = createSafeAction(deleteSupplierSchema, async ({ id }, { session }) => {
+export async function updateSupplier(params: z.infer<typeof updateSupplierSchema>) {
+    return updateSupplierActionInternal(params);
+}
+
+const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.MANAGE);
 
     await db.delete(suppliers)
@@ -80,3 +85,7 @@ export const deleteSupplier = createSafeAction(deleteSupplierSchema, async ({ id
     revalidatePath('/supply-chain/suppliers');
     return { success: true };
 });
+
+export async function deleteSupplier(params: z.infer<typeof deleteSupplierSchema>) {
+    return deleteSupplierActionInternal(params);
+}

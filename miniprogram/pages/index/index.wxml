@@ -1,0 +1,95 @@
+<!--pages/index/index.wxml-->
+<view class="container">
+  <!-- 顶部 Logo 区域 -->
+  <view class="header">
+    <view class="logo-wrapper">
+      <image class="logo" src="/assets/logo.png" mode="aspectFit" />
+      <view class="app-name">L2C 销售管理</view>
+    </view>
+    <view class="app-desc">企业销售数字化解决方案</view>
+  </view>
+
+  <!-- 未登录状态 -->
+  <view wx:if="{{!isLoggedIn}}" class="login-section">
+    <view class="card">
+      <view class="title">欢迎使用 L2C</view>
+      <view class="subtitle">请先登录以使用全部功能</view>
+      
+      <button 
+        class="btn btn-primary" 
+        open-type="getPhoneNumber" 
+        bindgetphonenumber="onGetPhoneNumber"
+        loading="{{loading}}"
+      >
+        <text class="btn-icon">📱</text>
+        微信一键登录
+      </button>
+      
+      <view class="divider"></view>
+      
+      <view class="register-tip">
+        还没有账号？
+        <text class="link" bindtap="goToRegister">申请企业入驻</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 已登录状态 -->
+  <view wx:else class="user-section">
+    <!-- 用户信息卡片 -->
+    <view class="card user-card">
+      <view class="user-header">
+        <view class="avatar-wrapper">
+          <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+        </view>
+        <view class="user-info">
+          <view class="user-name">{{userInfo.name || '用户'}}</view>
+          <view class="tenant-name">{{userInfo.tenantName || '未绑定企业'}}</view>
+        </view>
+        <view class="status-badge badge-{{statusClass}}">{{statusText}}</view>
+      </view>
+    </view>
+
+    <!-- 快捷入口 -->
+    <view class="quick-actions">
+      <view class="action-item" bindtap="goToStatus">
+        <view class="action-icon">📋</view>
+        <view class="action-text">审批状态</view>
+      </view>
+      <view class="action-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}">
+        <view class="action-icon">👥</view>
+        <view class="action-text">邀请员工</view>
+      </view>
+      <view class="action-item" bindtap="openNotification">
+        <view class="action-icon">🔔</view>
+        <view class="action-text">消息订阅</view>
+      </view>
+      <view class="action-item" bindtap="logout">
+        <view class="action-icon">🚪</view>
+        <view class="action-text">退出登录</view>
+      </view>
+    </view>
+
+    <!-- 提示信息 -->
+    <view wx:if="{{tenantStatus === 'pending_approval'}}" class="notification-card card">
+      <view class="notification-icon">⏳</view>
+      <view class="notification-content">
+        <view class="notification-title">审批中</view>
+        <view class="notification-desc">您的企业入驻申请正在审核中，请耐心等待</view>
+      </view>
+    </view>
+
+    <view wx:if="{{tenantStatus === 'rejected'}}" class="notification-card card error">
+      <view class="notification-icon">❌</view>
+      <view class="notification-content">
+        <view class="notification-title">审批未通过</view>
+        <view class="notification-desc">{{rejectReason || '请联系客服了解详情'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部版权 -->
+  <view class="footer">
+    <text>© 2026 L2C Sales Management System</text>
+  </view>
+</view>

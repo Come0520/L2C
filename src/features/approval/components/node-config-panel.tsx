@@ -26,7 +26,7 @@ export function NodeConfigPanel({ selectedNode, onUpdate, onClose }: NodeConfigP
     };
 
     const handleApproverTypeChange = (value: string) => {
-        onUpdate(selectedNode.id, { approverType: value as any });
+        onUpdate(selectedNode.id, { approverType: value as 'USER' | 'ROLE' | 'CREATOR_MANAGER' });
     };
 
     const handleApproverValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +81,7 @@ export function NodeConfigPanel({ selectedNode, onUpdate, onClose }: NodeConfigP
                                 <Label>审批方式</Label>
                                 <Select
                                     value={selectedNode.data.approverMode || 'ANY'}
-                                    onValueChange={(val) => onUpdate(selectedNode.id, { approverMode: val as any })}
+                                    onValueChange={(val) => onUpdate(selectedNode.id, { approverMode: val as 'ANY' | 'ALL' | 'MAJORITY' })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />

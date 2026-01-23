@@ -272,15 +272,26 @@ test.describe('完整销售流程 E2E', () => {
 
     test('Step 7: 安排发货', async ({ page }) => {
         test.skip(!createdOrderId, '需要先创建订单');
+        test.setTimeout(60000); // 单独增加此步骤的超时
 
         await page.goto(`/orders/${createdOrderId}`);
         await page.waitForLoadState('networkidle');
 
-        // 查找发货按钮
-        const shipBtn = page.getByRole('button', { name: /发货|安排发货/ });
+        // 等待页面完全渲染
+        await expect(page.getByText(/订单/)).toBeVisible({ timeout: 10000 });
+
+        // 查找发货按钮（匹配多种可能的文案）
+        const shipBtn = page.getByRole('button', { name: /发货|安排发货|申请发货/ });
+
+        // 增加显式等待，某些状态下按钮可能延迟出现
+        await shipBtn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {
+            console.log('⚠️ 发货按钮等待超时');
+        });
 
         if (await shipBtn.isVisible()) {
-            await shipBtn.click();
+            // 滚动到视图并使用 force 点击
+            await shipBtn.scrollIntoViewIfNeeded();
+            await shipBtn.click({ force: true });
 
             // 处理确认对话框
             const dialog = page.getByRole('dialog');

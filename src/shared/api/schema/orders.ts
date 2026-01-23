@@ -5,6 +5,7 @@ import { quotes, quoteItems } from './quotes';
 import { products } from './catalogs';
 import { leads } from './leads';
 import { purchaseOrders, suppliers } from './supply-chain';
+import { channels, channelContacts } from './channels';
 import {
     orderStatusEnum,
     productCategoryEnum,
@@ -13,7 +14,8 @@ import {
     orderSettlementTypeEnum,
     changeRequestTypeEnum,
     changeRequestStatusEnum,
-    orderItemStatusEnum
+    orderItemStatusEnum,
+    cooperationModeEnum
 } from './enums';
 
 export const orders = pgTable('orders', {
@@ -25,6 +27,11 @@ export const orders = pgTable('orders', {
     quoteVersionId: uuid('quote_version_id').references(() => quotes.id).notNull(), // 报价版本关联
 
     leadId: uuid('lead_id').references(() => leads.id), // 线索关联
+
+    // 渠道信息（冗余存储，用于佣金计算）
+    channelId: uuid('channel_id').references(() => channels.id),
+    channelContactId: uuid('channel_contact_id').references(() => channelContacts.id),
+    channelCooperationMode: cooperationModeEnum('channel_cooperation_mode'), // BASE_PRICE / COMMISSION
 
     customerId: uuid('customer_id').references(() => customers.id).notNull(),
     customerName: varchar('customer_name', { length: 100 }), // Denormalized for quick access
@@ -83,6 +90,7 @@ export const orders = pgTable('orders', {
     orderNoIdx: index('idx_orders_order_no').on(table.orderNo),
     orderStatusIdx: index('idx_orders_status').on(table.status),
     orderSalesIdx: index('idx_orders_sales').on(table.salesId),
+    orderChannelIdx: index('idx_orders_channel').on(table.channelId),
 }));
 
 export const orderItems = pgTable('order_items', {

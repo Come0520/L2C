@@ -1,8 +1,9 @@
-'use server';
+// Lead 分配引擎 - 内部业务逻辑（非 Server Action）
 
 import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
+import { getSetting } from "@/features/settings/actions/system-settings-actions";
 
 /**
  * 分配策略类型
@@ -18,6 +19,14 @@ interface DistributionConfig {
     salesPool: string[]; // 参与轮转的销售ID列表
 }
 
+/**
+ * 租户设置结构（用于类型安全访问）
+ */
+interface TenantSettings {
+    distribution?: Partial<DistributionConfig>;
+    [key: string]: unknown;
+}
+
 const DEFAULT_CONFIG: DistributionConfig = {
     strategy: 'MANUAL',
     nextSalesIndex: 0,
@@ -28,15 +37,21 @@ const DEFAULT_CONFIG: DistributionConfig = {
  * 获取租户分配配置
  */
 async function getTenantDistributionConfig(tenantId: string): Promise<DistributionConfig> {
+    // 1. 从新系统设置表中获取分配规则（使用统一的键名）
+    const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE') as DistributionStrategy;
+
+    // 2. 从原租户设置中获取轮转指针等数据
     const tenant = await db.query.tenants.findFirst({
         where: eq(tenants.id, tenantId),
         columns: { settings: true }
     });
 
     const settings = tenant?.settings as { distribution?: Partial<DistributionConfig> } | null;
+
     return {
         ...DEFAULT_CONFIG,
-        ...settings?.distribution
+        ...settings?.distribution,
+        strategy: assignRule || 'MANUAL' // 优先使用新设置表的规则
     };
 }
 
@@ -52,11 +67,11 @@ async function updateTenantDistributionConfig(
         columns: { settings: true }
     });
 
-    const currentSettings = (tenant?.settings as object) || {};
-    const newSettings = {
+    const currentSettings = (tenant?.settings as TenantSettings) || {};
+    const newSettings: TenantSettings = {
         ...currentSettings,
         distribution: {
-            ...(currentSettings as any).distribution,
+            ...currentSettings.distribution,
             ...updates
         }
     };
@@ -84,7 +99,7 @@ async function getAvailableSalesList(tenantId: string): Promise<{ id: string; na
 }
 
 /**
- * 执行轮转分配
+ * 执行轮转分配（使用事务保证原子性）
  * 按销售顺序依次分配新线索
  */
 export async function distributeToNextSales(tenantId: string): Promise<{
@@ -92,53 +107,99 @@ export async function distributeToNextSales(tenantId: string): Promise<{
     salesName: string | null;
     strategy: DistributionStrategy;
 }> {
-    const config = await getTenantDistributionConfig(tenantId);
+    // 使用事务确保读取和更新是原子操作
+    return await db.transaction(async (tx) => {
+        // 使用 FOR UPDATE 锁定租户记录，防止并发分配
+        const [tenant] = await tx.select()
+            .from(tenants)
+            .where(eq(tenants.id, tenantId))
+            .for('update');
 
-    // 手动模式：不自动分配
-    if (config.strategy === 'MANUAL') {
-        return { salesId: null, salesName: null, strategy: 'MANUAL' };
-    }
+        if (!tenant) {
+            return { salesId: null, salesName: null, strategy: 'MANUAL' as DistributionStrategy };
+        }
 
-    // 获取可用销售列表
-    const salesList = await getAvailableSalesList(tenantId);
-    if (salesList.length === 0) {
-        return { salesId: null, salesName: null, strategy: config.strategy };
-    }
-
-    // 轮转分配
-    if (config.strategy === 'ROUND_ROBIN') {
-        const currentIndex = config.nextSalesIndex % salesList.length;
-        const nextSales = salesList[currentIndex];
-
-        // 更新指针
-        await updateTenantDistributionConfig(tenantId, {
-            nextSalesIndex: (currentIndex + 1) % salesList.length
-        });
-
-        return {
-            salesId: nextSales.id,
-            salesName: nextSales.name,
-            strategy: 'ROUND_ROBIN'
+        // 获取分配策略
+        const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE') as DistributionStrategy;
+        const settings = tenant.settings as { distribution?: Partial<DistributionConfig> } | null;
+        const config: DistributionConfig = {
+            ...DEFAULT_CONFIG,
+            ...settings?.distribution,
+            strategy: assignRule || 'MANUAL'
         };
-    }
 
-    // TODO: 负载均衡模式 - 优先分配给线索最少的销售
-    // if (config.strategy === 'LOAD_BALANCE') { ... }
+        // 手动模式：不自动分配
+        if (config.strategy === 'MANUAL') {
+            return { salesId: null, salesName: null, strategy: 'MANUAL' as DistributionStrategy };
+        }
 
-    // TODO: 渠道指定模式 - 特定渠道分配给指定销售
-    // if (config.strategy === 'CHANNEL_SPECIFIC') { ... }
+        // 获取可用销售列表
+        const salesUsers = await tx.query.users.findMany({
+            where: and(
+                eq(users.tenantId, tenantId),
+                eq(users.isActive, true)
+            ),
+            columns: { id: true, name: true }
+        });
+        const salesList = salesUsers.map(u => ({ id: u.id, name: u.name || '' }));
 
-    return { salesId: null, salesName: null, strategy: config.strategy };
+        if (salesList.length === 0) {
+            return { salesId: null, salesName: null, strategy: config.strategy };
+        }
+
+        // 轮转分配
+        if (config.strategy === 'ROUND_ROBIN') {
+            const currentIndex = config.nextSalesIndex % salesList.length;
+            const nextSales = salesList[currentIndex];
+            const newIndex = (currentIndex + 1) % salesList.length;
+
+            // 原子更新指针
+            const currentSettings = (tenant.settings as TenantSettings) || {};
+            const newSettings: TenantSettings = {
+                ...currentSettings,
+                distribution: {
+                    ...currentSettings.distribution,
+                    nextSalesIndex: newIndex
+                }
+            };
+
+            await tx.update(tenants)
+                .set({ settings: newSettings })
+                .where(eq(tenants.id, tenantId));
+
+            return {
+                salesId: nextSales.id,
+                salesName: nextSales.name,
+                strategy: 'ROUND_ROBIN' as DistributionStrategy
+            };
+        }
+
+        // TODO: 负载均衡模式 - 优先分配给线索最少的销售
+        // TODO: 渠道指定模式 - 特定渠道分配给指定销售
+
+        return { salesId: null, salesName: null, strategy: config.strategy };
+    });
 }
 
 /**
  * 配置租户的分配策略
+ * 需要 SETTINGS.MANAGE 权限
  */
 export async function configureDistributionStrategy(
-    tenantId: string,
     strategy: DistributionStrategy,
     salesPool?: string[]
 ): Promise<void> {
+    // 认证和权限检查
+    const { auth, checkPermission } = await import('@/shared/lib/auth');
+    const { PERMISSIONS } = await import('@/shared/config/permissions');
+
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+
+    const tenantId = session.user.tenantId;
     await updateTenantDistributionConfig(tenantId, {
         strategy,
         salesPool: salesPool || [],
@@ -149,12 +210,20 @@ export async function configureDistributionStrategy(
 /**
  * 获取当前分配状态 (用于管理界面展示)
  */
-export async function getDistributionStatus(tenantId: string): Promise<{
+export async function getDistributionStatus(): Promise<{
     strategy: DistributionStrategy;
     salesPool: { id: string; name: string }[];
     nextSalesIndex: number;
     nextSalesName: string | null;
 }> {
+    // 认证检查
+    const { auth } = await import('@/shared/lib/auth');
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('Unauthorized: 未登录或缺少租户信息');
+    }
+    const tenantId = session.user.tenantId;
+
     const config = await getTenantDistributionConfig(tenantId);
     const salesList = await getAvailableSalesList(tenantId);
 

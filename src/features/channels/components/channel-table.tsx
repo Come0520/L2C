@@ -60,9 +60,6 @@ export function ChannelTable({ data, currentUser }: ChannelTableProps) {
         if (!currentUser) return;
         await logPhoneView({
             customerId: channelId, // 渠道商暂借用 customerId 接口或后续扩展
-            viewerId: currentUser.id,
-            viewerRole: currentUser.role,
-            tenantId: currentUser.tenantId,
         });
     };
 

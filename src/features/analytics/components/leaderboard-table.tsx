@@ -1,3 +1,4 @@
+import React from 'react';
 import {
     Table,
     TableBody,
@@ -21,6 +22,29 @@ interface LeaderboardTableProps {
     className?: string;
 }
 
+interface LeaderboardTableRowProps {
+    item: LeaderboardItem;
+    index: number;
+}
+
+const LeaderboardTableRow = React.memo(function LeaderboardTableRow({ item, index }: LeaderboardTableRowProps) {
+    return (
+        <TableRow>
+            <TableCell className="font-medium">{index + 1}</TableCell>
+            <TableCell className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                    <AvatarFallback>{item.salesName ? item.salesName.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+                </Avatar>
+                {item.salesName || 'Unknown'}
+            </TableCell>
+            <TableCell className="text-right">{item.orderCount}</TableCell>
+            <TableCell className="text-right font-bold">
+                ¥{Number(item.totalAmount).toLocaleString()}
+            </TableCell>
+        </TableRow>
+    );
+});
+
 export function LeaderboardTable({ data, className }: LeaderboardTableProps) {
     return (
         <Card className={className}>
@@ -40,19 +64,7 @@ export function LeaderboardTable({ data, className }: LeaderboardTableProps) {
                     </TableHeader>
                     <TableBody>
                         {data.map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell className="font-medium">{index + 1}</TableCell>
-                                <TableCell className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarFallback>{item.salesName ? item.salesName.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
-                                    </Avatar>
-                                    {item.salesName || 'Unknown'}
-                                </TableCell>
-                                <TableCell className="text-right">{item.orderCount}</TableCell>
-                                <TableCell className="text-right font-bold">
-                                    ¥{Number(item.totalAmount).toLocaleString()}
-                                </TableCell>
-                            </TableRow>
+                            <LeaderboardTableRow key={index} item={item} index={index} />
                         ))}
                     </TableBody>
                 </Table>

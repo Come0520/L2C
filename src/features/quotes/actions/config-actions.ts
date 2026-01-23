@@ -2,7 +2,7 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { QuoteConfigService } from '@/services/quote-config.service';
+import { QuoteConfigService, type QuoteConfig } from '@/services/quote-config.service';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 
@@ -15,14 +15,19 @@ const updateGlobalConfigSchema = z.object({
     visibleFields: z.array(z.string()).optional(),
     presetLoss: z.object({
         curtain: z.object({
-            sideLoss: z.number(),
-            bottomLoss: z.number(),
-            headerLoss: z.number(),
-        }),
+            sideLoss: z.number().optional(),
+            bottomLoss: z.number().optional(),
+            headerLoss: z.number().optional(), // 兼容旧版
+            headerLossWrapped: z.number().optional(),
+            headerLossAttached: z.number().optional(),
+            defaultHeaderType: z.enum(['WRAPPED', 'ATTACHED']).optional(),
+            defaultFoldRatio: z.number().optional(),
+            heightWarningThreshold: z.number().optional(),
+        }).optional(),
         wallpaper: z.object({
-            widthLoss: z.number(),
-            cutLoss: z.number(),
-        }),
+            widthLoss: z.number().optional(),
+            cutLoss: z.number().optional(),
+        }).optional(),
     }).optional(),
     discountControl: z.object({
         minDiscountRate: z.number().min(0).max(1),
@@ -64,10 +69,7 @@ export async function getMyQuoteConfig() {
     return await QuoteConfigService.getMergedConfig(session.user.tenantId, session.user.id);
 }
 
-/**
- * 切换用户的报价模式
- */
-export const toggleQuoteMode = createSafeAction(updateModeSchema, async (data) => {
+const toggleQuoteModeActionInternal = createSafeAction(updateModeSchema, async (data) => {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error('Unauthorized');
@@ -79,10 +81,11 @@ export const toggleQuoteMode = createSafeAction(updateModeSchema, async (data) =
     return { success: true };
 });
 
-/**
- * 更新租户的全局报价配置
- */
-export const updateGlobalQuoteConfig = createSafeAction(updateGlobalConfigSchema, async (data) => {
+export async function toggleQuoteMode(params: z.infer<typeof updateModeSchema>) {
+    return toggleQuoteModeActionInternal(params);
+}
+
+const updateGlobalQuoteConfigActionInternal = createSafeAction(updateGlobalConfigSchema, async (data) => {
     const session = await auth();
     if (!session?.user?.id || !session.user.tenantId) {
         throw new Error('Unauthorized');
@@ -93,16 +96,23 @@ export const updateGlobalQuoteConfig = createSafeAction(updateGlobalConfigSchema
         throw new Error('Permission denied: Only admins can change global config');
     }
 
-    await QuoteConfigService.updateTenantConfig(session.user.tenantId, data);
+    // Zod schema 中 presetLoss 的所有子字段都是可选的，但 QuoteConfig 要求完整对象
+    // 服务层 updateTenantConfig 会将传入的部分配置与现有配置/默认值进行深度合并
+    // 因此这里的类型断言是安全的
+    await QuoteConfigService.updateTenantConfig(
+        session.user.tenantId,
+        data as unknown as Partial<QuoteConfig>
+    );
 
     revalidatePath('/quotes');
     return { success: true };
 });
 
-/**
- * 更新用户的默认报价方案
- */
-export const updateUserPlan = createSafeAction(updateUserPlanSchema, async (data) => {
+export async function updateGlobalQuoteConfig(params: z.infer<typeof updateGlobalConfigSchema>) {
+    return updateGlobalQuoteConfigActionInternal(params);
+}
+
+const updateUserPlanActionInternal = createSafeAction(updateUserPlanSchema, async (data) => {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error('Unauthorized');
@@ -113,6 +123,10 @@ export const updateUserPlan = createSafeAction(updateUserPlanSchema, async (data
     revalidatePath('/quotes');
     return { success: true };
 });
+
+export async function updateUserPlan(params: z.infer<typeof updateUserPlanSchema>) {
+    return updateUserPlanActionInternal(params);
+}
 
 /**
  * 获取特定方案的设置

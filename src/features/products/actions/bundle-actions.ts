@@ -86,7 +86,7 @@ export async function getBundleById(id: string) {
 
         if (!data) return { success: false, error: '组合商品不存在' };
 
-        // 获取组合商品明细
+        // P1 修复：获取组合商品明细（加租户验证）
         const items = await db
             .select({
                 id: productBundleItems.id,
@@ -102,7 +102,10 @@ export async function getBundleById(id: string) {
             })
             .from(productBundleItems)
             .leftJoin(products, eq(productBundleItems.productId, products.id))
-            .where(eq(productBundleItems.bundleId, id));
+            .where(and(
+                eq(productBundleItems.bundleId, id),
+                eq(productBundleItems.tenantId, tenantId)
+            ));
 
         return { success: true, data: { ...data, items } };
     } catch (error) {
@@ -183,10 +186,13 @@ export async function deleteBundle(id: string) {
         const tenantId = await getTenantIdFromSession();
         if (!tenantId) return { success: false, error: '未授权' };
 
-        // 先删除关联的明细
+        // P0 修复：先删除关联的明细（加租户验证）
         await db
             .delete(productBundleItems)
-            .where(eq(productBundleItems.bundleId, id));
+            .where(and(
+                eq(productBundleItems.bundleId, id),
+                eq(productBundleItems.tenantId, tenantId)
+            ));
 
         // 再删除组合商品
         await db
@@ -253,7 +259,7 @@ export async function calculateBundleCost(bundleId: string) {
         const tenantId = await getTenantIdFromSession();
         if (!tenantId) return { success: false, error: '未授权' };
 
-        // 获取组合商品明细
+        // P1 修复：获取组合商品明细（加租户验证）
         const items = await db
             .select({
                 quantity: productBundleItems.quantity,
@@ -263,7 +269,10 @@ export async function calculateBundleCost(bundleId: string) {
             })
             .from(productBundleItems)
             .leftJoin(products, eq(productBundleItems.productId, products.id))
-            .where(eq(productBundleItems.bundleId, bundleId));
+            .where(and(
+                eq(productBundleItems.bundleId, bundleId),
+                eq(productBundleItems.tenantId, tenantId)
+            ));
 
         let totalCost = 0;
         let totalRetail = 0;

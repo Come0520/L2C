@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
     Table,
     TableBody,
@@ -23,6 +24,7 @@ import { useState, useCallback } from 'react';
 import { SupplierDialog } from './supplier-dialog';
 import { deleteSupplier } from '../actions/mutations';
 import { toast } from 'sonner';
+import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -55,7 +57,53 @@ interface SuppliersTableProps {
     onPageChange?: (page: number) => void;
 }
 
-export function SuppliersTable({ data, page, pageSize, total, onPageChange }: SuppliersTableProps) {
+interface SupplierTableRowProps {
+    supplier: Supplier;
+    onEdit: (supplier: Supplier) => void;
+    onDelete: (id: string) => void;
+}
+
+const SupplierTableRow = React.memo(function SupplierTableRow({ supplier, onEdit, onDelete }: SupplierTableRowProps) {
+    return (
+        <TableRow key={supplier.id}>
+            <TableCell className="font-medium">{supplier.name}</TableCell>
+            <TableCell>{supplier.contactPerson || '-'}</TableCell>
+            <TableCell>{supplier.phone || '-'}</TableCell>
+            <TableCell>
+                {supplier.paymentPeriod === 'MONTHLY' ? '月结' : '现结'}
+            </TableCell>
+            <TableCell className="max-w-[200px] truncate" title={supplier.address || ''}>
+                {supplier.address || '-'}
+            </TableCell>
+            <TableCell>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">打开菜单</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>操作</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit(supplier)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            编辑
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => onDelete(supplier.id)}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            删除
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    );
+});
+
+export function SuppliersTable({ data, page: _page, pageSize: _pageSize, total: _total, onPageChange: _onPageChange }: SuppliersTableProps) {
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -100,48 +148,15 @@ export function SuppliersTable({ data, page, pageSize, total, onPageChange }: Su
                     </TableHeader>
                     <TableBody>
                         {data.map((supplier) => (
-                            <TableRow key={supplier.id}>
-                                <TableCell className="font-medium">{supplier.name}</TableCell>
-                                <TableCell>{supplier.contactPerson || '-'}</TableCell>
-                                <TableCell>{supplier.phone || '-'}</TableCell>
-                                <TableCell>
-                                    {supplier.paymentPeriod === 'MONTHLY' ? '月结' : '现结'}
-                                </TableCell>
-                                <TableCell className="max-w-[200px] truncate" title={supplier.address || ''}>
-                                    {supplier.address || '-'}
-                                </TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">打开菜单</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>操作</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => setEditingSupplier(supplier)}>
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                编辑
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="text-red-600"
-                                                onClick={() => setDeletingSupplierId(supplier.id)}
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                删除
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
+                            <SupplierTableRow
+                                key={supplier.id}
+                                supplier={supplier}
+                                onEdit={setEditingSupplier}
+                                onDelete={setDeletingSupplierId}
+                            />
                         ))}
                         {data.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    暂无数据
-                                </TableCell>
-                            </TableRow>
+                            <EmptyTableRow colSpan={6} message="暂无数据" />
                         )}
                     </TableBody>
                 </Table>

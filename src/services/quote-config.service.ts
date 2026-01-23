@@ -1,6 +1,8 @@
 import { db } from '@/shared/api/db';
 import { quoteConfig } from '@/shared/api/schema/quote-config';
+import { tenants } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
+import { DEFAULT_QUOTE_MODE_CONFIG, type QuoteModeConfig } from '@/features/settings/lib/quote-mode-constants';
 
 /**
  * 尺寸限制配置 (Dimension Limits Configuration)
@@ -29,6 +31,19 @@ export interface QuotePlanSettings {
 }
 
 /**
+ * 空间分组配置 (Room Group Configuration)
+ * 用于报价单中的空间选择器
+ */
+export interface RoomGroup {
+    /** 分组名称 */
+    label: string;
+    /** 分组内的空间选项 */
+    items: string[];
+    /** 是否显示自定义输入 */
+    hasCustom?: boolean;
+}
+
+/**
  * 报价展示配置结构 (Quote Visibility Configuration)
  */
 export interface QuoteConfig {
@@ -45,9 +60,22 @@ export interface QuoteConfig {
     visibleFields: string[];
     presetLoss: {
         curtain: {
+            /** 侧边损耗 (cm) */
             sideLoss: number;
+            /** 底边损耗 (cm) */
             bottomLoss: number;
-            headerLoss: number;
+            /** 包布带帘头损耗 (cm) */
+            headerLossWrapped: number;
+            /** 贴布带帘头损耗 (cm) */
+            headerLossAttached: number;
+            /** 默认帘头工艺 */
+            defaultHeaderType: 'WRAPPED' | 'ATTACHED';
+            /** 默认褶皱倍数 */
+            defaultFoldRatio: number;
+            /** 定高面料阈值 (cm)，超过此值触发超高预警 */
+            heightWarningThreshold: number;
+            /** 兼容旧版 headerLoss，等同于 headerLossWrapped */
+            headerLoss?: number;
         };
         wallpaper: {
             widthLoss: number;
@@ -61,6 +89,9 @@ export interface QuoteConfig {
 
     /** 尺寸校验配置 (Dimension Validation) */
     dimensionLimits?: DimensionLimits;
+
+    /** 空间分组配置 (Room Groups for Space Selector) */
+    roomGroups?: RoomGroup[];
 }
 
 /**
@@ -90,7 +121,15 @@ const SYSTEM_DEFAULT_CONFIG: QuoteConfig = {
         'productName', 'width', 'height', 'quantity', 'unitPrice', 'subtotal'
     ],
     presetLoss: {
-        curtain: { sideLoss: 5, bottomLoss: 10, headerLoss: 20 },
+        curtain: {
+            sideLoss: 5,
+            bottomLoss: 10,
+            headerLossWrapped: 20,
+            headerLossAttached: 7,
+            defaultHeaderType: 'WRAPPED',
+            defaultFoldRatio: 2,
+            heightWarningThreshold: 275
+        },
         wallpaper: { widthLoss: 20, cutLoss: 10 }
     },
     discountControl: {
@@ -109,7 +148,26 @@ const SYSTEM_DEFAULT_CONFIG: QuoteConfig = {
         widthWarning: 1000,   // 超过 1000cm 提示是否需分段
         widthMax: 2000,       // 系统硬限制，不可超过 2000cm
         enabled: true
-    }
+    },
+    /**
+     * 空间分组默认配置
+     * 租户可自定义，用于报价单中的空间选择器
+     */
+    roomGroups: [
+        {
+            label: '卧室',
+            items: ['主卧', '次卧', '客房', '儿童房', '男孩房', '女孩房'],
+        },
+        {
+            label: '公共空间',
+            items: ['客厅', '餐厅', '书房', '茶室', '阳台', '南阳台', '北阳台'],
+        },
+        {
+            label: '其他',
+            items: ['阳光房', '洗衣房', '保姆房'],
+            hasCustom: true,
+        },
+    ]
 };
 
 /**
@@ -138,6 +196,13 @@ export class QuoteConfigService {
                 eq(quoteConfig.entityId, userId)
             )
         });
+
+        // 2.5 获取租户的快速报价字段配置 (Get Tenant's Quick Quote Field Config)
+        const tenantRecord = await db.query.tenants.findFirst({
+            where: eq(tenants.id, tenantId),
+            columns: { settings: true },
+        });
+        const tenantQuoteModeConfig = (tenantRecord?.settings as Record<string, unknown>)?.quoteModeConfig as QuoteModeConfig | undefined;
 
         const tenantSettings = (tenantData?.config as unknown as Partial<QuoteConfig>) || {};
         const userPrefs = (userData?.config as unknown as Partial<QuoteConfig>) || {};
@@ -206,6 +271,10 @@ export class QuoteConfigService {
         if (config.mode === 'advanced') {
             const advancedFields = ['foldRatio', 'processFee', 'remark', 'measuredWidth', 'measuredHeight'];
             config.visibleFields = Array.from(new Set([...config.visibleFields, ...advancedFields]));
+        } else {
+            // 快速模式：使用租户配置的快速报价字段 (Quick Mode: Use tenant's quick quote fields)
+            const quickModeFields = tenantQuoteModeConfig?.quickModeFields ?? DEFAULT_QUOTE_MODE_CONFIG.quickModeFields;
+            config.visibleFields = quickModeFields;
         }
 
         return config;
@@ -349,5 +418,51 @@ export class QuoteConfigService {
     ): Promise<QuotePlanSettings> {
         const config = await this.getMergedConfig(tenantId, userId);
         return config.planSettings?.[plan] || SYSTEM_DEFAULT_CONFIG.planSettings![plan]!;
+    }
+
+    /**
+     * 获取空间分组配置 (Get Room Groups)
+     * 优先返回租户自定义配置，否则返回系统默认配置
+     */
+    static async getRoomGroups(tenantId: string): Promise<RoomGroup[]> {
+        const tenantData = await db.query.quoteConfig.findFirst({
+            where: and(
+                eq(quoteConfig.type, 'TENANT'),
+                eq(quoteConfig.entityId, tenantId)
+            )
+        });
+
+        const tenantSettings = (tenantData?.config as unknown as Partial<QuoteConfig>) || {};
+        return tenantSettings.roomGroups || SYSTEM_DEFAULT_CONFIG.roomGroups!;
+    }
+
+    /**
+     * 更新空间分组配置 (Update Room Groups)
+     * 仅限管理员操作
+     */
+    static async updateRoomGroups(tenantId: string, roomGroups: RoomGroup[]) {
+        const existing = await db.query.quoteConfig.findFirst({
+            where: and(
+                eq(quoteConfig.type, 'TENANT'),
+                eq(quoteConfig.entityId, tenantId)
+            )
+        });
+
+        const newConfig = {
+            ...(existing?.config as unknown as Partial<QuoteConfig> || {}),
+            roomGroups
+        };
+
+        if (existing) {
+            await db.update(quoteConfig)
+                .set({ config: newConfig, updatedAt: new Date() })
+                .where(eq(quoteConfig.id, existing.id));
+        } else {
+            await db.insert(quoteConfig).values({
+                type: 'TENANT',
+                entityId: tenantId,
+                config: newConfig
+            });
+        }
     }
 }

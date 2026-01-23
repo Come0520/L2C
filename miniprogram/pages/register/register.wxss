@@ -1,0 +1,21 @@
+/* pages/register/register.wxss */
+
+.optional {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.picker-input {
+  display: flex;
+  align-items: center;
+}
+
+.picker-input.placeholder {
+  color: var(--text-muted);
+}
+
+.back-link {
+  text-align: center;
+  color: var(--primary-color);
+  font-size: 28rpx;
+}

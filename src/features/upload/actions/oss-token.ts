@@ -1,13 +1,25 @@
 'use server';
 
-// import OSS from 'ali-oss';
-import { env } from '@/shared/config/env';
+// import { env } from '@/shared/config/env'; // OSS 功能暂时禁用
+
+
+/**
+ * OSS STS Token 响应数据
+ */
+interface OSSTokenData {
+    AccessKeyId: string;
+    AccessKeySecret: string;
+    SecurityToken: string;
+    Expiration: string;
+    bucket: string;
+    region: string;
+}
 
 /**
  * 获取 OSS STS 临时授权 Token
  * 有效期：15分钟 (900秒，阿里云 STS 最小值)
  */
-export async function getOSSToken(): Promise<{ success: true; data: any } | { success: false; error: string }> {
+export async function getOSSToken(): Promise<{ success: true; data: OSSTokenData } | { success: false; error: string }> {
     return { success: false, error: 'OSS Upload temporarily disabled for update' };
     /*
     try {
@@ -21,7 +33,6 @@ export async function getOSSToken(): Promise<{ success: true; data: any } | { su
             accessKeySecret: env.OSS_ACCESS_KEY_SECRET,
         });
 
-        // 扮演角色
         const result = await sts.assumeRole(
             env.OSS_ROLE_ARN,
             '',

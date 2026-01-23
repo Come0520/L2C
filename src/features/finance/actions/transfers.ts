@@ -12,7 +12,8 @@
 import { db } from '@/shared/api/db';
 import { financeAccounts, accountTransactions, internalTransfers } from '@/shared/api/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -61,6 +62,9 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
+
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
         // 验证不能自己转给自己
         if (data.fromAccountId === data.toAccountId) {
@@ -247,7 +251,11 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         const tenantId = session.user.tenantId;
         const _userId = session.user.id;
 
+        // 权限检查：需要财务管理权限
+        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+
         return await db.transaction(async (tx) => {
+
             // 1. 获取调拨单
             const transfer = await tx.query.internalTransfers.findFirst({
                 where: and(

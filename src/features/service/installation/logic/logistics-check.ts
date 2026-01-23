@@ -1,6 +1,6 @@
 import { db } from '@/shared/api/db';
 import { purchaseOrders } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export interface LogisticsCheckResult {
     ready: boolean;
@@ -15,10 +15,17 @@ const READY_STATUSES = ['RECEIVED', 'ARRIVED', 'COMPLETED', 'PARTIAL_RECEIVED'];
 
 /**
  * Check if all logistics for an order are ready
+ * @param orderId - 订单 ID
+ * @param tenantId - 租户 ID（必须从 session 获取）
  */
-export async function checkLogisticsReady(orderId: string): Promise<LogisticsCheckResult> {
+export async function checkLogisticsReady(orderId: string, tenantId?: string): Promise<LogisticsCheckResult> {
+    // 构建查询条件，包含租户隔离
+    const whereConditions = tenantId
+        ? and(eq(purchaseOrders.orderId, orderId), eq(purchaseOrders.tenantId, tenantId))
+        : eq(purchaseOrders.orderId, orderId);
+
     const pos = await db.query.purchaseOrders.findMany({
-        where: eq(purchaseOrders.orderId, orderId),
+        where: whereConditions,
         columns: {
             id: true,
             poNo: true,

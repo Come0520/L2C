@@ -6,6 +6,11 @@ import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { restoreLeadSchema } from '../schemas';
 import { revalidatePath } from 'next/cache';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+
+// 线索状态类型（与 schema 中的 leadStatusEnum 保持一致）
+type LeadStatus = 'PENDING_ASSIGNMENT' | 'PENDING_FOLLOWUP' | 'FOLLOWING_UP' | 'WON' | 'VOID' | 'INVALID';
 
 /**
  * 恢复已作废的线索
@@ -15,17 +20,24 @@ import { revalidatePath } from 'next/cache';
  * 2. 恢复到作废前的状态
  * 3. 记录恢复操作到状态历史
  * 
- * 权限要求：店长或更高
+ * 权限要求：LEAD.MANAGE 权限
  */
 export async function restoreLeadAction(
-    input: z.infer<typeof restoreLeadSchema>,
-    userId: string,
-    tenantId: string
+    input: z.infer<typeof restoreLeadSchema>
 ): Promise<{ success: boolean; error?: string; targetStatus?: string }> {
+    // 认证和权限检查
+    const session = await auth();
+    if (!session?.user?.tenantId || !session?.user?.id) {
+        return { success: false, error: 'Unauthorized: 未登录或缺少租户信息' };
+    }
+    await checkPermission(session, PERMISSIONS.LEAD.MANAGE);
+
+    const tenantId = session.user.tenantId;
+    const userId = session.user.id;
     const { id, reason } = restoreLeadSchema.parse(input);
 
     try {
-        // 1. 获取线索
+        // 1. 获取线索（使用 session 中的 tenantId 保证租户隔离）
         const lead = await db.query.leads.findFirst({
             where: and(
                 eq(leads.id, id),
@@ -93,8 +105,7 @@ export async function restoreLeadAction(
             // 更新线索状态
             await tx.update(leads)
                 .set({
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    status: targetStatus as any, // 安全：targetStatus 来自历史记录
+                    status: targetStatus as LeadStatus, // 类型断言：targetStatus 来自历史记录
                     lostReason: null // 清除作废原因
                 })
                 .where(eq(leads.id, id));
@@ -126,9 +137,15 @@ export async function restoreLeadAction(
  * 检查线索是否可恢复
  */
 export async function canRestoreLead(
-    leadId: string,
-    tenantId: string
+    leadId: string
 ): Promise<{ canRestore: boolean; reason?: string }> {
+    // 认证检查
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { canRestore: false, reason: '未登录或缺少租户信息' };
+    }
+    const tenantId = session.user.tenantId;
+
     const lead = await db.query.leads.findFirst({
         where: and(
             eq(leads.id, leadId),

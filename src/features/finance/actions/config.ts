@@ -5,6 +5,7 @@ import { financeConfigs, financeAccounts } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { clearFinanceConfigCache } from '../services/finance-config-utils';
 import {
     updateFinanceConfigSchema,
     createFinanceAccountSchema,
@@ -69,6 +70,9 @@ export async function updateFinanceConfig(data: z.infer<typeof updateFinanceConf
             });
         }
     }
+
+    // 清除配置缓存，确保业务逻辑读取最新值
+    clearFinanceConfigCache(session.user.tenantId);
 
     revalidatePath('/settings/finance');
     return { success: true };

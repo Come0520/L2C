@@ -3,7 +3,7 @@ import { getMeasureTasks } from '@/features/service/measurement/actions/queries'
 import { submitMeasureData } from '@/features/service/measurement/actions/mutations';
 
 export class SyncManager {
-    static async syncOnlineTasks(workerId: string) {
+    static async syncOnlineTasks(_workerId: string) {
         try {
             const result = await getMeasureTasks({
                 page: 1,
@@ -20,8 +20,10 @@ export class SyncManager {
                         measureNo: task.measureNo,
                         customerName: task.customer?.name || 'Unknown',
                         customerPhone: task.customer?.phone || '',
-                        // Fix: addresses access
-                        address: (task.customer as any)?.addresses?.[0]?.address || '',
+                        // 使用可选链访问客户地址（类型定义可能不完整）
+                        address: task.customer && 'addresses' in task.customer && Array.isArray((task.customer as { addresses?: { address?: string }[] }).addresses)
+                            ? (task.customer as { addresses: { address?: string }[] }).addresses[0]?.address || ''
+                            : '',
                         status: 'pending',
                         scheduledAt: task.scheduledAt ? new Date(task.scheduledAt) : new Date(),
                         createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
@@ -39,7 +41,7 @@ export class SyncManager {
 
     static async syncLocalChanges() {
         let successCount = 0;
-        const errors: any[] = [];
+        const errors: { id: string; error: unknown }[] = [];
 
         try {
             const pendingTasks = await offlineStore.getPendingSyncList();
@@ -70,10 +72,10 @@ export class SyncManager {
                             updatedAt: new Date()
                         });
                     } else {
-                        errors.push({ id: localTask.id, error: (result as any).error || 'Unknown error' });
+                        errors.push({ id: String(localTask.id), error: 'error' in result ? result.error : 'Unknown error' });
                     }
                 } catch (err) {
-                    errors.push({ id: localTask.id, error: err });
+                    errors.push({ id: String(localTask.id), error: err });
                 }
             }
         } catch (error) {

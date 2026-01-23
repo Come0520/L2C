@@ -4,7 +4,7 @@ import { useState, useCallback, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { ChevronDown, ChevronUp, Plus, Trash2, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, GripVertical, Plus } from 'lucide-react';
 
 interface RoomData {
     id: string;
@@ -28,8 +28,6 @@ interface QuoteRoomAccordionProps {
     onRename?: (roomId: string, newName: string) => void;
     /** 删除空间回调 */
     onDelete?: (roomId: string) => void;
-    /** 添加商品回调 */
-    onAddProduct?: (roomId: string) => void;
     /** 子内容（商品列表） */
     children: ReactNode;
     /** 额外的 className */
@@ -47,7 +45,6 @@ export function QuoteRoomAccordion({
     readOnly = false,
     onRename,
     onDelete,
-    onAddProduct,
     children,
     className,
 }: QuoteRoomAccordionProps) {
@@ -135,35 +132,21 @@ export function QuoteRoomAccordion({
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* 操作按钮（展开时显示） */}
+                    {/* 操作按钮（展开时显示） - 仅保留删除按钮 */}
                     {isExpanded && !readOnly && (
-                        <>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddProduct?.(room.id);
-                                }}
-                                className="h-8"
-                            >
-                                <Plus className="w-4 h-4 mr-1" />
-                                添加商品
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (confirm('确定删除此空间及其所有明细吗？')) {
-                                        onDelete?.(room.id);
-                                    }
-                                }}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
-                        </>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('确定删除此空间及其所有明细吗？')) {
+                                    onDelete?.(room.id);
+                                }
+                            }}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
                     )}
 
                     {/* 展开/收起图标 */}
@@ -212,8 +195,6 @@ interface QuoteRoomAccordionGroupProps {
     onRename?: (roomId: string, newName: string) => void;
     /** 删除回调 */
     onDelete?: (roomId: string) => void;
-    /** 添加商品回调 */
-    onAddProduct?: (roomId: string) => void;
     /** 添加空间回调 */
     onAddRoom?: () => void;
     /** 渲染每个空间内容的函数 */
@@ -229,7 +210,6 @@ export function QuoteRoomAccordionGroup({
     readOnly = false,
     onRename,
     onDelete,
-    onAddProduct,
     onAddRoom,
     renderRoomContent,
     className,
@@ -291,7 +271,6 @@ export function QuoteRoomAccordionGroup({
                         readOnly={readOnly}
                         onRename={onRename}
                         onDelete={onDelete}
-                        onAddProduct={onAddProduct}
                     >
                         {renderRoomContent(room)}
                     </QuoteRoomAccordion>

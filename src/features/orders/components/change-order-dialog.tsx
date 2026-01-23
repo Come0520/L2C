@@ -44,7 +44,7 @@ export function ChangeOrderDialog({ orderId, trigger }: ChangeOrderDialogProps) 
         try {
             const res = await createChangeRequestAction({
                 orderId,
-                type: type as any,
+                type: type as 'FIELD_CHANGE' | 'CUSTOMER_CHANGE' | 'STOCK_OUT' | 'OTHER',
                 reason,
                 diffAmount
             });

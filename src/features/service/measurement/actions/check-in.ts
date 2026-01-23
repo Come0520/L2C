@@ -2,13 +2,14 @@
 
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { ActionState, createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { validateGpsCheckIn, calculateLateMinutes } from '@/shared/lib/gps-utils';
+import { auth } from '@/shared/lib/auth';
 
-// Input Schema
+// 输入校验 Schema
 const CheckInMeasureTaskSchema = z.object({
     taskId: z.string().uuid(),
     latitude: z.number(),
@@ -20,44 +21,57 @@ const CheckInMeasureTaskSchema = z.object({
 
 type CheckInMeasureTaskInput = z.infer<typeof CheckInMeasureTaskSchema>;
 
-/**
- * Check-in Measure Task
- * 1. Validate GPS (if target coords provided)
- * 2. Check for Late Arrival
- * 3. Update Task Status & Check-in Info
- */
-export const checkInMeasureTask = createSafeAction(
+const checkInMeasureTaskActionInternal = createSafeAction(
     CheckInMeasureTaskSchema,
-    async (input: CheckInMeasureTaskInput): Promise<ActionState<any>> => {
+    async (input: CheckInMeasureTaskInput): Promise<ActionState<{ checkInAt: Date; gpsResult: ReturnType<typeof validateGpsCheckIn> | null; lateMinutes: number }>> => {
+        // 🔒 安全校验：获取当前用户身份
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) {
+            return { success: false, error: '未授权访问' };
+        }
+        const tenantId = session.user.tenantId;
+        const userId = session.user.id;
+
         const { taskId, latitude, longitude, address, targetLatitude, targetLongitude } = input;
 
         return await db.transaction(async (tx) => {
-            // 1. Fetch Task
+            // 🔒 安全校验：验证任务归属当前租户
             const task = await tx.query.measureTasks.findFirst({
-                where: eq(measureTasks.id, taskId)
+                where: and(
+                    eq(measureTasks.id, taskId),
+                    eq(measureTasks.tenantId, tenantId) // 租户隔离
+                )
             });
 
             if (!task) {
-                return { success: false, error: '任务不存在' };
+                return { success: false, error: '任务不存在或无权访问' };
+            }
+
+            // 🔒 安全校验：只有被指派的测量师才能签到
+            if (task.assignedWorkerId !== userId) {
+                return { success: false, error: '只有被指派的测量师才能签到' };
             }
 
             if (task.status === 'COMPLETED' || task.status === 'CANCELLED') {
                 return { success: false, error: '任务已结束，无法签到' };
             }
 
-            // 2. GPS Validation
+            // GPS 校验
             let gpsResult = null;
             if (targetLatitude && targetLongitude) {
                 gpsResult = validateGpsCheckIn(latitude, longitude, targetLatitude, targetLongitude);
             }
 
-            // 3. Late Validation
+            // 迟到检测
             let lateMinutes = 0;
             if (task.scheduledAt) {
-                lateMinutes = calculateLateMinutes(task.scheduledAt, new Date());
+                // 读取系统配置的迟到阈值 (动态 import 避免循环依赖)
+                const { getSetting } = await import('@/features/settings/actions/system-settings-actions');
+                const lateThreshold = await getSetting('MEASURE_LATE_THRESHOLD') as number ?? 15;
+
+                lateMinutes = calculateLateMinutes(task.scheduledAt, new Date(), lateThreshold);
             }
 
-            // 4. Update Task
             const checkInInfo = {
                 coords: { lat: latitude, lng: longitude },
                 address,
@@ -66,29 +80,26 @@ export const checkInMeasureTask = createSafeAction(
                 isLate: lateMinutes > 0
             };
 
+            // 更新任务：签到后状态应保持 PENDING_VISIT（待上门）或进入测量中
             await tx.update(measureTasks)
                 .set({
                     checkInAt: new Date(),
                     checkInLocation: checkInInfo,
-                    status: 'PENDING', // Stay in PENDING or move to 'IN_PROGRESS' if available? Schema has PENDING_VISIT?
-                    // measureTaskStatusEnum: ['PENDING_APPROVAL','PENDING','DISPATCHING','PENDING_VISIT','PENDING_CONFIRM','COMPLETED','CANCELLED']
-                    // Assuming PENDING_VISIT is for "Waiting for visit", so maybe current status is PENDING_VISIT?
-                    // And checking in implies start of work? Usually status stays PENDING_VISIT until completion or maybe we don't change status on check-in, just record time.
-                    // Or if we have IN_PROGRESS. We don't.
-                    // Let's keep status as is or update to indicating presence.
-                    // Requirement says: "现场考核". Usually just updates checkInAt.
+                    // 签到后状态保持 PENDING_VISIT，提交数据后才变更
                 })
                 .where(eq(measureTasks.id, taskId));
 
-            revalidatePath('/measurement');
+            revalidatePath('/service/measurement');
+            revalidatePath(`/service/measurement/${taskId}`);
             return {
                 success: true,
-                data: {
-                    checkInAt: new Date(),
-                    gpsResult,
-                    lateMinutes
-                }
+                data: { checkInAt: new Date(), gpsResult, lateMinutes }
             };
         });
     }
 );
+
+export async function checkInMeasureTask(params: CheckInMeasureTaskInput) {
+    return checkInMeasureTaskActionInternal(params);
+}
+

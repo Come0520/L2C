@@ -1,6 +1,11 @@
+/**
+ * 报价版本比较工具
+ * 用于比较报价项目的变更
+ */
+
 export interface FieldChange {
-    oldValue?: any;
-    newValue?: any;
+    oldValue?: unknown;
+    newValue?: unknown;
 }
 
 export interface ItemDiff {
@@ -23,11 +28,21 @@ export interface ExtendedItem {
     foldRatio?: number;
     groundClearance?: number;
     remark?: string;
-    specs?: Record<string, any>;
+    specs?: Record<string, unknown>;
     attachments?: Array<{ id: string; url: string }>;
 }
 
-function areEqual(a: any, b: any): boolean {
+interface QuoteVersion {
+    id: string;
+    items?: ExtendedItem[];
+}
+
+interface Attachment {
+    id: string;
+    url?: string;
+}
+
+function areEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (a == null && b == null) return true;
     if (a == null || b == null) return false;
@@ -39,16 +54,22 @@ function areEqual(a: any, b: any): boolean {
     }
 
     if (typeof a === 'object' && typeof b === 'object') {
-        const keysA = Object.keys(a);
-        const keysB = Object.keys(b);
+        const objA = a as Record<string, unknown>;
+        const objB = b as Record<string, unknown>;
+        const keysA = Object.keys(objA);
+        const keysB = Object.keys(objB);
         if (keysA.length !== keysB.length) return false;
-        return keysA.every(key => areEqual(a[key], b[key]));
+        return keysA.every(key => areEqual(objA[key], objB[key]));
     }
 
     return false;
 }
 
-function compareSpecs(oldSpecs: any, newSpecs: any, changes: Record<string, FieldChange>) {
+function compareSpecs(
+    oldSpecs: Record<string, unknown> | undefined,
+    newSpecs: Record<string, unknown> | undefined,
+    changes: Record<string, FieldChange>
+) {
     if (!oldSpecs && !newSpecs) return;
 
     const oldKeys = Object.keys(oldSpecs || {});
@@ -68,11 +89,15 @@ function compareSpecs(oldSpecs: any, newSpecs: any, changes: Record<string, Fiel
     }
 }
 
-function compareAttachments(oldAttachments: any, newAttachments: any, changes: Record<string, FieldChange>) {
+function compareAttachments(
+    oldAttachments: Attachment[] | undefined,
+    newAttachments: Attachment[] | undefined,
+    changes: Record<string, FieldChange>
+) {
     if (!oldAttachments && !newAttachments) return;
 
-    const oldIds = (oldAttachments || []).map((a: any) => a.id).toSorted();
-    const newIds = (newAttachments || []).map((a: any) => a.id).toSorted();
+    const oldIds = (oldAttachments || []).map((a) => a.id).toSorted();
+    const newIds = (newAttachments || []).map((a) => a.id).toSorted();
 
     if (!areEqual(oldIds, newIds)) {
         changes.attachments = {
@@ -113,6 +138,6 @@ export const compareItems = (oldItem: ExtendedItem, newItem: ExtendedItem): Item
 
 type DiffType = 'UNCHANGED' | 'MODIFIED' | 'ADDED' | 'REMOVED';
 
-export function compareQuoteVersions(v1: any, v2: any) {
+export function compareQuoteVersions(_v1: QuoteVersion, _v2: QuoteVersion) {
     return { changes: [] };
 }

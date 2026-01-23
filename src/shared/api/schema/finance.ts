@@ -319,6 +319,9 @@ export const paymentBills = pgTable('payment_bills', {
     payeeId: uuid('payee_id').notNull(),
     payeeName: varchar('payee_name', { length: 100 }).notNull(),
 
+    // 关联订单 (用于客户退款场景溯源)
+    orderId: uuid('order_id').references(() => orders.id),
+
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     status: varchar('status', { length: 20 }).notNull(), // DRAFT/PENDING/VERIFIED/REJECTED/PAID
 
@@ -339,6 +342,7 @@ export const paymentBills = pgTable('payment_bills', {
 }, (table) => ({
     tenantIdx: index('idx_payment_bills_tenant').on(table.tenantId),
     payeeIdx: index('idx_payment_bills_payee').on(table.payeeId),
+    orderIdx: index('idx_payment_bills_order').on(table.orderId),
 }));
 
 // 付款单-对账单关联 (Payment Bill Items) - 支持一笔付款对应多个对账单

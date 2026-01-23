@@ -1,10 +1,32 @@
 import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum, channelStatusEnum } from './enums';
+import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum, channelStatusEnum, commissionTriggerModeEnum } from './enums';
+
+// 渠道类型表 (Channel Categories)
+// 支持租户自定义渠道分类，如：装修公司、设计师、跨界合作等
+export const channelCategories = pgTable('channel_categories', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    name: varchar('name', { length: 50 }).notNull(),           // 类型名称
+    code: varchar('code', { length: 50 }).notNull(),           // 类型代码
+    description: text('description'),                           // 描述
+    isActive: boolean('is_active').default(true),              // 是否启用
+    sortOrder: integer('sort_order').default(0),               // 排序
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    categoryTenantIdx: index('idx_channel_categories_tenant').on(table.tenantId),
+    categoryCodeIdx: index('idx_channel_categories_code').on(table.tenantId, table.code),
+}));
 
 export const channels = pgTable('channels', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+
+    // 多层级支持 (Multi-level Hierarchy)
+    parentId: uuid('parent_id'),  // 自引用，指向父级渠道（无法直接 references，需要关系定义）
+    hierarchyLevel: integer('hierarchy_level').default(1).notNull(),  // 层级深度：1=一级，2=二级，3=三级
+    categoryId: uuid('category_id').references(() => channelCategories.id),  // 关联渠道类型表
 
     // Core Info
     category: channelCategoryEnum('category').notNull().default('OFFLINE'),
@@ -27,6 +49,7 @@ export const channels = pgTable('channels', {
 
     settlementType: channelSettlementTypeEnum('settlement_type').notNull(), // PREPAY / MONTHLY
     creditLimit: decimal('credit_limit', { precision: 15, scale: 2 }).default('0'), // 月结渠道授信额度
+    commissionTriggerMode: commissionTriggerModeEnum('commission_trigger_mode').default('PAYMENT_COMPLETED'), // 佣金触发时机
     bankInfo: jsonb('bank_info'),
 
     // Attachments
@@ -47,6 +70,7 @@ export const channels = pgTable('channels', {
     channelTenantIdx: index('idx_channels_tenant').on(table.tenantId),
     channelCodeIdx: index('idx_channels_code').on(table.code),
     channelPhoneIdx: index('idx_channels_phone').on(table.phone),
+    channelParentIdx: index('idx_channels_parent').on(table.parentId),  // 层级查询优化
 }));
 
 export const channelContacts = pgTable('channel_contacts', {

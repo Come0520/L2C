@@ -125,7 +125,7 @@ export async function requestCancelOrder(input: z.infer<typeof cancelOrderSchema
 /**
  * 执行撤单（审批通过后调用）
  */
-export async function executeCancelOrder(
+async function executeCancelOrder(
     orderId: string,
     changeRecordId: string,
     tenantId: string,

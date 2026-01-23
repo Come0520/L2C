@@ -52,13 +52,19 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
         const draftTab = page.getByRole('tab', { name: /待下单|草稿/ });
         if (await draftTab.isVisible()) {
             await draftTab.click();
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(1000);
         }
 
         const draftRow = page.locator('table tbody tr').first();
-        if (await draftRow.isVisible()) {
-            // 点击进入详情
-            await draftRow.locator('a').first().click();
+        const draftText = await draftRow.textContent();
+        if (await draftRow.isVisible() && draftText && !draftText.includes('暂无') && !draftText.includes('No Data')) {
+            // 点击进入详情 (尝试点击链接，如果不行则点击整行)
+            const link = draftRow.locator('a').first();
+            if (await link.isVisible()) {
+                await link.click();
+            } else {
+                await draftRow.click();
+            }
             await page.waitForURL(/\/supply-chain\/purchase-orders\/.+/);
 
             // 验证由"草稿"转为"已下单"
@@ -76,7 +82,7 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
                     await externalNo.fill('SUP-MOCK-123456');
                 }
 
-                // 取消或按 Escape 退出 (测试环境不一定要真正提交，视 Action 实现而定)
+                // 取消或按 Escape 退出
                 await page.keyboard.press('Escape');
                 console.log('✅ 下单流程按钮与对话框验证成功');
             }
@@ -92,12 +98,19 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
         const orderedTab = page.getByRole('tab', { name: /已下单|生产中/ });
         if (await orderedTab.isVisible()) {
             await orderedTab.click();
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(1000);
         }
 
         const orderedRow = page.locator('table tbody tr').first();
-        if (await orderedRow.isVisible()) {
-            await orderedRow.locator('a').first().click();
+        const orderedText = await orderedRow.textContent();
+        if (await orderedRow.isVisible() && orderedText && !orderedText.includes('暂无') && !orderedText.includes('No Data')) {
+            // 点击进入详情
+            const link = orderedRow.locator('a').first();
+            if (await link.isVisible()) {
+                await link.click();
+            } else {
+                await orderedRow.click();
+            }
 
             // 查找发货/填写物流按钮
             const shippingBtn = page.getByRole('button', { name: /发货|填写物流/ });
@@ -124,12 +137,18 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
         const shippedTab = page.getByRole('tab', { name: /已发货|待入库/ });
         if (await shippedTab.isVisible()) {
             await shippedTab.click();
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(1000);
         }
 
         const shippedRow = page.locator('table tbody tr').first();
-        if (await shippedRow.isVisible()) {
-            await shippedRow.locator('a').first().click();
+        const shippedText = await shippedRow.textContent();
+        if (await shippedRow.isVisible() && shippedText && !shippedText.includes('暂无') && !shippedText.includes('No Data')) {
+            const link = shippedRow.locator('a').first();
+            if (await link.isVisible()) {
+                await link.click();
+            } else {
+                await shippedRow.click();
+            }
 
             // 查找入库/确认收货按钮
             const receiveBtn = page.getByRole('button', { name: /确认收货|入库/ });
@@ -148,16 +167,28 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
 
     test('应支持导出采购单 (PDF/图片)', async ({ page }) => {
         await page.goto('/supply-chain/purchase-orders');
-        const firstRow = page.locator('table tbody tr').first();
+        await page.waitForLoadState('networkidle');
 
-        if (await firstRow.isVisible()) {
-            await firstRow.locator('a').first().click();
+        const firstRow = page.locator('table tbody tr').first();
+        const rowText = await firstRow.textContent();
+
+        if (await firstRow.isVisible() && rowText && !rowText.includes('暂无') && !rowText.includes('No Data')) {
+            // 点击进入详情 (尝试点击链接，如果不行则点击整行)
+            const link = firstRow.locator('a').first();
+            if (await link.isVisible()) {
+                await link.click();
+            } else {
+                await firstRow.click();
+            }
+            await page.waitForURL(/\/supply-chain\/purchase-orders\/.+/);
 
             // 查找导出按钮
             const exportBtn = page.getByRole('button', { name: /导出|下载/ });
             if (await exportBtn.isVisible()) {
                 console.log('✅ 导出按钮可见');
             }
+        } else {
+            console.log('⚠️ 无采购单数据，跳过导出测试');
         }
     });
 });
@@ -261,8 +292,28 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
         await page.waitForLoadState('networkidle');
 
         const firstRow = page.locator('table tbody tr').first();
-        if (await firstRow.isVisible()) {
-            await firstRow.locator('a').first().click();
+        const hasRow = await firstRow.isVisible({ timeout: 5000 });
+
+        if (!hasRow) {
+            // 尝试创建供应商数据
+            console.log('ℹ️ 供应商列表为空，尝试创建测试数据...');
+            const { seedSuppliers } = await import('./fixtures/supplier-data-seed');
+            await seedSuppliers(page);
+            await page.goto('/supply-chain/suppliers');
+            await page.waitForLoadState('networkidle');
+        }
+
+        // 重新检查是否有数据
+        const rowAfterSeed = page.locator('table tbody tr').first();
+        if (!(await rowAfterSeed.isVisible({ timeout: 5000 }))) {
+            test.skip(true, '供应商列表为空且无法创建测试数据');
+            return;
+        }
+
+        // 点击进入详情页
+        const firstLink = rowAfterSeed.locator('a').first();
+        if (await firstLink.isVisible({ timeout: 3000 })) {
+            await firstLink.click();
             await page.waitForLoadState('networkidle');
 
             // 验证评价指标展示
@@ -270,11 +321,13 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
             const onTimeRate = page.getByText(/准时率|交期/);
             const qualityRate = page.getByText(/合格率|质量/);
 
-            if (await ratingSection.isVisible() || await onTimeRate.isVisible() || await qualityRate.isVisible()) {
+            if (await ratingSection.isVisible({ timeout: 5000 }) || await onTimeRate.isVisible({ timeout: 5000 }) || await qualityRate.isVisible({ timeout: 5000 })) {
                 console.log('✅ 供应商评价指标展示成功');
             } else {
                 console.log('⚠️ 供应商评价 UI 尚未实现');
             }
+        } else {
+            console.log('⚠️ 供应商行没有可点击的链接');
         }
     });
 
@@ -284,7 +337,7 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
 
         // 验证表格包含评分列
         const ratingColumn = page.locator('th').filter({ hasText: /评分|星级|等级/ });
-        if (await ratingColumn.isVisible()) {
+        if (await ratingColumn.isVisible({ timeout: 5000 })) {
             console.log('✅ 供应商评分列展示成功');
         } else {
             console.log('⚠️ 供应商评分列尚未添加');

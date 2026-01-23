@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { toast } from 'sonner';
 import { Loader2, Save } from 'lucide-react';
 
@@ -58,183 +58,170 @@ export function SystemParamsConfig({ initialValues }: SystemParamsConfigProps) {
     };
 
     return (
-        <div className="space-y-6">
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    {/* 报价设置卡片 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>报价设置</CardTitle>
-                            <CardDescription>配置报价单的默认参数</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="quoteValidityDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>报价有效期（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={365}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 30)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            新报价单的默认有效天数
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base">系统参数配置</CardTitle>
+                                <CardDescription className="text-xs">配置报价、提醒和排期参数</CardDescription>
+                            </div>
+                            <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? (
+                                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Save className="mr-1.5 h-3.5 w-3.5" />
                                 )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="quoteFollowupDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>跟进提醒（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={30}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 3)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            报价超过此天数未跟进则提醒
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
+                                保存配置
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {/* 报价设置 */}
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-medium text-muted-foreground">报价设置</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name="quoteValidityDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">报价有效期（天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={365}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 30)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="quoteFollowupDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">跟进提醒（天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={30}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 3)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
 
-                    {/* 提醒规则卡片 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>提醒规则</CardTitle>
-                            <CardDescription>配置系统自动提醒的触发条件</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="orderDeliveryReminderDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>发货提醒（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={30}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 3)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            订单预计发货前N天提醒
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="paymentDueReminderDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>回款提醒（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={30}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 1)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            应收到期前N天提醒
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
+                        {/* 提醒规则 */}
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-medium text-muted-foreground">提醒规则</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name="orderDeliveryReminderDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">发货提醒（天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={30}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 3)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="paymentDueReminderDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">回款提醒（天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={30}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
 
-                    {/* 服务排期卡片 */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>服务排期</CardTitle>
-                            <CardDescription>配置测量和安装服务的排期参数</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="measureScheduleBufferDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>测量预约缓冲（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                max={14}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 2)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            最早可预约测量时间（当前+N天）
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="installScheduleBufferDays"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>安装预约缓冲（天）</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                max={14}
-                                                {...field}
-                                                onChange={e => field.onChange(parseInt(e.target.value) || 3)}
-                                            />
-                                        </FormControl>
-                                        <FormDescription>
-                                            最早可预约安装时间（当前+N天）
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end">
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Save className="mr-2 h-4 w-4" />
-                            )}
-                            保存配置
-                        </Button>
-                    </div>
-                </form>
-            </Form>
-        </div>
+                        {/* 服务排期 */}
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-medium text-muted-foreground">服务排期</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name="measureScheduleBufferDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">最早可预约测量时间（当前+N天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={14}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 2)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="installScheduleBufferDays"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-sm">最早可预约安装时间（当前+N天）</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={14}
+                                                    className="h-9"
+                                                    {...field}
+                                                    onChange={e => field.onChange(parseInt(e.target.value) || 3)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </form>
+        </Form>
     );
 }
+

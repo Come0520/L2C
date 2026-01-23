@@ -3,6 +3,8 @@
 import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, users } from '@/shared/api/schema';
 import { eq, and, desc, or, ilike, count, gte, lte } from 'drizzle-orm';
+import { auth } from '@/shared/lib/auth';
+import { MEASURE_TASK_STATUS } from '../schemas';
 
 
 /**
@@ -37,6 +39,13 @@ export interface MeasureTaskQueryFilters {
  * - dateFrom/dateTo: 预约日期范围
  */
 export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
+    // 🔒 安全校验：强制租户隔离
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
     const {
         status,
         search,
@@ -51,12 +60,12 @@ export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
         dateTo,
     } = filters;
 
-    const whereConditions = [];
+    // 🔒 强制添加租户过滤条件
+    const whereConditions = [eq(measureTasks.tenantId, tenantId)];
 
-    // 状态筛选
-    if (status) {
-        // @ts-expect-error - 兼容枚举类型不匹配
-        whereConditions.push(eq(measureTasks.status, status));
+    // 状态筛选（使用枚举校验）
+    if (status && MEASURE_TASK_STATUS.includes(status as (typeof MEASURE_TASK_STATUS)[number])) {
+        whereConditions.push(eq(measureTasks.status, status as (typeof MEASURE_TASK_STATUS)[number]));
     }
 
     // 测量师筛选
@@ -77,10 +86,13 @@ export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
 
     // 通用搜索（测量单号、备注）
     if (search) {
-        whereConditions.push(or(
+        const searchCondition = or(
             ilike(measureTasks.measureNo, `%${search}%`),
             ilike(measureTasks.remark, `%${search}%`)
-        ));
+        );
+        if (searchCondition) {
+            whereConditions.push(searchCondition);
+        }
     }
 
     const whereClause = and(...whereConditions);
@@ -140,8 +152,18 @@ export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
  * 获取测量任务详情 (包含最新的测量单和明细)
  */
 export async function getMeasureTaskById(id: string) {
+    // 🔒 安全校验：强制租户隔离
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
     const task = await db.query.measureTasks.findFirst({
-        where: eq(measureTasks.id, id),
+        where: and(
+            eq(measureTasks.id, id),
+            eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
+        ),
         with: {
             assignedWorker: true,
             lead: true,
@@ -156,6 +178,10 @@ export async function getMeasureTaskById(id: string) {
         }
     });
 
+    if (!task) {
+        return { success: false, error: '任务不存在或无权访问' };
+    }
+
     return { success: true, data: task };
 }
 
@@ -163,9 +189,19 @@ export async function getMeasureTaskById(id: string) {
  * 获取可指派的测量师傅列表
  */
 export async function getAvailableWorkers() {
-    // 假设角色为 WORKER 的用户是测量师傅
+    // 🔒 安全校验：强制租户隔离
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
+    // 只返回当前租户的测量师傅（角色为 WORKER）
     const workers = await db.query.users.findMany({
-        where: eq(users.role, 'WORKER'),
+        where: and(
+            eq(users.role, 'WORKER'),
+            eq(users.tenantId, tenantId) // 🔒 强制租户过滤
+        ),
     });
     return { success: true, data: workers };
 }
@@ -174,6 +210,26 @@ export async function getAvailableWorkers() {
  * 获取测量任务的版本历史 (所有测量单)
  */
 export async function getMeasureTaskVersions(taskId: string) {
+    // 🔒 安全校验：强制租户隔离
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
+    // 先验证任务归属
+    const task = await db.query.measureTasks.findFirst({
+        where: and(
+            eq(measureTasks.id, taskId),
+            eq(measureTasks.tenantId, tenantId)
+        ),
+        columns: { id: true }
+    });
+
+    if (!task) {
+        return { success: false, error: '任务不存在或无权访问' };
+    }
+
     const sheets = await db.query.measureSheets.findMany({
         where: eq(measureSheets.taskId, taskId),
         with: {
@@ -188,8 +244,18 @@ export async function getMeasureTaskVersions(taskId: string) {
  * 检查测量任务的费用状态 (定金检查)
  */
 export async function checkMeasureFeeStatus(taskId: string) {
+    // 🔒 安全校验：强制租户隔离
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, error: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
     const task = await db.query.measureTasks.findFirst({
-        where: eq(measureTasks.id, taskId),
+        where: and(
+            eq(measureTasks.id, taskId),
+            eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
+        ),
         with: {
             customer: {
                 with: {
@@ -200,7 +266,7 @@ export async function checkMeasureFeeStatus(taskId: string) {
         }
     });
 
-    if (!task) return { success: false, error: 'Task not found' };
+    if (!task) return { success: false, error: '任务不存在或无权访问' };
 
     // 1. 检查是否获免
     if (task.isFeeExempt) {
@@ -213,18 +279,16 @@ export async function checkMeasureFeeStatus(taskId: string) {
     }
 
     // 2. 检查是否有已支付的定金订单
-    // TODO: Require 'type' field in orders schema to distinguish EARNEST_MONEY orders strictly.
-    // For now, checking for any PAID order with sufficient amount.
+    // TODO: 添加 orders.type 字段以严格区分定金订单
+    // 目前使用订单号前缀 'EM' 作为备选判断
     const earnestOrder = task.customer.orders.find(o =>
-        o.status === 'PAID' &&
-        // @ts-expect-error - Assuming 'type' might be added later or using naming convention logic if needed
-        (o['type'] === 'EARNEST_MONEY' || o.orderNo.startsWith('EM'))
+        o.status === 'PAID' && o.orderNo.startsWith('EM')
     );
 
     // 假设标准测量费 (未来应从配置读取)
     const STANDARD_MEASURE_FEE = 200;
 
-    // Fallback: If no strict earnest money order, check if ANY paid order covers the fee (loose check)
+    // Fallback: 检查是否有任意已支付订单覆盖测量费
     const hasSufficientPayment = (earnestOrder && Number(earnestOrder.totalAmount) >= STANDARD_MEASURE_FEE) ||
         task.customer.orders.some(o => o.status === 'PAID' && Number(o.totalAmount) >= STANDARD_MEASURE_FEE);
 

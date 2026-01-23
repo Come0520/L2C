@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './src/shared/api/schema';
+import * as schema from '../../src/shared/api/schema';
 import 'dotenv/config'; // Make sure to install dotenv or run with --env-file
 
 async function seed() {

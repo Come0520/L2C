@@ -10,6 +10,7 @@ import {
 } from '@/shared/api/schema/notifications';
 import { eq, and, sql, gte, lte, isNull, or, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getSetting } from "@/features/settings/actions/system-settings-actions";
 
 /**
  * 通知服务
@@ -77,7 +78,11 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
     const content = renderTemplate(template.contentTemplate, input.params);
 
     // 3. 获取发送渠道
-    const channels = input.channels || (template.channels as string[]) || ['IN_APP'];
+    let channels = input.channels || (template.channels as string[]);
+    if (!channels || channels.length === 0) {
+        const defaultChannels = await getSetting('NOTIFICATION_CHANNELS') as string[];
+        channels = defaultChannels || ['IN_APP'];
+    }
 
     // 4. 为每个渠道创建队列记录
     const queueItems = [];
@@ -196,7 +201,9 @@ export async function processNotificationQueue(batchSize: number = 50) {
             }
         } catch (error) {
             const retryCount = parseInt(item.retryCount || '0') + 1;
-            const maxRetries = parseInt(item.maxRetries || '3');
+            // 读取全局重试配置
+            const maxRetriesSetting = await getSetting('NOTIFICATION_RETRY_COUNT') as number;
+            const maxRetries = maxRetriesSetting || parseInt(item.maxRetries || '3');
 
             await db.update(notificationQueue)
                 .set({

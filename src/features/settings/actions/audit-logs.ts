@@ -23,14 +23,12 @@ const getAuditLogsSchema = z.object({
     search: z.string().optional(),
 });
 
-export const getAuditLogsAction = createSafeAction(getAuditLogsSchema, async (params, { session }) => {
-    // 只有管理员可以查看审计日志
+const getAuditLogsActionInternal = createSafeAction(getAuditLogsSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
 
     const { page, pageSize, tableName, action, userId, startDate, endDate, search } = params;
     const offset = (page - 1) * pageSize;
 
-    // 构建查询条件
     const conditions = [
         eq(auditLogs.tenantId, session.user.tenantId),
     ];
@@ -59,7 +57,6 @@ export const getAuditLogsAction = createSafeAction(getAuditLogsSchema, async (pa
         );
     }
 
-    // 查询日志
     const logs = await db
         .select({
             id: auditLogs.id,
@@ -80,24 +77,19 @@ export const getAuditLogsAction = createSafeAction(getAuditLogsSchema, async (pa
         .limit(pageSize)
         .offset(offset);
 
-    // 获取总数（简化版，实际可用 count）
     const total = logs.length < pageSize && page === 1 ? logs.length : pageSize * page + 1;
 
     return {
         logs,
-        pagination: {
-            page,
-            pageSize,
-            total,
-            hasMore: logs.length === pageSize,
-        }
+        pagination: { page, pageSize, total, hasMore: logs.length === pageSize }
     };
 });
 
-/**
- * 获取可用的表名列表（用于筛选）
- */
-export const getAuditTableNamesAction = createSafeAction(z.object({}), async (_, { session }) => {
+export async function getAuditLogsAction(params: z.infer<typeof getAuditLogsSchema>) {
+    return getAuditLogsActionInternal(params);
+}
+
+const getAuditTableNamesActionInternal = createSafeAction(z.object({}), async (_, { session }) => {
     await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
 
     const result = await db
@@ -108,3 +100,7 @@ export const getAuditTableNamesAction = createSafeAction(z.object({}), async (_,
 
     return result.map(r => r.tableName);
 });
+
+export async function getAuditTableNamesAction() {
+    return getAuditTableNamesActionInternal({});
+}

@@ -30,9 +30,17 @@ const envSchema = z.object({
     AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
     AUTH_URL: z.string().url().default('http://localhost:3000'),
 
-    // WeChat
-    WX_APPID: z.string().optional(),
-    WX_APPSECRET: z.string().optional(),
+    // WeChat Mini Program (小程序)
+    WX_APPID: z.string().optional(),           // 小程序 AppID
+    WX_APPSECRET: z.string().optional(),       // 小程序 AppSecret
+    WECHAT_MINI_APPID: z.string().optional(),  // 兼容旧字段
+    WECHAT_MINI_SECRET: z.string().optional(), // 兼容旧字段
+
+    // WeChat Mini Program 订阅消息模板
+    WECHAT_TEMPLATE_TENANT_APPROVED: z.string().optional(),   // 租户审批通过模板
+    WECHAT_TEMPLATE_TENANT_REJECTED: z.string().optional(),   // 租户审批拒绝模板
+    WECHAT_TEMPLATE_ORDER_STATUS: z.string().optional(),      // 订单状态变更模板
+    WECHAT_TEMPLATE_TASK_ASSIGN: z.string().optional(),       // 任务分配模板
 });
 
 const processEnv = {
@@ -54,6 +62,12 @@ const processEnv = {
     AUTH_URL: process.env.AUTH_URL,
     WX_APPID: process.env.WX_APPID,
     WX_APPSECRET: process.env.WX_APPSECRET,
+    WECHAT_MINI_APPID: process.env.WECHAT_MINI_APPID,
+    WECHAT_MINI_SECRET: process.env.WECHAT_MINI_SECRET,
+    WECHAT_TEMPLATE_TENANT_APPROVED: process.env.WECHAT_TEMPLATE_TENANT_APPROVED,
+    WECHAT_TEMPLATE_TENANT_REJECTED: process.env.WECHAT_TEMPLATE_TENANT_REJECTED,
+    WECHAT_TEMPLATE_ORDER_STATUS: process.env.WECHAT_TEMPLATE_ORDER_STATUS,
+    WECHAT_TEMPLATE_TASK_ASSIGN: process.env.WECHAT_TEMPLATE_TASK_ASSIGN,
 };
 
 // Validate environment variables

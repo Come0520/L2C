@@ -25,7 +25,7 @@ services:
       - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
       - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
     networks:
       - l2c-network
@@ -35,48 +35,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # PgBouncer 连接池
-  pgbouncer:
-    image: edoburu/pgbouncer:latest
-    container_name: l2c-pgbouncer
-    restart: unless-stopped
-    ports:
-      - "6432:5432"
-    environment:
-      # 数据库连接 (分离配置避免特殊字符问题)
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:-l2c_user}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB:-l2c}
-
-      # 连接池配置 (Transaction 模式)
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 200
-      DEFAULT_POOL_SIZE: 20
-      MIN_POOL_SIZE: 5
-      RESERVE_POOL_SIZE: 5
-      RESERVE_POOL_TIMEOUT: 3
-      MAX_DB_CONNECTIONS: 30
-      MAX_USER_CONNECTIONS: 30
-
-      # 连接生命周期
-      SERVER_IDLE_TIMEOUT: 600
-      SERVER_LIFETIME: 3600
-
-      # 认证
-      AUTH_TYPE: scram-sha-256
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-h", "localhost", "-p", "5432" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - l2c-network
 
   # PostgreSQL 数据库
   postgres:

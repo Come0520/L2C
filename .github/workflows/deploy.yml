@@ -14,22 +14,33 @@ jobs:
           host: ${{ secrets.ECS_HOST }}
           username: root
           key: ${{ secrets.ECS_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          # Use ssh-keyscan to auto-accept the host key (insecure but practical for this setup)
+          # OR use the action's built-in way if available, but manual pre-script is safer
+          envs: ECS_HOST
           script: |
-            cd /opt/L2C
+            set -e  # Stop on error
+            echo "Starting deployment script..."
             
-            # --- Ensure Git Repository Exists ---
+            cd /opt/L2C || { echo "Directory /opt/L2C does not exist"; exit 1; }
+            echo "Current directory: $(pwd)"
+            
+            # --- Ensure Git Repository Exists & Clean ---
             if [ ! -d ".git" ]; then
                 echo "Initializing Git repository..."
                 git init
                 git remote add origin https://github.com/Come0520/L2C.git
-                git fetch origin
-                git reset --hard origin/main
             fi
             
-            # --- Pull Latest Code ---
-            echo "Pulling latest code..."
-            git reset --hard
-            git pull origin main
+            echo "Fetching latest code..."
+            # Force HTTPS to avoid git-ssh issues on ECS itself
+            git remote set-url origin https://github.com/Come0520/L2C.git
+            git fetch --all
+            
+            echo "Resetting to origin/main..."
+            git reset --hard origin/main
+            git clean -fd
             
             # --- Rebuild & Restart ---
             echo "Rebuilding containers..."

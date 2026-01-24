@@ -1,132 +1,201 @@
 <!--pages/register/register.wxml-->
 <view class="container">
-  <view class="card">
-    <view class="title">企业入驻申请</view>
-    <view class="subtitle">填写以下信息申请开通 L2C 销售管理系统</view>
-
-    <form bindsubmit="onSubmit">
-      <!-- 企业名称 -->
-      <view class="form-group">
-        <text class="form-label">企业名称 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="companyName"
-          placeholder="请输入企业全称"
-          value="{{form.companyName}}"
-          bindinput="onInput"
-          data-field="companyName"
-        />
-      </view>
-
-      <!-- 联系人 -->
-      <view class="form-group">
-        <text class="form-label">联系人 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="applicantName"
-          placeholder="您的姓名"
-          value="{{form.applicantName}}"
-          bindinput="onInput"
-          data-field="applicantName"
-        />
-      </view>
-
-      <!-- 手机号 -->
-      <view class="form-group">
-        <text class="form-label">手机号 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="phone"
-          type="number"
-          placeholder="11位手机号"
-          maxlength="11"
-          value="{{form.phone}}"
-          bindinput="onInput"
-          data-field="phone"
-        />
-      </view>
-
-      <!-- 邮箱 -->
-      <view class="form-group">
-        <text class="form-label">邮箱 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="email"
-          placeholder="用于接收通知"
-          value="{{form.email}}"
-          bindinput="onInput"
-          data-field="email"
-        />
-      </view>
-
-      <!-- 地区 -->
-      <view class="form-group">
-        <text class="form-label">地区 <text class="required">*</text></text>
-        <picker mode="region" bindchange="onRegionChange" value="{{regionValue}}">
-          <view class="form-input picker-input {{form.region ? '' : 'placeholder'}}">
-            {{form.region || '请选择省市区'}}
-          </view>
-        </picker>
-      </view>
-
-      <!-- 密码 -->
-      <view class="form-group">
-        <text class="form-label">设置密码 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="password"
-          type="text"
-          password="{{true}}"
-          placeholder="至少6位"
-          value="{{form.password}}"
-          bindinput="onInput"
-          data-field="password"
-        />
-      </view>
-
-      <!-- 确认密码 -->
-      <view class="form-group">
-        <text class="form-label">确认密码 <text class="required">*</text></text>
-        <input 
-          class="form-input" 
-          name="confirmPassword"
-          type="text"
-          password="{{true}}"
-          placeholder="再次输入密码"
-          value="{{form.confirmPassword}}"
-          bindinput="onInput"
-          data-field="confirmPassword"
-        />
-      </view>
-
-      <!-- 业务简介 -->
-      <view class="form-group">
-        <text class="form-label">业务简介 <text class="optional">(选填)</text></text>
-        <textarea 
-          class="form-textarea" 
-          name="businessDescription"
-          placeholder="请简要介绍您的主营业务..."
-          maxlength="500"
-          value="{{form.businessDescription}}"
-          bindinput="onInput"
-          data-field="businessDescription"
-        />
-      </view>
-
-      <!-- 提交按钮 -->
-      <button 
-        class="btn btn-primary mt-32" 
-        form-type="submit"
-        loading="{{submitting}}"
-        disabled="{{submitting}}"
-      >
-        提交入驻申请
-      </button>
-    </form>
-
-    <!-- 返回登录 -->
-    <view class="back-link mt-32" bindtap="goBack">
-      已有账号？返回登录
-    </view>
+  <!-- 液态流体背景 -->
+  <view class="liquid-bg">
+    <view class="blob blob-1"></view>
+    <view class="blob blob-2"></view>
+    <view class="blob blob-3"></view>
+    <view class="noise-overlay"></view>
   </view>
+
+  <scroll-view class="content-wrapper" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <!-- 页面标题 -->
+    <view class="page-header animate-fade-in">
+      <view class="header-icon">🏢</view>
+      <view class="header-title">企业入驻申请</view>
+      <view class="header-desc">填写以下信息，开通 L2C 销售管理系统</view>
+    </view>
+
+    <!-- 表单卡片 -->
+    <view class="glass-card form-card animate-slide-up">
+      <form bindsubmit="onSubmit">
+        <!-- 企业名称 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">企业名称</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="companyName"
+              placeholder="请输入企业全称"
+              placeholder-class="input-placeholder"
+              value="{{form.companyName}}"
+              bindinput="onInput"
+              data-field="companyName"
+            />
+          </view>
+        </view>
+
+        <!-- 联系人 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">联系人</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="applicantName"
+              placeholder="您的姓名"
+              placeholder-class="input-placeholder"
+              value="{{form.applicantName}}"
+              bindinput="onInput"
+              data-field="applicantName"
+            />
+          </view>
+        </view>
+
+        <!-- 手机号 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">手机号</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="phone"
+              type="number"
+              placeholder="11位手机号"
+              placeholder-class="input-placeholder"
+              maxlength="11"
+              value="{{form.phone}}"
+              bindinput="onInput"
+              data-field="phone"
+            />
+          </view>
+        </view>
+
+        <!-- 邮箱 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">邮箱</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="email"
+              placeholder="用于接收通知"
+              placeholder-class="input-placeholder"
+              value="{{form.email}}"
+              bindinput="onInput"
+              data-field="email"
+            />
+          </view>
+        </view>
+
+        <!-- 地区 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">地区</text>
+            <text class="required">*</text>
+          </view>
+          <picker mode="region" bindchange="onRegionChange" value="{{regionValue}}">
+            <view class="input-wrapper picker-wrapper">
+              <view class="glass-input picker-value {{form.region ? '' : 'placeholder'}}">
+                {{form.region || '请选择省市区'}}
+              </view>
+              <text class="picker-arrow">▼</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 密码 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">设置密码</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="password"
+              type="text"
+              password="{{true}}"
+              placeholder="至少6位"
+              placeholder-class="input-placeholder"
+              value="{{form.password}}"
+              bindinput="onInput"
+              data-field="password"
+            />
+          </view>
+        </view>
+
+        <!-- 确认密码 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">确认密码</text>
+            <text class="required">*</text>
+          </view>
+          <view class="input-wrapper">
+            <input 
+              class="glass-input" 
+              name="confirmPassword"
+              type="text"
+              password="{{true}}"
+              placeholder="再次输入密码"
+              placeholder-class="input-placeholder"
+              value="{{form.confirmPassword}}"
+              bindinput="onInput"
+              data-field="confirmPassword"
+            />
+          </view>
+        </view>
+
+        <!-- 业务简介 -->
+        <view class="form-group">
+          <view class="form-label">
+            <text class="label-text">业务简介</text>
+            <text class="optional">(选填)</text>
+          </view>
+          <view class="input-wrapper textarea-wrapper">
+            <textarea 
+              class="glass-textarea" 
+              name="businessDescription"
+              placeholder="请简要介绍您的主营业务..."
+              placeholder-class="input-placeholder"
+              maxlength="500"
+              value="{{form.businessDescription}}"
+              bindinput="onInput"
+              data-field="businessDescription"
+            />
+          </view>
+        </view>
+
+        <!-- 提交按钮 -->
+        <button 
+          class="submit-btn" 
+          form-type="submit"
+          loading="{{submitting}}"
+          disabled="{{submitting}}"
+          hover-class="submit-btn-hover"
+        >
+          <text wx:if="{{!submitting}}">提交入驻申请</text>
+          <text wx:else>提交中...</text>
+        </button>
+      </form>
+
+      <!-- 返回登录 -->
+      <view class="back-link" bindtap="goBack">
+        <text class="back-text">已有账号？</text>
+        <text class="back-action">返回登录 →</text>
+      </view>
+    </view>
+
+    <!-- 底部留白 -->
+    <view class="footer-space"></view>
+  </scroll-view>
 </view>

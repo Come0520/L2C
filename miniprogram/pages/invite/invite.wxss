@@ -1,95 +1,350 @@
 /* pages/invite/invite.wxss */
 
+/* 容器与背景 */
+.container {
+  min-height: 100vh;
+  position: relative;
+  background-color: #f8fafc;
+  overflow: hidden;
+  color: #0f172a;
+}
+
+/* 液态流体背景 */
+.liquid-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  opacity: 0.6;
+  border-radius: 50%;
+  animation: float 15s infinite ease-in-out;
+  mix-blend-mode: multiply;
+}
+
+.blob-1 {
+  width: 400rpx;
+  height: 400rpx;
+  background: #c7d2fe;
+  top: 10%;
+  right: -10%;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 350rpx;
+  height: 350rpx;
+  background: #bbf7d0; /* Green 200 */
+  bottom: 20%;
+  left: -5%;
+  animation-delay: -3s;
+}
+
+.blob-3 {
+  width: 300rpx;
+  height: 300rpx;
+  background: #bfdbfe;
+  top: 40%;
+  left: 30%;
+  animation-delay: -6s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.1); }
+  66% { transform: translate(-20px, 30px) scale(0.9); }
+}
+
+.noise-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* 内容布局 */
+.content-wrapper {
+  position: relative;
+  z-index: 10;
+  height: 100vh;
+  padding: 40rpx 32rpx;
+  box-sizing: border-box;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(30rpx);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes slideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 玻璃卡片 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 32rpx;
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.2);
+  margin-bottom: 32rpx;
+  overflow: hidden;
+}
+
+/* 卡片标题 */
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.header-icon-box {
+  width: 80rpx;
+  height: 80rpx;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+}
+
+.header-icon { font-size: 40rpx; }
+
 .section-title {
   font-size: 34rpx;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4rpx;
 }
 
 .section-desc {
   font-size: 26rpx;
-  color: var(--text-secondary);
-  margin-top: 8rpx;
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.picker-input {
+/* 头部样式 */
+.invite-card {
+  padding: 40rpx;
+}
+
+/* 表单组件 */
+.form-group {
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 16rpx;
+}
+
+.picker-wrapper {
+  position: relative;
+}
+
+.glass-input {
+  width: 100%;
+  height: 96rpx;
+  padding: 0 28rpx;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  color: #fff;
+  font-size: 30rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.glass-input:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.glass-input.placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .picker-arrow {
-  color: var(--text-muted);
-  font-size: 24rpx;
+  position: absolute;
+  right: 28rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
 }
+
+/* 按钮 */
+.primary-btn {
+  width: 100%;
+  height: 96rpx;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  box-shadow: 0 8rpx 20rpx rgba(16, 185, 129, 0.3);
+  margin-bottom: 32rpx;
+}
+
+.outline-btn {
+  width: 100%;
+  height: 96rpx;
+  background: transparent;
+  border: 2rpx solid rgba(255,255,255,0.2);
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 30rpx;
+}
+
+.btn-hover { transform: scale(0.98); opacity: 0.9; }
 
 /* 二维码区域 */
 .qrcode-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40rpx 0;
+  padding-top: 24rpx;
+  border-top: 1rpx solid rgba(255,255,255,0.1);
+}
+
+.qrcode-box {
+  padding: 16rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+  overflow: hidden;
 }
 
 .qrcode {
-  width: 400rpx;
-  height: 400rpx;
-  border-radius: 16rpx;
-  border: 2rpx solid var(--border-color);
+  width: 360rpx;
+  height: 360rpx;
+  display: block;
 }
 
 .qrcode-tip {
   font-size: 24rpx;
-  color: var(--text-muted);
-  margin-top: 20rpx;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 24rpx;
 }
 
-.invite-link-box {
+.link-box {
   display: flex;
   align-items: center;
-  background: #f3f4f6;
-  border-radius: 8rpx;
-  padding: 16rpx 20rpx;
-  margin-top: 24rpx;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
   width: 100%;
   box-sizing: border-box;
+  margin-bottom: 20rpx;
 }
 
-.invite-link {
+.link-text {
   flex: 1;
   font-size: 24rpx;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: monospace;
 }
 
-.copy-btn {
+.copy-tag {
+  font-size: 22rpx;
+  color: #34d399;
+  border: 1rpx solid #34d399;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
   margin-left: 16rpx;
-  font-size: 24rpx;
 }
 
 .expire-tip {
-  font-size: 24rpx;
-  color: var(--warning-color);
-  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  font-size: 22rpx;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
 }
 
-/* 邀请列表 */
+.expire-icon { margin-right: 8rpx; }
+
+/* 列表样式 */
+.list-card {
+  padding: 0;
+}
+
+.list-header {
+  padding: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1rpx solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02);
+}
+
+.list-count {
+  font-size: 24rpx;
+  background: rgba(255,255,255,0.15);
+  padding: 2rpx 16rpx;
+  border-radius: 20rpx;
+}
+
 .invite-list {
-  margin-top: 20rpx;
+  padding: 0 32rpx;
 }
 
 .invite-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid var(--border-color);
+  border-bottom: 1rpx solid rgba(255,255,255,0.05);
 }
 
-.invite-item:last-child {
-  border-bottom: none;
+.invite-item:last-child { border-bottom: none; }
+
+.avatar-placeholder {
+  width: 80rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-right: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.2);
 }
 
 .invite-info {
@@ -98,42 +353,71 @@
 
 .invite-name {
   font-size: 30rpx;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.invite-role-tag {
+  display: inline-block;
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.1);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
 }
 
 .invite-meta {
-  display: flex;
-  align-items: center;
-  margin-top: 8rpx;
-}
-
-.invite-role {
-  font-size: 24rpx;
-  color: var(--text-secondary);
-  background: #f3f4f6;
-  padding: 4rpx 12rpx;
-  border-radius: 8rpx;
-  margin-right: 16rpx;
+  text-align: right;
 }
 
 .invite-time {
-  font-size: 24rpx;
-  color: var(--text-muted);
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 8rpx;
 }
 
 .invite-status {
-  font-size: 24rpx;
-  padding: 8rpx 16rpx;
-  border-radius: 16rpx;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  display: inline-block;
 }
 
-.badge-success {
-  background: #dcfce7;
-  color: #16a34a;
+.badge-success { color: #86efac; background: rgba(34, 197, 94, 0.2); }
+.badge-pending { color: #fcd34d; background: rgba(245, 158, 11, 0.2); }
+
+/* 空状态 */
+.empty-card {
+  padding: 60rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.badge-pending {
-  background: #fef3c7;
-  color: #d97706;
+.empty-icon-box {
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.empty-icon { font-size: 60rpx; }
+.empty-icon.small { font-size: 48rpx; }
+
+.empty-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.5;
 }

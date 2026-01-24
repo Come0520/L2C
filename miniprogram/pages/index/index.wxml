@@ -1,95 +1,123 @@
 <!--pages/index/index.wxml-->
 <view class="container">
-  <!-- 顶部 Logo 区域 -->
-  <view class="header">
-    <view class="logo-wrapper">
-      <image class="logo" src="/assets/logo.png" mode="aspectFit" />
-      <view class="app-name">L2C 销售管理</view>
-    </view>
-    <view class="app-desc">企业销售数字化解决方案</view>
+  <!-- 液态流体背景 -->
+  <view class="liquid-bg">
+    <view class="blob blob-1"></view>
+    <view class="blob blob-2"></view>
+    <view class="blob blob-3"></view>
+    <!-- 噪点纹理叠加 -->
+    <view class="noise-overlay"></view>
   </view>
 
-  <!-- 未登录状态 -->
-  <view wx:if="{{!isLoggedIn}}" class="login-section">
-    <view class="card">
-      <view class="title">欢迎使用 L2C</view>
-      <view class="subtitle">请先登录以使用全部功能</view>
-      
+  <view class="content-wrapper">
+    <!-- 顶部欢迎区 -->
+    <view class="header animate-fade-in-down">
+      <view class="logo-box">
+        <image class="logo" src="/assets/logo.png" mode="aspectFit" />
+        <view class="logo-text">
+          <view class="app-name">L2C</view>
+          <view class="app-tag">PRO</view>
+        </view>
+      </view>
+      <view class="header-slogan">
+        <text class="slogan-main">重新定义</text>
+        <text class="slogan-sub">销售管理新体验</text>
+      </view>
+    </view>
+
+    <!-- 登录卡片 (Glassmorphism) -->
+    <view wx:if="{{!isLoggedIn}}" class="glass-card login-card animate-slide-up">
+      <view class="welcome-box">
+        <view class="welcome-title">欢迎归来</view>
+        <view class="welcome-desc">登录以访问您的企业工作台</view>
+      </view>
+
       <button 
-        class="btn btn-primary" 
+        class="login-btn" 
         open-type="getPhoneNumber" 
         bindgetphonenumber="onGetPhoneNumber"
         loading="{{loading}}"
+        hover-class="login-btn-hover"
       >
-        <text class="btn-icon">📱</text>
-        微信一键登录
+        <view class="btn-inner">
+          <view class="icon-wechat"></view>
+          <text>微信一键登录</text>
+        </view>
+        <view class="btn-glow"></view>
       </button>
-      
-      <view class="divider"></view>
-      
-      <view class="register-tip">
-        还没有账号？
-        <text class="link" bindtap="goToRegister">申请企业入驻</text>
+
+      <view class="footer-actions">
+        <text class="action-text">还没有账号？</text>
+        <view class="action-link" bindtap="goToRegister">
+          申请入驻 <text class="arrow">→</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 用户仪表盘 (Glassmorphism) -->
+    <view wx:else class="dashboard animate-slide-up">
+      <!-- 用户信息卡片 -->
+      <view class="glass-card user-card">
+        <view class="user-profile">
+          <view class="avatar-ring">
+            <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+          </view>
+          <view class="user-meta">
+            <view class="user-name">{{userInfo.name || '用户'}}</view>
+            <view class="tenant-tag {{tenantStatus === 'active' ? 'active' : ''}}">
+              {{userInfo.tenantName || '未绑定企业'}}
+            </view>
+          </view>
+          <view class="status-indicator {{statusClass}}">
+            <text>{{statusText}}</text>
+          </view>
+        </view>
+
+        <!-- 状态提醒 -->
+        <view wx:if="{{tenantStatus === 'pending_approval'}}" class="status-alert warning">
+          <view class="alert-icon">⏳</view>
+          <text>企业入驻申请审核中</text>
+        </view>
+        <view wx:elif="{{tenantStatus === 'rejected'}}" class="status-alert error">
+          <view class="alert-icon">⚠️</view>
+          <text>审核未通过: {{rejectReason}}</text>
+        </view>
+      </view>
+
+      <!-- 功能菜单 (Grid) -->
+      <view class="menu-grid">
+        <view class="glass-card menu-item" bindtap="goToStatus" hover-class="card-hover">
+          <view class="menu-icon-box blue">
+            <text class="menu-icon">📋</text>
+          </view>
+          <text class="menu-label">审批进度</text>
+        </view>
+
+        <view class="glass-card menu-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}" hover-class="card-hover">
+          <view class="menu-icon-box green">
+            <text class="menu-icon">👥</text>
+          </view>
+          <text class="menu-label">邀请员工</text>
+        </view>
+
+        <view class="glass-card menu-item" bindtap="openNotification" hover-class="card-hover">
+          <view class="menu-icon-box purple">
+            <text class="menu-icon">🔔</text>
+          </view>
+          <text class="menu-label">消息订阅</text>
+        </view>
+
+        <view class="glass-card menu-item" bindtap="logout" hover-class="card-hover">
+          <view class="menu-icon-box orange">
+            <text class="menu-icon">🚪</text>
+          </view>
+          <text class="menu-label">退出登录</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 已登录状态 -->
-  <view wx:else class="user-section">
-    <!-- 用户信息卡片 -->
-    <view class="card user-card">
-      <view class="user-header">
-        <view class="avatar-wrapper">
-          <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
-        </view>
-        <view class="user-info">
-          <view class="user-name">{{userInfo.name || '用户'}}</view>
-          <view class="tenant-name">{{userInfo.tenantName || '未绑定企业'}}</view>
-        </view>
-        <view class="status-badge badge-{{statusClass}}">{{statusText}}</view>
-      </view>
-    </view>
-
-    <!-- 快捷入口 -->
-    <view class="quick-actions">
-      <view class="action-item" bindtap="goToStatus">
-        <view class="action-icon">📋</view>
-        <view class="action-text">审批状态</view>
-      </view>
-      <view class="action-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}">
-        <view class="action-icon">👥</view>
-        <view class="action-text">邀请员工</view>
-      </view>
-      <view class="action-item" bindtap="openNotification">
-        <view class="action-icon">🔔</view>
-        <view class="action-text">消息订阅</view>
-      </view>
-      <view class="action-item" bindtap="logout">
-        <view class="action-icon">🚪</view>
-        <view class="action-text">退出登录</view>
-      </view>
-    </view>
-
-    <!-- 提示信息 -->
-    <view wx:if="{{tenantStatus === 'pending_approval'}}" class="notification-card card">
-      <view class="notification-icon">⏳</view>
-      <view class="notification-content">
-        <view class="notification-title">审批中</view>
-        <view class="notification-desc">您的企业入驻申请正在审核中，请耐心等待</view>
-      </view>
-    </view>
-
-    <view wx:if="{{tenantStatus === 'rejected'}}" class="notification-card card error">
-      <view class="notification-icon">❌</view>
-      <view class="notification-content">
-        <view class="notification-title">审批未通过</view>
-        <view class="notification-desc">{{rejectReason || '请联系客服了解详情'}}</view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 底部版权 -->
-  <view class="footer">
-    <text>© 2026 L2C Sales Management System</text>
+  <view class="copyright">
+    L2C Sales Management System v1.0
   </view>
 </view>

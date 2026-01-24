@@ -56,6 +56,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
+# Enable Pnpm and Tsx capability for runtime scripts
+ENV PNPM_HOME="/app/.pnpm"
+ENV PATH="/app/.local/bin:$PNPM_HOME:$PATH"
+RUN corepack enable pnpm
 
 USER nextjs
 

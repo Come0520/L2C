@@ -8,7 +8,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync files to ECS via Rsync
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: root
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: "."
+          target: "/opt/L2C"
+          strip_components: 0
+          
+      - name: Restart Application via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.ECS_HOST }}
@@ -16,34 +29,8 @@ jobs:
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
           command_timeout: 30m
-          # Use ssh-keyscan to auto-accept the host key (insecure but practical for this setup)
-          # OR use the action's built-in way if available, but manual pre-script is safer
-          envs: ECS_HOST
           script: |
-            set -e  # Stop on error
-            echo "Starting deployment script..."
-            
-            cd /opt/L2C || { echo "Directory /opt/L2C does not exist"; exit 1; }
-            echo "Current directory: $(pwd)"
-            
-            # --- Ensure Git Repository Exists & Clean ---
-            # Fix GnuTLS recv error (-110)
-            git config --global http.postBuffer 524288000
-            
-            if [ ! -d ".git" ]; then
-                echo "Initializing Git repository..."
-                git init
-                git remote add origin https://github.com/Come0520/L2C.git
-            fi
-            
-            echo "Fetching latest code..."
-            # Force HTTPS to avoid git-ssh issues on ECS itself
-            git remote set-url origin https://github.com/Come0520/L2C.git
-            git fetch --all
-            
-            echo "Resetting to origin/main..."
-            git reset --hard origin/main
-            git clean -fd
+            cd /opt/L2C
             
             # --- Rebuild & Restart ---
             echo "Rebuilding containers..."

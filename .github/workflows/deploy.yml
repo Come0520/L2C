@@ -27,6 +27,9 @@ jobs:
             echo "Current directory: $(pwd)"
             
             # --- Ensure Git Repository Exists & Clean ---
+            # Fix GnuTLS recv error (-110)
+            git config --global http.postBuffer 524288000
+            
             if [ ! -d ".git" ]; then
                 echo "Initializing Git repository..."
                 git init

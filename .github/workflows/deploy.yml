@@ -1,0 +1,44 @@
+name: Deploy to Aliyun ECS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: root
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /opt/L2C
+            
+            # --- Ensure Git Repository Exists ---
+            if [ ! -d ".git" ]; then
+                echo "Initializing Git repository..."
+                git init
+                git remote add origin https://github.com/Come0520/L2C.git
+                git fetch origin
+                git reset --hard origin/main
+            fi
+            
+            # --- Pull Latest Code ---
+            echo "Pulling latest code..."
+            git reset --hard
+            git pull origin main
+            
+            # --- Rebuild & Restart ---
+            echo "Rebuilding containers..."
+            # Force rebuild to pick up new dependencies
+            docker-compose -f docker-compose.prod.yml build --no-cache
+            
+            echo "Restarting services..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # --- Cleanup ---
+            echo "Cleaning up..."
+            docker image prune -f

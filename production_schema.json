@@ -1,0 +1,794 @@
+{
+  "tables": {
+    "tenants": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "code": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "logo_url": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "status": {
+          "type": "tenant_status",
+          "nullable": "NO",
+          "default": "'active'::tenant_status"
+        },
+        "applicant_name": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "applicant_phone": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "applicant_email": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "region": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "business_description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "reviewed_by": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "reviewed_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": null
+        },
+        "reject_reason": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "settings": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "users": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "email": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "phone": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "password_hash": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "role": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": "'USER'::character varying"
+        },
+        "permissions": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'[]'::jsonb"
+        },
+        "wechat_openid": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "preferences": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "dashboard_config": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "avatar_url": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "notification_settings": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "is_platform_admin": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "false"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "sys_dictionaries": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "category": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "key": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "value": {
+          "type": "text",
+          "nullable": "NO",
+          "default": null
+        },
+        "label": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "roles": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "code": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "permissions": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'[]'::jsonb"
+        },
+        "is_system": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "false"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "market_channels": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "parent_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "level": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "1"
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "auto_assign_sales_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "distribution_rule_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "allow_duplicate_leads": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "false"
+        },
+        "url_params_config": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": null
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "product_attribute_templates": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "category": {
+          "type": "product_category",
+          "nullable": "NO",
+          "default": null
+        },
+        "template_schema": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "product_templates": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "category": {
+          "type": "product_category",
+          "nullable": "NO",
+          "default": null
+        },
+        "description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "unit_price": {
+          "type": "numeric",
+          "nullable": "NO",
+          "default": "0"
+        },
+        "default_width": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": null
+        },
+        "default_fold_ratio": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": null
+        },
+        "tags": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'[]'::jsonb"
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "products": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "sku": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "category": {
+          "type": "product_category",
+          "nullable": "NO",
+          "default": null
+        },
+        "unit_price": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "unit": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": "'件'::character varying"
+        },
+        "purchase_price": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "logistics_cost": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "processing_cost": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "loss_rate": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0.0500"
+        },
+        "retail_price": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "channel_price_mode": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": "'FIXED'::character varying"
+        },
+        "channel_price": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "channel_discount_rate": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "1.0000"
+        },
+        "floor_price": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "is_tob_enabled": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "is_toc_enabled": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "default_supplier_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "is_stockable": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "false"
+        },
+        "description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "specs": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "true"
+        },
+        "created_by": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        }
+      }
+    },
+    "customers": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "customer_no": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "type": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": "'INDIVIDUAL'::character varying"
+        },
+        "phone": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "phone_secondary": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "wechat": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "gender": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "birthday": {
+          "type": "timestamp",
+          "nullable": "YES",
+          "default": null
+        },
+        "level": {
+          "type": "customer_level",
+          "nullable": "YES",
+          "default": "'D'::customer_level"
+        },
+        "lifecycle_stage": {
+          "type": "customer_lifecycle_stage",
+          "nullable": "NO",
+          "default": "'LEAD'::customer_lifecycle_stage"
+        },
+        "pipeline_status": {
+          "type": "customer_pipeline_status",
+          "nullable": "NO",
+          "default": "'UNASSIGNED'::customer_pipeline_status"
+        },
+        "referrer_customer_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "source_lead_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "loyalty_points": {
+          "type": "int4",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "referral_code": {
+          "type": "varchar",
+          "nullable": "YES",
+          "default": null
+        },
+        "total_orders": {
+          "type": "int4",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "total_amount": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "avg_order_amount": {
+          "type": "numeric",
+          "nullable": "YES",
+          "default": "0"
+        },
+        "first_order_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": null
+        },
+        "last_order_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": null
+        },
+        "preferences": {
+          "type": "jsonb",
+          "nullable": "YES",
+          "default": "'{}'::jsonb"
+        },
+        "notes": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "tags": {
+          "type": "_text",
+          "nullable": "YES",
+          "default": "'{}'::text[]"
+        },
+        "is_merged": {
+          "type": "bool",
+          "nullable": "YES",
+          "default": "false"
+        },
+        "merged_from": {
+          "type": "_uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "assigned_sales_id": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "created_by": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "deleted_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": null
+        }
+      }
+    },
+    "system_settings": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "type": "uuid",
+          "nullable": "NO",
+          "default": null
+        },
+        "category": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "key": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "value": {
+          "type": "text",
+          "nullable": "NO",
+          "default": null
+        },
+        "value_type": {
+          "type": "varchar",
+          "nullable": "NO",
+          "default": null
+        },
+        "description": {
+          "type": "text",
+          "nullable": "YES",
+          "default": null
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "nullable": "YES",
+          "default": "now()"
+        },
+        "updated_by": {
+          "type": "uuid",
+          "nullable": "YES",
+          "default": null
+        }
+      }
+    }
+  }
+}

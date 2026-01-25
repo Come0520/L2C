@@ -1,0 +1,148 @@
+/* pages/landing/landing.wxss */
+
+/* Art Deco Theme - Precision Edition */
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--obsidian-black);
+  position: relative;
+  overflow: hidden;
+  /* 放射状背景 - 模拟盖茨比派对光束 */
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      rgba(212, 175, 55, 0.05) 0,
+      rgba(212, 175, 55, 0.05) 1px,
+      transparent 1px,
+      transparent 20px
+    ),
+    radial-gradient(circle at 50% 30%, #1a1a1a 0%, #000000 100%);
+}
+
+.hero-swiper {
+  height: 50vh;
+  width: 100%;
+  margin-top: 60rpx;
+  position: relative;
+}
+
+/* 装饰边框 - Swiper 周围 */
+.hero-swiper::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 10%; right: 10%;
+    height: 2rpx;
+    background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+}
+
+.slide {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 标题 - 装饰艺术风格 */
+.slide-title {
+    font-size: 80rpx;
+    font-weight: 900;
+    margin-bottom: 32rpx;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 8rpx;
+    /* 内发光效果 */
+    text-shadow: 
+        0 0 10rpx rgba(212, 175, 55, 0.5),
+        0 0 20rpx rgba(212, 175, 55, 0.3);
+    position: relative;
+    padding: 0 40rpx;
+    border-bottom: 4rpx double var(--gold-dark);
+}
+
+.slide-subtitle {
+    font-size: 32rpx;
+    color: var(--text-muted);
+    letter-spacing: 6rpx;
+    text-transform: uppercase;
+    border-top: 1rpx solid var(--gold-dark);
+    padding-top: 12rpx;
+    margin-top: 12rpx;
+}
+
+.intro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+
+.intro-text-row {
+    font-size: 36rpx;
+    color: var(--text-main);
+    line-height: 2;
+    font-weight: 300;
+    letter-spacing: 4rpx;
+}
+
+.intro-highlight {
+    color: var(--gold-light);
+    font-weight: 600;
+    margin: 0 8rpx;
+    border-bottom: 1rpx dashed var(--gold-dark);
+}
+
+.actions {
+  padding: 48rpx 80rpx;
+  padding-bottom: 120rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 40rpx;
+  /* 底部装饰底座 */
+  background: 
+    linear-gradient(to top, rgba(212, 175, 55, 0.05), transparent 50%);
+}
+
+/* 覆盖 app.wxss 的按钮样式以适配落地页 */
+.btn-primary {
+    font-size: 36rpx;
+    padding: 28rpx 0;
+    border: 2rpx solid var(--gold-light); /* 双层边框感 */
+    box-shadow: 
+        0 0 20rpx rgba(212, 175, 55, 0.2),
+        inset 0 0 10rpx rgba(212, 175, 55, 0.2);
+}
+
+.link {
+  text-align: center;
+  color: var(--gold-dark);
+  font-size: 26rpx;
+  letter-spacing: 2rpx;
+  text-decoration: none;
+  padding: 16rpx;
+  transition: all 0.3s;
+  /* 链接装饰 */
+  position: relative;
+  display: inline-block;
+  align-self: center;
+}
+
+.link::after {
+    content: '';
+    position: absolute;
+    bottom: 10rpx; left: 20%; right: 20%;
+    height: 1rpx;
+    background: var(--gold-dark);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+}
+
+.link:active::after {
+    transform: scaleX(1);
+}

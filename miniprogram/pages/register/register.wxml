@@ -1,198 +1,194 @@
 <!--pages/register/register.wxml-->
 <view class="container">
-  <!-- 液态流体背景 -->
-  <view class="liquid-bg">
-    <view class="blob blob-1"></view>
-    <view class="blob blob-2"></view>
-    <view class="blob blob-3"></view>
-    <view class="noise-overlay"></view>
-  </view>
-
   <scroll-view class="content-wrapper" scroll-y="true" enhanced="true" show-scrollbar="false">
-    <!-- 页面标题 -->
-    <view class="page-header animate-fade-in">
-      <view class="header-icon">🏢</view>
-      <view class="header-title">企业入驻申请</view>
-      <view class="header-desc">填写以下信息，开通 L2C 销售管理系统</view>
+    
+    <!-- Tab Headers -->
+    <view class="tab-header animate-fade-in">
+        <view class="tab-item {{currentTab === 0 ? 'active' : ''}}" data-index="0" bindtap="switchTab">
+            <text>商家入驻</text>
+            <view class="active-indicator" wx:if="{{currentTab === 0}}"></view>
+        </view>
+        <view class="tab-item {{currentTab === 1 ? 'active' : ''}}" data-index="1" bindtap="switchTab">
+            <text>加入团队</text>
+            <view class="active-indicator" wx:if="{{currentTab === 1}}"></view>
+        </view>
     </view>
 
-    <!-- 表单卡片 -->
-    <view class="glass-card form-card animate-slide-up">
-      <form bindsubmit="onSubmit">
-        <!-- 企业名称 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">企业名称</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="companyName"
-              placeholder="请输入企业全称"
-              placeholder-class="input-placeholder"
-              value="{{form.companyName}}"
-              bindinput="onInput"
-              data-field="companyName"
-            />
-          </view>
+    <!-- Tab 0: Create Tenant -->
+    <block wx:if="{{currentTab === 0}}">
+        <view class="page-header animate-fade-in">
+            <view class="header-desc">创建您的企业，开启数字化管理</view>
         </view>
 
-        <!-- 联系人 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">联系人</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="applicantName"
-              placeholder="您的姓名"
-              placeholder-class="input-placeholder"
-              value="{{form.applicantName}}"
-              bindinput="onInput"
-              data-field="applicantName"
-            />
-          </view>
-        </view>
-
-        <!-- 手机号 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">手机号</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="phone"
-              type="number"
-              placeholder="11位手机号"
-              placeholder-class="input-placeholder"
-              maxlength="11"
-              value="{{form.phone}}"
-              bindinput="onInput"
-              data-field="phone"
-            />
-          </view>
-        </view>
-
-        <!-- 邮箱 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">邮箱</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="email"
-              placeholder="用于接收通知"
-              placeholder-class="input-placeholder"
-              value="{{form.email}}"
-              bindinput="onInput"
-              data-field="email"
-            />
-          </view>
-        </view>
-
-        <!-- 地区 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">地区</text>
-            <text class="required">*</text>
-          </view>
-          <picker mode="region" bindchange="onRegionChange" value="{{regionValue}}">
-            <view class="input-wrapper picker-wrapper">
-              <view class="glass-input picker-value {{form.region ? '' : 'placeholder'}}">
-                {{form.region || '请选择省市区'}}
-              </view>
-              <text class="picker-arrow">▼</text>
+        <view class="glass-card form-card animate-slide-up">
+        <form bindsubmit="onSubmit">
+            <!-- 企业名称 -->
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">企业名称</text>
+                <text class="required">*</text>
             </view>
-          </picker>
+            <view class="input-wrapper">
+                <input 
+                class="glass-input" 
+                name="companyName"
+                placeholder="请输入企业全称"
+                placeholder-class="input-placeholder"
+                value="{{form.companyName}}"
+                bindinput="onInput"
+                data-field="companyName"
+                />
+            </view>
+            </view>
+
+            <!-- 联系人 -->
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">联系人</text>
+                <text class="required">*</text>
+            </view>
+            <view class="input-wrapper">
+                <input 
+                class="glass-input" 
+                name="applicantName"
+                placeholder="您的姓名"
+                placeholder-class="input-placeholder"
+                value="{{form.applicantName}}"
+                bindinput="onInput"
+                data-field="applicantName"
+                />
+            </view>
+            </view>
+
+            <!-- 手机号 -->
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">手机号</text>
+                <text class="required">*</text>
+            </view>
+            <view class="input-wrapper">
+                <input 
+                class="glass-input" 
+                name="phone"
+                type="number"
+                placeholder="11位手机号"
+                placeholder-class="input-placeholder"
+                maxlength="11"
+                value="{{form.phone}}"
+                bindinput="onInput"
+                data-field="phone"
+                />
+            </view>
+            </view>
+
+            <!-- 地区 -->
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">地区</text>
+                <text class="required">*</text>
+            </view>
+            <picker mode="region" bindchange="onRegionChange" value="{{regionValue}}">
+                <view class="input-wrapper picker-wrapper">
+                <view class="glass-input picker-value {{form.region ? '' : 'placeholder'}}">
+                    {{form.region || '请选择省市区'}}
+                </view>
+                <text class="picker-arrow">▼</text>
+                </view>
+            </picker>
+            </view>
+
+            <!-- 密码 -->
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">设置密码</text>
+                <text class="required">*</text>
+            </view>
+            <view class="input-wrapper">
+                <input 
+                class="glass-input" 
+                name="password"
+                type="text"
+                password="{{true}}"
+                placeholder="至少6位"
+                placeholder-class="input-placeholder"
+                value="{{form.password}}"
+                bindinput="onInput"
+                data-field="password"
+                />
+            </view>
+            </view>
+             <view class="form-group">
+                <view class="input-wrapper">
+                    <input 
+                    class="glass-input" 
+                    name="confirmPassword"
+                    type="text"
+                    password="{{true}}"
+                    placeholder="再次输入确认"
+                    placeholder-class="input-placeholder"
+                    value="{{form.confirmPassword}}"
+                    bindinput="onInput"
+                    data-field="confirmPassword"
+                    />
+                </view>
+            </view>
+
+            <!-- 提交按钮 -->
+            <button 
+            class="submit-btn" 
+            form-type="submit"
+            loading="{{submitting}}"
+            disabled="{{submitting}}"
+            hover-class="submit-btn-hover"
+            >
+            <text wx:if="{{!submitting}}">提交入驻申请</text>
+            <text wx:else>提交中...</text>
+            </button>
+        </form>
+        </view>
+    </block>
+
+    <!-- Tab 1: Join Tenant -->
+    <block wx:if="{{currentTab === 1}}">
+        <view class="page-header animate-fade-in">
+             <view class="header-icon"><image src="/assets/icons/handshake-active.svg" style="width:64rpx;height:64rpx;"/></view>
+            <view class="header-desc">输入邀请码，加入现有团队/租户</view>
         </view>
 
-        <!-- 密码 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">设置密码</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="password"
-              type="text"
-              password="{{true}}"
-              placeholder="至少6位"
-              placeholder-class="input-placeholder"
-              value="{{form.password}}"
-              bindinput="onInput"
-              data-field="password"
-            />
-          </view>
+        <view class="glass-card form-card animate-slide-up">
+            <view class="form-group">
+            <view class="form-label">
+                <text class="label-text">邀请码</text>
+            </view>
+            <view class="input-wrapper">
+                <input 
+                class="glass-input invite-input" 
+                placeholder="请输入 6 位邀请码"
+                placeholder-class="input-placeholder"
+                value="{{inviteCode}}"
+                bindinput="onInviteCodeInput"
+                maxlength="6"
+                type="number"
+                />
+            </view>
+            </view>
+
+            <button 
+            class="submit-btn join-btn" 
+            bindtap="onJoinSubmit"
+            loading="{{submitting}}"
+            disabled="{{submitting}}"
+            hover-class="submit-btn-hover"
+            >
+            <text wx:if="{{!submitting}}">立即加入</text>
+            <text wx:else>验证中...</text>
+            </button>
         </view>
-
-        <!-- 确认密码 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">确认密码</text>
-            <text class="required">*</text>
-          </view>
-          <view class="input-wrapper">
-            <input 
-              class="glass-input" 
-              name="confirmPassword"
-              type="text"
-              password="{{true}}"
-              placeholder="再次输入密码"
-              placeholder-class="input-placeholder"
-              value="{{form.confirmPassword}}"
-              bindinput="onInput"
-              data-field="confirmPassword"
-            />
-          </view>
-        </view>
-
-        <!-- 业务简介 -->
-        <view class="form-group">
-          <view class="form-label">
-            <text class="label-text">业务简介</text>
-            <text class="optional">(选填)</text>
-          </view>
-          <view class="input-wrapper textarea-wrapper">
-            <textarea 
-              class="glass-textarea" 
-              name="businessDescription"
-              placeholder="请简要介绍您的主营业务..."
-              placeholder-class="input-placeholder"
-              maxlength="500"
-              value="{{form.businessDescription}}"
-              bindinput="onInput"
-              data-field="businessDescription"
-            />
-          </view>
-        </view>
-
-        <!-- 提交按钮 -->
-        <button 
-          class="submit-btn" 
-          form-type="submit"
-          loading="{{submitting}}"
-          disabled="{{submitting}}"
-          hover-class="submit-btn-hover"
-        >
-          <text wx:if="{{!submitting}}">提交入驻申请</text>
-          <text wx:else>提交中...</text>
-        </button>
-      </form>
-
-      <!-- 返回登录 -->
-      <view class="back-link" bindtap="goBack">
-        <text class="back-text">已有账号？</text>
-        <text class="back-action">返回登录 →</text>
-      </view>
+    </block>
+    
+    <!-- 返回登录 -->
+    <view class="back-link" bindtap="goBack">
+    <text class="back-text">返回</text>
     </view>
 
     <!-- 底部留白 -->

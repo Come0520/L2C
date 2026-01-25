@@ -1,0 +1,195 @@
+/* pages/users/profile.wxss */
+.container {
+  padding: 32rpx;
+  background-color: #0f0f0f; /* 深邃黑 */
+  min-height: 100vh;
+  background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #0f0f0f 60%);
+  color: #e2e8f0;
+}
+
+/* 装饰光效 */
+.container::before {
+  content: '';
+  position: absolute;
+  top: -100rpx;
+  right: -100rpx;
+  width: 500rpx;
+  height: 500rpx;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+  filter: blur(80rpx);
+  pointer-events: none;
+}
+
+/* 黑金名片卡 Hero Card */
+.user-card {
+  position: relative;
+  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+  border-radius: 32rpx;
+  padding: 48rpx;
+  display: flex;
+  align-items: center;
+  margin-bottom: 40rpx;
+  border: 2rpx solid rgba(212, 175, 55, 0.3);
+  box-shadow: 
+    0 16rpx 40rpx rgba(0, 0, 0, 0.6),
+    inset 0 0 40rpx rgba(212, 175, 55, 0.1);
+  overflow: hidden;
+}
+
+/* 名片纹理 */
+.user-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.avatar {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: #2d2d2d;
+  margin-right: 32rpx;
+  border: 4rpx solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 8rpx 20rpx rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.name {
+  font-size: 40rpx;
+  font-weight: 800;
+  /* 金色渐变文字 */
+  background: linear-gradient(to right, #fceabb, #d4af37);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin-bottom: 12rpx;
+  letter-spacing: 1rpx;
+}
+
+.role-tag {
+  font-size: 22rpx;
+  color: #1a1a1a;
+  background: #d4af37;
+  padding: 6rpx 20rpx;
+  border-radius: 99rpx;
+  align-self: flex-start;
+  font-weight: 700;
+  box-shadow: 0 4rpx 10rpx rgba(212, 175, 55, 0.3);
+}
+
+/* 分享按钮 (名片上的) */
+.share-btn {
+  background: rgba(255,255,255,0.05);
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid rgba(255,255,255,0.1);
+  margin-left: 20rpx;
+  position: relative;
+  z-index: 1;
+}
+.share-icon { width: 36rpx; height: 36rpx; }
+
+/* 战绩仪表盘 Dashboard */
+.stats-card {
+  background: rgba(26, 26, 26, 0.6);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 40rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #f1f5f9;
+  font-family: 'DIN Alternate', sans-serif; /* 数字字体 */
+  margin-bottom: 8rpx;
+}
+
+.stat-value.gold {
+  color: #d4af37;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #64748b;
+}
+
+/* 菜单列表 */
+.menu-list {
+  background: #1a1a1a;
+  border-radius: 32rpx;
+  overflow: hidden;
+  margin-bottom: 60rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 36rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.menu-item:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-size: 30rpx;
+  color: #cbd5e1;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.menu-icon {
+  margin-right: 16rpx;
+  font-size: 32rpx;
+}
+
+.arrow {
+  color: #475569;
+  font-size: 24rpx;
+}
+
+.btn-logout {
+  background: transparent;
+  color: #ef4444; /* 红色保留作为警示，但调暗 */
+  border: 2rpx solid rgba(239, 68, 68, 0.3);
+  border-radius: 999rpx;
+  font-weight: 700;
+  font-size: 28rpx;
+  padding: 20rpx 0;
+}

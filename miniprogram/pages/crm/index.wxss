@@ -1,0 +1,140 @@
+/* pages/crm/index.wxss */
+.container {
+    background-color: #f8fafc;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-bar {
+    padding: 24rpx 32rpx;
+    background: #fff;
+    box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.02);
+}
+
+.search-input-wrap {
+    background: #f1f5f9;
+    border-radius: 99rpx;
+    padding: 16rpx 24rpx;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    margin-left: 16rpx;
+    font-size: 28rpx;
+    color: #334155;
+}
+
+.crm-list {
+    flex: 1;
+    padding: 24rpx 32rpx;
+    box-sizing: border-box;
+}
+
+.crm-card {
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 32rpx;
+    margin-bottom: 24rpx;
+    box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.03);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24rpx;
+    border-bottom: 2rpx solid #f8fafc;
+    padding-bottom: 16rpx;
+}
+
+.name-row {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+}
+
+.name {
+    font-size: 34rpx;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.tag {
+    font-size: 20rpx;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 4rpx 12rpx;
+    border-radius: 8rpx;
+}
+
+.call-btn {
+    width: 64rpx;
+    height: 64rpx;
+    background: #f0fdf4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32rpx;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+}
+
+.info-row {
+    display: flex;
+    font-size: 26rpx;
+}
+
+.label {
+    color: #94a3b8;
+    width: 100rpx;
+}
+
+.value {
+    color: #475569;
+    flex: 1;
+}
+
+.value.highlight {
+    color: #f59e0b;
+}
+
+.fab-add {
+    position: fixed;
+    right: 48rpx;
+    bottom: 64rpx;
+    width: 112rpx;
+    height: 112rpx;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 50%;
+    color: white;
+    font-size: 64rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8rpx 24rpx rgba(37, 99, 235, 0.4);
+    z-index: 100;
+    padding-bottom: 8rpx; /* Visual centering adjustment */
+    box-sizing: border-box;
+}
+
+.empty-state {
+    text-align: center;
+    padding-top: 120rpx;
+    color: #cbd5e1;
+    font-size: 28rpx;
+}
+
+.empty-img {
+    width: 200rpx;
+    height: 200rpx;
+    margin-bottom: 24rpx;
+    opacity: 0.5;
+}

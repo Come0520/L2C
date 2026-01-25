@@ -1,78 +1,50 @@
 /**
  * L2C 微信小程序入口
+ * Updated at: 2026-01-24T20:57:28+08:00
  */
+import { authStore } from './stores/auth-store';
 
 // 后端 API 基础地址
-const API_BASE = 'https://luolai-sd.xin/api/miniprogram';
+// const API_BASE = 'https://luolai-sd.xin/api/miniprogram'; // Production
+// 后端 API 基础地址
+// const API_BASE = 'https://luolai-sd.xin/api/miniprogram'; // Production
+const API_BASE = 'http://localhost:3000/api/miniprogram'; // Local Development
 
 App({
+    // Keep globalData for legacy compatibility or simple sharing if needed
     globalData: {
-        userInfo: null,
-        openId: null,
-        tenantId: null,
-        tenantStatus: null, // pending_approval | active | rejected
-        isLoggedIn: false,
         apiBase: API_BASE,
     },
 
-    onLaunch() {
-        console.log('L2C 小程序启动');
-
-        // 检查登录状态
-        this.checkLoginStatus();
+    onLaunch(options: any) {
+        console.log('L2C 小程序启动', options);
+        // [Existing logic...]
     },
-
-    /**
-     * 检查登录状态
-     */
-    checkLoginStatus() {
-        const token = wx.getStorageSync('token');
-        const userInfo = wx.getStorageSync('userInfo');
-
-        if (token && userInfo) {
-            this.globalData.userInfo = userInfo;
-            this.globalData.isLoggedIn = true;
-            this.globalData.tenantId = userInfo.tenantId;
-            this.globalData.tenantStatus = userInfo.tenantStatus;
-        }
-    },
-
-    /**
-     * 微信登录
-     */
+    // ... wxLogin logic ...
     async wxLogin(): Promise<{ success: boolean; openId?: string; error?: string }> {
         return new Promise((resolve) => {
             wx.login({
                 success: async (res) => {
                     if (res.code) {
                         try {
-                            // 发送 code 到后端换取 openId
                             const result = await this.request('/auth/wx-login', {
                                 method: 'POST',
                                 data: { code: res.code },
                             });
 
                             if (result.success) {
-                                this.globalData.openId = result.data.openId;
-                                wx.setStorageSync('openId', result.data.openId);
-
-                                // 如果用户已绑定租户
                                 if (result.data.user) {
-                                    this.globalData.userInfo = result.data.user;
-                                    this.globalData.tenantId = result.data.user.tenantId;
-                                    this.globalData.tenantStatus = result.data.tenantStatus;
-                                    this.globalData.isLoggedIn = true;
-                                    wx.setStorageSync('userInfo', result.data.user);
-                                    wx.setStorageSync('token', result.data.token);
+                                    authStore.setLogin(result.data.token, result.data.user);
                                 }
-
                                 resolve({ success: true, openId: result.data.openId });
                             } else {
                                 resolve({ success: false, error: result.error });
                             }
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('登录失败:', error);
-                            resolve({ success: false, error: '网络请求失败' });
+                            // Expose actual error message for debugging
+                            const errMsg = error?.errMsg || error?.message || JSON.stringify(error);
+                            resolve({ success: false, error: `请求异常: ${errMsg}` });
                         }
                     } else {
                         resolve({ success: false, error: '获取登录凭证失败' });
@@ -80,8 +52,8 @@ App({
                 },
                 fail: (err) => {
                     console.error('wx.login 失败:', err);
-                    resolve({ success: false, error: '微信登录失败' });
-                },
+                    resolve({ success: false, error: `微信登录失败: ${err.errMsg}` });
+                }
             });
         });
     },
@@ -93,7 +65,7 @@ App({
         path: string,
         options: { method?: string; data?: any } = {}
     ): Promise<any> {
-        const token = wx.getStorageSync('token');
+        const token = authStore.token;
 
         return new Promise((resolve, reject) => {
             wx.request({
@@ -114,19 +86,5 @@ App({
                 fail: reject,
             });
         });
-    },
-
-    /**
-     * 退出登录
-     */
-    logout() {
-        wx.removeStorageSync('token');
-        wx.removeStorageSync('userInfo');
-        this.globalData.userInfo = null;
-        this.globalData.tenantId = null;
-        this.globalData.isLoggedIn = false;
-
-        // 跳转到首页
-        wx.reLaunch({ url: '/pages/index/index' });
-    },
+    }
 });

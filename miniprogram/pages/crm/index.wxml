@@ -1,0 +1,60 @@
+<!--pages/crm/index.wxml-->
+<view class="container">
+  <!-- Search Bar -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+        <icon type="search" size="14" color="#94a3b8"></icon>
+        <input 
+            class="search-input" 
+            placeholder="搜索姓名或手机号" 
+            confirm-type="search"
+            bindinput="onSearchInput" 
+            bindconfirm="onSearch"
+        />
+    </view>
+  </view>
+
+  <!-- List -->
+  <scroll-view class="crm-list" scroll-y="true">
+    <block wx:for="{{list}}" wx:key="id">
+        <view class="crm-card" bindtap="onTapItem" data-id="{{item.id}}">
+            <view class="card-header">
+                <view class="name-row">
+                    <text class="name">{{item.name}}</text>
+                    <view class="tags" wx:if="{{item.tags}}">
+                        <text class="tag">{{item.tags}}</text>
+                    </view>
+                </view>
+                <view class="call-btn" catchtap="onCall" data-phone="{{item.phone}}">
+                    📞
+                </view>
+            </view>
+            
+            <view class="card-body">
+                <view class="info-row">
+                    <text class="label">手机：</text>
+                    <text class="value">{{item.phone}}</text>
+                </view>
+                <view class="info-row">
+                    <text class="label">地址：</text>
+                    <text class="value">{{item.address || '未填写'}}</text>
+                </view>
+                <view class="info-row" wx:if="{{userInfo.role === 'admin'}}">
+                    <text class="label">归属：</text>
+                    <text class="value highlight">{{item.salesRepName}}</text>
+                </view>
+            </view>
+        </view>
+    </block>
+
+    <view class="empty-state" wx:if="{{!list.length && !loading}}">
+        <image class="empty-img" src="/assets/empty.png" /> 
+        <text>暂无客户数据</text>
+    </view>
+  </scroll-view>
+
+  <!-- FAB -->
+  <view class="fab-add" bindtap="onAdd">
+    +
+  </view>
+</view>

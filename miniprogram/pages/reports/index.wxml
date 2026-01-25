@@ -1,0 +1,70 @@
+<view class="container">
+  <!-- Custom Nav Bar -->
+  <view class="nav-bar safe-top">
+      <view class="back-btn" bindtap="goBack">
+          <text class="back-icon">←</text>
+          <text class="back-text">BACK</text>
+      </view>
+  </view>
+
+  <!-- 顶部全息控制台 -->
+  <view class="holo-header animate-slide-up">
+    <view class="header-title">全息报表</view>
+    <view class="header-subtitle">HOLOGRAPHIC DATA VISUALIZATION</view>
+    <!-- 装饰线 -->
+    <view class="deco-line"></view>
+  </view>
+
+  <!-- 时间维度选择器 -->
+  <view class="time-selector animate-slide-up" style="animation-delay: 0.1s;">
+    <view class="selector-tab {{currentTab === 'week' ? 'active' : ''}}" bindtap="switchTab" data-tab="week">本周</view>
+    <view class="selector-tab {{currentTab === 'month' ? 'active' : ''}}" bindtap="switchTab" data-tab="month">本月</view>
+    <view class="selector-tab {{currentTab === 'quarter' ? 'active' : ''}}" bindtap="switchTab" data-tab="quarter">本季</view>
+  </view>
+
+  <!-- 核心全息投影区 -->
+  <view class="holo-projector animate-fade-in" style="animation-delay: 0.3s;">
+    <!-- 投影光束背景 -->
+    <view class="beam-light"></view>
+    
+    <!-- 悬浮数据卡片 -->
+    <view class="holo-card main">
+        <view class="card-label">总营收 (Total Revenue)</view>
+        <view class="card-value">¥ {{stats.revenue}}</view>
+        <view class="card-trend up">
+            <text>▲ 12.5%</text> (同比)
+        </view>
+    </view>
+
+    <!-- 环绕卫星数据 -->
+    <view class="holo-orbit">
+        <view class="orbit-item item-1">
+            <view class="label">签单率</view>
+            <view class="value">{{stats.conversion}}%</view>
+        </view>
+        <view class="orbit-item item-2">
+            <view class="label">客单价</view>
+            <view class="value">{{stats.atv}}k</view>
+        </view>
+    </view>
+  </view>
+
+  <!-- 详细数据列表 (Art Deco 表格) -->
+  <view class="data-grid animate-slide-up" style="animation-delay: 0.5s;">
+      <view class="grid-header">
+          <text>指标 INDEX</text>
+          <text>数值 VALUE</text>
+      </view>
+      <block wx:for="{{details}}" wx:key="label">
+          <view class="grid-row">
+              <view class="row-label">{{item.label}}</view>
+              <view class="row-value">
+                  <text class="num">{{item.value}}</text>
+                  <view class="bar-container">
+                      <view class="progress-bar" style="width: {{item.percent}}%;"></view>
+                  </view>
+              </view>
+          </view>
+      </block>
+  </view>
+</view>

@@ -1,5 +1,7 @@
 'use client';
 
+import { CATEGORY_LABELS, type ProductCategory } from '@/features/quotes/constants';
+
 import * as React from 'react';
 import { Check, ChevronsUpDown, Loader2, Clock } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks/use-debounce';
@@ -194,15 +196,21 @@ export function ProductAutocomplete({
                 <CommandItem
                   key={product.id}
                   value={product.id}
-                  onSelect={() => handleSelect(product)}
-                  // 修复 cmdk v1.x shouldFilter={false} 时点击无响应问题
-                  // 使用 onPointerDown 确保触控和鼠标事件都能正常工作
+                  onSelect={() => {
+                    handleSelect(product);
+                  }}
+                  // 强制处理点击事件，解决 cmdk 兼容性问题
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(product);
+                  }}
                   onPointerDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    handleSelect(product);
                   }}
-                  onClick={() => handleSelect(product)}
-                  className="cursor-pointer"
+                  className="pointer-events-auto cursor-pointer" // 强制 pointer-events-auto
                 >
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-center gap-2">
@@ -213,7 +221,7 @@ export function ProductAutocomplete({
                         </span>
                       )}
                       <span className="text-muted-foreground bg-muted shrink-0 rounded px-1 text-xs">
-                        {product.category}
+                        {CATEGORY_LABELS[product.category as ProductCategory] || product.category}
                       </span>
                     </div>
                     <span className="text-muted-foreground text-xs">

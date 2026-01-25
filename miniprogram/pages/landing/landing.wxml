@@ -1,0 +1,28 @@
+<view class="landing-container">
+  <swiper class="hero-swiper" indicator-dots="{{true}}" indicator-color="rgba(212, 175, 55, 0.3)" indicator-active-color="#D4AF37" autoplay interval="4000" circular>
+    <swiper-item>
+        <view class="slide">
+            <text class="slide-title">L2C 指挥官</text>
+            <text class="slide-subtitle">窗帘全流程管理专家</text>
+        </view>
+    </swiper-item>
+    <swiper-item>
+        <view class="slide">
+            <text class="slide-title">高效协作</text>
+            <text class="slide-subtitle">重塑您的业务流转</text>
+        </view>
+    </swiper-item>
+  </swiper>
+  
+  <view class="intro">
+    <view class="intro-text-row">
+        连接 <text class="intro-highlight">租户</text> · <text class="intro-highlight">员工</text> · <text class="intro-highlight">客户</text>
+    </view>
+    <view class="intro-text-row">一站式数字化尊享体验</view>
+  </view>
+
+  <view class="actions">
+    <button class="btn-primary" bindtap="handleLogin">微信尊享登录</button>
+    <view class="link" bindtap="handleCreateTenant">我是商家，创建企业 ></view>
+  </view>
+</view>

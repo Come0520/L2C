@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import {
-    Drawer,
-    DrawerContent,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerDescription,
-    DrawerFooter,
-    DrawerClose,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
 } from '@/shared/ui/drawer';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -19,298 +19,305 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
 
-
 interface QuoteItemAdvancedDrawerProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    item: any; // Using any for now, ideally QuoteItem type
-    onSuccess?: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item: any; // Using any for now, ideally QuoteItem type
+  onSuccess?: () => void;
 }
 
-export function QuoteItemAdvancedDrawer({ open, onOpenChange, item, onSuccess }: QuoteItemAdvancedDrawerProps) {
-    const [loading, setLoading] = useState(false);
+export function QuoteItemAdvancedDrawer({
+  open,
+  onOpenChange,
+  item,
+  onSuccess,
+}: QuoteItemAdvancedDrawerProps) {
+  const [loading, setLoading] = useState(false);
 
-    /** 
-     * 报价项的动态属性集，类型不固定，故使用 any 
-     */
-    const [attributes, setAttributes] = useState<Record<string, any>>({});
+  /**
+   * 报价项的动态属性集，类型不固定，故使用 any
+   */
+  const [attributes, setAttributes] = useState<Record<string, any>>({});
 
+  const [processFee, setProcessFee] = useState<number>(0);
+  const [foldRatio, setFoldRatio] = useState<number>(2);
+  const [remark, setRemark] = useState('');
 
-    const [processFee, setProcessFee] = useState<number>(0);
-    const [foldRatio, setFoldRatio] = useState<number>(2);
-    const [remark, setRemark] = useState('');
+  useEffect(() => {
+    if (item && open) {
+      setAttributes(item.attributes || {});
+      setProcessFee(Number(item.processFee || 0));
+      setFoldRatio(Number(item.foldRatio || 2));
+      setRemark(item.remark || '');
+    }
+  }, [item, open]);
 
-    useEffect(() => {
-        if (item && open) {
-            setAttributes(item.attributes || {});
-            setProcessFee(Number(item.processFee || 0));
-            setFoldRatio(Number(item.foldRatio || 2));
-            setRemark(item.remark || '');
-        }
-    }, [item, open]);
+  if (!item) return null;
 
-    if (!item) return null;
+  const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
+  const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(item.category);
 
-    const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
-    const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(item.category);
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await updateQuoteItem({
+        id: item.id,
+        processFee,
+        foldRatio: isCurtain ? foldRatio : undefined,
+        remark,
+        attributes: {
+          ...attributes,
+          // Ensure numeric values are numbers
+          fabricWidth: attributes.fabricWidth ? Number(attributes.fabricWidth) : undefined,
+          sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
+          bottomLoss:
+            attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : undefined,
+          headerLoss:
+            attributes.headerLoss !== undefined ? Number(attributes.headerLoss) : undefined,
+          rollLength: attributes.rollLength ? Number(attributes.rollLength) : undefined,
+          patternRepeat:
+            attributes.patternRepeat !== undefined ? Number(attributes.patternRepeat) : undefined,
+        },
+      });
+      toast.success('高级配置已保存');
+      if (onSuccess) onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('保存失败');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleSave = async () => {
-        setLoading(true);
-        try {
-            await updateQuoteItem({
-                id: item.id,
-                processFee,
-                foldRatio: isCurtain ? foldRatio : undefined,
-                remark,
-                attributes: {
-                    ...attributes,
-                    // Ensure numeric values are numbers
-                    fabricWidth: attributes.fabricWidth ? Number(attributes.fabricWidth) : undefined,
-                    sideLoss: attributes.sideLoss ? Number(attributes.sideLoss) : undefined,
-                    bottomLoss: attributes.bottomLoss ? Number(attributes.bottomLoss) : undefined,
-                    headerLoss: attributes.headerLoss ? Number(attributes.headerLoss) : undefined,
-                    rollLength: attributes.rollLength ? Number(attributes.rollLength) : undefined,
-                    patternRepeat: attributes.patternRepeat ? Number(attributes.patternRepeat) : undefined,
-                }
-            });
-            toast.success('高级配置已保存');
-            if (onSuccess) onSuccess();
-            onOpenChange(false);
-        } catch (error) {
-            toast.error('保存失败');
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const updateAttribute = (key: string, value: unknown) => {
+    setAttributes((prev) => ({ ...prev, [key]: value }));
+  };
 
-    const updateAttribute = (key: string, value: unknown) => {
-        setAttributes(prev => ({ ...prev, [key]: value }));
-    };
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[90vh]">
+        <div className="mx-auto w-full max-w-lg">
+          <DrawerHeader>
+            <DrawerTitle>高级配置: {item.productName}</DrawerTitle>
+            <DrawerDescription>调整计算参数和详细配置</DrawerDescription>
+          </DrawerHeader>
 
-    return (
-        <Drawer open={open} onOpenChange={onOpenChange}>
-            <DrawerContent className="max-h-[90vh]">
-                <div className="mx-auto w-full max-w-lg">
-                    <DrawerHeader>
-                        <DrawerTitle>高级配置: {item.productName}</DrawerTitle>
-                        <DrawerDescription>
-                            调整计算参数和详细配置
-                        </DrawerDescription>
-                    </DrawerHeader>
+          <ScrollArea className="h-[50vh] px-4">
+            <div className="space-y-6 py-4">
+              {/* 通用配置 */}
+              <div className="space-y-4">
+                <h4 className="text-sm leading-none font-medium">基础参数</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>加工费 (Process Fee)</Label>
+                    <Input
+                      type="number"
+                      value={processFee}
+                      onChange={(e) => setProcessFee(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>备注 (Remark)</Label>
+                    <Input value={remark} onChange={(e) => setRemark(e.target.value)} />
+                  </div>
+                </div>
+              </div>
 
-                    <ScrollArea className="h-[50vh] px-4">
-                        <div className="space-y-6 py-4">
-                            {/* 通用配置 */}
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium leading-none">基础参数</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>加工费 (Process Fee)</Label>
-                                        <Input
-                                            type="number"
-                                            value={processFee}
-                                            onChange={(e) => setProcessFee(Number(e.target.value))}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>备注 (Remark)</Label>
-                                        <Input
-                                            value={remark}
-                                            onChange={(e) => setRemark(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+              <Separator />
 
-                            <Separator />
+              {/* 窗帘特定配置 */}
+              {/* 窗帘特定配置 */}
+              {isCurtain && (
+                <div className="space-y-4">
+                  <h4 className="text-sm leading-none font-medium">窗帘算法参数</h4>
 
-                            {/* 窗帘特定配置 */}
-                            {/* 窗帘特定配置 */}
-                            {isCurtain && (
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-medium leading-none">窗帘算法参数</h4>
+                  {/* 新增：安装与尺寸修正 */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>安装位置 (Install Position)</Label>
+                      <Select
+                        value={attributes.installPosition || 'CURTAIN_BOX'}
+                        onValueChange={(v) => updateAttribute('installPosition', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select position" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CURTAIN_BOX">窗帘盒 (Default)</SelectItem>
+                          <SelectItem value="INSIDE">窗框内 (Inside)</SelectItem>
+                          <SelectItem value="OUTSIDE">窗框外 (Outside)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>离地高度 (Ground Clearance)</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={
+                            attributes.groundClearance !== undefined
+                              ? attributes.groundClearance
+                              : 2
+                          }
+                          onChange={(e) => updateAttribute('groundClearance', e.target.value)}
+                        />
+                        <span className="text-muted-foreground absolute top-2.5 right-3 text-xs">
+                          cm
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                                    {/* 新增：安装与尺寸修正 */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>安装位置 (Install Position)</Label>
-                                            <Select
-                                                value={attributes.installPosition || 'CURTAIN_BOX'}
-                                                onValueChange={(v) => updateAttribute('installPosition', v)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select position" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="CURTAIN_BOX">窗帘盒 (Default)</SelectItem>
-                                                    <SelectItem value="INSIDE">窗框内 (Inside)</SelectItem>
-                                                    <SelectItem value="OUTSIDE">窗框外 (Outside)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>离地高度 (Ground Clearance)</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    type="number"
-                                                    value={attributes.groundClearance !== undefined ? attributes.groundClearance : 2}
-                                                    onChange={(e) => updateAttribute('groundClearance', e.target.value)}
-                                                />
-                                                <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">cm</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>拉动形式 (Opening Style)</Label>
+                      <Select
+                        value={attributes.openingStyle || 'SPLIT'}
+                        onValueChange={(v) => updateAttribute('openingStyle', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SPLIT">对开 (Split)</SelectItem>
+                          <SelectItem value="SINGLE_LEFT">单开左 (Left)</SelectItem>
+                          <SelectItem value="SINGLE_RIGHT">单开右 (Right)</SelectItem>
+                          <SelectItem value="MULTI">多开 (Multi)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>褶皱倍数 (Fold Ratio)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={foldRatio}
+                        onChange={(e) => setFoldRatio(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>拉动形式 (Opening Style)</Label>
-                                            <Select
-                                                value={attributes.openingStyle || 'SPLIT'}
-                                                onValueChange={(v) => updateAttribute('openingStyle', v)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select style" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="SPLIT">对开 (Split)</SelectItem>
-                                                    <SelectItem value="SINGLE_LEFT">单开左 (Left)</SelectItem>
-                                                    <SelectItem value="SINGLE_RIGHT">单开右 (Right)</SelectItem>
-                                                    <SelectItem value="MULTI">多开 (Multi)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>褶皱倍数 (Fold Ratio)</Label>
-                                            <Input
-                                                type="number"
-                                                step="0.1"
-                                                value={foldRatio}
-                                                onChange={(e) => setFoldRatio(Number(e.target.value))}
-                                            />
-                                        </div>
-                                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>幅宽 (Fabric Width)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.fabricWidth || ''}
+                        onChange={(e) => updateAttribute('fabricWidth', e.target.value)}
+                        placeholder="280"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>算料公式 (Formula)</Label>
+                      <Select
+                        value={attributes.formula || 'FIXED_HEIGHT'}
+                        onValueChange={(v) => updateAttribute('formula', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select formula" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIXED_HEIGHT">定高 (Fixed Height)</SelectItem>
+                          <SelectItem value="FIXED_WIDTH">定宽 (Fixed Width)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>幅宽 (Fabric Width)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.fabricWidth || ''}
-                                                onChange={(e) => updateAttribute('fabricWidth', e.target.value)}
-                                                placeholder="280"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>算料公式 (Formula)</Label>
-                                            <Select
-                                                value={attributes.formula || 'FIXED_HEIGHT'}
-                                                onValueChange={(v) => updateAttribute('formula', v)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select formula" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="FIXED_HEIGHT">定高 (Fixed Height)</SelectItem>
-                                                    <SelectItem value="FIXED_WIDTH">定宽 (Fixed Width)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
+                  <div className="space-y-2">
+                    <Label>帘头工艺 (Header)</Label>
+                    <Select
+                      value={attributes.headerType || 'WRAPPED'}
+                      onValueChange={(v) => updateAttribute('headerType', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WRAPPED">包布带 (Wrapped)</SelectItem>
+                        <SelectItem value="ATTACHED">贴布带 (Attached)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                                    <div className="space-y-2">
-                                        <Label>帘头工艺 (Header)</Label>
-                                        <Select
-                                            value={attributes.headerType || 'WRAPPED'}
-                                            onValueChange={(v) => updateAttribute('headerType', v)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="WRAPPED">包布带 (Wrapped)</SelectItem>
-                                                <SelectItem value="ATTACHED">贴布带 (Attached)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>边损 (Side)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.sideLoss || ''}
+                        onChange={(e) => updateAttribute('sideLoss', e.target.value)}
+                        placeholder="Default"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>底边 (Bottom)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.bottomLoss || ''}
+                        onChange={(e) => updateAttribute('bottomLoss', e.target.value)}
+                        placeholder="Default"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>帘头损耗 (Head)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.headerLoss || ''}
+                        onChange={(e) => updateAttribute('headerLoss', e.target.value)}
+                        placeholder="Default"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>边损 (Side)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.sideLoss || ''}
-                                                onChange={(e) => updateAttribute('sideLoss', e.target.value)}
-                                                placeholder="Default"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>底边 (Bottom)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.bottomLoss || ''}
-                                                onChange={(e) => updateAttribute('bottomLoss', e.target.value)}
-                                                placeholder="Default"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>帘头损耗 (Head)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.headerLoss || ''}
-                                                onChange={(e) => updateAttribute('headerLoss', e.target.value)}
-                                                placeholder="Default"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+              {/* 墙纸特定配置 */}
+              {isWallpaper && (
+                <div className="space-y-4">
+                  <h4 className="text-sm leading-none font-medium">墙纸/墙布参数</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>每卷长度 (Roll Length)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.rollLength || ''}
+                        onChange={(e) => updateAttribute('rollLength', e.target.value)}
+                        placeholder="1000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>对花损耗 (Repeat)</Label>
+                      <Input
+                        type="number"
+                        value={attributes.patternRepeat || ''}
+                        onChange={(e) => updateAttribute('patternRepeat', e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                            {/* 墙纸特定配置 */}
-                            {isWallpaper && (
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-medium leading-none">墙纸/墙布参数</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>每卷长度 (Roll Length)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.rollLength || ''}
-                                                onChange={(e) => updateAttribute('rollLength', e.target.value)}
-                                                placeholder="1000"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>对花损耗 (Repeat)</Label>
-                                            <Input
-                                                type="number"
-                                                value={attributes.patternRepeat || ''}
-                                                onChange={(e) => updateAttribute('patternRepeat', e.target.value)}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 调试信息 (仅开发可见) */}
-                            {/* <div className="text-xs text-muted-foreground pt-4 bg-muted/20 p-2 rounded">
+              {/* 调试信息 (仅开发可见) */}
+              {/* <div className="text-xs text-muted-foreground pt-4 bg-muted/20 p-2 rounded">
                                 <p>Category: {item.category}</p>
                                 <pre>{JSON.stringify(attributes, null, 2)}</pre>
                             </div> */}
-                        </div>
-                    </ScrollArea>
+            </div>
+          </ScrollArea>
 
-                    <DrawerFooter>
-                        <Button onClick={handleSave} disabled={loading}>
-                            {loading ? '保存中...' : '保存更改'}
-                        </Button>
-                        <DrawerClose asChild>
-                            <Button variant="outline">取消</Button>
-                        </DrawerClose>
-                    </DrawerFooter>
-                </div>
-            </DrawerContent>
-        </Drawer>
-    );
+          <DrawerFooter>
+            <Button onClick={handleSave} disabled={loading}>
+              {loading ? '保存中...' : '保存更改'}
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">取消</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
 }

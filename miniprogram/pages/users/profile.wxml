@@ -1,0 +1,52 @@
+<view class="container">
+  <!-- 黑金电子名片 -->
+  <view class="user-card">
+    <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}"></image>
+    <view class="info">
+        <text class="name">{{userInfo.name || '未登录'}}</text>
+        <text class="role-tag">{{userInfo.role}}</text>
+    </view>
+    <!-- 分享名片按钮 -->
+    <button class="share-btn" open-type="share">
+        <image class="share-icon" src="/assets/icons/share-active.svg" />
+    </button>
+  </view>
+
+  <!-- 战绩仪表盘 (新增) -->
+  <view class="stats-card animate-slide-up" style="animation-delay: 0.1s;">
+      <view class="stat-item">
+          <text class="stat-value gold">{{stats.monthlySales || '0'}}</text>
+          <text class="stat-label">本月业绩(万)</text>
+      </view>
+      <view class="stat-item">
+          <text class="stat-value">{{stats.monthlyOrders || '0'}}</text>
+          <text class="stat-label">本月签单</text>
+      </view>
+      <view class="stat-item">
+          <text class="stat-value">{{stats.conversionRate || '0'}}%</text>
+          <text class="stat-label">转化率</text>
+      </view>
+  </view>
+
+  <!-- 菜单列表 -->
+  <view class="menu-list animate-slide-up" style="animation-delay: 0.2s;">
+      <!-- 老板/管理员专属菜单 -->
+      <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'BOSS'}}" bindtap="navigateToPaymentSettings">
+          <text class="label"><image class="menu-icon" src="/assets/icons/payment-active.svg" /> 支付设置</text>
+          <text class="arrow">></text>
+      </view>
+
+      <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'BOSS' || userInfo.role === 'manager'}}" bindtap="navigateToInvite">
+          <text class="label"><image class="menu-icon" src="/assets/icons/invite-active.svg" /> 邀请成员</text>
+          <text class="arrow">></text>
+      </view>
+      
+      <!-- 通用菜单 -->
+      <view class="menu-item">
+          <text class="label"><image class="menu-icon" src="/assets/icons/support-active.svg" /> 联系客服</text>
+          <text class="arrow">></text>
+      </view>
+  </view>
+
+  <button class="btn-logout" bindtap="handleLogout">退出登录</button>
+</view>

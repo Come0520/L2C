@@ -1,0 +1,56 @@
+<!--pages/quotes/create/index.wxml-->
+<view class="container">
+  <!-- Customer Selection -->
+  <view class="section card">
+    <view class="section-title">客户信息</view>
+    <input class="input" placeholder="选择或输入客户 (暂未实现选择)" value="{{customerName || customerId}}" disabled />
+  </view>
+
+  <!-- Rooms Builder -->
+  <block wx:for="{{rooms}}" wx:key="id" wx:for-index="roomIndex">
+    <view class="room-card card">
+        <view class="room-header">
+            <input 
+                class="room-name-input" 
+                value="{{item.name}}" 
+                data-index="{{roomIndex}}" 
+                bindblur="onRoomNameChange" 
+            />
+            <view class="btn-remove" bindtap="onRemoveRoom" data-index="{{roomIndex}}">×</view>
+        </view>
+
+        <!-- Items List -->
+        <view class="items-list">
+            <block wx:for="{{item.items}}" wx:for-item="prod" wx:for-index="itemIndex" wx:key="id">
+                <view class="item-row">
+                    <view class="item-info">
+                        <text class="item-name">{{prod.name}}</text>
+                        <text class="item-dims">{{prod.width}}m * {{prod.height}}m ({{prod.foldRatio}}倍)</text>
+                    </view>
+                    <view class="item-price">
+                        <text>¥{{prod.subtotal}}</text>
+                        <view class="btn-del-item" bindtap="onRemoveItem" data-room-index="{{roomIndex}}" data-item-index="{{itemIndex}}">-</view>
+                    </view>
+                </view>
+            </block>
+        </view>
+
+        <!-- Add Item Button -->
+        <view class="btn-add-item" bindtap="onAddItem" data-index="{{roomIndex}}">
+            + 添加商品
+        </view>
+    </view>
+  </block>
+
+  <!-- Add Room Button -->
+  <button class="btn-add-room" bindtap="onAddRoom">新增房间</button>
+
+  <view class="footer-spacer"></view>
+  <view class="footer-bar">
+      <view class="total-preview">
+          <!-- Total calculation logic needed in TS or WXS -->
+          <text>预估总价: ¥...</text>
+      </view>
+      <button class="btn-submit" bindtap="onSubmit">生成报价单</button>
+  </view>
+</view>

@@ -1,0 +1,29 @@
+<!--pages/quotes/product-selector/index.wxml-->
+<view class="container">
+  <view class="search-bar">
+    <input 
+        class="search-input" 
+        placeholder="搜索窗帘/轨道/配件" 
+        confirm-type="search"
+        bindconfirm="onSearch"
+        bindinput="onSearchInput"
+    />
+  </view>
+
+  <scroll-view class="product-list" scroll-y="true">
+    <block wx:for="{{products}}" wx:key="id">
+        <view class="product-item" bindtap="onProductSelect" data-product="{{item}}">
+            <image class="prod-img" src="{{item.image || '/assets/default-prod.png'}}"></image>
+            <view class="prod-info">
+                <view class="prod-name">{{item.name}}</view>
+                <view class="prod-meta">
+                    <text class="tag">{{item.category}}</text>
+                    <text class="sku">{{item.sku}}</text>
+                </view>
+                <view class="prod-price">¥{{item.unitPrice}} / {{item.unit}}</view>
+            </view>
+            <view class="btn-pick">选择</view>
+        </view>
+    </block>
+  </scroll-view>
+</view>

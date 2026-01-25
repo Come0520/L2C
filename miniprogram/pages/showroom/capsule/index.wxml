@@ -1,0 +1,36 @@
+<!--pages/showroom/capsule/index.wxml-->
+<view class="container">
+  <!-- Hero Section -->
+  <view class="hero">
+    <view class="hero-content">
+      <view class="hero-subtitle">Digital Showroom</view>
+      <view class="hero-title">专属灵感方案</view>
+      <view class="hero-curator">
+        <view class="curator-avatar">
+            <image src="{{curator.avatarUrl || '/assets/default-avatar.png'}}"></image>
+        </view>
+        <text class="curator-text">由 {{curator.name || '销售顾问'}} 精选</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Gallery -->
+  <view class="gallery">
+    <block wx:for="{{items}}" wx:key="id">
+        <view class="gallery-item animate-slide-up" style="animation-delay: {{index * 0.1}}s">
+            <image class="gallery-img" src="{{item.image}}" mode="widthFix" bindtap="previewImage" data-src="{{item.image}}"></image>
+            <view class="gallery-info">
+                <view class="item-title">{{item.title}}</view>
+                <view class="item-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
+            </view>
+        </view>
+    </block>
+  </view>
+
+  <!-- Contact CTA -->
+  <view class="footer-cta">
+      <button class="contact-btn" open-type="contact">
+          咨询顾问
+      </button>
+  </view>
+</view>

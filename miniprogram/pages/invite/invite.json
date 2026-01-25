@@ -1,4 +1,6 @@
 {
-    "usingComponents": {},
-    "navigationBarTitleText": "邀请员工"
+  "usingComponents": {},
+  "navigationBarTitleText": "邀请员工",
+  "navigationBarBackgroundColor": "#0f0f0f",
+  "navigationBarTextStyle": "white"
 }

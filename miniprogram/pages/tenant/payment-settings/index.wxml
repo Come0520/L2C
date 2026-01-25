@@ -1,0 +1,46 @@
+<!--pages/tenant/payment-settings/index.wxml-->
+<view class="container">
+  <view class="page-header">
+    <text class="title">支付设置</text>
+    <text class="desc">配置客户的付款方式</text>
+  </view>
+
+  <form bindsubmit="onSubmit">
+    <!-- 线下转账配置 -->
+    <view class="section card">
+        <view class="section-header">
+            <view class="label-row">
+                <text class="label">线下转账 (默认)</text>
+                <switch checked="{{config.offline.enabled}}" color="#07c160" bindchange="onOfflineSwitch" />
+            </view>
+            <text class="caption">客户需上传转账截图，由财务人工核销。</text>
+        </view>
+
+        <view class="form-group" wx:if="{{config.offline.enabled}}">
+            <view class="form-label">收款信息说明</view>
+            <textarea 
+                class="input-textarea" 
+                placeholder="请输入转账说明，例如：\n开户行：招商银行深圳分行\n户名：xx窗帘店\n账号：1234567890" 
+                maxlength="500"
+                value="{{config.offline.instructions}}"
+                bindinput="onInstructionsInput"
+            />
+        </view>
+    </view>
+
+    <!-- 微信支付配置 (暂未开放完全配置，仅Toggle) -->
+    <view class="section card disabled-section">
+        <view class="section-header">
+            <view class="label-row">
+                <text class="label">微信支付 (在线)</text>
+                <switch checked="{{config.online.enabled}}" color="#07c160" disabled="{{true}}" />
+            </view>
+            <text class="caption">开通需配置商户号 (即将开放)</text>
+        </view>
+    </view>
+
+    <view class="footer-action">
+        <button class="btn-save" form-type="submit" loading="{{saving}}">保存配置</button>
+    </view>
+  </form>
+</view>

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "确认报价单",
+  "usingComponents": {
+    "signature": "../../components/signature/signature"
+  }
+}

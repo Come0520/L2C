@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.vscode
+.env.local
+npm-debug.log
+.DS_Store
+coverage
+build
+dist
+.gemini

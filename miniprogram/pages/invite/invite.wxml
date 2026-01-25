@@ -1,16 +1,9 @@
 <!--pages/invite/invite.wxml-->
 <view class="container">
-  <!-- 液态流体背景 -->
-  <view class="liquid-bg">
-    <view class="blob blob-1"></view>
-    <view class="blob blob-2"></view>
-    <view class="blob blob-3"></view>
-    <view class="noise-overlay"></view>
-  </view>
-
+  <!-- 黑金风格背景 -->
   <scroll-view class="content-wrapper" scroll-y="true" enhanced="true" show-scrollbar="false">
     <!-- 未激活提示 -->
-    <view wx:if="{{tenantStatus !== 'active'}}" class="glass-card empty-card animate-slide-up">
+    <view wx:if="{{tenantStatus !== 'active'}}" class="gold-card empty-card animate-slide-up">
       <view class="empty-icon-box lock">
         <view class="empty-icon">🔒</view>
       </view>
@@ -24,7 +17,7 @@
     <!-- 已激活 - 邀请功能 -->
     <view wx:else>
       <!-- 生成邀请 -->
-      <view class="glass-card invite-card animate-slide-up">
+      <view class="gold-card invite-card animate-slide-up">
         <view class="card-header">
           <view class="header-icon-box">
             <text class="header-icon">👥</text>
@@ -79,7 +72,7 @@
       </view>
 
       <!-- 邀请记录 -->
-      <view class="glass-card list-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length > 0}}">
+      <view class="gold-card list-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length > 0}}">
         <view class="list-header">
           <view class="section-title">邀请记录</view>
           <view class="list-count">{{inviteList.length}}</view>
@@ -103,7 +96,7 @@
       </view>
 
       <!-- 空记录 -->
-      <view class="glass-card empty-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length === 0 && !loading}}">
+      <view class="gold-card empty-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length === 0 && !loading}}">
         <view class="empty-state">
           <view class="empty-icon small">📝</view>
           <view class="empty-text">暂无邀请记录</view>

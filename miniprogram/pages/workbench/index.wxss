@@ -1,0 +1,345 @@
+/* pages/workbench/index.wxss */
+
+/* Art Deco Theme - Precision Edition */
+.container {
+  padding: 32rpx;
+  background-color: #0f0f0f;
+  min-height: 100vh;
+  /* 放射状背景 - 模拟盖茨比派对光束 */
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(212, 175, 55, 0.05) 0,
+      rgba(212, 175, 55, 0.05) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    radial-gradient(circle at 50% 20%, #1a1a1a 0%, #000000 100%);
+  color: #e2e8f0;
+  overflow-x: hidden;
+}
+
+/* 顶部问候 - 指挥官风格 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 60rpx;
+  padding: 0 16rpx;
+  border-bottom: 1rpx solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 20rpx;
+}
+
+.h1 {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: var(--gold-primary);
+  display: block;
+  letter-spacing: 4rpx;
+  text-transform: uppercase;
+  text-shadow: 0 0 10rpx rgba(212, 175, 55, 0.3);
+}
+
+.p {
+  font-size: 24rpx;
+  color: #64748b;
+  margin-top: 8rpx;
+  display: block;
+  letter-spacing: 2rpx;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%; /* 圆形 */
+  border: 4rpx double var(--gold-primary); /* 双线金边 */
+  box-shadow: 0 0 30rpx rgba(212, 175, 55, 0.2);
+}
+
+/* 精密时计仪表盘 (Chronometer HUD) */
+.hud-container {
+  position: relative;
+  height: 600rpx; /* 增加高度以容纳布局 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 60rpx;
+}
+
+/* 装饰性背景环 - 刻度盘 */
+.hud-container::before {
+    content: '';
+    position: absolute;
+    width: 500rpx;
+    height: 500rpx;
+    border-radius: 50%;
+    /* 模拟刻度线 */
+    background: 
+        repeating-conic-gradient(
+            rgba(212, 175, 55, 0.1) 0deg 1deg,
+            transparent 1deg 10deg
+        );
+    mask-image: radial-gradient(transparent 60%, black 65%);
+    -webkit-mask-image: radial-gradient(transparent 60%, black 65%);
+    animation: rotateSlow 60s linear infinite;
+}
+
+@keyframes rotateSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* 中心表盘 */
+.reactor-core {
+  width: 280rpx;
+  height: 280rpx;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+/* 金色表圈 */
+.reactor-ring {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2rpx solid var(--gold-primary);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20rpx rgba(212, 175, 55, 0.2),
+    inset 0 0 10rpx rgba(212, 175, 55, 0.1);
+}
+
+/* 内部装饰环 */
+.reactor-ring-inner {
+  position: absolute;
+  top: 24rpx; left: 24rpx; right: 24rpx; bottom: 24rpx;
+  border: 1rpx dashed var(--gold-light);
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.core-text {
+  text-align: center;
+  z-index: 20;
+}
+
+.core-value {
+  font-size: 72rpx;
+  font-weight: 900;
+  color: var(--gold-light);
+  text-shadow: 0 0 10rpx rgba(212, 175, 55, 0.5);
+  font-family: 'DIN Alternate', sans-serif;
+  display: block;
+  line-height: 1;
+}
+
+.core-label {
+  font-size: 20rpx;
+  color: var(--text-muted);
+  letter-spacing: 4rpx;
+  text-transform: uppercase;
+  margin-top: 12rpx;
+  display: block;
+}
+
+/* 卫星数据 - 改为十字布局 */
+.satellite-stat {
+  position: absolute;
+  /* 移除背景色，使用纯文字+线条 */
+  background: transparent;
+  padding: 0;
+  min-width: 120rpx;
+  text-align: center;
+  /* 连接线 */
+}
+
+/* 数据连接线 */
+.satellite-stat::after {
+    content: '';
+    position: absolute;
+    width: 60rpx;
+    height: 1rpx;
+    background: var(--gold-dark);
+    opacity: 0.5;
+}
+
+/* 左上 */
+.pos-tl { top: 80rpx; left: 40rpx; text-align: right; }
+.pos-tl::after { right: -70rpx; top: 50%; transform: rotate(-45deg); width: 80rpx;}
+
+/* 右上 */
+.pos-tr { top: 80rpx; right: 40rpx; text-align: left; }
+.pos-tr::after { left: -70rpx; top: 50%; transform: rotate(45deg); width: 80rpx;}
+
+/* 左下 */
+.pos-bl { bottom: 80rpx; left: 40rpx; text-align: right; }
+.pos-bl::after { right: -70rpx; top: 50%; transform: rotate(45deg); width: 80rpx;}
+
+/* 右下 */
+.pos-br { bottom: 80rpx; right: 40rpx; text-align: left; }
+.pos-br::after { left: -70rpx; top: 50%; transform: rotate(-45deg); width: 80rpx;}
+
+
+.sat-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--gold-light);
+  font-family: 'DIN Alternate', sans-serif;
+}
+.sat-label {
+  font-size: 22rpx;
+  color: var(--text-muted);
+  margin-top: 4rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 快捷功能 - 装饰艺术相框 */
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--gold-primary);
+  margin-bottom: 32rpx;
+  text-align: center; /* 居中标题 */
+  letter-spacing: 8rpx;
+  position: relative;
+  text-transform: uppercase;
+}
+
+/* 标题装饰线 */
+.section-title::before, .section-title::after {
+    content: '';
+    display: inline-block;
+    width: 40rpx;
+    height: 1rpx;
+    background: var(--gold-dark);
+    vertical-align: middle;
+    margin: 0 20rpx;
+}
+
+.actions-row {
+  display: flex;
+  margin-bottom: 80rpx;
+  gap: 30rpx;
+  padding: 0 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 40rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid var(--gold-dark);
+  position: relative;
+  transition: all 0.3s;
+}
+
+/* 按钮双线框装饰 */
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 6rpx; left: 6rpx; right: 6rpx; bottom: 6rpx;
+    border: 1rpx solid rgba(212, 175, 55, 0.2);
+    pointer-events: none;
+}
+
+.action-btn:active {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.icon {
+  width: 56rpx;
+  height: 56rpx;
+  margin-bottom: 20rpx;
+  /* 确保图标为金色 */
+}
+
+.action-btn text {
+  font-size: 24rpx;
+  color: var(--gold-light);
+  letter-spacing: 2rpx;
+}
+
+/* 动态列表 - 电报风格 */
+.todo-list {
+  padding: 0 20rpx;
+}
+
+.todo-item {
+  position: relative;
+  margin-bottom: 30rpx;
+  padding-bottom: 30rpx;
+  border-bottom: 1rpx dashed rgba(212, 175, 55, 0.3); /* 虚线分隔 */
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.todo-title {
+    font-size: 30rpx;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 8rpx;
+    letter-spacing: 1rpx;
+}
+
+.todo-desc {
+    font-size: 24rpx;
+    color: var(--text-muted);
+}
+
+.todo-right {
+    text-align: right;
+    min-width: 140rpx;
+}
+
+.status-tag {
+    font-size: 20rpx;
+    padding: 2rpx 12rpx;
+    border: 1rpx solid currentColor;
+    display: inline-block;
+    margin-bottom: 8rpx;
+    background: transparent;
+    letter-spacing: 1rpx;
+}
+
+.status-tag.CONFIRMED {
+    color: var(--status-success);
+    border-color: var(--status-success);
+}
+
+.status-tag.DRAFT {
+    color: var(--gold-dark);
+    border-color: var(--gold-dark);
+}
+
+.time {
+    font-size: 22rpx;
+    color: #64748b;
+    font-family: monospace;
+}
+
+.empty-state {
+    padding: 60rpx;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 26rpx;
+    font-style: italic;
+    border: 1rpx solid rgba(212, 175, 55, 0.1);
+    background: rgba(0,0,0,0.2);
+}
+
+/* Animations - 保持原有 */
+.animate-fade-in { animation: fadeIn 1s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.8s ease-out forwards; }
+.animate-slide-in-left { animation: slideInLeft 0.8s ease-out forwards; }
+.animate-slide-in-right { animation: slideInRight 0.8s ease-out forwards; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes slideInLeft { from { opacity: 0; transform: translateX(-20rpx); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(20rpx); } to { opacity: 1; transform: translateX(0); } }

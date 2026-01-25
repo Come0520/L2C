@@ -1,0 +1,52 @@
+<!--pages/quotes/index.wxml-->
+<view class="container">
+  <!-- Search Bar -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+        <icon type="search" size="14" color="#94a3b8"></icon>
+        <input 
+            class="search-input" 
+            placeholder="搜索报价单号或客户名" 
+            confirm-type="search"
+            bindinput="onSearchInput" 
+            bindconfirm="onSearch"
+        />
+    </view>
+  </view>
+
+  <!-- List -->
+  <scroll-view class="list-container" scroll-y="true">
+    <block wx:for="{{list}}" wx:key="id">
+        <view class="quote-card" bindtap="onTapItem" data-id="{{item.id}}">
+            <view class="card-header">
+                <view class="title-row">
+                    <text class="title">{{item.customerName}}</text>
+                    <text class="status-tag {{item.status}}">{{item.statusText}}</text>
+                </view>
+                <text class="date">{{item.updatedAt}}</text>
+            </view>
+            
+            <view class="card-body">
+                <view class="info-row">
+                    <text class="label">金额：</text>
+                    <text class="value price">¥{{item.totalAmount}}</text>
+                </view>
+                <view class="info-row">
+                    <text class="label">单号：</text>
+                    <text class="value code">{{item.code}}</text>
+                </view>
+            </view>
+        </view>
+    </block>
+
+    <view class="empty-state" wx:if="{{!list.length && !loading}}">
+        <image class="empty-img" src="/assets/empty.png" /> 
+        <text>暂无报价单</text>
+    </view>
+  </scroll-view>
+
+  <!-- FAB -->
+  <view class="fab-add" bindtap="onAdd">
+    +
+  </view>
+</view>

@@ -1,101 +1,107 @@
 /**
  * 生成员工邀请码 API
- * 
+ *
  * POST /api/miniprogram/invite/generate
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { tenants } from '@/shared/api/schema';
+import { tenants, invitations } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { jwtVerify, SignJWT } from 'jose';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 
 // 从 Token 获取用户信息
 async function getUserFromToken(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-        return null;
-    }
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
 
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+  const token = authHeader.slice(7);
+  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 
-    try {
-        const { payload } = await jwtVerify(token, secret);
-        return payload as { userId: string; tenantId: string };
-    } catch {
-        return null;
-    }
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    return payload as { userId: string; tenantId: string };
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const tokenData = await getUserFromToken(request);
+  try {
+    const tokenData = await getUserFromToken(request);
 
-        if (!tokenData) {
-            return NextResponse.json(
-                { success: false, error: '未授权' },
-                { status: 401 }
-            );
-        }
-
-        // 检查租户是否已激活
-        const tenant = await db.query.tenants.findFirst({
-            where: eq(tenants.id, tokenData.tenantId),
-        });
-
-        if (!tenant || tenant.status !== 'active') {
-            return NextResponse.json(
-                { success: false, error: '企业未激活，无法邀请员工' },
-                { status: 403 }
-            );
-        }
-
-        const body = await request.json();
-        const { role = 'STAFF' } = body;
-
-        // 生成邀请码
-        const inviteCode = nanoid(12);
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7天有效期
-
-        // 生成邀请 Token
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const inviteToken = await new SignJWT({
-            type: 'employee_invite',
-            tenantId: tokenData.tenantId,
-            inviterId: tokenData.userId,
-            defaultRole: role,
-            inviteCode,
-        })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime(expiresAt)
-            .sign(secret);
-
-        // 邀请链接（Web 端）
-        const baseUrl = process.env.AUTH_URL || 'https://your-domain.com';
-        const inviteLink = `${baseUrl}/register/employee?token=${inviteToken}`;
-
-        // 小程序码 URL（需要调用微信 API 生成）
-        // 这里返回一个占位符，实际使用时需要调用 wxacode.getUnlimited
-        const qrcodeUrl = `${baseUrl}/api/miniprogram/invite/qrcode?code=${inviteCode}`;
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                inviteCode,
-                inviteLink,
-                qrcodeUrl,
-                expiresAt: expiresAt.toISOString(),
-                role,
-            },
-        });
-
-    } catch (error) {
-        console.error('生成邀请码错误:', error);
-        return NextResponse.json(
-            { success: false, error: '生成失败' },
-            { status: 500 }
-        );
+    if (!tokenData) {
+      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
     }
+
+    // 检查租户是否已激活
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, tokenData.tenantId),
+    });
+
+    if (!tenant || tenant.status !== 'active') {
+      return NextResponse.json(
+        { success: false, error: '企业未激活，无法邀请员工' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { role = 'STAFF' } = body;
+    const maxUses = body.maxUses || '1'; // 默认单次有效
+
+    // 生成6位数字邀请码 (方便输入)
+    const generateCode = customAlphabet('0123456789', 6);
+    const inviteCode = generateCode();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7天有效期
+
+    // 保存到数据库
+    await db.insert(invitations).values({
+      tenantId: tokenData.tenantId,
+      inviterId: tokenData.userId,
+      code: inviteCode,
+      role,
+      expiresAt,
+      maxUses: String(maxUses),
+      isActive: true,
+    });
+
+    // 生成邀请 Token
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    const inviteToken = await new SignJWT({
+      type: 'employee_invite',
+      tenantId: tokenData.tenantId,
+      inviterId: tokenData.userId,
+      defaultRole: role,
+      inviteCode,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(expiresAt)
+      .sign(secret);
+
+    // 邀请链接（Web 端）
+    const baseUrl = process.env.AUTH_URL || 'https://your-domain.com';
+    const inviteLink = `${baseUrl}/register/employee?token=${inviteToken}`;
+
+    // 小程序码 URL（需要调用微信 API 生成）
+    // 这里返回一个占位符，实际使用时需要调用 wxacode.getUnlimited
+    const qrcodeUrl = `${baseUrl}/api/miniprogram/invite/qrcode?code=${inviteCode}`;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        inviteCode,
+        inviteLink,
+        qrcodeUrl,
+        expiresAt: expiresAt.toISOString(),
+        role,
+      },
+    });
+  } catch (error) {
+    console.error('生成邀请码错误:', error);
+    return NextResponse.json({ success: false, error: '生成失败' }, { status: 500 });
+  }
 }

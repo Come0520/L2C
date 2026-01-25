@@ -1,0 +1,58 @@
+<!--pages/quotes/detail.wxml-->
+<view class="container" wx:if="{{!loading}}">
+  <scroll-view class="content-wrapper" scroll-y="true">
+    <!-- 报价单详情 -->
+    <view class="section quote-info">
+      <view class="header-row">
+        <view class="title">尊享 · 报价单</view>
+        <view class="status tag">{{quote.status === 'DRAFT' ? '草稿' : (quote.status === 'CONFIRMED' ? '已确认' : quote.status)}}</view>
+      </view>
+      <view class="sub-info">NO. {{quote.quoteNo}}</view>
+      <view class="customer">致：{{quote.customerName}} 阁下</view>
+      
+      <view class="items">
+        <block wx:for="{{quote.items}}" wx:key="id">
+            <view class="item">
+            <view class="item-main">
+                <text class="product-name">{{item.roomName}} - {{item.productName}}</text>
+                <text class="sku-info" wx:if="{{item.attributes}}">{{item.attributes}}</text>
+            </view>
+            <view class="item-price">
+                <text class="price">¥{{item.subtotal}}</text>
+            </view>
+            </view>
+        </block>
+      </view>
+
+      <view class="total">
+        <text>总计：</text>
+        <text class="amount">¥{{quote.finalAmount}}</text>
+      </view>
+    </view>
+
+    <!-- 已确认状态展示 -->
+    <view class="section signed-section" wx:if="{{quote.customerSignatureUrl}}">
+        <view class="section-title">已签字确认</view>
+        <image class="signed-img" src="{{quote.customerSignatureUrl}}" mode="aspectFit"></image>
+        <view class="signed-time">确认时间：{{quote.confirmedAt}}</view>
+        <!-- Pay Button could go here -->
+    </view>
+
+    <!-- 待签字区域 -->
+    <view class="section signature-section" wx:elif="{{quote.status !== 'CONFIRMED'}}">
+      <view class="section-title">客户确认签字</view>
+      <view class="signature-wrapper">
+        <signature id="signature" width="{{signatureWidth}}" height="{{signatureHeight}}" />
+      </view>
+      <view class="actions">
+        <button class="btn-clear" bindtap="handleClear">重签</button>
+        <button class="btn-confirm" bindtap="handleConfirm">确认并支付</button>
+      </view>
+    </view>
+  </scroll-view>
+</view>
+
+<view class="loading-state" wx:else>
+    <view class="loading-spinner"></view>
+    <text>加载中...</text>
+</view>

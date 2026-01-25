@@ -1,0 +1,14 @@
+.signature-box {
+  background-color: #f8f8f8;
+  border-radius: 16rpx;
+  overflow: hidden;
+  position: relative;
+  /* Optional dashed border for signature area hint */
+  border: 2rpx dashed #d1d5db; 
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

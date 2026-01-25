@@ -1,0 +1,11 @@
+<view class="signature-box" style="width:{{width}}px; height:{{height}}px;">
+  <canvas 
+    type="2d" 
+    id="signature-canvas" 
+    class="canvas"
+    disable-scroll="{{true}}"
+    bindtouchstart="onTouchStart"
+    bindtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd"
+  ></canvas>
+</view>

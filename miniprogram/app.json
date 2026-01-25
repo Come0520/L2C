@@ -1,18 +1,61 @@
 {
-    "pages": [
-        "pages/index/index",
-        "pages/register/register",
-        "pages/status/status",
-        "pages/invite/invite"
-    ],
-    "window": {
-        "navigationBarTitleText": "L2C 销售管理",
-        "navigationBarBackgroundColor": "#1e40af",
-        "navigationBarTextStyle": "white",
-        "backgroundColor": "#f5f5f5",
-        "backgroundTextStyle": "dark"
-    },
-    "style": "v2",
-    "sitemapLocation": "sitemap.json",
-    "lazyCodeLoading": "requiredComponents"
+  "pages": [
+    "pages/landing/landing",
+    "pages/login/login",
+    "pages/index/index",
+    "pages/register/register",
+    "pages/status/status",
+    "pages/invite/invite",
+    "pages/workbench/index",
+    "pages/crm/index",
+    "pages/quotes/index",
+    "pages/quotes/create/index",
+    "pages/reports/index",
+    "pages/tasks/index",
+    "pages/quotes/detail",
+    "pages/users/profile",
+    "pages/tenant/payment-settings/index",
+    "pages/showroom/index",
+    "pages/showroom/detail/index",
+    "pages/showroom/capsule/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "L2C 窗帘全流程管理大师",
+    "navigationBarBackgroundColor": "#141414",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#141414",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#909399",
+    "selectedColor": "#E6B450",
+    "borderStyle": "black",
+    "backgroundColor": "#141414",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/workbench/index",
+        "text": "工作台"
+      },
+      {
+        "pagePath": "pages/crm/index",
+        "text": "客户"
+      },
+      {
+        "pagePath": "pages/quotes/index",
+        "text": "报价"
+      },
+      {
+        "pagePath": "pages/users/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
 }

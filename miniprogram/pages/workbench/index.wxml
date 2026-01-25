@@ -1,0 +1,79 @@
+<!--pages/workbench/index.wxml-->
+<view class="container">
+  <!-- Header -->
+  <view class="header">
+    <view class="greeting">
+        <text class="h1">指挥官, {{userInfo.name}}</text>
+        <text class="p">任务日期: {{today}}</text>
+    </view>
+    <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}"></image>
+  </view>
+
+  <!-- Data HUD - 核心反应堆 -->
+  <view class="hud-container animate-fade-in">
+    <!-- 中心旋转圆环 -->
+    <view class="reactor-core">
+        <view class="reactor-ring"></view>
+        <view class="reactor-ring-inner"></view>
+        <view class="core-text">
+            <text class="core-value">{{dashboard.targetCompletion || '85'}}%</text>
+            <text class="core-label">目标达成</text>
+        </view>
+    </view>
+
+    <!-- 卫星数据 -->
+    <view class="satellite-stat pos-tl animate-slide-in-left" style="animation-delay: 0.1s;">
+        <view class="sat-value">{{dashboard.stats.leads || '0'}}</view>
+        <view class="sat-label">线索</view>
+    </view>
+    <view class="satellite-stat pos-tr animate-slide-in-right" style="animation-delay: 0.2s;">
+        <view class="sat-value">{{dashboard.stats.quotes || '0'}}</view>
+        <view class="sat-label">报价</view>
+    </view>
+    <view class="satellite-stat pos-bl animate-slide-in-left" style="animation-delay: 0.3s;">
+        <view class="sat-value">{{dashboard.stats.orders || '0'}}</view>
+        <view class="sat-label">订单</view>
+    </view>
+    <view class="satellite-stat pos-br animate-slide-in-right" style="animation-delay: 0.4s;">
+        <view class="sat-value">{{dashboard.stats.cash || '0'}}</view>
+        <view class="sat-label">现金(k)</view>
+    </view>
+  </view>
+
+  <!-- Quick Actions - 霓虹按钮 -->
+  <view class="section-title">快捷入口</view>
+  <view class="actions-row animate-slide-up">
+      <view class="action-btn" bindtap="navigateToCreateQuote">
+          <image class="icon" src="/assets/icons/flash-active.svg" />
+          <text>快速报价</text>
+      </view>
+      <view class="action-btn" bindtap="navigateToShowroom">
+          <image class="icon" src="/assets/icons/gallery-active.svg" />
+          <text>云展厅</text>
+      </view>
+      <view class="action-btn" wx:if="{{userInfo.role === 'admin'}}" bindtap="navigateToReports">
+          <image class="icon" src="/assets/icons/chart-active.svg" />
+          <text>全息报表</text>
+      </view>
+  </view>
+
+  <!-- Live Feed - 情报流 -->
+  <view class="section-title">实时动态</view>
+  <view class="todo-list animate-slide-up" style="animation-delay: 0.2s;">
+      <block wx:for="{{dashboard.todos}}" wx:key="id">
+          <view class="todo-item" bindtap="handleTodoTap" data-id="{{item.id}}">
+              <view class="todo-main">
+                  <view class="todo-title">{{item.title}}</view>
+                  <view class="todo-desc">{{item.desc}}</view>
+              </view>
+              <view class="todo-right">
+                  <view class="status-tag {{item.status}}">{{item.status}}</view>
+                  <view class="time">{{item.time}}</view>
+              </view>
+          </view>
+      </block>
+      <view class="empty-state" wx:if="{{!dashboard.todos.length}}">
+          暂无信号
+      </view>
+  </view>
+</view>

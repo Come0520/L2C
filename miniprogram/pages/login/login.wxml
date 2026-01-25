@@ -1,0 +1,46 @@
+<view class="container">
+  <view class="header">
+    <view class="title">欢迎回来</view>
+    <view class="subtitle">登录 L2C 窗帘全流程管理大师</view>
+  </view>
+
+  <view class="form-card">
+    <view class="form-item">
+      <view class="label">账号</view>
+      <input 
+        class="input" 
+        placeholder="请输入手机号或邮箱" 
+        placeholder-class="placeholder" 
+        model:value="{{account}}"
+        data-field="account"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="label">密码</view>
+      <input 
+        class="input" 
+        type="password" 
+        placeholder="请输入密码" 
+        placeholder-class="placeholder" 
+        model:value="{{password}}"
+        data-field="password"
+        bindinput="onInput"
+      />
+    </view>
+
+    <button 
+      class="btn-primary" 
+      loading="{{loggingIn}}" 
+      bindtap="onLogin"
+    >
+      立即登录
+    </button>
+
+    <view class="link-area">
+      <view class="tips">还没有账号？</view>
+      <view class="link" bindtap="goRegister">立即入驻/加入团队</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+<view class="container">
+  <text>我的任务</text>
+  <view class="task-list">
+    <view class="task-item">
+      <text class="address">上海市浦东新区...</text>
+      <text class="type">量房</text>
+    </view>
+  </view>
+</view>

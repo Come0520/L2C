@@ -63,3 +63,19 @@ next-env.d.ts
 # Antigravity Agent Workflows
 !.agent/workflows/
 !.agent/rules/
+
+# 敏感脚本 (Sensitive Scripts - 包含 AccessKey/密码)
+test_and_create_database.py
+test_dms_ssl.py
+test_rds_*.py
+search_dms_database.py
+query_rds_*.py
+list_dms_instances.py
+execute_schema_*.py
+check_rds_*.py
+check_dms_*.py
+add_local_whitelist.py
+add_dms_whitelist.py
+dms-mcp/start_server.ps1
+*_with_secrets.py
+*_credentials.py

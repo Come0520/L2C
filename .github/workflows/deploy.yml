@@ -42,6 +42,20 @@ jobs:
           script_stop: true
           command_timeout: 45m
           script: |
+            # --- Setup Swap (Prevent OOM) ---
+            if ! swapon --show | grep -q "/swapfile"; then
+              echo "Creating 4GB swapfile..."
+              fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo "Swap enabled:"
+              free -h
+            else
+              echo "Swap already exists."
+              free -h
+            fi
+
             cd /opt/L2C
             
             # --- Rebuild & Restart ---

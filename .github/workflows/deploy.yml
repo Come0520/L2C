@@ -23,18 +23,36 @@ jobs:
           username: root
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
-          command_timeout: 10m
           script: |
             # --- Setup Swap (Prevent OOM) ---
-            if ! swapon --show | grep -q "/swapfile"; then
+            echo "Checking swap status..."
+            
+            # 检查 swap 是否已激活
+            if swapon --show | grep -q "/swapfile"; then
+              echo "Swap already active."
+              free -h
+            elif [ -f /swapfile ]; then
+              # swapfile 存在但未激活，尝试激活
+              echo "Swapfile exists but not active, activating..."
+              swapon /swapfile || {
+                echo "Failed to activate existing swap, recreating..."
+                swapoff /swapfile 2>/dev/null || true
+                rm -f /swapfile
+                fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+                chmod 600 /swapfile
+                mkswap /swapfile
+                swapon /swapfile
+              }
+              echo "Swap enabled."
+              free -h
+            else
+              # swapfile 不存在，创建它
               echo "Creating 4GB swapfile..."
               fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
               chmod 600 /swapfile
               mkswap /swapfile
               swapon /swapfile
               echo "Swap enabled."
-            else
-              echo "Swap already exists."
               free -h
             fi
             

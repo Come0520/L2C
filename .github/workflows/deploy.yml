@@ -40,7 +40,7 @@ jobs:
           username: root
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
-          command_timeout: 30m
+          command_timeout: 45m
           script: |
             cd /opt/L2C
             

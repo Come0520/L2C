@@ -15,6 +15,32 @@ jobs:
       - name: Create deployment artifact
         run: git archive --format=tar.gz -o site.tar.gz HEAD
 
+      # 1. Setup Swap FIRST to ensure server can handle subsequent connections
+      - name: Setup Server (Swap & Cleanup)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: root
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            # --- Setup Swap (Prevent OOM) ---
+            if ! swapon --show | grep -q "/swapfile"; then
+              echo "Creating 4GB swapfile..."
+              fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo "Swap enabled."
+            else
+              echo "Swap already exists."
+              free -h
+            fi
+            
+            # Clean temp dir
+            rm -f /tmp/site.tar.gz
+
       - name: Upload artifact to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -33,18 +59,6 @@ jobs:
           script_stop: true
           command_timeout: 45m
           script: |
-            # --- Setup Swap (Prevent OOM) ---
-            if ! swapon --show | grep -q "/swapfile"; then
-              echo "Creating 4GB swapfile..."
-              fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
-              chmod 600 /swapfile
-              mkswap /swapfile
-              swapon /swapfile
-              echo "Swap enabled."
-            else
-              echo "Swap already exists."
-            fi
-
             # --- Deploy Source Code ---
             echo "Deploying new source code..."
             mkdir -p /opt/L2C
@@ -53,34 +67,15 @@ jobs:
             mkdir -p /opt/L2C_tmp
             tar -xzf /tmp/site.tar.gz -C /opt/L2C_tmp
             
-            # Sync files from tmp to target (rsync is safer than rm+cp for live updates)
-            # But since we are rebuilding docker, full overwrite is fine. 
-            # We copy files over. Note: this keeps .env if it exists in target but not in archive? 
-            # git archive doesn't have .env. We must preserve .env if it exists in /opt/L2C
-            
-            # Safe update strategy:
-            # 1. Extract new code
-            # 2. Copy config files (.env, etc) from old dir to new dir if needed (or just use rsync)
-            # Simple approach: Tar extract overwrites existing files. Files deleted in git won't be deleted in server with simple overwrite.
-            # Ideally: Clean directory but keep .env.
-            
             # Back up .env
             if [ -f /opt/L2C/.env ]; then
               cp /opt/L2C/.env /tmp/L2C.env.bak
             fi
             
-            # Clear directory (expect volumes) but careful with bind mounts if any
-            # Docker compose down might be needed if we remove docker-compose.yml? No, we have it in memory/new code.
-            # Let's just extract over it. 'git archive' is clean. 
-            # To remove stale files (like deleted in git), we should probably clear.
-            # But let's stick to simple overwrite to avoid deleting logs/state if mapped locally (though state should be in volumes).
-            
+            # Extract to target
             tar -xzf /tmp/site.tar.gz -C /opt/L2C
             rm /tmp/site.tar.gz
             
-            # Restore .env if we wiped it (we didn't wipe, but just in case we change logic later)
-            # (In overwrite mode, .env stays if not in tar. git archive doesn't have .env)
-
             cd /opt/L2C
             
             # --- Rebuild & Restart ---

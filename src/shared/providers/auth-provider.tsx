@@ -8,9 +8,12 @@
 import { SessionProvider } from 'next-auth/react';
 import type { ReactNode } from 'react';
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+import type { Session } from 'next-auth';
+
+export function AuthProvider({ children, session }: { children: ReactNode; session: Session | null }) {
     return (
         <SessionProvider
+            session={session}
             refetchInterval={5 * 60}
             refetchOnWindowFocus={false}
         >

@@ -125,23 +125,23 @@ export default function TenantRegisterPage() {
   // 提交成功页面
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-        <Card className="w-full max-w-md border-white/20 bg-white/10 backdrop-blur-xl">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
+        <Card className="w-full max-w-md glass-liquid border-white/40 shadow-xl">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20">
-              <CheckCircle2 className="h-10 w-10 text-green-400" />
+              <CheckCircle2 className="h-10 w-10 text-green-500" />
             </div>
-            <CardTitle className="text-2xl text-white">申请已提交</CardTitle>
-            <CardDescription className="mt-2 text-slate-300">
+            <CardTitle className="text-2xl text-foreground">申请已提交</CardTitle>
+            <CardDescription className="mt-2 text-muted-foreground">
               您的企业入驻申请已成功提交！
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-white/5 p-4 text-center">
-              <p className="text-sm text-slate-300">
-                我们将在 <span className="font-semibold text-white">1-3 个工作日</span> 内完成审核
+            <div className="rounded-lg bg-secondary/50 p-4 text-center">
+              <p className="text-sm text-foreground">
+                我们将在 <span className="font-semibold">1-3 个工作日</span> 内完成审核
               </p>
-              <p className="mt-2 text-sm text-slate-400">审核结果将通过短信和邮件通知您</p>
+              <p className="mt-2 text-sm text-muted-foreground">审核结果将通过短信和邮件通知您</p>
             </div>
             <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -155,14 +155,14 @@ export default function TenantRegisterPage() {
 
   // 注册表单
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-4 py-8">
-      <Card className="w-full max-w-lg border-white/20 bg-white/10 backdrop-blur-xl">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 py-8">
+      <Card className="w-full max-w-lg glass-liquid border-white/40 shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/20">
-            <Building2 className="h-8 w-8 text-blue-400" />
+          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary-500/10">
+            <Building2 className="h-8 w-8 text-primary-600" />
           </div>
-          <CardTitle className="text-xl text-white">企业入驻申请</CardTitle>
-          <CardDescription className="text-slate-300">
+          <CardTitle className="text-xl text-foreground">企业入驻申请</CardTitle>
+          <CardDescription className="text-muted-foreground">
             填写以下信息申请开通 L2C 销售管理系统
           </CardDescription>
         </CardHeader>
@@ -171,8 +171,8 @@ export default function TenantRegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 企业名称 */}
             <div className="space-y-2">
-              <Label htmlFor="companyName" className="text-white">
-                企业名称 <span className="text-red-400">*</span>
+              <Label htmlFor="companyName" className="text-foreground">
+                企业名称 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="companyName"
@@ -180,15 +180,15 @@ export default function TenantRegisterPage() {
                 value={formData.companyName}
                 onChange={(e) => handleChange('companyName', e.target.value)}
                 required
-                className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                className="input-base"
               />
             </div>
 
             {/* 联系人 + 手机号 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="applicantName" className="text-white">
-                  联系人 <span className="text-red-400">*</span>
+                <Label htmlFor="applicantName" className="text-foreground">
+                  联系人 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="applicantName"
@@ -196,12 +196,12 @@ export default function TenantRegisterPage() {
                   value={formData.applicantName}
                   onChange={(e) => handleChange('applicantName', e.target.value)}
                   required
-                  className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                  className="input-base"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-white">
-                  手机号 <span className="text-red-400">*</span>
+                <Label htmlFor="phone" className="text-foreground">
+                  手机号 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="phone"
@@ -210,7 +210,7 @@ export default function TenantRegisterPage() {
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
                   required
-                  className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                  className="input-base"
                 />
               </div>
             </div>
@@ -218,8 +218,8 @@ export default function TenantRegisterPage() {
             {/* 邮箱 + 地区 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">
-                  邮箱 <span className="text-red-400">*</span>
+                <Label htmlFor="email" className="text-foreground">
+                  邮箱 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -228,18 +228,18 @@ export default function TenantRegisterPage() {
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
                   required
-                  className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                  className="input-base"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="region" className="text-white">
-                  地区 <span className="text-red-400">*</span>
+                <Label htmlFor="region" className="text-foreground">
+                  地区 <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={formData.region}
                   onValueChange={(value) => handleChange('region', value)}
                 >
-                  <SelectTrigger className="border-white/20 bg-white/5 text-white">
+                  <SelectTrigger className="input-base">
                     <SelectValue placeholder="选择省份" />
                   </SelectTrigger>
                   <SelectContent>
@@ -256,8 +256,8 @@ export default function TenantRegisterPage() {
             {/* 密码 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">
-                  设置密码 <span className="text-red-400">*</span>
+                <Label htmlFor="password" className="text-foreground">
+                  设置密码 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="password"
@@ -266,12 +266,12 @@ export default function TenantRegisterPage() {
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   required
-                  className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                  className="input-base"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-white">
-                  确认密码 <span className="text-red-400">*</span>
+                <Label htmlFor="confirmPassword" className="text-foreground">
+                  确认密码 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="confirmPassword"
@@ -280,22 +280,22 @@ export default function TenantRegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => handleChange('confirmPassword', e.target.value)}
                   required
-                  className="border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                  className="input-base"
                 />
               </div>
             </div>
 
             {/* 业务简介 */}
             <div className="space-y-2">
-              <Label htmlFor="businessDescription" className="text-white">
-                业务简介 <span className="text-slate-500">(选填)</span>
+              <Label htmlFor="businessDescription" className="text-foreground">
+                业务简介 <span className="text-muted-foreground">(选填)</span>
               </Label>
               <Textarea
                 id="businessDescription"
                 placeholder="请简要介绍您的主营业务..."
                 value={formData.businessDescription}
                 onChange={(e) => handleChange('businessDescription', e.target.value)}
-                className="min-h-[80px] border-white/20 bg-white/5 text-white placeholder:text-slate-500"
+                className="min-h-[80px] input-base"
               />
             </div>
 
@@ -309,7 +309,7 @@ export default function TenantRegisterPage() {
             {/* 提交按钮 */}
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-500/30"
               disabled={submitting}
             >
               {submitting ? (
@@ -327,7 +327,7 @@ export default function TenantRegisterPage() {
               <Button
                 type="button"
                 variant="link"
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => router.push('/login')}
               >
                 已有账号？返回登录

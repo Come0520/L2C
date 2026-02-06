@@ -6,7 +6,7 @@
 import { Suspense } from 'react';
 import { getPurchaseOrders } from '@/features/supply-chain/actions/queries';
 import { EnhancedPOTable } from '@/features/supply-chain/components/enhanced-po-table';
-import { PageHeader } from '@/components/ui/page-header';
+
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { TableSkeleton } from '@/shared/ui/skeleton-variants';
@@ -43,14 +43,8 @@ export default async function PurchaseOrdersPage({
     });
 
     return (
-        <div className="flex h-full flex-col">
-            <div className="border-b px-6 py-4">
-                <PageHeader
-                    title="采购单管理"
-                    description="管理订单拆分生成的采购单，跟踪供应商生产和物流进度"
-                />
-            </div>
-            <div className="flex-1 p-6">
+        <div className="flex h-full flex-col space-y-4">
+            <div className="flex-1 glass-liquid-ultra p-6 rounded-2xl border border-white/10">
                 <Suspense fallback={<TableSkeleton />}>
                     <EnhancedPOTable data={result.data} />
                 </Suspense>

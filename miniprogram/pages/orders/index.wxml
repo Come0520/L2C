@@ -1,3 +1,42 @@
+<!--pages/orders/index.wxml-->
 <view class="container">
-  <text>我的订单</text>
+    <view class="tabs">
+        <view class="tab-item {{activeTab === 'ALL' ? 'active' : ''}}" bindtap="onTabChange" data-status="ALL">全部</view>
+        <view class="tab-item {{activeTab === 'PENDING_PAYMENT' ? 'active' : ''}}" bindtap="onTabChange" data-status="PENDING_PAYMENT">待付款</view>
+        <view class="tab-item {{activeTab === 'IN_PRODUCTION' ? 'active' : ''}}" bindtap="onTabChange" data-status="IN_PRODUCTION">生产中</view>
+        <view class="tab-item {{activeTab === 'COMPLETED' ? 'active' : ''}}" bindtap="onTabChange" data-status="COMPLETED">已完成</view>
+    </view>
+
+    <scroll-view class="order-list" scroll-y="true" bindscrolltolower="onLoadMore">
+        <block wx:for="{{list}}" wx:key="id">
+            <view class="order-card" bindtap="onToDetail" data-id="{{item.id}}">
+                <view class="card-header">
+                    <text class="order-no">{{item.orderNo}}</text>
+                    <text class="status {{item.status}}">{{statusMap[item.status] || item.status}}</text>
+                </view>
+                <view class="card-body">
+                    <view class="row">
+                        <text class="label">客户：</text>
+                        <text class="value">{{item.customerName}}</text>
+                    </view>
+                    <view class="row">
+                        <text class="label">金额：</text>
+                        <text class="value price">¥{{item.totalAmount}}</text>
+                    </view>
+                     <view class="row">
+                        <text class="label">已付：</text>
+                        <text class="value paid">¥{{item.paidAmount}}</text>
+                    </view>
+                     <view class="row">
+                        <text class="label">创建时间：</text>
+                        <text class="value">{{item.createdAtFormatted}}</text>
+                    </view>
+                </view>
+            </view>
+        </block>
+
+        <view class="empty-state" wx:if="{{!list.length && !loading}}">
+            <text>暂无订单</text>
+        </view>
+    </scroll-view>
 </view>

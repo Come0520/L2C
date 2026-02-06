@@ -12,6 +12,7 @@ import {
     Megaphone,
     Shield,
     ChevronDown,
+    HardHat,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -31,8 +32,8 @@ const settingsTabs = [
         icon: Building2,
         items: [
             { href: '/settings/general', label: '租户信息' },
+            { href: '/settings/verification', label: '企业认证' },
             { href: '/settings/preferences', label: '偏好设置' },
-            { href: '/settings/theme', label: '主题配置' },
         ],
     },
     {
@@ -62,6 +63,13 @@ const settingsTabs = [
         icon: Wallet,
         items: [
             { href: '/settings/finance', label: '财务基础' },
+        ],
+    },
+    {
+        id: 'worker',
+        label: '工人管理',
+        icon: HardHat,
+        items: [
             { href: '/settings/labor-pricing', label: '劳务定价' },
         ],
     },
@@ -76,11 +84,10 @@ const settingsTabs = [
         ],
     },
     {
-        id: 'channel',
-        label: '渠道通知',
+        id: 'notification',
+        label: '通知配置',
         icon: Megaphone,
         items: [
-            { href: '/settings/channels', label: '渠道管理' },
             { href: '/settings/notifications', label: '通知设置' },
             { href: '/settings/reminders', label: '提醒规则' },
         ],

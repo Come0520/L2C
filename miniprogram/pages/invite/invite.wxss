@@ -7,7 +7,7 @@
   background-color: #0f0f0f; /* 深邃黑 */
   background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #0f0f0f 70%);
   overflow: hidden;
-  color: #e2e8f0;
+  color: #ffffff;
 }
 
 /* 装饰性光效 */

@@ -1,0 +1,75 @@
+/* pages/workbench/engineer/index.wxss */
+.container {
+    background: #f8fafc;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    padding: 30rpx;
+    background: #fff;
+    font-size: 36rpx;
+    font-weight: bold;
+}
+
+.tabs {
+    display: flex;
+    background: #fff;
+    border-bottom: 1rpx solid #f1f5f9;
+}
+
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 24rpx 0;
+    color: #64748b;
+    position: relative;
+    font-size: 28rpx;
+}
+
+.tab.active {
+    color: #0f172a;
+    font-weight: 500;
+}
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 30%; right: 30%;
+    height: 4rpx;
+    background: #0f172a;
+    border-radius: 4rpx;
+}
+
+.task-list {
+    flex: 1;
+    padding: 24rpx;
+    box-sizing: border-box;
+}
+
+.task-card {
+    background: #fff;
+    border-radius: 16rpx;
+    padding: 24rpx;
+    margin-bottom: 24rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20rpx;
+}
+.task-no { font-weight: 500; color: #334155; }
+.status { font-size: 24rpx; padding: 4rpx 12rpx; border-radius: 8rpx; background: #f1f5f9; color: #64748b; }
+.status.PENDING_ACCEPT { background: #fff7ed; color: #c2410c; }
+.status.IN_PROGRESS { background: #eff6ff; color: #1d4ed8; }
+.status.COMPLETED { background: #f0fdf4; color: #15803d; }
+
+.row { display: flex; font-size: 26rpx; margin-bottom: 12rpx; }
+.row .label { color: #94a3b8; width: 100rpx; flex-shrink: 0; }
+.row .value { color: #334155; }
+.row .value.address { flex: 1; }
+.row .value.time { color: #0f172a; font-weight: 500; }
+
+.empty { text-align: center; padding: 60rpx; color: #cbd5e1; }

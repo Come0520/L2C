@@ -31,6 +31,7 @@ export const channels = pgTable('channels', {
     // Core Info
     category: channelCategoryEnum('category').notNull().default('OFFLINE'),
     channelType: channelTypeEnum('channel_type').notNull(),
+    customChannelType: varchar('custom_channel_type', { length: 50 }), // 自定义渠道类型名称 (当 channelType=OTHER 时使用)
     name: varchar('name', { length: 100 }).notNull(),
     code: varchar('code', { length: 50 }).notNull(), // Unique per tenant potentially, but keeping global unique for simplicity or enforce logic app side? req says "QD2026xxxx".
     level: channelLevelEnum('level').notNull().default('C'),

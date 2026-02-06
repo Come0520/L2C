@@ -1,12 +1,14 @@
 import { Suspense } from 'react';
 import { getMeasureTasks, getAvailableWorkers } from '@/features/service/measurement/actions/queries';
 import { MeasureTaskTable } from '@/features/service/measurement/components/measure-task-table';
-import { MeasurementFilterBar } from '@/features/service/measurement/components/measurement-filter-bar';
+import { MeasurementToolbar } from '@/features/service/measurement/components/measurement-toolbar';
 import { CreateMeasureTaskDialog } from '@/features/service/measurement/components/create-measure-task-dialog';
+import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { Metadata } from 'next';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { db } from '@/shared/api/db';
-import { users, channels } from '@/shared/api/schema';
+import { users } from '@/shared/api/schema';
 import { eq, or } from 'drizzle-orm';
 
 export const metadata: Metadata = {
@@ -54,7 +56,7 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
     const channelOptions = (channelList || []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }));
 
     // 调用查询，传递所有筛选参数
-    const { data: tasks } = await getMeasureTasks({
+    const tasks = await getMeasureTasks({
         page,
         search,
         status: status === 'ALL' ? undefined : status,
@@ -67,28 +69,47 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
         dateTo: params.dateTo,
     });
 
+    const totalPages = Math.ceil((tasks.total || 0) / (Number(params.pageSize) || 10));
+
     return (
-        <div className="flex h-full flex-col gap-4">
+        <div className="h-full flex flex-col gap-4 p-4">
+            {/* Header Section */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">测量管理</h1>
-                    <p className="text-muted-foreground">
-                        管理测量任务、派单及审核测量数据。
-                    </p>
-                </div>
+                <UrlSyncedTabs
+                    paramName="status"
+                    defaultValue="ALL"
+                    layoutId="measurement-status-tabs"
+                    tabs={[
+                        { value: 'ALL', label: '全部任务' },
+                        { value: 'PENDING', label: '待测量' },
+                        { value: 'SCHEDULED', label: '已排期' },
+                        { value: 'COMPLETED', label: '已完成' },
+                        { value: 'CANCELLED', label: '已取消' },
+                    ]}
+                />
                 <CreateMeasureTaskDialog />
             </div>
 
-            <MeasurementFilterBar
-                workerOptions={workerOptions}
-                salesOptions={salesOptions}
-                channelOptions={channelOptions}
-            />
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-2xl border border-white/20 p-4 gap-4">
+                <MeasurementToolbar
+                    workerOptions={workerOptions}
+                    salesOptions={salesOptions}
+                    channelOptions={channelOptions}
+                />
 
-            <Suspense fallback={<TableSkeleton />}>
-                <MeasureTaskTable data={tasks as any} />
-                {/* Pagination TODO */}
-            </Suspense>
+                <div className="flex-1 min-h-0 overflow-auto">
+                    <Suspense fallback={<TableSkeleton />}>
+                        <MeasureTaskTable data={tasks.data as any} />
+                    </Suspense>
+                </div>
+
+                <DataTablePagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={tasks.total}
+                />
+            </div>
         </div>
     );
 }

@@ -4,11 +4,10 @@ import { Suspense, useState, useEffect } from 'react';
 import { SupplierTable } from '@/features/supply-chain/components/supplier-table';
 import { SupplierDialog } from '@/features/supply-chain/components/supplier-dialog';
 import { getSuppliers, updateSupplier } from '@/features/supply-chain/actions/supplier-actions';
+import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
-import Search from 'lucide-react/dist/esm/icons/search';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import { Input } from '@/shared/ui/input';
 import { toast } from 'sonner';
 
 export default function SuppliersPage() {
@@ -66,31 +65,21 @@ export default function SuppliersPage() {
     };
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">供应商管理</h1>
-                    <p className="text-muted-foreground">
-                        管理系统中的所有供应商及其基本信息。
-                    </p>
-                </div>
-                <Button onClick={handleCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    新建供应商
-                </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="搜索名称或编号..."
-                        className="pl-8"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                </div>
-            </div>
+        <div className="glass-liquid-ultra p-6 rounded-2xl border border-white/10 flex flex-col gap-4">
+            <DataTableToolbar
+                searchProps={{
+                    value: query,
+                    onChange: setQuery,
+                    placeholder: "搜索名称或编号..."
+                }}
+                actions={
+                    <Button onClick={handleCreate} size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        新建供应商
+                    </Button>
+                }
+                className="border-none shadow-none p-0 bg-transparent"
+            />
 
             {loading ? (
                 <div className="flex h-64 items-center justify-center">

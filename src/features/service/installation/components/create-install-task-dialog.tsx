@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
 
 interface CreateInstallTaskDialogProps {
     trigger?: React.ReactNode;
@@ -24,9 +25,16 @@ export function CreateInstallTaskDialog({ trigger, onSuccess }: CreateInstallTas
         }, 1000);
     };
 
+    // 默认触发按钮
+    const defaultTrigger = (
+        <Button>
+            <Plus className="mr-2 h-4 w-4" /> 新建安装单
+        </Button>
+    );
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+            <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>新建安装任务</DialogTitle>
@@ -44,4 +52,5 @@ export function CreateInstallTaskDialog({ trigger, onSuccess }: CreateInstallTas
         </Dialog>
     );
 }
+
 

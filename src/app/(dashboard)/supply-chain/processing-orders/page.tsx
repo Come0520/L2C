@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getProcessingOrders } from '@/features/supply-chain/actions/processing-actions';
 import { ProcessingOrderTable } from '@/features/supply-chain/components/processing-order-table';
-import { PageHeader } from '@/components/ui/page-header';
+
 import { Input } from '@/shared/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Search from 'lucide-react/dist/esm/icons/search';
@@ -38,16 +38,10 @@ export default async function ProcessingOrdersPage({
     });
 
     return (
-        <div className="flex h-full flex-col">
-            <div className="border-b px-6 py-4">
-                <PageHeader
-                    title="加工单管理"
-                    description="管理面料加工订单，跟踪加工进度和完成状态"
-                />
-            </div>
-            <div className="flex-1 p-6 space-y-4">
+        <div className="flex h-full flex-col space-y-4">
+            <div className="flex-1 glass-liquid-ultra p-6 rounded-2xl border border-white/10">
                 {/* 筛选栏 */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 mb-4">
                     {/* 状态 Tabs */}
                     <Tabs defaultValue={status || 'ALL'} className="w-auto">
                         <TabsList>

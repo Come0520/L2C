@@ -14,9 +14,10 @@ import { Badge } from '@/shared/ui/badge';
 
 interface UserListProps {
     data: any[];
+    onEdit?: (user: any) => void;
 }
 
-export function UserList({ data }: UserListProps) {
+export function UserList({ data, onEdit }: UserListProps) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -42,7 +43,13 @@ export function UserList({ data }: UserListProps) {
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.phone}</TableCell>
                                 <TableCell>
-                                     <Badge variant="outline">{item.role}</Badge>
+                                    <div className="flex flex-wrap gap-1">
+                                        {(item.roles && item.roles.length > 0 ? item.roles : [item.role]).map((role: string) => (
+                                            <Badge key={role} variant="outline" className="text-xs">
+                                                {role}
+                                            </Badge>
+                                        ))}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={item.isActive ? "default" : "secondary"}>
@@ -50,7 +57,7 @@ export function UserList({ data }: UserListProps) {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon">
+                                    <Button variant="ghost" size="icon" onClick={() => onEdit?.(item)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
                                     <Button variant="ghost" size="icon">

@@ -57,8 +57,6 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
             processingCost: Number(initialData.processingCost),
             lossRate: Number(initialData.lossRate),
             retailPrice: Number(initialData.retailPrice),
-            channelPrice: Number(initialData.channelPrice),
-            channelDiscountRate: Number(initialData.channelDiscountRate),
             floorPrice: Number(initialData.floorPrice),
         } : {
             sku: '',
@@ -70,9 +68,6 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
             processingCost: 0,
             lossRate: 0.05,
             retailPrice: 0,
-            channelPriceMode: 'FIXED',
-            channelPrice: 0,
-            channelDiscountRate: 1,
             floorPrice: 0,
             isToBEnabled: true,
             isToCEnabled: true,
@@ -401,53 +396,8 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="channelPriceMode"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>渠道定价模式</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="FIXED">固定渠道价</SelectItem>
-                                                    <SelectItem value="DISCOUNT">零售价折扣</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                {form.watch('channelPriceMode') === 'FIXED' ? (
-                                    <FormField
-                                        control={form.control}
-                                        name="channelPrice"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>渠道固定价</FormLabel>
-                                                <FormControl><Input type="number" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                ) : (
-                                    <FormField
-                                        control={form.control}
-                                        name="channelDiscountRate"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>渠道折扣率 (0-1)</FormLabel>
-                                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
                             </div>
+                            {/* [Channel Pricing Moved] 渠道定价配置已移至渠道管理模块。详见 implementation_plan.md */}
                         </div>
                     </TabsContent>
 

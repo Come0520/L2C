@@ -29,7 +29,9 @@ export interface InviteTokenPayload {
     tenantId: string;
     inviterId: string;      // 邀请人 ID
     customerId?: string;    // 客户邀请时的客户 ID
-    defaultRole?: string;   // 员工邀请时的默认角色
+    defaultRole?: string;   // @deprecated Use defaultRoles
+    defaultRoles?: string[]; // 员工邀请时的默认角色列表
+    expiresAt: number;
     expiresAt: number;
 }
 
@@ -76,7 +78,7 @@ function getSecretKey(): Uint8Array {
 export async function generateEmployeeInviteToken(
     tenantId: string,
     inviterId: string,
-    defaultRole: string = 'STAFF'
+    defaultRoles: string[] = ['STAFF']
 ): Promise<string> {
     const expiresAt = Date.now() + EMPLOYEE_INVITE_EXPIRY;
 
@@ -84,7 +86,7 @@ export async function generateEmployeeInviteToken(
         type: 'employee' as InviteType,
         tenantId,
         inviterId,
-        defaultRole,
+        defaultRoles,
         expiresAt,
     })
         .setProtectedHeader({ alg: 'HS256' })
@@ -102,9 +104,9 @@ export async function generateEmployeeInviteToken(
 export async function generateEmployeeInviteLink(
     tenantId: string,
     inviterId: string,
-    defaultRole?: string
+    defaultRoles?: string[]
 ): Promise<string> {
-    const token = await generateEmployeeInviteToken(tenantId, inviterId, defaultRole);
+    const token = await generateEmployeeInviteToken(tenantId, inviterId, defaultRoles);
     const baseUrl = env.AUTH_URL || 'http://localhost:3000';
     return `${baseUrl}/register/employee?token=${encodeURIComponent(token)}`;
 }
@@ -216,13 +218,18 @@ export async function registerEmployeeByInvite(
 
     // 创建用户（权限为空，需管理员后台分配）
     const passwordHash = await hash(userData.password, 12);
+
+    // 兼容旧 payload (defaultRole)
+    const roles = validation.payload.defaultRoles || (validation.payload.defaultRole ? [validation.payload.defaultRole] : ['STAFF']);
+
     const [newUser] = await db.insert(users).values({
         tenantId,
         name: userData.name,
         phone: userData.phone,
         email: `${userData.phone}@temp.l2c.com`, // 临时邮箱
         passwordHash,
-        role: defaultRole || 'STAFF',
+        role: roles[0] || 'STAFF', // Backup compatibility
+        roles: roles, // Multi-role
         permissions: [],  // 空权限，需管理员分配
         wechatOpenId: userData.wechatOpenId,
         isActive: true,

@@ -18,21 +18,17 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
 
   const handleImport = async (data: ProductImportItem[]) => {
     try {
-      // Transform simplified import data to full product creation schema
-      // @ts-expect-error - Valid default values injection
       const payload = data.map((item) => ({
         ...item,
         // Default values for fields not in Excel
         isToBEnabled: true,
         isToCEnabled: true,
-        channelPriceMode: 'discount', // Default mode
-        channelDiscountRate: 1,
         floorPrice: 0,
         isStockable: true,
         logisticsCost: 0,
         processingCost: 0,
         lossRate: 0,
-        channelPrice: item.retailPrice, // Default channel price to retail price
+        // channelPrice: item.retailPrice, // [Removed]
         defaultSupplierId: undefined, // Optional
         attributes: {},
       }));

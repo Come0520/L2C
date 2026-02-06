@@ -9,9 +9,11 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { leads } from '@/shared/api/schema';
 import { eq, and, isNull, desc, or, ilike, count } from 'drizzle-orm';
-import { apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiError, apiPaginated, apiSuccess } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
+import { LeadService } from '@/services/lead.service';
+import { createLeadSchema } from '@/features/leads/schemas';
 
 export async function GET(request: NextRequest) {
     // 1. 认证
@@ -105,6 +107,52 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('客户列表查询错误:', error);
         return apiError('查询客户列表失败', 500);
+    }
+}
+
+export async function POST(request: NextRequest) {
+    // 1. 认证
+    const authResult = await authenticateMobile(request);
+    if (!authResult.success) {
+        return authResult.response;
+    }
+    const { session } = authResult;
+
+    // 2. 权限检查
+    const roleCheck = requireSales(session);
+    if (!roleCheck.allowed) {
+        return roleCheck.response;
+    }
+
+    try {
+        const json = await request.json();
+
+        // 3. 验证数据
+        const parseResult = createLeadSchema.safeParse(json);
+        if (!parseResult.success) {
+            console.error('[API] Validation failed:', JSON.stringify(parseResult.error, null, 2));
+            return apiError(parseResult.error.issues[0].message, 400);
+        }
+        const data = parseResult.data;
+
+        // 4. 调用 Service 创建线索
+        const result = await LeadService.createLead({
+            ...data,
+            estimatedAmount: data.estimatedAmount ? String(data.estimatedAmount) : null,
+            notes: data.remark ?? null,
+        }, session.tenantId, session.userId);
+
+        if (result.isDuplicate) {
+            return apiError(`重复线索: ${result.duplicateReason === 'PHONE' ? '手机号重复' : '地址重复'}`, 409, {
+                conflictId: result.lead.id
+            });
+        }
+
+        return apiSuccess(result.lead);
+
+    } catch (error) {
+        console.error('创建线索错误:', error);
+        return apiError('创建线索失败', 500);
     }
 }
 

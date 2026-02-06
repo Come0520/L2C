@@ -1,0 +1,31 @@
+<!--pages/service/list/index.wxml-->
+<view class="container">
+  <block wx:for="{{list}}" wx:key="id">
+    <view class="ticket-card">
+        <view class="card-header">
+            <text class="ticket-no">{{item.ticketNo}}</text>
+            <text class="status {{item.status}}">{{statusMap[item.status] || item.status}}</text>
+        </view>
+        <view class="card-body">
+            <view class="row">
+                <text class="label">类型：</text>
+                <text class="value">{{item.type}}</text>
+            </view>
+             <view class="row">
+                <text class="label">描述：</text>
+                <text class="value desc">{{item.description}}</text>
+            </view>
+             <view class="row">
+                <text class="label">时间：</text>
+                <text class="value">{{item.createdAtFormatted}}</text>
+            </view>
+        </view>
+        <!-- Optional: View Detail Button if we have detail page, for now just list -->
+    </view>
+  </block>
+
+  <view class="empty" wx:if="{{!list.length && !loading}}">
+      <image src="/assets/empty.png" mode="aspectFit" class="empty-img"></image>
+      <text>暂无售后记录</text>
+  </view>
+</view>

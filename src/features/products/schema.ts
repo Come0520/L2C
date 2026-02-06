@@ -54,9 +54,6 @@ export const createProductSchema = z.object({
 
     // 价格 - 销售维度
     retailPrice: z.coerce.number().min(0).default(0),
-    channelPriceMode: z.enum(['FIXED', 'DISCOUNT']).default('FIXED'),
-    channelPrice: z.coerce.number().min(0).default(0),
-    channelDiscountRate: z.coerce.number().min(0).max(1).default(1),
     floorPrice: z.coerce.number().min(0).default(0),
 
     // 权限与关联

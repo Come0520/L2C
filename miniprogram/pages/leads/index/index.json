@@ -1,0 +1,5 @@
+{
+    "navigationBarTitleText": "线索管理",
+    "enablePullDownRefresh": true,
+    "onReachBottomDistance": 50
+}

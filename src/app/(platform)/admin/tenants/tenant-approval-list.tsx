@@ -5,10 +5,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'; // Removed
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import {
     Dialog,
     DialogContent,
@@ -104,44 +105,44 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
 
     // 租户卡片
     const TenantCard = ({ tenant, showActions = false }: { tenant: PendingTenant; showActions?: boolean }) => (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="card transition-all duration-300 hover:shadow-md">
             <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                     <div className="space-y-3 flex-1">
                         <div className="flex items-center gap-2">
-                            <Building2 className="w-5 h-5 text-blue-400" />
-                            <h3 className="font-semibold text-white">{tenant.name}</h3>
-                            <Badge variant="outline" className="text-slate-400 border-slate-600">
+                            <Building2 className="w-5 h-5 text-primary-500" />
+                            <h3 className="font-semibold text-foreground">{tenant.name}</h3>
+                            <Badge variant="outline" className="text-muted-foreground border-border">
                                 {tenant.code}
                             </Badge>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="flex items-center gap-2 text-slate-400">
-                                <span className="text-slate-500">联系人:</span>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <span className="text-muted-foreground/70">联系人:</span>
                                 {tenant.applicantName || '-'}
                             </div>
-                            <div className="flex items-center gap-2 text-slate-400">
+                            <div className="flex items-center gap-2 text-muted-foreground">
                                 <Phone className="w-4 h-4" />
                                 {tenant.applicantPhone || '-'}
                             </div>
-                            <div className="flex items-center gap-2 text-slate-400">
+                            <div className="flex items-center gap-2 text-muted-foreground">
                                 <Mail className="w-4 h-4" />
                                 {tenant.applicantEmail || '-'}
                             </div>
-                            <div className="flex items-center gap-2 text-slate-400">
+                            <div className="flex items-center gap-2 text-muted-foreground">
                                 <MapPin className="w-4 h-4" />
                                 {tenant.region || '-'}
                             </div>
                         </div>
 
                         {tenant.businessDescription && (
-                            <p className="text-slate-500 text-sm line-clamp-2">
+                            <p className="text-muted-foreground text-sm line-clamp-2">
                                 {tenant.businessDescription}
                             </p>
                         )}
 
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
                             <Clock className="w-3 h-3" />
                             申请时间: {formatDate(tenant.createdAt)}
                         </div>
@@ -178,25 +179,28 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
 
     return (
         <>
-            <Tabs defaultValue="pending" className="w-full">
-                <TabsList className="bg-slate-800 border-slate-700">
-                    <TabsTrigger value="pending" className="data-[state=active]:bg-slate-700">
-                        待审批
-                        {pendingTenants.length > 0 && (
-                            <Badge className="ml-2 bg-orange-600">{pendingTenants.length}</Badge>
-                        )}
-                    </TabsTrigger>
-                    <TabsTrigger value="all" className="data-[state=active]:bg-slate-700">
-                        全部租户 ({allTenants.length})
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="pending" className="mt-4">
+            <AnimatedTabs
+                tabs={[
+                    {
+                        value: 'pending',
+                        label: `待审批${pendingTenants.length > 0 ? ` (${pendingTenants.length})` : ''}`,
+                        icon: <Loader2 className="mr-2 h-4 w-4" />
+                    },
+                    {
+                        value: 'all',
+                        label: `全部租户 (${allTenants.length})`,
+                        icon: <Building2 className="mr-2 h-4 w-4" />
+                    },
+                ]}
+                defaultTab="pending"
+                contentClassName="mt-4"
+            >
+                <div data-tab-value="pending">
                     {pendingTenants.length === 0 ? (
-                        <Card className="bg-slate-800 border-slate-700">
+                        <Card className="card border-dashed">
                             <CardContent className="p-8 text-center">
-                                <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                                <p className="text-slate-400">暂无待审批的租户申请</p>
+                                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-50" />
+                                <p className="text-muted-foreground">暂无待审批的租户申请</p>
                             </CardContent>
                         </Card>
                     ) : (
@@ -206,35 +210,35 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
                             ))}
                         </div>
                     )}
-                </TabsContent>
+                </div>
 
-                <TabsContent value="all" className="mt-4">
+                <div data-tab-value="all">
                     <div className="space-y-4">
                         {allTenants.map((tenant) => (
                             <TenantCard key={tenant.id} tenant={tenant} />
                         ))}
                     </div>
-                </TabsContent>
-            </Tabs>
+                </div>
+            </AnimatedTabs>
 
             {/* 拒绝原因对话框 */}
             <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-                <DialogContent className="bg-slate-800 border-slate-700">
+                <DialogContent className="glass-popover sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle className="text-white">拒绝申请</DialogTitle>
-                        <DialogDescription className="text-slate-400">
+                        <DialogTitle className="text-foreground">拒绝申请</DialogTitle>
+                        <DialogDescription className="text-muted-foreground">
                             请填写拒绝「{selectedTenant?.name}」入驻申请的原因
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="rejectReason" className="text-white">拒绝原因</Label>
+                            <Label htmlFor="rejectReason" className="text-foreground">拒绝原因</Label>
                             <Textarea
                                 id="rejectReason"
                                 placeholder="请说明拒绝原因，将发送给申请人..."
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
-                                className="bg-slate-700 border-slate-600 text-white min-h-[100px]"
+                                className="glass-input text-foreground min-h-[100px]"
                             />
                         </div>
                     </div>
@@ -242,7 +246,7 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
                         <Button
                             variant="outline"
                             onClick={() => setRejectDialogOpen(false)}
-                            className="border-slate-600"
+                            className="bg-transparent"
                         >
                             取消
                         </Button>

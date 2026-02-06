@@ -1,11 +1,10 @@
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
-import { UserList } from '@/features/settings/components/user-list';
+import { UsersSettingsClient } from '@/features/settings/components/users-settings-client';
 import { db } from '@/shared/api/db';
 import { users } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { Button } from '@/shared/ui/button';
-import { Plus } from 'lucide-react';
+import { InviteUserDialog } from '@/features/settings/components/invite-user-dialog';
 
 /**
  * 用户管理设置页面
@@ -23,9 +22,11 @@ export default async function UsersSettingsPage() {
                 where: eq(users.tenantId, tenantId),
             });
             userData = dbUsers.map(u => ({
+                id: u.id,
                 name: u.name || '未命名用户',
                 phone: u.phone || '-',
                 role: u.role || '未分配角色',
+                roles: u.roles || [],
                 isActive: u.isActive,
             }));
         } catch (error) {
@@ -39,13 +40,17 @@ export default async function UsersSettingsPage() {
                 title="用户管理"
                 subtitle="管理系统用户和权限"
             >
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    添加用户
-                </Button>
+                <div className="flex gap-2">
+                    <InviteUserDialog />
+                    {/* 暂时保留原按钮，未来可移除 */}
+                    {/* <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        添加用户
+                    </Button> */}
+                </div>
             </DashboardPageHeader>
 
-            <UserList data={userData} />
+            <UsersSettingsClient userData={userData} />
         </div>
     );
 }

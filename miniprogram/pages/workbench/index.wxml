@@ -51,9 +51,17 @@
           <image class="icon" src="/assets/icons/gallery-active.svg" />
           <text>云展厅</text>
       </view>
+      <view class="action-btn" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'manager'}}" bindtap="navigateToTargets">
+          <image class="icon" src="/assets/icons/success-active.svg" />
+          <text>销售目标</text>
+      </view>
       <view class="action-btn" wx:if="{{userInfo.role === 'admin'}}" bindtap="navigateToReports">
           <image class="icon" src="/assets/icons/chart-active.svg" />
           <text>全息报表</text>
+      </view>
+      <view class="action-btn" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'engineer'}}" bindtap="navigateToEngineer">
+          <image class="icon" src="/assets/icons/list-active.svg" />
+          <text>工程任务</text>
       </view>
   </view>
 

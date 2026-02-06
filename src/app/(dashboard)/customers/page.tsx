@@ -5,13 +5,13 @@
 import { Suspense } from 'react';
 import { getCustomers } from '@/features/customers/actions/queries';
 import { CustomerTable } from '@/features/customers/components/customer-table';
-import { CustomerHeader } from '@/features/customers/components/CustomerHeader';
+import { CreateCustomerDialog } from '@/features/customers/components/create-customer-dialog';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import Search from 'lucide-react/dist/esm/icons/search';
 import { Pagination } from '@/shared/ui/pagination';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
+import { CustomersToolbar } from '@/features/customers/components/customers-toolbar';
 
 export const revalidate = 60; // Revalidate every minute
 
@@ -59,25 +59,22 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-6">
-      <CustomerHeader userId={userId} tenantId={tenantId} />
-
-      <div className="flex items-center space-x-2">
-        <form className="flex max-w-sm flex-1 items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              name="search"
-              type="search"
-              placeholder="搜索姓名、电话、编号..."
-              className="pl-9"
-              defaultValue={query}
-            />
-          </div>
-          {/* Add filter dropdowns here later (Level, Type) */}
-          <Button type="submit" variant="secondary">
-            搜索
-          </Button>
-        </form>
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex-1">
+          <CustomersToolbar />
+        </div>
+        <div className="flex items-center gap-2 glass-layout-card p-2 rounded-xl border border-white/10 shadow-sm">
+          <CreateCustomerDialog
+            userId={userId}
+            tenantId={tenantId}
+            trigger={
+              <Button className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                新建客户
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       <Suspense fallback={<div>加载中...</div>}>

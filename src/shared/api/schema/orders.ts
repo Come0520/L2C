@@ -138,7 +138,11 @@ export const paymentSchedules = pgTable('payment_schedules', {
     statementId: uuid('statement_id'), // Link to AR Statement (avoid circular ref)
 
     name: varchar('name', { length: 100 }).notNull(), // Deposit, Balance, etc.
-    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(), // Scheduled Amount
+
+    // Actual Payment
+    actualAmount: decimal('actual_amount', { precision: 12, scale: 2 }),
+    paymentMethod: paymentMethodEnum('payment_method'),
 
     expectedDate: date('expected_date'),
     actualDate: date('actual_date'),
@@ -176,4 +180,3 @@ export const orderChanges = pgTable('order_changes', {
     orderChangesOrderIdx: index('idx_order_changes_order').on(table.orderId),
     orderChangesStatusIdx: index('idx_order_changes_status').on(table.status),
 }));
-

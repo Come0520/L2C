@@ -22,14 +22,14 @@ import { revalidatePath } from 'next/cache';
 /**
  * 生成员工邀请链接（管理员操作）
  */
-export async function createEmployeeInviteLink(defaultRole?: string) {
+export async function createEmployeeInviteLink(defaultRoles?: string[]) {
     const session = await auth();
     if (!session?.user?.tenantId || !session?.user?.id) {
         return { success: false, error: '未授权' };
     }
 
     // 检查权限（只有管理员可以邀请员工）
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER' && !session.user.roles?.includes('ADMIN')) {
         return { success: false, error: '无权限邀请员工' };
     }
 
@@ -37,7 +37,7 @@ export async function createEmployeeInviteLink(defaultRole?: string) {
         const link = await generateEmployeeInviteLink(
             session.user.tenantId,
             session.user.id,
-            defaultRole
+            defaultRoles
         );
         return { success: true, link };
     } catch (error) {

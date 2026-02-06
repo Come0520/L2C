@@ -6,20 +6,16 @@ import { ProductFilter } from '@/features/products/components/product-filter';
 import { ProductDialog } from '@/features/products/components/product-dialog';
 import { getProducts } from '@/features/products/actions/queries';
 import { activateProduct, deleteProduct } from '@/features/products/actions/mutations';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Search from 'lucide-react/dist/esm/icons/search';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import Layers from 'lucide-react/dist/esm/icons/layers';
 import Boxes from 'lucide-react/dist/esm/icons/boxes';
 import Tags from 'lucide-react/dist/esm/icons/tags';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'; // Removed
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { ProductsToolbar } from '@/features/products/components/products-toolbar';
 import { PackageManager } from '@/features/products/components/package-manager';
 import { AttributeTemplateManager } from '@/features/products/components/attribute-template-manager';
-import { PageHeader } from '@/components/ui/page-header';
-import { ProductImportDialog } from '@/features/products/components/product-import-dialog';
 
 export default function ProductsPage() {
   const [data, setData] = useState<unknown[]>([]);
@@ -95,23 +91,17 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <PageHeader title="基础资料管理" description="管理商品库、套餐方案及品类属性定义" />
-
-      <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="products">
-            <Boxes className="mr-2 h-4 w-4" /> 产品库
-          </TabsTrigger>
-          <TabsTrigger value="packages">
-            <Layers className="mr-2 h-4 w-4" /> 套餐管理
-          </TabsTrigger>
-          <TabsTrigger value="templates">
-            <Tags className="mr-2 h-4 w-4" /> 属性模板
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="products" className="pt-6">
+    <div className="space-y-4">
+      <AnimatedTabs
+        tabs={[
+          { value: 'products', label: '产品库', icon: <Boxes className="mr-2 h-4 w-4" /> },
+          { value: 'packages', label: '套餐管理', icon: <Layers className="mr-2 h-4 w-4" /> },
+          { value: 'templates', label: '属性模板', icon: <Tags className="mr-2 h-4 w-4" /> },
+        ]}
+        defaultTab="products"
+        contentClassName="pt-4"
+      >
+        <div data-tab-value="products" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <div className="flex flex-col items-start gap-6 md:flex-row">
             {/* Sidebar Filters */}
             <div className="w-full shrink-0 md:w-64">
@@ -120,31 +110,16 @@ export default function ProductsPage() {
 
             {/* Main Content */}
             <div className="w-full flex-1 space-y-6">
-              {/* Search & Actions Bar */}
-              <div className="bg-card/50 flex flex-col justify-between gap-4 rounded-lg border p-4 backdrop-blur-sm sm:flex-row">
-                <div className="relative flex flex-1 items-center gap-2">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                  <Input
-                    placeholder="搜索 SKU 或名称..."
-                    className="bg-background pl-9"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                  />
-                  <Button onClick={fetchData} variant="secondary">
-                    查询
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={fetchData} disabled={loading} size="icon">
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  </Button>
-                  <ProductImportDialog onSuccess={fetchData} />
-                  <Button onClick={handleAdd} className="shadow-md transition-all hover:shadow-lg">
-                    <Plus className="mr-2 h-4 w-4" /> 新增产品
-                  </Button>
-                </div>
-              </div>
+              <ProductsToolbar
+                search={query}
+                onSearchChange={setQuery}
+                onRefresh={fetchData}
+                onAdd={handleAdd}
+                onImportSuccess={fetchData}
+                loading={loading}
+                className="border-none shadow-none p-0 bg-transparent"
+              />
+
 
               {/* Product Grid */}
               <div className="min-h-[500px]">
@@ -163,16 +138,16 @@ export default function ProductsPage() {
               </div>
             </div>
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="packages" className="pt-4">
+        <div data-tab-value="packages" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <PackageManager />
-        </TabsContent>
+        </div>
 
-        <TabsContent value="templates" className="pt-4">
+        <div data-tab-value="templates" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <AttributeTemplateManager />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </AnimatedTabs>
 
       <ProductDialog
         open={isDialogOpen}

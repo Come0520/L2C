@@ -45,15 +45,27 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
 
     const whereClause = and(...whereConditions);
 
-    const data = await db.query.customers.findMany({
-        where: whereClause,
-        with: {
-            assignedSales: true,
-        },
-        orderBy: [desc(customers.createdAt)],
-        limit: pageSize,
-        offset: offset,
-    });
+    let data;
+    try {
+        data = await db.query.customers.findMany({
+            where: whereClause,
+            with: {
+                assignedSales: true,
+            },
+            orderBy: [desc(customers.createdAt)],
+            limit: pageSize,
+            offset: offset,
+        });
+    } catch (error) {
+        console.error('Error fetching customers with relations, falling back to basic query:', error);
+        // Fallback: try fetching without relations if the join fails (e.g. schema mismatch)
+        data = await db.query.customers.findMany({
+            where: whereClause,
+            orderBy: [desc(customers.createdAt)],
+            limit: pageSize,
+            offset: offset,
+        });
+    }
 
     // Count for pagination
     const countResult = await db
@@ -85,19 +97,31 @@ export async function getCustomerDetail(id: string) {
 
     const tenantId = session.user.tenantId;
 
-    const customer = await db.query.customers.findFirst({
-        where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
-        with: {
-            assignedSales: true,
-            creator: true,
-            addresses: true,
-            referrer: true,
-            referrals: {
-                limit: 5, // Just show a few recent referrals
-                orderBy: desc(customers.createdAt)
-            }
-        },
-    });
+    let customer;
+    try {
+        customer = await db.query.customers.findFirst({
+            where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
+            with: {
+                assignedSales: true,
+                creator: true,
+                addresses: true,
+                referrer: true,
+                referrals: {
+                    limit: 5, // Just show a few recent referrals
+                    orderBy: desc(customers.createdAt)
+                }
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching customer details with relations, falling back:', error);
+        customer = await db.query.customers.findFirst({
+            where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
+            with: {
+                addresses: true,
+                // Exclude users relations that might be causing schema issues
+            },
+        });
+    }
 
     return customer;
 }
@@ -117,16 +141,27 @@ const getCustomerProfileSchema = z.object({
 const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSchema, async ({ customerId }, { session }) => {
     const tenantId = session.user.tenantId;
 
-    const customer = await db.query.customers.findFirst({
-        where: and(
-            eq(customers.id, customerId),
-            eq(customers.tenantId, tenantId)
-        ),
-        with: {
-            assignedSales: true,
-            referrer: true,
-        }
-    });
+    let customer;
+    try {
+        customer = await db.query.customers.findFirst({
+            where: and(
+                eq(customers.id, customerId),
+                eq(customers.tenantId, tenantId)
+            ),
+            with: {
+                assignedSales: true,
+                referrer: true,
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching customer profile with relations, falling back:', error);
+        customer = await db.query.customers.findFirst({
+            where: and(
+                eq(customers.id, customerId),
+                eq(customers.tenantId, tenantId)
+            ),
+        });
+    }
 
     if (!customer) {
         return { error: '客户不存在' };

@@ -1,13 +1,10 @@
-/**
- * 平台管理员布局
- * 
- * 验证用户是否为平台管理员，未授权则重定向
- */
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/shared/api/db';
 import { users } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
+import { Sidebar } from '@/widgets/layout/sidebar';
+import { Header } from '@/widgets/layout/header';
 
 export default async function PlatformLayout({
     children,
@@ -33,23 +30,17 @@ export default async function PlatformLayout({
     }
 
     return (
-        <div className="min-h-screen bg-slate-900">
-            <header className="bg-slate-800 border-b border-slate-700">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">L2C</span>
-                        </div>
-                        <h1 className="text-white font-semibold">平台管理后台</h1>
-                    </div>
-                    <div className="text-slate-400 text-sm">
-                        {session.user.name || session.user.email}
-                    </div>
-                </div>
-            </header>
-            <main className="max-w-7xl mx-auto px-4 py-6">
-                {children}
-            </main>
+        <div className="flex h-screen w-full overflow-hidden bg-transparent">
+            {/* 侧边栏导航 */}
+            <Sidebar />
+
+            {/* 主内容区域 */}
+            <div className="flex flex-col flex-1 overflow-hidden relative">
+                <Header session={session} />
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 relative md:ml-[60px]">
+                    {children}
+                </main>
+            </div>
         </div>
     );
 }

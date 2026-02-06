@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import Search from 'lucide-react/dist/esm/icons/search';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
-import { cn } from '@/shared/lib/utils';
 
 import { OrderTable } from './order-table';
 import { OrderAdvancedFilter, type OrderFilters } from './orders-advanced-filter';
 import { getOrders } from '../actions/orders';
 import { toast } from 'sonner';
+import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 
 /**
  * 订单状态Tabs配置
@@ -40,9 +40,11 @@ type OrderStatusTab = typeof ORDER_STATUS_TABS[number]['key'];
  * 4. React Query 客户端缓存
  */
 export function OrderList() {
+    const searchParams = useSearchParams();
+    const statusTab = (searchParams.get('status') || 'ALL') as OrderStatusTab;
+
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
-    const [statusTab, setStatusTab] = useState<OrderStatusTab>('ALL');
     const [filters, setFilters] = useState<OrderFilters>({});
     const pageSize = 20;
 
@@ -50,9 +52,22 @@ export function OrderList() {
     const { data, isLoading, isFetching, refetch } = useQuery({
         queryKey: ['orders', page, pageSize, search, statusTab, filters],
         queryFn: async () => {
-            const result = await getOrders(page, pageSize);
+            // Pass filters to getOrders
+            const result = await getOrders(
+                page,
+                pageSize,
+                search,
+                statusTab, // Pass status
+                filters.salesId as string, // Cast if needed, or update advanced filter types
+                filters.channelId as string,
+                filters.dateRange
+            );
             if (!result || !Array.isArray(result.data)) {
-                throw new Error('获取订单列表失败');
+                // Handle potential error format if action returns { success: false } but type hints dictate list
+                // The new action returns { data, total... } directly if successful, or throws?
+                // Wait, action updated to return object. If error, it might throw.
+                // Let's assume action returns data object.
+                if (!result.data) throw new Error('获取订单列表失败');
             }
             return result;
         },
@@ -75,10 +90,7 @@ export function OrderList() {
         toast.success('已刷新');
     }, [refetch]);
 
-    const handleStatusTabChange = useCallback((tab: OrderStatusTab) => {
-        setStatusTab(tab);
-        setPage(1); // 切换Tab时重置页码
-    }, []);
+
 
     const handleFiltersChange = useCallback((newFilters: OrderFilters) => {
         setFilters(newFilters);
@@ -86,37 +98,35 @@ export function OrderList() {
     }, []);
 
     return (
-        <div className="space-y-4">
-            {/* 状态Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg overflow-x-auto">
-                {ORDER_STATUS_TABS.map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => handleStatusTabChange(tab.key)}
-                        className={cn(
-                            'px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap',
-                            statusTab === tab.key
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        )}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
+        <div className="h-[calc(100vh-8rem)] [perspective:1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
+            {/* Top Section: Tabs */}
+            <div className="flex w-full items-center justify-between">
+                <div className="flex-1">
+                    <UrlSyncedTabs
+                        tabs={ORDER_STATUS_TABS.map(t => ({ value: t.key, label: t.label }))}
+                        paramName="status"
+                        defaultValue="ALL"
+                        containerClassName="w-full mb-4"
+                        layoutId="orders-status-tabs"
+                    />
+                </div>
+                <div className="flex items-center gap-2 mb-4">
+                    {/* Action Buttons if any (e.g. Create Order) - currently empty or future use */}
+                </div>
             </div>
 
-            {/* 搜索和筛选栏 */}
-            <div className="flex flex-wrap items-center justify-between gap-4 glass-layout-card p-4 rounded-lg border shadow-sm">
-                <div className="flex items-center flex-1 min-w-[300px] gap-2">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="搜索客户、订单号..."
-                            className="pl-9 bg-muted/20 border-none focus-visible:ring-1"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
+            {/* Content Card */}
+            <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid border border-white/10 flex flex-col gap-4">
+                {/* 搜索和筛选栏 */}
+                <DataTableToolbar
+                    searchProps={{
+                        value: search,
+                        onChange: setSearch,
+                        placeholder: "搜索客户、订单号..."
+                    }}
+                    onRefresh={handleRefresh}
+                    loading={isFetching}
+                >
                     <OrderAdvancedFilter
                         filters={filters}
                         onFiltersChange={handleFiltersChange}
@@ -125,76 +135,75 @@ export function OrderList() {
                         designerOptions={[]}
                         referrerOptions={[]}
                     />
-                    <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isFetching}>
-                        <RotateCcw className={isFetching ? "animate-spin h-4 w-4" : "h-4 w-4"} />
-                    </Button>
-                </div>
+                </DataTableToolbar>
 
-                {/* 分页信息 */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground px-2">
                     <span>共 {total} 条</span>
                     {isFetching && !isLoading && <span className="text-blue-500">更新中...</span>}
                 </div>
+
+
+                {isLoading ? (
+                    <div className="h-[400px] flex items-center justify-center glass-empty-state rounded-lg border border-dashed">
+                        <div className="flex flex-col items-center gap-2">
+                            <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground font-medium">加载中...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-auto rounded-md border">
+                        <OrderTable data={orders} />
+                    </div>
+                )}
+
+                {/* 分页控件 */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => goToPage(page - 1)}
+                            disabled={page <= 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            上一页
+                        </Button>
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum: number;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (page <= 3) {
+                                    pageNum = i + 1;
+                                } else if (page >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = page - 2 + i;
+                                }
+                                return (
+                                    <Button
+                                        key={pageNum}
+                                        variant={pageNum === page ? "default" : "ghost"}
+                                        size="sm"
+                                        onClick={() => goToPage(pageNum)}
+                                    >
+                                        {pageNum}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => goToPage(page + 1)}
+                            disabled={page >= totalPages}
+                        >
+                            下一页
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
             </div>
-
-            {isLoading ? (
-                <div className="h-[400px] flex items-center justify-center glass-empty-state rounded-lg border border-dashed">
-                    <div className="flex flex-col items-center gap-2">
-                        <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground font-medium">加载中...</p>
-                    </div>
-                </div>
-            ) : (
-                <OrderTable data={orders} />
-            )}
-
-            {/* 分页控件 */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page - 1)}
-                        disabled={page <= 1}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        上一页
-                    </Button>
-                    <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum: number;
-                            if (totalPages <= 5) {
-                                pageNum = i + 1;
-                            } else if (page <= 3) {
-                                pageNum = i + 1;
-                            } else if (page >= totalPages - 2) {
-                                pageNum = totalPages - 4 + i;
-                            } else {
-                                pageNum = page - 2 + i;
-                            }
-                            return (
-                                <Button
-                                    key={pageNum}
-                                    variant={pageNum === page ? "default" : "ghost"}
-                                    size="sm"
-                                    onClick={() => goToPage(pageNum)}
-                                >
-                                    {pageNum}
-                                </Button>
-                            );
-                        })}
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page + 1)}
-                        disabled={page >= totalPages}
-                    >
-                        下一页
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            )}
         </div>
     );
 }

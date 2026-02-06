@@ -1,18 +1,7 @@
 'use client';
 
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-} from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
-import Filter from 'lucide-react/dist/esm/icons/filter';
-import { Label } from '@/shared/ui/label';
-import { Input } from '@/shared/ui/input';
+import { X } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -21,22 +10,15 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
+import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
+import { addDays, format } from 'date-fns';
 
 interface LeadsAdvancedFilterProps {
     tenantId: string;
     salesList?: Array<{ id: string; name: string }>;
 }
-
-// 状态选项
-const STATUS_OPTIONS = [
-    { value: 'PENDING_ASSIGNMENT', label: '待分配' },
-    { value: 'PENDING_FOLLOWUP', label: '待跟进' },
-    { value: 'FOLLOWING_UP', label: '跟进中' },
-    { value: 'WON', label: '已成交' },
-    { value: 'VOID', label: '已作废' },
-];
 
 // 意向等级选项
 const INTENTION_OPTIONS = [
@@ -56,269 +38,151 @@ const TAG_OPTIONS = [
 export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedFilterProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [open, setOpen] = useState(false);
 
     // 筛选状态
     const [filters, setFilters] = useState({
-        search: searchParams.get('search') || '',
         intentionLevel: searchParams.get('intentionLevel') || '',
         channelId: searchParams.get('channelId') || '',
         salesId: searchParams.get('salesId') || '',
-        status: searchParams.get('status') || '',
         tags: searchParams.get('tags') || '',
         dateFrom: searchParams.get('dateFrom') || '',
         dateTo: searchParams.get('dateTo') || '',
     });
 
-    // 弹窗打开时同步 URL 参数到状态
-    const syncFiltersFromUrl = () => {
-        setFilters({
-            search: searchParams.get('search') || '',
-            intentionLevel: searchParams.get('intentionLevel') || '',
-            channelId: searchParams.get('channelId') || '',
-            salesId: searchParams.get('salesId') || '',
-            status: searchParams.get('status') || '',
-            tags: searchParams.get('tags') || '',
-            dateFrom: searchParams.get('dateFrom') || '',
-            dateTo: searchParams.get('dateTo') || '',
-        });
-    };
+    // 监听 filters 变化自动应用 (防抖? 或者直接 push 路由)
+    // 这里为了响应迅速，我们在 onChange 时直接触发, 但为了避免过于频繁，通常在 Select onChange 时触发即可。
+    // 但是 DatePicker 可能会频繁触发。
 
-    const handleOpenChange = (isOpen: boolean) => {
-        if (isOpen) {
-            syncFiltersFromUrl();
-        }
-        setOpen(isOpen);
-    };
-
-    const handleApply = () => {
+    // 直接复用 Measurement 的逻辑，单个 filter 变化直接更新 URL
+    const updateUrl = (updates: Partial<typeof filters>) => {
         const params = new URLSearchParams(searchParams.toString());
-
-        // 搜索
-        if (filters.search) {
-            params.set('search', filters.search);
-        } else {
-            params.delete('search');
-        }
-
-        // 意向等级
-        if (filters.intentionLevel && filters.intentionLevel !== 'ALL') {
-            params.set('intentionLevel', filters.intentionLevel);
-        } else {
-            params.delete('intentionLevel');
-        }
-
-        // 渠道
-        if (filters.channelId) {
-            params.set('channelId', filters.channelId);
-        } else {
-            params.delete('channelId');
-        }
-
-        // 归属销售
-        if (filters.salesId && filters.salesId !== 'ALL') {
-            params.set('salesId', filters.salesId);
-        } else {
-            params.delete('salesId');
-        }
-
-        // 状态
-        if (filters.status && filters.status !== 'ALL') {
-            params.set('status', filters.status);
-        } else {
-            params.delete('status');
-        }
-
-        // 标签
-        if (filters.tags && filters.tags !== 'ALL') {
-            params.set('tags', filters.tags);
-        } else {
-            params.delete('tags');
-        }
-
-        // 日期范围
-        if (filters.dateFrom) {
-            params.set('dateFrom', filters.dateFrom);
-        } else {
-            params.delete('dateFrom');
-        }
-        if (filters.dateTo) {
-            params.set('dateTo', filters.dateTo);
-        } else {
-            params.delete('dateTo');
-        }
-
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value && value !== 'ALL') {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+        });
         params.set('page', '1');
         router.push(`?${params.toString()}`);
-        setOpen(false);
     };
 
-    const handleReset = () => {
-        setFilters({
-            search: '',
+    const handleFilterChange = (key: string, value: string) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        updateUrl({ [key]: value });
+    };
+
+    const handleDateRangeChange = (range: any) => {
+        const from = range?.from ? format(range.from, 'yyyy-MM-dd') : '';
+        const to = range?.to ? format(range.to, 'yyyy-MM-dd') : '';
+        setFilters(prev => ({ ...prev, dateFrom: from, dateTo: to }));
+        updateUrl({ dateFrom: from, dateTo: to });
+    };
+
+    const handleClear = () => {
+        const emptyState = {
             intentionLevel: '',
             channelId: '',
             salesId: '',
-            status: '',
             tags: '',
             dateFrom: '',
             dateTo: '',
-        });
-        const params = new URLSearchParams();
+        };
+        setFilters(emptyState);
+        const params = new URLSearchParams(searchParams.toString());
+        Object.keys(emptyState).forEach(k => params.delete(k));
         params.set('page', '1');
         router.push(`?${params.toString()}`);
-        setOpen(false);
     };
 
-    // 计算激活的筛选数量
-    const activeFilterCount = Object.values(filters).filter(v => v && v !== 'ALL').length;
+    const dateRange = filters.dateFrom ? {
+        from: new Date(filters.dateFrom),
+        to: filters.dateTo ? new Date(filters.dateTo) : undefined
+    } : undefined;
+
+    const hasFilters = Object.values(filters).some(v => v !== '' && v !== 'ALL');
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
-                    高级筛选
-                    {activeFilterCount > 0 && (
-                        <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                            {activeFilterCount}
-                        </span>
-                    )}
+        <div className="flex flex-wrap items-center gap-2">
+            {/* 意向等级 */}
+            <Select
+                value={filters.intentionLevel || 'ALL'}
+                onValueChange={(v) => handleFilterChange('intentionLevel', v)}
+            >
+                <SelectTrigger className="w-[120px] bg-muted/20 border-white/10 h-9">
+                    <SelectValue placeholder="意向" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ALL">所有意向</SelectItem>
+                    {INTENTION_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* 渠道 - ChannelPicker 需要确认是否支持高度自定义，还是用Select封装 */}
+            {/* 为了简单统一，这里我们假设 ChannelPicker 能适应 button 样式，或者如果 ChannelPicker 复杂，我们先用简单 Select 占位？ */}
+            {/* 之前的代码里用了 ChannelPicker，但现在为了统一 "平铺 Select" 风格，如果 ChannelPicker 是个 Dialog Trigger，那也行。但看 props 似乎是个 Select */}
+            <div className="w-[140px]">
+                {/* 暂时用 div 包裹 ChannelPicker 以限制宽度，实际上可能需要深入 ChannelPicker 修改样式 */}
+                <ChannelPicker
+                    tenantId={tenantId}
+                    value={filters.channelId}
+                    onChange={(v) => handleFilterChange('channelId', v)}
+                    placeholder="渠道"
+                // 假设 ChannelPicker 支持 className
+                // className="h-9 bg-muted/20 border-white/10" 
+                />
+            </div>
+
+
+            {/* 归属销售 */}
+            <Select
+                value={filters.salesId || 'ALL'}
+                onValueChange={(v) => handleFilterChange('salesId', v)}
+            >
+                <SelectTrigger className="w-[120px] bg-muted/20 border-white/10 h-9">
+                    <SelectValue placeholder="销售" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ALL">所有销售</SelectItem>
+                    <SelectItem value="UNASSIGNED">未分配</SelectItem>
+                    {salesList.map(sales => (
+                        <SelectItem key={sales.id} value={sales.id}>{sales.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* 标签/阶段 */}
+            <Select
+                value={filters.tags || 'ALL'}
+                onValueChange={(v) => handleFilterChange('tags', v)}
+            >
+                <SelectTrigger className="w-[120px] bg-muted/20 border-white/10 h-9">
+                    <SelectValue placeholder="标签" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ALL">所有标签</SelectItem>
+                    {TAG_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* 日期范围 */}
+            <div className="w-[240px]">
+                <DatePickerWithRange
+                    date={dateRange}
+                    setDate={handleDateRangeChange}
+                    className="h-9"
+                />
+            </div>
+
+            {hasFilters && (
+                <Button variant="ghost" size="icon" onClick={handleClear} className="h-9 w-9">
+                    <X className="h-4 w-4" />
                 </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>高级筛选</DialogTitle>
-                    <DialogDescription>
-                        多维度筛选线索数据
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    {/* 搜索框 */}
-                    <div className="grid gap-2">
-                        <Label>搜索</Label>
-                        <Input
-                            placeholder="客户姓名/电话/楼盘"
-                            value={filters.search}
-                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                        />
-                    </div>
-
-                    {/* 时间范围 */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label>开始日期</Label>
-                            <Input
-                                type="date"
-                                value={filters.dateFrom}
-                                onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>结束日期</Label>
-                            <Input
-                                type="date"
-                                value={filters.dateTo}
-                                onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                            />
-                        </div>
-                    </div>
-
-                    {/* 状态 */}
-                    <div className="grid gap-2">
-                        <Label>状态</Label>
-                        <Select
-                            value={filters.status || 'ALL'}
-                            onValueChange={(v) => setFilters(prev => ({ ...prev, status: v }))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="全部状态" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">全部状态</SelectItem>
-                                {STATUS_OPTIONS.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* 意向等级 */}
-                    <div className="grid gap-2">
-                        <Label>意向等级</Label>
-                        <Select
-                            value={filters.intentionLevel || 'ALL'}
-                            onValueChange={(v) => setFilters(prev => ({ ...prev, intentionLevel: v }))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="全部" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">全部</SelectItem>
-                                {INTENTION_OPTIONS.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* 来源渠道 */}
-                    <div className="grid gap-2">
-                        <Label>来源渠道</Label>
-                        <ChannelPicker
-                            tenantId={tenantId}
-                            value={filters.channelId}
-                            onChange={(v) => setFilters(prev => ({ ...prev, channelId: v }))}
-                            placeholder="选择渠道"
-                        />
-                    </div>
-
-                    {/* 归属销售 */}
-                    <div className="grid gap-2">
-                        <Label>归属销售</Label>
-                        <Select
-                            value={filters.salesId || 'ALL'}
-                            onValueChange={(v) => setFilters(prev => ({ ...prev, salesId: v }))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="全部销售" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">全部销售</SelectItem>
-                                <SelectItem value="UNASSIGNED">未分配</SelectItem>
-                                {salesList.map(sales => (
-                                    <SelectItem key={sales.id} value={sales.id}>{sales.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* 标签 */}
-                    <div className="grid gap-2">
-                        <Label>标签</Label>
-                        <Select
-                            value={filters.tags || 'ALL'}
-                            onValueChange={(v) => setFilters(prev => ({ ...prev, tags: v }))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="全部标签" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">全部标签</SelectItem>
-                                {TAG_OPTIONS.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <div className="flex w-full justify-between">
-                        <Button variant="ghost" onClick={handleReset}>重置</Button>
-                        <Button onClick={handleApply}>应用筛选</Button>
-                    </div>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            )}
+        </div>
     );
 }

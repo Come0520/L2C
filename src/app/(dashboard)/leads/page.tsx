@@ -4,7 +4,7 @@
 import { Suspense } from 'react';
 import { getLeads, getChannels } from '@/features/leads/actions';
 import { LeadsFilterBar } from '@/features/leads/components/leads-filter-bar';
-import { LeadsAdvancedFilter } from '@/features/leads/components/leads-advanced-filter';
+import { LeadsToolbar } from '@/features/leads/components/leads-toolbar';
 import { LeadTable } from '@/features/leads/components/lead-table';
 import { CreateLeadDialog } from '@/features/leads/components/create-lead-dialog';
 import { ExcelImportDialog } from '@/features/leads/components/excel-import-dialog';
@@ -59,9 +59,9 @@ export default async function LeadsPage({
     const dateRange =
       dateFrom || dateTo
         ? {
-            from: dateFrom ? new Date(dateFrom) : undefined,
-            to: dateTo ? new Date(dateTo) : undefined,
-          }
+          from: dateFrom ? new Date(dateFrom) : undefined,
+          to: dateTo ? new Date(dateTo) : undefined,
+        }
         : undefined;
 
     const [leadsResult, channels] = await Promise.all([
@@ -79,34 +79,33 @@ export default async function LeadsPage({
     ]);
 
     return (
-      <div className="space-y-6 p-6">
-        <PageHeader
-          title="线索管理"
-          description="管理和追踪所有潜在客户线索"
-          action={
-            <>
-              <ExcelImportDialog userId={userId} tenantId={tenantId} />
-              <CreateLeadDialog channels={channels} userId={userId} tenantId={tenantId} />
-            </>
-          }
-        />
-
-        <div className="flex items-center space-x-4">
-          <LeadsFilterBar />
-          <div className="ml-auto">
-            <LeadsAdvancedFilter tenantId={tenantId} />
+      <div className="h-[calc(100vh-8rem)] [perspective:1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
+        {/* Top Section: Tabs and Actions */}
+        <div className="flex w-full items-center justify-between">
+          <div className="flex-1">
+            <LeadsFilterBar />
+          </div>
+          <div className="flex items-center gap-2 mb-4">
+            <ExcelImportDialog userId={userId} tenantId={tenantId} />
+            <CreateLeadDialog channels={channels} userId={userId} tenantId={tenantId} />
           </div>
         </div>
 
-        <Suspense fallback={<TableSkeleton />}>
-          <LeadTable
-            data={leadsResult.data}
-            page={page}
-            pageSize={10}
-            total={leadsResult.total}
-            userRole={userRole}
-          />
-        </Suspense>
+        {/* Content Card */}
+        <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid border border-white/10 flex flex-col gap-4">
+          <LeadsToolbar tenantId={tenantId} />
+          <div className="flex-1 overflow-auto">
+            <Suspense fallback={<TableSkeleton />}>
+              <LeadTable
+                data={leadsResult.data}
+                page={page}
+                pageSize={10}
+                total={leadsResult.total}
+                userRole={userRole}
+              />
+            </Suspense>
+          </div>
+        </div>
       </div>
     );
   } catch (error) {

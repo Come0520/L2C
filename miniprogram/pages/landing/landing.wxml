@@ -22,7 +22,10 @@
   </view>
 
   <view class="actions">
-    <button class="btn-primary" bindtap="handleLogin">微信尊享登录</button>
+    <button class="btn-primary" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">微信尊享登录</button>
+    <view class="link" bindtap="handlePasswordLogin">已有账号？密码登录</view>
     <view class="link" bindtap="handleCreateTenant">我是商家，创建企业 ></view>
+    <!-- 开发模式入口 - 正式上线需移除 -->
+    <view class="dev-login" bindtap="devLogin">🔧 开发模式 (跳过登录)</view>
   </view>
 </view>

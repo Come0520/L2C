@@ -46,14 +46,15 @@ export function LoginForm() {
     };
 
     return (
-        <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+        <Card className="glass-liquid-ultra border-white/40 shadow-xl">
             <CardHeader>
-                <CardTitle className="text-white text-center">登录</CardTitle>
+                <CardTitle className="text-foreground text-center text-2xl font-bold">登录 L2C 系统</CardTitle>
+                <p className="text-muted-foreground text-center text-sm mt-2">线索到现金，一站式销售管理</p>
             </CardHeader>
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="username" className="text-slate-200">
+                        <Label htmlFor="username" className="text-foreground">
                             手机号 / 邮箱
                         </Label>
                         <Input
@@ -62,12 +63,12 @@ export function LoginForm() {
                             placeholder="请输入手机号或邮箱"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                            className="glass-input text-foreground placeholder:text-muted-foreground/60"
                             required
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="password" className="text-slate-200">
+                        <Label htmlFor="password" className="text-foreground">
                             密码
                         </Label>
                         <Input
@@ -76,7 +77,7 @@ export function LoginForm() {
                             placeholder="请输入密码"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                            className="glass-input text-foreground placeholder:text-muted-foreground/60"
                             required
                         />
                     </div>
@@ -84,7 +85,7 @@ export function LoginForm() {
                 <CardFooter>
                     <Button
                         type="submit"
-                        className="w-full"
+                        className="w-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-500/30"
                         disabled={isLoading}
                     >
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

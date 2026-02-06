@@ -1,0 +1,17 @@
+<view class="container">
+  <view class="form-group">
+    <view class="avatar-wrapper">
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="avatar-img" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+      </button>
+      <text class="avatar-tip">点击修改头像</text>
+    </view>
+
+    <view class="input-item">
+      <text class="label">昵称</text>
+      <input type="nickname" class="input" placeholder="请输入昵称" value="{{userInfo.name}}" bindinput="onNameInput"/>
+    </view>
+
+    <button class="btn-save" loading="{{submitting}}" bindtap="onSave">保存修改</button>
+  </view>
+</view>

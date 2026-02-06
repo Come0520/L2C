@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { auth } from '@/shared/lib/auth';
 import { getChannelTree } from '@/features/channels/actions/queries';
 import { getActiveChannelCategories } from '@/features/channels/actions/categories';
-import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { ChannelTree } from '@/features/channels/components/channel-tree';
 import { Skeleton } from '@/shared/ui/skeleton';
 
@@ -20,18 +19,21 @@ export default async function ChannelsPage() {
         return <div>请先登录</div>;
     }
 
-    const [channelTree, categoryTypes] = await Promise.all([
-        getChannelTree(),
-        getActiveChannelCategories(),
-    ]);
+    let channelTree: Awaited<ReturnType<typeof getChannelTree>> = [];
+    let categoryTypes: Awaited<ReturnType<typeof getActiveChannelCategories>> = [];
+
+    try {
+        [channelTree, categoryTypes] = await Promise.all([
+            getChannelTree(),
+            getActiveChannelCategories(),
+        ]);
+    } catch (error) {
+        console.error('加载渠道数据失败:', error);
+        // 数据加载失败时返回空数组，页面仍可显示
+    }
 
     return (
         <div className="space-y-6">
-            <DashboardPageHeader
-                title="渠道管理"
-                subtitle="管理合作渠道档案、查看业绩统计"
-            />
-
             <Suspense fallback={<ChannelTreeSkeleton />}>
                 <ChannelTree
                     initialData={channelTree}

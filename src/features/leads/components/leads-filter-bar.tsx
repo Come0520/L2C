@@ -1,12 +1,23 @@
 'use client';
 
-import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+const LEAD_STATUS_TABS = [
+    { value: 'ALL', label: '全部线索' },
+    { value: 'PENDING_ASSIGNMENT', label: '公海池' },
+    { value: 'PENDING_FOLLOWUP', label: '待跟进' },
+    { value: 'MY_FOLLOWING', label: '我的跟进' },
+    { value: 'FOLLOWING_UP', label: '跟进中' },
+    { value: 'WON', label: '已成交' },
+    { value: 'VOID', label: '已作废' },
+];
 
 export function LeadsFilterBar() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const currentStatus = searchParams.get('status') || 'ALL';
+    const currentStatus = searchParams.get('status') ||
+        (searchParams.get('salesFilter') === 'MINE' ? 'MY_FOLLOWING' : 'ALL');
 
     const handleTabChange = (value: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -26,16 +37,12 @@ export function LeadsFilterBar() {
     };
 
     return (
-        <Tabs value={currentStatus} onValueChange={handleTabChange} className="w-full">
-            <TabsList>
-                <TabsTrigger value="ALL">全部线索</TabsTrigger>
-                <TabsTrigger value="PENDING_ASSIGNMENT">公海池</TabsTrigger>
-                <TabsTrigger value="PENDING_FOLLOWUP">待跟进</TabsTrigger>
-                <TabsTrigger value="MY_FOLLOWING">我的跟进</TabsTrigger>
-                <TabsTrigger value="FOLLOWING_UP">跟进中</TabsTrigger>
-                <TabsTrigger value="WON">已成交</TabsTrigger>
-                <TabsTrigger value="VOID">已作废</TabsTrigger>
-            </TabsList>
-        </Tabs>
+        <AnimatedTabs
+            tabs={LEAD_STATUS_TABS}
+            activeTab={currentStatus}
+            onChange={handleTabChange}
+            layoutId="leads-status-tabs"
+            containerClassName="w-full mb-4"
+        />
     );
 }

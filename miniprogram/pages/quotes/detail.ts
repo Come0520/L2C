@@ -121,6 +121,37 @@ Page({
         }
     },
 
+    async onTurnToOrder() {
+        if (this.data.loading) return;
+
+        wx.showLoading({ title: '正在创建订单...' });
+        try {
+            const app = getApp<IAppOption>();
+            const res = await app.request('/orders', {
+                method: 'POST',
+                data: { quoteId: this.data.quoteId }
+            });
+
+            if (res.success) {
+                wx.showToast({ title: '订单创建成功', icon: 'success' });
+                // Navigate to Order Detail
+                const orderId = res.data.id;
+                setTimeout(() => {
+                    wx.navigateTo({
+                        url: `/pages/orders/detail/index?id=${orderId}`
+                    });
+                }, 1500);
+            } else {
+                throw new Error(res.error || '创建订单失败');
+            }
+        } catch (err: any) {
+            console.error('Create Order Error', err);
+            wx.showToast({ title: err.message || '网络错误', icon: 'none' });
+        } finally {
+            wx.hideLoading();
+        }
+    },
+
     /**
      * Helper: Upload File
      */

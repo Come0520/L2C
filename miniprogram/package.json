@@ -1,0 +1,14 @@
+{
+    "name": "l2c-miniprogram",
+    "version": "1.0.0",
+    "description": "L2C Miniprogram",
+    "main": "app.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@vant/weapp": "^1.11.2"
+    }
+}

@@ -1,0 +1,71 @@
+/* pages/users/edit/edit.wxss */
+.container {
+  min-height: 100vh;
+  background: #141414;
+  padding: 32rpx;
+  color: #fff;
+}
+
+.form-group {
+  margin-top: 48rpx;
+}
+
+.avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 60rpx;
+}
+
+.avatar-btn {
+  padding: 0;
+  background: none;
+  border: none;
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: 4rpx solid #d4af37;
+}
+
+.avatar-btn::after { border: none; }
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-tip {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+.input-item {
+  margin-bottom: 40rpx;
+}
+
+.label {
+  font-size: 28rpx;
+  color: #9ca3af;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.input {
+  background: #1f2937;
+  height: 96rpx;
+  border-radius: 12rpx;
+  padding: 0 32rpx;
+  color: #fff;
+  font-size: 30rpx;
+}
+
+.btn-save {
+  margin-top: 80rpx;
+  background: linear-gradient(135deg, #d4af37 0%, #fceabb 100%);
+  color: #1a1a1a;
+  border-radius: 48rpx;
+  font-weight: 600;
+}

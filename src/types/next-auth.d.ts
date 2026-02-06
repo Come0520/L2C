@@ -12,13 +12,17 @@ declare module "next-auth" {
         user: {
             id: string;
             tenantId: string;  // UNBOUND_TENANT_ID = 未绑定
-            role: string;      // UNBOUND_ROLE = 未分配
+            role: string;      // @deprecated: Use roles instead
+            roles: string[];   // Multi-role support
+            isPlatformAdmin: boolean;
         } & DefaultSession["user"];
     }
 
     interface User {
         tenantId: string;
         role: string;
+        roles: string[];
+        isPlatformAdmin: boolean;
     }
 }
 
@@ -26,5 +30,7 @@ declare module "next-auth/jwt" {
     interface JWT {
         tenantId: string;
         role: string;
+        roles: string[];
+        isPlatformAdmin: boolean;
     }
 }

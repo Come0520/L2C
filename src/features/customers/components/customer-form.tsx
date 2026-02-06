@@ -21,6 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
+import { ChannelPicker } from '@/features/channels/components/channel-picker';
 import { createCustomer, updateCustomer } from '../actions/mutations';
 import { toast } from 'sonner';
 import { useTransition } from 'react';
@@ -175,24 +176,14 @@ export function CustomerForm({ onSuccess, userId, tenantId, initialData }: Custo
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>渠道来源</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || ''}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="选择渠道来源" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="抖音">抖音</SelectItem>
-                                        <SelectItem value="小红书">小红书</SelectItem>
-                                        <SelectItem value="微信">微信</SelectItem>
-                                        <SelectItem value="朋友介绍">朋友介绍</SelectItem>
-                                        <SelectItem value="老客户转介绍">老客户转介绍</SelectItem>
-                                        <SelectItem value="门店自然进店">门店自然进店</SelectItem>
-                                        <SelectItem value="设计师带单">设计师带单</SelectItem>
-                                        <SelectItem value="装修公司">装修公司</SelectItem>
-                                        <SelectItem value="其他">其他</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <FormControl>
+                                    <ChannelPicker
+                                        value={field.value || ''}
+                                        onChange={field.onChange}
+                                        tenantId={tenantId}
+                                        placeholder="选择渠道来源"
+                                    />
+                                </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}

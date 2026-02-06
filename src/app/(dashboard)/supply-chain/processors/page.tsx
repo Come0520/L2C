@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProcessorTable } from '@/features/supply-chain/components/processor-table';
 import { ProcessorDialog } from '@/features/supply-chain/components/processor-dialog';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
+import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
-import Search from 'lucide-react/dist/esm/icons/search';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import { Input } from '@/shared/ui/input';
 import { toast } from 'sonner';
 
 export default function ProcessorsPage() {
@@ -23,7 +22,7 @@ export default function ProcessorsPage() {
     const [total, setTotal] = useState(0);
     const pageSize = 100; // 暂时每页显示100条
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             // 使用 type='PROCESSOR' 筛选加工厂
@@ -34,16 +33,16 @@ export default function ProcessorsPage() {
             }
             setData(result.data?.data || []);
             setTotal(result.data?.total || 0);
-        } catch (error: unknown) {
+        } catch {
             toast.error('获取加工厂列表失败');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, query]);
 
     useEffect(() => {
         fetchData();
-    }, [query, page]);
+    }, [fetchData]);
 
     const handleCreate = () => {
         setSelectedProcessor(null);
@@ -77,31 +76,21 @@ export default function ProcessorsPage() {
     };
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">加工厂管理</h1>
-                    <p className="text-muted-foreground">
-                        管理窗帘加工厂、加工费配置及合同资质。
-                    </p>
-                </div>
-                <Button onClick={handleCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    新建加工厂
-                </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="搜索名称..."
-                        className="pl-8"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                </div>
-            </div>
+        <div className="glass-liquid-ultra p-6 rounded-2xl border border-white/10 flex flex-col gap-4">
+            <DataTableToolbar
+                searchProps={{
+                    value: query,
+                    onChange: setQuery,
+                    placeholder: "搜索名称..."
+                }}
+                actions={
+                    <Button onClick={handleCreate} size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        新建加工厂
+                    </Button>
+                }
+                className="border-none shadow-none p-0 bg-transparent"
+            />
 
             {loading ? (
                 <div className="flex h-64 items-center justify-center">
@@ -123,7 +112,7 @@ export default function ProcessorsPage() {
             <ProcessorDialog
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
-                initialData={selectedProcessor} // 如果是 Create，这里是 null
+                initialData={selectedProcessor}
                 onSuccess={fetchData}
             />
         </div>

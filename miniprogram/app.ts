@@ -77,13 +77,28 @@ App({
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
                 success: (res: any) => {
-                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                    if (res.statusCode === 401) {
+                        console.warn('[Request] 401 Unauthorized, logging out...');
+                        authStore.logout();
+
+                        // 获取当前页面栈，如果在非 Public 页面则跳转登录
+                        const pages = getCurrentPages();
+                        const currentPage = pages[pages.length - 1];
+                        if (currentPage && currentPage.route !== 'pages/landing/landing') {
+                            wx.reLaunch({ url: '/pages/landing/landing' });
+                        }
+
+                        reject({ success: false, error: '未授权，请重新登录' });
+                    } else if (res.statusCode >= 200 && res.statusCode < 300) {
                         resolve(res.data);
                     } else {
                         reject(res.data);
                     }
                 },
-                fail: reject,
+                fail: (err) => {
+                    console.error('[Request] Fail:', err);
+                    reject({ success: false, error: '网络请求失败' });
+                },
             });
         });
     }

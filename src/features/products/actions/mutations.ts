@@ -46,9 +46,10 @@ const createProductActionInternal = createSafeAction(createProductSchema, async 
         processingCost: data.processingCost.toString(),
         lossRate: data.lossRate.toString(),
         retailPrice: data.retailPrice.toString(),
-        channelPriceMode: data.channelPriceMode,
-        channelPrice: data.channelPrice.toString(),
-        channelDiscountRate: data.channelDiscountRate.toString(),
+        // [Refactor] 移除渠道相关字段
+        // channelPriceMode: data.channelPriceMode,
+        // channelPrice: data.channelPrice.toString(),
+        // channelDiscountRate: data.channelDiscountRate.toString(),
         floorPrice: data.floorPrice.toString(),
 
         isToBEnabled: data.isToBEnabled,
@@ -89,9 +90,10 @@ const updateProductActionInternal = createSafeAction(updateProductSchema, async 
             processingCost: updates.processingCost?.toString(),
             lossRate: updates.lossRate?.toString(),
             retailPrice: updates.retailPrice?.toString(),
-            channelPriceMode: updates.channelPriceMode,
-            channelPrice: updates.channelPrice?.toString(),
-            channelDiscountRate: updates.channelDiscountRate?.toString(),
+            // [Refactor] 移除渠道相关字段
+            // channelPriceMode: updates.channelPriceMode,
+            // channelPrice: updates.channelPrice?.toString(),
+            // channelDiscountRate: updates.channelDiscountRate?.toString(),
             floorPrice: updates.floorPrice?.toString(),
 
             isToBEnabled: updates.isToBEnabled,
@@ -205,9 +207,10 @@ const batchCreateProductsActionInternal = createSafeAction(
                     processingCost: data.processingCost.toString(),
                     lossRate: data.lossRate.toString(),
                     retailPrice: data.retailPrice.toString(),
-                    channelPriceMode: data.channelPriceMode,
-                    channelPrice: data.channelPrice.toString(),
-                    channelDiscountRate: data.channelDiscountRate.toString(),
+                    // [Refactor] 移除渠道相关字段
+                    // channelPriceMode: data.channelPriceMode,
+                    // channelPrice: data.channelPrice.toString(),
+                    // channelDiscountRate: data.channelDiscountRate.toString(),
                     floorPrice: data.floorPrice.toString(),
                     isToBEnabled: data.isToBEnabled,
                     isToCEnabled: data.isToCEnabled,

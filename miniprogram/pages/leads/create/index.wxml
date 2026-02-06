@@ -1,0 +1,134 @@
+<view class="container">
+    <view class="form-group">
+        <view class="form-item">
+            <text class="label required">客户姓名</text>
+            <input 
+                class="input {{errors.customerName ? 'error' : ''}}" 
+                placeholder="请输入客户姓名" 
+                placeholder-class="placeholder"
+                value="{{form.customerName}}"
+                bindinput="onInput"
+                data-field="customerName"
+            />
+        </view>
+        <view class="form-item">
+            <text class="label required">手机号码</text>
+            <input 
+                class="input {{errors.customerPhone ? 'error' : ''}}" 
+                placeholder="请输入手机号码" 
+                placeholder-class="placeholder"
+                type="number"
+                maxlength="11"
+                value="{{form.customerPhone}}"
+                bindinput="onInput"
+                data-field="customerPhone"
+            />
+        </view>
+         <view class="form-item">
+            <text class="label">详细地址</text>
+            <input 
+                class="input" 
+                placeholder="小区/楼栋/门牌号" 
+                placeholder-class="placeholder"
+                value="{{form.address}}"
+                bindinput="onInput"
+                data-field="address"
+            />
+        </view>
+        <view class="form-item">
+            <text class="label">来源渠道</text>
+            <view class="picker-trigger {{sourceDisplay ? '' : 'empty'}}" bindtap="onShowSourcePicker">
+                {{sourceDisplay || '请选择渠道来源'}}
+                <text class="arrow">></text>
+            </view>
+        </view>
+        <view class="form-item">
+            <text class="label">意向等级</text>
+            <picker bindchange="onIntentionChange" value="{{intentionIndex}}" range="{{intentionOptions}}">
+                <view class="picker-trigger {{form.intentionLevel ? '' : 'empty'}}">
+                    {{form.intentionLevel || '请选择意向等级'}}
+                    <text class="arrow">></text>
+                </view>
+            </picker>
+        </view>
+    </view>
+
+    <view class="form-group mt-24">
+        <view class="form-item vertical">
+            <text class="label">备注信息</text>
+            <textarea 
+                class="textarea" 
+                placeholder="请输入备注信息（选填）" 
+                placeholder-class="placeholder"
+                value="{{form.remark}}"
+                bindinput="onInput"
+                data-field="remark"
+                maxlength="200"
+            />
+        </view>
+    </view>
+
+    <view class="footer">
+        <button class="btn-submit {{submitting ? 'disabled' : ''}}" bindtap="onSubmit" disabled="{{submitting}}">
+            {{submitting ? '提交中...' : '确认创建'}}
+        </button>
+    </view>
+
+    <!-- 渠道选择弹窗 (仿 CRM) -->
+    <view class="picker-modal {{showSourcePicker ? 'show' : ''}}">
+        <view class="mask" bindtap="onHideSourcePicker"></view>
+        <view class="picker-content">
+            <view class="picker-header">
+                <text class="title">选择来源渠道</text>
+                <text class="close" bindtap="onHideSourcePicker">×</text>
+            </view>
+            <view class="picker-body">
+                <view class="level-column">
+                    <view class="column-title">一级渠道</view>
+                    <scroll-view scroll-y class="column-list">
+                        <view 
+                            wx:for="{{channelTree}}" 
+                            wx:key="id"
+                            class="list-item {{tempLevel1 === item.id ? 'active' : ''}}"
+                            bindtap="onSelectLevel1"
+                            data-item="{{item}}"
+                        >
+                            {{item.name}}
+                        </view>
+                    </scroll-view>
+                </view>
+                <view class="level-column">
+                    <view class="column-title">二级渠道</view>
+                    <scroll-view scroll-y class="column-list">
+                        <view 
+                            wx:for="{{level2Options}}" 
+                            wx:key="id"
+                            class="list-item {{tempLevel2 === item.id ? 'active' : ''}}"
+                            bindtap="onSelectLevel2"
+                            data-item="{{item}}"
+                        >
+                            {{item.name}}
+                        </view>
+                    </scroll-view>
+                </view>
+                <view class="level-column">
+                    <view class="column-title">联系人</view>
+                    <scroll-view scroll-y class="column-list">
+                        <view 
+                            wx:for="{{level3Options}}" 
+                            wx:key="id"
+                            class="list-item {{tempLevel3 === item.id ? 'active' : ''}}"
+                            bindtap="onSelectLevel3"
+                            data-item="{{item}}"
+                        >
+                            {{item.name}}
+                        </view>
+                    </scroll-view>
+                </view>
+            </view>
+            <view class="picker-footer">
+                <button class="btn-confirm" bindtap="onConfirmSource">确定选择</button>
+            </view>
+        </view>
+    </view>
+</view>

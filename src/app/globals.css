@@ -84,18 +84,18 @@
   --curve-fluid: cubic-bezier(0.4, 0.0, 0.2, 1);
   --duration-morph: 400ms;
 
-  /* Claymorphism System - Deepened & Warm */
-  --clay-bg: #fff5f0;
-  /* Warm Peach/Almond */
-  --clay-bg-secondary: #ffeadf;
+  /* Claymorphism System - Deepened & Warm (可读性优化版) */
+  --clay-bg: #f7ebe4;
+  /* 温和杏仁色，降低亮度减少眩光 */
+  --clay-bg-secondary: #f2ddd3;
 
-  /* Inflated effect: Two inner shadows (top-left highlight, bottom-right shadow) + deep large outer shadow */
+  /* 膨胀效果：双内阴影（左上高光+右下阴影）+ 深外阴影 - 降低眩光版 */
   --clay-shadow-out:
     12px 12px 24px rgba(234, 184, 158, 0.4),
-    -8px -8px 20px #ffffff;
+    -8px -8px 20px rgba(255, 255, 255, 0.65);
 
   --clay-shadow-in:
-    inset 4px 4px 8px rgba(255, 255, 255, 0.8),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.45),
     inset -4px -4px 12px rgba(206, 149, 119, 0.3);
 
   --clay-radius: 3rem;
@@ -260,9 +260,9 @@
   /* Muted Primary Blue */
   --color-primary-600: #556a8a;
 
-  --color-text-primary: #5c5552;
-  /* Softer text color for clay */
-  --color-muted-foreground: #a39996;
+  --color-text-primary: #3d3835;
+  /* 加深文字颜色，提升可读性 */
+  --color-muted-foreground: #7a7573;
 }
 
 /* Claymorphism Overrides */
@@ -295,8 +295,8 @@
 [data-style="clay"] .glass-popover,
 [data-style="clay"] .card {
   background: var(--clay-bg);
-  border: 2px solid #ffffff;
-  /* Soft rim light */
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  /* 柔化白边，减少眩光 */
   box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
   /* Combined for depth */
   border-radius: var(--clay-radius);

@@ -213,3 +213,82 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
     return stats;
 }
+
+// ============ 用户仪表盘配置 ============
+
+import { users } from '@/shared/api/schema';
+
+// 从 types.ts 导入并重新导出类型
+export type { WidgetType, WidgetConfig, UserDashboardConfig } from './types';
+import type { UserDashboardConfig } from './types';
+
+/**
+ * 获取用户仪表盘配置
+ */
+export async function getUserDashboardConfig(): Promise<UserDashboardConfig | null> {
+    const session = await auth();
+    if (!session?.user?.id) return null;
+
+    try {
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, session.user.id),
+            columns: { dashboardConfig: true }
+        });
+
+        if (user?.dashboardConfig && typeof user.dashboardConfig === 'object') {
+            return user.dashboardConfig as UserDashboardConfig;
+        }
+        return null;
+    } catch (error) {
+        console.error('获取仪表盘配置失败:', error);
+        return null;
+    }
+}
+
+/**
+ * 保存用户仪表盘配置
+ */
+export async function saveUserDashboardConfig(config: UserDashboardConfig): Promise<{ success: boolean; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: '未登录' };
+    }
+
+    try {
+        await db.update(users)
+            .set({
+                dashboardConfig: config,
+                updatedAt: new Date()
+            })
+            .where(eq(users.id, session.user.id));
+
+        return { success: true };
+    } catch (error) {
+        console.error('保存仪表盘配置失败:', error);
+        return { success: false, error: '保存失败' };
+    }
+}
+
+/**
+ * 重置用户仪表盘配置为默认
+ */
+export async function resetDashboardConfig(): Promise<{ success: boolean; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: '未登录' };
+    }
+
+    try {
+        await db.update(users)
+            .set({
+                dashboardConfig: {},
+                updatedAt: new Date()
+            })
+            .where(eq(users.id, session.user.id));
+
+        return { success: true };
+    } catch (error) {
+        console.error('重置仪表盘配置失败:', error);
+        return { success: false, error: '重置失败' };
+    }
+}

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getInventoryLevels } from '@/features/supply-chain/actions/inventory-actions';
 import { InventoryList } from '@/features/supply-chain/components/inventory-list';
-import { Separator } from '@/shared/ui/separator';
+
 import { Button } from '@/shared/ui/button';
 import { PlusIcon, ArrowRightLeftIcon } from 'lucide-react';
 import { AdjustInventoryDialog } from '@/features/supply-chain/components/adjust-inventory-dialog';
@@ -25,35 +25,28 @@ async function InventoryData() {
 
 export default function InventoryPage() {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">库存查询</h2>
-                    <p className="text-muted-foreground">
-                        查看和管理各仓库的实时库存水平。
-                    </p>
-                </div>
-                <div className="flex gap-2">
+        <div className="flex h-full flex-col space-y-4">
+            <div className="flex-1 glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+                <div className="flex items-center justify-end gap-2 mb-4">
                     {/* 调拨 Dialog (Future) */}
-                    <Button variant="outline">
+                    <Button variant="outline" size="sm">
                         <ArrowRightLeftIcon className="mr-2 h-4 w-4" />
                         调拨
                     </Button>
 
                     {/* 盘点 Dialog */}
                     <AdjustInventoryDialog trigger={
-                        <Button>
+                        <Button size="sm">
                             <PlusIcon className="mr-2 h-4 w-4" />
                             调整/盘点
                         </Button>
                     } />
                 </div>
-            </div>
-            <Separator />
 
-            <Suspense fallback={<TableSkeleton />}>
-                <InventoryData />
-            </Suspense>
+                <Suspense fallback={<TableSkeleton />}>
+                    <InventoryData />
+                </Suspense>
+            </div>
         </div>
     );
 }

@@ -1,56 +1,92 @@
 <!--pages/quotes/create/index.wxml-->
 <view class="container">
-  <!-- Customer Selection -->
-  <view class="section card">
-    <view class="section-title">客户信息</view>
-    <input class="input" placeholder="选择或输入客户 (暂未实现选择)" value="{{customerName || customerId}}" disabled />
+  <!-- Loading -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <text>加载中...</text>
   </view>
 
-  <!-- Rooms Builder -->
+  <!-- 客户选择 -->
+  <view class="section card" bindtap="onSelectCustomer">
+    <view class="section-title">客户信息</view>
+    <view class="customer-row">
+      <text class="customer-name" wx:if="{{customerName}}">{{customerName}}</text>
+      <text class="customer-placeholder" wx:else>点击选择客户</text>
+      <text class="arrow">></text>
+    </view>
+  </view>
+
+  <!-- 房间列表 -->
   <block wx:for="{{rooms}}" wx:key="id" wx:for-index="roomIndex">
     <view class="room-card card">
-        <view class="room-header">
-            <input 
-                class="room-name-input" 
-                value="{{item.name}}" 
-                data-index="{{roomIndex}}" 
-                bindblur="onRoomNameChange" 
-            />
-            <view class="btn-remove" bindtap="onRemoveRoom" data-index="{{roomIndex}}">×</view>
-        </view>
+      <view class="room-header">
+        <input 
+          class="room-name-input" 
+          value="{{item.name}}" 
+          data-index="{{roomIndex}}" 
+          bindblur="onRoomNameChange" 
+        />
+        <view class="btn-remove" bindtap="onRemoveRoom" data-index="{{roomIndex}}">×</view>
+      </view>
 
-        <!-- Items List -->
-        <view class="items-list">
-            <block wx:for="{{item.items}}" wx:for-item="prod" wx:for-index="itemIndex" wx:key="id">
-                <view class="item-row">
-                    <view class="item-info">
-                        <text class="item-name">{{prod.name}}</text>
-                        <text class="item-dims">{{prod.width}}m * {{prod.height}}m ({{prod.foldRatio}}倍)</text>
-                    </view>
-                    <view class="item-price">
-                        <text>¥{{prod.subtotal}}</text>
-                        <view class="btn-del-item" bindtap="onRemoveItem" data-room-index="{{roomIndex}}" data-item-index="{{itemIndex}}">-</view>
-                    </view>
-                </view>
-            </block>
+      <!-- 商品列表 -->
+      <view class="items-list">
+        <block wx:for="{{item.items}}" wx:for-item="prod" wx:for-index="itemIndex" wx:key="id">
+          <view class="item-row">
+            <view class="item-info" bindtap="onEditItemDimension" data-room-index="{{roomIndex}}" data-item-index="{{itemIndex}}">
+              <text class="item-name">{{prod.name}}</text>
+              <text class="item-dims">{{prod.width}}m × {{prod.height}}m ({{prod.foldRatio}}倍) = {{prod.quantity}}{{prod.unit}}</text>
+            </view>
+            <view class="item-price">
+              <text class="price-text">¥{{prod.subtotal}}</text>
+              <view class="btn-del-item" catchtap="onRemoveItem" data-room-index="{{roomIndex}}" data-item-index="{{itemIndex}}">-</view>
+            </view>
+          </view>
+        </block>
+        
+        <!-- 空状态 -->
+        <view class="empty-items" wx:if="{{item.items.length === 0}}">
+          <text class="empty-text">暂无商品</text>
         </view>
+      </view>
 
-        <!-- Add Item Button -->
-        <view class="btn-add-item" bindtap="onAddItem" data-index="{{roomIndex}}">
-            + 添加商品
-        </view>
+      <!-- 添加商品按钮 -->
+      <view class="btn-add-item" bindtap="onAddItem" data-index="{{roomIndex}}">
+        + 添加商品
+      </view>
     </view>
   </block>
 
-  <!-- Add Room Button -->
-  <button class="btn-add-room" bindtap="onAddRoom">新增房间</button>
+  <!-- 新增房间按钮 -->
+  <button class="btn-add-room" bindtap="onShowRoomPicker">新增房间</button>
 
+  <!-- 底部间距 -->
   <view class="footer-spacer"></view>
+
+  <!-- 底部操作栏 -->
   <view class="footer-bar">
-      <view class="total-preview">
-          <!-- Total calculation logic needed in TS or WXS -->
-          <text>预估总价: ¥...</text>
+    <view class="total-preview">
+      <text class="total-label">预估总价:</text>
+      <text class="total-amount">¥{{totalAmount}}</text>
+    </view>
+    <button class="btn-submit" bindtap="onSubmit">生成报价单</button>
+  </view>
+
+  <!-- 房间类型选择弹窗 -->
+  <view class="room-picker-mask" wx:if="{{showRoomPicker}}" bindtap="onCancelRoomPicker">
+    <view class="room-picker-panel" catchtap="">
+      <view class="picker-title">选择房间类型</view>
+      <view class="picker-list">
+        <view 
+          class="picker-item" 
+          wx:for="{{roomTypes}}" 
+          wx:key="key"
+          data-label="{{item.label}}"
+          bindtap="onSelectRoomType"
+        >
+          {{item.label}}
+        </view>
       </view>
-      <button class="btn-submit" bindtap="onSubmit">生成报价单</button>
+      <view class="picker-cancel" bindtap="onCancelRoomPicker">取消</view>
+    </view>
   </view>
 </view>

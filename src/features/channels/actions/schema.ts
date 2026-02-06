@@ -29,6 +29,7 @@ export const channelSchema = z.object({
     code: z.string().min(1, '请输入渠道编号').max(50, '渠道编号不能超过50字'),
     category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL']).default('OFFLINE'),
     channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY', 'DOUYIN', 'XIAOHONGSHU', 'STORE', 'OTHER']),
+    customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
     level: z.enum(['S', 'A', 'B', 'C']).default('C'),
     contactName: z.string().min(1, '请输入核心联系人').max(50, '联系人姓名不能超过50字'),
     phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'),
@@ -46,6 +47,14 @@ export const channelSchema = z.object({
 
     assignedManagerId: z.string().uuid().optional(),
     status: z.string().default('ACTIVE'),
+}).refine((data) => {
+    if (data.channelType === 'OTHER' && !data.customChannelType) {
+        return false;
+    }
+    return true;
+}, {
+    message: '请输入自定义类型名称',
+    path: ['customChannelType'],
 });
 
 export const channelContactSchema = z.object({

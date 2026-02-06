@@ -4,6 +4,7 @@
  * 使用方式:
  * npx tsx scripts/seed/seed-platform-admin.ts
  */
+import 'dotenv/config';
 import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { hash } from 'bcryptjs';
@@ -16,7 +17,7 @@ async function seedPlatformAdmin() {
     const ADMIN_PHONE = '15601911921';
     const ADMIN_PASSWORD = 'I@l2c2026';
     const ADMIN_NAME = '平台管理员';
-    const ADMIN_EMAIL = 'admin@l2c.com';
+    const ADMIN_EMAIL = 'bigeyecome@gmail.com';
 
     try {
         // 1. 检查是否已存在
@@ -29,11 +30,13 @@ async function seedPlatformAdmin() {
             await db.update(users)
                 .set({
                     isPlatformAdmin: true,
+                    email: ADMIN_EMAIL, // 确保邮箱也被更新
                     updatedAt: new Date(),
                 })
                 .where(eq(users.id, existing.id));
 
             console.log(`✅ 已将现有用户 (${ADMIN_PHONE}) 设置为平台管理员`);
+            console.log(`   邮箱已更新为: ${ADMIN_EMAIL}`);
             return;
         }
 

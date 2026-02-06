@@ -48,13 +48,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     return null;
                 }
 
+                // 处理多角色逻辑：优先使用 roles 数组，如果为空则兼容旧 role
+                const roles = (user.roles as string[])?.length > 0
+                    ? (user.roles as string[])
+                    : [user.role || 'USER'];
+
                 return {
                     id: user.id,
                     name: user.name,
                     email: user.email,
                     image: user.avatarUrl,
-                    role: user.role || 'USER', // Default role
+                    role: user.role || 'USER', // Deprecated
+                    roles: roles,
                     tenantId: user.tenantId,
+                    isPlatformAdmin: user.isPlatformAdmin || false,
                 };
             },
         }),
@@ -68,7 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token: 'https://api.weixin.qq.com/sns/oauth2/access_token',
             userinfo: 'https://api.weixin.qq.com/sns/userinfo',
             profile(profile) {
-                // 微信登录用户默认无租户归属，需通过邀请链接绑定
+                // 微信登录用户默认无租户归属，需通过邀请链接确定
                 // 员工：管理员分享的员工邀请二维码
                 // 客户：客户详情页的客户邀请链接
                 return {
@@ -77,7 +84,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     email: null,
                     image: profile.headimgurl,
                     role: '__UNBOUND__',      // 待通过邀请链接确定
+                    roles: ['__UNBOUND__'],
                     tenantId: '__UNBOUND__',  // 待通过邀请链接绑定
+                    isPlatformAdmin: false,
                 }
             },
         }
@@ -91,6 +100,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.id = token.sub;
                 session.user.tenantId = token.tenantId;
                 session.user.role = token.role;
+                session.user.roles = token.roles || [token.role];
+                session.user.isPlatformAdmin = token.isPlatformAdmin;
             }
             return session;
         },
@@ -98,6 +109,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (user) {
                 token.tenantId = user.tenantId;
                 token.role = user.role;
+                token.roles = user.roles;
+                token.isPlatformAdmin = user.isPlatformAdmin;
             }
             return token;
         }
@@ -129,11 +142,11 @@ export const checkPermission = async (
     permissionName: string,
     options?: CheckPermissionOptions
 ) => {
-    if (!session?.user?.role) {
+    if (!session?.user?.roles || session.user.roles.length === 0) {
         return false;
     }
 
-    const hasPermission = session.user.role === 'ADMIN' || await checkRolePermission(session, permissionName);
+    const hasPermission = session.user.roles.includes('ADMIN') || await checkRolePermission(session, permissionName);
 
     // 如果需要审计日志记录
     if (options?.audit && session.user.tenantId) {
@@ -146,6 +159,7 @@ export const checkPermission = async (
                 userId: session.user.id,
                 changedFields: {
                     permission: permissionName,
+                    roles: session.user.roles,
                     granted: hasPermission,
                     timestamp: new Date().toISOString(),
                 },
@@ -180,8 +194,17 @@ const checkRolePermission = async (session: Session, permissionName: string): Pr
     );
 
     try {
-        const permissions = await getRolePermissions(session.user.role, session.user.tenantId);
-        return permissions.includes(permissionName) || permissions.includes('*');
+        // 并行检查所有角色的权限
+        const results = await Promise.all(
+            (session.user.roles || []).map(role =>
+                getRolePermissions(role, session.user.tenantId)
+            )
+        );
+
+        // 合并所有角色的权限
+        const allPermissions = new Set(results.flat());
+
+        return allPermissions.has(permissionName) || allPermissions.has('*');
     } catch (e) {
         console.error('Permission check failed', e);
         return false;

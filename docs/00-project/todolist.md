@@ -53,6 +53,16 @@
   - 发现时间：2026-01-25
   - 待排查：窗帘计算逻辑中的 unitPrice 或 quantity 可能为空
 
+### 上线前清理 (Pre-Launch Cleanup)
+
+- [ ] **[Cleanup-01] 移除小程序开发模式登录入口**
+  - 文件：`miniprogram/pages/landing/landing.wxml` (删除 dev-login 按钮)
+  - 文件：`miniprogram/pages/landing/landing.ts` (删除 devLogin 方法)
+  - 文件：`miniprogram/pages/landing/landing.wxss` (删除 .dev-login 样式)
+  - 文件：`miniprogram/pages/workbench/index.ts` (删除 dev-mock-token 检测逻辑)
+  - 添加时间：2026-01-27
+  - 优先级：上线前必须完成
+
 ### 运维与安全 (Ops & Security)
 
 - [ ] **[Ops-01] 自动化数据库备份策略**

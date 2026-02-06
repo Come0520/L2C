@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
@@ -26,6 +27,28 @@ interface UserMenuProps {
 export function UserMenu({ session }: UserMenuProps) {
     const user = session.user;
     const initials = user?.name?.slice(0, 2) || user?.email?.slice(0, 2) || 'U';
+
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return (
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-primary-600 hover:opacity-90"
+            >
+                <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-transparent text-white text-sm">
+                        {initials}
+                    </AvatarFallback>
+                </Avatar>
+            </Button>
+        );
+    }
 
     return (
         <DropdownMenu>
@@ -63,7 +86,7 @@ export function UserMenu({ session }: UserMenuProps) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: '/login' })}
+                    onClick={() => signOut({ callbackUrl: '/login', redirect: true })}
                     className="text-destructive focus:text-destructive"
                 >
                     <LogOut className="mr-2 h-4 w-4" />

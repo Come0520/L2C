@@ -298,7 +298,8 @@ export function QuoteItemDialog({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">产品</Label>
             <div className="col-span-3">
-              <Popover open={productOpen} onOpenChange={setProductOpen}>
+              {/* [Fix] 添加 modal={true} 解决在 Dialog 中 Popover 无法交互的问题 */}
+              <Popover open={productOpen} onOpenChange={setProductOpen} modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -391,7 +392,7 @@ export function QuoteItemDialog({
                     className={cn(
                       widthStatus.status === 'error' && 'border-red-500 focus-visible:ring-red-500',
                       widthStatus.status === 'warning' &&
-                        'border-yellow-500 focus-visible:ring-yellow-500'
+                      'border-yellow-500 focus-visible:ring-yellow-500'
                     )}
                     value={width}
                     onChange={(e) => setWidth(Number(e.target.value))}
@@ -422,9 +423,9 @@ export function QuoteItemDialog({
                     type="number"
                     className={cn(
                       heightStatus.status === 'error' &&
-                        'border-red-500 focus-visible:ring-red-500',
+                      'border-red-500 focus-visible:ring-red-500',
                       heightStatus.status === 'warning' &&
-                        'border-yellow-500 focus-visible:ring-yellow-500'
+                      'border-yellow-500 focus-visible:ring-yellow-500'
                     )}
                     value={height}
                     onChange={(e) => setHeight(Number(e.target.value))}

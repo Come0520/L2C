@@ -5,8 +5,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { users, quotes, customers } from '@/shared/api/schema';
-import { eq, and, sql, count } from 'drizzle-orm';
+import { quotes, customers, salesTargets } from '@/shared/api/schema';
+import { eq, and, count, sum } from 'drizzle-orm';
 import { jwtVerify } from 'jose';
 
 // Helper: Get User Info from Token
@@ -44,14 +44,39 @@ export async function GET(request: NextRequest) {
       todos: [],
     };
 
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+
     if (user.role === 'admin' || user.role === 'BOSS') {
       // --- ADMIN VIEW ---
 
-      // 1. Leads (Customers)
-      const leadsCount = await db
-        .select({ count: count() })
+      // 0. Get Team Target (Sum of all sales targets for this month)
+      const teamTargetRes = await db
+        .select({ total: sum(salesTargets.targetAmount) })
+        .from(salesTargets)
+        .where(and(
+          eq(salesTargets.tenantId, user.tenantId),
+          eq(salesTargets.year, currentYear),
+          eq(salesTargets.month, currentMonth)
+        ));
+
+      const targetAmount = parseFloat(teamTargetRes[0]?.total as string) || 0;
+
+      // 1. Leads Stats
+      const leadsStats = await db
+        .select({
+          status: customers.status,
+          count: count()
+        })
         .from(customers)
-        .where(eq(customers.tenantId, user.tenantId));
+        .where(eq(customers.tenantId, user.tenantId))
+        .groupBy(customers.status);
+
+      const totalLeads = leadsStats.reduce((acc, curr) => acc + curr.count, 0);
+      const pendingLeads = leadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+      const followingLeads = leadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
+      const wonLeads = leadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
 
       // 2. Quotes (Total)
       const quotesCount = await db
@@ -65,10 +90,7 @@ export async function GET(request: NextRequest) {
         .from(quotes)
         .where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')));
 
-      // 4. Cash (Sum of Confirmed) - Simplified for MVP, assuming finalAmount is numeric-string
-      // For now, mockup the sum or use a count * avg if SQL sum is complex with string types in SQLite/Postgres hybrid envs
-      // Let's iterate or just mock the value for safety in this demo environment if casting is risky.
-      // Actually, let's try to fetch confirmed quotes and sum in JS for reliability.
+      // 4. Cash
       const confirmedQuotes = await db.query.quotes.findMany({
         where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')),
         columns: { finalAmount: true },
@@ -79,21 +101,55 @@ export async function GET(request: NextRequest) {
         0
       );
 
+      data.target = {
+        amount: targetAmount,
+        achieved: totalCash,
+        percentage: targetAmount > 0 ? Math.min(Math.round((totalCash / targetAmount) * 100), 100) : 0
+      };
+
       data.stats = {
-        leads: leadsCount[0].count,
+        leads: totalLeads,
+        leadsBreakdown: {
+          pending: pendingLeads,
+          following: followingLeads,
+          won: wonLeads
+        },
         quotes: quotesCount[0].count,
         orders: ordersCount[0].count,
-        cash: (totalCash / 1000).toFixed(1), // Return in k unit
+        cash: (totalCash / 1000).toFixed(1), // k unit
+        conversionRate: totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : '0.0',
+        avgOrderValue: ordersCount[0].count > 0 ? (totalCash / ordersCount[0].count).toFixed(0) : '0'
       };
+
     } else if (user.role === 'sales') {
-      console.log('Dashboard: Entering SALES view');
       // --- SALES VIEW ---
-      console.log('Dashboard: Querying leads...');
-      const myLeads = await db
-        .select({ count: count() })
+
+      // 0. Get My Target
+      const myTargetRes = await db.query.salesTargets.findFirst({
+        where: and(
+          eq(salesTargets.tenantId, user.tenantId),
+          eq(salesTargets.userId, user.id),
+          eq(salesTargets.year, currentYear),
+          eq(salesTargets.month, currentMonth)
+        ),
+        columns: { targetAmount: true }
+      });
+      const targetAmount = parseFloat(myTargetRes?.targetAmount as string) || 0;
+
+      // 1. Leads Breakdown
+      const myLeadsStats = await db
+        .select({
+          status: customers.status,
+          count: count()
+        })
         .from(customers)
-        .where(and(eq(customers.tenantId, user.tenantId), eq(customers.assignedSalesId, user.id)));
-      console.log('Dashboard: Leads queried', myLeads);
+        .where(and(eq(customers.tenantId, user.tenantId), eq(customers.assignedSalesId, user.id)))
+        .groupBy(customers.status);
+
+      const totalLeads = myLeadsStats.reduce((acc, curr) => acc + curr.count, 0);
+      const pendingLeads = myLeadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+      const followingLeads = myLeadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
+      const wonLeads = myLeadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
 
       const myQuotesCount = await db
         .select({ count: count() })
@@ -125,11 +181,24 @@ export async function GET(request: NextRequest) {
         0
       );
 
+      data.target = {
+        amount: targetAmount,
+        achieved: myCash,
+        percentage: targetAmount > 0 ? Math.min(Math.round((myCash / targetAmount) * 100), 100) : 0
+      };
+
       data.stats = {
-        leads: myLeads[0].count,
+        leads: totalLeads,
+        leadsBreakdown: {
+          pending: pendingLeads,
+          following: followingLeads,
+          won: wonLeads
+        },
         quotes: myQuotesCount[0].count,
         orders: myOrders[0].count,
         cash: (myCash / 1000).toFixed(1),
+        conversionRate: totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : '0.0',
+        avgOrderValue: myOrders[0].count > 0 ? (myCash / myOrders[0].count).toFixed(0) : '0'
       };
 
       // My Recent Quotes
@@ -142,10 +211,10 @@ export async function GET(request: NextRequest) {
 
       data.todos = myRecentQuotes.map((q) => ({
         id: q.id,
-        title: q.title || q.quoteNo,
+        title: q.quoteNo, // Use quoteNo as title
         status: q.status,
         desc: `客户: ${q.customer?.name || '未知'}`,
-        time: q.createdAt,
+        time: q.createdAt ? new Date(q.createdAt).toLocaleDateString() : '',
       }));
     }
 

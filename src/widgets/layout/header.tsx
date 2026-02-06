@@ -18,10 +18,15 @@ interface HeaderProps {
 
 export function Header({ session }: HeaderProps) {
     const pathname = usePathname();
+    console.log('Header Render Pathname:', pathname);
 
     // 根据路径获取页面标题
     const getPageTitle = () => {
         if (pathname === '/') return '工作台';
+        if (pathname.startsWith('/customers')) {
+            console.log('Matched customers path, returning 客户管理');
+            return '客户管理';
+        }
         if (pathname.startsWith('/leads')) return '线索管理';
         if (pathname.startsWith('/quotes')) return '报价管理';
         if (pathname.startsWith('/orders')) return '订单管理';
@@ -32,6 +37,11 @@ export function Header({ session }: HeaderProps) {
         if (pathname.startsWith('/after-sales')) return '售后服务';
         if (pathname.startsWith('/analytics')) return '数据分析';
         if (pathname.startsWith('/settings')) return '系统设置';
+        if (pathname.startsWith('/channels')) return '渠道管理';
+        if (pathname.startsWith('/workflow/approvals')) return '审批中心';
+        if (pathname.startsWith('/notifications')) return '通知中心';
+        if (pathname.startsWith('/admin')) return '平台管理';
+        // Debug change to verify update
         return '工作台';
     };
 

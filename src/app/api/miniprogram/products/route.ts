@@ -30,6 +30,19 @@ async function getUser(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    // 开发模式检测 - 返回 Mock 商品数据
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.includes('dev-mock-token-')) {
+      const mockProducts = [
+        { id: 'mock-prod-1', name: '高遮光窗帘布', sku: 'CUR-001', category: 'CURTAIN', unitPrice: '128.00', unit: '米', image: null, calcType: 'CURTAIN', fabricWidth: 2.8 },
+        { id: 'mock-prod-2', name: '纱帘布料', sku: 'CUR-002', category: 'CURTAIN', unitPrice: '68.00', unit: '米', image: null, calcType: 'CURTAIN', fabricWidth: 2.8 },
+        { id: 'mock-prod-3', name: '铝合金静音轨道', sku: 'TRK-001', category: 'TRACK', unitPrice: '45.00', unit: '米', image: null, calcType: 'LINEAR' },
+        { id: 'mock-prod-4', name: '罗马杆套装', sku: 'ROD-001', category: 'ACCESSORY', unitPrice: '180.00', unit: '套', image: null, calcType: 'FIXED' },
+        { id: 'mock-prod-5', name: '挂钩（100个装）', sku: 'ACC-001', category: 'ACCESSORY', unitPrice: '25.00', unit: '包', image: null, calcType: 'FIXED' },
+      ];
+      return NextResponse.json({ success: true, data: mockProducts });
+    }
+
     const user = await getUser(request);
     if (!user || !user.tenantId) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });

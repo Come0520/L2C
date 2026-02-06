@@ -1,0 +1,249 @@
+/* pages/crm/create/create.wxss */
+.container {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    padding-bottom: 160rpx;
+}
+
+.form-section {
+    padding: 24rpx 32rpx;
+}
+
+.section-title {
+    font-size: 26rpx;
+    color: #64748b;
+    margin-bottom: 16rpx;
+    margin-top: 16rpx;
+}
+
+.form-card {
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 0 32rpx;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+.form-item {
+    display: flex;
+    align-items: center;
+    padding: 32rpx 0;
+    border-bottom: 1rpx solid #f1f5f9;
+}
+
+.form-item:last-child {
+    border-bottom: none;
+}
+
+.textarea-item {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.label {
+    font-size: 28rpx;
+    color: #334155;
+    width: 140rpx;
+    flex-shrink: 0;
+}
+
+.label.required::before {
+    content: '*';
+    color: #ef4444;
+    margin-right: 8rpx;
+}
+
+.input {
+    flex: 1;
+    font-size: 28rpx;
+    color: #1e293b;
+}
+
+.input::placeholder {
+    color: #cbd5e1;
+}
+
+.input.error {
+    border-bottom: 2rpx solid #ef4444; 
+    /* 由于 input 外面有 form-item 的 border, 我们其实可以直接给 input 加颜色或者给 form-item 加 error 类 */
+    /* 修正策略：form-item 是 border-bottom 的持有者。
+       但这里 input 是 flex:1, 没法直接改 form-item 的 border (需要 wxml 改动传给 parent)。
+       退一步，我们给 input 加一个显眼的 placeholder 颜色变化或者背景色微调？
+       或者直接改 placeholder 颜色为红色？
+       
+       或者直接简单的：如果 input 有 error, 它的 placeholder 变红？
+       
+       这里 .input 是在 form-item 内部。form-item 有 border-bottom。
+       给 input 加 border-bottom 会很怪。
+       
+       Better approach: 让 WXML 里 .form-item 也有 error class?
+       Current WXML: <input class="input {{errors.name ? 'error' : ''}}" ... />
+       
+       Let's stick to simple visual cue on the input itself if possible, or maybe text color?
+       Let's make placeholder red temporarily.
+    */
+    color: #ef4444; 
+}
+
+.input.error::placeholder {
+    color: #fca5a5;
+}
+
+.textarea {
+    width: 100%;
+    font-size: 28rpx;
+    color: #1e293b;
+    min-height: 120rpx;
+    margin-top: 16rpx;
+    line-height: 1.6;
+}
+
+.textarea::placeholder {
+    color: #cbd5e1;
+}
+
+.picker-value {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 28rpx;
+    color: #1e293b;
+}
+
+.picker-value.placeholder {
+    color: #cbd5e1;
+}
+
+.arrow {
+    color: #cbd5e1;
+    font-size: 32rpx;
+    margin-left: 16rpx;
+}
+
+/* 提交区域 */
+.submit-area {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 24rpx 32rpx;
+    padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+    background: #fff;
+    box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.submit-btn {
+    width: 100%;
+    height: 96rpx;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    font-size: 32rpx;
+    font-weight: 500;
+    border-radius: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+
+.submit-btn.disabled {
+    opacity: 0.6;
+}
+
+.submit-btn::after {
+    border: none;
+}
+
+/* 多级来源选择器弹窗 */
+.source-picker-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.source-picker-mask.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.source-picker-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    border-radius: 24rpx 24rpx 0 0;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.source-picker-mask.show .source-picker-panel {
+    transform: translateY(0);
+}
+
+.picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 32rpx;
+    border-bottom: 1rpx solid #f1f5f9;
+}
+
+.picker-cancel {
+    color: #94a3b8;
+    font-size: 28rpx;
+}
+
+.picker-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.picker-confirm {
+    color: #3b82f6;
+    font-size: 28rpx;
+    font-weight: 500;
+}
+
+.picker-body {
+    display: flex;
+    height: 600rpx;
+}
+
+.picker-column {
+    flex: 1;
+    height: 100%;
+    border-right: 1rpx solid #f1f5f9;
+}
+
+.picker-column:last-child {
+    border-right: none;
+}
+
+.picker-item {
+    padding: 28rpx 24rpx;
+    font-size: 28rpx;
+    color: #475569;
+    border-bottom: 1rpx solid #f8fafc;
+}
+
+.picker-item.active {
+    background: #eff6ff;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.picker-empty {
+    padding: 48rpx 24rpx;
+    text-align: center;
+    color: #cbd5e1;
+    font-size: 26rpx;
+}

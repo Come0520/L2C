@@ -59,6 +59,10 @@
           </view>
           <view class="qrcode-tip">长按保存或直接扫码加入</view>
           
+          <button class="primary-btn share-btn" open-type="share">
+            <text>转发给微信好友</text>
+          </button>
+
           <view class="link-box">
             <text class="link-text">{{inviteLink}}</text>
             <view class="copy-tag" bindtap="copyLink">复制</view>

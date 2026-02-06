@@ -23,6 +23,7 @@ import {
 } from '@/shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import RefreshCcw from 'lucide-react/dist/esm/icons/refresh-ccw';
 import { toast } from 'sonner';
 import { createChannel, updateChannel } from '@/features/channels/actions/mutations';
 import { ChannelInput } from '@/features/channels/actions/schema';
@@ -39,6 +40,7 @@ const formSchema = z.object({
     code: z.string().min(1, '请输入渠道编号'),
     category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL']).default('OFFLINE'),
     channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY', 'DOUYIN', 'XIAOHONGSHU', 'STORE', 'OTHER']),
+    customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
     level: z.enum(['S', 'A', 'B', 'C']).default('C'),
     contactName: z.string().min(1, '请输入联系人'),
     phone: z.string().min(1, '请输入联系电话'),
@@ -50,6 +52,14 @@ const formSchema = z.object({
     commissionTriggerMode: z.enum(['ORDER_CREATED', 'ORDER_COMPLETED', 'PAYMENT_COMPLETED']).default('PAYMENT_COMPLETED'),
     priceDiscountRate: z.coerce.number().min(0).max(2).optional(),
     settlementType: z.enum(['PREPAY', 'MONTHLY']).default('PREPAY'),
+}).refine((data) => {
+    if (data.channelType === 'OTHER' && !data.customChannelType) {
+        return false;
+    }
+    return true;
+}, {
+    message: '请输入自定义类型名称',
+    path: ['customChannelType'],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -73,6 +83,11 @@ interface ChannelFormDialogProps {
         id: string;
         name: string;
         hierarchyLevel: number;
+        categoryId?: string | null;
+        category?: { name: string } | null;
+        category?: { name: string } | null;
+        channelType?: string | null;
+        customChannelType?: string | null;
     } | null;
     categoryTypes: Array<{ id: string; name: string; code: string }>;
     tenantId: string;
@@ -100,11 +115,21 @@ export function ChannelFormDialog({
         defaultValues: {
             parentId: parentChannel?.id || channel?.parentId || null,
             hierarchyLevel: parentChannel ? parentChannel.hierarchyLevel + 1 : (channel?.hierarchyLevel || 1),
-            categoryId: channel?.categoryId || null,
+            categoryId: channel?.categoryId || parentChannel?.categoryId || null,
             name: channel?.name || '',
-            code: channel?.code || '',
-            category: (channel?.category?.name || 'OFFLINE') as 'ONLINE' | 'OFFLINE' | 'REFERRAL', // 修正类型断言
-            channelType: (channel as unknown as { channelType: string })?.channelType as 'DECORATION_CO' || 'DECORATION_CO',
+            code: channel?.code || (() => {
+                const date = new Date();
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const random = Math.floor(Math.random() * 9000 + 1000);
+                return `QD${year}${month}${day}${random}`;
+            })(),
+            // 继承父级 Category，如果有的话
+            category: (channel?.category?.name || (parentChannel?.category?.name) || 'OFFLINE') as 'ONLINE' | 'OFFLINE' | 'REFERRAL',
+            // 继承父级 channelType (作为默认值)
+            channelType: (channel as unknown as { channelType: string })?.channelType as 'DECORATION_CO' || (parentChannel?.channelType as 'DECORATION_CO') || 'DECORATION_CO',
+            customChannelType: (channel as unknown as { customChannelType?: string })?.customChannelType || '',
             level: (channel?.level as 'S' | 'A' | 'B' | 'C') || 'C',
             contactName: channel?.contactName || '',
             phone: channel?.phone || '',
@@ -141,7 +166,7 @@ export function ChannelFormDialog({
         { value: 'DOUYIN', label: '抖音' },
         { value: 'XIAOHONGSHU', label: '小红书' },
         { value: 'STORE', label: '门店' },
-        { value: 'OTHER', label: '其他' },
+        { value: 'OTHER', label: '自定义' },
     ];
 
     return (
@@ -189,11 +214,30 @@ export function ChannelFormDialog({
                                 {/* 渠道编号 */}
                                 <div className="space-y-2">
                                     <Label htmlFor="code">渠道编号 *</Label>
-                                    <Input
-                                        id="code"
-                                        {...form.register('code')}
-                                        placeholder="如：QD202601001"
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="code"
+                                            {...form.register('code')}
+                                            placeholder="如：QD202601001"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            title="自动生成编号"
+                                            onClick={() => {
+                                                const date = new Date();
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                const random = Math.floor(Math.random() * 9000 + 1000);
+                                                const code = `QD${year}${month}${day}${random}`;
+                                                form.setValue('code', code);
+                                            }}
+                                        >
+                                            <RefreshCcw className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                     {form.formState.errors.code && (
                                         <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
                                     )}
@@ -220,6 +264,21 @@ export function ChannelFormDialog({
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                {/* 自定义类型名称 */}
+                                {form.watch('channelType') === 'OTHER' && (
+                                    <div className="space-y-2 col-span-2">
+                                        <Label htmlFor="customChannelType">自定义类型名称 *</Label>
+                                        <Input
+                                            id="customChannelType"
+                                            {...form.register('customChannelType')}
+                                            placeholder="请输入自定义渠道类型"
+                                        />
+                                        {form.formState.errors.customChannelType && (
+                                            <p className="text-xs text-destructive">{form.formState.errors.customChannelType.message}</p>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* 渠道等级 */}
                                 <div className="space-y-2">

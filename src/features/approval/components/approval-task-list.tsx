@@ -3,74 +3,32 @@
 import { Card, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+
 import { CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
 export function ApprovalTaskList({
-    pendingTasks,
-    processedTasks
+    tasks,
+    isPending
 }: {
-    pendingTasks: Array<{
-        id: string;
-        status: string | null;
-        createdAt: Date | null;
-        approval: {
-            id: string;
-            entityType: string;
-            entityId: string;
-            requester?: { name: string | null } | null;
-            flow: { name: string } | null;
-        };
-        node: { name: string };
-    }>;
-    processedTasks: Array<{
-        id: string;
-        status: string | null;
-        createdAt: Date | null;
-        actionAt?: Date | null;
-        approval: {
-            id: string;
-            entityType: string;
-            entityId: string;
-            requester?: { name: string | null } | null;
-            flow: { name: string } | null;
-        };
-        node: { name: string };
-    }>;
+    tasks: Array<any>;
+    isPending: boolean;
 }) {
+    if (tasks.length === 0) {
+        return (
+            <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
+                {isPending ? '暂无待处理任务' : '暂无已处理记录'}
+            </div>
+        );
+    }
+
     return (
-        <Tabs defaultValue="pending" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="pending">待处理 ({pendingTasks.length})</TabsTrigger>
-                <TabsTrigger value="processed">已处理 ({processedTasks.length})</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="pending" className="space-y-4">
-                {pendingTasks.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
-                        暂无待处理任务
-                    </div>
-                ) : (
-                    pendingTasks.map((task) => (
-                        <TaskCard key={task.id} task={task} isPending={true} />
-                    ))
-                )}
-            </TabsContent>
-
-            <TabsContent value="processed" className="space-y-4">
-                {processedTasks.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
-                        暂无已处理记录
-                    </div>
-                ) : (
-                    processedTasks.map((task) => (
-                        <TaskCard key={task.id} task={task} isPending={false} />
-                    ))
-                )}
-            </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+            {tasks.map((task) => (
+                <TaskCard key={task.id} task={task} isPending={isPending} />
+            ))}
+        </div>
     );
 }
 

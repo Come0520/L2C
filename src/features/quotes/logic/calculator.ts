@@ -138,7 +138,14 @@ export const CurtainCalculator = {
             unitPrice = 0,
         } = params;
 
-        // 获取配置参数（优先使用传入值，否则使用默认值）
+        // [Fix] 处理 NaN 输入
+        const safeParams = {
+            measuredWidth: isNaN(measuredWidth) ? 0 : measuredWidth,
+            measuredHeight: isNaN(measuredHeight) ? 0 : measuredHeight,
+            foldRatio: isNaN(foldRatio) ? 2 : foldRatio,
+        };
+        const hFinished = safeParams.measuredHeight;
+        const wFinished = safeParams.measuredWidth * safeParams.foldRatio;
         const sideLoss = params.sideLoss ?? DEFAULTS.SIDE_LOSS;
         const bottomLoss = params.bottomLoss ?? DEFAULTS.BOTTOM_LOSS;
         const headerLossWrapped = params.headerLossWrapped ?? params.headerLoss ?? DEFAULTS.HEADER_LOSS_WRAPPED;
@@ -149,9 +156,9 @@ export const CurtainCalculator = {
         // 根据当前工艺选择帘头损耗
         const currentHeaderLoss = headerType === 'WRAPPED' ? headerLossWrapped : headerLossAttached;
 
-        // 1. 成品尺寸
-        const hFinished = measuredHeight;
-        const wFinished = measuredWidth * foldRatio;
+        // 1. 成品尺寸 (已在上方 safeParams 中计算)
+        // const hFinished = measuredHeight;
+        // const wFinished = measuredWidth * foldRatio;
 
         // 2. 裁剪尺寸
         const splitCount = splitType === 'SINGLE' ? 1 : 2;

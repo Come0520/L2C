@@ -1,0 +1,67 @@
+<!--pages/crm/detail/index.wxml-->
+<view class="container">
+  <view class="header-card">
+    <view class="info-row">
+        <view class="avatar-placeholder">{{customer.name[0]}}</view>
+        <view class="basic-info">
+            <view class="name-row">
+                <text class="name">{{customer.name}}</text>
+                <text class="level-tag">{{customer.level || 'D'}}级</text>
+            </view>
+            <view class="meta-row">
+                <text class="label">来源: {{customer.source || '-'}}</text>
+            </view>
+        </view>
+    </view>
+    
+    <view class="contact-actions">
+        <view class="action-item" bindtap="onCall">
+            <image class="icon" src="/assets/icons/phone.svg" />
+            <text>电话</text>
+        </view>
+        <view class="action-item" bindtap="onCopyWechat">
+            <image class="icon" src="/assets/icons/wechat.svg" />
+            <text>微信</text>
+        </view>
+        <view class="action-item" bindtap="onNavToMap">
+            <image class="icon" src="/assets/icons/location.svg" />
+            <text>导航</text>
+        </view>
+    </view>
+  </view>
+
+  <view class="section-title">跟进记录</view>
+  
+  <view class="timeline">
+    <block wx:for="{{customer.activities}}" wx:key="id">
+        <view class="timeline-item">
+            <view class="timeline-left">
+                <view class="dot {{item.type}}"></view>
+                <view class="line" wx:if="{{index < customer.activities.length - 1}}"></view>
+            </view>
+            <view class="timeline-content">
+                <view class="activity-header">
+                    <text class="type-badge {{item.type}}">{{item.type}}</text>
+                    <text class="activity-time">{{item.createdAt}}</text> <!-- Needs formatting -->
+                </view>
+                <view class="activity-body">
+                    <text>{{item.description}}</text>
+                </view>
+                <view class="activity-footer">
+                    <text class="operator">{{item.creator.name}}</text>
+                </view>
+            </view>
+        </view>
+    </block>
+    <view class="empty-state" wx:if="{{!customer.activities || customer.activities.length === 0}}">
+        <text>暂无跟进记录</text>
+    </view>
+  </view>
+  
+  <!-- Footer Actions -->
+  <view class="footer-safe-area"></view>
+  <view class="footer-bar">
+    <button class="footer-btn secondary" bindtap="onEdit">编辑资料</button>
+    <button class="footer-btn primary" bindtap="onAddFollowup">写跟进</button>
+  </view>
+</view>

@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/shared/lib/utils';
+import { usePathname, useRouter } from 'next/navigation';
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import Package from 'lucide-react/dist/esm/icons/package';
 import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
 import Factory from 'lucide-react/dist/esm/icons/factory';
@@ -57,32 +56,31 @@ const supplyChainTabs = [
  */
 export function SupplyChainTabNav() {
     const pathname = usePathname();
+    const router = useRouter();
+
+    // Find active tab based on current path
+    // Default to first one if no match (though usually there should be a match or handle explicitly)
+    const activeTab = supplyChainTabs.find(tab => pathname.startsWith(tab.href))?.href || supplyChainTabs[0].href;
+
+    const handleTabChange = (value: string) => {
+        router.push(value);
+    };
+
+    const formattedTabs = supplyChainTabs.map(tab => ({
+        value: tab.href,
+        label: tab.label,
+        icon: <tab.icon className="h-4 w-4" />
+    }));
 
     return (
-        <div className="space-y-2">
-            <h1 className="text-2xl font-bold">供应链管理</h1>
-            <nav className="flex items-center gap-1 overflow-x-auto pb-1">
-                {supplyChainTabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = pathname.startsWith(tab.href);
-
-                    return (
-                        <Link
-                            key={tab.href}
-                            href={tab.href}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                                isActive
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                            )}
-                        >
-                            <Icon className="h-4 w-4" />
-                            {tab.label}
-                        </Link>
-                    );
-                })}
-            </nav>
+        <div className="w-full">
+            <AnimatedTabs
+                tabs={formattedTabs}
+                activeTab={activeTab}
+                onChange={handleTabChange}
+                layoutId="supply-chain-nav"
+                tabClassName="px-4 py-2"
+            />
         </div>
     );
 }

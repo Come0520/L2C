@@ -19,7 +19,7 @@ const client = postgres(connectionString, {
   max: env.DB_MAX_CONNECTIONS,
   idle_timeout: 30, // 空闲超时 30s
   connect_timeout: 10,
-  prepare: true,
+  prepare: false,
 });
 
 export const db = drizzle(client, { schema });

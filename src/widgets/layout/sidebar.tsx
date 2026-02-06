@@ -20,13 +20,19 @@ import {
   ClipboardCheck,
   User,
   Store,
+  Building2, // 租户管理图标
+  Network, // 渠道管理图标
+  UserCheck, // 客户管理图标
+  Bell, // 通知中心图标
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
 import { AnimatedList } from '@/shared/ui/animated-list';
 import { LogoWithThemeSwitcher } from '@/shared/ui/theme-pill-nav';
 import { useTenant } from '@/shared/providers/tenant-provider';
+import { VerifiedIcon } from '@/shared/ui/verification-badge';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react'; // Import useSession
 
 /**
  * 导航链接配置
@@ -42,6 +48,16 @@ const navLinks = [
     label: '线索管理',
     href: '/leads',
     icon: Users,
+  },
+  {
+    label: '渠道管理',
+    href: '/channels',
+    icon: Network,
+  },
+  {
+    label: '客户管理',
+    href: '/customers',
+    icon: UserCheck,
   },
   {
     label: '报价管理',
@@ -89,6 +105,11 @@ const navLinks = [
     icon: Headphones,
   },
   {
+    label: '通知中心',
+    href: '/notifications',
+    icon: Bell,
+  },
+  {
     label: '数据分析',
     href: '/analytics',
     icon: BarChart2,
@@ -107,6 +128,23 @@ const navLinks = [
 export function AppSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
+  const { data: session } = useSession();
+
+  // 动态生成导航菜单，如果是平台管理员，添加“租户管理”
+  const displayNavLinks = React.useMemo(() => {
+    // console.log('Sidebar Debug - Session:', session); // Temporarily commented out to avoid console spam, enable if needed
+    if (session?.user?.isPlatformAdmin) {
+      return [
+        ...navLinks,
+        {
+          label: '租户管理',
+          href: '/admin/tenants',
+          icon: Building2,
+        }
+      ];
+    }
+    return navLinks;
+  }, [session?.user?.isPlatformAdmin]);
 
   return (
     <Sidebar open={open} setOpen={setOpen}>
@@ -120,7 +158,7 @@ export function AppSidebar() {
           {/* 导航链接 - 使用 AnimatedList */}
           <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto px-1">
             <AnimatedList
-              items={navLinks.map((link) => {
+              items={displayNavLinks.map((link) => {
                 const isActive =
                   pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
                 return (
@@ -178,12 +216,17 @@ function LogoWrapper() {
       )}
       <motion.span
         animate={{
-          display: animate ? (open ? 'inline-block' : 'none') : 'inline-block',
+          display: animate ? (open ? 'inline-flex' : 'none') : 'inline-flex',
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="from-primary-600 to-primary-400 bg-linear-to-r bg-clip-text font-serif text-xl leading-tight font-semibold whitespace-normal text-transparent"
+        className="flex items-center gap-1.5"
       >
-        {tenant?.name || 'L2C System'}
+        <span className="from-primary-600 to-primary-400 bg-linear-to-r bg-clip-text font-serif text-xl leading-tight font-semibold whitespace-normal text-transparent">
+          {tenant?.name || 'L2C System'}
+        </span>
+        {tenant?.verificationStatus === 'verified' && (
+          <VerifiedIcon size="md" className="shrink-0" />
+        )}
       </motion.span>
     </div>
   );

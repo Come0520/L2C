@@ -46,12 +46,18 @@ export async function getSettingsByCategory(category: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
-    const settings = await db.query.systemSettings.findMany({
-        where: and(
-            eq(systemSettings.tenantId, session.user.tenantId),
-            eq(systemSettings.category, category)
-        ),
-    });
+    let settings = [];
+    try {
+        settings = await db.query.systemSettings.findMany({
+            where: and(
+                eq(systemSettings.tenantId, session.user.tenantId),
+                eq(systemSettings.category, category)
+            ),
+        });
+    } catch (error) {
+        console.error(`Failed to get settings for category ${category}:`, error);
+        return {}; // Return empty object fallback
+    }
 
     // 转换为对象格式
     const result: Record<string, unknown> = {};
@@ -65,11 +71,18 @@ export async function getSettingsByCategory(category: string) {
 /**
  * 获取单个配置值（带缓存）
  */
-export async function getSetting(key: string): Promise<unknown> {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+export async function getSetting(key: string, overrideTenantId?: string): Promise<unknown> {
+    let tenantId = overrideTenantId;
 
-    const tenantId = session.user.tenantId;
+    if (!tenantId) {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            // If explicit tenantId provided, we don't need auth session (internal/api call)
+            // But if neither is present, throw.
+            throw new Error('未授权');
+        }
+        tenantId = session.user.tenantId;
+    }
 
     // 检查缓存
     const cached = settingsCache.get(tenantId);
@@ -86,12 +99,23 @@ export async function getSetting(key: string): Promise<unknown> {
     }
 
     // 从数据库获取
-    const setting = await db.query.systemSettings.findFirst({
-        where: and(
-            eq(systemSettings.tenantId, tenantId),
-            eq(systemSettings.key, key)
-        ),
-    });
+    let setting;
+    try {
+        setting = await db.query.systemSettings.findFirst({
+            where: and(
+                eq(systemSettings.tenantId, tenantId),
+                eq(systemSettings.key, key)
+            ),
+        });
+    } catch (error) {
+        console.error(`Failed to get setting ${key}:`, error);
+        // Fallback to default if DB fails
+        const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find(s => s.key === key);
+        if (defaultSetting) {
+            return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
+        }
+        return null;
+    }
 
     if (!setting) {
         // 返回默认值
@@ -180,28 +204,38 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
  * 在创建新租户时调用
  */
 export async function initTenantSettings(tenantId: string) {
-    // 检查是否已初始化
-    const existing = await db.query.systemSettings.findFirst({
-        where: eq(systemSettings.tenantId, tenantId),
-    });
+    try {
+        // 检查是否已初始化（通过查询任一配置项）
+        const existing = await db.query.systemSettings.findFirst({
+            where: eq(systemSettings.tenantId, tenantId),
+        });
 
-    if (existing) {
-        return { success: true, message: '配置已存在' };
+        if (existing) {
+            return { success: true, message: '配置已存在' };
+        }
+
+        // 逐条插入默认配置（静默处理冲突）
+        for (const setting of DEFAULT_SYSTEM_SETTINGS) {
+            try {
+                await db.insert(systemSettings).values({
+                    tenantId,
+                    category: setting.category,
+                    key: setting.key,
+                    value: setting.value,
+                    valueType: setting.valueType,
+                    description: setting.description,
+                }).onConflictDoNothing();
+            } catch {
+                // 静默忽略单条插入失败（如重复键）
+            }
+        }
+
+        return { success: true, message: '配置初始化完成' };
+    } catch (error) {
+        // 仅在严重错误时记录
+        console.error('initTenantSettings error:', error);
+        return { success: false, error: '配置初始化失败' };
     }
-
-    // 批量插入默认配置
-    const defaultSettings = DEFAULT_SYSTEM_SETTINGS.map(setting => ({
-        tenantId,
-        category: setting.category,
-        key: setting.key,
-        value: setting.value,
-        valueType: setting.valueType,
-        description: setting.description,
-    }));
-
-    await db.insert(systemSettings).values(defaultSettings);
-
-    return { success: true, message: '配置初始化完成' };
 }
 
 /**

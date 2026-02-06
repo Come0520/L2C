@@ -226,3 +226,193 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
         return { success: false, error: '上传失败，请稍后重试' };
     }
 }
+
+// ============ 企业认证相关 Actions ============
+
+/** 认证状态类型 */
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
+
+/** 认证信息 */
+export interface VerificationInfo {
+    status: VerificationStatus;
+    businessLicenseUrl: string | null;
+    legalRepName: string | null;
+    registeredCapital: string | null;
+    businessScope: string | null;
+    verifiedAt: Date | null;
+    verificationRejectReason: string | null;
+}
+
+/**
+ * 获取当前租户认证状态
+ */
+export async function getVerificationStatus(): Promise<{
+    success: true;
+    data: VerificationInfo;
+} | { success: false; error: string }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未登录或无租户信息' };
+        }
+
+        const tenant = await db.query.tenants.findFirst({
+            where: eq(tenants.id, session.user.tenantId),
+            columns: {
+                verificationStatus: true,
+                businessLicenseUrl: true,
+                legalRepName: true,
+                registeredCapital: true,
+                businessScope: true,
+                verifiedAt: true,
+                verificationRejectReason: true,
+            },
+        });
+
+        if (!tenant) {
+            return { success: false, error: '租户不存在' };
+        }
+
+        return {
+            success: true,
+            data: {
+                status: (tenant.verificationStatus || 'unverified') as VerificationStatus,
+                businessLicenseUrl: tenant.businessLicenseUrl,
+                legalRepName: tenant.legalRepName,
+                registeredCapital: tenant.registeredCapital,
+                businessScope: tenant.businessScope,
+                verifiedAt: tenant.verifiedAt,
+                verificationRejectReason: tenant.verificationRejectReason,
+            },
+        };
+    } catch (error) {
+        console.error('获取认证状态失败:', error);
+        return { success: false, error: '获取认证状态失败' };
+    }
+}
+
+/** 提交认证申请的输入 */
+const submitVerificationSchema = z.object({
+    legalRepName: z.string().min(1, '法定代表人不能为空').max(50),
+    registeredCapital: z.string().max(50).optional().default(''),
+    businessScope: z.string().max(500).optional().default(''),
+    businessLicenseUrl: z.string().min(1, '请上传营业执照'),
+});
+
+/**
+ * 提交企业认证申请
+ * 仅 BOSS 和 ADMIN 角色可调用
+ */
+export async function submitVerification(data: {
+    legalRepName: string;
+    registeredCapital?: string;
+    businessScope?: string;
+    businessLicenseUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未登录' };
+        }
+
+        // 权限校验
+        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+            return { success: false, error: '无权限执行此操作' };
+        }
+
+        // 输入校验
+        const validated = submitVerificationSchema.safeParse(data);
+        if (!validated.success) {
+            return { success: false, error: validated.error.issues[0]?.message || '输入校验失败' };
+        }
+
+        // 检查当前状态
+        const tenant = await db.query.tenants.findFirst({
+            where: eq(tenants.id, session.user.tenantId),
+            columns: { verificationStatus: true },
+        });
+
+        // 已认证的不能重复申请
+        if (tenant?.verificationStatus === 'verified') {
+            return { success: false, error: '企业已完成认证' };
+        }
+
+        // 更新数据库
+        await db.update(tenants)
+            .set({
+                verificationStatus: 'pending',
+                legalRepName: validated.data.legalRepName,
+                registeredCapital: validated.data.registeredCapital || null,
+                businessScope: validated.data.businessScope || null,
+                businessLicenseUrl: validated.data.businessLicenseUrl,
+                verificationRejectReason: null, // 清除之前的拒绝原因
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, session.user.tenantId));
+
+        revalidatePath('/settings/verification');
+        return { success: true };
+    } catch (error) {
+        console.error('提交认证申请失败:', error);
+        return { success: false, error: '提交失败，请稍后重试' };
+    }
+}
+
+/**
+ * 上传营业执照
+ * 接收 FormData，保存到 public/uploads/licenses/ 目录
+ */
+export async function uploadBusinessLicense(formData: FormData): Promise<{
+    success: true;
+    licenseUrl: string;
+} | { success: false; error: string }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.tenantId) {
+            return { success: false, error: '未登录' };
+        }
+
+        // 权限校验
+        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+            return { success: false, error: '无权限执行此操作' };
+        }
+
+        const file = formData.get('license') as File | null;
+        if (!file) {
+            return { success: false, error: '请选择图片文件' };
+        }
+
+        // 验证文件类型
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            return { success: false, error: '仅支持 JPG、PNG、WebP、PDF 格式' };
+        }
+
+        // 验证文件大小（最大 5MB）
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            return { success: false, error: '文件大小不能超过 5MB' };
+        }
+
+        // 生成文件名
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+        const fileName = `license_${session.user.tenantId}_${Date.now()}.${ext}`;
+
+        // 确保目录存在
+        const uploadDir = join(process.cwd(), 'public', 'uploads', 'licenses');
+        await mkdir(uploadDir, { recursive: true });
+
+        // 保存文件
+        const filePath = join(uploadDir, fileName);
+        const bytes = await file.arrayBuffer();
+        await writeFile(filePath, Buffer.from(bytes));
+
+        // 生成可访问的 URL
+        const licenseUrl = `/uploads/licenses/${fileName}`;
+
+        return { success: true, licenseUrl };
+    } catch (error) {
+        console.error('上传营业执照失败:', error);
+        return { success: false, error: '上传失败，请稍后重试' };
+    }
+}

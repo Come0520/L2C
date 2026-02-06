@@ -1,0 +1,42 @@
+<!--pages/crm/followup/create.wxml-->
+<view class="container">
+  <view class="form-group">
+    <view class="label">跟进方式</view>
+    <view class="type-selector">
+        <view 
+            wx:for="{{typeOptions}}" 
+            wx:key="value"
+            class="type-item {{form.type === item.value ? 'active' : ''}}"
+            bindtap="onTypeSelect"
+            data-value="{{item.value}}"
+        >
+            {{item.label}}
+        </view>
+    </view>
+  </view>
+
+  <view class="form-group">
+    <view class="label">跟进内容</view>
+    <textarea 
+        class="input-area" 
+        placeholder="记录一下跟进情况..." 
+        bindinput="onInputContent"
+        value="{{form.description}}"
+        maxlength="500"
+    ></textarea>
+  </view>
+
+  <!-- Image Uploader MVP (Placeholder) -->
+  <!-- <view class="form-group">
+    <view class="label">添加照片</view>
+    <view class="uploader">
+        <view class="upload-btn">
+            <text>+</text>
+        </view>
+    </view>
+  </view> -->
+
+  <view class="footer">
+    <button class="submit-btn" bindtap="onSubmit" loading="{{submitting}}">提交</button>
+  </view>
+</view>

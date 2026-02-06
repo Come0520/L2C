@@ -5,15 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Building2, Phone, MapPin, Mail, Upload, Pencil, Save, X, Loader2 } from 'lucide-react';
+import { Building2, Phone, MapPin, Mail, Upload, Pencil, Save, X, Loader2, ShieldCheck, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateTenantInfo, uploadTenantLogo, type TenantInfo } from '../actions/tenant-info';
+import { updateTenantInfo, uploadTenantLogo, type TenantInfo, type VerificationStatus } from '../actions/tenant-info';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useTenant } from '@/shared/providers/tenant-provider';
+import { VerificationBadge } from '@/shared/ui/verification-badge';
 
 interface TenantInfoFormProps {
     /** 初始租户信息 */
     initialData: TenantInfo;
+    /** 认证状态 */
+    verificationStatus?: VerificationStatus;
     /** 是否有编辑权限 */
     canEdit: boolean;
 }
@@ -22,7 +26,7 @@ interface TenantInfoFormProps {
  * 租户信息表单组件
  * 支持展示和编辑两种模式
  */
-export function TenantInfoForm({ initialData, canEdit }: TenantInfoFormProps) {
+export function TenantInfoForm({ initialData, canEdit, verificationStatus = 'unverified' }: TenantInfoFormProps) {
     const { refreshTenant } = useTenant();
     const [isEditing, setIsEditing] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -108,6 +112,42 @@ export function TenantInfoForm({ initialData, canEdit }: TenantInfoFormProps) {
 
     return (
         <div className="space-y-6">
+            {/* 认证状态引导卡片 */}
+            <div className="bg-muted/50 rounded-lg p-4 border flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${verificationStatus === 'verified' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                        <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2">
+                            企业认证状态
+                            <VerificationBadge status={verificationStatus} size="sm" />
+                        </h4>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            {verificationStatus === 'verified'
+                                ? '您的企业已通过认证，享有专属标识。'
+                                : '完成企业认证，提升客户信任度。'}
+                        </p>
+                    </div>
+                </div>
+                {verificationStatus !== 'verified' && (
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/settings/verification">
+                            去认证
+                            <ChevronRight className="ml-1 h-3 w-3" />
+                        </Link>
+                    </Button>
+                )}
+                {verificationStatus === 'verified' && (
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/settings/verification">
+                            查看详情
+                            <ChevronRight className="ml-1 h-3 w-3" />
+                        </Link>
+                    </Button>
+                )}
+            </div>
+
             {/* Logo 区域 */}
             <div className="flex items-center gap-6">
                 <div

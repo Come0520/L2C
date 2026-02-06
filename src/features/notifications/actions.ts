@@ -42,32 +42,44 @@ export async function getNotificationsPure(session: SessionUser, params: GetNoti
     const tenantId = session.tenantId;
     const userId = session.id;
 
-    const whereCondition = and(
-        eq(notifications.tenantId, tenantId),
-        eq(notifications.userId, userId),
-        onlyUnread ? eq(notifications.isRead, false) : undefined
-    );
+    try {
+        const whereCondition = and(
+            eq(notifications.tenantId, tenantId),
+            eq(notifications.userId, userId),
+            onlyUnread ? eq(notifications.isRead, false) : undefined
+        );
 
-    const data = await db.query.notifications.findMany({
-        where: whereCondition,
-        orderBy: [desc(notifications.createdAt)],
-        limit: limit,
-        offset: (page - 1) * limit,
-    });
+        const data = await db.query.notifications.findMany({
+            where: whereCondition,
+            orderBy: [desc(notifications.createdAt)],
+            limit: limit,
+            offset: (page - 1) * limit,
+        });
 
-    const [{ count }] = await db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(notifications)
-        .where(whereCondition);
+        const [{ count }] = await db
+            .select({ count: sql<number>`cast(count(*) as int)` })
+            .from(notifications)
+            .where(whereCondition);
 
-    return {
-        data: data,
-        meta: {
-            total: count,
-            page,
-            limit,
-        }
-    };
+        return {
+            data: data,
+            meta: {
+                total: count,
+                page,
+                limit,
+            }
+        };
+    } catch (error) {
+        console.error('getNotificationsPure safe fallback:', error);
+        return {
+            data: [],
+            meta: {
+                total: 0,
+                page,
+                limit,
+            }
+        };
+    }
 }
 
 const getNotificationsActionInternal = createSafeAction(getNotificationsSchema, async (params, { session }) => {

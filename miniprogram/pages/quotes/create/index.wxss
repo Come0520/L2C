@@ -148,3 +148,123 @@
     border-radius: 99rpx;
     margin: 0;
 }
+
+/* Loading Mask */
+.loading-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    color: #64748b;
+}
+
+/* Customer Selection */
+.customer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12rpx 0;
+}
+
+.customer-name {
+    font-size: 32rpx;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.customer-placeholder {
+    font-size: 28rpx;
+    color: #94a3b8;
+}
+
+.arrow {
+    color: #cbd5e1;
+    font-size: 28rpx;
+}
+
+/* Empty Items */
+.empty-items {
+    padding: 32rpx;
+    text-align: center;
+}
+
+.empty-text {
+    color: #cbd5e1;
+    font-size: 26rpx;
+}
+
+/* Price Text */
+.price-text {
+    color: #3b82f6;
+}
+
+/* Total */
+.total-label {
+    color: #64748b;
+    margin-right: 8rpx;
+}
+
+.total-amount {
+    color: #ef4444;
+    font-size: 36rpx;
+}
+
+/* Room Picker Modal */
+.room-picker-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: flex-end;
+    z-index: 1000;
+}
+
+.room-picker-panel {
+    background: #fff;
+    width: 100%;
+    border-radius: 32rpx 32rpx 0 0;
+    padding: 32rpx;
+    padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+}
+
+.picker-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 32rpx;
+    color: #1e293b;
+}
+
+.picker-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20rpx;
+    margin-bottom: 32rpx;
+}
+
+.picker-item {
+    background: #f1f5f9;
+    padding: 20rpx 32rpx;
+    border-radius: 16rpx;
+    font-size: 28rpx;
+    color: #334155;
+}
+
+.picker-item:active {
+    background: #e2e8f0;
+}
+
+.picker-cancel {
+    text-align: center;
+    padding: 24rpx;
+    color: #64748b;
+    font-size: 28rpx;
+}
+
+.footer-spacer {
+    height: 200rpx;
+}
+

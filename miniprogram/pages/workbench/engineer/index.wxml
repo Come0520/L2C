@@ -1,0 +1,38 @@
+<!--pages/workbench/engineer/index.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">我的任务</text>
+  </view>
+
+  <view class="tabs">
+     <view class="tab {{activeTab === 'PENDING' ? 'active' : ''}}" bindtap="onTabChange" data-status="PENDING">待处理</view>
+     <view class="tab {{activeTab === 'COMPLETED' ? 'active' : ''}}" bindtap="onTabChange" data-status="COMPLETED">已完成</view>
+  </view>
+
+  <scroll-view class="task-list" scroll-y bindscrolltolower="onLoadMore">
+    <block wx:for="{{list}}" wx:key="id">
+        <!-- Filter via JS or API param roughly mapped -->
+        <view class="task-card" bindtap="onToDetail" data-id="{{item.id}}">
+            <view class="card-header">
+                <text class="task-no">{{item.taskNo}}</text>
+                <text class="status {{item.status}}">{{statusMap[item.status] || item.status}}</text>
+            </view>
+            <view class="card-body">
+                <view class="row">
+                    <text class="label">客户：</text>
+                    <text class="value">{{item.customerName}} {{item.customerPhone}}</text>
+                </view>
+                 <view class="row">
+                    <text class="label">地址：</text>
+                    <text class="value address">{{item.address || '未填写'}}</text>
+                </view>
+                 <view class="row">
+                    <text class="label">预约：</text>
+                    <text class="value time">{{item.scheduledDateFormatted}} {{item.scheduledTimeSlot}}</text>
+                </view>
+            </view>
+        </view>
+    </block>
+    <view class="empty" wx:if="{{!list.length && !loading}}">暂无任务</view>
+  </scroll-view>
+</view>

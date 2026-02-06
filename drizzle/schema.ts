@@ -62,7 +62,7 @@ export const productCategory = pgEnum("product_category", ['CURTAIN', 'WALLPAPER
 export const productType = pgEnum("product_type", ['FINISHED', 'CUSTOM'])
 export const purchaseOrderStatus = pgEnum("purchase_order_status", ['DRAFT', 'PENDING', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED'])
 export const quotePlanType = pgEnum("quote_plan_type", ['ECONOMIC', 'COMFORT', 'LUXURY'])
-export const quoteStatus = pgEnum("quote_status", ['DRAFT', 'PENDING_APPROVAL', 'PENDING_CUSTOMER', 'ACCEPTED', 'REJECTED', 'EXPIRED'])
+export const quoteStatus = pgEnum("quote_status", ['DRAFT', 'PENDING_APPROVAL', 'PENDING_CUSTOMER', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'APPROVED', 'LOCKED', 'ORDERED'])
 export const roomType = pgEnum("room_type", ['LIVING_ROOM', 'BEDROOM', 'DINING_ROOM', 'STUDY', 'BALCONY', 'BATHROOM', 'KITCHEN', 'OTHER'])
 export const settlementType = pgEnum("settlement_type", ['CASH', 'TRANSFER'])
 export const supplierType = pgEnum("supplier_type", ['SUPPLIER', 'PROCESSOR', 'BOTH'])
@@ -102,7 +102,8 @@ export const users = pgTable("users", {
 	name: varchar({ length: 100 }),
 	phone: varchar({ length: 20 }),
 	passwordHash: text("password_hash"),
-	role: varchar({ length: 50 }).default('USER'),
+	role: varchar({ length: 50 }).default('USER'), // @deprecated: Use roles instead
+	roles: jsonb("roles").default([]).notNull(), // New multi-role support
 	permissions: jsonb().default([]),
 	wechatOpenid: varchar("wechat_openid", { length: 100 }),
 	preferences: jsonb().default({}),

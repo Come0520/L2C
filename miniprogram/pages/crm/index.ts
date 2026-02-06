@@ -1,3 +1,5 @@
+import { authStore } from '../../stores/auth-store';
+
 Page({
     data: {
         keyword: '',
@@ -40,10 +42,14 @@ Page({
         this.fetchList();
     },
 
+    // 跳转详情
+    navigateToDetail(e: any) {
+        const id = e.currentTarget.dataset.id;
+        wx.navigateTo({ url: `/pages/crm/detail/index?id=${id}` });
+    },
+
     onAdd() {
-        // TODO: Create Customer Page
-        wx.showToast({ title: '新建客户功能开发中', icon: 'none' });
-        // wx.navigateTo({ url: '/pages/crm/create' });
+        wx.navigateTo({ url: '/pages/crm/create/create' });
     },
 
     onCall(e: any) {

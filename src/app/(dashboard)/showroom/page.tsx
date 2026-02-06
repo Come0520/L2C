@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShowroomTabs } from './components/showroom-tabs';
-import { FilterBar } from './components/filter-bar';
 import { ShowroomCard } from './components/showroom-card';
 import { AddResourceDialog } from './components/add-resource-dialog';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, MoreHorizontal, Aperture } from 'lucide-react';
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 
 // Mock Data
 const MOCK_DATA = [
@@ -63,6 +61,13 @@ const MOCK_DATA = [
   },
 ] as const;
 
+const TABS = [
+  { value: 'all', label: '精选 ✨' },
+  { value: 'product', label: '商品 🛍️' },
+  { value: 'case', label: '案例 🏠' },
+  { value: 'knowledge', label: '知识 📖' },
+];
+
 export default function ShowroomPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,64 +82,61 @@ export default function ShowroomPage() {
   });
 
   return (
-    <div className="from-background via-background to-muted/30 min-h-screen space-y-6 bg-gradient-to-br p-4 pb-24 md:p-8 md:pb-8">
-      {/* Header Area */}
-      <header className="bg-background/80 sticky top-0 z-20 -mx-4 flex items-center justify-between px-4 py-2 backdrop-blur-xl md:static md:mx-0 md:bg-transparent md:px-0">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="hover:bg-muted rounded-full">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="from-foreground to-foreground/70 bg-gradient-to-r bg-clip-text text-xl font-bold text-transparent md:text-2xl">
-            L2C 窗帘全流程管理大师
-          </h1>
+    <div className="h-[calc(100vh-8rem)] perspective-[1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
+      {/* Top Section: Tabs */}
+      <div className="flex w-full items-center justify-between">
+        <div className="flex-1">
+          <AnimatedTabs
+            tabs={TABS}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            containerClassName="w-full mb-4"
+            layoutId="showroom-tabs"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden md:block">
-            <AddResourceDialog />
-          </div>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Aperture className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center gap-2 mb-4">
+          {/* Actions */}
+          <AddResourceDialog />
         </div>
-      </header>
-
-      {/* Sticky Filters Mobile */}
-      <div className="bg-background/95 border-border/40 sticky top-[52px] z-10 -mx-4 space-y-4 border-b px-4 py-3 shadow-sm backdrop-blur-xl md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-        <FilterBar onSearch={setSearchQuery} />
-        <ShowroomTabs activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
-      {/* Content Grid */}
-      <motion.div
-        layout
-        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        <AnimatePresence mode="popLayout">
-          {filteredData.map((item) => (
-            <ShowroomCard key={item.id} item={item as any} />
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      {/* Content Card */}
+      <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid-ultra border border-white/10 flex flex-col gap-4">
+        {/* Toolbar */}
+        <DataTableToolbar
+          searchProps={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: "搜索商品 / 案例..."
+          }}
+        />
 
-      {/* Empty State */}
-      {filteredData.length === 0 && (
-        <div className="flex flex-col items-center justify-center space-y-4 py-20 text-center">
-          <div className="bg-muted/50 animate-blob flex h-24 w-24 items-center justify-center rounded-full">
-            <span className="text-4xl">🔍</span>
-          </div>
-          <h3 className="text-muted-foreground text-lg font-semibold">没有找到相关内容</h3>
-          <p className="text-muted-foreground/60 max-w-xs text-sm">
-            尝试更换搜索关键词或切换分类看看
-          </p>
+        {/* Content Grid */}
+        <div className="flex-1 overflow-auto rounded-md border border-white/10 p-4">
+          <motion.div
+            layout
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredData.map((item) => (
+                <ShowroomCard key={item.id} item={item as any} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Empty State */}
+          {filteredData.length === 0 && (
+            <div className="flex flex-col items-center justify-center space-y-4 py-20 text-center">
+              <div className="bg-muted/50 animate-blob flex h-24 w-24 items-center justify-center rounded-full">
+                <span className="text-4xl">🔍</span>
+              </div>
+              <h3 className="text-muted-foreground text-lg font-semibold">没有找到相关内容</h3>
+              <p className="text-muted-foreground/60 max-w-xs text-sm">
+                尝试更换搜索关键词或切换分类看看
+              </p>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Mobile Fab */}
-      <div className="fixed right-6 bottom-6 md:hidden">
-        <AddResourceDialog />
       </div>
     </div>
   );

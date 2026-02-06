@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.AUTH_URL || 'https://your-domain.com';
     const inviteLink = `${baseUrl}/register/employee?token=${inviteToken}`;
 
-    // 小程序码 URL（需要调用微信 API 生成）
-    // 这里返回一个占位符，实际使用时需要调用 wxacode.getUnlimited
-    const qrcodeUrl = `${baseUrl}/api/miniprogram/invite/qrcode?code=${inviteCode}`;
+    // 小程序码 URL（Mock Implementation）
+    // 使用公共 HTTPS 二维码生成服务，确保小程序可以加载
+    const qrcodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteLink)}`;
 
     return NextResponse.json({
       success: true,

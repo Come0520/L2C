@@ -13,7 +13,7 @@
   <scroll-view class="product-list" scroll-y="true">
     <block wx:for="{{products}}" wx:key="id">
         <view class="product-item" bindtap="onProductSelect" data-product="{{item}}">
-            <image class="prod-img" src="{{item.image || '/assets/default-prod.png'}}"></image>
+            <view class="prod-icon">📦</view>
             <view class="prod-info">
                 <view class="prod-name">{{item.name}}</view>
                 <view class="prod-meta">

@@ -1,0 +1,161 @@
+
+<view class="container" wx:if="{{!loading}}">
+    <!-- Header -->
+    <view class="header-card">
+        <view class="header-top">
+            <view class="name-wrap">
+                <text class="name">{{lead.customerName}}</text>
+                <view class="status-tag {{lead.status}}">{{lead.statusText || lead.status}}</view>
+            </view>
+            <view class="actions">
+                <view class="action-btn call" bindtap="onCall">
+                    <text>📞</text> 拨打
+                </view>
+            </view>
+        </view>
+        <view class="header-info">
+            <view class="info-item" bindtap="onCopy" data-text="{{lead.customerPhone}}">
+                <text class="label">手机：</text>
+                <text class="value">{{lead.customerPhone}}</text> 
+                <text class="copy-icon">⧉</text> 
+            </view>
+            <view class="info-item" wx:if="{{lead.customerWechat}}" bindtap="onCopy" data-text="{{lead.customerWechat}}">
+                <text class="label">微信：</text>
+                <text class="value">{{lead.customerWechat}}</text>
+                <text class="copy-icon">⧉</text>
+            </view>
+        </view>
+    </view>
+
+    <!-- Details -->
+    <view class="section-card">
+        <view class="section-title">基本信息</view>
+        <view class="detail-grid">
+             <view class="grid-item">
+                <text class="label">意向等级</text>
+                <text class="value">{{lead.intentionLevel || '-'}}</text>
+            </view>
+            <view class="grid-item full">
+                <text class="label">地址</text>
+                <text class="value">{{lead.address || '-'}}</text>
+            </view>
+            <view class="grid-item full">
+                <text class="label">来源渠道</text>
+                <text class="value">{{lead.channelName || '-'}} {{lead.channelContactName ? '> ' + lead.channelContactName : ''}}</text>
+            </view>
+             <view class="grid-item full" wx:if="{{lead.notes}}">
+                <text class="label">备注</text>
+                <text class="value">{{lead.notes}}</text>
+            </view>
+        </view>
+    </view>
+
+    <!-- Timeline -->
+    <view class="section-card timeline-section">
+        <view class="section-title">跟进记录</view>
+        <view class="timeline">
+            <block wx:for="{{lead.activities}}" wx:key="id">
+                <view class="timeline-item">
+                    <view class="timeline-dot"></view>
+                    <view class="timeline-content">
+                        <view class="timeline-header">
+                            <text class="user">{{item.creator.name || '系统'}}</text>
+                            <text class="time">{{item.createdAt}}</text>
+                        </view>
+                        <view class="timeline-body">
+                           <text wx:if="{{item.activityType === 'SYSTEM'}}" class="type-tag system">系统</text>
+                           <text wx:elif="{{item.activityType === 'PHONE_CALL'}}" class="type-tag phone">电话</text>
+                           <text wx:elif="{{item.activityType === 'WECHAT_CHAT'}}" class="type-tag wechat">微信</text>
+                           <text wx:elif="{{item.activityType === 'HOME_VISIT'}}" class="type-tag visit">上门</text>
+                           <text wx:elif="{{item.activityType === 'STORE_VISIT'}}" class="type-tag visit">到店</text>
+                           <text>{{item.content}}</text>
+                        </view>
+                         <view class="timeline-footer" wx:if="{{item.nextFollowupDate}}">
+                            下次跟进：{{item.nextFollowupDate}}
+                        </view>
+                    </view>
+                </view>
+            </block>
+            <view class="empty-timeline" wx:if="{{!lead.activities || lead.activities.length === 0}}">
+                暂无跟进记录
+            </view>
+        </view>
+    </view>
+
+    <!-- Bottom Actions -->
+    <view class="bottom-bar">
+        <view class="btn-group">
+            <button class="btn btn-secondary" bindtap="onShowVoid" wx:if="{{lead.status !== 'VOID' && lead.status !== 'WON'}}">作废</button>
+            <button class="btn btn-primary" bindtap="onShowFollowup" wx:if="{{lead.status !== 'VOID' && lead.status !== 'WON'}}">写跟进</button>
+            <button class="btn btn-success" bindtap="onConvert" wx:if="{{lead.status !== 'VOID' && lead.status !== 'WON'}}">转客户</button>
+        </view>
+    </view>
+
+    <!-- Followup Modal -->
+    <view class="modal {{showFollowupModal ? 'show' : ''}}">
+        <view class="mask" bindtap="onHideFollowup"></view>
+        <view class="modal-content">
+            <view class="modal-header">添加跟进记录</view>
+            <view class="modal-body">
+                <view class="form-field">
+                    <text class="label">跟进方式</text>
+                    <view class="tags-group">
+                        <view 
+                            wx:for="{{followupTypes}}" 
+                            wx:key="value" 
+                            class="tag-radio {{followupForm.type === item.value ? 'active' : ''}}"
+                            bindtap="onFollowupTypeChange"
+                            data-type="{{item.value}}"
+                        >
+                            {{item.name}}
+                        </view>
+                    </view>
+                </view>
+                <view class="form-field">
+                    <text class="label">跟进内容</text>
+                    <textarea 
+                        class="textarea" 
+                        placeholder="请输入跟进情况" 
+                        value="{{followupForm.content}}"
+                        bindinput="onFollowupInput"
+                    />
+                </view>
+                <view class="form-field">
+                    <text class="label">下次跟进</text>
+                     <picker mode="date" bindchange="onNextDateChange">
+                        <view class="picker-trigger">
+                            {{followupForm.nextFollowupAt || '选择日期 (可选)'}}
+                        </view>
+                    </picker>
+                </view>
+            </view>
+            <view class="modal-footer">
+                <button class="btn-cancel" bindtap="onHideFollowup">取消</button>
+                <button class="btn-confirm" bindtap="onSubmitFollowup">提交</button>
+            </view>
+        </view>
+    </view>
+
+    <!-- Void Modal -->
+    <view class="modal {{showVoidModal ? 'show' : ''}}">
+        <view class="mask" bindtap="onHideVoid"></view>
+        <view class="modal-content">
+            <view class="modal-header">作废线索</view>
+            <view class="modal-body">
+                <view class="form-field">
+                    <text class="label">作废原因</text>
+                    <textarea 
+                        class="textarea" 
+                        placeholder="请输入作废原因，如：无意向、号码空号等" 
+                        value="{{voidReason}}"
+                        bindinput="onVoidReasonInput"
+                    />
+                </view>
+            </view>
+            <view class="modal-footer">
+                <button class="btn-cancel" bindtap="onHideVoid">取消</button>
+                <button class="btn-confirm danger" bindtap="onSubmitVoid">确认作废</button>
+            </view>
+        </view>
+    </view>
+</view>

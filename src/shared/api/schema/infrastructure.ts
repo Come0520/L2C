@@ -8,6 +8,14 @@ export const tenantStatusEnum = pgEnum('tenant_status', [
     'suspended',         // 已暂停
 ]);
 
+// 企业认证状态枚举
+export const verificationStatusEnum = pgEnum('verification_status', [
+    'unverified',  // 未认证
+    'pending',     // 待审核
+    'verified',    // 已认证
+    'rejected',    // 已拒绝
+]);
+
 export const tenants = pgTable('tenants', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 100 }).notNull(),
@@ -28,6 +36,16 @@ export const tenants = pgTable('tenants', {
     reviewedBy: uuid('reviewed_by'),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     rejectReason: text('reject_reason'),
+
+    // 企业认证信息
+    verificationStatus: verificationStatusEnum('verification_status').default('unverified'),
+    businessLicenseUrl: text('business_license_url'),       // 营业执照图片
+    legalRepName: varchar('legal_rep_name', { length: 50 }), // 法定代表人
+    registeredCapital: varchar('registered_capital', { length: 50 }), // 注册资本
+    businessScope: text('business_scope'),                   // 经营范围
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    verifiedBy: uuid('verified_by'),
+    verificationRejectReason: text('verification_reject_reason'),
 
     // Settings JSON structure:
     // interface TenantSettings {

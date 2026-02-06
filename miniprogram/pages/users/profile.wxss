@@ -1,195 +1,322 @@
 /* pages/users/profile.wxss */
 .container {
-  padding: 32rpx;
-  background-color: #0f0f0f; /* 深邃黑 */
+  padding: 40rpx 32rpx;
+  background-color: #000000; /* 极致黑 */
   min-height: 100vh;
-  background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #0f0f0f 60%);
+  position: relative;
+  overflow: hidden;
   color: #e2e8f0;
 }
 
-/* 装饰光效 */
-.container::before {
-  content: '';
-  position: absolute;
-  top: -100rpx;
-  right: -100rpx;
-  width: 500rpx;
-  height: 500rpx;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
-  filter: blur(80rpx);
-  pointer-events: none;
+/* --- 全局动效 --- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20rpx); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* 黑金名片卡 Hero Card */
+.animate-fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-slide-up {
+  opacity: 0;
+  animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* --- 背景装饰光效 --- */
+.glow-effect {
+  position: absolute;
+  width: 600rpx;
+  height: 600rpx;
+  border-radius: 50%;
+  filter: blur(120rpx);
+  opacity: 0.4;
+  z-index: 0;
+}
+
+.glow-effect.top-right {
+  top: -200rpx;
+  right: -200rpx;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.2), transparent 70%);
+}
+
+.glow-effect.bottom-left {
+  bottom: -200rpx;
+  left: -200rpx;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05), transparent 70%);
+}
+
+/* --- 核心：黑金名片卡 (非对称布局) --- */
 .user-card {
   position: relative;
-  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
-  border-radius: 32rpx;
-  padding: 48rpx;
+  width: 100%;
+  height: 380rpx; /* 增加高度，缓解拥挤 */
+  background: rgba(20, 20, 20, 0.6);
+  border-radius: 40rpx;
   display: flex;
   align-items: center;
-  margin-bottom: 40rpx;
-  border: 2rpx solid rgba(212, 175, 55, 0.3);
-  box-shadow: 
-    0 16rpx 40rpx rgba(0, 0, 0, 0.6),
-    inset 0 0 40rpx rgba(212, 175, 55, 0.1);
-  overflow: hidden;
+  justify-content: space-between;
+  padding: 0 40rpx;
+  margin-bottom: 48rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20rpx 50rpx rgba(0, 0, 0, 0.5);
+  z-index: 1;
+  overflow: hidden; 
 }
 
-/* 名片纹理 */
-.user-card::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4af37' fill-opacity='0.03' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
-  opacity: 0.5;
-  pointer-events: none;
+/* 区域分块 */
+.card-section {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* 1. 左侧头像 */
+.avatar-section {
+  flex: 0 0 auto;
+  margin-right: 32rpx;
 }
 
 .avatar {
-  width: 140rpx;
-  height: 140rpx;
+  width: 110rpx; /* 略微缩小头像，留出空间 */
+  height: 110rpx;
   border-radius: 50%;
-  background: #2d2d2d;
-  margin-right: 32rpx;
-  border: 4rpx solid rgba(212, 175, 55, 0.5);
-  box-shadow: 0 8rpx 20rpx rgba(0,0,0,0.5);
-  position: relative;
-  z-index: 1;
+  border: 2rpx solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 30rpx rgba(212, 175, 55, 0.2);
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
+/* 2. 中间信息区 (竖排核心) */
+.info-section {
   flex: 1;
-  position: relative;
-  z-index: 1;
+  display: flex;
+  flex-direction: row-reverse; 
+  justify-content: center; /* 改为居中，利用左右剩余空间 */
+  align-items: center; 
+  padding-top: 40rpx;
+  padding-bottom: 40rpx;
+  gap: 40rpx; /* 增加列间距，让文字不打架 */
 }
 
-.name {
-  font-size: 40rpx;
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 12rpx; /* 增加字间距 */
+  font-weight: 600;
+  white-space: nowrap; /* 防止换行 */
+}
+
+.role-text {
+  font-size: 32rpx; /* 缩小字号 */
+  color: #F2D091; 
+  text-shadow: 0 0 20rpx rgba(212, 175, 55, 0.3);
+  height: 80%; /* 限制文字区域高度 */
+  display: flex;
+  align-items: center; /* 文字垂直居中 */
+}
+
+.name-text {
+  font-size: 22rpx; /* 缩小字号 */
+  color: #94a3b8;
+  opacity: 0.8;
+  margin-top: 0; 
+  height: 70%;
+  display: flex;
+  align-items: center;
+}
+
+/* 竖排 Admin 标签 */
+.tag-pill {
+  writing-mode: horizontal-tb; 
+  position: absolute;
+  bottom: 30rpx;
+  left: 50%; 
+  transform: translateX(-50%); /* 居中放置在信息区底部 */
+  background: #D4AF37;
+  color: #000;
+  font-size: 18rpx;
   font-weight: 800;
-  /* 金色渐变文字 */
-  background: linear-gradient(to right, #fceabb, #d4af37);
-  -webkit-background-clip: text;
-  color: transparent;
-  margin-bottom: 12rpx;
-  letter-spacing: 1rpx;
-}
-
-.role-tag {
-  font-size: 22rpx;
-  color: #1a1a1a;
-  background: #d4af37;
-  padding: 6rpx 20rpx;
+  padding: 2rpx 14rpx;
   border-radius: 99rpx;
-  align-self: flex-start;
-  font-weight: 700;
-  box-shadow: 0 4rpx 10rpx rgba(212, 175, 55, 0.3);
+  box-shadow: 0 4rpx 12rpx rgba(212, 175, 55, 0.4);
+  opacity: 0.9;
 }
 
-/* 分享按钮 (名片上的) */
-.share-btn {
-  background: rgba(255,255,255,0.05);
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 50%;
+/* 3. 右侧操作区 (Orbit) */
+.action-section {
+  flex: 0 0 140rpx; /* 稍微缩小右侧区域宽度 */
+  justify-content: flex-end; /* 靠右对齐 */
+}
+
+.orbit-container {
+  position: relative;
+  width: 220rpx; /* 缩小椭圆宽度 */
+  height: 90rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1rpx solid rgba(255,255,255,0.1);
-  margin-left: 20rpx;
-  position: relative;
-  z-index: 1;
+  /* 整体旋转 */
+  transform: rotate(-10deg) translateX(40rpx); /* 增加向右偏移，只露出左半部分 */
 }
-.share-icon { width: 36rpx; height: 36rpx; }
 
-/* 战绩仪表盘 Dashboard */
+.orbit-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 999rpx; /* 极扁椭圆 */
+  backdrop-filter: blur(5px);
+}
+
+/* 核心分享按钮 */
+.share-btn-center {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  z-index: 10;
+}
+
+.share-icon {
+  width: 32rpx;
+  height: 32rpx;
+  opacity: 0.9;
+}
+
+/* 编辑卫星 */
+.edit-satellite {
+  position: absolute;
+  left: 30rpx; 
+  top: -10rpx;
+  /* background: rgba(0,0,0,0.8); */
+  padding: 8rpx;
+  border-radius: 50%;
+}
+
+.edit-icon-text {
+  font-size: 24rpx;
+  color: #64748b;
+  transform: rotate(10deg); /* 抵消父级旋转 */
+}
+
+
+/* --- 战绩仪表盘 (Glassmorphism) --- */
 .stats-card {
-  background: rgba(26, 26, 26, 0.6);
-  border-radius: 24rpx;
-  padding: 32rpx;
-  margin-bottom: 40rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-around;
+  align-items: center;
+  padding: 40rpx;
+  margin-bottom: 48rpx;
+  /* 极简无边框风格 */
+  background: transparent; 
 }
 
 .stat-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
 }
 
 .stat-value {
-  font-size: 40rpx;
+  font-family: 'DIN Alternate', sans-serif;
+  font-size: 44rpx;
   font-weight: 700;
-  color: #f1f5f9;
-  font-family: 'DIN Alternate', sans-serif; /* 数字字体 */
+  color: #e2e8f0;
   margin-bottom: 8rpx;
 }
 
 .stat-value.gold {
-  color: #d4af37;
+  color: #D4AF37;
+  text-shadow: 0 0 20rpx rgba(212, 175, 55, 0.2);
 }
 
 .stat-label {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #64748b;
+  letter-spacing: 1rpx;
 }
 
-/* 菜单列表 */
+.divider-vertical {
+  width: 1rpx;
+  height: 40rpx;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- 菜单列表 (Floating Items) --- */
 .menu-list {
-  background: #1a1a1a;
-  border-radius: 32rpx;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
   margin-bottom: 60rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.05);
 }
 
 .menu-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 36rpx;
-  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
-  background: transparent;
-  transition: background 0.2s;
+  padding: 32rpx 40rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
 }
 
 .menu-item:active {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(212, 175, 55, 0.05); /* 金色微光反馈 */
+  transform: scale(0.99);
 }
 
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.label {
-  font-size: 30rpx;
-  color: #cbd5e1;
-  font-weight: 500;
+.menu-left {
   display: flex;
   align-items: center;
 }
 
 .menu-icon {
-  margin-right: 16rpx;
-  font-size: 32rpx;
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 24rpx;
+  opacity: 0.8;
+}
+
+/* 图标染色 (使用 filter 或 mask) - 此处假设 SVG 本身颜色合适，或使用 CSS filter 变金 */
+/* .menu-icon { filter: brightness(0) saturate(100%) invert(80%) sepia(26%) saturate(1059%) hue-rotate(359deg) brightness(96%) contrast(89%); } */
+/* 上面的 filter 大致对应 #D4AF37 */
+
+.label {
+  font-size: 28rpx;
+  color: #cbd5e1;
+  font-weight: 500;
+  letter-spacing: 1rpx;
 }
 
 .arrow {
-  color: #475569;
   font-size: 24rpx;
+  color: #475569;
+  font-family: monospace;
 }
 
+/* --- 退出按钮 --- */
 .btn-logout {
+  width: 100%;
   background: transparent;
-  color: #ef4444; /* 红色保留作为警示，但调暗 */
-  border: 2rpx solid rgba(239, 68, 68, 0.3);
-  border-radius: 999rpx;
-  font-weight: 700;
-  font-size: 28rpx;
-  padding: 20rpx 0;
+  color: #ef4444;
+  font-size: 26rpx;
+  padding: 30rpx 0;
+  border-radius: 20rpx;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.btn-logout:active {
+  opacity: 0.6;
 }

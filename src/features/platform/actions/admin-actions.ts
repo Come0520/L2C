@@ -289,3 +289,120 @@ export async function activateTenant(tenantId: string): Promise<{
         };
     }
 }
+
+// ============ 企业认证审核 Actions ============
+
+/** 待认证审核的租户信息 */
+export interface VerificationPendingTenant {
+    id: string;
+    name: string;
+    code: string;
+    logoUrl: string | null;
+    legalRepName: string | null;
+    registeredCapital: string | null;
+    businessScope: string | null;
+    businessLicenseUrl: string | null;
+    createdAt: Date | null;
+}
+
+/**
+ * 获取待企业认证审核列表
+ */
+export async function getVerificationPendingTenants(): Promise<{
+    success: boolean;
+    data?: VerificationPendingTenant[];
+    error?: string;
+}> {
+    try {
+        await requirePlatformAdmin();
+
+        const pendingList = await db.query.tenants.findMany({
+            where: eq(tenants.verificationStatus, 'pending'),
+            columns: {
+                id: true,
+                name: true,
+                code: true,
+                logoUrl: true,
+                legalRepName: true,
+                registeredCapital: true,
+                businessScope: true,
+                businessLicenseUrl: true,
+                createdAt: true,
+            },
+            orderBy: desc(tenants.updatedAt),
+        });
+
+        return { success: true, data: pendingList };
+    } catch (error) {
+        console.error('获取待认证列表失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '获取失败'
+        };
+    }
+}
+
+/**
+ * 通过企业认证
+ */
+export async function approveVerification(tenantId: string): Promise<{
+    success: boolean;
+    error?: string;
+}> {
+    try {
+        const adminId = await requirePlatformAdmin();
+
+        await db.update(tenants)
+            .set({
+                verificationStatus: 'verified',
+                verifiedBy: adminId,
+                verifiedAt: new Date(),
+                verificationRejectReason: null,
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, tenantId));
+
+        return { success: true };
+    } catch (error) {
+        console.error('认证通过失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '操作失败'
+        };
+    }
+}
+
+/**
+ * 拒绝企业认证
+ */
+export async function rejectVerification(
+    tenantId: string,
+    reason: string
+): Promise<{
+    success: boolean;
+    error?: string;
+}> {
+    try {
+        await requirePlatformAdmin();
+
+        if (!reason || reason.trim().length === 0) {
+            return { success: false, error: '请填写拒绝原因' };
+        }
+
+        await db.update(tenants)
+            .set({
+                verificationStatus: 'rejected',
+                verificationRejectReason: reason.trim(),
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, tenantId));
+
+        return { success: true };
+    } catch (error) {
+        console.error('拒绝认证失败:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '操作失败'
+        };
+    }
+}

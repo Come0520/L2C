@@ -1,0 +1,60 @@
+<!--pages/manager/targets/index.wxml-->
+<view class="container">
+  <view class="header">
+    <view class="date-picker">
+        <text>{{year}}年{{month}}月</text>
+    </view>
+    <view class="stats">
+        <text>总目标: ¥{{totalTarget}}</text>
+    </view>
+  </view>
+
+  <view class="list">
+    <view class="list-header">
+        <text>销售人员</text>
+        <text>目标金额</text>
+        <text>操作</text>
+    </view>
+    
+    <block wx:for="{{list}}" wx:key="userId">
+        <view class="list-item" bindtap="onEdit" data-item="{{item}}">
+            <view class="user-info">
+                <image class="avatar" src="{{item.userAvatar || '/assets/default-avatar.png'}}" />
+                <text class="name">{{item.userName}}</text>
+            </view>
+            <view class="amount {{item.targetAmount > 0 ? '' : 'empty'}}">
+                {{item.targetAmount > 0 ? '¥' + item.targetAmount : '未设置'}}
+            </view>
+            <view class="action">
+                <text class="edit-btn">设置</text>
+            </view>
+        </view>
+    </block>
+  </view>
+
+  <!-- Edit Dialog -->
+  <view class="dialog-mask {{showDialog ? 'show' : ''}}" bindtap="closeDialog">
+    <view class="dialog-content" catchtap>
+        <view class="dialog-header">
+            <text>设置目标</text>
+        </view>
+        <view class="dialog-body">
+            <view class="user-preview">
+                <text>{{currentItem.userName}} - {{month}}月目标</text>
+            </view>
+            <input 
+                class="target-input" 
+                type="digit" 
+                placeholder="请输入金额" 
+                value="{{tempTarget}}"
+                bindinput="onInputTarget"
+                focus="{{showDialog}}"
+            />
+        </view>
+        <view class="dialog-footer">
+            <button class="btn cancel" bindtap="closeDialog">取消</button>
+            <button class="btn confirm" bindtap="onSave" loading="{{saving}}">保存</button>
+        </view>
+    </view>
+  </view>
+</view>

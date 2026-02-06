@@ -1,7 +1,9 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { JWT } from 'next-auth/jwt';
+import { extractAndVerifyToken } from '@/shared/lib/jwt';
 
 // ============================================================================
 // 常量配置
@@ -16,7 +18,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/webhooks', // Webhook 端点（使用独立签名验证）
   '/api/health', // 健康检查
   '/api/public', // 公开 API
-  '/api/mobile/login', // 移动端登录
+  '/api/mobile/auth/login', // 移动端登录
 ] as const;
 
 /**
@@ -98,11 +100,27 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
     return NextResponse.next();
   }
 
-  // 2. 验证 JWT Token
-  const token = (await getToken({
+  // 2. 验证 JWT Token (Web Auth)
+  let token = (await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
   })) as JWT | null;
+
+  // 2.1 尝试验证移动端自定义 Token (Mobile Auth Fallback)
+  if (!token) {
+    const authHeader = request.headers.get('authorization');
+    const mobilePayload = await extractAndVerifyToken(authHeader);
+
+    if (mobilePayload) {
+      token = {
+        sub: mobilePayload.userId,
+        tenantId: mobilePayload.tenantId,
+        role: mobilePayload.role,
+        name: mobilePayload.phone,
+        email: `${mobilePayload.phone}@mobile.local`,
+      } as unknown as JWT;
+    }
+  }
 
   if (!token) {
     return createUnauthorizedResponse('请先登录');

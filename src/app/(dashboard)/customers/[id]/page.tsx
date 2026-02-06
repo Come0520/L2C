@@ -20,6 +20,7 @@ import { auth } from '@/shared/lib/auth';
 import { MaskedPhone } from '@/shared/components/masked-phone';
 import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 import { MergeCustomerDialog } from '@/features/customers/components/merge-customer-dialog';
+import { CustomerActivitiesSection } from '@/features/customers/components/CustomerActivitiesSection';
 
 export const revalidate = 60;
 
@@ -173,12 +174,16 @@ export default async function CustomerDetailPage({
                         </Card>
                     </div>
 
-                    <Tabs defaultValue="addresses">
+                    <Tabs defaultValue="activities">
                         <TabsList>
+                            <TabsTrigger value="activities">跟进记录</TabsTrigger>
                             <TabsTrigger value="addresses">地址管理</TabsTrigger>
                             <TabsTrigger value="orders">订单记录</TabsTrigger>
                             <TabsTrigger value="referrals">转介绍 ({customer.referrals?.length || 0})</TabsTrigger>
                         </TabsList>
+                        <TabsContent value="activities" className="mt-4">
+                            <CustomerActivitiesSection customerId={customer.id} />
+                        </TabsContent>
                         <TabsContent value="addresses" className="mt-4">
                             <CustomerAddressList
                                 addresses={customer.addresses || []}

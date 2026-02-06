@@ -12,8 +12,6 @@
         placeholder="请输入手机号或邮箱" 
         placeholder-class="placeholder" 
         model:value="{{account}}"
-        data-field="account"
-        bindinput="onInput"
       />
     </view>
 
@@ -25,8 +23,6 @@
         placeholder="请输入密码" 
         placeholder-class="placeholder" 
         model:value="{{password}}"
-        data-field="password"
-        bindinput="onInput"
       />
     </view>
 

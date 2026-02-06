@@ -35,7 +35,9 @@
         <view class="section-title">已签字确认</view>
         <image class="signed-img" src="{{quote.customerSignatureUrl}}" mode="aspectFit"></image>
         <view class="signed-time">确认时间：{{quote.confirmedAt}}</view>
-        <!-- Pay Button could go here -->
+        <view class="actions-row mt-4" wx:if="{{quote.id && quote.status === 'CONFIRMED'}}">
+             <button class="btn-primary" bindtap="onTurnToOrder">生成订单</button>
+        </view>
     </view>
 
     <!-- 待签字区域 -->

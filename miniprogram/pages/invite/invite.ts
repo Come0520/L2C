@@ -23,10 +23,10 @@ Page({
     data: {
         tenantStatus: '',
         roleOptions: [
-            { value: 'ADMIN', label: '管理员' },
-            { value: 'MANAGER', label: '主管' },
-            { value: 'SALESPERSON', label: '销售' },
-            { value: 'STAFF', label: '员工' },
+            { value: 'admin', label: '管理员' },
+            { value: 'sales', label: '销售' },
+            { value: 'installer', label: '师傅' }, // 对应 Installer
+            // { value: 'customer', label: '客户' }, // 客户通常通过另一渠道邀请? 暂时保留给员工邀请
         ] as RoleOption[],
         selectedRole: {} as RoleOption,
         inviteCode: '',
@@ -155,4 +155,22 @@ Page({
     goToStatus() {
         wx.switchTab({ url: '/pages/status/status' });
     },
+
+    /**
+     * 分享给好友
+     */
+    onShareAppMessage() {
+        const { inviteCode, inviteLink, selectedRole } = this.data;
+        const roleName = selectedRole.label || '员工';
+
+        // 默认分享路径：跳转到注册页并携带邀请码
+        // 假设注册页是 /pages/register/register
+        const path = `/pages/register/register?currentTab=1&inviteCode=${inviteCode}`;
+
+        return {
+            title: `邀请您加入团队成为${roleName}`,
+            path: path,
+            imageUrl: '/assets/images/invite-cover.png' // Optional: Custom cover
+        };
+    }
 });

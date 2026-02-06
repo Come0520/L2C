@@ -1,0 +1,83 @@
+<view class="container">
+    <!-- Tabs -->
+    <view class="tabs">
+        <view class="tab-item {{activeTab === 'mine' ? 'active' : ''}}" bindtap="onTabChange" data-tab="mine">
+            <text>我的线索</text>
+            <view class="indicator" wx:if="{{activeTab === 'mine'}}"></view>
+        </view>
+        <view class="tab-item {{activeTab === 'pool' ? 'active' : ''}}" bindtap="onTabChange" data-tab="pool">
+            <text>公海池</text>
+            <view class="indicator" wx:if="{{activeTab === 'pool'}}"></view>
+        </view>
+    </view>
+
+    <!-- Search -->
+    <view class="search-bar">
+        <view class="search-input-wrap">
+            <icon type="search" size="14" color="#94a3b8"></icon>
+            <input 
+                class="search-input" 
+                placeholder="搜索姓名或手机号" 
+                confirm-type="search"
+                bindinput="onSearchInput" 
+                bindconfirm="onSearch"
+                value="{{keyword}}"
+            />
+        </view>
+    </view>
+
+    <!-- List -->
+    <scroll-view class="crm-list" scroll-y="true" bindscrolltolower="onReachBottom" refresher-enabled="{{true}}" refresher-triggered="{{isRefreshing}}" bindrefresherrefresh="onPullDownRefresh">
+        <block wx:for="{{list}}" wx:key="id">
+            <view class="crm-card" bindtap="navigateToDetail" data-id="{{item.id}}">
+                <view class="card-header">
+                    <view class="name-row">
+                        <text class="name">{{item.name}}</text>
+                        <view class="status-tag {{item.status}}">
+                            {{item.statusText}}
+                        </view>
+                    </view>
+                    <view class="date" wx:if="{{item.nextFollowupAt}}">
+                        跟进: {{item.nextFollowupAt}}
+                    </view>
+                </view>
+                
+                <view class="card-body">
+                    <view class="info-row">
+                        <text class="label">手机：</text>
+                        <text class="value">{{item.phone}}</text>
+                    </view>
+                    <view class="info-row">
+                        <text class="label">意向：</text>
+                        <text class="value">{{item.intentionLevel || '未分级'}}</text>
+                    </view>
+                    <view class="info-row" wx:if="{{item.address}}">
+                        <text class="label">地址：</text>
+                        <text class="value">{{item.address || '无'}}</text>
+                    </view>
+                     <view class="info-row" wx:if="{{item.decorationProgress}}">
+                        <text class="label">进度：</text>
+                        <text class="value">{{item.decorationProgress || '未记录'}}</text>
+                    </view>
+                </view>
+            </view>
+        </block>
+
+        <view class="empty-state" wx:if="{{!list.length && !loading}}">
+            <image class="empty-img" src="/assets/empty.png" /> 
+            <text>暂无数据</text>
+        </view>
+        
+        <view class="loading-more" wx:if="{{loading && list.length}}">
+            加载中...
+        </view>
+        <view class="no-more" wx:if="{{!hasMore && list.length}}">
+            没有更多了
+        </view>
+    </scroll-view>
+
+    <!-- FAB Add -->
+    <view class="fab-add" bindtap="navigateToAdd">
+        +
+    </view>
+</view>

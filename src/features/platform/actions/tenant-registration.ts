@@ -12,6 +12,8 @@ import { z } from 'zod';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { eq, or } from 'drizzle-orm';
+import { sendEmail } from '@/shared/lib/email';
+import { formatDate } from '@/shared/lib/utils';
 
 // ============ 类型定义 ============
 
@@ -112,6 +114,48 @@ export async function submitTenantApplication(
 
             return newTenant;
         });
+
+        // 5. 异步发送管理员通知（不阻塞返回）
+        (async () => {
+            try {
+                // 查询所有超级管理员
+                const admins = await db.query.users.findMany({
+                    where: eq(users.isPlatformAdmin, true),
+                    columns: { email: true, name: true },
+                });
+
+                if (admins.length === 0) return;
+
+                const adminEmails = admins.map(a => a.email).filter(Boolean);
+
+                if (adminEmails.length > 0) {
+                    await sendEmail({
+                        to: adminEmails,
+                        subject: `[L2C] 新租户入驻申请: ${data.companyName}`,
+                        html: `
+                            <div style="font-family: sans-serif; padding: 20px; color: #333;">
+                                <h2>收到新的企业入驻申请</h2>
+                                <p><strong>企业名称：</strong>${data.companyName}</p>
+                                <p><strong>联系人：</strong>${data.applicantName}</p>
+                                <p><strong>联系电话：</strong>${data.phone}</p>
+                                <p><strong>邮箱：</strong>${data.email}</p>
+                                <p><strong>所属地区：</strong>${data.region}</p>
+                                <p><strong>申请时间：</strong>${formatDate(new Date())}</p>
+                                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                                <p>请登录管理后台进行审批：</p>
+                                <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/tenants" 
+                                   style="display: inline-block; background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                                   前往审批
+                                </a>
+                            </div>
+                        `,
+                        text: `收到新的企业入驻申请：${data.companyName}，请登录后台审批。`
+                    });
+                }
+            } catch (err) {
+                console.error('发送管理员通知失败:', err);
+            }
+        })();
 
         return { success: true, tenantId: result.id };
 

@@ -1,0 +1,155 @@
+<!--pages/crm/create/create.wxml-->
+<view class="container">
+    <!-- 表单区域 -->
+    <view class="form-section">
+        <!-- 基本信息 -->
+        <view class="section-title">基本信息</view>
+        <view class="form-card">
+            <view class="form-item">
+                <text class="label required">姓名</text>
+                <input 
+                    class="input {{errors.name ? 'error' : ''}}" 
+                    placeholder="请输入客户姓名" 
+                    value="{{form.name}}"
+                    data-field="name"
+                    bindinput="onInput"
+                    focus="true"
+                    cursor-spacing="20"
+                    confirm-type="next"
+                />
+            </view>
+            <view class="form-item">
+                <text class="label required">手机号</text>
+                <input 
+                    class="input {{errors.phone ? 'error' : ''}}" 
+                    type="number"
+                    maxlength="11"
+                    placeholder="请输入11位手机号" 
+                    value="{{form.phone}}"
+                    data-field="phone"
+                    bindinput="onInput"
+                    cursor-spacing="20"
+                    confirm-type="done"
+                />
+            </view>
+            <view class="form-item">
+                <text class="label">微信号</text>
+                <input 
+                    class="input" 
+                    placeholder="选填" 
+                    value="{{form.wechat}}"
+                    data-field="wechat"
+                    bindinput="onInput"
+                    cursor-spacing="20"
+                    confirm-type="next"
+                />
+            </view>
+        </view>
+
+        <!-- 更多信息 -->
+        <view class="section-title">更多信息</view>
+        <view class="form-card">
+            <view class="form-item">
+                <text class="label">地址</text>
+                <input 
+                    class="input" 
+                    placeholder="选填，详细地址" 
+                    value="{{form.address}}"
+                    data-field="address"
+                    bindinput="onInput"
+                    cursor-spacing="20"
+                />
+            </view>
+            <view class="form-item" bindtap="onShowSourcePicker">
+                <text class="label">来源</text>
+                <view class="picker-value {{sourceDisplay ? '' : 'placeholder'}}">
+                    {{sourceDisplay || '选择渠道来源'}}
+                    <text class="arrow">›</text>
+                </view>
+            </view>
+            <view class="form-item textarea-item">
+                <text class="label">备注</text>
+                <textarea 
+                    class="textarea" 
+                    placeholder="选填，补充信息" 
+                    value="{{form.notes}}"
+                    data-field="notes"
+                    bindinput="onInput"
+                    maxlength="200"
+                    auto-height
+                    cursor-spacing="50"
+                />
+            </view>
+        </view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <view class="submit-area">
+        <button 
+            class="submit-btn {{submitting ? 'disabled' : ''}}" 
+            bindtap="onSubmit"
+            disabled="{{submitting}}"
+            loading="{{submitting}}"
+        >
+            {{submitting ? '提交中...' : '创建客户'}}
+        </button>
+    </view>
+
+    <!-- 多级来源选择器弹窗 -->
+    <view class="source-picker-mask {{showSourcePicker ? 'show' : ''}}" bindtap="onHideSourcePicker">
+        <view class="source-picker-panel" catchtap="">
+            <view class="picker-header">
+                <text class="picker-cancel" bindtap="onHideSourcePicker">取消</text>
+                <text class="picker-title">选择来源渠道</text>
+                <text class="picker-confirm" bindtap="onConfirmSource">确定</text>
+            </view>
+            
+            <view class="picker-body">
+                <!-- 一级：大渠道 -->
+                <scroll-view class="picker-column" scroll-y>
+                    <view 
+                        wx:for="{{channelTree}}" 
+                        wx:key="id"
+                        class="picker-item {{selectedLevel1 === item.id ? 'active' : ''}}"
+                        bindtap="onSelectLevel1"
+                        data-item="{{item}}"
+                    >
+                        {{item.name}}
+                    </view>
+                </scroll-view>
+                
+                <!-- 二级：子渠道 -->
+                <scroll-view class="picker-column" scroll-y>
+                    <view 
+                        wx:for="{{level2Options}}" 
+                        wx:key="id"
+                        class="picker-item {{selectedLevel2 === item.id ? 'active' : ''}}"
+                        bindtap="onSelectLevel2"
+                        data-item="{{item}}"
+                    >
+                        {{item.name}}
+                    </view>
+                    <view wx:if="{{!level2Options.length}}" class="picker-empty">
+                        无子渠道
+                    </view>
+                </scroll-view>
+                
+                <!-- 三级：联系人 -->
+                <scroll-view class="picker-column" scroll-y>
+                    <view 
+                        wx:for="{{level3Options}}" 
+                        wx:key="id"
+                        class="picker-item {{selectedLevel3 === item.id ? 'active' : ''}}"
+                        bindtap="onSelectLevel3"
+                        data-item="{{item}}"
+                    >
+                        {{item.name}}
+                    </view>
+                    <view wx:if="{{!level3Options.length && selectedLevel2}}" class="picker-empty">
+                        无联系人
+                    </view>
+                </scroll-view>
+            </view>
+        </view>
+    </view>
+</view>

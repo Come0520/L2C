@@ -3,17 +3,22 @@ import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
 import { eq, and, desc, ne } from 'drizzle-orm';
 import { ApprovalTaskList } from '@/features/approval/components/approval-task-list';
+import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { Suspense } from 'react';
 
-export default async function ApprovalsPage() {
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
     const session = await auth();
     if (!session?.user?.id) return <div>Unauthorized</div>;
 
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
+    const params = await searchParams;
+    const tab = params.tab || 'pending';
 
-    // Parallelize task fetching
-    const [pendingTasks, processedTasks] = await Promise.all([
-        db.query.approvalTasks.findMany({
+    let tasks = [];
+
+    if (tab === 'pending') {
+        tasks = await db.query.approvalTasks.findMany({
             where: and(
                 eq(approvalTasks.tenantId, tenantId),
                 eq(approvalTasks.approverId, userId),
@@ -29,8 +34,9 @@ export default async function ApprovalsPage() {
                 node: true
             },
             orderBy: [desc(approvalTasks.createdAt)]
-        }),
-        db.query.approvalTasks.findMany({
+        });
+    } else {
+        tasks = await db.query.approvalTasks.findMany({
             where: and(
                 eq(approvalTasks.tenantId, tenantId),
                 eq(approvalTasks.approverId, userId),
@@ -47,24 +53,32 @@ export default async function ApprovalsPage() {
             },
             orderBy: [desc(approvalTasks.actionAt)],
             limit: 50
-        })
-    ]);
+        });
+    }
 
     return (
-        <div className="flex-1 space-y-4 p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">审批中心</h2>
-                    <p className="text-muted-foreground">
-                        处理待办审批任务及查看历史记录
-                    </p>
-                </div>
-            </div>
-            <div className="grid gap-8">
-                <ApprovalTaskList
-                    pendingTasks={pendingTasks as any}
-                    processedTasks={processedTasks as any}
+        <div className="flex h-full flex-col gap-4 p-4">
+            <div className="flex items-center justify-between">
+                <UrlSyncedTabs
+                    paramName="tab"
+                    defaultValue="pending"
+                    layoutId="approval-tabs"
+                    tabs={[
+                        { value: 'pending', label: '待处理' },
+                        { value: 'processed', label: '已处理' },
+                    ]}
                 />
+            </div>
+
+            <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-2xl border border-white/20 p-4 gap-4">
+                <div className="flex-1 min-h-0 overflow-auto">
+                    <Suspense fallback={<div>Loading...</div>}>
+                        <ApprovalTaskList
+                            tasks={tasks}
+                            isPending={tab === 'pending'}
+                        />
+                    </Suspense>
+                </div>
             </div>
         </div>
     );

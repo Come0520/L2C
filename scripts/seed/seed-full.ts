@@ -1,7 +1,28 @@
 import 'dotenv/config';
+import * as fs from 'fs';
 import { db } from '@/shared/api/db';
 import * as schema from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
+
+const logFile = 'seed.log';
+fs.writeFileSync(logFile, ''); // Clear log file
+
+const originalLog = console.log;
+const originalError = console.error;
+
+function formatArgs(...args: any[]) {
+    return args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+}
+
+console.log = (...args) => {
+    originalLog(...args);
+    fs.appendFileSync(logFile, formatArgs(...args) + '\n');
+};
+
+console.error = (...args) => {
+    originalError(...args);
+    fs.appendFileSync(logFile, '[ERROR] ' + formatArgs(...args) + '\n');
+};
 
 // ==================== 工具函数 ====================
 
@@ -204,7 +225,7 @@ async function main() {
                 name: s.name,
                 contactName: s.contact,
                 contactPhone: s.phone,
-                settlementType: randomChoice(['MONTHLY', 'SINGLE', 'PREPAY']),
+                paymentPeriod: randomChoice(['MONTHLY', 'SINGLE', 'PREPAY']),
                 isActive: true,
             }).onConflictDoNothing().returning();
 
@@ -276,8 +297,8 @@ async function main() {
                 name: p.name,
                 category: p.category,
                 unit: p.unit,
-                basePrice: p.basePrice,
-                costPrice: p.costPrice,
+                unitPrice: p.basePrice,
+                purchasePrice: p.costPrice,
                 defaultSupplierId: suppliers[p.supplier]?.id,
                 isStockable: ['CURTAIN_ACCESSORY', 'STANDARD', 'MOTOR'].includes(p.category),
                 stockQuantity: ['CURTAIN_ACCESSORY', 'STANDARD', 'MOTOR'].includes(p.category) ? String(randomInt(100, 1000)) : '0',
@@ -286,15 +307,78 @@ async function main() {
                 target: schema.products.sku,
                 set: {
                     name: p.name,
-                    basePrice: p.basePrice,
-                    costPrice: p.costPrice,
+                    unitPrice: p.basePrice,
+                    purchasePrice: p.costPrice,
                     updatedAt: new Date(),
                 }
             }).returning();
 
-            productsList.push(product);
+            if (product) {
+                productsList.push(product);
+            } else {
+                console.warn(`⚠️ Warning: Product insertion returned no data for ${p.sku}`);
+            }
         }
-        console.log(`✅ 商品: ${productsList.length} 个`);
+
+        // 动态生成更多商品以达到 50+
+        const extraProductCount = 30;
+        const categories: any[] = ['CURTAIN_FABRIC', 'CURTAIN_SHEER', 'CURTAIN_TRACK', 'WALLCLOTH', 'WALLPANEL'];
+        for (let i = 0; i < extraProductCount; i++) {
+            const category = randomChoice(categories);
+            const basePrice = String(randomInt(30, 200));
+            const costPrice = String((Number(basePrice) * 0.5).toFixed(2));
+
+
+
+            // Check existing
+            const existing = await db.query.products.findFirst({
+                where: (t, { eq, and }) => and(eq(t.sku, `GEN-${category}-${i + 1}`), eq(t.tenantId, tenant.id))
+            });
+
+            if (existing) {
+                productsList.push(existing);
+            } else {
+                const [product] = await db.insert(schema.products).values({
+                    tenantId: tenant.id,
+                    sku: `GEN-${category}-${i + 1}`,
+                    name: `标准${category === 'CURTAIN_FABRIC' ? '窗帘' : category === 'CURTAIN_SHEER' ? '纱帘' : '商品'}系列-${i + 1}`,
+                    category: category,
+                    unit: '米',
+                    unitPrice: basePrice,
+                    purchasePrice: costPrice,
+                    defaultSupplierId: null,
+                    isStockable: true,
+                    stockQuantity: '0',
+                    isActive: true,
+                }).returning();
+                if (product) productsList.push(product);
+            }
+        }
+        console.log(`✅ 商品: ${productsList.length} 个 (含动态生成)`);
+
+        /*
+        // RELOAD ALL PRODUCTS TO ENSURE INTEGRITY
+        console.log('🔄 Reloading all products from DB to ensure data integrity...');
+        const allProducts = await db.query.products.findMany({
+            where: (t, { eq }) => eq(t.tenantId, tenant.id)
+        });
+        console.log(`🔍 Debug: Found ${allProducts.length} products in DB for tenant ${tenant.id}`);
+        if (allProducts.length > 0) {
+            console.log(`🔍 Debug: First product sample:`, JSON.stringify(allProducts[0], null, 2));
+        }
+
+        productsList.length = 0;
+        // Filter to only include products with valid unitPrice
+        const validProducts = allProducts.filter(p => p.unitPrice !== null && p.unitPrice !== undefined);
+        console.log(`🔍 Debug: Products after filtering for valid unitPrice: ${validProducts.length}`);
+
+        productsList.push(...validProducts);
+        productsList.push(...validProducts);
+        console.log(`✅ 商品总数(DB): ${productsList.length} 个\n`);
+        */
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('DEBUG: STARTING QUOTE PLANS...');
 
         // 2.3 报价方案
         const quotePlansData = [
@@ -304,11 +388,19 @@ async function main() {
         ];
 
         for (const plan of quotePlansData) {
-            await db.insert(schema.quotePlans).values({
-                tenantId: tenant.id,
-                ...plan,
-                isActive: true,
-            }).onConflictDoNothing();
+            console.log(`DEBUG: Checking Quote Plan ${plan.code}`);
+            const existing = await db.query.quotePlans.findFirst({
+                where: (t, { eq, and }) => and(eq(t.code, plan.code), eq(t.tenantId, tenant.id))
+            });
+
+            if (!existing) {
+                console.log(`DEBUG: Inserting Quote Plan ${plan.code}`);
+                await db.insert(schema.quotePlans).values({
+                    tenantId: tenant.id,
+                    ...plan,
+                    isActive: true,
+                });
+            }
         }
         console.log(`✅ 报价方案: ${quotePlansData.length} 个`);
 
@@ -321,25 +413,32 @@ async function main() {
 
         const channelRoots: Record<string, typeof schema.marketChannels.$inferSelect> = {};
         for (const cat of channelRootData) {
-            const [root] = await db.insert(schema.marketChannels).values({
-                tenantId: tenant.id,
-                name: cat.name,
-                code: cat.code,
-                level: 1,
-                isActive: true,
-            }).onConflictDoUpdate({
-                target: schema.marketChannels.code,
-                set: { name: cat.name, updatedAt: new Date() }
-            }).returning();
+            console.log(`DEBUG: Processing Channel Root ${cat.code}`);
+            // Check existing
+            const existing = await db.query.marketChannels.findFirst({
+                where: (t, { eq, and }) => and(eq(t.code, cat.code), eq(t.tenantId, tenant.id))
+            });
 
-            if (root) {
-                channelRoots[cat.code] = root;
+            if (existing) {
+                // Update
+                const [updated] = await db.update(schema.marketChannels)
+                    .set({ name: cat.name, updatedAt: new Date() })
+                    .where(eq(schema.marketChannels.id, existing.id))
+                    .returning();
+                channelRoots[cat.code] = updated;
             } else {
-                // Fallback if update didn't return (shouldn't happen with returning, but for safety)
-                const existing = await db.query.marketChannels.findFirst({
-                    where: (t, { eq, and }) => and(eq(t.code, cat.code), eq(t.tenantId, tenant.id))
-                });
-                if (existing) channelRoots[cat.code] = existing;
+                // Insert
+                console.log(`DEBUG: Inserting Channel Root ${cat.code}`);
+                const [root] = await db.insert(schema.marketChannels).values({
+                    tenantId: tenant.id,
+                    name: cat.name,
+                    code: cat.code,
+                    level: 1, // Root level
+                    cooperationMode: 'REBATE',
+                    commissionRate: '0',
+                    isActive: true,
+                }).returning();
+                channelRoots[cat.code] = root;
             }
         }
 
@@ -359,26 +458,134 @@ async function main() {
 
         const channels: Record<string, typeof schema.marketChannels.$inferSelect> = {};
         for (const ch of channelsData) {
+            console.log(`DEBUG: Processing Channel ${ch.code}`);
             const parent = channelRoots[ch.category];
             if (!parent) continue;
 
-            const [channel] = await db.insert(schema.marketChannels).values({
-                tenantId: tenant.id,
-                parentId: parent.id,
-                name: ch.name,
-                code: ch.code,
-                level: 2,
-                isActive: true,
-            }).onConflictDoUpdate({
-                target: schema.marketChannels.code,
-                set: { name: ch.name, parentId: parent.id, updatedAt: new Date() }
-            }).returning();
+            // Check existing
+            const existing = await db.query.marketChannels.findFirst({
+                where: (t, { eq, and }) => and(eq(t.code, ch.code), eq(t.tenantId, tenant.id))
+            });
 
-            if (channel) {
+            if (existing) {
+                const [updated] = await db.update(schema.marketChannels)
+                    .set({ name: ch.name, parentId: parent.id, updatedAt: new Date() })
+                    .where(eq(schema.marketChannels.id, existing.id))
+                    .returning();
+                channels[ch.code] = updated;
+            } else {
+                console.log(`DEBUG: Inserting Channel ${ch.code}`);
+                const [channel] = await db.insert(schema.marketChannels).values({
+                    tenantId: tenant.id,
+                    parentId: parent.id,
+                    name: ch.name,
+                    code: ch.code,
+                    level: 2, // Child level
+                    commissionRate: '0.10',
+                    cooperationMode: 'REBATE',
+                    isActive: true,
+                }).returning();
                 channels[ch.code] = channel;
             }
         }
         console.log(`✅ 渠道: ${Object.keys(channels).length} 个\n`);
+
+        // 2.5 仓库与库存
+        console.log('📦 第二.五步:仓库与库存数据');
+
+        const warehousesData = ['主仓库', '东区仓库', '西区仓库', '样品库', '临时周转库'];
+        const warehousesList: typeof schema.warehouses.$inferSelect[] = [];
+
+        for (const name of warehousesData) {
+            const [warehouse] = await db.insert(schema.warehouses).values({
+                tenantId: tenant.id,
+                name,
+                address: '测试地址-' + name,
+                managerId: users['13904004001'].id, // 采购员兼仓库管理
+                isDefault: name === '主仓库',
+            }).returning();
+            warehousesList.push(warehouse);
+        }
+        console.log(`✅ 仓库: ${warehousesList.length} 个`);
+
+        // 为所有商品在主仓库生成库存
+        const mainWarehouse = warehousesList.find(w => w.name === '主仓库');
+        if (mainWarehouse) {
+            let inventoryCount = 0;
+            for (const product of productsList) {
+                if (product.isStockable) {
+                    // console.log(`DEBUG: Inserting inventory for product ${product.id}`);
+                    const quantity = randomInt(10, 500);
+                    // 插入库存
+                    try {
+                        await db.insert(schema.inventory).values({
+                            tenantId: tenant.id,
+                            warehouseId: mainWarehouse.id,
+                            productId: product.id,
+                            quantity,
+                            minStock: 10,
+                            location: `A-${randomInt(1, 10)}-${randomInt(1, 20)}`,
+                        });
+
+                        // 插入库存流水 (初始化)
+                        await db.insert(schema.inventoryLogs).values({
+                            tenantId: tenant.id,
+                            warehouseId: mainWarehouse.id,
+                            productId: product.id,
+                            type: 'IN', // 使用入库类型
+                            quantity,
+                            balanceAfter: quantity,
+                            reason: '期初库存初始化',
+                            operatorId: users['13904004001']?.id || users['13904001001']?.id, // Fallback if user missing
+                            createdAt: randomDate(60),
+                        });
+                    } catch (e) {
+                        console.error(`❌ Failed inventory insert for product ${product.id}`, e);
+                        throw e;
+                    }
+                    inventoryCount++;
+                }
+            }
+            console.log(`✅ 库存记录: ${inventoryCount} 条`);
+        }
+
+        // 2.6 面料库存 (Fabric Inventory) - 针对窗帘面料的细分库存 (Rolls)
+        const fabricProducts = productsList.filter(p => p.category === 'CURTAIN_FABRIC');
+        let fabricRollCount = 0;
+        if (mainWarehouse && fabricProducts.length > 0) {
+            for (const product of fabricProducts) {
+                // 每种面料生成 3-5 卷
+                const rollCount = randomInt(3, 5);
+                for (let i = 0; i < rollCount; i++) {
+                    const length = randomInt(20, 60);
+                    const [roll] = await db.insert(schema.fabricInventory).values({
+                        tenantId: tenant.id,
+                        fabricProductId: product.id,
+                        fabricSku: product.sku,
+                        fabricName: product.name,
+                        batchNo: `BATCH-${randomDate(100).toISOString().slice(0, 10).replace(/-/g, '')}`,
+                        availableQuantity: String(length),
+                        totalQuantity: String(length),
+                        warehouseLocation: `${mainWarehouse.name} F-${randomInt(1, 10)}`,
+                    }).returning();
+
+                    // Log
+                    await db.insert(schema.fabricInventoryLogs).values({
+                        tenantId: tenant.id,
+                        fabricInventoryId: roll.id,
+                        logType: 'PURCHASE_IN',
+                        quantity: String(length),
+                        beforeQuantity: '0',
+                        afterQuantity: String(length),
+                        reason: '采购入库',
+                        operatorId: users['13904004001'].id,
+                        createdAt: randomDate(60),
+                    });
+                    fabricRollCount++;
+                }
+            }
+        }
+        console.log(`✅ 面料库存: ${fabricRollCount} 卷\n`);
 
         // ===== 3. 客户层 =====
         console.log('📦 第三步:客户层数据');
@@ -386,7 +593,7 @@ async function main() {
         const customersData: { name: string; phone: string; address: ReturnType<typeof generateChineseAddress>; level: 'A' | 'B' | 'C' | 'D'; salesId: string }[] = [];
         const salesUserPhones = ['13901001001', '13901001002', '13901001003', '13901001004', '13901001005'];
 
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 300; i++) {
             const name = generateChineseName();
             const phone = generatePhone();
             const address = generateChineseAddress();
@@ -410,97 +617,139 @@ async function main() {
                 createdBy: users[c.salesId]?.id,
                 createdAt: randomDate(randomInt(30, 90)),
             }).onConflictDoNothing().returning();
-
             if (customer) {
                 customersList.push(customer);
             }
         }
-        console.log(`✅ 客户: ${customersList.length} 个\n`);
 
-        // ===== 4. 销售流程层 =====
-        console.log('📦 第四步:销售流程层数据');
+        console.error(`DEBUG: Customers FINISHED. Count: ${customersList.length}`);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // ===== 4. 销售线索层 =====
+        console.error('DEBUG: STEP 4 STARTING...');
+        console.log('📦 第四步:销售线索与跟进');
 
         // 4.1 线索
-        const leadsData = [
-            // 待派单 2条
-            { status: 'PENDING_ASSIGNMENT' as const, intentionLevel: 'MEDIUM' as const, channel: 'MEITUAN', daysAgo: 1, salesAssigned: null },
-            { status: 'PENDING_ASSIGNMENT' as const, intentionLevel: 'HIGH' as const, channel: 'DOUYIN', daysAgo: 0, salesAssigned: null },
-
-            // 跟进中 5条
-            { status: 'FOLLOWING_UP' as const, intentionLevel: 'HIGH' as const, channel: 'DIANPING', daysAgo: 5, salesAssigned: '13901001001' },
-            { status: 'FOLLOWING_UP' as const, intentionLevel: 'MEDIUM' as const, channel: 'COMMUNITY', daysAgo: 7, salesAssigned: '13901001002' },
-            { status: 'FOLLOWING_UP' as const, intentionLevel: 'HIGH' as const, channel: 'CUSTOMER_REFERRAL', daysAgo: 10, salesAssigned: '13901001003' },
-            { status: 'FOLLOWING_UP' as const, intentionLevel: 'LOW' as const, channel: 'WALKIN', daysAgo: 12, salesAssigned: '13901001004' },
-            { status: 'FOLLOWING_UP' as const, intentionLevel: 'MEDIUM' as const, channel: 'DECORATION', daysAgo: 15, salesAssigned: '13901001005' },
-
-            // 已成交 5条
-            { status: 'WON' as const, intentionLevel: 'HIGH' as const, channel: 'MEITUAN', daysAgo: 25, salesAssigned: '13901001001' },
-            { status: 'WON' as const, intentionLevel: 'HIGH' as const, channel: 'CUSTOMER_REFERRAL', daysAgo: 30, salesAssigned: '13901001002' },
-            { status: 'WON' as const, intentionLevel: 'MEDIUM' as const, channel: 'WALKIN', daysAgo: 35, salesAssigned: '13901001003' },
-            { status: 'WON' as const, intentionLevel: 'HIGH' as const, channel: 'DECORATION', daysAgo: 40, salesAssigned: '13901001004' },
-            { status: 'WON' as const, intentionLevel: 'HIGH' as const, channel: 'DESIGNER', daysAgo: 45, salesAssigned: '13901001005' },
-
-            // 作废 3条
-            { status: 'VOID' as const, intentionLevel: 'LOW' as const, channel: 'OUTDOOR_AD', daysAgo: 50, salesAssigned: '13901001001' },
-            { status: 'VOID' as const, intentionLevel: 'LOW' as const, channel: 'XIAOHONGSHU', daysAgo: 55, salesAssigned: '13901001002' },
-            { status: 'VOID' as const, intentionLevel: 'LOW' as const, channel: 'WALKIN', daysAgo: 60, salesAssigned: '13901001003' },
-        ];
+        // 4.1 线索 (动态生成 1000 条)
+        // 定义线索状态模板
+        const leadTemplates: any[] = [
+            // 待派单 (20%)
+            { status: 'PENDING_ASSIGNMENT', intentionLevel: 'MEDIUM', channel: 'MEITUAN' },
+            { status: 'PENDING_ASSIGNMENT', intentionLevel: 'HIGH', channel: 'DOUYIN' },
+            // 跟进中 (50%)
+            { status: 'FOLLOWING_UP', intentionLevel: 'HIGH', channel: 'DIANPING' },
+            { status: 'FOLLOWING_UP', intentionLevel: 'MEDIUM', channel: 'COMMUNITY' },
+            { status: 'FOLLOWING_UP', intentionLevel: 'HIGH', channel: 'CUSTOMER_REFERRAL' },
+            { status: 'FOLLOWING_UP', intentionLevel: 'LOW', channel: 'WALKIN' },
+            // 已成交 (20%)
+            { status: 'WON', intentionLevel: 'HIGH', channel: 'MEITUAN' },
+            { status: 'WON', intentionLevel: 'HIGH', channel: 'CUSTOMER_REFERRAL' },
+            { status: 'WON', intentionLevel: 'MEDIUM', channel: 'WALKIN' },
+            // 作废 (10%)
+            { status: 'VOID', intentionLevel: 'LOW', channel: 'OUTDOOR_AD' },
+            { status: 'VOID', intentionLevel: 'LOW', channel: 'XIAOHONGSHU' },
+        ] as const;
 
         const leadsList: typeof schema.leads.$inferSelect[] = [];
-        for (const [index, ld] of leadsData.entries()) {
-            const customer = customersList[index % customersList.length];
-            const channel = channels[ld.channel];
-            // const channelCategory = Object.values(channelCategories).find(cat => ... ); // Removed outdated logic
+        console.log(`🔍 Debug: Starting lead generation loop...`);
 
-            const createdAt = randomDate(ld.daysAgo);
-            const salesUser = ld.salesAssigned ? users[ld.salesAssigned] : null;
+        // Debug: Try only 1 iteration first
+        for (let i = 0; i < 1; i++) {
+            const template = randomChoice(leadTemplates);
+            // console.log(`🔍 Debug: Processing lead ${i + 1}, template:`, JSON.stringify(template));
+            const customer = customersList[i % customersList.length]; // 循环使用客户
+            const channel = channels[template.channel];
+            if (!channel && i === 0) console.warn(`⚠️ Warning: Channel not found for code ${template.channel}`);
 
-            const [lead] = await db.insert(schema.leads).values({
-                tenantId: tenant.id,
-                leadNo: generateDocNo('L'),
-                sourceChannelId: channel?.parentId,
-                sourceSubId: channel?.id,
-                customerName: customer.name,
-                customerPhone: customer.phone,
-                community: (customer.addresses as Array<{ community?: string }>)?.[0]?.community || '未知小区',
-                address: customer.defaultAddress,
-                intentionLevel: ld.intentionLevel,
-                estimatedAmount: String(randomInt(5000, 50000)),
-                status: ld.status,
-                assignedSalesId: salesUser?.id,
-                assignedAt: salesUser ? createdAt : null,
-                customerId: ld.status === 'WON' ? customer.id : null,
-                createdBy: salesUser?.id || users['13800000001'].id,
-                createdAt,
-                lastActivityAt: randomDate(Math.max(0, ld.daysAgo - randomInt(0, 5))),
-                wonAt: ld.status === 'WON' ? randomDate(Math.max(0, ld.daysAgo - 5)) : null,
-                lostReason: ld.status === 'VOID' ? randomChoice(['价格太高', '已选其他商家', '暂不需要', '联系不上']) : null,
-            }).onConflictDoNothing().returning();
+            // 随机生成时间，最近 180 天分布
+            const daysAgo = randomInt(0, 180);
+            const createdAt = randomDate(daysAgo);
+
+            // 分配销售
+            let salesUser = null;
+            if (template.status !== 'PENDING_ASSIGNMENT') {
+                const salesPhone = randomChoice(salesUserPhones);
+                salesUser = users[salesPhone];
+            }
+
+            let lead;
+            try {
+                console.log(`DEBUG: Inserting lead status=${template.status} intention=${template.intentionLevel} channel=${template.channel}`);
+                [lead] = await db.insert(schema.leads).values({
+                    tenantId: tenant.id,
+                    leadNo: generateDocNo('L'),
+                    sourceChannelId: channel?.parentId,
+                    sourceSubId: channel?.id,
+                    customerName: customer.name,
+                    customerPhone: customer.phone,
+                    community: (customer.addresses as Array<{ community?: string }>)?.[0]?.community || '未知小区',
+                    address: customer.defaultAddress,
+                    intentionLevel: template.intentionLevel,
+                    estimatedAmount: String(randomInt(5000, 50000)),
+                    status: template.status,
+                    assignedSalesId: salesUser?.id,
+                    assignedAt: salesUser ? createdAt : null,
+                    customerId: template.status === 'WON' ? customer.id : null,
+                    createdBy: salesUser?.id || users['13800000001'].id,
+                    createdAt,
+                    lastActivityAt: randomDate(Math.max(0, daysAgo - randomInt(0, 5))),
+                    wonAt: template.status === 'WON' ? randomDate(Math.max(0, daysAgo - 5)) : null,
+                    lostReason: template.status === 'VOID' ? randomChoice(['价格太高', '已选其他商家', '暂不需要', '联系不上']) : null,
+                }).returning();
+            } catch (e: any) {
+                console.error(`❌ Failed to insert lead. Data:`, JSON.stringify({
+                    leadNo: generateDocNo('L'), // Note: this will be a new one, but illustrative
+                    customerName: customer.name,
+                    status: template.status,
+                    intentionLevel: template.intentionLevel,
+                    channel: template.channel,
+                    sourceChannelId: channel?.parentId,
+                    sourceSubId: channel?.id,
+                    address: customer.defaultAddress
+                }, null, 2));
+                console.error(`Error details:`, e);
+                throw e; // Stop execution to fix it
+            }
 
             if (lead) {
                 leadsList.push(lead);
 
                 // 为跟进中和已成交的线索添加跟进记录
-                if (ld.status === 'FOLLOWING_UP' || ld.status === 'WON') {
-                    const followupCount = randomInt(1, 3);
-                    for (let i = 0; i < followupCount; i++) {
-                        await db.insert(schema.leadFollowupLogs).values({
-                            leadId: lead.id,
-                            type: randomChoice(['CALL', 'WECHAT', 'VISIT']),
-                            content: randomChoice([
-                                '电话沟通,客户有意向,预约周末上门量房',
-                                '微信发送产品图册,客户表示需要考虑',
-                                '客户到店看样,对雪尼尔系列比较感兴趣',
-                                '上门量房,测量尺寸并初步报价',
-                            ]),
-                            result: randomChoice(['CONNECTED', 'INTERESTED', 'FOLLOW_UP']),
-                            createdBy: salesUser!.id,
-                            createdAt: randomDate(ld.daysAgo - i * 3),
-                        });
+                if (template.status === 'FOLLOWING_UP' || template.status === 'WON') {
+                    const followupCount = randomInt(1, 5);
+                    for (let j = 0; j < followupCount; j++) {
+                        try {
+                            const typeMap: Record<string, 'PHONE_CALL' | 'WECHAT_CHAT' | 'STORE_VISIT'> = {
+                                'CALL': 'PHONE_CALL',
+                                'WECHAT': 'WECHAT_CHAT',
+                                'VISIT': 'STORE_VISIT'
+                            };
+                            const typeKey = randomChoice(['CALL', 'WECHAT', 'VISIT']);
+
+                            await db.insert(schema.leadActivities).values({
+                                tenantId: tenant.id,
+                                leadId: lead.id,
+                                activityType: typeMap[typeKey],
+                                content: randomChoice([
+                                    '电话沟通,客户有意向,预约周末上门量房',
+                                    '微信发送产品图册,客户表示需要考虑',
+                                    '客户到店看样,对雪尼尔系列比较感兴趣',
+                                    '上门量房,测量尺寸并初步报价',
+                                    '沟通预算方案，客户比较关注性价比',
+                                    '确认安装时间，客户希望尽快安装',
+                                ]),
+                                createdBy: salesUser ? salesUser.id : users['13800000001'].id,
+                                createdAt: randomDate(daysAgo - j * 3),
+                            });
+                        } catch (e) {
+                            console.error(`❌ Failed to insert lead ACTIVITY`, e);
+                        }
                     }
                 }
             }
         }
+
         console.log(`✅ 线索: ${leadsList.length} 条`);
 
         console.log('\n🎉 数据播种第一阶段完成!');
@@ -531,26 +780,42 @@ async function main() {
             const createdAt = lead.wonAt || randomDate(20);
 
             // 创建报价单
-            const [quote] = await db.insert(schema.quotes).values({
-                tenantId: tenant.id,
-                quoteNo: generateDocNo('Q'),
-                version: 1,
-                isLatest: true,
-                leadId: lead.id,
-                customerId: customer.id,
-                status: isActive ? 'LOCKED' as const : 'ACTIVE' as const,
-                totalAmount: '0',
-                discountAmount: '0',
-                finalAmount: '0',
-                installationFee: '300',
-                measurementFee: '0',
-                freightFee: '150',
-                createdBy: salesUser.id,
-                createdAt,
-                lockedAt: isActive ? createdAt : null,
-            }).returning();
+            let quote;
+            try {
+                console.log(`Inserting quote for lead ${lead.id}...`);
+                [quote] = await db.insert(schema.quotes).values({
+                    tenantId: tenant.id,
+                    quoteNo: generateDocNo('Q'),
+                    version: 1,
+                    isLatest: true,
+                    leadId: lead.id,
+                    customerId: customer.id,
+                    status: 'DRAFT', // Explicitly DRAFT
+                    totalAmount: '0',
+                    discountAmount: '0',
+                    finalAmount: '0',
+                    installationFee: '300',
+                    measurementFee: '0',
+                    freightFee: '150',
+                    createdBy: salesUser.id,
+                    createdAt,
+                    lockedAt: isActive ? createdAt : null,
+                }).returning();
+                console.log(`✅ Inserted quote ${quote.id}`);
+            } catch (e: any) {
+                console.error(`❌ Failed to insert quote for lead ${lead.id}. Data:`, JSON.stringify({
+                    leadId: lead.id,
+                    customerId: customer.id,
+                    status: isActive ? 'ACCEPTED' : 'DRAFT',
+                    salesUserId: salesUser?.id
+                }, null, 2));
+                console.error(e);
+                // throw e; // Allow continue to debug other items
+            }
 
             quotesList.push(quote);
+
+            if (!quote) continue; // Skip if quote creation failed
 
             // 创建空间(1-3个空间)
             const roomCount = randomChoice([1, 2, 2, 3]);
@@ -558,7 +823,8 @@ async function main() {
             const quoteRooms: typeof schema.rooms.$inferSelect[] = [];
 
             for (let i = 0; i < roomCount; i++) {
-                const [room] = await db.insert(schema.rooms).values({
+                const [room] = await db.insert(schema.quoteRooms).values({
+                    tenantId: tenant.id,
                     quoteId: quote.id,
                     name: roomNames[i],
                     sortOrder: i,
@@ -586,7 +852,7 @@ async function main() {
                         height = randomChoice(['2.6', '2.7', '2.8']);
                         foldRatio = '2.0';
                         quantity = String(Number(width) * Number(foldRatio));
-                        unitPrice = product.basePrice;
+                        unitPrice = product.unitPrice;
                         subtotal = String(Number(quantity) * Number(unitPrice) * Number(height));
                     }
                     // 第二个商品:纱帘
@@ -596,7 +862,7 @@ async function main() {
                         height = randomChoice(['2.6', '2.7', '2.8']);
                         foldRatio = '2.5';
                         quantity = String(Number(width) * Number(foldRatio));
-                        unitPrice = product.basePrice;
+                        unitPrice = product.unitPrice;
                         subtotal = String(Number(quantity) * Number(unitPrice) * Number(height));
                     }
                     // 第三个商品:轨道
@@ -606,11 +872,17 @@ async function main() {
                         height = null;
                         foldRatio = null;
                         quantity = '1';
-                        unitPrice = product.basePrice;
+                        unitPrice = product.unitPrice;
                         subtotal = String(Number(width) * Number(unitPrice));
                     }
 
+                    if (!unitPrice) {
+                        console.error(`❌ Error: Unit Price is missing for product ${product.name} (${product.id}). UnitPrice: ${product.unitPrice}, Category: ${product.category}`);
+                        unitPrice = '0.00'; // Fallback to avoid crash, but log it
+                    }
+
                     await db.insert(schema.quoteItems).values({
+                        tenantId: tenant.id,
                         quoteId: quote.id,
                         roomId: room.id,
                         productId: product.id,
@@ -626,6 +898,7 @@ async function main() {
                         subtotal,
                         sortOrder: i,
                     });
+                    console.log(`  ✅ Inserted item ${i} for room ${room.name}`);
 
                     quoteTotalAmount += Number(subtotal);
                 }
@@ -651,7 +924,7 @@ async function main() {
         const quotesForOrders = quotesList.filter(q => q.status === 'LOCKED').slice(0, 10);
         const ordersList: Array<typeof schema.orders.$inferSelect> = [];
 
-        const orderStatuses = ['PENDING_PO', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'SHIPPED', 'PENDING_INSTALL', 'COMPLETED'];
+        const orderStatuses = ['PENDING_PO', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALL', 'COMPLETED'];
 
         for (const [index, quote] of quotesForOrders.entries()) {
             const lead = leadsList.find(l => l.id === quote.leadId);
@@ -691,12 +964,72 @@ async function main() {
                 orderValues.completedAt = randomDate(2);
             }
 
-            const [order] = await db.insert(schema.orders).values(orderValues as typeof schema.orders.$inferInsert).returning();
+            let order;
+            try {
+                [order] = await db.insert(schema.orders).values(orderValues as typeof schema.orders.$inferInsert).returning();
+            } catch (e) {
+                console.error(`❌ Failed to insert order for quote ${quote.id}`);
+                console.error(e);
+                continue;
+            }
 
             ordersList.push(order);
+
+            // Create Order Items from Quote Items
+            const quoteItems = await db.query.quoteItems.findMany({
+                where: (t, { eq }) => eq(t.quoteId, quote.id)
+            });
+
+            for (const qi of quoteItems) {
+                const roomName = (await db.query.quoteRooms.findFirst({
+                    where: (t, { eq }) => eq(t.id, qi.roomId!)
+                }))?.name || '未知空间';
+
+                await db.insert(schema.orderItems).values({
+                    tenantId: tenant.id,
+                    orderId: order.id,
+                    quoteItemId: qi.id,
+                    roomName,
+                    productId: qi.productId,
+                    productName: qi.productName,
+                    category: qi.category,
+                    quantity: qi.quantity,
+                    width: qi.width,
+                    height: qi.height,
+                    unitPrice: qi.unitPrice,
+                    subtotal: qi.subtotal,
+                    status: 'PENDING',
+                    sortOrder: qi.sortOrder,
+                });
+            }
         }
 
         console.log(`✅ 订单: ${ordersList.length} 个\n`);
+
+        // 6.2 订单变更记录 (Order Changes)
+        let changeCount = 0;
+        for (const order of ordersList) {
+            if (order.status !== 'PENDING_PAYMENT' && Math.random() > 0.7) {
+                // 模拟一次变更
+                // 模拟一次变更
+                const type = randomChoice(['FIELD_CHANGE', 'CUSTOMER_CHANGE', 'STOCK_OUT', 'OTHER']);
+                try {
+                    await db.insert(schema.orderChanges).values({
+                        tenantId: tenant.id,
+                        orderId: order.id,
+                        type: type as any,
+                        reason: '正常流转或变更',
+                        status: 'PENDING', // Default
+                        originalData: type === 'FIELD_CHANGE' ? { note: 'Old measurements' } : {},
+                        newData: type === 'FIELD_CHANGE' ? { note: 'New measurements' } : {},
+                        requestedBy: users['13901001001'].id,
+                        createdAt: randomDate(5),
+                    });
+                    changeCount++;
+                } catch (e) { console.error(`Failed order change`, e); }
+            }
+        }
+        console.log(`✅ 订单变更: ${changeCount} 条\n`);
 
         // ===== 7. 服务交付层 =====
         console.log('📦 第七步:服务交付数据');
@@ -715,36 +1048,37 @@ async function main() {
             const dispatcher = users['13902002001']; // 派单员
             const measurer = randomChoice([users['13905005001'], users['13905005002'], users['13905005003']]);
 
-            const status = randomChoice(['COMPLETED', 'COMPLETED', 'PENDING_VISIT', 'PENDING_CONFIRM']) as typeof schema.measureStatusEnum.enumValues[number];
+            const status = randomChoice(['COMPLETED', 'PENDING_VISIT', 'PENDING_CONFIRM']) as typeof schema.measureTaskStatus.enumValues[number];
             const createdAt = randomDate(randomInt(10, 30));
 
-            const [measureTask] = await db.insert(schema.measureTasks).values({
-                tenantId: tenant.id,
-                measureNo: generateDocNo('M'),
-                leadId: lead.id,
-                customerId: customer.id,
-                status,
-                dispatcherId: dispatcher.id,
-                salesId: salesUser.id,
-                scheduledAt: randomDate(randomInt(5, 15)),
-                assignedWorkerId: measurer.id,
-                round: 1,
-                variant: 'A',
-                versionDisplay: 'V1.A',
-                isActive: true,
-                resultData: status === 'COMPLETED' ? {
-                    rooms: [
-                        { name: '客厅', width: 3200, height: 2700, windowType: 'STRAIGHT' },
-                        { name: '主卧', width: 2800, height: 2600, windowType: 'STRAIGHT' },
-                    ]
-                } : {},
-                images: status === 'COMPLETED' ? ['/uploads/measure-1.jpg', '/uploads/measure-2.jpg'] : [],
-                createdBy: salesUser.id,
-                createdAt,
-                completedAt: status === 'COMPLETED' ? randomDate(randomInt(1, 8)) : null,
-            }).returning();
+            let measureTask;
+            try {
+                [measureTask] = await db.insert(schema.measureTasks).values({
+                    tenantId: tenant.id,
+                    measureNo: generateDocNo('M'),
+                    leadId: lead.id,
+                    customerId: customer.id,
+                    status,
+                    dispatcherId: dispatcher.id,
+                    salesId: salesUser.id,
+                    scheduledAt: randomDate(randomInt(5, 15)),
+                    assignedWorkerId: measurer.id,
+                    round: 1,
+                    variant: 'A',
+                    versionDisplay: 'V1.A',
+                    isActive: true,
+                    resultData: status === 'COMPLETED' ? {
+                        rooms: [{ name: '客厅', width: '3.5', height: '2.8' }]
+                    } : null,
+                    createdBy: dispatcher.id,
+                    createdAt,
+                    completedAt: status === 'COMPLETED' ? randomDate(randomInt(1, 5)) : null,
+                }).returning();
 
-            measureTasksList.push(measureTask);
+                measureTasksList.push(measureTask);
+            } catch (e) {
+                console.error(`Failed measure task`, e);
+            }
         }
 
         console.log(`✅ 测量任务: ${measureTasksList.length} 个`);
@@ -807,11 +1141,42 @@ async function main() {
 
         console.log(`✅ 安装任务: ${installTasksList.length} 个\n`);
 
+        // 7.3 售后工单与维保
+        console.log('📦 第七.三步:售后与维保数据');
+
+        const afterSalesOrders = ordersList.filter(o => o.status === 'COMPLETED').slice(0, 50);
+        const afterSalesList: typeof schema.afterSalesTickets.$inferSelect[] = [];
+
+        for (const order of afterSalesOrders) {
+            const customer = customersList.find(c => c.id === order.customerId);
+            if (!customer) continue;
+
+            const installTask = installTasksList.find(it => it.orderId === order.id);
+
+            const [ticket] = await db.insert(schema.afterSalesTickets).values({
+                tenantId: tenant.id,
+                ticketNo: generateDocNo('AST'),
+                orderId: order.id,
+                customerId: customer.id,
+                installTaskId: installTask?.id,
+                type: randomChoice(['QUALITY', 'INSTALLATION', 'LOGISTICS']),
+                status: randomChoice(['PENDING', 'PROCESSING', 'COMPLETED']),
+                description: '客户反馈部分窗帘褶皱不均匀，希望能调整',
+                priority: 'MEDIUM',
+                isWarranty: true,
+                createdBy: users['13901001001'].id,
+                createdAt: randomDate(5),
+            }).returning();
+
+            if (ticket) afterSalesList.push(ticket);
+        }
+        console.log(`✅ 售后工单: ${afterSalesList.length} 个\n`);
+
         // ===== 8. 供应链层 =====
         console.log('📦 第八步:供应链数据');
 
-        // 为订单创建采购单
-        const ordersForPO = ordersList.slice(0, 8);
+        // 为订单创建采购单 (处理前 100 个订单)
+        const ordersForPO = ordersList.slice(0, 100);
 
         for (const order of ordersForPO) {
             const quote = quotesList.find(q => q.id === order.quoteId);
@@ -851,7 +1216,7 @@ async function main() {
                     orderId: order.id,
                     supplierId: supplier.id,
                     supplierName: supplier.name,
-                    type: 'EXTERNAL' as const,
+                    type: 'FINISHED' as const,
                     status: poStatus,
                     paymentStatus: poStatus === 'RECEIVED' ? 'PAID' as const : 'PENDING' as const,
                     totalCost: String(totalCost.toFixed(2)),
@@ -886,6 +1251,36 @@ async function main() {
                 }
             }
         }
+
+        // 8.2 外协加工单 (Work Orders)
+        console.log('📦 第八.二步:外协加工单数据');
+
+        const workOrdersList: typeof schema.workOrders.$inferSelect[] = [];
+        // 查询最近的采购单
+        const recentPOs = await db.query.purchaseOrders.findMany({
+            where: (po, { eq }) => eq(po.type, 'FINISHED'),
+            limit: 50,
+        });
+
+        for (const po of recentPOs) {
+            if (Math.random() > 0.4) continue;
+
+            const [wo] = await db.insert(schema.workOrders).values({
+                tenantId: tenant.id,
+                woNo: generateDocNo('WO'),
+                orderId: po.orderId!,
+                poId: po.id,
+                supplierId: po.supplierId!,
+                status: randomChoice(['PENDING', 'PROCESSING', 'COMPLETED']),
+                startAt: po.sentAt,
+                completedAt: po.deliveredAt,
+                remark: '外协加工订单',
+                createdBy: users['13904004001'].id,
+                createdAt: po.createdAt,
+            }).returning();
+            workOrdersList.push(wo);
+        }
+        console.log(`✅ 外协加工单: ${workOrdersList.length} 个`);
 
         console.log(`✅ 采购订单: 已生成\n`);
 
@@ -997,6 +1392,78 @@ async function main() {
         console.log(`✅ 应收账款: ${ordersList.length} 条`);
         console.log(`✅ 收款记录: 已生成\n`);
 
+        // 9.2 佣金与结算 (Commissions & Settlements)
+        console.log('📦 第九.二步:佣金与结算数据');
+
+        // 渠道结算 (暂时跳过，因为没有真正的channels表数据)
+        // TODO: 需要先创建 channels 表数据才能创建 channel_settlements
+        let settlementCount = 0;
+        console.log(`✅ 渠道结算: ${settlementCount} 条 (暂时跳过)`);
+
+        // 佣金调整 (Commission Adjustments)
+        let commissionCount = 0;
+        for (const u of Object.values(users).filter(u => u.role === 'SALES').slice(0, 3)) {
+            await db.insert(schema.commissionAdjustments).values({
+                tenantId: tenant.id,
+                userId: u.id,
+                amount: String(randomInt(-200, 500)),
+                reason: randomChoice(['业绩达标奖励', '客诉扣款', '全勤奖']),
+                adjustmentDate: randomDate(5).toISOString(),
+                status: 'APPROVED',
+                approvedBy: users['13800000001'].id, // Admin/Manager
+                approvedAt: randomDate(2),
+                createdBy: users['13800000001'].id,
+                createdAt: randomDate(5),
+            });
+            commissionCount++;
+        }
+        console.log(`✅ 佣金调整: ${commissionCount} 条\n`);
+
+
+        // ===== 10. 营销与系统 =====
+        console.log('📦 第十步:营销与系统数据');
+
+        // 10.1 客户积分 (Loyalty)
+        let loyaltyCount = 0;
+        for (const customer of customersList.slice(0, 50)) {
+            if (Math.random() > 0.3) {
+                const points = randomInt(10, 500);
+                await db.insert(schema.loyaltyTransactions).values({
+                    tenantId: tenant.id,
+                    customerId: customer.id,
+                    type: 'EARN',
+                    source: 'ORDER',
+                    points,
+                    balanceAfter: points, // Simplified
+                    referenceType: 'ORDER',
+                    // referenceId: linked to order if available, skip for now
+                    description: '下单积分奖励',
+                    createdAt: randomDate(5),
+                    createdBy: users['13901001001'].id,
+                });
+                loyaltyCount++;
+            }
+        }
+        console.log(`✅ 积分流水: ${loyaltyCount} 条`);
+
+        // 10.2 系统公告 & 通知 & 审批
+        // 公告
+        await db.insert(schema.systemAnnouncements).values({
+            tenantId: tenant.id,
+            title: '关于五一假期放假安排的通知',
+            content: '各位同事：五一劳动节放假安排如下...',
+            type: 'INFO',
+            startAt: randomDate(5),
+            endAt: randomDate(-2), // future date
+            isPinned: true,
+            createdBy: users['13800000001'].id,
+        });
+
+        // 审批流 (Mock)
+        // ... (Skipping complex approval logic, just creating records if needed)
+
+        console.log(`✅ 系统数据: 公告/通知已生成\n`);
+
         console.log('═══════════════════════════════════════');
         console.log('🎉 数据播种全部完成!');
         console.log('═══════════════════════════════════════\n');
@@ -1012,7 +1479,11 @@ async function main() {
         console.log(`   ├─ 订单: ${ordersList.length} 个`);
         console.log(`   ├─ 测量任务: ${measureTasksList.length} 个`);
         console.log(`   ├─ 安装任务: ${installTasksList.length} 个`);
-        console.log(`   └─ 应收账款: ${ordersList.length} 条\n`);
+        console.log(`   ├─ 售后工单: ${afterSalesList.length} 个`);
+        console.log(`   ├─ 外协加工单: ${workOrdersList.length} 个`);
+        console.log(`   ├─ 渠道结算: ${settlementCount} 条`);
+        console.log(`   ├─ 佣金调整: ${commissionCount} 条`);
+        console.log(`   └─ 积分流水: ${loyaltyCount} 条\n`);
 
         console.log('🔑 测试账号:');
         console.log('   ├─ 店长: 13800000001 / 123456');

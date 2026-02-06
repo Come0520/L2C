@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { getTenantInfo } from '@/features/settings/actions/tenant-info';
+import { getTenantInfo, getVerificationStatus, type VerificationStatus } from '@/features/settings/actions/tenant-info';
 
 // 租户信息接口
 export interface Tenant {
@@ -15,6 +15,7 @@ export interface Tenant {
     name: string;
     code: string;
     logoUrl?: string | null;
+    verificationStatus?: VerificationStatus;
     settings?: Record<string, unknown>;
 }
 
@@ -35,14 +36,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         if (!session?.user?.tenantId) return;
 
         try {
-            const result = await getTenantInfo();
-            if (result.success) {
+            const [tenantResult, verificationResult] = await Promise.all([
+                getTenantInfo(),
+                getVerificationStatus(),
+            ]);
+            if (tenantResult.success) {
                 setTenant({
-                    id: result.data.id,
-                    name: result.data.name,
-                    code: result.data.code,
-                    logoUrl: result.data.logoUrl,
-                    settings: {}, // 暂时使用空对象，后续需要可根据 TenantInfo 扩展
+                    id: tenantResult.data.id,
+                    name: tenantResult.data.name,
+                    code: tenantResult.data.code,
+                    logoUrl: tenantResult.data.logoUrl,
+                    verificationStatus: verificationResult.success ? verificationResult.data.status : 'unverified',
+                    settings: {},
                 });
             }
         } catch (error) {

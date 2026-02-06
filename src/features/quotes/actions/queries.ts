@@ -116,16 +116,22 @@ export async function getQuotes({
     const whereCondition = and(...conditions);
 
     // Fetch Data
-    const data = await db.query.quotes.findMany({
-        where: whereCondition,
-        limit: pageSize,
-        offset: offset,
-        orderBy: [desc(quotes.createdAt)],
-        with: {
-            customer: true,
-            creator: true,
-        },
-    });
+    let data;
+    try {
+        data = await db.query.quotes.findMany({
+            where: whereCondition,
+            limit: pageSize,
+            offset: offset,
+            orderBy: [desc(quotes.createdAt)],
+            with: {
+                customer: true,
+                creator: true,
+            },
+        });
+    } catch (error) {
+        console.error('getQuotes Error:', error);
+        throw error;
+    }
 
     // Fetch Total Count for Pagination
     const countResult = await db

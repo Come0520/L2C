@@ -31,3 +31,14 @@ export async function generateOrderNo(tenantId: string): Promise<string> {
     const seqStr = sequence.toString().padStart(4, '0');
     return `${prefix}-${seqStr}`;
 }
+
+/**
+ * 生成通用编号
+ * @param prefix 前缀，如 'TKT', 'INV' 等
+ * @returns 格式: PREFIX-yyyyMMddHHmmss-XXXX
+ */
+export function generateNo(prefix: string): string {
+    const timestamp = format(new Date(), 'yyyyMMddHHmmss');
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+}

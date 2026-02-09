@@ -1,78 +1,108 @@
 #!/bin/bash
+# ==============================================
+# L2C 生产环境部署脚本
+# 由 CodeUp Flow 触发执行
+# ==============================================
 
-# L2C 部署脚本
-# 使用方式: 
-#   ./deploy.sh deploy <version>  (e.g., ./deploy.sh deploy v1.0.1)
-#   ./deploy.sh rollback <version> (e.g., ./deploy.sh rollback v1.0.0)
+set -e
 
-COMMAND=$1
-VERSION=$2
+echo "=== L2C 生产部署开始 ==="
+echo "部署时间: $(date '+%Y-%m-%d %H:%M:%S')"
 
-if [ -z "$COMMAND" ] || [ -z "$VERSION" ]; then
-    echo "Usage: ./deploy.sh [deploy|rollback] <version>"
-    exit 1
-fi
-
-APP_NAME="l2c-app"
-IMAGE_NAME="l2c-app"
-
-function deploy() {
-    echo "🚀 Starting deployment of version $VERSION..."
-    
-    # 1. 检查代码是否是最新的 (可选)
-    # git pull origin main
-
-    # 2. 修改 .env 或环境变量中的版本号 (这里演示写入 .env.production)
-    # 实际生产中通常修改 docker-compose.yml 里的 image tag
-    # e.g., sed -i "s/image: l2c-app:.*/image: l2c-app:$VERSION/g" docker-compose.yml
-    
-    echo "📦 Building Docker image..."
-    docker build -t $IMAGE_NAME:$VERSION .
-    docker tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
-
-    echo "🔄 Updating service..."
-    # 使用 latest 或指定 version 启动
-    # 如果使用了 Docker Hub/ACR，这里应该是 docker pull
-    
-    # 修改 compose 文件使用新版本 (示例: 仅为了演示逻辑，实际可能已由环境变量控制)
-    # export APP_VERSION=$VERSION 
-    
-    docker-compose up -d --build app
-
-    echo "✅ Deployment of $VERSION completed!"
-}
-
-function rollback() {
-    echo "⏪ Rolling back to version $VERSION..."
-    
-    # 1. 确认该版本镜像是否存在
-    if [[ "$(docker images -q $IMAGE_NAME:$VERSION 2> /dev/null)" == "" ]]; then
-        echo "❌ Image $IMAGE_NAME:$VERSION not found locally."
-        exit 1
-    fi
-
-    # 2. 停止当前容器
-    # docker-compose stop app
-    
-    # 3. 启动旧版本
-    echo "🔄 Restarting service with version $VERSION..."
-    
-    # 这里假设 docker-compose 能够接受外部 env 改变 image tag
-    # IMAGE_TAG=$VERSION docker-compose up -d app
-    
-    # 简单回滚逻辑：重新打标 latest 为目标版本并重启
-    docker tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
-    docker-compose up -d app
-    
-    echo "✅ Rollback to $VERSION completed!"
-    echo "⚠️  注意: 数据库回滚需手动执行 drizzle/rollback 下的 SQL 脚本!"
-}
-
-if [ "$COMMAND" == "deploy" ]; then
-    deploy
-elif [ "$COMMAND" == "rollback" ]; then
-    rollback
+# ------------------------------------------
+# 1. 检查并设置 Swap（防止 OOM）
+# ------------------------------------------
+echo "[1/6] 检查 Swap 状态..."
+if swapon --show | grep -q "/swapfile"; then
+  echo "✓ Swap 已激活"
+  free -h
+elif [ -f /swapfile ]; then
+  echo "Swapfile 存在但未激活，正在激活..."
+  swapon /swapfile || {
+    echo "激活失败，正在重建..."
+    swapoff /swapfile 2>/dev/null || true
+    rm -f /swapfile
+    fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+  }
+  echo "✓ Swap 已激活"
+  free -h
 else
-    echo "Unknown command: $COMMAND"
-    exit 1
+  echo "正在创建 4GB Swap..."
+  fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo "✓ Swap 已创建并激活"
+  free -h
 fi
+
+# ------------------------------------------
+# 2. 备份 .env 文件
+# ------------------------------------------
+echo "[2/6] 备份 .env 文件..."
+if [ -f /opt/L2C/.env ]; then
+  cp /opt/L2C/.env /tmp/L2C.env.bak
+  echo "✓ .env 已备份到 /tmp/L2C.env.bak"
+else
+  echo "⚠ 未找到 .env 文件，跳过备份"
+fi
+
+# ------------------------------------------
+# 3. 拉取最新代码
+# ------------------------------------------
+echo "[3/6] 拉取最新代码..."
+cd /opt/L2C
+
+# 确保 remote 正确配置
+if ! git remote | grep -q "origin"; then
+  echo "配置远程仓库..."
+  git remote add origin https://codeup.aliyun.com/697359d3b28d0aba0f5e4ff2/l2c.git
+fi
+
+git fetch origin main
+git reset --hard origin/main
+echo "✓ 代码已更新到最新版本"
+git log --oneline -1
+
+# ------------------------------------------
+# 4. 恢复 .env 文件
+# ------------------------------------------
+echo "[4/6] 恢复 .env 文件..."
+if [ -f /tmp/L2C.env.bak ]; then
+  cp /tmp/L2C.env.bak /opt/L2C/.env
+  echo "✓ .env 已恢复"
+else
+  echo "⚠ 未找到备份的 .env 文件"
+fi
+
+# ------------------------------------------
+# 5. 重建并重启 Docker 容器
+# ------------------------------------------
+echo "[5/6] 重建 Docker 容器..."
+docker-compose -f docker-compose.prod.yml build
+
+echo "[5/6] 重启服务..."
+docker-compose -f docker-compose.prod.yml up -d
+
+# ------------------------------------------
+# 6. 清理无用镜像
+# ------------------------------------------
+echo "[6/6] 清理无用镜像..."
+docker image prune -f
+
+# ------------------------------------------
+# 完成报告
+# ------------------------------------------
+echo ""
+echo "=== 部署完成 ==="
+echo "完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
+echo ""
+echo "服务状态:"
+docker-compose -f docker-compose.prod.yml ps
+echo ""
+echo "健康检查:"
+sleep 5
+curl -sf http://localhost:3000/api/health && echo "✓ 服务健康" || echo "✗ 服务异常"

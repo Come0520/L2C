@@ -59,7 +59,7 @@ cd /opt/L2C
 # 确保 remote 正确配置
 if ! git remote | grep -q "origin"; then
   echo "配置远程仓库..."
-  git remote add origin https://codeup.aliyun.com/697359d3b28d0aba0f5e4ff2/l2c.git
+  git remote add origin git@codeup.aliyun.com:697359d3b28d0aba0f5e4ff2/l2c.git
 fi
 
 git fetch origin main
@@ -82,10 +82,10 @@ fi
 # 5. 重建并重启 Docker 容器
 # ------------------------------------------
 echo "[5/6] 重建 Docker 容器..."
-docker-compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml build
 
 echo "[5/6] 重启服务..."
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # ------------------------------------------
 # 6. 清理无用镜像
@@ -101,7 +101,7 @@ echo "=== 部署完成 ==="
 echo "完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "服务状态:"
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 echo ""
 echo "健康检查:"
 sleep 5

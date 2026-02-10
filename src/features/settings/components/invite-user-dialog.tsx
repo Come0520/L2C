@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/shared/ui/button';
 import {
   Dialog,
@@ -15,13 +15,40 @@ import { Label } from '@/shared/ui/label';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { Loader2, Copy, Check, UserPlus } from 'lucide-react';
 import { createEmployeeInviteLink } from '@/features/settings/actions/invite';
+import { getAvailableRoles } from '@/features/settings/actions/roles';
 
-export function InviteUserDialog() {
+interface InviteUserDialogProps {
+  availableRoles?: { label: string; value: string }[];
+}
+
+export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [roles, setRoles] = useState<string[]>(['STAFF']);
+  const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      if (availableRoles && availableRoles.length > 0) {
+        setRoleOptions(availableRoles);
+      } else {
+        setLoadingRoles(true);
+        getAvailableRoles()
+          .then((options) => {
+            setRoleOptions(options);
+          })
+          .catch((err) => {
+            console.error('Failed to load roles:', err);
+          })
+          .finally(() => {
+            setLoadingRoles(false);
+          });
+      }
+    }
+  }, [open, availableRoles]);
 
   const handleGenerateLink = async () => {
     setLoading(true);
@@ -81,27 +108,27 @@ export function InviteUserDialog() {
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>默认角色</Label>
-            <MultiSelect
-              options={[
-                { label: '管理员 (ADMIN)', value: 'ADMIN' },
-                { label: '经理 (MANAGER)', value: 'MANAGER' },
-                { label: '销售 (SALES)', value: 'SALES' },
-                { label: '财务 (FINANCE)', value: 'FINANCE' },
-                { label: '供应链 (SUPPLY)', value: 'SUPPLY' },
-                { label: '普通员工 (WORKER)', value: 'WORKER' },
-                { label: '职员 (STAFF)', value: 'STAFF' },
-                { label: '调度 (DISPATCHER)', value: 'DISPATCHER' },
-                { label: '安装工 (INSTALLER)', value: 'INSTALLER' },
-                { label: '测量员 (MEASURER)', value: 'MEASURER' },
-              ]}
-              selected={roles}
-              onChange={setRoles}
-              placeholder="选择角色..."
-            />
+            {loadingRoles ? (
+              <div className="text-muted-foreground flex items-center space-x-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>加载角色中...</span>
+              </div>
+            ) : (
+              <MultiSelect
+                options={roleOptions}
+                selected={roles}
+                onChange={setRoles}
+                placeholder="选择角色..."
+              />
+            )}
           </div>
 
           {!inviteLink ? (
-            <Button className="w-full" onClick={handleGenerateLink} disabled={loading}>
+            <Button
+              className="w-full"
+              onClick={handleGenerateLink}
+              disabled={loading || loadingRoles}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

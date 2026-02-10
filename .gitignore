@@ -79,3 +79,4 @@ add_dms_whitelist.py
 dms-mcp/start_server.ps1
 *_with_secrets.py
 *_credentials.py
+deployment.tar.gz

@@ -130,6 +130,7 @@
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^11.0.0",
     "@types/wechat-miniprogram": "^3.4.9",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "4.0.16",
@@ -145,6 +146,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
+    "uuid": "^13.0.0",
     "vitest": "^4.0.16"
   }
 }

@@ -1,0 +1,71 @@
+version: '1.0'
+name: L2C-Production-Deploy
+sources:
+  my_repo:
+    type: codeup
+    name: CodeupRepo
+    endpoint: https://codeup.aliyun.com/697359d3b28d0aba0f5e4ff2/l2c.git
+    branch: main
+    trigger_events:
+      - push
+
+stages:
+  - stage: 
+      name: build-stage
+      displayName: Build Stage
+      steps:
+        - step: 
+            name: build-image
+            displayName: Build and Package
+            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:16
+            script:
+              - echo "Start building..."
+              - npm install -g pnpm
+              - pnpm install
+              - pnpm build
+              - echo "Packaging..."
+              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml package.json pnpm-lock.yaml scripts/
+              - mv release.tar.gz $FLOW_ARTIFACT_PATH/
+            artifacts:
+              - name: release-package
+                path: ./release.tar.gz
+
+  - stage: 
+      name: deploy-stage
+      displayName: Deploy to ECS
+      steps:
+        - step: 
+            name: deploy-script
+            displayName: Deploy Script
+            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
+            env:
+              ECS_HOST: $ECS_HOST
+              ECS_SSH_KEY: $ECS_SSH_KEY
+              ECS_USER: root
+            script:
+              - echo "Deploying to $ECS_HOST..."
+              - mkdir -p ~/.ssh
+              - echo "$ECS_SSH_KEY" > ~/.ssh/id_rsa
+              - chmod 600 ~/.ssh/id_rsa
+              - echo -e "Host $ECS_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+              - mkdir -p deploy_temp
+              - cp $FLOW_ARTIFACT_PATH/release.tar.gz deploy_temp/
+              - scp deploy_temp/release.tar.gz $ECS_USER@$ECS_HOST:/root/L2C/release.tar.gz
+              - |
+                ssh $ECS_USER@$ECS_HOST << 'EOF'
+                  cd /root/L2C
+                  tar -xzf release.tar.gz
+                  if [ ! -f .env ]; then
+                    if [ -f env.production.template ]; then
+                      cp env.production.template .env
+                      echo "Created .env from template."
+                    else
+                      echo "Warning: No .env found!"
+                    fi
+                  fi
+                  docker compose -f docker-compose.prod.yml down
+                  docker compose -f docker-compose.prod.yml up -d --build
+                  rm release.tar.gz
+                  docker system prune -f
+                EOF
+              - echo "Deployment finished!"

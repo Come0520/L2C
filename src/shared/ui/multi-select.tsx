@@ -100,7 +100,15 @@ export function MultiSelect({
             <CommandEmpty>No item found.</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {options.map((option) => (
-                <CommandItem key={option.value} onSelect={() => handleSelect(option.value)}>
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  keywords={[option.label]}
+                  onSelect={() => {
+                    handleSelect(option.value);
+                    setOpen(true);
+                  }}
+                >
                   <div
                     className={cn(
                       'border-primary mr-2 flex h-4 w-4 items-center justify-center rounded-sm border',

@@ -40,7 +40,7 @@ stages:
             image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
             env:
               ECS_HOST: $ECS_HOST
-              ECS_SSH_KEY: $ECS_SSH_KEY
+              ECS_SSH_KEY_B64: $ECS_SSH_KEY_B64
               ECS_USER: root
             script:
               - echo "Deploying to $ECS_HOST..."

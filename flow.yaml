@@ -45,7 +45,7 @@ stages:
             script:
               - echo "Deploying to $ECS_HOST..."
               - mkdir -p ~/.ssh
-              - echo "$ECS_SSH_KEY" > ~/.ssh/id_rsa
+              - echo "$ECS_SSH_KEY_B64" | base64 -d > ~/.ssh/id_rsa
               - chmod 600 ~/.ssh/id_rsa
               - echo -e "Host $ECS_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
               - mkdir -p deploy_temp

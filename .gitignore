@@ -80,3 +80,14 @@ dms-mcp/start_server.ps1
 *_with_secrets.py
 *_credentials.py
 deployment.tar.gz
+
+# Temporary Deployment Files
+*.key
+*.pem
+scripts/deploy_v*.sh
+*.txt
+final_deploy_command.sh
+gen_chunks.js
+generate_final.js
+build_v3_2.js
+

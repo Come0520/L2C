@@ -27,7 +27,7 @@ stages:
               - echo "Current Commit SHA: $NEXT_PUBLIC_GIT_COMMIT_SHA"
               - pnpm build
               - echo "Packaging..."
-              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prod package.json pnpm-lock.yaml scripts/ .env
+              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prod package.json pnpm-lock.yaml scripts/ .env nginx/
               - mv release.tar.gz $FLOW_ARTIFACT_PATH/
             artifacts:
               - name: release-package

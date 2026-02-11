@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   distDir: process.env.DIST_DIR || '.next',
   output: 'standalone',
+  env: {
+    NEXT_PUBLIC_GIT_COMMIT_SHA: process.env.NEXT_PUBLIC_GIT_COMMIT_SHA,
+  },
 
   // 暂时忽略 TypeScript 构建错误 (react-hook-form 与 zod 类型推断问题)
   typescript: {

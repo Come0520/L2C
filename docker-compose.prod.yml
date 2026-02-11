@@ -24,9 +24,6 @@ services:
       - OSS_BUCKET=${OSS_BUCKET}
       - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
       - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - l2c-network
     healthcheck:
@@ -35,42 +32,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # PostgreSQL 数据库
-  postgres:
-    image: postgres:17-alpine
-    container_name: l2c-postgres-prod
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-l2c}
-      POSTGRES_USER: ${POSTGRES_USER:-l2c_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=50" # 减少最大连接数
-      - "-c"
-      - "shared_buffers=256MB" # 共享缓冲区
-      - "-c"
-      - "effective_cache_size=768MB" # 有效缓存大小
-      - "-c"
-      - "work_mem=16MB" # 工作内存
-      - "-c"
-      - "maintenance_work_mem=128MB" # 维护工作内存
-      - "-c"
-      - "log_statement=ddl" # 仅记录 DDL 操作
-      - "-c"
-      - "idle_in_transaction_session_timeout=30000" # 30秒事务超时
-    volumes:
-      - l2c_postgres_data:/var/lib/postgresql/data
-    networks:
-      - l2c-network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-l2c_user} -d ${POSTGRES_DB:-l2c}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Nginx 反向代理
   nginx:
@@ -91,7 +52,3 @@ services:
 networks:
   l2c-network:
     driver: bridge
-
-volumes:
-  l2c_postgres_data:
-    name: l2c_postgres_prod_data

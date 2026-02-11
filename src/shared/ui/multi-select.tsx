@@ -104,7 +104,9 @@ export function MultiSelect({
                   key={option.value}
                   value={option.value}
                   keywords={[option.label]}
-                  onSelect={() => {
+                  onSelect={(_currentValue) => {
+                    // _currentValue from cmdk is often the label or lowercased value.
+                    // We explicitly use option.value to ensure correctness.
                     handleSelect(option.value);
                     setOpen(true);
                   }}

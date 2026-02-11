@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { role = 'STAFF' } = body;
+    const { role = 'STAFF', roles } = body;
+    // 兼容处理：如果前端传了 roles 数组则使用，否则回退到单 role
+    const targetRoles = roles && roles.length > 0 ? roles : [role];
     const maxUses = body.maxUses || '1'; // 默认单次有效
 
     // 生成6位数字邀请码 (方便输入)
@@ -74,7 +76,8 @@ export async function POST(request: NextRequest) {
       type: 'employee_invite',
       tenantId: tokenData.tenantId,
       inviterId: tokenData.userId,
-      defaultRole: role,
+      defaultRole: targetRoles[0], // 保持向后兼容
+      defaultRoles: targetRoles, // 新增多角色支持
       inviteCode,
     })
       .setProtectedHeader({ alg: 'HS256' })

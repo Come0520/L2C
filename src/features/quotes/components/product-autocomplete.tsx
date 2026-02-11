@@ -199,18 +199,7 @@ export function ProductAutocomplete({
                   onSelect={() => {
                     handleSelect(product);
                   }}
-                  // 强制处理点击事件，解决 cmdk 兼容性问题
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSelect(product);
-                  }}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSelect(product);
-                  }}
-                  className="pointer-events-auto cursor-pointer" // 强制 pointer-events-auto
+                  className="cursor-pointer"
                 >
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-center gap-2">

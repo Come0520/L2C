@@ -24,7 +24,7 @@ stages:
               - pnpm install
               - pnpm build
               - echo "Packaging..."
-              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml package.json pnpm-lock.yaml scripts/
+              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml package.json pnpm-lock.yaml scripts/ .env
               - mv release.tar.gz $FLOW_ARTIFACT_PATH/
             artifacts:
               - name: release-package
@@ -55,13 +55,10 @@ stages:
                 ssh $ECS_USER@$ECS_HOST << 'EOF'
                   cd /root/L2C
                   tar -xzf release.tar.gz
-                  if [ ! -f .env ]; then
-                    if [ -f env.production.template ]; then
-                      cp env.production.template .env
-                      echo "Created .env from template."
-                    else
-                      echo "Warning: No .env found!"
-                    fi
+                  # 强制覆盖 .env，确保配置更新
+                  if [ -f .env ]; then
+                    echo "Updating .env file..."
+                    tar -xzf release.tar.gz .env
                   fi
                   docker compose -f docker-compose.prod.yml down
                   docker compose -f docker-compose.prod.yml up -d --build

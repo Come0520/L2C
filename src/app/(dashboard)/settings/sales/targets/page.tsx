@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { TargetsClientPage } from './client'; // Separate client component for interactivity
 export const dynamic = 'force-dynamic';
-import { getSalesTargets } from '@/features/settings/actions/sales-targets';
+import { getSalesTargets } from '@/features/sales/actions/targets';
 
 export const metadata: Metadata = {
   title: '销售目标配置 | 系统设置',

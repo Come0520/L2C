@@ -13,6 +13,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { getRoleLabel } from '@/shared/config/roles';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 角色权限覆盖的 Server Actions
@@ -241,11 +242,10 @@ export async function saveRoleOverride(
 
     return {
       success: true,
-      // Use Role Label from DB if possible, or fallback to code
       message: `角色 ${roleExists.name} 的权限配置已保存`,
     };
   } catch (error) {
-    console.error('保存角色覆盖失败:', error);
+    logger.error('保存角色覆盖失败:', error);
     return { success: false, message: '保存失败，请稍后重试' };
   }
 }
@@ -283,7 +283,7 @@ export async function resetRoleOverride(
       message: `角色 ${roleLabel} 已重置为系统默认`,
     };
   } catch (error) {
-    console.error('重置角色覆盖失败:', error);
+    logger.error('重置角色覆盖失败:', error);
     return { success: false, message: '重置失败，请稍后重试' };
   }
 }
@@ -324,7 +324,7 @@ export async function saveAllRoleOverrides(
 
     return { success: true, message: '所有角色权限配置已保存' };
   } catch (error) {
-    console.error('批量保存角色覆盖失败:', error);
+    logger.error('批量保存角色覆盖失败:', error);
     return { success: false, message: '保存失败，请稍后重试' };
   }
 }

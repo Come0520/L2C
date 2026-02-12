@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { role = 'STAFF', roles } = body;
+    const { role = 'SALES', roles } = body;
     // 兼容处理：如果前端传了 roles 数组则使用，否则回退到单 role
     const targetRoles = roles && roles.length > 0 ? roles : [role];
     const maxUses = body.maxUses || '1'; // 默认单次有效

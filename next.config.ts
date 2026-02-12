@@ -42,6 +42,8 @@ const nextConfig: NextConfig = {
       'zod',
       '@tanstack/react-table',
       'react-hook-form',
+      '@/shared/ui',
+      '@/features',
     ],
   },
 

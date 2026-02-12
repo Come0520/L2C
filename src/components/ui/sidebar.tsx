@@ -1,8 +1,8 @@
-"use client";
-import { cn } from "@/shared/lib/utils";
-import React, { useState, createContext, useContext } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { IconMenu2, IconX } from "@tabler/icons-react";
+'use client';
+import { cn } from '@/shared/lib/utils';
+import React, { useState, createContext, useContext } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { IconMenu2, IconX } from '@tabler/icons-react';
 
 interface Links {
   label: string;
@@ -16,14 +16,12 @@ interface SidebarContextProps {
   animate: boolean;
 }
 
-const SidebarContext = createContext<SidebarContextProps | undefined>(
-  undefined
-);
+const SidebarContext = createContext<SidebarContextProps | undefined>(undefined);
 
 export const useSidebar = () => {
   const context = useContext(SidebarContext);
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider");
+    throw new Error('useSidebar must be used within a SidebarProvider');
   }
   return context;
 };
@@ -73,7 +71,7 @@ export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
   return (
     <>
       <DesktopSidebar {...props} />
-      <MobileSidebar {...(props as React.ComponentProps<"div">)} />
+      <MobileSidebar {...(props as React.ComponentProps<'div'>)} />
     </>
   );
 };
@@ -84,44 +82,54 @@ export const DesktopSidebar = ({
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
   const { open, setOpen, animate } = useSidebar();
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 300);
+  };
+
   return (
     <>
-      <motion.div
+      <motion.aside
         className={cn(
-          "h-full py-4 hidden md:flex md:flex-col bg-white/50 dark:bg-black/40 backdrop-blur-md border-r border-white/20 shrink-0 overflow-hidden",
+          'relative z-50 hidden h-full shrink-0 overflow-hidden border-r border-white/20 bg-white/50 py-4 backdrop-blur-md md:flex md:flex-col dark:bg-black/40',
           className
         )}
         animate={{
-          width: animate ? (open ? "280px" : "72px") : "280px",
-          paddingLeft: animate ? (open ? "16px" : "12px") : "16px",
-          paddingRight: animate ? (open ? "16px" : "12px") : "16px",
+          width: animate ? (open ? '280px' : '72px') : '280px',
+          paddingLeft: animate ? (open ? '16px' : '12px') : '16px',
+          paddingRight: animate ? (open ? '16px' : '12px') : '16px',
         }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         {...props}
       >
         {children}
-      </motion.div>
+      </motion.aside>
     </>
   );
 };
 
-export const MobileSidebar = ({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<"div">) => {
+export const MobileSidebar = ({ className, children, ...props }: React.ComponentProps<'div'>) => {
   const { open, setOpen } = useSidebar();
   return (
     <>
       <div
-        className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between w-full"
-        )}
+        className={cn('flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden')}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
+        <div className="z-20 flex w-full justify-end">
           <IconMenu2
             className="text-neutral-800 dark:text-neutral-200"
             onClick={() => setOpen(!open)}
@@ -130,20 +138,20 @@ export const MobileSidebar = ({
         <AnimatePresence>
           {open && (
             <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
+              initial={{ x: '-100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
+              exit={{ x: '-100%', opacity: 0 }}
               transition={{
                 duration: 0.3,
-                ease: "easeInOut",
+                ease: 'easeInOut',
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-md p-10 z-[100] flex flex-col justify-between",
+                'fixed inset-0 z-[100] flex h-full w-full flex-col justify-between bg-white/60 p-10 backdrop-blur-md dark:bg-black/60',
                 className
               )}
             >
               <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
+                className="absolute top-10 right-10 z-50 text-neutral-800 dark:text-neutral-200"
                 onClick={() => setOpen(!open)}
               >
                 <IconX />
@@ -157,32 +165,22 @@ export const MobileSidebar = ({
   );
 };
 
-export const SidebarLink = ({
-  link,
-  className,
-  ...props
-}: {
-  link: Links;
-  className?: string;
-}) => {
+export const SidebarLink = ({ link, className, ...props }: { link: Links; className?: string }) => {
   const { open, animate } = useSidebar();
   return (
     <a
       href={link.href}
-      className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2",
-        className
-      )}
+      className={cn('group/sidebar flex items-center justify-start gap-2 py-2', className)}
       {...props}
     >
       {link.icon}
 
       <motion.span
         animate={{
-          display: animate ? (open ? "inline-block" : "none") : "inline-block",
+          display: animate ? (open ? 'inline-block' : 'none') : 'inline-block',
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        className="!m-0 inline-block !p-0 text-sm whitespace-pre text-neutral-700 transition duration-150 group-hover/sidebar:translate-x-1 dark:text-neutral-200"
       >
         {link.label}
       </motion.span>

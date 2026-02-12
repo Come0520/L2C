@@ -22,6 +22,7 @@ export function Header({ session }: HeaderProps) {
   // 页面标题映射
   const getPageTitle = () => {
     if (pathname === '/') return '工作台';
+    if (pathname.startsWith('/profile')) return '个人偏好';
     if (pathname.startsWith('/customers')) return '客户管理';
     if (pathname.startsWith('/quotes')) return '报价管理';
     if (pathname.startsWith('/orders')) return '订单管理';

@@ -140,7 +140,7 @@ export function AppSidebar() {
           label: '租户管理',
           href: '/admin/tenants',
           icon: Building2,
-        }
+        },
       ];
     }
     return navLinks;
@@ -180,7 +180,7 @@ export function AppSidebar() {
         </div>
 
         {/* 底部用户信息 - 指向独立的用户设置页面 */}
-        <div className="border-t border-white/10 px-2 pt-4 dark:border-white/5">
+        <div className="mt-auto border-t border-white/10 pt-4 dark:border-white/5">
           <NavLink
             href="/profile/settings"
             label="个人设置"

@@ -4,16 +4,33 @@ import { useState } from 'react';
 import { UserList } from './user-list';
 import { UserForm } from './user-form';
 
+interface UserData {
+  id: string;
+  name?: string;
+  email: string;
+  roles?: string[];
+  role?: string;
+  isActive?: boolean;
+  avatarUrl?: string;
+}
+
+interface RoleData {
+  id: string;
+  name: string;
+  code: string;
+  permissions?: string[];
+}
+
 interface UsersSettingsClientProps {
-  userData: any[];
-  availableRoles?: any[];
+  userData: UserData[];
+  availableRoles?: RoleData[];
 }
 
 export function UsersSettingsClient({ userData, availableRoles = [] }: UsersSettingsClientProps) {
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: UserData) => {
     setEditingUser(user);
     setIsDialogOpen(true);
   };

@@ -11,6 +11,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { checkSchedulingConflict } from './logic/conflict-detection';
 import { checkLogisticsReady } from './logic/logistics-check';
 import { notifyTaskAssigned } from '@/services/wechat-subscribe-message.service';
+import { logger } from '@/shared/lib/logger';
 
 // --- Schemas ---
 
@@ -123,17 +124,16 @@ export async function getInstallTasks(params?: {
 
     if (search) {
       conditions.push(
-        or(
-          // ilike is not standard in drizzle across all drivers, assuming postgres or using like/sql
-          // Using sql operator for generic compatibility or drizzle specific
-          // For simplicity assuming drizzle-orm operators work
-          // If using postgres, ilike(installTasks.customerName, `%${search}%`)
-          // If sqlite/mysql, like(...)
-          // Let's assume like for now or handle it carefully.
-          // Since we use drizzle, we need to import 'like' or 'ilike'.
-          // Re-import might be needed. Let's try simple 'like' if not sure about driver, or check imports.
-          // Step 446 imports: import { eq, and, desc, asc } from 'drizzle-orm';
-        )
+        or()
+        // ilike is not standard in drizzle across all drivers, assuming postgres or using like/sql
+        // Using sql operator for generic compatibility or drizzle specific
+        // For simplicity assuming drizzle-orm operators work
+        // If using postgres, ilike(installTasks.customerName, `%${search}%`)
+        // If sqlite/mysql, like(...)
+        // Let's assume like for now or handle it carefully.
+        // Since we use drizzle, we need to import 'like' or 'ilike'.
+        // Re-import might be needed. Let's try simple 'like' if not sure about driver, or check imports.
+        // Step 446 imports: import { eq, and, desc, asc } from 'drizzle-orm';
       );
     }
 
@@ -169,23 +169,18 @@ export async function getInstallTasks(params?: {
     let filteredTasks = tasks;
     if (search) {
       const lowerSearch = search.toLowerCase();
-      filteredTasks = tasks.filter(t =>
-        t.taskNo?.toLowerCase().includes(lowerSearch) ||
-        t.customerName?.toLowerCase().includes(lowerSearch) ||
-        t.customerPhone?.includes(search) ||
-        t.installer?.name?.toLowerCase().includes(lowerSearch)
+      filteredTasks = tasks.filter(
+        (t) =>
+          t.taskNo?.toLowerCase().includes(lowerSearch) ||
+          t.customerName?.toLowerCase().includes(lowerSearch) ||
+          t.customerPhone?.includes(search) ||
+          t.installer?.name?.toLowerCase().includes(lowerSearch)
       );
     }
 
     return { success: true, data: filteredTasks };
   } catch (_error: any) {
-    console.error('加载安装任务列表失败 - 详细错误:', {
-      message: _error.message,
-      stack: _error.stack,
-      cause: _error.cause,
-      name: _error.name,
-      detail: JSON.stringify(_error)
-    });
+    logger.error('加载安装任务列表失败:', _error);
     return { success: false, error: `系统错误: ${_error.message}` };
   }
 }
@@ -314,7 +309,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
 
     return { success: true, message: '安装任务已创建' };
   } catch (_error) {
-    console.error('创建任务失败:', _error);
+    logger.error('创建任务失败:', _error);
     return { success: false, error: '新建任务失败' };
   }
 });
@@ -414,7 +409,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
           taskInfo.taskNo,
           '安装任务',
           taskInfo.scheduledDate ? new Date(taskInfo.scheduledDate).toLocaleString('zh-CN') : '尽快'
-        ).catch(console.error);
+        ).catch((err) => logger.error('通知发送失败:', err));
       }
     }
 
@@ -512,7 +507,7 @@ const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (da
       },
     };
   } catch (_error) {
-    console.error('签到异常:', _error);
+    logger.error('签到异常:', _error);
     return { success: false, error: '签到异常' };
   }
 });

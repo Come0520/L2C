@@ -69,7 +69,6 @@
     "@tanstack/react-query": "^5.90.16",
     "@types/decimal.js": "^7.4.3",
     "@types/matter-js": "^0.20.2",
-    "@types/react-grid-layout": "^2.1.0",
     "@types/react-signature-canvas": "^1.0.7",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",

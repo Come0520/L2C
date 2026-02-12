@@ -75,28 +75,31 @@ fi
 # 6. 打包并同步
 echo "打包同步关键配置文件..."
 # 包含 standalone, static, public, 以及 Dockerfile.prod 和 环境变量文件
-FILES_TO_TAR=".next/standalone .next/static public docker-compose.prod.yml package.json pnpm-lock.yaml scripts/ Dockerfile Dockerfile.prod nginx/"
-if [ -n "$ENV_FILE" ]; then
-    FILES_TO_TAR="$FILES_TO_TAR $ENV_FILE"
-fi
+# 5. 打包文件 (包含 standalone 和 static 资源，排除 node_modules) -> 修复：排除 .next/cache 和 .git
+echo "📦 Packaging..."
+# Use strict inclusion to avoid huge files like RocksDB cache
+tar -czf release.tar.gz \
+    .next/standalone/server.js \
+    .next/standalone/.next \
+    .next/static \
+    public \
+    docker-compose.prod.yml \
+    package.json \
+    pnpm-lock.yaml \
+    scripts/ \
+    Dockerfile \
+    Dockerfile.prod \
+    nginx/ \
+    .env.production \
+    drizzle/ \
+    drizzle.config.ts
 
-tar -czf release.tar.gz $FILES_TO_TAR
-scp release.tar.gz root@$ECS_HOST:/root/L2C/
+# 6. 上传到服务器
+echo "🚀 Uploading to server..."
+scp -i deploy_key.pem -o StrictHostKeyChecking=no release.tar.gz root@106.15.43.218:/root/L2C/
 
-# 7. 远程部署
-echo "在服务器重启服务 (终极合体)..."
-ssh root@$ECS_HOST << 'EOF'
-  cd /root/L2C
-  tar -xzf release.tar.gz
-  
-  # 如果上传的是 .env.production，重命名为 .env 供 docker-compose 使用
-  if [ -f .env.production ]; then
-    mv .env.production .env
-  fi
-
-  docker compose -f docker-compose.prod.yml down
-  docker compose -f docker-compose.prod.yml up -d --build
-  docker system prune -f
-EOF
+# 7. 远程执行部署
+echo "🔄 Deploying on server..."
+ssh -i deploy_key.pem -o StrictHostKeyChecking=no root@106.15.43.218 "cd /root/L2C && tar -xzf release.tar.gz && if [ -f .env.production ]; then mv .env.production .env; fi && mkdir -p uploads && chmod 777 uploads && docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d --build --remove-orphans && docker system prune -f"
 
 echo "=== 部署完成！请访问 http://106.15.43.218 ==="

@@ -10,7 +10,7 @@ async function main() {
 
     for (const u of users) {
         const t = tenants.find(t => t.id === u.tenantId);
-        console.log(`电话: ${u.phone} | 名称: ${u.name} | 租户: ${t?.name || 'Unknown'}`);
+        console.log(`ID: ${u.id} | 电话: ${u.phone} | 名称: ${u.name} | 租户: ${t?.name || 'Unknown'} | 租户ID: ${u.tenantId}`);
     }
 
     process.exit(0);

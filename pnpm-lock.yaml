@@ -83,9 +83,6 @@ importers:
       '@types/matter-js':
         specifier: ^0.20.2
         version: 0.20.2
-      '@types/react-grid-layout':
-        specifier: ^2.1.0
-        version: 2.1.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@types/react-signature-canvas':
         specifier: ^1.0.7
         version: 1.0.7
@@ -2576,10 +2573,6 @@ packages:
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
-
-  '@types/react-grid-layout@2.1.0':
-    resolution: {integrity: sha512-pHEjVg9ert6BDFHFQ1IEdLUkd2gasJvyti5lV2kE46N/R07ZiaSZpAXeXJAA1MXy/Qby23fZmiuEgZkITxPXug==}
-    deprecated: This is a stub types definition. react-grid-layout provides its own type definitions, so you do not need this installed.
 
   '@types/react-signature-canvas@1.0.7':
     resolution: {integrity: sha512-0ulzaUvcIQ0HdNB5fHj+KE7ztWhlhYRsi65TdPIRj/t+FD5Rr8NJKBv4/xLViz7HsUh/tgqsoyKeARrm9+gPIg==}
@@ -8124,13 +8117,6 @@ snapshots:
   '@types/react-dom@19.2.3(@types/react@19.2.7)':
     dependencies:
       '@types/react': 19.2.7
-
-  '@types/react-grid-layout@2.1.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      react-grid-layout: 1.4.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-    transitivePeerDependencies:
-      - react
-      - react-dom
 
   '@types/react-signature-canvas@1.0.7':
     dependencies:

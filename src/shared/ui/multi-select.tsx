@@ -51,11 +51,12 @@ export function MultiSelect({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <div
           role="combobox"
           aria-expanded={open}
+          aria-controls="multi-select-listbox"
           className={cn(
             'group border-input ring-offset-background placeholder:text-muted-foreground focus-within:ring-ring flex min-h-[2.5rem] w-full cursor-text flex-wrap items-center justify-between rounded-md border bg-transparent px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             className
@@ -96,7 +97,7 @@ export function MultiSelect({
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search..." />
-          <CommandList>
+          <CommandList id="multi-select-listbox">
             <CommandEmpty>No item found.</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {options.map((option) => (
@@ -104,9 +105,7 @@ export function MultiSelect({
                   key={option.value}
                   value={option.value}
                   keywords={[option.label]}
-                  onSelect={(_currentValue) => {
-                    // _currentValue from cmdk is often the label or lowercased value.
-                    // We explicitly use option.value to ensure correctness.
+                  onSelect={() => {
                     handleSelect(option.value);
                     setOpen(true);
                   }}

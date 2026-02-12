@@ -6,6 +6,7 @@ import { ROLES } from '@/shared/config/roles';
 import { auth } from '@/shared/lib/auth';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 角色管理 Server Actions
@@ -76,7 +77,7 @@ export async function syncSystemRoles() {
       details: results,
     };
   } catch (error) {
-    console.error('同步系统角色失败:', error);
+    logger.error('同步系统角色失败:', error);
     return { success: false, message: '同步失败，请查看日志' };
   }
 }
@@ -121,7 +122,7 @@ export async function createRole(data: {
     revalidatePath('/settings/roles');
     return { success: true, message: '角色创建成功' };
   } catch (error) {
-    console.error('创建角色失败:', error);
+    logger.error('创建角色失败:', error);
     return { success: false, message: '创建失败' };
   }
 }
@@ -171,7 +172,7 @@ export async function updateRole(
     revalidatePath('/settings/roles');
     return { success: true, message: '角色更新成功' };
   } catch (error) {
-    console.error('更新角色失败:', error);
+    logger.error('更新角色失败:', error);
     return { success: false, message: '更新失败' };
   }
 }
@@ -206,7 +207,7 @@ export async function deleteRole(id: string) {
     revalidatePath('/settings/roles');
     return { success: true, message: '角色已删除' };
   } catch (error) {
-    console.error('删除角色失败:', error);
+    logger.error('删除角色失败:', error);
     return { success: false, message: '删除失败' };
   }
 }

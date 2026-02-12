@@ -98,10 +98,12 @@ export async function GET(request: NextRequest) {
 function getRoleName(role: string | null) {
   const roles: Record<string, string> = {
     ADMIN: '管理员',
-    MANAGER: '主管',
-    SALESPERSON: '销售',
-    STAFF: '员工',
-    INSTALLER: '安装师傅',
+    MANAGER: '经理',
+    SALES: '销售员',
+    FINANCE: '财务',
+    SUPPLY: '供应链',
+    DISPATCHER: '调度员',
+    WORKER: '工人',
     CUSTOMER: '客户',
   };
   return role ? roles[role] || role : '未知';

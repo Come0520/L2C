@@ -4,6 +4,7 @@ import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 import { roles } from '@/shared/api/schema';
 import { eq, asc } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
 
 export type RoleOption = {
   label: string;
@@ -27,9 +28,6 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
     });
 
     if (dbRoles.length === 0) {
-      // Auto-initialize default roles for the tenant
-      console.log(`Initializing default roles for tenant: ${session.user.tenantId}`);
-
       const newRoles = DEFAULT_ROLES.map((role) => ({
         tenantId: session.user.tenantId,
         name: role.name,
@@ -62,7 +60,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
       isSystem: r.isSystem || false,
     }));
   } catch (error) {
-    console.error('Failed to fetch roles:', error);
+    logger.error('Failed to fetch roles:', error);
     return [];
   }
 }

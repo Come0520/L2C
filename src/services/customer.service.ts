@@ -80,6 +80,10 @@ export class CustomerService {
           address: addressData.address,
           isDefault: true,
           label: '默认',
+          province: null,
+          city: null,
+          district: null,
+          community: null,
         });
       }
 

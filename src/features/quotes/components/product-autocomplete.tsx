@@ -6,6 +6,7 @@ import * as React from 'react';
 import { Check, ChevronsUpDown, Loader2, Clock } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { cn } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/ui/button';
 import {
   Command,
@@ -113,7 +114,7 @@ export function ProductAutocomplete({
         setData(results);
         cacheRef.current[cacheKey] = results;
       } catch (error) {
-        console.error('搜索商品失败:', error);
+        logger.error('搜索商品失败:', error);
         setData([]);
       } finally {
         setLoading(false);
@@ -126,7 +127,6 @@ export function ProductAutocomplete({
   // 处理商品选择，同时记录到最近使用
   const handleSelect = React.useCallback(
     (product: ProductSearchResult) => {
-      // 记录到最近使用
       addRecentProduct({
         id: product.id,
         name: product.name,
@@ -135,11 +135,9 @@ export function ProductAutocomplete({
         unitPrice: product.unitPrice,
       });
 
-      // 调用原始回调
       onSelect(product);
       setOpen(false);
 
-      // 清除缓存，下次打开时刷新数据
       cacheRef.current = {};
     },
     [onSelect, addRecentProduct]
@@ -195,7 +193,7 @@ export function ProductAutocomplete({
               {data.map((product) => (
                 <CommandItem
                   key={product.id}
-                  value={product.id}
+                  value={product.name}
                   onSelect={() => {
                     handleSelect(product);
                   }}

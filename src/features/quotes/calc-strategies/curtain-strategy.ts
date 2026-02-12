@@ -1,4 +1,5 @@
 import { BaseCalcStrategy } from './base-strategy';
+import { logger } from '@/shared/lib/logger';
 
 export interface CurtainCalcParams {
   measuredWidth: number; // 测量宽度 (cm)
@@ -68,6 +69,35 @@ export class CurtainStrategy extends BaseCalcStrategy {
       headerType = 'WRAPPED',
       openingType = 'DOUBLE',
     } = params;
+
+    const emptyResult = (): CurtainCalcResult => ({
+      usage: 0,
+      subtotal: 0,
+      details: {
+        finishedWidth: 0,
+        finishedHeight: 0,
+        cutWidth: 0,
+        cutHeight: 0,
+        fabricWidthCm: 0,
+      },
+    });
+
+    if (isNaN(measuredWidth) || measuredWidth <= 0) {
+      logger.warn('[CurtainStrategy] measuredWidth 无效', measuredWidth);
+      return emptyResult();
+    }
+    if (isNaN(measuredHeight) || measuredHeight <= 0) {
+      logger.warn('[CurtainStrategy] measuredHeight 无效', measuredHeight);
+      return emptyResult();
+    }
+    if (isNaN(fabricWidth) || fabricWidth <= 0) {
+      logger.warn('[CurtainStrategy] fabricWidth 无效', fabricWidth);
+      return emptyResult();
+    }
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      logger.warn('[CurtainStrategy] unitPrice 无效', unitPrice);
+      return emptyResult();
+    }
 
     // 1. Determine Losses
     // Side Loss Logic:

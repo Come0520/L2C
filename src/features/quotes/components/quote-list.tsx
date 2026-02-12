@@ -1,17 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from '@/shared/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { getQuotes } from '@/features/quotes/actions/queries';
 import { createQuote } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
@@ -26,197 +19,215 @@ import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 
 // Tab 配置：定义每个 Tab 对应的状态列表
 const QUOTE_TABS = [
-    { value: 'ALL', label: '全部', statuses: [] },
-    { value: 'DRAFT', label: '草稿', statuses: ['DRAFT'] },
-    { value: 'PENDING_APPROVAL', label: '待审批', statuses: ['PENDING_APPROVAL'] },
-    { value: 'PENDING_CUSTOMER', label: '待客户确认', statuses: ['PENDING_CUSTOMER'] },
-    { value: 'ACCEPTED', label: '已成交', statuses: ['ACCEPTED'] },
-    { value: 'CLOSED', label: '已关闭', statuses: ['REJECTED', 'EXPIRED'] },
+  { value: 'ALL', label: '全部', statuses: [] },
+  { value: 'DRAFT', label: '草稿', statuses: ['DRAFT'] },
+  { value: 'PENDING_APPROVAL', label: '待审批', statuses: ['PENDING_APPROVAL'] },
+  { value: 'PENDING_CUSTOMER', label: '待客户确认', statuses: ['PENDING_CUSTOMER'] },
+  { value: 'ACCEPTED', label: '已成交', statuses: ['ACCEPTED'] },
+  { value: 'CLOSED', label: '已关闭', statuses: ['REJECTED', 'EXPIRED'] },
 ] as const;
 
 // 状态显示名称映射
 const STATUS_LABELS: Record<string, string> = {
-    'DRAFT': '草稿',
-    'PENDING_APPROVAL': '待审批',
-    'PENDING_CUSTOMER': '待客户确认',
-    'ACCEPTED': '已接受',
-    'REJECTED': '已拒绝',
-    'EXPIRED': '已过期',
+  DRAFT: '草稿',
+  PENDING_APPROVAL: '待审批',
+  PENDING_CUSTOMER: '待客户确认',
+  ACCEPTED: '已接受',
+  REJECTED: '已拒绝',
+  EXPIRED: '已过期',
 };
 
 export function QuoteList() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const { data: session } = useSession();
-    const [quotes, setQuotes] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    // 当前选中的 Tab 从 URL 获取
-    const activeTab = searchParams.get('status') || 'ALL';
-    // 控制客户选择弹窗
-    const [dialogOpen, setDialogOpen] = useState(false);
-    // 创建报价单的加载状态
-    const [creating, setCreating] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const activeTab = searchParams.get('status') || 'ALL';
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-    // 根据 Tab 获取对应的状态列表
-    const getStatusesForTab = useCallback((tabValue: string): string[] => {
-        const tab = QUOTE_TABS.find(t => t.value === tabValue);
-        return tab?.statuses ? [...tab.statuses] : [];
-    }, []);
+  const lastLoadedTabRef = useRef<string | null>(null);
 
-    // 加载报价单列表
-    const loadQuotes = useCallback(async (statuses: string[]) => {
-        setLoading(true);
-        try {
-            const { data } = await getQuotes({
-                statuses: statuses.length > 0 ? statuses : undefined
-            });
-            setQuotes(data || []);
-        } catch (error) {
-            console.error(error);
-            toast.error('加载失败');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+  const getStatusesForTab = useCallback((tabValue: string): string[] => {
+    const tab = QUOTE_TABS.find((t) => t.value === tabValue);
+    return tab?.statuses ? [...tab.statuses] : [];
+  }, []);
 
-    // 当 Tab 切换时重新加载数据
-    useEffect(() => {
-        const statuses = getStatusesForTab(activeTab);
-        loadQuotes(statuses);
-    }, [activeTab, loadQuotes, getStatusesForTab]);
+  const loadQuotes = useCallback(async (statuses: string[], tabValue: string) => {
+    if (lastLoadedTabRef.current === tabValue) {
+      return;
+    }
+    lastLoadedTabRef.current = tabValue;
 
+    setLoading(true);
+    try {
+      const { data } = await getQuotes({
+        statuses: statuses.length > 0 ? statuses : undefined,
+      });
+      setQuotes(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
+    const statuses = getStatusesForTab(activeTab);
+    loadQuotes(statuses, activeTab);
+  }, [activeTab, loadQuotes, getStatusesForTab]);
 
-    /**
-     * 点击新建报价按钮，打开客户选择弹窗
-     */
-    const handleCreate = () => {
-        setDialogOpen(true);
-    };
+  /**
+   * 点击新建报价按钮，打开客户选择弹窗
+   */
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
 
-    /**
-     * 客户选择确认后，创建报价单
-     */
-    const handleCustomerSelected = async (customerId: string) => {
-        setCreating(true);
-        try {
-            const result = await createQuote({ customerId });
-            if (result.data) {
-                toast.success('报价单创建成功');
-                setDialogOpen(false);
-                // 跳转到报价单详情页
-                router.push(`/quotes/${result.data.id}`);
-            } else if (result.error) {
-                toast.error(`创建失败: ${result.error}`);
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error('创建报价单失败');
-        } finally {
-            setCreating(false);
-        }
-    };
+  /**
+   * 客户选择确认后，创建报价单
+   */
+  const handleCustomerSelected = async (customerId: string) => {
+    setCreating(true);
+    try {
+      const result = await createQuote({ customerId });
+      if (result.data) {
+        toast.success('报价单创建成功');
+        setDialogOpen(false);
+        // 跳转到报价单详情页
+        router.push(`/quotes/${result.data.id}`);
+      } else if (result.error) {
+        toast.error(`创建失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('创建报价单失败');
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    // 获取用户和租户 ID
-    const userId = session?.user?.id || '';
-    const tenantId = session?.user?.tenantId || '';
+  const userId = session?.user?.id || '';
+  const tenantId = session?.user?.tenantId || '';
 
-    // 手动刷新逻辑（如果需要，或者 DataTableToolbar 可选不传 onRefresh）
-    const handleRefresh = useCallback(() => {
-        const statuses = getStatusesForTab(activeTab);
-        loadQuotes(statuses);
-        toast.success('已刷新');
-    }, [activeTab, loadQuotes, getStatusesForTab]);
+  const handleRefresh = useCallback(() => {
+    lastLoadedTabRef.current = null;
+    const statuses = getStatusesForTab(activeTab);
+    loadQuotes(statuses, activeTab);
+    toast.success('已刷新');
+  }, [activeTab, loadQuotes, getStatusesForTab]);
 
-    return (
-        <div className="h-full flex flex-col gap-4 p-4">
-            {/* Header Section - Tabs 和新建按钮同一行 */}
-            <div className="flex items-center justify-between">
-                <UrlSyncedTabs
-                    tabs={QUOTE_TABS}
-                    paramName="status"
-                    defaultValue="ALL"
-                    layoutId="quotes-status-tabs"
-                />
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" asChild className="h-9">
-                        <Link href="/quotes/templates">
-                            <Layout className="mr-2 h-4 w-4" /> 报价模板
-                        </Link>
-                    </Button>
-                    <Button onClick={handleCreate} disabled={creating} className="h-9">
-                        <Plus className="mr-2 h-4 w-4" /> 新建报价
-                    </Button>
-                </div>
-            </div>
-
-            {/* 主内容区域 - 玻璃态容器 */}
-            <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-2xl border border-white/20 p-4 gap-4">
-                <DataTableToolbar
-                    searchProps={{
-                        value: "",
-                        onChange: () => { },
-                        placeholder: "搜索报价单..."
-                    }}
-                    onRefresh={handleRefresh}
-                    loading={loading}
-                >
-                    <div className="w-[240px]">
-                        <DatePickerWithRange />
-                    </div>
-                </DataTableToolbar>
-
-                <div className="flex-1 overflow-auto rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>报价单号</TableHead>
-                                <TableHead>客户</TableHead>
-                                <TableHead>状态</TableHead>
-                                <TableHead className="text-right">总金额</TableHead>
-                                <TableHead>创建人</TableHead>
-                                <TableHead>创建时间</TableHead>
-                                <TableHead className="text-right">操作</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center h-24">加载中...</TableCell>
-                                </TableRow>
-                            ) : quotes.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center h-24">暂无报价单</TableCell>
-                                </TableRow>
-                            ) : (
-                                quotes.map((quote) => (
-                                    <TableRow key={quote.id} className="cursor-pointer" onClick={() => router.push(`/quotes/${quote.id}`)}>
-                                        <TableCell className="font-medium">{quote.quoteNo}</TableCell>
-                                        <TableCell>{quote.customer?.name || '-'}</TableCell>
-                                        <TableCell>{STATUS_LABELS[quote.status] || quote.status}</TableCell>
-                                        <TableCell className="text-right">¥{quote.finalAmount}</TableCell>
-                                        <TableCell>{quote.creator?.name || '-'}</TableCell>
-                                        <TableCell>{quote.createdAt ? format(new Date(quote.createdAt), 'yyyy-MM-dd HH:mm') : '-'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); router.push(`/quotes/${quote.id}`); }}>编辑</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* 客户选择弹窗 */}
-            <SelectCustomerDialog
-                open={dialogOpen}
-                onOpenChange={setDialogOpen}
-                onConfirm={handleCustomerSelected}
-                userId={userId}
-                tenantId={tenantId}
-            />
+  return (
+    <div className="flex h-full flex-col gap-4 p-4">
+      {/* Header Section - Tabs 和新建按钮同一行 */}
+      <div className="flex items-center justify-between">
+        <UrlSyncedTabs
+          tabs={QUOTE_TABS}
+          paramName="status"
+          defaultValue="ALL"
+          layoutId="quotes-status-tabs"
+        />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild className="h-9">
+            <Link href="/quotes/templates">
+              <Layout className="mr-2 h-4 w-4" /> 报价模板
+            </Link>
+          </Button>
+          <Button onClick={handleCreate} disabled={creating} className="h-9">
+            <Plus className="mr-2 h-4 w-4" /> 新建报价
+          </Button>
         </div>
-    );
-}
+      </div>
 
+      {/* 主内容区域 - 玻璃态容器 */}
+      <div className="glass-liquid-ultra flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/20 p-4">
+        <DataTableToolbar
+          searchProps={{
+            value: '',
+            onChange: () => {},
+            placeholder: '搜索报价单...',
+          }}
+          onRefresh={handleRefresh}
+          loading={loading}
+        >
+          <div className="w-[240px]">
+            <DatePickerWithRange />
+          </div>
+        </DataTableToolbar>
+
+        <div className="flex-1 overflow-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>报价单号</TableHead>
+                <TableHead>客户</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead className="text-right">总金额</TableHead>
+                <TableHead>创建人</TableHead>
+                <TableHead>创建时间</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    加载中...
+                  </TableCell>
+                </TableRow>
+              ) : quotes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    暂无报价单
+                  </TableCell>
+                </TableRow>
+              ) : (
+                quotes.map((quote) => (
+                  <TableRow
+                    key={quote.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/quotes/${quote.id}`)}
+                  >
+                    <TableCell className="font-medium">{quote.quoteNo}</TableCell>
+                    <TableCell>{quote.customer?.name || '-'}</TableCell>
+                    <TableCell>{STATUS_LABELS[quote.status] || quote.status}</TableCell>
+                    <TableCell className="text-right">¥{quote.finalAmount}</TableCell>
+                    <TableCell>{quote.creator?.name || '-'}</TableCell>
+                    <TableCell>
+                      {quote.createdAt
+                        ? format(new Date(quote.createdAt), 'yyyy-MM-dd HH:mm')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/quotes/${quote.id}`);
+                        }}
+                      >
+                        编辑
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* 客户选择弹窗 */}
+      <SelectCustomerDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onConfirm={handleCustomerSelected}
+        userId={userId}
+        tenantId={tenantId}
+      />
+    </div>
+  );
+}

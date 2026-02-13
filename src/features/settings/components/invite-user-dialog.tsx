@@ -12,7 +12,7 @@ import {
 } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { MultiSelect } from '@/shared/ui/multi-select';
 import { Loader2, Copy, Check, UserPlus } from 'lucide-react';
 import { createEmployeeInviteLink } from '@/features/settings/actions/invite';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
@@ -25,7 +25,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
-  const [role, setRole] = useState<string>('SALES');
+  const [roles, setRoles] = useState<string[]>(['SALES']);
   const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -40,9 +40,9 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
           .then((options) => {
             setRoleOptions(options);
             // 如果没有选中角色且选项加载完成，默认选中第一个（通常是 SALES）
-            if (!role && options.length > 0) {
+            if (roles.length === 0 && options.length > 0) {
               const defaultRole = options.find((r) => r.value === 'SALES') || options[0];
-              setRole(defaultRole.value);
+              setRoles([defaultRole.value]);
             }
           })
           .catch((err) => {
@@ -53,19 +53,19 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
           });
       }
     }
-  }, [open, availableRoles, role]);
+  }, [open, availableRoles, roles]);
 
   const handleGenerateLink = async () => {
     setLoading(true);
     try {
       // 参数校验
-      if (!role) {
-        alert('请选择一个角色');
+      if (roles.length === 0) {
+        alert('请至少选择一个角色');
         setLoading(false);
         return;
       }
-      // 将单选角色封装为数组传给后端 action
-      const result = await createEmployeeInviteLink([role]);
+      // 直接传角色数组给后端 action
+      const result = await createEmployeeInviteLink(roles);
       if (result.success && result.link) {
         setInviteLink(result.link);
       } else {
@@ -119,18 +119,12 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
                 <span>加载角色中...</span>
               </div>
             ) : (
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择角色..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={roleOptions}
+                selected={roles}
+                onChange={setRoles}
+                placeholder="选择默认分配的角色..."
+              />
             )}
           </div>
 

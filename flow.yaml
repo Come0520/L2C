@@ -1,5 +1,6 @@
 version: '1.0'
 name: L2C-Production-Deploy
+
 sources:
   my_repo:
     type: codeup
@@ -9,35 +10,58 @@ sources:
     trigger_events:
       - push
 
+envs:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.27.0'
+
 stages:
-  - stage: 
+  - stage:
       name: build-stage
       displayName: Build Stage
       steps:
-        - step: 
+        - step:
             name: build-image
             displayName: Build and Package
-            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:16
+            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:20
             script:
-              - echo "Start building..."
-              - npm install -g pnpm
-              - pnpm install
-              - pnpm install
+              - echo "=== L2C Production Build ==="
+              - echo "Node version: $(node -v)"
+              - echo "NPM version: $(npm -v)"
+
+              - echo "Installing pnpm ${PNPM_VERSION}..."
+              - npm install -g pnpm@${PNPM_VERSION}
+
+              - echo "Installing dependencies with frozen lockfile..."
+              - pnpm install --frozen-lockfile
+
+              - echo "Injecting version information..."
               - export NEXT_PUBLIC_GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
-              - echo "Current Commit SHA: $NEXT_PUBLIC_GIT_COMMIT_SHA"
+              - export NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+              - echo "Commit SHA: $NEXT_PUBLIC_GIT_COMMIT_SHA"
+              - echo "Build Time: $NEXT_PUBLIC_BUILD_TIME"
+
+              - echo "Building Next.js application..."
               - pnpm build
-              - echo "Packaging..."
-              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prod package.json pnpm-lock.yaml scripts/ .env nginx/
+
+              - echo "Verifying build output..."
+              - ls -la .next/standalone/ || { echo "ERROR: standalone build missing!"; exit 1; }
+              - ls -la .next/static/ || { echo "ERROR: static build missing!"; exit 1; }
+
+              - echo "Packaging release..."
+              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prod package.json pnpm-lock.yaml scripts/ nginx/ drizzle/ drizzle.config.ts
+
+              - echo "Moving artifact to output path..."
               - mv release.tar.gz $FLOW_ARTIFACT_PATH/
+
             artifacts:
               - name: release-package
                 path: ./release.tar.gz
 
-  - stage: 
+  - stage:
       name: deploy-stage
       displayName: Deploy to ECS
       steps:
-        - step: 
+        - step:
             name: deploy-script
             displayName: Deploy Script
             image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
@@ -46,26 +70,58 @@ stages:
               ECS_SSH_KEY_B64: $ECS_SSH_KEY_B64
               ECS_USER: root
             script:
-              - echo "Deploying to $ECS_HOST..."
+              - echo "=== Deploying to $ECS_HOST ==="
+
               - mkdir -p ~/.ssh
               - echo "$ECS_SSH_KEY_B64" | tr -d '\n\r ' | base64 -d > ~/.ssh/id_rsa
               - chmod 600 ~/.ssh/id_rsa
               - echo -e "Host $ECS_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+
               - mkdir -p deploy_temp
               - cp $FLOW_ARTIFACT_PATH/release.tar.gz deploy_temp/
               - scp deploy_temp/release.tar.gz $ECS_USER@$ECS_HOST:/root/L2C/release.tar.gz
+
               - |
-                ssh $ECS_USER@$ECS_HOST << 'EOF'
+                ssh $ECS_USER@$ECS_HOST << 'DEPLOY_EOF'
+                  set -e
+                  echo "=== Starting deployment on ECS ==="
+
                   cd /root/L2C
-                  tar -xzf release.tar.gz
-                  # 强制覆盖 .env，确保配置更新
+
+                  echo "Backing up current .env..."
                   if [ -f .env ]; then
-                    echo "Updating .env file..."
-                    tar -xzf release.tar.gz .env
+                    cp .env .env.backup.$(date +%Y%m%d%H%M%S)
+                    echo ".env backed up successfully."
+                  else
+                    echo "WARNING: No existing .env file found!"
                   fi
-                  docker compose -f docker-compose.prod.yml down
+
+                  echo "Extracting new release..."
+                  tar -xzf release.tar.gz
+
+                  echo "Checking .env file..."
+                  if [ ! -f .env ]; then
+                    echo "ERROR: .env file is missing! Please ensure .env exists on server."
+                    exit 1
+                  fi
+
+                  echo "Stopping existing containers..."
+                  docker compose -f docker-compose.prod.yml down || true
+
+                  echo "Building and starting new containers..."
                   docker compose -f docker-compose.prod.yml up -d --build
-                  rm release.tar.gz
+
+                  echo "Waiting for health check..."
+                  sleep 10
+
+                  echo "Checking container status..."
+                  docker compose -f docker-compose.prod.yml ps
+
+                  echo "Cleaning up..."
+                  rm -f release.tar.gz
                   docker system prune -f
-                EOF
-              - echo "Deployment finished!"
+
+                  echo "=== Deployment completed successfully ==="
+                DEPLOY_EOF
+
+              - echo "=== Deployment finished! ==="

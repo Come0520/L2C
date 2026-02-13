@@ -1,14 +1,11 @@
-
 FROM node:20-alpine AS base
-# Removed npmmirror due to connection stability issues
-
-FROM base AS runner
-WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Enable Pnpm and Tsx capability for runtime scripts
+FROM base AS runner
+WORKDIR /app
+
 ENV PNPM_HOME="/app/.pnpm"
 ENV PATH="/app/.local/bin:$PNPM_HOME:$PATH"
 RUN corepack enable pnpm
@@ -16,21 +13,15 @@ RUN corepack enable pnpm
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy project definition
 COPY package.json pnpm-lock.yaml ./
 
-# Install production dependencies
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
-# Copy standalone build artifacts (excluding node_modules)
 COPY .next/standalone/server.js ./
-# Note: copying folders
 COPY .next/standalone/.next ./.next
-# Handle public assets if they exists in standalone or root
 COPY public ./public
 COPY .next/static ./.next/static
 
-# Copy other necessary files
 COPY drizzle ./drizzle
 COPY drizzle.config.ts ./
 COPY scripts ./scripts

@@ -1,19 +1,29 @@
 {
-    "mcpServers": {
-        "postgres": {
-            "command": "docker",
-            "args": [
-                "run",
-                "-i",
-                "--rm",
-                "-e",
-                "POSTGRES_URL",
-                "mcp/postgres",
-                "$POSTGRES_URL"
-            ],
-            "env": {
-                "POSTGRES_URL": "postgresql://l2c_user:l2c_dev_password@host.docker.internal:5433/l2c_dev"
-            }
-        }
+  "mcpServers": {
+    "postgres": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "POSTGRES_URL", "mcp/postgres", "$POSTGRES_URL"],
+      "env": {
+        "POSTGRES_URL": "postgresql://l2c_user:l2c_dev_password@host.docker.internal:5433/l2c_dev"
+      }
+    },
+    "alibabacloud-rds": {
+      "command": "uvx",
+      "args": ["alibabacloud-rds-openapi-mcp-server@latest"],
+      "env": {
+        "ALIBABA_CLOUD_ACCESS_KEY_ID": "${ALIBABA_CLOUD_ACCESS_KEY_ID}",
+        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "${ALIBABA_CLOUD_ACCESS_KEY_SECRET}",
+        "ALIBABA_CLOUD_REGION_ID": "cn-shanghai"
+      }
+    },
+    "alibabacloud-dms": {
+      "command": "uv",
+      "args": ["--directory", "./dms-mcp", "run", "alibabacloud-dms-mcp-server"],
+      "env": {
+        "ALIBABA_CLOUD_ACCESS_KEY_ID": "${ALIBABA_CLOUD_ACCESS_KEY_ID}",
+        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "${ALIBABA_CLOUD_ACCESS_KEY_SECRET}",
+        "CONNECTION_STRING": "l2c@pgm-uf6aq31y169c8wvl.pg.rds.aliyuncs.com:5432"
+      }
     }
+  }
 }

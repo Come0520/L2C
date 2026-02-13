@@ -47,6 +47,9 @@ test_*.txt
 # env files (can opt-in for committing if needed)
 .env*
 
+# Antigravity MCP secrets (AccessKey/密码)
+.antigravity/.env
+
 # vercel
 .vercel
 

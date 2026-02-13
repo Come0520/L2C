@@ -7,31 +7,17 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
-import { Checkbox } from '@/shared/ui/checkbox';
+import { MultiSelect } from '@/shared/ui/multi-select';
 import { updateUser } from '@/features/settings/actions/user-actions';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface UserData {
-  id: string;
-  name?: string;
-  roles?: string[];
-  role?: string;
-  isActive?: boolean;
-}
-
 interface UserFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: UserData;
+  initialData?: any;
   onSuccess: () => void;
   availableRoles?: { label: string; value: string }[];
-}
-
-interface FormData {
-  name: string;
-  roles: string[];
-  isActive: boolean;
 }
 
 export function UserForm({
@@ -54,18 +40,13 @@ export function UserForm({
     if (open && initialData) {
       form.reset({
         name: initialData.name || '',
-        roles:
-          Array.isArray(initialData.roles) && initialData.roles.length > 0
-            ? initialData.roles
-            : initialData.role
-              ? [initialData.role]
-              : [],
+        roles: initialData.roles || (initialData.role ? [initialData.role] : []) || [],
         isActive: initialData.isActive ?? true,
       });
     }
   }, [open, initialData, form]);
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: any) => {
     if (!initialData?.id) return;
 
     setLoading(true);
@@ -83,7 +64,7 @@ export function UserForm({
       } else {
         toast.error(result.error || '更新失败');
       }
-    } catch (_e) {
+    } catch (e) {
       toast.error('更新失败');
     } finally {
       setLoading(false);
@@ -103,41 +84,18 @@ export function UserForm({
             <Input {...form.register('name')} placeholder="用户姓名" />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label>角色</Label>
-            <div className="bg-muted/30 grid grid-cols-2 gap-4 rounded-lg border p-4">
-              {availableRoles.map((role) => (
-                <div key={role.value} className="flex flex-row items-center space-y-0 space-x-3">
-                  <Checkbox
-                    id={`role-${role.value}`}
-                    checked={form.watch('roles').includes(role.value)}
-                    onCheckedChange={(checked) => {
-                      const currentRoles = form.getValues('roles') || [];
-                      if (checked) {
-                        form.setValue('roles', [...currentRoles, role.value]);
-                      } else {
-                        form.setValue(
-                          'roles',
-                          currentRoles.filter((r) => r !== role.value)
-                        );
-                      }
-                    }}
-                  />
-                  <Label
-                    htmlFor={`role-${role.value}`}
-                    className="cursor-pointer text-sm leading-none font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {role.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            <MultiSelect
+              options={availableRoles}
+              selected={form.watch('roles')}
+              onChange={(vals) => form.setValue('roles', vals)}
+              placeholder="选择角色..."
+            />
           </div>
 
-          <div className="flex items-center justify-between space-x-2 pt-2">
-            <Label htmlFor="active-mode" className="cursor-pointer">
-              账号状态 (启用/禁用)
-            </Label>
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="active-mode">账号状态 (启用/禁用)</Label>
             <Switch
               id="active-mode"
               checked={form.watch('isActive')}

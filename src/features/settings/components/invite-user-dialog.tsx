@@ -18,14 +18,14 @@ import { createEmployeeInviteLink } from '@/features/settings/actions/invite';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
 
 interface InviteUserDialogProps {
-  availableRoles?: { label: string; value: string }[] | null;
+  availableRoles?: { label: string; value: string }[];
 }
 
 export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
-  const [roles, setRoles] = useState<string[]>(['SALES']);
+  const [roles, setRoles] = useState<string[]>(['STAFF']);
   const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -39,11 +39,6 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
         getAvailableRoles()
           .then((options) => {
             setRoleOptions(options);
-            // 如果没有选中角色且选项加载完成，默认选中第一个（通常是 SALES）
-            if (roles.length === 0 && options.length > 0) {
-              const defaultRole = options.find((r) => r.value === 'SALES') || options[0];
-              setRoles([defaultRole.value]);
-            }
           })
           .catch((err) => {
             console.error('Failed to load roles:', err);
@@ -53,7 +48,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
           });
       }
     }
-  }, [open, availableRoles, roles]);
+  }, [open, availableRoles]);
 
   const handleGenerateLink = async () => {
     setLoading(true);
@@ -64,11 +59,11 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
         setLoading(false);
         return;
       }
-      // 直接传角色数组给后端 action
       const result = await createEmployeeInviteLink(roles);
       if (result.success && result.link) {
         setInviteLink(result.link);
       } else {
+        // simple alert for now, could be toast
         alert(result.error || '生成失败');
       }
     } catch (e) {
@@ -123,7 +118,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
                 options={roleOptions}
                 selected={roles}
                 onChange={setRoles}
-                placeholder="选择默认分配的角色..."
+                placeholder="选择角色..."
               />
             )}
           </div>

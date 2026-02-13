@@ -14,7 +14,6 @@ import {
   verifyInviteToken,
 } from '@/shared/lib/invite-token';
 import { revalidatePath } from 'next/cache';
-import { logger } from '@/shared/lib/logger';
 
 // ============================================================
 // 员工邀请
@@ -46,7 +45,7 @@ export async function createEmployeeInviteLink(defaultRoles?: string[]) {
     );
     return { success: true, link };
   } catch (error) {
-    logger.error('生成员工邀请链接失败:', error);
+    console.error('生成员工邀请链接失败:', error);
     return { success: false, error: '生成邀请链接失败' };
   }
 }
@@ -72,7 +71,7 @@ export async function createCustomerInviteLink(customerId: string) {
     );
     return { success: true, link };
   } catch (error) {
-    logger.error('生成客户邀请链接失败:', error);
+    console.error('生成客户邀请链接失败:', error);
     return { success: false, error: '生成邀请链接失败' };
   }
 }

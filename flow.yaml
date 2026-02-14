@@ -12,7 +12,7 @@ sources:
 
 envs:
   NODE_VERSION: '20'
-  PNPM_VERSION: '10.27.0'
+  PNPM_VERSION: '9.15.0'
 
 stages:
   # ============================================================
@@ -178,19 +178,19 @@ stages:
             image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
             env:
               ECS_HOST: $ECS_HOST
-              ECS_SSH_KEY_B64: $ECS_SSH_KEY_B64
+              ECS_PASSWORD: $ECS_PASSWORD
               ECS_USER: root
             script:
               - echo "=== 部署验证 ==="
 
-              # SSH 配置
-              - mkdir -p ~/.ssh
-              - echo "$ECS_SSH_KEY_B64" | tr -d '\n\r ' | base64 -d > ~/.ssh/id_rsa
-              - chmod 600 ~/.ssh/id_rsa
-              - echo -e "Host $ECS_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+              # 安装 sshpass
+              - if command -v apt-get >/dev/null; then apt-get update && apt-get install -y sshpass; elif command -v apk >/dev/null; then apk add --no-cache sshpass; else echo "Unable to install sshpass"; exit 1; fi
+
+              # 验证 ECS_PASSWORD
+              - if [ -z "$ECS_PASSWORD" ]; then echo "Error: ECS_PASSWORD variable is not set"; exit 1; fi
 
               - |
-                ssh $ECS_USER@$ECS_HOST << 'VERIFY_EOF'
+                sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no $ECS_USER@$ECS_HOST << 'VERIFY_EOF'
                   set -e
                   cd /root/L2C
 

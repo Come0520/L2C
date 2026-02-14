@@ -53,7 +53,8 @@ export async function PUT(
     if (!authResult.success) return authResult.response;
     const { session } = authResult;
 
-    if (!requireSales(session).allowed) return requireSales(session).response;
+    const salesCheck = requireSales(session);
+    if (!salesCheck.allowed) return salesCheck.response;
 
     try {
         const { id } = await params;
@@ -62,7 +63,7 @@ export async function PUT(
         // 验证部分更新数据
         const parseResult = leadSchema.partial().safeParse(json);
         if (!parseResult.success) {
-            return apiError(parseResult.error.errors[0].message, 400);
+            return apiError(parseResult.error.issues[0].message, 400);
         }
         const data = parseResult.data;
 

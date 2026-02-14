@@ -25,7 +25,7 @@ const QUOTE_TABS = [
   { value: 'PENDING_CUSTOMER', label: '待客户确认', statuses: ['PENDING_CUSTOMER'] },
   { value: 'ACCEPTED', label: '已成交', statuses: ['ACCEPTED'] },
   { value: 'CLOSED', label: '已关闭', statuses: ['REJECTED', 'EXPIRED'] },
-] as const;
+];
 
 // 状态显示名称映射
 const STATUS_LABELS: Record<string, string> = {
@@ -146,7 +146,7 @@ export function QuoteList() {
         <DataTableToolbar
           searchProps={{
             value: '',
-            onChange: () => {},
+            onChange: () => { },
             placeholder: '搜索报价单...',
           }}
           onRefresh={handleRefresh}

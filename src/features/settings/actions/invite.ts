@@ -100,6 +100,7 @@ export async function registerEmployee(
   userData: {
     name: string;
     phone: string;
+    email?: string;
     password: string;
   }
 ) {
@@ -118,6 +119,7 @@ export async function registerCustomer(
   userData: {
     name: string;
     phone: string;
+    email?: string;
     password: string;
   }
 ) {

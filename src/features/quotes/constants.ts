@@ -7,7 +7,7 @@ export const PRODUCT_CATEGORIES = productCategoryEnum.enumValues;
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
 // Zod schema for validation
-// @ts-expect-error - dizaale enumValues is strictly string[] but z.enum needs [string, ...string[]]
+// Zod schema for validation
 export const productCategorySchema = z.enum(PRODUCT_CATEGORIES);
 
 export const CATEGORY_LABELS: Record<string, string> = {

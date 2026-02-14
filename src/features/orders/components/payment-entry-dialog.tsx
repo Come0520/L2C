@@ -21,12 +21,12 @@ interface PaymentSchedule {
   id: string;
   name: string;
   amount: string;
-  actualAmount?: string;
-  paymentMethod?: string;
-  expectedDate?: string;
-  actualDate?: string;
-  status?: string;
-  proofImg?: string;
+  actualAmount?: string | null;
+  paymentMethod?: string | null;
+  expectedDate?: string | null;
+  actualDate?: string | null;
+  status?: string | null;
+  proofImg?: string | null;
 }
 
 interface Props {
@@ -62,7 +62,7 @@ export function PaymentEntryDialog({ schedule, orderId, trigger }: Props) {
         toast.success('支付录入成功');
         setOpen(false);
       } else {
-        toast.error(res.error || '录入失败');
+        toast.error((res as any).error || '录入失败');
       }
     } catch {
       toast.error('网络错误');

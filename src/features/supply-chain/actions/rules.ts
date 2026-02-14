@@ -9,6 +9,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 import { splitRuleSchema, type SplitRuleInput } from './rules.schema';
+export type { SplitRuleInput };
 
 async function requireUser() {
   const session = await auth();

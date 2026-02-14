@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             // For MVP, if paidAmount > 0, status -> IN_PRODUCTION (if it was DRAFT or PENDING_PAYMENT)
 
             let statusToSet = order.status;
-            if ((order.status === 'PENDING_PAYMENT' || order.status === 'DRAFT') && parseFloat(newPaid) > 0) {
+            if (((order.status as string) === 'PENDING_PAYMENT' || order.status === 'DRAFT') && parseFloat(newPaid) > 0) {
                 statusToSet = 'IN_PRODUCTION';
             }
 

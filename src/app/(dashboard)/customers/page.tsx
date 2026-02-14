@@ -13,6 +13,19 @@ import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { CustomersToolbar } from '@/features/customers/components/customers-toolbar';
 
+interface Customer {
+    id: string;
+    customerNo: string | null;
+    name: string;
+    phone: string | null;
+    level: string | null;
+    type: string | null;
+    totalAmount: string | number | null;
+    totalOrders: number | null;
+    assignedSales?: { name: string | null } | null;
+    lastOrderAt: Date | null | string;
+}
+
 export const revalidate = 60; // Revalidate every minute
 
 export default async function CustomersPage({
@@ -31,7 +44,7 @@ export default async function CustomersPage({
   const page = Number(resolvedParams.page) || 1;
   const query = typeof resolvedParams.search === 'string' ? resolvedParams.search : undefined;
 
-  let data = [];
+  let data: Customer[] = [];
   let pagination = { page: 1, pageSize: 10, total: 0, totalPages: 0 };
 
   try {

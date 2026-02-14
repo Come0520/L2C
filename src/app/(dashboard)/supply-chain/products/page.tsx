@@ -24,6 +24,7 @@ export default function ProductsPage() {
   const [category, setCategory] = useState<string>('ALL');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<unknown>(null);
+  const [activeTab, setActiveTab] = useState('products');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -98,9 +99,10 @@ export default function ProductsPage() {
           { value: 'packages', label: '套餐管理', icon: <Layers className="mr-2 h-4 w-4" /> },
           { value: 'templates', label: '属性模板', icon: <Tags className="mr-2 h-4 w-4" /> },
         ]}
-        defaultTab="products"
-        contentClassName="pt-4"
+        activeTab={activeTab}
+        onChange={setActiveTab}
       >
+        {activeTab === 'products' && (
         <div data-tab-value="products" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <div className="flex flex-col items-start gap-6 md:flex-row">
             {/* Sidebar Filters */}
@@ -139,14 +141,19 @@ export default function ProductsPage() {
             </div>
           </div>
         </div>
+        )}
 
+        {activeTab === 'packages' && (
         <div data-tab-value="packages" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <PackageManager />
         </div>
+        )}
 
+        {activeTab === 'templates' && (
         <div data-tab-value="templates" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
           <AttributeTemplateManager />
         </div>
+        )}
       </AnimatedTabs>
 
       <ProductDialog

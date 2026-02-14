@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
                     // 关联客户信息
                     customerName: customers.name,
                     customerPhone: customers.phone,
-                    customerAddress: customers.address,
                 })
                 .from(measureTasks)
                 .leftJoin(customers, eq(measureTasks.customerId, customers.id))
@@ -79,8 +78,8 @@ export async function GET(request: NextRequest) {
                             ? eq(measureTasks.status, statusFilter as any)
                             : or(
                                 eq(measureTasks.status, 'PENDING'),
-                                eq(measureTasks.status, 'SCHEDULED'),
-                                eq(measureTasks.status, 'IN_PROGRESS')
+                                eq(measureTasks.status, 'PENDING_VISIT'),
+                                eq(measureTasks.status, 'PENDING_CONFIRM')
                             )
                     )
                 )
@@ -116,8 +115,8 @@ export async function GET(request: NextRequest) {
                             ? eq(installTasks.status, statusFilter as any)
                             : or(
                                 eq(installTasks.status, 'PENDING_DISPATCH'),
-                                eq(installTasks.status, 'ASSIGNED'),
-                                eq(installTasks.status, 'IN_PROGRESS')
+                                eq(installTasks.status, 'PENDING_VISIT'),
+                                eq(installTasks.status, 'PENDING_CONFIRM')
                             )
                     )
                 )

@@ -37,7 +37,7 @@ export class SupplyChainService {
                 // Find default supplier for product
                 const mapping = await tx.query.productSuppliers.findFirst({
                     where: and(
-                        eq(productSuppliers.productId, item.productId),
+                        eq(productSuppliers.productId, item.productId!),
                         eq(productSuppliers.isDefault, true)
                     ),
                     with: {

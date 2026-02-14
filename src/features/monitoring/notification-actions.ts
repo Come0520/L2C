@@ -47,7 +47,7 @@ const getUnreadCountSchema = z.object({});
  * 创建系统通知
  */
 const createNotificationActionInternal = createSafeAction(createNotificationSchema, async (params, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.CREATE);
+    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
     // Map legacy type string to NotificationType enum
     let notificationType: NotificationType = 'SYSTEM';

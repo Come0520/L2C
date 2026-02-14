@@ -341,7 +341,9 @@ export const installTaskCategoryEnum = pgEnum('install_task_category', [
 export const installTaskStatusEnum = pgEnum('install_task_status', [
   'PENDING_DISPATCH',
   'DISPATCHING',
+  'PENDING_ACCEPT',
   'PENDING_VISIT',
+  'IN_PROGRESS',
   'PENDING_CONFIRM',
   'COMPLETED',
   'CANCELLED',

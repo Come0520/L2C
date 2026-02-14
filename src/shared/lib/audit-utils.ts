@@ -19,8 +19,8 @@ interface AuditLogParams {
  * 记录审计日志
  * @param params - 审计日志参数
  */
-export async function logAudit(params: AuditLogParams) {
-    console.log('Audit log simulated:', params);
+export async function logAudit(_params: AuditLogParams) {
+    // TODO: 对接真实审计日志服务
     return { success: true };
 }
 

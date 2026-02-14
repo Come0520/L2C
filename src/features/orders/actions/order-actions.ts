@@ -126,7 +126,7 @@ export async function createOrderPayment(data: {
             const newBalance = (parseFloat(order.totalAmount as string) - parseFloat(newPaid)).toFixed(2);
 
             let statusToSet = order.status;
-            if ((order.status === 'PENDING_PAYMENT' || order.status === 'DRAFT') && parseFloat(newPaid) > 0) {
+            if ((order.status === 'PENDING_PO' || order.status === 'DRAFT') && parseFloat(newPaid) > 0) {
                 statusToSet = 'IN_PRODUCTION';
             }
 

@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
         }
 
-        const tickNo = generateNo('TKT');
+        const ticketNo = generateNo('TKT');
 
         await db.insert(afterSalesTickets).values({
             tenantId: user.tenantId,
-            ticketNo: tickNo,
+            ticketNo: ticketNo,
             orderId: orderId,
             customerId: order.customerId,
             type,

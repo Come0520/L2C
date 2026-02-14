@@ -21,8 +21,7 @@ export function ExcelImportDialog() {
         email: z.string().email('邮箱格式不正确').optional(),
     });
 
-    const handleImport = async (data: Record<string, unknown>[]) => {
-        console.log('正在导入数据:', data);
+    const handleImport = async (_data: Record<string, unknown>[]) => {
         // 模拟 API 调用
         await new Promise(resolve => setTimeout(resolve, 1500));
         setOpen(false);

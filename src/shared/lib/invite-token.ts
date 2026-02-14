@@ -196,50 +196,74 @@ export async function registerEmployeeByInvite(
   userData: {
     name: string;
     phone: string;
+    email?: string;
     password: string;
     wechatOpenId?: string;
   }
 ): Promise<{ success: boolean; userId?: string; error?: string }> {
-  const validation = await verifyInviteToken(token);
-  if (!validation.valid || !validation.payload) {
-    return { success: false, error: validation.error };
+  try {
+    const validation = await verifyInviteToken(token);
+    if (!validation.valid || !validation.payload) {
+      return { success: false, error: validation.error };
+    }
+
+    const { tenantId } = validation.payload;
+
+    // 检查手机号是否已存在
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.phone, userData.phone),
+    });
+    if (existingUser) {
+      return { success: false, error: '该手机号已注册' };
+    }
+
+    // 如果用户提供了真实邮箱，检查邮箱唯一性
+    if (userData.email) {
+      const existingEmail = await db.query.users.findFirst({
+        where: eq(users.email, userData.email),
+      });
+      if (existingEmail) {
+        return { success: false, error: '该邮箱已被使用' };
+      }
+    }
+
+    // 创建用户（权限为空，需管理员后台分配）
+    const passwordHash = await hash(userData.password, 12);
+
+    // 兼容旧 payload (defaultRole)
+    const roles =
+      validation.payload.defaultRoles ||
+      (validation.payload.defaultRole ? [validation.payload.defaultRole] : ['SALES']);
+
+    // 邮箱处理：优先使用用户提供的真实邮箱，否则生成唯一临时邮箱
+    const email = userData.email || `${userData.phone}_${Date.now().toString(36)}@temp.l2c.com`;
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        tenantId,
+        name: userData.name,
+        phone: userData.phone,
+        email,
+        passwordHash,
+        role: roles[0] || 'SALES', // Backup compatibility
+        roles: roles, // Multi-role
+        permissions: [], // 空权限，需管理员分配
+        wechatOpenId: userData.wechatOpenId,
+        isActive: true,
+      })
+      .returning({ id: users.id });
+
+    return { success: true, userId: newUser.id };
+  } catch (error) {
+    console.error('员工注册失败:', error);
+    // 处理常见的数据库错误
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('unique') || errorMessage.includes('duplicate')) {
+      return { success: false, error: '该手机号或邮箱已被使用' };
+    }
+    return { success: false, error: '注册过程中发生错误，请稍后重试' };
   }
-
-  const { tenantId } = validation.payload;
-
-  // 检查手机号是否已存在
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.phone, userData.phone),
-  });
-  if (existingUser) {
-    return { success: false, error: '该手机号已注册' };
-  }
-
-  // 创建用户（权限为空，需管理员后台分配）
-  const passwordHash = await hash(userData.password, 12);
-
-  // 兼容旧 payload (defaultRole)
-  const roles =
-    validation.payload.defaultRoles ||
-    (validation.payload.defaultRole ? [validation.payload.defaultRole] : ['SALES']);
-
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      tenantId,
-      name: userData.name,
-      phone: userData.phone,
-      email: `${userData.phone}@temp.l2c.com`, // 临时邮箱
-      passwordHash,
-      role: roles[0] || 'SALES', // Backup compatibility
-      roles: roles, // Multi-role
-      permissions: [], // 空权限，需管理员分配
-      wechatOpenId: userData.wechatOpenId,
-      isActive: true,
-    })
-    .returning({ id: users.id });
-
-  return { success: true, userId: newUser.id };
 }
 
 /**
@@ -250,61 +274,86 @@ export async function registerCustomerByInvite(
   userData: {
     name: string;
     phone: string;
+    email?: string;
     password: string;
     wechatOpenId?: string;
   }
 ): Promise<{ success: boolean; userId?: string; error?: string }> {
-  const validation = await verifyInviteToken(token);
-  if (!validation.valid || !validation.payload) {
-    return { success: false, error: validation.error };
+  try {
+    const validation = await verifyInviteToken(token);
+    if (!validation.valid || !validation.payload) {
+      return { success: false, error: validation.error };
+    }
+
+    const { tenantId, customerId } = validation.payload;
+
+    if (!customerId) {
+      return { success: false, error: '无效的客户邀请' };
+    }
+
+    // 验证客户记录存在
+    const customer = await db.query.customers.findFirst({
+      where: eq(customers.id, customerId),
+    });
+    if (!customer) {
+      return { success: false, error: '客户记录不存在' };
+    }
+
+    // 检查手机号是否已存在
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.phone, userData.phone),
+    });
+    if (existingUser) {
+      return { success: false, error: '该手机号已注册' };
+    }
+
+    // 如果用户提供了真实邮箱，检查邮箱唯一性
+    if (userData.email) {
+      const existingEmail = await db.query.users.findFirst({
+        where: eq(users.email, userData.email),
+      });
+      if (existingEmail) {
+        return { success: false, error: '该邮箱已被使用' };
+      }
+    }
+
+    // 创建用户
+    const passwordHash = await hash(userData.password, 12);
+
+    // 邮箱处理：优先使用用户提供的真实邮箱，否则生成唯一临时邮箱
+    const email = userData.email || `${userData.phone}_${Date.now().toString(36)}@customer.l2c.com`;
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        tenantId,
+        name: userData.name,
+        phone: userData.phone,
+        email,
+        passwordHash,
+        role: 'CUSTOMER',
+        permissions: ['customer:view_orders', 'customer:view_progress'], // 客户默认权限
+        wechatOpenId: userData.wechatOpenId,
+        isActive: true,
+      })
+      .returning({ id: users.id });
+
+    // 更新客户记录关联微信 OpenId（如果提供）
+    if (userData.wechatOpenId) {
+      await db
+        .update(customers)
+        .set({ wechatOpenId: userData.wechatOpenId })
+        .where(eq(customers.id, customerId));
+    }
+
+    return { success: true, userId: newUser.id };
+  } catch (error) {
+    console.error('客户注册失败:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('unique') || errorMessage.includes('duplicate')) {
+      return { success: false, error: '该手机号或邮箱已被使用' };
+    }
+    return { success: false, error: '注册过程中发生错误，请稍后重试' };
   }
-
-  const { tenantId, customerId } = validation.payload;
-
-  if (!customerId) {
-    return { success: false, error: '无效的客户邀请' };
-  }
-
-  // 验证客户记录存在
-  const customer = await db.query.customers.findFirst({
-    where: eq(customers.id, customerId),
-  });
-  if (!customer) {
-    return { success: false, error: '客户记录不存在' };
-  }
-
-  // 检查手机号是否已存在
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.phone, userData.phone),
-  });
-  if (existingUser) {
-    return { success: false, error: '该手机号已注册' };
-  }
-
-  // 创建用户
-  const passwordHash = await hash(userData.password, 12);
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      tenantId,
-      name: userData.name,
-      phone: userData.phone,
-      email: `${userData.phone}@customer.l2c.com`,
-      passwordHash,
-      role: 'CUSTOMER',
-      permissions: ['customer:view_orders', 'customer:view_progress'], // 客户默认权限
-      wechatOpenId: userData.wechatOpenId,
-      isActive: true,
-    })
-    .returning({ id: users.id });
-
-  // 更新客户记录关联微信 OpenId（如果提供）
-  if (userData.wechatOpenId) {
-    await db
-      .update(customers)
-      .set({ wechatOpenId: userData.wechatOpenId })
-      .where(eq(customers.id, customerId));
-  }
-
-  return { success: true, userId: newUser.id };
 }
+

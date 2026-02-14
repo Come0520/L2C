@@ -8,7 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { jose } from 'jose'; // Wait, jose is usually imported as { jwtVerify } or similar. Checking usage.
 import { jwtVerify } from 'jose';
 
 // Helper: Verify Admin Role

@@ -88,7 +88,6 @@ deployment.tar.gz
 *.key
 *.pem
 scripts/deploy_v*.sh
-!scripts/deploy_v3.7.sh
 *.txt
 final_deploy_command.sh
 gen_chunks.js

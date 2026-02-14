@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { orders, orderItems, quotes, quoteItems, paymentSchedules } from '@/shared/api/schema';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { orders, orderItems, quotes, paymentSchedules } from '@/shared/api/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { jwtVerify } from 'jose';
 import { generateOrderNo } from '@/shared/lib/generators';
 
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Quote not found' }, { status: 404 });
         }
 
-        // Logic Check: Quote must be CONFIRMED
-        if (quote.status !== 'CONFIRMED') {
+        // Logic Check: Quote must be ORDERED
+        if (quote.status !== 'ORDERED') {
             return NextResponse.json({ success: false, error: 'Quote must be confirmed first' }, { status: 400 });
         }
 
@@ -99,13 +99,13 @@ export async function POST(request: NextRequest) {
                 quoteId: quote.id,
                 quoteVersionId: quote.id, // Simplifying for now, assuming quote is latest
                 customerId: quote.customerId,
-                customerName: quote.customerName,
-                customerPhone: quote.customerPhone,
+                // customerName: order.customer?.name,
+                // customerPhone: order.customer?.phone,
                 totalAmount: quote.totalAmount,
                 paidAmount: "0",
                 balanceAmount: quote.totalAmount,
-                settlementType: 'PHASED', // Default to Phased
-                status: 'PENDING_PAYMENT',
+                settlementType: 'CASH', // Default to Cash
+                status: 'PENDING_PO',
                 salesId: user.id,
                 remark: quote.notes,
                 createdBy: user.id
@@ -117,10 +117,10 @@ export async function POST(request: NextRequest) {
                     tenantId: user.tenantId,
                     orderId: newOrder.id,
                     quoteItemId: item.id,
-                    roomName: item.roomName,
+                    roomName: item.roomName || 'Unknown Room',
                     productId: item.productId,
                     productName: item.productName,
-                    category: item.category,
+                    category: item.category as any,
                     quantity: item.quantity,
                     width: item.width,
                     height: item.height,

@@ -120,6 +120,7 @@ async function getLeadDetailInternal(id: string, tenantId: string) {
             sourceSub: true,
             customer: true,
             referrerCustomer: true,
+            creator: true,
         }
     });
     return lead;

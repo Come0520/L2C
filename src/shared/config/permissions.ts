@@ -37,6 +37,10 @@ export const PERMISSIONS = {
         TRANSFER: 'lead.transfer',     // 转移线索
         IMPORT: 'lead.import',         // 导入线索
         EXPORT: 'lead.export',         // 导出线索
+        VIEW: 'lead.view',             // 访问线索模块
+        CREATE: 'lead.create',         // 创建线索
+        EDIT: 'lead.edit',             // 编辑线索 (通用)
+        MANAGE: 'lead.manage',         // 管理线索
     },
 
     // ==================== 客户模块 ====================
@@ -46,6 +50,10 @@ export const PERMISSIONS = {
         OWN_VIEW: 'customer.own.view',   // 查看自己的客户
         OWN_EDIT: 'customer.own.edit',   // 编辑自己的客户
         DELETE: 'customer.delete',       // 删除客户
+        VIEW: 'customer.view',           // 访问客户模块
+        CREATE: 'customer.create',       // 创建客户
+        EDIT: 'customer.edit',           // 编辑客户
+        MANAGE: 'customer.manage',       // 管理客户
     },
 
     // ==================== 报价模块 ====================
@@ -56,6 +64,10 @@ export const PERMISSIONS = {
         OWN_EDIT: 'quote.own.edit',    // 编辑自己的报价
         DELETE: 'quote.delete',        // 删除报价
         APPROVE: 'quote.approve',      // 审批报价
+        VIEW: 'quote.view',            // 访问报价模块
+        CREATE: 'quote.create',        // 创建报价
+        EDIT: 'quote.edit',            // 编辑报价
+        MANAGE: 'quote.manage',        // 管理报价
     },
 
     // ==================== 订单模块 ====================
@@ -66,6 +78,10 @@ export const PERMISSIONS = {
         OWN_EDIT: 'order.own.edit',    // 编辑自己的订单
         DELETE: 'order.delete',        // 删除订单
         APPROVE: 'order.approve',      // 审批订单
+        VIEW: 'order.view',            // 访问订单模块
+        CREATE: 'order.create',        // 创建订单
+        EDIT: 'order.edit',            // 编辑订单
+        MANAGE: 'order.manage',        // 管理订单
     },
 
     // ==================== 测量模块 ====================
@@ -74,6 +90,7 @@ export const PERMISSIONS = {
         OWN_VIEW: 'measure.own.view',    // 查看自己的测量任务
         DISPATCH: 'measure.dispatch',    // 派发测量任务
         COMPLETE: 'measure.complete',    // 完成测量任务
+        VIEW: 'measure.view',            // 访问测量模块
     },
 
     // ==================== 安装模块 ====================
@@ -82,6 +99,10 @@ export const PERMISSIONS = {
         OWN_VIEW: 'install.own.view',    // 查看自己的安装任务
         DISPATCH: 'install.dispatch',    // 派发安装任务
         COMPLETE: 'install.complete',    // 完成安装任务
+        VIEW: 'install.view',            // 访问安装模块
+        CREATE: 'install.create',        // 创建安装任务
+        EDIT: 'install.edit',            // 编辑安装任务
+        MANAGE: 'install.manage',        // 管理安装任务
     },
 
     // ==================== 售后模块 ====================
@@ -91,6 +112,10 @@ export const PERMISSIONS = {
         OWN_VIEW: 'after_sales.own.view',  // 查看自己的售后
         OWN_EDIT: 'after_sales.own.edit',  // 编辑自己的售后
         DELETE: 'after_sales.delete',      // 删除售后
+        VIEW: 'after_sales.view',          // 访问售后模块
+        CREATE: 'after_sales.create',      // 创建售后
+        EDIT: 'after_sales.edit',          // 编辑售后
+        MANAGE: 'after_sales.manage',      // 管理售后
     },
 
     // ==================== 财务模块 ====================
@@ -102,6 +127,7 @@ export const PERMISSIONS = {
         APPROVE: 'finance.approve',        // 审批财务
         LABOR_VIEW: 'finance.labor_view',  // 查看人工费用
         RECONCILE: 'finance.reconcile',    // 对账
+        MANAGE: 'finance.manage',          // 财务管理
     },
 
     // ==================== 产品模块 ====================
@@ -110,6 +136,7 @@ export const PERMISSIONS = {
         CREATE: 'products.create', // 创建产品
         EDIT: 'products.edit',     // 编辑产品
         DELETE: 'products.delete', // 删除产品
+        MANAGE: 'products.manage', // 产品管理
     },
 
     // ==================== 供应链模块 ====================
@@ -120,6 +147,8 @@ export const PERMISSIONS = {
         DELETE: 'supply_chain.delete',              // 删除采购单
         SUPPLIER_MANAGE: 'supply_chain.supplier',   // 供应商管理
         STOCK_MANAGE: 'supply_chain.stock',         // 库存管理
+        PO_MANAGE: 'supply_chain.po_manage',        // 采购单管理
+        MANAGE: 'supply_chain.manage',              // 供应链管理
     },
 
     // ==================== 渠道模块 ====================
@@ -130,6 +159,8 @@ export const PERMISSIONS = {
         DELETE: 'channel.delete',                  // 删除渠道
         COMMISSION: 'channel.commission',          // 佣金管理
         SETTLEMENT: 'channel.settlement',          // 结算管理
+        MANAGE_COMMISSION: 'channel.manage_commission', // 佣金管理(兼容)
+        MANAGE_SETTLEMENT: 'channel.manage_settlement', // 结算管理(兼容)
     },
 
     // ==================== 数据分析模块 ====================
@@ -159,6 +190,12 @@ export const PERMISSIONS = {
     GLOBAL: {
         VIEW: '*',    // 超级查看权限
         ADMIN: '**',  // 超级管理员
+    },
+
+    // ==================== 通知模块 ====================
+    NOTIFICATION: {
+        VIEW: 'notification.view',
+        MANAGE: 'notification.manage',
     },
 } as const;
 
@@ -273,12 +310,14 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'lead.transfer': '转移线索',
     'lead.import': '导入线索',
     'lead.export': '导出线索',
+    'lead.view': '访问线索模块',
     // 客户
     'customer.all.view': '查看所有客户',
     'customer.all.edit': '编辑所有客户',
     'customer.own.view': '查看我的客户',
     'customer.own.edit': '编辑我的客户',
     'customer.delete': '删除客户',
+    'customer.view': '访问客户模块',
     // 报价
     'quote.all.view': '查看所有报价',
     'quote.all.edit': '编辑所有报价',
@@ -286,6 +325,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'quote.own.edit': '编辑我的报价',
     'quote.delete': '删除报价',
     'quote.approve': '审批报价',
+    'quote.view': '访问报价模块',
     // 订单
     'order.all.view': '查看所有订单',
     'order.all.edit': '编辑所有订单',
@@ -293,22 +333,26 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'order.own.edit': '编辑我的订单',
     'order.delete': '删除订单',
     'order.approve': '审批订单',
+    'order.view': '访问订单模块',
     // 测量
     'measure.all.view': '查看所有测量任务',
     'measure.own.view': '查看我的测量任务',
     'measure.dispatch': '派发测量任务',
     'measure.complete': '完成测量任务',
+    'measure.view': '访问测量模块',
     // 安装
     'install.all.view': '查看所有安装任务',
     'install.own.view': '查看我的安装任务',
     'install.dispatch': '派发安装任务',
     'install.complete': '完成安装任务',
+    'install.view': '访问安装模块',
     // 售后
     'after_sales.all.view': '查看所有售后',
     'after_sales.all.edit': '编辑所有售后',
     'after_sales.own.view': '查看我的售后',
     'after_sales.own.edit': '编辑我的售后',
     'after_sales.delete': '删除售后',
+    'after_sales.view': '访问售后模块',
     // 财务
     'finance.view': '查看财务',
     'finance.create': '创建收付款',
@@ -329,6 +373,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'supply_chain.delete': '删除采购单',
     'supply_chain.supplier': '供应商管理',
     'supply_chain.stock': '库存管理',
+    'supply_chain.po_manage': '采购单管理',
     // 渠道
     'channel.view': '查看渠道',
     'channel.create': '创建渠道',

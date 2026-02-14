@@ -97,31 +97,19 @@ export async function getCustomerDetail(id: string) {
 
     const tenantId = session.user.tenantId;
 
-    let customer;
-    try {
-        customer = await db.query.customers.findFirst({
-            where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
-            with: {
-                assignedSales: true,
-                creator: true,
-                addresses: true,
-                referrer: true,
-                referrals: {
-                    limit: 5, // Just show a few recent referrals
-                    orderBy: desc(customers.createdAt)
-                }
-            },
-        });
-    } catch (error) {
-        console.error('Error fetching customer details with relations, falling back:', error);
-        customer = await db.query.customers.findFirst({
-            where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
-            with: {
-                addresses: true,
-                // Exclude users relations that might be causing schema issues
-            },
-        });
-    }
+    const customer = await db.query.customers.findFirst({
+        where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
+        with: {
+            assignedSales: true,
+            creator: true,
+            addresses: true,
+            referrer: true,
+            referrals: {
+                limit: 5, // Just show a few recent referrals
+                orderBy: desc(customers.createdAt)
+            }
+        },
+    });
 
     return customer;
 }
@@ -213,8 +201,8 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
             phone: customer.phone,
             type: customer.type,
             level: customer.level,
-            assignedSalesName: customer.assignedSales?.name,
-            referrerName: customer.referrer?.name,
+            assignedSalesName: (customer as any).assignedSales?.name,
+            referrerName: (customer as any).referrer?.name,
             createdAt: customer.createdAt,
         },
         stats: {

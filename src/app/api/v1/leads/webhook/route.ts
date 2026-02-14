@@ -6,7 +6,7 @@ import {
     WebhookLeadPayload,
     WebhookResponse
 } from '@/features/leads/logic/webhook-handler';
-import { checkRateLimit, isRedisConfigured } from '@/shared/lib/rate-limit';
+import { checkRateLimit, isRedisConfigured } from '@/shared/middleware/rate-limit';
 
 // 限流配置常量
 const RATE_LIMIT = 100;
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. 限流检查（优先使用 Redis，自动降级到内存）
-        const rateCheck = await checkRateLimit(accessToken);
+        const rateCheck = await checkRateLimit(accessToken, 'webhook');
         if (!rateCheck.allowed) {
             return NextResponse.json(
                 {

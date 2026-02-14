@@ -17,17 +17,16 @@ export function ActivityTimeline({ customerId, refreshTrigger }: Props) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        async function fetchActivities() {
+            setLoading(true);
+            const res = await getActivities(customerId);
+            if (res.success && res.data) {
+                setActivities(res.data);
+            }
+            setLoading(false);
+        }
         fetchActivities();
     }, [customerId, refreshTrigger]);
-
-    async function fetchActivities() {
-        setLoading(true);
-        const res = await getActivities(customerId);
-        if (res.success && res.data) {
-            setActivities(res.data);
-        }
-        setLoading(false);
-    }
 
     if (loading && activities.length === 0) {
         return <div className="flex justify-center p-4"><Loader2 className="animate-spin text-muted-foreground" /></div>;

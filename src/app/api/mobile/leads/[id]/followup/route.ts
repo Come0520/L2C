@@ -36,7 +36,8 @@ export async function POST(request: NextRequest, { params }: FollowupParams) {
     if (!authResult.success) return authResult.response;
     const { session } = authResult;
 
-    if (!requireSales(session).allowed) return requireSales(session).response;
+    const salesCheck = requireSales(session);
+    if (!salesCheck.allowed) return salesCheck.response;
 
     const { id: leadId } = await params;
 

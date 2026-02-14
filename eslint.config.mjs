@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-require-imports": "off",
       // 允许 @ts-ignore 和 @ts-expect-error 注释
       "@typescript-eslint/ban-ts-comment": "off",
+      // 禁止生产代码中使用 console.log（允许 warn 和 error）
+      "no-console": ["warn", { allow: ["warn", "error"] }],
       // 允许 JSX 中使用未转义的引号
       "react/no-unescaped-entities": "off",
       // 禁用 react-compiler 规则（实验性功能）
@@ -36,6 +38,11 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "coverage/**",
+    // Project specific ignores:
+    "e2e/**",
+    "miniprogram/**",
+    ".agent/**",
+    "alibabacloud-rds-openapi-mcp-server/**",
   ]),
 ]);
 

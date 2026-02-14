@@ -402,16 +402,6 @@ export async function requestDelivery(input: z.infer<typeof requestDeliverySchem
 
   // 发送发货通知
   notifyOrderStatusChange(
-    order.salesId || order.customerId, // 这里的通知对象可能是客户或销售，根据业务需求。通常发给客户。
-    // 但 notifyOrderStatusChange 第一个参数是 userId。如果不确定 userId，先跳过或查找 owner.
-    // 假设 wechat-subscribe-message.service 是发给 User (Sales/Internal) or Customer?
-    // 查看 service 实现: findFirst users where id = userId.
-    // 所以这是发给 B 端用户的。如果要发给 C 端客户，需要另写 logic。
-    // 暂时发给销售(salesId)或创建者(createdBy -- not in schema here but typical).
-    // 既然 order.customerId 是 C 端，order.salesId 是 B 端 (User)。
-    // 业务场景：通知销售"已发货"？或者通知客户？
-    // 如果是 notifyOrderStatusChange(userId...), 那就是发给内部。
-    // 让我们假设是通知销售跟进。
     order.salesId || '',
     order.orderNo,
     '待安装',

@@ -468,6 +468,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 remark: item.remark ?? undefined,
                 roomId: item.roomId || null,
                 parentId: item.parentId || null,
+                unit: item.unit || undefined, // Fix unit nullability
                 attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
               }))}
             mode={mode}
@@ -508,6 +509,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               remark: item.remark ?? undefined,
               roomId: item.roomId || null,
               parentId: item.parentId || null,
+              unit: item.unit || undefined, // Fix unit nullability
               attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
             }))}
             mode={mode}

@@ -59,7 +59,7 @@ const updatePreferencesSchema = z.object({
 /**
  * 获取当前用户的通知偏好设置
  */
-export async function getNotificationPreferences() {
+export async function getNotificationPreferencesFromDB() {
     const session = await auth();
     if (!session?.user?.id) {
         return { success: false, error: '未授权' };
@@ -126,7 +126,7 @@ export async function updateNotificationPreferences(
         }
 
         // 获取当前偏好
-        const { data: currentPrefs } = await getNotificationPreferences();
+        const { data: currentPrefs } = await getNotificationPreferencesFromDB();
         if (!currentPrefs) {
             return { success: false, error: '获取当前偏好失败' };
         }

@@ -331,7 +331,7 @@ export function QuoteItemsTable({
 
       <Dialog
         open={warningDialog.open}
-        onOpenChange={(open) => setWarningDialog((prev) => ({ ...prev, open }))}
+        onOpenChange={(open) => setWarningDialog((prev: any) => ({ ...prev, open }))}
       >
         <DialogContent>
           <DialogHeader>
@@ -347,7 +347,7 @@ export function QuoteItemsTable({
             您可以通过修改"高级配置"调整工艺（如：改用贴布带），或确认此尺寸进行生产（可能需要拼接）。
           </div>
           <DialogFooter>
-            <Button onClick={() => setWarningDialog((prev) => ({ ...prev, open: false }))}>
+            <Button onClick={() => setWarningDialog((prev: any) => ({ ...prev, open: false }))}>
               知道了
             </Button>
           </DialogFooter>

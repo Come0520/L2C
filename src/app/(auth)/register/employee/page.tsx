@@ -32,6 +32,7 @@ function EmployeeRegisterContent() {
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
+        email: '',
         password: '',
         confirmPassword: '',
     });
@@ -68,6 +69,12 @@ function EmployeeRegisterContent() {
             return;
         }
 
+        // 邮箱格式校验（如果填写了的话）
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            setError('邮箱格式不正确');
+            return;
+        }
+
         setSubmitting(true);
         setError(null);
 
@@ -75,6 +82,7 @@ function EmployeeRegisterContent() {
             const result = await registerEmployee(token!, {
                 name: formData.name,
                 phone: formData.phone,
+                email: formData.email || undefined,
                 password: formData.password,
             });
 
@@ -186,6 +194,20 @@ function EmployeeRegisterContent() {
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 required
+                                className="bg-white/5 border-white/20 text-white"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-white">
+                                邮箱 <span className="text-slate-400 text-xs">(选填，可用于登录)</span>
+                            </Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="请输入邮箱（选填）"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="bg-white/5 border-white/20 text-white"
                             />
                         </div>

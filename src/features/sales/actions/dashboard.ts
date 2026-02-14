@@ -68,26 +68,26 @@ export async function getSalesDashboardStats(): Promise<{ success: boolean; data
 
             const leadsStats = await db
                 .select({
-                    status: customers.status,
+                    status: customers.pipelineStatus,
                     count: count()
                 })
                 .from(customers)
                 .where(eq(customers.tenantId, user.tenantId))
-                .groupBy(customers.status);
+                .groupBy(customers.pipelineStatus);
 
             totalLeads = leadsStats.reduce((acc, curr) => acc + curr.count, 0);
-            pendingLeads = leadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
-            followingLeads = leadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
-            wonLeads = leadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
+            pendingLeads = leadsStats.filter(s => ['UNASSIGNED', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+            followingLeads = leadsStats.filter(s => ['PENDING_QUOTE', 'QUOTE_SENT', 'PENDING_MEASUREMENT'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+            wonLeads = leadsStats.filter(s => ['IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALLATION', 'COMPLETED'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
 
             const qCount = await db.select({ count: count() }).from(quotes).where(eq(quotes.tenantId, user.tenantId));
             quotesCount = qCount[0].count;
 
-            const oCount = await db.select({ count: count() }).from(quotes).where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')));
+            const oCount = await db.select({ count: count() }).from(quotes).where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'ORDERED')));
             ordersCount = oCount[0].count;
 
             const confirmedQuotes = await db.query.quotes.findMany({
-                where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')),
+                where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'ACCEPTED')),
                 columns: { finalAmount: true },
             });
             totalCash = confirmedQuotes.reduce((sum, q) => sum + (parseFloat(q.finalAmount as string) || 0), 0);
@@ -107,17 +107,17 @@ export async function getSalesDashboardStats(): Promise<{ success: boolean; data
 
             const myLeadsStats = await db
                 .select({
-                    status: customers.status,
+                    status: customers.pipelineStatus,
                     count: count()
                 })
                 .from(customers)
                 .where(and(eq(customers.tenantId, user.tenantId), eq(customers.assignedSalesId, user.id)))
-                .groupBy(customers.status);
+                .groupBy(customers.pipelineStatus);
 
             totalLeads = myLeadsStats.reduce((acc, curr) => acc + curr.count, 0);
-            pendingLeads = myLeadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
-            followingLeads = myLeadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
-            wonLeads = myLeadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
+            pendingLeads = myLeadsStats.filter(s => ['UNASSIGNED', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+            followingLeads = myLeadsStats.filter(s => ['PENDING_QUOTE', 'QUOTE_SENT', 'PENDING_MEASUREMENT'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+            wonLeads = myLeadsStats.filter(s => ['IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALLATION', 'COMPLETED'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
 
             const qCount = await db.select({ count: count() }).from(quotes).where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.createdBy, user.id)));
             quotesCount = qCount[0].count;
@@ -125,7 +125,7 @@ export async function getSalesDashboardStats(): Promise<{ success: boolean; data
             const oCount = await db.select({ count: count() }).from(quotes).where(and(
                 eq(quotes.tenantId, user.tenantId),
                 eq(quotes.createdBy, user.id),
-                eq(quotes.status, 'CONFIRMED')
+                eq(quotes.status, 'ORDERED')
             ));
             ordersCount = oCount[0].count;
 
@@ -133,7 +133,7 @@ export async function getSalesDashboardStats(): Promise<{ success: boolean; data
                 where: and(
                     eq(quotes.tenantId, user.tenantId),
                     eq(quotes.createdBy, user.id),
-                    eq(quotes.status, 'CONFIRMED')
+                    eq(quotes.status, 'ACCEPTED')
                 ),
                 columns: { finalAmount: true },
             });

@@ -140,6 +140,7 @@ export async function checkAndGenerateCommission(
         const discountRate = gradeDiscounts[channelLevel] ?? 1.00;
 
         for (const item of order.items) {
+            if (!item.productId) continue;
             const product = await db.query.products.findFirst({
                 where: eq(products.id, item.productId),
                 columns: { channelPrice: true, channelPriceMode: true }

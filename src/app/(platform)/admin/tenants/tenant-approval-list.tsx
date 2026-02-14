@@ -44,6 +44,7 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [selectedTenant, setSelectedTenant] = useState<PendingTenant | null>(null);
     const [rejectReason, setRejectReason] = useState('');
+    const [activeTab, setActiveTab] = useState('pending');
 
     // 审批通过
     const handleApprove = async (tenant: PendingTenant) => {
@@ -192,32 +193,38 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
                         icon: <Building2 className="mr-2 h-4 w-4" />
                     },
                 ]}
-                defaultTab="pending"
-                contentClassName="mt-4"
+                activeTab={activeTab}
+                onChange={setActiveTab}
             >
-                <div data-tab-value="pending">
-                    {pendingTenants.length === 0 ? (
-                        <Card className="card border-dashed">
-                            <CardContent className="p-8 text-center">
-                                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-50" />
-                                <p className="text-muted-foreground">暂无待审批的租户申请</p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="space-y-4">
-                            {pendingTenants.map((tenant) => (
-                                <TenantCard key={tenant.id} tenant={tenant} showActions />
-                            ))}
+                <div className="mt-4">
+                    {activeTab === 'pending' && (
+                        <div data-tab-value="pending">
+                            {pendingTenants.length === 0 ? (
+                                <Card className="card border-dashed">
+                                    <CardContent className="p-8 text-center">
+                                        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-50" />
+                                        <p className="text-muted-foreground">暂无待审批的租户申请</p>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pendingTenants.map((tenant) => (
+                                        <TenantCard key={tenant.id} tenant={tenant} showActions />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
 
-                <div data-tab-value="all">
-                    <div className="space-y-4">
-                        {allTenants.map((tenant) => (
-                            <TenantCard key={tenant.id} tenant={tenant} />
-                        ))}
-                    </div>
+                    {activeTab === 'all' && (
+                        <div data-tab-value="all">
+                            <div className="space-y-4">
+                                {allTenants.map((tenant) => (
+                                    <TenantCard key={tenant.id} tenant={tenant} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </AnimatedTabs>
 

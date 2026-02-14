@@ -7,8 +7,6 @@ import postgres from 'postgres';
 import * as schema from './schema';
 import { env } from '@/shared/config/env';
 
-console.log('[DEBUG] INITIALIZING DB', env.DATABASE_URL ? 'URL Present' : 'URL Missing');
-
 const connectionString = env.DATABASE_URL;
 
 if (!connectionString) {

@@ -102,7 +102,7 @@ export const orderItems = pgTable('order_items', {
 
     roomName: varchar('room_name', { length: 100 }).notNull(),
 
-    productId: uuid('product_id').references(() => products.id).notNull(),
+    productId: uuid('product_id').references(() => products.id),
     productName: varchar('product_name', { length: 200 }).notNull(),
     category: productCategoryEnum('category').notNull(),
 

@@ -98,7 +98,7 @@ export function DispatchDialog({ taskId, trigger }: Props) {
                     </div>
                     <div className="grid gap-2">
                         <Label>预约日期</Label>
-                        <DatePicker date={date} setDate={setDate} />
+                        <DatePicker value={date} onChange={setDate} />
                     </div>
                     <div className="grid gap-2">
                         <Label>时间段</Label>

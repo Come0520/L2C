@@ -12,33 +12,38 @@ interface OrderItem {
   id: string;
   roomName?: string;
   productName?: string;
-  attributes?: { sku?: string };
+  attributes?: { sku?: string } | unknown;
   subtotal?: string;
-  quantity?: number;
+  quantity?: number | string;
 }
 
 interface PaymentScheduleItem {
   id: string;
   name: string;
   amount: string;
-  actualAmount?: string;
-  status?: string;
-  expectedDate?: string;
+  actualAmount?: string | null;
+  status?: string | null;
+  expectedDate?: string | null;
+  proofImg?: string | null;
 }
 
 interface OrderData {
   id: string;
   orderNo: string;
-  status: string;
-  createdAt: string;
-  totalAmount?: string;
-  paidAmount?: string;
-  balanceAmount?: string;
+  status: string | null;
+  createdAt: string | Date | null;
+  totalAmount?: string | null;
+  paidAmount?: string | null;
+  balanceAmount?: string | null;
   items: OrderItem[];
   paymentSchedules: PaymentScheduleItem[];
-  customerName?: string;
-  customerPhone?: string;
-  deliveryAddress?: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  deliveryAddress?: string | null;
+  customer?: {
+    name: string;
+    phone: string;
+  } | null;
 }
 
 interface Props {
@@ -71,11 +76,11 @@ export function OrderDashboardView({ order }: Props) {
             <h1 className="flex items-center gap-3 text-2xl font-bold">
               订单 {order.orderNo}
               <Badge variant={order.status === 'IN_PRODUCTION' ? 'default' : 'secondary'}>
-                {STATUS_MAP[order.status] || order.status}
+                {STATUS_MAP[order.status || ''] || order.status}
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              创建时间: {formatDate(order.createdAt)}
+              创建时间: {order.createdAt ? formatDate(order.createdAt) : '-'}
             </p>
           </div>
           <div className="flex gap-2">
@@ -109,7 +114,7 @@ export function OrderDashboardView({ order }: Props) {
                         {item.roomName} - {item.productName}
                       </div>
                       <div className="text-muted-foreground mt-1 text-sm">
-                        {item.attributes?.sku || '标准规格'}
+                        {(item.attributes as any)?.sku || '标准规格'}
                       </div>
                     </div>
                     <div className="text-right">

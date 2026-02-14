@@ -4,7 +4,7 @@ import { MeasureTaskTable } from '@/features/service/measurement/components/meas
 import { MeasurementToolbar } from '@/features/service/measurement/components/measurement-toolbar';
 import { CreateMeasureTaskDialog } from '@/features/service/measurement/components/create-measure-task-dialog';
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
-import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { Pagination } from '@/shared/ui/pagination';
 import { Metadata } from 'next';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { db } from '@/shared/api/db';
@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 interface PageProps {
     searchParams: Promise<{
         page?: string;
+        pageSize?: string;
         search?: string;
         status?: string;
         // 扩展筛选参数
@@ -104,10 +105,9 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
                     </Suspense>
                 </div>
 
-                <DataTablePagination
-                    currentPage={page}
+                <Pagination
                     totalPages={totalPages}
-                    totalItems={tasks.total}
+                    currentPage={page}
                 />
             </div>
         </div>

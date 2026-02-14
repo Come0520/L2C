@@ -22,9 +22,9 @@ export function registerFonts() {
                 },
             ],
         });
-        console.log('PDF Fonts registered successfully');
-    } catch (error) {
-        console.error('Failed to register PDF fonts:', error);
+        // 字体注册成功，静默处理
+    } catch (_error) {
+        // 字体注册失败时静默处理，不影响页面渲染
     }
 }
 

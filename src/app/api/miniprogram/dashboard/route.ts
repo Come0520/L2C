@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
 import { quotes, customers, salesTargets } from '@/shared/api/schema';
-import { eq, and, count, sum } from 'drizzle-orm';
+import { eq, and, count, sql } from 'drizzle-orm';
 import { jwtVerify } from 'jose';
 
 // Helper: Get User Info from Token
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
       // 0. Get Team Target (Sum of all sales targets for this month)
       const teamTargetRes = await db
-        .select({ total: sum(salesTargets.targetAmount) })
+        .select({ total: sql<string>`sum(${salesTargets.targetAmount})` })
         .from(salesTargets)
         .where(and(
           eq(salesTargets.tenantId, user.tenantId),
@@ -61,22 +61,22 @@ export async function GET(request: NextRequest) {
           eq(salesTargets.month, currentMonth)
         ));
 
-      const targetAmount = parseFloat(teamTargetRes[0]?.total as string) || 0;
+      const targetAmount = parseFloat(teamTargetRes[0]?.total || '0');
 
       // 1. Leads Stats
       const leadsStats = await db
         .select({
-          status: customers.status,
+          status: customers.pipelineStatus,
           count: count()
         })
         .from(customers)
         .where(eq(customers.tenantId, user.tenantId))
-        .groupBy(customers.status);
+        .groupBy(customers.pipelineStatus);
 
       const totalLeads = leadsStats.reduce((acc, curr) => acc + curr.count, 0);
-      const pendingLeads = leadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
-      const followingLeads = leadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
-      const wonLeads = leadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
+      const pendingLeads = leadsStats.filter(s => ['UNASSIGNED', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+      const followingLeads = leadsStats.filter(s => ['PENDING_MEASUREMENT', 'PENDING_QUOTE', 'QUOTE_SENT'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
+      const wonLeads = leadsStats.filter(s => ['IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALLATION'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
 
       // 2. Quotes (Total)
       const quotesCount = await db
@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
       const ordersCount = await db
         .select({ count: count() })
         .from(quotes)
-        .where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')));
+        .where(and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'ORDERED')));
 
       // 4. Cash
       const confirmedQuotes = await db.query.quotes.findMany({
-        where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'CONFIRMED')),
+        where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.status, 'ORDERED')),
         columns: { finalAmount: true },
       });
 
@@ -139,17 +139,17 @@ export async function GET(request: NextRequest) {
       // 1. Leads Breakdown
       const myLeadsStats = await db
         .select({
-          status: customers.status,
+          status: customers.pipelineStatus,
           count: count()
         })
         .from(customers)
         .where(and(eq(customers.tenantId, user.tenantId), eq(customers.assignedSalesId, user.id)))
-        .groupBy(customers.status);
+        .groupBy(customers.pipelineStatus);
 
       const totalLeads = myLeadsStats.reduce((acc, curr) => acc + curr.count, 0);
       const pendingLeads = myLeadsStats.filter(s => ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP'].includes(s.status || '')).reduce((acc, c) => acc + c.count, 0);
-      const followingLeads = myLeadsStats.filter(s => s.status === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
-      const wonLeads = myLeadsStats.filter(s => s.status === 'WON').reduce((acc, c) => acc + c.count, 0);
+      const followingLeads = myLeadsStats.filter(s => (s.status as string) === 'FOLLOWING_UP').reduce((acc, c) => acc + c.count, 0);
+      const wonLeads = myLeadsStats.filter(s => (s.status as string) === 'WON').reduce((acc, c) => acc + c.count, 0);
 
       const myQuotesCount = await db
         .select({ count: count() })
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
           and(
             eq(quotes.tenantId, user.tenantId),
             eq(quotes.createdBy, user.id),
-            eq(quotes.status, 'CONFIRMED')
+            eq(quotes.status, 'ORDERED')
           )
         );
 
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
         where: and(
           eq(quotes.tenantId, user.tenantId),
           eq(quotes.createdBy, user.id),
-          eq(quotes.status, 'CONFIRMED')
+          eq(quotes.status, 'ORDERED')
         ),
         columns: { finalAmount: true },
       });

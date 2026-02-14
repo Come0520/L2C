@@ -288,7 +288,7 @@ export class FinanceService {
 
                     let totalBasePrice = new Decimal(0);
                     for (const item of items) {
-                        const product = productMap.get(item.productId);
+                        const product = productMap.get(item.productId!);
                         if (product) {
                             // Use floorPrice if available, otherwise purchasePrice, fallback to 0
                             const base = new Decimal(product.floorPrice || product.purchasePrice || 0);

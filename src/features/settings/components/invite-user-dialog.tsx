@@ -12,7 +12,7 @@ import {
 } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { MultiSelect } from '@/shared/ui/multi-select';
+import { RoleSelector } from './role-selector';
 import { Loader2, Copy, Check, UserPlus } from 'lucide-react';
 import { createEmployeeInviteLink } from '@/features/settings/actions/invite';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
@@ -114,11 +114,10 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
                 <span>加载角色中...</span>
               </div>
             ) : (
-              <MultiSelect
+              <RoleSelector
                 options={roleOptions}
                 selected={roles}
-                onChange={setRoles}
-                placeholder="选择角色..."
+                onSelect={setRoles}
               />
             )}
           </div>

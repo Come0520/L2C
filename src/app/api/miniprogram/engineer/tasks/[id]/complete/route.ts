@@ -21,14 +21,14 @@ async function getUser(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await getUser(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const taskId = params.id;
+        const { id: taskId } = await params;
         const body = await request.json();
         const { photos, signatureUrl, remark } = body;
 

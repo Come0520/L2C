@@ -230,7 +230,7 @@ const getNotificationPreferencesActionInternal = createSafeAction(
     }
 );
 
-export async function getNotificationPreferences() {
+export async function getNotificationPreferencesAction() {
     return getNotificationPreferencesActionInternal({});
 }
 
@@ -346,5 +346,4 @@ export async function batchUpdateNotificationPreferences(data: z.infer<typeof ba
 export { getNotifications as getNotificationsAction };
 export { markAsRead as markAsReadAction };
 export { markAllAsRead as markAllAsReadAction };
-export { getNotificationPreferences as getNotificationPreferencesAction };
 export { updateNotificationPreference as updateNotificationPreferenceAction };

@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { customers } from '@/shared/api/schema';
+import { customers, customerAddresses } from '@/shared/api/schema';
 import { eq, and, or, like, desc, isNull } from 'drizzle-orm';
 import { jwtVerify } from 'jose';
 
@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
         phone: true,
         level: true,
         totalOrders: true,
+        // address removed as it is not in customers table
         lifecycleStage: true,
       },
     });
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, wechat, address, channelId, contactId, source, notes } = body;
+    const { name, phone, wechat, address } = body;
 
     if (!name) {
       return NextResponse.json({ success: false, error: '客户姓名不能为空' }, { status: 400 });
@@ -147,23 +148,24 @@ export async function POST(request: NextRequest) {
         name,
         phone: phone || '',
         wechat: wechat || null,
-        address: address || null,
-        // channelId 和 contactId 会在 leads 表中记录，这里存储来源文本
-        notes: notes || null,
         createdBy: user.id,
-        lifecycleStage: 'LEAD',
-        pipelineStatus: 'UNASSIGNED',
-        preferences: {
-          source: source || null,
-          channelId: channelId || null,
-          contactId: contactId || null,
-        },
       })
       .returning({
         id: customers.id,
         name: customers.name,
         phone: customers.phone,
       });
+
+    // 如果提供了地址，保存到地址表
+    if (address) {
+      await db.insert(customerAddresses).values({
+        tenantId: user.tenantId,
+        customerId: newCustomer.id,
+        address: address,
+        label: '默认地址',
+        isDefault: true,
+      });
+    }
 
     return NextResponse.json({ success: true, data: newCustomer });
   } catch (error) {

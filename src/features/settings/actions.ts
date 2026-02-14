@@ -23,27 +23,27 @@ const createUserAction = createSafeAction(mockActionSchema, async (data) => {
     return { success: true, message: "User created in recovery mode" };
 });
 
-export async function createUser(data: z.infer<typeof mockActionSchema>) {
-    return createUserAction(data);
-}
+// export async function createUser(data: z.infer<typeof mockActionSchema>) {
+//     return createUserAction(data);
+// }
 
-const updateUserAction = createSafeAction(mockActionSchema, async (data) => {
-    revalidatePath('/settings/users');
-    return { success: true, message: "User updated in recovery mode" };
-});
+// const updateUserAction = createSafeAction(mockActionSchema, async (data) => {
+//     revalidatePath('/settings/users');
+//     return { success: true, message: "User updated in recovery mode" };
+// });
 
-export async function updateUser(data: z.infer<typeof mockActionSchema>) {
-    return updateUserAction(data);
-}
+// export async function updateUser(data: z.infer<typeof mockActionSchema>) {
+//     return updateUserAction(data);
+// }
 
-const deleteUserAction = createSafeAction(mockActionSchema, async (data) => {
-    revalidatePath('/settings/users');
-    return { success: true, message: "User deleted in recovery mode" };
-});
+// const deleteUserAction = createSafeAction(mockActionSchema, async (data) => {
+//     revalidatePath('/settings/users');
+//     return { success: true, message: "User deleted in recovery mode" };
+// });
 
-export async function deleteUser(data: z.infer<typeof mockActionSchema>) {
-    return deleteUserAction(data);
-}
+// export async function deleteUser(data: z.infer<typeof mockActionSchema>) {
+//     return deleteUserAction(data);
+// }
 
 const updateTenantProfileAction = createSafeAction(mockActionSchema, async (data) => {
     revalidatePath('/settings/general');

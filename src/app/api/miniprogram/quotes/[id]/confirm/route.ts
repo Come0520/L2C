@@ -28,14 +28,14 @@ export async function POST(
     await db
       .update(quotes)
       .set({
-        status: 'CONFIRMED',
+        status: 'ACCEPTED',
         customerSignatureUrl: signatureUrl,
         confirmedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(quotes.id, id));
 
-    return NextResponse.json({ success: true, data: { status: 'CONFIRMED' } });
+    return NextResponse.json({ success: true, data: { status: 'ACCEPTED' } });
   } catch (error) {
     console.error('Confirm quote error:', error);
     return NextResponse.json({ success: false, error: 'Confirmation failed' }, { status: 500 });

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { installTasks, installItems, users, customers, orders } from '@/shared/api/schema';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, or, ilike } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { checkSchedulingConflict } from './logic/conflict-detection';
@@ -119,21 +119,16 @@ export async function getInstallTasks(params?: {
     const conditions = [eq(installTasks.tenantId, session.user.tenantId)];
 
     if (status && status !== 'ALL') {
-      conditions.push(eq(installTasks.status, status));
+      conditions.push(eq(installTasks.status, status as any));
     }
 
     if (search) {
       conditions.push(
-        or()
-        // ilike is not standard in drizzle across all drivers, assuming postgres or using like/sql
-        // Using sql operator for generic compatibility or drizzle specific
-        // For simplicity assuming drizzle-orm operators work
-        // If using postgres, ilike(installTasks.customerName, `%${search}%`)
-        // If sqlite/mysql, like(...)
-        // Let's assume like for now or handle it carefully.
-        // Since we use drizzle, we need to import 'like' or 'ilike'.
-        // Re-import might be needed. Let's try simple 'like' if not sure about driver, or check imports.
-        // Step 446 imports: import { eq, and, desc, asc } from 'drizzle-orm';
+        or(
+          ilike(installTasks.taskNo, `%${search}%`),
+          ilike(installTasks.customerName, `%${search}%`),
+          ilike(installTasks.customerPhone, `%${search}%`)
+        )!
       );
     }
 

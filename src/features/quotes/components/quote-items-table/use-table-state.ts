@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Dispatch, SetStateAction } from 'react';
 import type { QuoteItem, WarningDialogState } from './types';
 
 interface UseTableStateReturn {
@@ -11,7 +11,7 @@ interface UseTableStateReturn {
   expandedItemIds: Set<string>;
   handleAdvancedEdit: (item: QuoteItem) => void;
   setAdvancedDrawerOpen: (open: boolean) => void;
-  setWarningDialog: (state: WarningDialogState) => void;
+  setWarningDialog: Dispatch<SetStateAction<WarningDialogState>>;
   handleToggleRoom: (roomId: string) => void;
   handleToggleItem: (itemId: string) => void;
   initializeExpandedRooms: (roomIds: string[]) => void;

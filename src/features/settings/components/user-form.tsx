@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
-import { MultiSelect } from '@/shared/ui/multi-select';
+import { RoleSelector } from './role-selector';
 import { updateUser } from '@/features/settings/actions/user-actions';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -86,11 +86,10 @@ export function UserForm({
 
           <div className="space-y-2">
             <Label>角色</Label>
-            <MultiSelect
+            <RoleSelector
               options={availableRoles}
               selected={form.watch('roles')}
-              onChange={(vals) => form.setValue('roles', vals)}
-              placeholder="选择角色..."
+              onSelect={(vals) => form.setValue('roles', vals)}
             />
           </div>
 

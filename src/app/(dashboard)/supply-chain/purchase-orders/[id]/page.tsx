@@ -158,7 +158,7 @@ export default async function PoDetailPage({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {(po.items as PurchaseOrderItem[]).map((item) => (
+                                    {(po.items || []).map((item) => (
                                         <tr key={item.id}>
                                             <td className="px-4 py-3">
                                                 <div className="font-medium">{item.productName}</div>

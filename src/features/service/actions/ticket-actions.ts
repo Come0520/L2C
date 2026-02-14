@@ -48,7 +48,7 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
           ilike(afterSalesTickets.ticketNo, searchLower),
           ilike(afterSalesTickets.description, searchLower),
           ilike(customers.name, searchLower)
-        )
+        )!
       );
     }
 
@@ -99,7 +99,7 @@ export async function updateTicketStatus(
       .update(afterSalesTickets)
       .set({
         status: status as any, // Schema enum
-        result: result || undefined,
+        resolution: result || undefined,
         updatedAt: new Date(),
         // handlerId not in schema? let's check.
         // Schema has assignedTo, createdBy. But maybe handlerId was removed or I missed it.

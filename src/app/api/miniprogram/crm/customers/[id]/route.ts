@@ -21,14 +21,14 @@ async function getUser(request: NextRequest) {
     }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await getUser(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const customerId = await Promise.resolve(params.id);
+        const { id: customerId } = await params;
 
         const customer = await db.query.customers.findFirst({
             where: and(eq(customers.id, customerId), eq(customers.tenantId, user.tenantId)),

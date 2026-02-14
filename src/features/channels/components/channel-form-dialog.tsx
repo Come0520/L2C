@@ -85,7 +85,6 @@ interface ChannelFormDialogProps {
         hierarchyLevel: number;
         categoryId?: string | null;
         category?: { name: string } | null;
-        category?: { name: string } | null;
         channelType?: string | null;
         customChannelType?: string | null;
     } | null;

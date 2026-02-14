@@ -96,7 +96,6 @@ export function VerificationBadge({
         return (
             <Icon
                 className={cn(sizeStyle.icon, config.className, className)}
-                title={config.label}
             />
         );
     }
@@ -139,7 +138,6 @@ export function VerifiedIcon({
                 'text-blue-500 dark:text-blue-400',
                 className
             )}
-            title="已认证企业"
         />
     );
 }

@@ -26,6 +26,17 @@ RUN corepack enable
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# 构建时占位环境变量，避免 Next.js 构建因缺少变量而失败
+# 实际值在运行时通过 .env 或 docker-compose 注入
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV AUTH_SECRET="build-time-placeholder-secret"
+
+# 版本信息通过 ARG 注入（可选，由 CI 传入）
+ARG NEXT_PUBLIC_GIT_COMMIT_SHA=""
+ARG NEXT_PUBLIC_BUILD_TIME=""
+ENV NEXT_PUBLIC_GIT_COMMIT_SHA=$NEXT_PUBLIC_GIT_COMMIT_SHA
+ENV NEXT_PUBLIC_BUILD_TIME=$NEXT_PUBLIC_BUILD_TIME
+
 RUN pnpm run build
 
 FROM base AS runner

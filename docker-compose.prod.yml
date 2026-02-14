@@ -9,7 +9,10 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_GIT_COMMIT_SHA=${GIT_COMMIT_SHA:-unknown}
+        - NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME:-unknown}
     container_name: l2c-app
     restart: unless-stopped
     environment:

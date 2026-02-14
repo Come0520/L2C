@@ -45,49 +45,48 @@ stages:
               - echo "✅ 质量检查全部通过"
 
   # ============================================================
-  # 阶段 2: 构建打包 (Build & Package)
+  # 阶段 2: 打包源码并上传 (Package & Upload)
   # ============================================================
   - stage:
-      name: build-stage
-      displayName: 构建打包
+      name: package-stage
+      displayName: 打包源码
       steps:
         - step:
-            name: build-and-package
-            displayName: 构建与打包
+            name: package-source
+            displayName: 打包与上传
             image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:20
             script:
-              - echo "=== L2C 构建流程 ==="
-              - echo "Node $(node -v)"
+              - echo "=== 打包源码 ==="
 
-              - echo "安装 pnpm..."
-              - npm install -g pnpm@${PNPM_VERSION}
-
-              - echo "安装依赖 (frozen-lockfile)..."
-              - pnpm install --frozen-lockfile
-
-              - echo "注入版本信息..."
-              - export NEXT_PUBLIC_GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
-              - export NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              - echo "Commit: $NEXT_PUBLIC_GIT_COMMIT_SHA | Time: $NEXT_PUBLIC_BUILD_TIME"
-
-              - echo "构建 Next.js 应用..."
-              - pnpm build
-
-              - echo "验证构建产物..."
-              - ls -la .next/standalone/ || { echo "❌ standalone 目录缺失！构建可能失败"; exit 1; }
-              - ls -la .next/static/ || { echo "❌ static 目录缺失！"; exit 1; }
+              - echo "生成版本信息..."
+              - export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
+              - export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+              - echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
 
               - echo "生成版本文件..."
-              - echo "{\"sha\":\"$NEXT_PUBLIC_GIT_COMMIT_SHA\",\"time\":\"$NEXT_PUBLIC_BUILD_TIME\"}" > public/version.json
+              - mkdir -p public
+              - echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
 
-              - echo "打包发布文件..."
-              - tar -czf release.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prod package.json pnpm-lock.yaml nginx/ drizzle/ drizzle.config.ts
+              # 生成 .build-args 文件，供 ECS 上 docker compose 时使用
+              - echo "GIT_COMMIT_SHA=$GIT_COMMIT_SHA" > .build-args
+              - echo "BUILD_TIME=$BUILD_TIME" >> .build-args
+
+              - echo "打包源码 (排除 node_modules/.next/.git)..."
+              - tar -czf release.tar.gz \
+                  --exclude='node_modules' \
+                  --exclude='.next' \
+                  --exclude='.git' \
+                  --exclude='test-results' \
+                  --exclude='playwright-report' \
+                  --exclude='coverage' \
+                  --exclude='*.log' \
+                  .
 
               - echo "产物大小:"
               - ls -lh release.tar.gz
 
               - mv release.tar.gz $FLOW_ARTIFACT_PATH/
-              - echo "✅ 构建完成"
+              - echo "✅ 打包完成"
 
             artifacts:
               - name: release-package
@@ -110,27 +109,27 @@ stages:
               ECS_USER: root
             script:
               - echo "=== 开始部署到 $ECS_HOST ==="
-              
+
               # 安装 sshpass (兼容 Debian/Ubuntu 和 Alpine)
               - if command -v apt-get >/dev/null; then apt-get update && apt-get install -y sshpass; elif command -v apk >/dev/null; then apk add --no-cache sshpass; else echo "Unable to install sshpass"; exit 1; fi
 
               # 验证 ECS_PASSWORD 是否存在
               - if [ -z "$ECS_PASSWORD" ]; then echo "Error: ECS_PASSWORD variable is not set"; exit 1; fi
 
-              # 上传构建产物 (使用 sshpass)
-              - echo "上传构建产物..."
+              # 上传源码包
+              - echo "上传源码包..."
               - sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no $FLOW_ARTIFACT_PATH/release.tar.gz $ECS_USER@$ECS_HOST:/root/L2C/release.tar.gz
 
-              # 远程部署脚本 (使用 sshpass)
+              # 远程部署脚本
               - |
                 sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no $ECS_USER@$ECS_HOST << 'DEPLOY_EOF'
                   set -e
                   cd /root/L2C
 
-                  echo "📦 Step 1: 备份当前环境..."
+                  echo "📦 Step 1: 备份当前 .env..."
                   if [ -f .env ]; then
-                    cp .env .env.deploy_backup
-                    echo "  ✅ .env 已备份为 .env.deploy_backup"
+                    cp .env /root/.env.l2c_backup
+                    echo "  ✅ .env 已备份到 /root/.env.l2c_backup"
                   else
                     echo "  ⚠️ 未找到 .env 文件！部署后请手动配置。"
                   fi
@@ -144,21 +143,28 @@ stages:
                     echo "  ✅ 上一版本已保存为 release.prev.tar.gz"
                   fi
 
-                  echo "📂 Step 3: 解压新版本..."
+                  echo "📂 Step 3: 解压源码..."
                   tar -xzf release.tar.gz
                   mv release.tar.gz release.current.tar.gz
 
                   echo "🔒 Step 4: 恢复环境变量..."
-                  if [ -f .env.deploy_backup ]; then
-                    mv .env.deploy_backup .env
+                  if [ -f /root/.env.l2c_backup ]; then
+                    cp /root/.env.l2c_backup .env
                     echo "  ✅ .env 已恢复"
                   fi
 
-                  echo "🐳 Step 5: 停止旧容器..."
+                  echo "📝 Step 5: 注入版本信息到 docker-compose..."
+                  if [ -f .build-args ]; then
+                    source .build-args
+                    export GIT_COMMIT_SHA BUILD_TIME
+                    echo "  版本: $GIT_COMMIT_SHA | 时间: $BUILD_TIME"
+                  fi
+
+                  echo "🐳 Step 6: 停止旧容器..."
                   docker compose -f docker-compose.prod.yml down || true
 
-                  echo "🐳 Step 6: 构建并启动新容器..."
-                  docker compose -f docker-compose.prod.yml up -d --build
+                  echo "🐳 Step 7: 构建并启动新容器 (多阶段 Docker 构建)..."
+                  docker compose -f docker-compose.prod.yml up -d --build --force-recreate
 
                   echo "✅ 容器已启动"
                 DEPLOY_EOF
@@ -194,21 +200,21 @@ stages:
                   set -e
                   cd /root/L2C
 
-                  echo "⏳ 等待应用启动 (最多 60 秒)..."
+                  echo "⏳ 等待应用启动 (最多 120 秒)..."
                   HEALTHY=false
-                  for i in $(seq 1 12); do
+                  for i in $(seq 1 24); do
                     if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                       echo "  ✅ 健康检查通过 (第 ${i} 次尝试, 耗时约 $((i*5)) 秒)"
                       HEALTHY=true
                       break
                     fi
-                    echo "  ⏳ 等待中... (${i}/12)"
+                    echo "  ⏳ 等待中... (${i}/24)"
                     sleep 5
                   done
 
                   if [ "$HEALTHY" = "false" ]; then
                     echo "❌ 健康检查超时！最近容器日志:"
-                    docker compose -f docker-compose.prod.yml logs --tail=50 app
+                    docker compose -f docker-compose.prod.yml logs --tail=80 app
                     exit 1
                   fi
 
@@ -226,8 +232,9 @@ stages:
                   fi
 
                   echo ""
-                  echo "🧹 清理无用 Docker 镜像..."
-                  docker system prune -f
+                  echo "🧹 清理无用 Docker 资源..."
+                  docker image prune -f
+                  docker builder prune -f --keep-storage=2GB || true
 
                   echo ""
                   echo "=== ✅ L2C 部署验证完成 ==="

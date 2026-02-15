@@ -76,6 +76,11 @@ export const createQuoteItemSchema = z.object({
 export const updateQuoteItemSchema = z.object({
   id: z.string().uuid(),
 
+  // 产品关联字段（更换产品时使用）
+  productId: z.string().uuid().optional(),
+  productName: z.string().max(200).optional(),
+  category: z.string().max(50).optional(),
+
   quantity: z.number().min(0).optional(),
   unitPrice: z.number().min(0).optional(),
 

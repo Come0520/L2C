@@ -32,94 +32,135 @@ import { LogoWithThemeSwitcher } from '@/shared/ui/theme-pill-nav';
 import { useTenant } from '@/shared/providers/tenant-provider';
 import { VerifiedIcon } from '@/shared/ui/verification-badge';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react'; // Import useSession
+import { useSession } from 'next-auth/react';
+import { ROLES } from '@/shared/config/roles';
 
 /**
  * 导航链接配置
  * 各模块入口，使用 lucide-react 图标
+ * requiredPermission: 访问该菜单所需的模块权限前缀（用于角色过滤）
  */
 const navLinks = [
   {
     label: '工作台',
     href: '/',
     icon: Home,
+    requiredPermission: null, // 所有角色可见
   },
   {
     label: '线索管理',
     href: '/leads',
     icon: Users,
+    requiredPermission: 'lead',
   },
   {
     label: '渠道管理',
     href: '/channels',
     icon: Network,
+    requiredPermission: 'channel',
   },
   {
     label: '客户管理',
     href: '/customers',
     icon: UserCheck,
+    requiredPermission: 'customer',
   },
   {
     label: '报价管理',
     href: '/quotes',
     icon: FileText,
+    requiredPermission: 'quote',
   },
   {
     label: '订单管理',
     href: '/orders',
     icon: ShoppingCart,
+    requiredPermission: 'order',
   },
   {
     label: '云展厅',
     href: '/showroom',
     icon: Store,
+    requiredPermission: 'products', // 需要产品查看权限
   },
   {
     label: '测量服务',
     href: '/service/measurement',
     icon: Ruler,
+    requiredPermission: 'measure',
   },
   {
     label: '安装服务',
     href: '/service/installation',
     icon: Wrench,
+    requiredPermission: 'install',
   },
   {
     label: '供应链',
     href: '/supply-chain',
     icon: Truck,
+    requiredPermission: 'supply_chain',
   },
   {
     label: '财务中心',
     href: '/finance',
     icon: DollarSign,
+    requiredPermission: 'finance',
   },
   {
     label: '审批中心',
     href: '/workflow/approvals',
     icon: ClipboardCheck,
+    requiredPermission: null, // 所有角色可见（内容按权限过滤）
   },
   {
     label: '售后服务',
     href: '/after-sales',
     icon: Headphones,
+    requiredPermission: 'after_sales',
   },
   {
     label: '通知中心',
     href: '/notifications',
     icon: Bell,
+    requiredPermission: null, // 所有角色可见
   },
   {
     label: '数据分析',
     href: '/analytics',
     icon: BarChart2,
+    requiredPermission: 'analytics',
   },
   {
     label: '系统设置',
     href: '/settings',
     icon: Settings,
+    requiredPermission: 'settings',
   },
 ];
+
+/**
+ * 检查角色是否拥有某模块的任意权限
+ * @param roles 用户角色列表
+ * @param modulePrefix 模块权限前缀（如 'lead', 'order', 'finance'）
+ * @returns 是否有权限访问该模块
+ */
+function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
+  // ADMIN 和平台管理员拥有所有权限
+  if (roles.includes('ADMIN')) return true;
+
+  // 从 ROLES 配置中检查用户的任一角色是否拥有该模块的某个权限
+  for (const roleCode of roles) {
+    const roleDef = ROLES[roleCode];
+    if (!roleDef) continue;
+    // 检查该角色是否拥有以 modulePrefix 开头的任意权限
+    const hasPermission = (roleDef.permissions as string[]).some(
+      (perm: string) => perm === '**' || perm === '*' || perm.startsWith(`${modulePrefix}.`)
+    );
+    if (hasPermission) return true;
+  }
+  return false;
+}
 
 /**
  * 应用侧边栏导航组件
@@ -130,21 +171,30 @@ export function AppSidebar() {
   const [open, setOpen] = React.useState(false);
   const { data: session } = useSession();
 
-  // 动态生成导航菜单，如果是平台管理员，添加“租户管理”
+  // 动态生成导航菜单：按角色过滤 + 平台管理员添加租户管理
   const displayNavLinks = React.useMemo(() => {
-    // console.log('Sidebar Debug - Session:', session); // Temporarily commented out to avoid console spam, enable if needed
+    const userRoles = session?.user?.roles || [session?.user?.role || 'SALES'];
+
+    // 按权限过滤可见菜单
+    let filtered = navLinks.filter((link) => {
+      if (!link.requiredPermission) return true; // 无权限要求，所有人可见
+      return hasModuleAccess(userRoles, link.requiredPermission);
+    });
+
+    // 平台管理员额外显示租户管理
     if (session?.user?.isPlatformAdmin) {
-      return [
-        ...navLinks,
+      filtered = [
+        ...filtered,
         {
           label: '租户管理',
           href: '/admin/tenants',
           icon: Building2,
+          requiredPermission: null,
         },
       ];
     }
-    return navLinks;
-  }, [session?.user?.isPlatformAdmin]);
+    return filtered;
+  }, [session?.user?.isPlatformAdmin, session?.user?.roles, session?.user?.role]);
 
   return (
     <Sidebar open={open} setOpen={setOpen}>

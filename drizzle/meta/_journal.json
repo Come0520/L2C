@@ -141,6 +141,13 @@
       "when": 1770874505541,
       "tag": "0019_giant_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771148183403,
+      "tag": "0020_lovely_prodigy",
+      "breakpoints": true
     }
   ]
 }

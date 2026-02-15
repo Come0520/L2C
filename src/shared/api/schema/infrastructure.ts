@@ -74,9 +74,9 @@ export const users = pgTable('users', {
   tenantId: uuid('tenant_id')
     .references(() => tenants.id)
     .notNull(),
-  email: varchar('email', { length: 255 }).unique().notNull(),
+  email: varchar('email', { length: 255 }), // 可空，通过迁移脚本添加条件唯一索引 (tenantId, email)
   name: varchar('name', { length: 100 }),
-  phone: varchar('phone', { length: 20 }).unique(),
+  phone: varchar('phone', { length: 20 }).notNull(), // 必填，通过迁移脚本添加复合唯一索引 (tenantId, phone)
   passwordHash: text('password_hash'),
   role: varchar('role', { length: 50 }).default('SALES'),
   roles: jsonb('roles').$type<string[]>().default([]),

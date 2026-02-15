@@ -20,6 +20,7 @@
     "pages/reports/index",
     "pages/tasks/index",
     "pages/tasks/detail/detail",
+    "pages/tasks/measure/index",
     "pages/quotes/detail",
     "pages/users/profile",
     "pages/tenant/payment-settings/index",

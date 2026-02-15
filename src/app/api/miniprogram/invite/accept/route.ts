@@ -121,7 +121,8 @@ export async function POST(request: NextRequest) {
       const [newUser] = await db
         .insert(users)
         .values({
-          email: `${openId}@wechat.com`, // 占位
+          email: null, // 邮箱可空，不再生成临时邮箱
+          phone: `WX_${openId.slice(0, 15)}`, // phone 必填，使用 openId 前缀作为占位符
           tenantId: invite.tenantId,
           role: invite.role,
           wechatOpenId: openId,

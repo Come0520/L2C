@@ -1,9 +1,79 @@
+<!--
+  任务列表页
+  pages/tasks/index.wxml
+-->
 <view class="container">
-  <text>我的任务</text>
-  <view class="task-list">
-    <view class="task-item">
-      <text class="address">上海市浦东新区...</text>
-      <text class="type">量房</text>
+  <!-- Tab 栏 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{activeTab === 'pending' ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-tab="pending"
+    >
+      待处理
+    </view>
+    <view 
+      class="tab-item {{activeTab === 'completed' ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-tab="completed"
+    >
+      已完成
     </view>
   </view>
+
+  <!-- 任务列表 -->
+  <scroll-view 
+    class="task-list"
+    scroll-y
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onPullDownRefresh"
+  >
+    <view wx:if="{{loading}}" class="loading">
+      <text>加载中...</text>
+    </view>
+
+    <view wx:elif="{{taskList.length === 0}}" class="empty">
+      <text>暂无任务</text>
+    </view>
+
+    <view wx:else>
+      <view 
+        wx:for="{{taskList}}" 
+        wx:key="id" 
+        class="task-card"
+        bindtap="goToDetail"
+        data-id="{{item.id}}"
+      >
+        <!-- 任务编号和状态 -->
+        <view class="task-header">
+          <text class="task-no">{{item.measureNo}}</text>
+          <text class="task-status {{item.status}}">{{formatStatus(item.status)}}</text>
+        </view>
+
+        <!-- 客户信息 -->
+        <view class="task-info">
+          <view class="info-row">
+            <text class="label">客户：</text>
+            <text class="value">{{item.customerName}}</text>
+          </view>
+          <view class="info-row">
+            <text class="label">预约：</text>
+            <text class="value">{{formatTime(item.scheduledAt)}}</text>
+          </view>
+        </view>
+
+        <!-- 底部信息 -->
+        <view class="task-footer">
+          <view class="tags">
+            <text class="tag type-{{item.type}}">{{formatMeasureType(item.type)}}</text>
+          </view>
+          <view class="labor-fee" wx:if="{{item.laborFee}}">
+            <text class="fee-label">工费：</text>
+            <text class="fee-value">¥{{item.laborFee}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
 </view>

@@ -8,9 +8,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/shared/config/env';
 import { db } from '@/shared/api/db';
-import { users, customers } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { users, customers, invitations } from '@/shared/api/schema';
+import { eq, and } from 'drizzle-orm';
 import { hash } from 'bcryptjs';
+import { nanoid } from 'nanoid';
 
 // ============================================================
 // 类型定义
@@ -28,6 +29,7 @@ export interface InviteTokenPayload {
   type: InviteType;
   tenantId: string;
   inviterId: string; // 邀请人 ID
+  invitationId?: string; // 邀请记录 ID（用于一次性使用验证）
   customerId?: string; // 客户邀请时的客户 ID
   defaultRole?: string; // @deprecated Use defaultRoles
   defaultRoles?: string[]; // 员工邀请时的默认角色列表
@@ -81,10 +83,27 @@ export async function generateEmployeeInviteToken(
 ): Promise<string> {
   const expiresAt = Date.now() + EMPLOYEE_INVITE_EXPIRY;
 
+  // 1. 写入 invitations 表记录
+  const [invitation] = await db
+    .insert(invitations)
+    .values({
+      tenantId,
+      inviterId,
+      code: nanoid(8),
+      role: defaultRoles.join(','),
+      expiresAt: new Date(expiresAt),
+      maxUses: '1', // 一次性使用
+      usedCount: '0',
+      isActive: true,
+    })
+    .returning({ id: invitations.id });
+
+  // 2. 生成 JWT 令牌，嵌入 invitationId
   const token = await new SignJWT({
     type: 'employee' as InviteType,
     tenantId,
     inviterId,
+    invitationId: invitation.id,
     defaultRoles,
     expiresAt,
   })
@@ -207,27 +226,48 @@ export async function registerEmployeeByInvite(
       return { success: false, error: validation.error };
     }
 
-    const { tenantId } = validation.payload;
+    const { tenantId, invitationId } = validation.payload;
 
-    // 检查手机号是否已存在
+    // 1. 验证 invitations 表记录是否有效
+    if (invitationId) {
+      const invitation = await db.query.invitations.findFirst({
+        where: eq(invitations.id, invitationId),
+      });
+
+      if (!invitation) {
+        return { success: false, error: '邀请记录不存在' };
+      }
+
+      if (!invitation.isActive) {
+        return { success: false, error: '邀请链接已失效' };
+      }
+
+      const usedCount = parseInt(invitation.usedCount || '0');
+      const maxUses = parseInt(invitation.maxUses || '1');
+      if (usedCount >= maxUses) {
+        return { success: false, error: '邀请链接已达最大使用次数' };
+      }
+    }
+
+    // 2. 检查手机号是否在当前租户内已存在
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.phone, userData.phone),
+      where: and(eq(users.phone, userData.phone), eq(users.tenantId, tenantId)),
     });
     if (existingUser) {
       return { success: false, error: '该手机号已注册' };
     }
 
-    // 如果用户提供了真实邮箱，检查邮箱唯一性
+    // 3. 如果用户提供了真实邮箱，检查邮箱在当前租户内的唯一性
     if (userData.email) {
       const existingEmail = await db.query.users.findFirst({
-        where: eq(users.email, userData.email),
+        where: and(eq(users.email, userData.email), eq(users.tenantId, tenantId)),
       });
       if (existingEmail) {
         return { success: false, error: '该邮箱已被使用' };
       }
     }
 
-    // 创建用户（权限为空，需管理员后台分配）
+    // 4. 创建用户
     const passwordHash = await hash(userData.password, 12);
 
     // 兼容旧 payload (defaultRole)
@@ -235,16 +275,13 @@ export async function registerEmployeeByInvite(
       validation.payload.defaultRoles ||
       (validation.payload.defaultRole ? [validation.payload.defaultRole] : ['SALES']);
 
-    // 邮箱处理：优先使用用户提供的真实邮箱，否则生成唯一临时邮箱
-    const email = userData.email || `${userData.phone}_${Date.now().toString(36)}@temp.l2c.com`;
-
     const [newUser] = await db
       .insert(users)
       .values({
         tenantId,
         name: userData.name,
         phone: userData.phone,
-        email,
+        email: userData.email || null, // 移除临时邮箱，改为 null
         passwordHash,
         role: roles[0] || 'SALES', // Backup compatibility
         roles: roles, // Multi-role
@@ -253,6 +290,18 @@ export async function registerEmployeeByInvite(
         isActive: true,
       })
       .returning({ id: users.id });
+
+    // 5. 更新 invitations 表，标记为已使用
+    if (invitationId) {
+      await db
+        .update(invitations)
+        .set({
+          usedCount: '1',
+          isActive: false, // 一次性使用，直接标记失效
+          updatedAt: new Date(),
+        })
+        .where(eq(invitations.id, invitationId));
+    }
 
     return { success: true, userId: newUser.id };
   } catch (error) {
@@ -356,4 +405,3 @@ export async function registerCustomerByInvite(
     return { success: false, error: '注册过程中发生错误，请稍后重试' };
   }
 }
-

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { InviteUserDialog } from '@/features/settings/components/invite-user-dialog';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
+import type { UserInfo } from '@/features/settings/actions/user-actions';
 
 /**
  * 用户管理设置页面
@@ -16,7 +17,7 @@ export default async function UsersSettingsPage() {
   const tenantId = session?.user?.tenantId;
 
   // 获取用户列表
-  let userData: any[] = [];
+  let userData: UserInfo[] = [];
   if (tenantId) {
     try {
       const dbUsers = await db.query.users.findMany({
@@ -26,9 +27,10 @@ export default async function UsersSettingsPage() {
         id: u.id,
         name: u.name || '未命名用户',
         phone: u.phone || '-',
+        email: u.email || null,
         role: u.role || '未分配角色',
-        roles: u.roles || [],
-        isActive: u.isActive,
+        roles: (u.roles as string[]) || [],
+        isActive: u.isActive ?? true,
       }));
     } catch (error) {
       console.error('获取用户列表失败:', error);

@@ -9,17 +9,23 @@ import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { RoleSelector } from './role-selector';
 import { updateUser } from '@/features/settings/actions/user-actions';
+import type { UserInfo } from '@/features/settings/actions/user-actions';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: any;
+  initialData?: UserInfo | null;
   onSuccess: () => void;
   availableRoles?: { label: string; value: string }[];
 }
 
+/**
+ * 用户编辑表单对话框
+ * 支持编辑姓名、角色、启用状态
+ * 显示手机号和邮箱（只读）
+ */
 export function UserForm({
   open,
   onOpenChange,
@@ -46,7 +52,7 @@ export function UserForm({
     }
   }, [open, initialData, form]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { name: string; roles: string[]; isActive: boolean }) => {
     if (!initialData?.id) return;
 
     setLoading(true);
@@ -64,7 +70,7 @@ export function UserForm({
       } else {
         toast.error(result.error || '更新失败');
       }
-    } catch (e) {
+    } catch {
       toast.error('更新失败');
     } finally {
       setLoading(false);
@@ -83,6 +89,20 @@ export function UserForm({
             <Label>姓名</Label>
             <Input {...form.register('name')} placeholder="用户姓名" />
           </div>
+
+          {/* 只读信息：手机号和邮箱 */}
+          {initialData && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">手机号</Label>
+                <Input value={initialData.phone || '-'} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">邮箱</Label>
+                <Input value={initialData.email || '未绑定'} disabled className="bg-muted" />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>角色</Label>

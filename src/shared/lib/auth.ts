@@ -176,6 +176,13 @@ export const checkPermission = async (
 
 /**
  * 内部权限检查（带缓存）
+ *
+ * 支持三种匹配模式：
+ * 1. 精确匹配：权限名完全一致
+ * 2. 通配符匹配：角色拥有 '*' 或 '**' 权限
+ * 3. 数据范围层级推导：`order.own.edit` 或 `order.all.edit` 隐式包含 `order.edit`
+ *    这解决了 Server Actions 使用通用权限名（如 `order.edit`），
+ *    而角色配置使用数据范围权限名（如 `order.own.edit`）的不匹配问题。
  */
 const checkRolePermission = async (session: Session, permissionName: string): Promise<boolean> => {
   const getRolePermissions = unstable_cache(
@@ -201,7 +208,29 @@ const checkRolePermission = async (session: Session, permissionName: string): Pr
     // 合并所有角色的权限
     const allPermissions = new Set(results.flat());
 
-    return allPermissions.has(permissionName) || allPermissions.has('*');
+    // 1. 精确匹配
+    if (allPermissions.has(permissionName)) return true;
+
+    // 2. 通配符匹配
+    if (allPermissions.has('*') || allPermissions.has('**')) return true;
+
+    // 3. 数据范围层级推导
+    //    如果检查的是通用权限（如 `order.edit`），
+    //    而用户拥有对应的数据范围权限（如 `order.own.edit` 或 `order.all.edit`），
+    //    则认为权限匹配成功。
+    //    格式：{module}.{action} → 检查 {module}.own.{action} 或 {module}.all.{action}
+    const parts = permissionName.split('.');
+    if (parts.length === 2) {
+      const [module, action] = parts;
+      if (
+        allPermissions.has(`${module}.own.${action}`) ||
+        allPermissions.has(`${module}.all.${action}`)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   } catch (e) {
     logger.error('Permission check failed', e);
     return false;

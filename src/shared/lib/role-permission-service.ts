@@ -110,6 +110,19 @@ export class RolePermissionService {
       return true;
     }
 
+    // 6.5 数据范围层级推导
+    //     通用权限（如 `order.edit`）可由数据范围权限（如 `order.own.edit`）隐式满足
+    const parts = permission.split('.');
+    if (parts.length === 2) {
+      const [module, action] = parts;
+      if (
+        effectivePermissions.includes(`${module}.own.${action}`) ||
+        effectivePermissions.includes(`${module}.all.${action}`)
+      ) {
+        return true;
+      }
+    }
+
     // 7. 检查用户直接分配的权限
     const userPermissions = (user.permissions as string[]) || [];
     if (userPermissions.includes(permission)) {

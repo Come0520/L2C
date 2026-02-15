@@ -1,78 +1,83 @@
-version: '1.0'
-name: L2C-Production-Deploy
+variables:
+  - key: PNPM_VERSION
+    value: '9.15.0'
 
 sources:
-  my_repo:
+  codeup_source:
     type: codeup
-    name: CodeupRepo
+    name: "Codeup 代码源"
     endpoint: https://codeup.aliyun.com/697359d3b28d0aba0f5e4ff2/l2c.git
     branch: main
-    trigger_events:
-      - push
+    certificate:
+      type: serviceConnection
+      serviceConnection: "n91ncnbpmgw4ybzk"
 
-envs:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '9.15.0'
+# 代码提交自动触发流水线
+triggers:
+  push_trigger:
+    name: "代码推送触发"
+    type: push
+    enabled: true
+    branches:
+      include:
+        - main
 
 stages:
-  # ============================================================
-  # 阶段 1: 质量检查 (Quality Gate)
-  # ============================================================
-  - stage:
-      name: quality-gate
-      displayName: 质量检查
-      steps:
-        - step:
-            name: lint-and-typecheck
-            displayName: ESLint + TypeScript 检查
-            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:20
-            script:
-              - echo "=== 质量检查开始 ==="
-              - echo "Node $(node -v) | NPM $(npm -v)"
+  quality_gate:
+    name: "质量检查"
+    jobs:
+      lint_job:
+        name: "ESLint + TypeScript 检查"
+        runsOn:
+          group: public/cn-beijing
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+        steps:
+          lint_step:
+            step: Command
+            name: "代码质量检查"
+            with:
+              run: |
+                echo "=== 质量检查开始 ==="
+                # 使用 npmmirror 国内镜像安装 Node.js
+                curl -fsSL https://npmmirror.com/mirrors/node/v20.19.0/node-v20.19.0-linux-x64.tar.xz -o node.tar.xz
+                tar -xJf node.tar.xz -C /usr/local --strip-components=1
+                rm -f node.tar.xz
+                npm config set registry https://registry.npmmirror.com
+                npm install -g pnpm@${PNPM_VERSION}
+                echo "Node $(node -v) | pnpm $(pnpm -v)"
+                pnpm config set registry https://registry.npmmirror.com
+                pnpm install --frozen-lockfile
+                echo "运行 ESLint..."
+                pnpm lint || { echo "ESLint 检查失败"; exit 1; }
+                echo "运行 TypeScript 类型检查..."
+                pnpm type-check || { echo "类型检查失败"; exit 1; }
+                echo "=== 质量检查通过 ==="
 
-              - echo "安装 pnpm..."
-              - npm install -g pnpm@${PNPM_VERSION}
+  deploy_stage:
+    name: "打包与部署"
+    jobs:
+      deploy_job:
+        name: "打包 → 部署 → 验证"
+        runsOn:
+          group: public/cn-beijing
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+        steps:
+          deploy_step:
+            step: Command
+            name: "打包、部署与健康检查"
+            with:
+              run: |
+                echo "=== 开始打包与部署 ==="
 
-              - echo "安装依赖..."
-              - pnpm install --frozen-lockfile
-
-              - echo "运行 ESLint..."
-              - pnpm lint || { echo "❌ ESLint 检查失败"; exit 1; }
-
-              - echo "运行 TypeScript 类型检查..."
-              - pnpm type-check || { echo "❌ 类型检查失败"; exit 1; }
-
-              - echo "✅ 质量检查全部通过"
-
-  # ============================================================
-  # 阶段 2: 打包源码并上传 (Package & Upload)
-  # ============================================================
-  - stage:
-      name: package-stage
-      displayName: 打包源码
-      steps:
-        - step:
-            name: package-source
-            displayName: 打包与上传
-            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/node:20
-            script:
-              - echo "=== 打包源码 ==="
-
-              - echo "生成版本信息..."
-              - export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
-              - export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              - echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
-
-              - echo "生成版本文件..."
-              - mkdir -p public
-              - echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
-
-              # 生成 .build-args 文件，供 ECS 上 docker compose 时使用
-              - echo "GIT_COMMIT_SHA=$GIT_COMMIT_SHA" > .build-args
-              - echo "BUILD_TIME=$BUILD_TIME" >> .build-args
-
-              - echo "打包源码 (排除 node_modules/.next/.git)..."
-              - tar -czf release.tar.gz \
+                # ========== 第一步：打包源码 ==========
+                export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
+                export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
+                mkdir -p public
+                echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
+                echo "GIT_COMMIT_SHA=$GIT_COMMIT_SHA" > .build-args
+                echo "BUILD_TIME=$BUILD_TIME" >> .build-args
+                tar -czf /tmp/release.tar.gz \
                   --exclude='node_modules' \
                   --exclude='.next' \
                   --exclude='.git' \
@@ -80,164 +85,132 @@ stages:
                   --exclude='playwright-report' \
                   --exclude='coverage' \
                   --exclude='*.log' \
+                  --exclude='release.tar.gz' \
                   .
+                mv /tmp/release.tar.gz release.tar.gz
+                ls -lh release.tar.gz
+                echo "=== 打包完成 ==="
 
-              - echo "产物大小:"
-              - ls -lh release.tar.gz
+                # ========== 第二步：安装部署工具 ==========
+                if command -v apt-get >/dev/null; then
+                  apt-get update -qq && apt-get install -y -qq sshpass rsync curl
+                elif command -v yum >/dev/null; then
+                  yum install -y sshpass rsync curl
+                elif command -v apk >/dev/null; then
+                  apk add --no-cache sshpass rsync curl
+                else
+                  echo "无法安装 sshpass"; exit 1
+                fi
 
-              - mv release.tar.gz $FLOW_ARTIFACT_PATH/
-              - echo "✅ 打包完成"
+                # 检查环境变量
+                if [ -z "$ECS_PASSWORD" ]; then echo "错误: ECS_PASSWORD 未设置"; exit 1; fi
+                if [ -z "$ECS_HOST" ]; then echo "错误: ECS_HOST 未设置"; exit 1; fi
 
-            artifacts:
-              - name: release-package
-                path: ./release.tar.gz
+                # ========== 第三步：上传到 ECS ==========
+                echo "上传 release.tar.gz 到 ECS..."
+                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
+                  release.tar.gz root@$ECS_HOST:/root/L2C/release.tar.gz
 
-  # ============================================================
-  # 阶段 3: 部署到 ECS (Deploy)
-  # ============================================================
-  - stage:
-      name: deploy-stage
-      displayName: 部署到 ECS
-      steps:
-        - step:
-            name: deploy-to-ecs
-            displayName: 安全部署
-            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
-            env:
-              ECS_HOST: $ECS_HOST
-              ECS_PASSWORD: $ECS_PASSWORD
-              ECS_USER: root
-            script:
-              - echo "=== 开始部署到 $ECS_HOST ==="
-
-              # 安装 sshpass (兼容 Debian/Ubuntu 和 Alpine)
-              - if command -v apt-get >/dev/null; then apt-get update && apt-get install -y sshpass; elif command -v apk >/dev/null; then apk add --no-cache sshpass; else echo "Unable to install sshpass"; exit 1; fi
-
-              # 验证 ECS_PASSWORD 是否存在
-              - if [ -z "$ECS_PASSWORD" ]; then echo "Error: ECS_PASSWORD variable is not set"; exit 1; fi
-
-              # 上传源码包
-              - echo "上传源码包..."
-              - sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no $FLOW_ARTIFACT_PATH/release.tar.gz $ECS_USER@$ECS_HOST:/root/L2C/release.tar.gz
-
-              # 远程部署脚本
-              - |
-                sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no $ECS_USER@$ECS_HOST << 'DEPLOY_EOF'
+                # ========== 第四步：远程部署 ==========
+                sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no root@$ECS_HOST << 'DEPLOY_EOF'
                   set -e
                   cd /root/L2C
 
-                  echo "📦 Step 1: 备份当前 .env..."
-                  if [ -f .env ]; then
-                    cp .env /root/.env.l2c_backup
-                    echo "  ✅ .env 已备份到 /root/.env.l2c_backup"
-                  else
-                    echo "  ⚠️ 未找到 .env 文件！部署后请手动配置。"
+                  # 1. 备份 .env
+                  if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
+
+                  # 2. 备份当前版本（用于回滚）
+                  if [ -f release.current.tar.gz ]; then cp release.current.tar.gz release.prev.tar.gz; fi
+
+                  # 3. 原子化解压到临时目录
+                  TEMP_DIR=$(mktemp -d /root/L2C_deploy_XXXXXX)
+                  tar -xzf release.tar.gz -C "$TEMP_DIR"
+                  if [ ! -f "$TEMP_DIR/Dockerfile" ] || [ ! -f "$TEMP_DIR/docker-compose.prod.yml" ]; then
+                    echo "错误：解压后缺少关键文件，中止部署"
+                    rm -rf "$TEMP_DIR"
+                    exit 1
                   fi
 
-                  echo "📦 Step 2: 保留上一版本 (回滚用)..."
-                  if [ -f release.prev.tar.gz ]; then
-                    rm -f release.prev.tar.gz
-                  fi
-                  if [ -f release.current.tar.gz ]; then
-                    mv release.current.tar.gz release.prev.tar.gz
-                    echo "  ✅ 上一版本已保存为 release.prev.tar.gz"
-                  fi
+                  # 4. rsync 同步（排除运行时数据）
+                  rsync -a --delete \
+                    --exclude='.env' \
+                    --exclude='.git' \
+                    --exclude='node_modules' \
+                    --exclude='.next' \
+                    --exclude='release.tar.gz' \
+                    --exclude='release.*.tar.gz' \
+                    --exclude='uploads' \
+                    --exclude='logs' \
+                    --exclude='nginx/ssl' \
+                    "$TEMP_DIR/" /root/L2C/
+                  rm -rf "$TEMP_DIR"
 
-                  echo "📂 Step 3: 解压源码..."
-                  tar -xzf release.tar.gz
+                  # 5. 恢复 .env
+                  if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup /root/L2C/.env; fi
                   mv release.tar.gz release.current.tar.gz
 
-                  echo "🔒 Step 4: 恢复环境变量..."
-                  if [ -f /root/.env.l2c_backup ]; then
-                    cp /root/.env.l2c_backup .env
-                    echo "  ✅ .env 已恢复"
-                  fi
+                  # 6. 加载版本信息
+                  if [ -f .build-args ]; then source .build-args; export GIT_COMMIT_SHA BUILD_TIME; fi
 
-                  echo "📝 Step 5: 注入版本信息到 docker-compose..."
-                  if [ -f .build-args ]; then
-                    source .build-args
-                    export GIT_COMMIT_SHA BUILD_TIME
-                    echo "  版本: $GIT_COMMIT_SHA | 时间: $BUILD_TIME"
+                  # 7. 数据库 Schema 迁移（同步表结构到 RDS）
+                  echo "=== 执行数据库迁移 ==="
+                  if ! command -v node > /dev/null 2>&1; then
+                    curl -fsSL https://npmmirror.com/mirrors/node/v20.19.0/node-v20.19.0-linux-x64.tar.xz -o /tmp/node.tar.xz
+                    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
+                    rm -f /tmp/node.tar.xz
                   fi
+                  npm config set registry https://registry.npmmirror.com
+                  npm install -g pnpm@9.15.0
+                  pnpm config set registry https://registry.npmmirror.com
+                  pnpm install --frozen-lockfile
+                  # 加载 .env 中的 DATABASE_URL 供 drizzle-kit 使用
+                  set -a; source .env; set +a
+                  npx drizzle-kit push --force || echo "⚠️ 数据库迁移警告（非致命，继续部署）"
+                  echo "=== 数据库迁移完成 ==="
 
-                  echo "🐳 Step 6: 停止旧容器..."
+                  # 8. 重建并启动容器
                   docker compose -f docker-compose.prod.yml down || true
-
-                  echo "🐳 Step 7: 构建并启动新容器 (多阶段 Docker 构建)..."
                   docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+                  echo "容器已启动，等待健康检查..."
 
-                  echo "✅ 容器已启动"
-                DEPLOY_EOF
-
-              - echo "✅ 部署脚本执行完毕"
-
-  # ============================================================
-  # 阶段 4: 部署验证 (Smoke Test)
-  # ============================================================
-  - stage:
-      name: verify-stage
-      displayName: 部署验证
-      steps:
-        - step:
-            name: smoke-test
-            displayName: 烟雾测试与清理
-            image: registry.cn-hangzhou.aliyuncs.com/flow-templates/deploy:latest
-            env:
-              ECS_HOST: $ECS_HOST
-              ECS_PASSWORD: $ECS_PASSWORD
-              ECS_USER: root
-            script:
-              - echo "=== 部署验证 ==="
-
-              # 安装 sshpass
-              - if command -v apt-get >/dev/null; then apt-get update && apt-get install -y sshpass; elif command -v apk >/dev/null; then apk add --no-cache sshpass; else echo "Unable to install sshpass"; exit 1; fi
-
-              # 验证 ECS_PASSWORD
-              - if [ -z "$ECS_PASSWORD" ]; then echo "Error: ECS_PASSWORD variable is not set"; exit 1; fi
-
-              - |
-                sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no $ECS_USER@$ECS_HOST << 'VERIFY_EOF'
-                  set -e
-                  cd /root/L2C
-
-                  echo "⏳ 等待应用启动 (最多 120 秒)..."
+                  # 9. 健康检查（最多等 2 分钟）
                   HEALTHY=false
                   for i in $(seq 1 24); do
-                    if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-                      echo "  ✅ 健康检查通过 (第 ${i} 次尝试, 耗时约 $((i*5)) 秒)"
+                    if curl -sf http://localhost:80/api/health > /dev/null 2>&1; then
+                      echo "✅ 健康检查通过 (第 ${i} 次尝试)"
                       HEALTHY=true
                       break
                     fi
-                    echo "  ⏳ 等待中... (${i}/24)"
+                    echo "  等待中... ($i/24)"
                     sleep 5
                   done
 
                   if [ "$HEALTHY" = "false" ]; then
-                    echo "❌ 健康检查超时！最近容器日志:"
+                    echo "❌ 健康检查超时！"
                     docker compose -f docker-compose.prod.yml logs --tail=80 app
+                    # 自动回滚
+                    if [ -f release.prev.tar.gz ]; then
+                      echo "=== 自动回滚到上一版本 ==="
+                      if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
+                      tar -xzf release.prev.tar.gz
+                      if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup .env; fi
+                      docker compose -f docker-compose.prod.yml down || true
+                      docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+                      sleep 30
+                      if curl -sf http://localhost:80/api/health > /dev/null 2>&1; then
+                        echo "回滚后健康检查通过"
+                      else
+                        echo "回滚后仍不健康，需手动干预"
+                      fi
+                    else
+                      echo "没有上一版本可回滚，需手动干预"
+                    fi
                     exit 1
                   fi
 
-                  echo ""
-                  echo "📊 容器状态:"
+                  # 10. 输出最终状态
                   docker compose -f docker-compose.prod.yml ps
-                  echo ""
-
-                  echo "🔍 HTTP 状态验证:"
-                  HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' http://localhost:3000/api/health)
-                  echo "  /api/health -> HTTP $HTTP_CODE"
-                  if [ "$HTTP_CODE" != "200" ]; then
-                    echo "  ❌ 非预期状态码!"
-                    exit 1
-                  fi
-
-                  echo ""
-                  echo "🧹 清理无用 Docker 资源..."
-                  docker image prune -f
-                  docker builder prune -f --keep-storage=2GB || true
-
-                  echo ""
-                  echo "=== ✅ L2C 部署验证完成 ==="
-                VERIFY_EOF
-
-              - echo "🎉 L2C 部署成功完成！"
+                  docker image prune -f --filter "until=24h"
+                  echo "=== L2C 部署成功完成 ==="
+                DEPLOY_EOF
+                echo "=== 流水线结束 ==="

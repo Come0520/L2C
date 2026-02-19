@@ -1,7 +1,11 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { systemSettings, systemSettingsHistory, DEFAULT_SYSTEM_SETTINGS } from '@/shared/api/schema/system-settings';
+import {
+  systemSettings,
+  systemSettingsHistory,
+  DEFAULT_SYSTEM_SETTINGS,
+} from '@/shared/api/schema/system-settings';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -12,251 +16,276 @@ import { revalidatePath } from 'next/cache';
  * 提供配置的增删改查操作
  */
 
-// 内存缓存（减少数据库查询）
-const settingsCache = new Map<string, { data: Map<string, string>; expireAt: number }>();
-const _CACHE_TTL = 5 * 60 * 1000; // 5 分钟
-
 /**
  * 解析配置值
  */
-function parseSettingValue(value: string, valueType: string): unknown {
-    switch (valueType) {
-        case 'BOOLEAN':
-            return value === 'true';
-        case 'INTEGER':
-            return parseInt(value, 10);
-        case 'DECIMAL':
-            return parseFloat(value);
-        case 'JSON':
-            try {
-                return JSON.parse(value);
-            } catch {
-                return value;
-            }
-        case 'ENUM':
-        default:
-            return value;
-    }
+export function parseSettingValue(value: string, valueType: string): unknown {
+  switch (valueType) {
+    case 'BOOLEAN':
+      return value === 'true';
+    case 'INTEGER':
+      return parseInt(value, 10);
+    case 'DECIMAL':
+      return parseFloat(value);
+    case 'JSON':
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    case 'ENUM':
+    default:
+      return value;
+  }
 }
 
 /**
- * 获取指定分类的所有配置
+ * 校验配置值类型
+ */
+export function validateValueType(value: unknown, expectedType: string): boolean {
+  switch (expectedType) {
+    case 'BOOLEAN':
+      return typeof value === 'boolean';
+    case 'INTEGER':
+      return Number.isInteger(Number(value));
+    case 'DECIMAL':
+      return !isNaN(Number(value));
+    case 'JSON':
+      return typeof value === 'object' || typeof value === 'string';
+    case 'ENUM':
+      return typeof value === 'string';
+    default:
+      return true;
+  }
+}
+
+/**
+ * 根据分类获取系统设置
+ *
+ * @description 获取当前租户下指定分类的所有系统设置。
+ * 自动解析每个配置项的值类型（BOOLEAN/INTEGER/DECIMAL/JSON/ENUM）。
+ *
+ * @param category - 设置分类标识，例如 'crm', 'finance'
+ * @returns Promise<Record<string, unknown>> 返回键值对形式的设置对象
+ * @throws Error 未授权访问时抛出
  */
 export async function getSettingsByCategory(category: string) {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+  const session = await auth();
+  if (!session?.user?.tenantId) throw new Error('未授权');
 
-    let settings = [];
-    try {
-        settings = await db.query.systemSettings.findMany({
-            where: and(
-                eq(systemSettings.tenantId, session.user.tenantId),
-                eq(systemSettings.category, category)
-            ),
-        });
-    } catch (error) {
-        console.error(`Failed to get settings for category ${category}:`, error);
-        return {}; // Return empty object fallback
-    }
+  try {
+    const settings = await db.query.systemSettings.findMany({
+      where: and(
+        eq(systemSettings.tenantId, session.user.tenantId),
+        eq(systemSettings.category, category)
+      ),
+    });
 
-    // 转换为对象格式
     const result: Record<string, unknown> = {};
     for (const setting of settings) {
-        result[setting.key] = parseSettingValue(setting.value, setting.valueType);
+      result[setting.key] = parseSettingValue(setting.value, setting.valueType);
     }
 
     return result;
+  } catch (error) {
+    console.error(`获取分类 ${category} 的配置失败:`, error);
+    return {};
+  }
 }
 
 /**
- * 获取单个配置值（带缓存）
+ * 获取单个配置值 (供内部服务层调用，不导出为 Server Action)
  */
-export async function getSetting(key: string, overrideTenantId?: string): Promise<unknown> {
-    let tenantId = overrideTenantId;
+export async function getSettingInternal(key: string, tenantId: string): Promise<unknown> {
+  try {
+    const setting = await db.query.systemSettings.findFirst({
+      where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, key)),
+    });
 
-    if (!tenantId) {
-        const session = await auth();
-        if (!session?.user?.tenantId) {
-            // If explicit tenantId provided, we don't need auth session (internal/api call)
-            // But if neither is present, throw.
-            throw new Error('未授权');
-        }
-        tenantId = session.user.tenantId;
+    if (setting) {
+      return parseSettingValue(setting.value, setting.valueType);
     }
 
-    // 检查缓存
-    const cached = settingsCache.get(tenantId);
-    if (cached && cached.expireAt > Date.now() && cached.data.has(key)) {
-        const setting = await db.query.systemSettings.findFirst({
-            where: and(
-                eq(systemSettings.tenantId, tenantId),
-                eq(systemSettings.key, key)
-            ),
-        });
-        if (setting) {
-            return parseSettingValue(setting.value, setting.valueType);
-        }
+    // 返回默认值
+    const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find((s) => s.key === key);
+    if (defaultSetting) {
+      return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
     }
 
-    // 从数据库获取
-    let setting;
-    try {
-        setting = await db.query.systemSettings.findFirst({
-            where: and(
-                eq(systemSettings.tenantId, tenantId),
-                eq(systemSettings.key, key)
-            ),
-        });
-    } catch (error) {
-        console.error(`Failed to get setting ${key}:`, error);
-        // Fallback to default if DB fails
-        const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find(s => s.key === key);
-        if (defaultSetting) {
-            return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
-        }
-        return null;
+    throw new Error(`配置项 ${key} 不存在`);
+  } catch (error) {
+    console.error(`获取配置项 ${key} 失败:`, error);
+    const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find((s) => s.key === key);
+    if (defaultSetting) {
+      return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
     }
+    return null;
+  }
+}
 
-    if (!setting) {
-        // 返回默认值
-        const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find(s => s.key === key);
-        if (defaultSetting) {
-            return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
-        }
-        throw new Error(`配置项 ${key} 不存在`);
-    }
+/**
+ * 获取当前租户的配置值 (导出为 Server Action)
+ */
+export async function getSetting(key: string): Promise<unknown> {
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    throw new Error('未授权访问');
+  }
 
-    return parseSettingValue(setting.value, setting.valueType);
+  return getSettingInternal(key, session.user.tenantId);
+}
+
+/**
+ * 更新单个配置 Internal (用于事务内调用)
+ */
+async function updateSettingInternal(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  key: string,
+  value: unknown,
+  tenantId: string,
+  userId: string
+) {
+  const existing = await tx.query.systemSettings.findFirst({
+    where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, key)),
+  });
+
+  if (!existing) {
+    throw new Error(`配置项 ${key} 不存在`);
+  }
+
+  if (!validateValueType(value, existing.valueType)) {
+    throw new Error(`配置项 ${key} 的值类型不匹配，预期 ${existing.valueType}`);
+  }
+
+  const newValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+
+  // 记录历史
+  await tx.insert(systemSettingsHistory).values({
+    tenantId,
+    settingId: existing.id,
+    key,
+    oldValue: existing.value,
+    newValue,
+    changedBy: userId,
+  });
+
+  // 更新配置
+  await tx
+    .update(systemSettings)
+    .set({
+      value: newValue,
+      updatedAt: new Date(),
+      updatedBy: userId,
+    })
+    .where(eq(systemSettings.id, existing.id));
 }
 
 /**
  * 更新单个配置
  */
 export async function updateSetting(key: string, value: unknown) {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
+  const session = await auth();
+  if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
 
-    // 权限校验：需要设置管理权限
-    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
 
-    const tenantId = session.user.tenantId;
-    const userId = session.user.id;
+  const tenantId = session.user.tenantId;
+  const userId = session.user.id;
 
-    // 查找现有配置
-    const existing = await db.query.systemSettings.findFirst({
-        where: and(
-            eq(systemSettings.tenantId, tenantId),
-            eq(systemSettings.key, key)
-        ),
-    });
+  await db.transaction(async (tx) => {
+    await updateSettingInternal(tx, key, value, tenantId, userId);
+  });
 
-    if (!existing) {
-        throw new Error(`配置项 ${key} 不存在`);
-    }
-
-    const newValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-
-    // 记录历史
-    await db.insert(systemSettingsHistory).values({
-        tenantId,
-        settingId: existing.id,
-        key,
-        oldValue: existing.value,
-        newValue,
-        changedBy: userId,
-    });
-
-    // 更新配置
-    await db.update(systemSettings)
-        .set({
-            value: newValue,
-            updatedAt: new Date(),
-            updatedBy: userId,
-        })
-        .where(eq(systemSettings.id, existing.id));
-
-    // 清除缓存
-    settingsCache.delete(tenantId);
-
-    revalidatePath('/settings');
-    return { success: true };
+  revalidatePath('/settings');
+  return { success: true };
 }
 
 /**
- * 批量更新配置
+ * 批量更新系统设置
+ *
+ * @description 同时更新多个配置项。在事务中逐项进行类型校验和更新，
+ * 并记录变更历史。如果任一项校验失败，整个事务回滚。
+ *
+ * @param settings - 键值对形式的配置更新对象，key 为配置名，value 为新值
+ * @returns Promise<{ success: boolean }> 更新结果
+ * @throws Error 未授权访问或权限不足时抛出
  */
 export async function batchUpdateSettings(settings: Record<string, unknown>) {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
+  const session = await auth();
+  if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
 
-    // 权限校验：需要设置管理权限
-    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
 
+  const tenantId = session.user.tenantId;
+  const userId = session.user.id;
+
+  await db.transaction(async (tx) => {
     for (const [key, value] of Object.entries(settings)) {
-        await updateSetting(key, value);
+      await updateSettingInternal(tx, key, value, tenantId, userId);
     }
+  });
 
-    return { success: true };
+  revalidatePath('/settings');
+  return { success: true };
 }
 
 /**
- * 初始化租户默认配置
- * 在创建新租户时调用
+ * 初始化租户默认设置
+ *
+ * @description 为租户创建默认的系统设置项。通常在租户创建或初始化时调用。
+ * 使用 `onConflictDoNothing` 策略，仅当设置项不存在时才创建，不会覆盖现有配置。
+ *
+ * @param tenantId - 目标租户 ID
+ * @returns Promise<{ success: boolean; message?: string; error?: string }> 初始化结果
  */
 export async function initTenantSettings(tenantId: string) {
-    try {
-        // 检查是否已初始化（通过查询任一配置项）
-        const existing = await db.query.systemSettings.findFirst({
-            where: eq(systemSettings.tenantId, tenantId),
-        });
+  try {
+    await db.transaction(async (tx) => {
+      const existing = await tx.query.systemSettings.findFirst({
+        where: eq(systemSettings.tenantId, tenantId),
+      });
 
-        if (existing) {
-            return { success: true, message: '配置已存在' };
-        }
+      if (existing) return;
 
-        // 逐条插入默认配置（静默处理冲突）
-        for (const setting of DEFAULT_SYSTEM_SETTINGS) {
-            try {
-                await db.insert(systemSettings).values({
-                    tenantId,
-                    category: setting.category,
-                    key: setting.key,
-                    value: setting.value,
-                    valueType: setting.valueType,
-                    description: setting.description,
-                }).onConflictDoNothing();
-            } catch {
-                // 静默忽略单条插入失败（如重复键）
-            }
-        }
+      const valuesToInsert = DEFAULT_SYSTEM_SETTINGS.map((setting) => ({
+        tenantId,
+        category: setting.category,
+        key: setting.key,
+        value: setting.value,
+        valueType: setting.valueType,
+        description: setting.description,
+      }));
 
-        return { success: true, message: '配置初始化完成' };
-    } catch (error) {
-        // 仅在严重错误时记录
-        console.error('initTenantSettings error:', error);
-        return { success: false, error: '配置初始化失败' };
-    }
+      if (valuesToInsert.length > 0) {
+        await tx.insert(systemSettings).values(valuesToInsert).onConflictDoNothing();
+      }
+    });
+
+    return { success: true, message: '配置初始化完成' };
+  } catch (error) {
+    console.error('initTenantSettings error:', error);
+    return { success: false, error: '配置初始化失败' };
+  }
 }
 
 /**
  * 获取所有配置（按分类分组）
  */
 export async function getAllSettings() {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+  const session = await auth();
+  if (!session?.user?.tenantId) throw new Error('未授权');
 
-    const allSettings = await db.query.systemSettings.findMany({
-        where: eq(systemSettings.tenantId, session.user.tenantId),
-    });
+  const allSettings = await db.query.systemSettings.findMany({
+    where: eq(systemSettings.tenantId, session.user.tenantId),
+  });
 
-    // 按分类分组
-    const grouped: Record<string, Record<string, unknown>> = {};
-    for (const setting of allSettings) {
-        if (!grouped[setting.category]) {
-            grouped[setting.category] = {};
-        }
-        grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+  const grouped: Record<string, Record<string, unknown>> = {};
+  for (const setting of allSettings) {
+    if (!grouped[setting.category]) {
+      grouped[setting.category] = {};
     }
+    grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+  }
 
-    return grouped;
+  return grouped;
 }

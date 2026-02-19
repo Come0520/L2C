@@ -73,3 +73,27 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]
+
+# ==========================================
+# 数据库迁移阶段（独立服务）
+# 用于在容器内执行 drizzle-kit push
+# 解决 CentOS 7 宿主机 GLIBC 版本过低的问题
+# ==========================================
+FROM base AS migrator
+WORKDIR /app
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# 复制迁移所需文件
+COPY drizzle ./drizzle
+COPY drizzle.config.ts ./
+COPY src/shared/api/schema.ts ./src/shared/api/schema.ts
+COPY src/shared/api/schema/ ./src/shared/api/schema/
+COPY tsconfig.json ./
+
+CMD ["npx", "drizzle-kit", "push", "--force"]

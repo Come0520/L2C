@@ -4,6 +4,20 @@
 # ========================================
 
 services:
+  # 数据库迁移服务（运行一次后退出）
+  # 在容器内执行 drizzle-kit push，解决宿主机 GLIBC 不兼容问题
+  db-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: l2c-db-migrate
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    networks:
+      - l2c-network
+    restart: "no"
+
   # Next.js 应用
   # 注意: 多实例部署请使用 Docker Swarm 或 Kubernetes
   app:
@@ -15,6 +29,9 @@ services:
         - NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME:-unknown}
     container_name: l2c-app
     restart: unless-stopped
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
     environment:
       - NODE_ENV=production
       # 使用 .env 中已编码的 DATABASE_URL

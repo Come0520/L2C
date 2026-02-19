@@ -152,21 +152,9 @@ stages:
                   # 6. 加载版本信息
                   if [ -f .build-args ]; then source .build-args; export GIT_COMMIT_SHA BUILD_TIME; fi
 
-                  # 7. 数据库 Schema 迁移（同步表结构到 RDS）
-                  echo "=== 执行数据库迁移 ==="
-                  if ! command -v node > /dev/null 2>&1; then
-                    curl -fsSL https://npmmirror.com/mirrors/node/v20.19.0/node-v20.19.0-linux-x64.tar.xz -o /tmp/node.tar.xz
-                    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
-                    rm -f /tmp/node.tar.xz
-                  fi
-                  npm config set registry https://registry.npmmirror.com
-                  npm install -g pnpm@9.15.0
-                  pnpm config set registry https://registry.npmmirror.com
-                  pnpm install --frozen-lockfile
-                  # 加载 .env 中的 DATABASE_URL 供 drizzle-kit 使用
-                  set -a; source .env; set +a
-                  npx drizzle-kit push --force || echo "⚠️ 数据库迁移警告（非致命，继续部署）"
-                  echo "=== 数据库迁移完成 ==="
+                  # 7. 数据库迁移已由 docker-compose.prod.yml 中的 db-migrate 服务自动执行
+                  # 无需在宿主机安装 Node.js（CentOS 7 GLIBC 不兼容）
+                  echo "=== 数据库迁移将由容器自动执行 ==="
 
                   # 8. 重建并启动容器
                   docker compose -f docker-compose.prod.yml down || true

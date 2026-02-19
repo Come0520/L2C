@@ -93,7 +93,7 @@ export function SplitRulesConfig() {
                     conditions: rule.conditions,
                     targetType: rule.targetType as 'PURCHASE_ORDER' | 'SERVICE_TASK',
                     targetSupplierId: rule.targetSupplierId,
-                    isActive: rule.isActive ? 0 : 1,
+                    isActive: !rule.isActive,
                 });
                 setRules(rules.map(r =>
                     r.id === rule.id ? { ...r, isActive: !r.isActive } : r
@@ -137,7 +137,7 @@ export function SplitRulesConfig() {
                     priority: formData.priority,
                     conditions: selectedType?.conditions || '{}',
                     targetType: 'PURCHASE_ORDER',
-                    isActive: 1,
+                    isActive: true,
                 };
 
                 if (editingRule) {

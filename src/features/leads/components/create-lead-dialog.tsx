@@ -13,12 +13,11 @@ import { LeadForm } from './lead-form';
 import { useState } from 'react';
 
 interface CreateLeadDialogProps {
-    channels: any[];
-    userId: string;
+    channels: Array<{ id: string; name: string }>;
     tenantId: string;
 }
 
-export function CreateLeadDialog({ channels, userId, tenantId }: CreateLeadDialogProps) {
+export function CreateLeadDialog({ channels, tenantId }: CreateLeadDialogProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -35,9 +34,8 @@ export function CreateLeadDialog({ channels, userId, tenantId }: CreateLeadDialo
                 </DialogHeader>
                 <LeadForm
                     channels={channels}
-                    userId={userId}
-                    tenantId={tenantId}
                     onSuccess={() => setOpen(false)}
+                    tenantId={tenantId}
                 />
             </DialogContent>
         </Dialog>

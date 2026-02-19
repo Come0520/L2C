@@ -2,12 +2,14 @@
 
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 租户基本信息管理 Server Actions
@@ -31,9 +33,6 @@ export interface TenantInfo {
     logoUrl: string | null;
     contact: TenantContactInfo;
 }
-
-/** 允许编辑租户信息的角色 */
-const EDITABLE_ROLES = ['BOSS', 'ADMIN'];
 
 // ============ Zod 校验 Schema ============
 
@@ -88,8 +87,8 @@ export async function getTenantInfo(): Promise<{ success: true; data: TenantInfo
                 contact,
             },
         };
-    } catch (error) {
-        console.error('获取租户信息失败:', error);
+    } catch {
+        console.error('获取租户信息失败:');
         return { success: false, error: '获取租户信息失败' };
     }
 }
@@ -98,14 +97,17 @@ export async function getTenantInfo(): Promise<{ success: true; data: TenantInfo
  * 检查当前用户是否有编辑权限
  */
 export async function canEditTenantInfo(): Promise<boolean> {
-    const session = await auth();
-    if (!session?.user?.role) return false;
-    return EDITABLE_ROLES.includes(session.user.role);
+    try {
+        const session = await auth();
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**
  * 更新租户基本信息
- * 仅 BOSS 和 ADMIN 角色可调用
  */
 export async function updateTenantInfo(data: {
     name: string;
@@ -120,7 +122,9 @@ export async function updateTenantInfo(data: {
         }
 
         // 权限校验
-        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+        try {
+            await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+        } catch (_e) {
             return { success: false, error: '无权限执行此操作' };
         }
 
@@ -130,41 +134,65 @@ export async function updateTenantInfo(data: {
             return { success: false, error: validated.error.issues[0]?.message || '输入校验失败' };
         }
 
-        // 获取当前 settings
-        const tenant = await db.query.tenants.findFirst({
-            where: eq(tenants.id, session.user.tenantId),
-            columns: { settings: true },
-        });
+        const tenantId = session.user.tenantId;
+        const userId = session.user.id;
 
-        const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+        // 使用事务并锁定行，防止并发更新数据覆盖 (R3-07)
+        await db.transaction(async (tx) => {
+            // 获取并锁定当前 settings
+            const tenant = await tx.select({ settings: tenants.settings })
+                .from(tenants)
+                .where(eq(tenants.id, tenantId))
+                .for('update')
+                .then(res => res[0]);
 
-        // 更新数据库
-        await db.update(tenants)
-            .set({
-                name: validated.data.name,
-                settings: {
-                    ...currentSettings,
-                    contact: {
-                        address: validated.data.address || '',
-                        phone: validated.data.phone || '',
-                        email: validated.data.email || '',
+            const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+            const oldContact = (currentSettings.contact as Record<string, unknown>) || {};
+
+            // 更新数据库
+            await tx.update(tenants)
+                .set({
+                    name: validated.data.name,
+                    settings: {
+                        ...currentSettings,
+                        contact: {
+                            address: validated.data.address || '',
+                            phone: validated.data.phone || '',
+                            email: validated.data.email || '',
+                        },
                     },
+                    updatedAt: new Date(),
+                })
+                .where(eq(tenants.id, tenantId));
+
+            // 记录审计日志
+            await AuditService.log(tx, {
+                tableName: 'tenants',
+                recordId: tenantId,
+                action: 'UPDATE',
+                userId,
+                newValues: {
+                    name: validated.data.name,
+                    contact: {
+                        address: validated.data.address,
+                        phone: validated.data.phone,
+                        email: validated.data.email,
+                    }
                 },
-                updatedAt: new Date(),
-            })
-            .where(eq(tenants.id, session.user.tenantId));
+                oldValues: { contact: oldContact },
+            });
+        });
 
         revalidatePath('/settings/general');
         return { success: true };
     } catch (error) {
         console.error('更新租户信息失败:', error);
-        return { success: false, error: '更新失败，请稍后重试' };
+        return { success: false, error: error instanceof Error ? error.message : '更新失败，请稍后重试' };
     }
 }
 
 /**
  * 上传租户 Logo
- * 接收 FormData，保存到 public/uploads/logos/ 目录
  */
 export async function uploadTenantLogo(formData: FormData): Promise<{ success: true; logoUrl: string } | { success: false; error: string }> {
     try {
@@ -174,7 +202,9 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
         }
 
         // 权限校验
-        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+        try {
+            await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+        } catch (_e) {
             return { success: false, error: '无权限执行此操作' };
         }
 
@@ -183,23 +213,33 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
             return { success: false, error: '请选择图片文件' };
         }
 
+        // 验证文件大小 (R3-01)
+        const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+        if (file.size > MAX_LOGO_SIZE) {
+            return { success: false, error: '图片文件不能超过 2MB' };
+        }
+
         // 验证文件类型
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            return { success: false, error: '仅支持 JPG、PNG、GIF、WebP 格式' };
+        // 验证文件类型和大小
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            return { success: false, error: '只支持 JPG, PNG, WEBP 格式图片' };
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            return { success: false, error: 'Logo 文件大小不能超过 2MB' };
         }
 
-        // 验证文件大小（最大 2MB）
-        const maxSize = 2 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return { success: false, error: '图片大小不能超过 2MB' };
-        }
+        const tenantId = session.user.tenantId;
+        const extension = file.name.split('.').pop() || 'png';
+        const fileName = `${tenantId}-${Date.now()}.${extension}`;
 
-        // 生成文件名
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
-        const fileName = `${session.user.tenantId}_${Date.now()}.${ext}`;
-
-        // 确保目录存在
+        /**
+         * [!WARNING]
+         * 生产环境架构建议：
+         * 当前实现使用本地文件系统 (fs) 存储 Logo。在 Serverless (如 Vercel) 或负载均衡环境下，
+         * 本地存储是临时且非共享的。
+         * 建议：在生产环境中，请将此处的逻辑替换为阿里云 OSS、S3 或其他分布式对象存储，
+         * 并通过 CDN 分发文件。
+         */
         const uploadDir = join(process.cwd(), 'public', 'uploads', 'logos');
         await mkdir(uploadDir, { recursive: true });
 
@@ -218,6 +258,15 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
                 updatedAt: new Date(),
             })
             .where(eq(tenants.id, session.user.tenantId));
+
+        // 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'tenants',
+            recordId: tenantId,
+            action: 'UPDATE_INFO',
+            userId: session.user.id,
+            newValues: { logoUrl },
+        });
 
         revalidatePath('/settings/general');
         return { success: true, logoUrl };
@@ -285,8 +334,8 @@ export async function getVerificationStatus(): Promise<{
                 verificationRejectReason: tenant.verificationRejectReason,
             },
         };
-    } catch (error) {
-        console.error('获取认证状态失败:', error);
+    } catch {
+        console.error('获取认证状态失败:');
         return { success: false, error: '获取认证状态失败' };
     }
 }
@@ -301,7 +350,6 @@ const submitVerificationSchema = z.object({
 
 /**
  * 提交企业认证申请
- * 仅 BOSS 和 ADMIN 角色可调用
  */
 export async function submitVerification(data: {
     legalRepName: string;
@@ -316,7 +364,9 @@ export async function submitVerification(data: {
         }
 
         // 权限校验
-        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+        try {
+            await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+        } catch (_e) {
             return { success: false, error: '无权限执行此操作' };
         }
 
@@ -326,41 +376,54 @@ export async function submitVerification(data: {
             return { success: false, error: validated.error.issues[0]?.message || '输入校验失败' };
         }
 
-        // 检查当前状态
-        const tenant = await db.query.tenants.findFirst({
-            where: eq(tenants.id, session.user.tenantId),
-            columns: { verificationStatus: true },
+        const tenantId = session.user.tenantId;
+
+        // 使用事务确保更新一致性 (R3-08)
+        await db.transaction(async (tx) => {
+            // 再次检查状态（事务内）
+            const tenant = await tx.select({ verificationStatus: tenants.verificationStatus })
+                .from(tenants)
+                .where(eq(tenants.id, tenantId))
+                .for('update')
+                .then(res => res[0]);
+
+            if (tenant?.verificationStatus === 'verified') {
+                throw new Error('企业已完成认证，无需重复提交');
+            }
+
+            // 更新数据库
+            await tx.update(tenants)
+                .set({
+                    verificationStatus: 'pending',
+                    legalRepName: validated.data.legalRepName,
+                    registeredCapital: validated.data.registeredCapital || null,
+                    businessScope: validated.data.businessScope || null,
+                    businessLicenseUrl: validated.data.businessLicenseUrl,
+                    verificationRejectReason: null, // 清除之前的拒绝原因
+                    updatedAt: new Date(),
+                })
+                .where(eq(tenants.id, tenantId));
+
+            // 记录审计日志
+            await AuditService.log(db, {
+                tableName: 'tenants',
+                recordId: tenantId,
+                action: 'UPDATE_LOGISTIC_CONFIG', // Assuming this is the correct action for verification submission
+                userId: session.user.id,
+                newValues: data,
+            });
         });
-
-        // 已认证的不能重复申请
-        if (tenant?.verificationStatus === 'verified') {
-            return { success: false, error: '企业已完成认证' };
-        }
-
-        // 更新数据库
-        await db.update(tenants)
-            .set({
-                verificationStatus: 'pending',
-                legalRepName: validated.data.legalRepName,
-                registeredCapital: validated.data.registeredCapital || null,
-                businessScope: validated.data.businessScope || null,
-                businessLicenseUrl: validated.data.businessLicenseUrl,
-                verificationRejectReason: null, // 清除之前的拒绝原因
-                updatedAt: new Date(),
-            })
-            .where(eq(tenants.id, session.user.tenantId));
 
         revalidatePath('/settings/verification');
         return { success: true };
     } catch (error) {
         console.error('提交认证申请失败:', error);
-        return { success: false, error: '提交失败，请稍后重试' };
+        return { success: false, error: error instanceof Error ? error.message : '提交失败，请稍后重试' };
     }
 }
 
 /**
  * 上传营业执照
- * 接收 FormData，保存到 public/uploads/licenses/ 目录
  */
 export async function uploadBusinessLicense(formData: FormData): Promise<{
     success: true;
@@ -373,7 +436,9 @@ export async function uploadBusinessLicense(formData: FormData): Promise<{
         }
 
         // 权限校验
-        if (!session.user.role || !EDITABLE_ROLES.includes(session.user.role)) {
+        try {
+            await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+        } catch (_e) {
             return { success: false, error: '无权限执行此操作' };
         }
 
@@ -382,20 +447,26 @@ export async function uploadBusinessLicense(formData: FormData): Promise<{
             return { success: false, error: '请选择图片文件' };
         }
 
+        // 验证文件大小 (R3-01)
+        const MAX_LICENSE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_LICENSE_SIZE) {
+            return { success: false, error: '文件不能超过 5MB' };
+        }
+
         // 验证文件类型
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
             return { success: false, error: '仅支持 JPG、PNG、WebP、PDF 格式' };
         }
 
-        // 验证文件大小（最大 5MB）
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return { success: false, error: '文件大小不能超过 5MB' };
-        }
-
-        // 生成文件名
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+        // 安全获取扩展名
+        const typeMap: Record<string, string> = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+            'application/pdf': 'pdf',
+        };
+        const ext = typeMap[file.type] || 'png';
         const fileName = `license_${session.user.tenantId}_${Date.now()}.${ext}`;
 
         // 确保目录存在

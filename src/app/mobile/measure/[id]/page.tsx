@@ -6,7 +6,7 @@ import { offlineStore, OfflineMeasurement } from '@/shared/lib/offline-store';
 
 import { toast } from 'sonner';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
-import { NumericKeypad } from '@/features/service/measurement/components/mobile/measure-input';
+import { MeasurementMobileForm } from '@/features/service/measurement/components/mobile-form';
 
 export default function MobileMeasurePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
     const params = use(paramsPromise);
@@ -46,31 +46,31 @@ export default function MobileMeasurePage({ params: paramsPromise }: { params: P
     if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
     if (!task) return <div className="p-8 text-center">任务不存在</div>;
 
+
+
     return (
-        <div className="p-4 space-y-4">
-            {/* Context Bar */}
-            <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
-                <span>Task: {task.taskId.slice(0, 8)}...</span>
+        <div className="p-4 space-y-4 pb-20">
+            {/* 上下文栏 */}
+            <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
+                <span>任务 ID: {task.taskId.slice(0, 8)}...</span>
                 <span className="flex items-center gap-1">
-                    {isOnline ? <Wifi className="h-3 w-3 text-green-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
+                    {isOnline ? <Wifi className="h-3 w-3 text-green-500" /> : <WifiOff className="h-3 w-3 text-destructive" />}
                     {task.status === 'synced' ? '已同步' : '未同步'}
                 </span>
             </div>
 
-            <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border">
+            <div className="bg-card p-4 rounded-lg shadow-sm border">
                 <h2 className="text-lg font-bold">{task.customerName}</h2>
-                <p className="text-gray-500">{task.address}</p>
+                <p className="text-muted-foreground text-sm">{task.address}</p>
             </div>
 
-            <div className="text-center py-10 text-gray-400">
-                这里是测量表单区域...
-                <br />
-                (Wait for next implementation step)
-            </div>
-
-            <NumericKeypad
-                value={0}
-                onValueChange={(v) => console.log(v)}
+            {/* 测量表单 */}
+            <MeasurementMobileForm
+                taskId={params.id}
+                onSuccess={() => {
+                    // 状态改为已同步（实际应由后端同步，此处做展示提示）
+                    setTask(t => t ? { ...t, status: 'synced' } : null);
+                }}
             />
         </div>
     );

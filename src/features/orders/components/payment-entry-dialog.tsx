@@ -14,7 +14,8 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { createOrderPayment } from '@/features/orders/actions/order-actions';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { UploadButton } from '@/shared/components/upload-button';
 
 interface PaymentSchedule {
@@ -38,7 +39,7 @@ interface Props {
 export function PaymentEntryDialog({ schedule, orderId, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(schedule.amount);
-  const [method, setMethod] = useState('TRANSFER'); // Default
+  const [method, setMethod] = useState('BANK'); // Default
   const [proofUrl, setProofUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +63,7 @@ export function PaymentEntryDialog({ schedule, orderId, trigger }: Props) {
         toast.success('支付录入成功');
         setOpen(false);
       } else {
-        toast.error((res as any).error || '录入失败');
+        toast.error('error' in res ? String(res.error) : '录入失败');
       }
     } catch {
       toast.error('网络错误');
@@ -95,7 +96,7 @@ export function PaymentEntryDialog({ schedule, orderId, trigger }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="CASH">现金</SelectItem>
-                <SelectItem value="TRANSFER">转账</SelectItem>
+                <SelectItem value="BANK">银行转账</SelectItem>
                 <SelectItem value="WECHAT">微信支付</SelectItem>
                 <SelectItem value="ALIPAY">支付宝</SelectItem>
               </SelectContent>
@@ -105,7 +106,7 @@ export function PaymentEntryDialog({ schedule, orderId, trigger }: Props) {
             <Label>支付凭证 (必传)</Label>
             {proofUrl ? (
               <div className="group relative aspect-video w-full overflow-hidden rounded-md border">
-                <img src={proofUrl} alt="Proof" className="h-full w-full object-cover" />
+                <Image src={proofUrl} alt="Proof" fill className="object-cover" />
                 <div
                   className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
                   onClick={() => setProofUrl('')}

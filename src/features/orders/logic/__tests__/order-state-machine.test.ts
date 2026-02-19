@@ -1,60 +1,91 @@
-
 import { describe, it, expect } from 'vitest';
-import { OrderStateMachine, OrderStatus } from '../order-state-machine';
+import { OrderStateMachine } from '../order-state-machine';
 
-describe('Order State Machine', () => {
+describe('OrderStateMachine', () => {
+    describe('validateTransition', () => {
+        it('should allow self-transition', () => {
+            expect(OrderStateMachine.validateTransition('DRAFT', 'DRAFT')).toBe(true);
+        });
 
-    describe('Valid Transitions (Happy Path)', () => {
-        const validFlows: { from: OrderStatus, to: OrderStatus }[] = [
-            { from: 'PENDING_PO', to: 'IN_PRODUCTION' },
-            { from: 'IN_PRODUCTION', to: 'PENDING_DELIVERY' },
-            { from: 'PENDING_DELIVERY', to: 'DISPATCHING' },
-            { from: 'DISPATCHING', to: 'SHIPPED' },
-            { from: 'SHIPPED', to: 'PENDING_INSTALL' },
-            { from: 'PENDING_INSTALL', to: 'COMPLETED' },
-            { from: 'COMPLETED', to: 'CLOSED' },
-        ];
+        it('should allow valid transitions', () => {
+            const validTransitions = [
+                ['DRAFT', 'PENDING_MEASURE'],
+                ['PENDING_MEASURE', 'MEASURED'],
+                ['MEASURED', 'QUOTED'],
+                ['QUOTED', 'SIGNED'],
+                ['SIGNED', 'PAID'],
+                ['PAID', 'PENDING_PRODUCTION'],
+                ['PENDING_PRODUCTION', 'IN_PRODUCTION'],
+                ['IN_PRODUCTION', 'PENDING_DELIVERY'],
+                ['PENDING_DELIVERY', 'PENDING_INSTALL'],
+                ['PENDING_INSTALL', 'INSTALLATION_COMPLETED'],
+                ['INSTALLATION_COMPLETED', 'PENDING_CONFIRMATION'],
+                ['PENDING_CONFIRMATION', 'COMPLETED'],
+            ] as const;
 
-        validFlows.forEach(({ from, to }) => {
-            it(`should allow transition from ${from} to ${to}`, () => {
+            validTransitions.forEach(([from, to]) => {
                 expect(OrderStateMachine.validateTransition(from, to)).toBe(true);
             });
         });
+
+        it('should reject invalid transitions', () => {
+            const invalidTransitions = [
+                ['DRAFT', 'COMPLETED'],
+                ['PENDING_MEASURE', 'SIGNED'],
+                ['COMPLETED', 'DRAFT'],
+            ] as const;
+
+            invalidTransitions.forEach(([from, to]) => {
+                expect(OrderStateMachine.validateTransition(from, to)).toBe(false);
+            });
+        });
+
+        it('should allow cancellation from most states', () => {
+            const cancellableStates = ['DRAFT', 'PENDING_MEASURE', 'SIGNED', 'IN_PRODUCTION'];
+            cancellableStates.forEach(state => {
+                expect(OrderStateMachine.validateTransition(state as any, 'CANCELLED')).toBe(true);
+            });
+        });
+
+        it('should allow HALTED from specific states', () => {
+            const haltableStates = [
+                'SIGNED', 'PAID', 'PENDING_PO',
+                'PENDING_PRODUCTION', 'IN_PRODUCTION',
+                'PENDING_DELIVERY', 'PENDING_INSTALL'
+            ];
+
+            haltableStates.forEach(state => {
+                expect(OrderStateMachine.validateTransition(state as any, 'HALTED')).toBe(true);
+            });
+        });
+
+        it('should recover from HALTED to production states', () => {
+            expect(OrderStateMachine.validateTransition('HALTED', 'PENDING_PRODUCTION')).toBe(true);
+            expect(OrderStateMachine.validateTransition('HALTED', 'IN_PRODUCTION')).toBe(true);
+        });
+
+        it('should not recover from HALTED to arbitrary states', () => {
+            expect(OrderStateMachine.validateTransition('HALTED', 'DRAFT')).toBe(false);
+            expect(OrderStateMachine.validateTransition('HALTED', 'COMPLETED')).toBe(false);
+        });
     });
 
-    describe('Invalid Transitions', () => {
-        it('should prevent skipping steps (PENDING_PO -> SHIPPED)', () => {
-            expect(() => OrderStateMachine.validateTransition('PENDING_PO', 'SHIPPED')).toThrow('Invalid transition');
-        });
-
-        it('should prevent reversing steps (SHIPPED -> IN_PRODUCTION)', () => {
-            expect(() => OrderStateMachine.validateTransition('SHIPPED', 'IN_PRODUCTION')).toThrow('Invalid transition');
-        });
-
-        it('should prevent modifying CLOSED orders', () => {
-            expect(() => OrderStateMachine.validateTransition('CLOSED', 'COMPLETED')).toThrow('Invalid transition');
+    describe('getNextStates', () => {
+        it('should return correct next states', () => {
+            expect(OrderStateMachine.getNextStates('DRAFT')).toContain('PENDING_MEASURE');
+            expect(OrderStateMachine.getNextStates('COMPLETED')).toEqual([]);
         });
     });
 
-    describe('Cancellation Logic', () => {
-        it('should allow cancellation from PENDING_PO', () => {
-            expect(OrderStateMachine.canCancel('PENDING_PO')).toBe(true);
-            expect(OrderStateMachine.validateTransition('PENDING_PO', 'CANCELLED')).toBe(true);
-        });
-
-        it('should allow cancellation from IN_PRODUCTION', () => {
+    describe('canCancel', () => {
+        it('should return true for non-terminal states', () => {
+            expect(OrderStateMachine.canCancel('DRAFT')).toBe(true);
             expect(OrderStateMachine.canCancel('IN_PRODUCTION')).toBe(true);
-            expect(OrderStateMachine.validateTransition('IN_PRODUCTION', 'CANCELLED')).toBe(true);
         });
 
-        it('should NOT allow cancellation from COMPLETED', () => {
+        it('should return false for terminal states', () => {
             expect(OrderStateMachine.canCancel('COMPLETED')).toBe(false);
-            expect(() => OrderStateMachine.validateTransition('COMPLETED', 'CANCELLED')).toThrow('Invalid transition');
-        });
-
-        it('should NOT allow cancellation from CLOSED', () => {
-            expect(OrderStateMachine.canCancel('CLOSED')).toBe(false);
-            expect(() => OrderStateMachine.validateTransition('CLOSED', 'CANCELLED')).toThrow('Invalid transition');
+            expect(OrderStateMachine.canCancel('CANCELLED')).toBe(false);
         });
     });
 });

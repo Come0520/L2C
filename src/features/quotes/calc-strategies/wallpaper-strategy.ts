@@ -1,4 +1,4 @@
-import { BaseCalcStrategy } from './base-strategy';
+import { BaseCalcStrategy, type CalcParams } from './base-strategy';
 
 export interface WallpaperCalcSettings {
     widthLoss: number;
@@ -16,7 +16,7 @@ export const DEFAULT_WALLPAPER_CALC_SETTINGS: WallpaperCalcSettings = {
     rollLength: 10
 };
 
-export interface WallpaperCalcParams {
+export interface WallpaperCalcParams extends CalcParams {
     width?: number;
     height?: number;
     fabricWidth?: number;
@@ -37,10 +37,12 @@ export interface WallpaperCalcResult {
         totalStrips?: number;
         effectiveHeightCm?: number;
         warning?: string;
+        totalWidthM?: number;
+        fabricWidthM?: number;
     };
 }
 
-export class WallpaperStrategy extends BaseCalcStrategy {
+export class WallpaperStrategy extends BaseCalcStrategy<WallpaperCalcParams, WallpaperCalcResult> {
     private settings: WallpaperCalcSettings;
 
     constructor(settings?: Partial<WallpaperCalcSettings>) {
@@ -145,8 +147,8 @@ export class WallpaperStrategy extends BaseCalcStrategy {
     }): WallpaperCalcResult {
         const { width, height, fabricWidth, unitPrice, widthLoss, heightLoss, wallSegments } = params;
 
-        // 墙布逻辑：通常是"定高"，按"周长"（宽度）购买
-        // Usage = Total Width (m)
+        // P1-02 修复：墙布逻辑按面积（m²）计算，而非仅宽度
+        // 需求文档 10.2：总价 = (墙面宽度 × 墙布幅宽) × 每平米单价
 
         let totalWidthCm = 0;
         let warning: string | undefined;
@@ -159,28 +161,28 @@ export class WallpaperStrategy extends BaseCalcStrategy {
 
         const totalWidthM = totalWidthCm / 100;
 
-        // Height Constraint Check
-        // Cut Height = Room Height + Height Loss
-        // Fabric Width (e.g. 2.8m) must >= Cut Height
+        // 高度约束检查
         const cutHeightCm = height + heightLoss;
         const fabricWidthCm = fabricWidth * 100;
 
         if (cutHeightCm > fabricWidthCm) {
-            // If exceeding, need splicing or rotation. Warning for now.
             warning = `墙布高度不足：需 ${cutHeightCm}cm (含损耗), 面料幅宽 ${fabricWidthCm}cm`;
         }
 
-        // Usage is simply the length needed
-        // Round up to 0.1m? Usually yes.
-        const usage = Math.ceil(totalWidthM * 10) / 10;
-        const subtotal = usage * unitPrice;
+        // 面积 = 宽度（米） × 幅宽（米）
+        // 墙布幅宽即为定高值，用于计算消耗面积
+        const fabricWidthM = fabricWidth; // fabricWidth 传入时已是米
+        const area = Math.ceil(totalWidthM * fabricWidthM * 100) / 100;
+        const subtotal = Math.round(area * unitPrice * 100) / 100;
 
         return {
-            usage,
+            usage: area,
             subtotal,
             details: {
                 warning,
-                effectiveHeightCm: cutHeightCm
+                effectiveHeightCm: cutHeightCm,
+                totalWidthM,
+                fabricWidthM,
             }
         };
     }

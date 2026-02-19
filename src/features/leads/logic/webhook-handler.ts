@@ -101,7 +101,7 @@ export async function matchChannel(
     if (!channel) {
         channel = await db.query.channels.findFirst({
             where: and(
-                ilike(channels.name, `%${categoryName}%`),
+                ilike(channels.name, `%${categoryName.replace(/[%_]/g, '\\$&')}%`),
                 tenantId ? eq(channels.tenantId, tenantId) : undefined
             )
         });
@@ -208,6 +208,9 @@ export async function handleWebhookRequest(
             };
         }
 
+        // 注意：如果 force_create=true 且发现重复，LeadService.createLead 目前的实现仍然会返回已存在的线索 (isDuplicate=true)。
+        // 因此这里返回 200 OK + is_new=false 是符合预期的幂等行为：
+        // "强制创建" 在重复时退化为 "返回现有资源"，而不是报错。
         return {
             code: 200,
             message: 'success',
@@ -215,7 +218,7 @@ export async function handleWebhookRequest(
                 lead_id: result.lead.id,
                 lead_no: result.lead.leadNo,
                 status: result.lead.status || 'PENDING_ASSIGNMENT',
-                is_new: true
+                is_new: !result.isDuplicate
             }
         };
     } catch (error: unknown) {

@@ -2,10 +2,14 @@
 
 import { db } from '@/shared/api/db';
 import { channelCommissions, channels } from '@/shared/api/schema/channels';
-import { eq, and, desc, between, sql } from 'drizzle-orm';
+import { orders } from '@/shared/api/schema/orders';
+import { eq, sql, desc, and, inArray, between, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { Decimal } from 'decimal.js';
+import { AuditService } from '@/shared/services/audit-service';
+import { z } from 'zod';
 
 // ==================== 佣金记录 Actions ====================
 
@@ -13,14 +17,12 @@ import { PERMISSIONS } from '@/shared/config/permissions';
  * 生成佣金记录（订单完成时调用）
  * 
  * 安全检查：需要 CHANNEL.MANAGE_COMMISSION 权限
+ * P0 Fix: 移除前端传入金额/费率，改为服务端查询并使用 Decimal.js 计算
  */
 export async function createCommissionRecord(params: {
     channelId: string;
     leadId?: string;
     orderId: string;
-    orderAmount: number;
-    commissionRate: number;
-    commissionType: 'BASE_PRICE' | 'COMMISSION';
 }) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
@@ -29,7 +31,12 @@ export async function createCommissionRecord(params: {
     await checkPermission(session, PERMISSIONS.CHANNEL.MANAGE_COMMISSION);
 
     const tenantId = session.user.tenantId;
-    const { channelId, leadId, orderId, orderAmount, commissionRate, commissionType } = params;
+    const { channelId, leadId, orderId } = params;
+
+    // P2 Fix: UUID Validation for robustness
+    z.string().uuid().parse(channelId);
+    z.string().uuid().parse(orderId);
+    if (leadId) z.string().uuid().parse(leadId);
 
     // 验证渠道属于当前租户
     const channel = await db.query.channels.findFirst({
@@ -37,27 +44,68 @@ export async function createCommissionRecord(params: {
     });
     if (!channel) throw new Error('渠道不存在或无权操作');
 
-    // 计算佣金金额
-    const commissionAmount = orderAmount * (commissionRate / 100);
+    // P0 Fix: 获取订单信息
+    const order = await db.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+        with: {
+            // Need items for BASE_PRICE mode calculation
+            items: true
+        }
+    });
+    if (!order) throw new Error('订单不存在');
+
+    // H-05 Fix: Add Idempotency Check BEFORE Calculation
+    const existing = await db.query.channelCommissions.findFirst({
+        where: and(
+            eq(channelCommissions.orderId, orderId),
+            eq(channelCommissions.tenantId, tenantId),
+            ne(channelCommissions.status, 'VOID')
+        )
+    });
+
+    if (existing) {
+        throw new Error('该订单已存在有效的佣金记录，无法重复创建');
+    }
+
+    // Call shared calculation service
+    // This ensures consistency with automatic triggers (e.g. Tiered Rates, Smart Rate Detection)
+    // Note: Manual creation via this action might override the 'commissionTriggerMode', 
+    // effectively forcing a commission generation even if the trigger event hasn't happened yet.
+    // This is acceptable for a "Manual Create" administrative action.
+    const result = await import('@/features/channels/logic/commission.service')
+        .then(m => m.calculateOrderCommission(order, channel));
+
+    if (!result) {
+        throw new Error('无法生成佣金记录：计算结果为0或不满足生成条件 (例如: 底价模式下利润为负)');
+    }
+
+    const calculationBase = new Decimal(order.totalAmount || 0);
 
     const [record] = await db.insert(channelCommissions).values({
         tenantId,
         channelId,
         leadId,
         orderId,
-        orderAmount: orderAmount.toString(),
-        commissionRate: (commissionRate / 100).toFixed(4),  // 转换为小数
-        amount: commissionAmount.toFixed(2),
-        commissionType,
+        orderAmount: calculationBase.toFixed(2),
+        commissionRate: (result.type === 'COMMISSION' ? result.rate : new Decimal(0)).toFixed(4),
+        amount: result.amount.toFixed(2),
+        commissionType: result.type,
         status: 'PENDING',
-        formula: {
-            orderAmount,
-            rate: commissionRate,
-            calculated: commissionAmount,
-            formula: `${orderAmount} × ${commissionRate}% = ${commissionAmount}`,
-        },
+        formula: result.formula,
+        remark: result.remark,
         createdBy: session.user.id,
     }).returning();
+
+    // P1 Fix: Audit Log
+    await AuditService.log(db, {
+        tableName: 'channel_commissions',
+        recordId: record.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        tenantId,
+        newValues: record,
+        details: { reason: 'Manual Creation via Action' }
+    });
 
     revalidatePath('/channels');
     return record;
@@ -82,6 +130,9 @@ export async function getChannelCommissions(params: {
     const tenantId = session.user.tenantId;
     const { channelId, status, startDate, endDate, page = 1, pageSize = 20 } = params;
 
+    // P3 Fix: Enforce pagination limits
+    const limit = Math.min(Math.max(pageSize, 1), 100);
+
     let whereClause = eq(channelCommissions.tenantId, tenantId);
 
     if (channelId) {
@@ -99,11 +150,11 @@ export async function getChannelCommissions(params: {
         ) as typeof whereClause;
     }
 
-    const offset = (page - 1) * pageSize;
+    const offset = (page - 1) * limit;
 
     const data = await db.query.channelCommissions.findMany({
         where: whereClause,
-        limit: pageSize,
+        limit: limit,
         offset,
         orderBy: [desc(channelCommissions.createdAt)],
         with: {
@@ -112,15 +163,12 @@ export async function getChannelCommissions(params: {
     });
 
     // 获取总数
-    const countResult = await db.query.channelCommissions.findMany({
-        where: whereClause,
-        columns: { id: true },
-    });
+    const totalItems = await db.$count(channelCommissions, whereClause);
 
     return {
         data,
-        totalItems: countResult.length,
-        totalPages: Math.ceil(countResult.length / pageSize),
+        totalItems: totalItems,
+        totalPages: Math.ceil(totalItems / limit),
         currentPage: page,
     };
 }
@@ -155,7 +203,7 @@ export async function getPendingCommissionSummary() {
         ? await db.query.channels.findMany({
             where: and(
                 eq(channels.tenantId, tenantId),
-                sql`${channels.id} = ANY(ARRAY[${sql.raw(channelIds.map(id => `'${id}'`).join(','))}]::uuid[])`
+                inArray(channels.id, channelIds)
             ),
         })
         : [];
@@ -168,6 +216,8 @@ export async function getPendingCommissionSummary() {
     }));
 }
 
+
+
 /**
  * 作废佣金记录
  * 
@@ -177,25 +227,55 @@ export async function voidCommission(id: string, reason: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: UUID Validation
+    z.string().uuid().parse(id);
+
     // 权限检查
     await checkPermission(session, PERMISSIONS.CHANNEL.MANAGE_COMMISSION);
 
     const tenantId = session.user.tenantId;
 
-    const [updated] = await db.update(channelCommissions)
-        .set({
-            status: 'VOID',
-            remark: reason,
-            updatedAt: new Date(),
-        })
-        .where(and(
+    // P2 Fix: Validate reason length
+    const validatedReason = z.string().max(500, '备注不能超过500字').parse(reason);
+
+    // 验证状态 (仅允许 VOID 待结算的佣金)
+    const commission = await db.query.channelCommissions.findFirst({
+        where: and(
             eq(channelCommissions.id, id),
             eq(channelCommissions.tenantId, tenantId)
+        ),
+        columns: { status: true, amount: true, id: true }
+    });
+
+    if (!commission) {
+        throw new Error('Commission not found');
+    }
+
+    if (commission.status !== 'PENDING') {
+        throw new Error('只能作废待结算状态的佣金记录');
+    }
+
+    const [updated] = await db.update(channelCommissions)
+        .set({ status: 'VOID', remark: validatedReason, updatedAt: new Date() })
+        .where(and(
+            eq(channelCommissions.id, id),
+            eq(channelCommissions.tenantId, tenantId),
+            eq(channelCommissions.status, 'PENDING') // Double check
         ))
         .returning();
+
+    // P1 Fix: Audit Log
+    await AuditService.log(db, {
+        tableName: 'channel_commissions',
+        recordId: updated.id,
+        action: 'VOID',
+        userId: session.user.id,
+        tenantId,
+        oldValues: { status: 'PENDING' },
+        newValues: { status: 'VOID', remark: validatedReason },
+        details: { reason: validatedReason }
+    });
 
     revalidatePath('/channels');
     return updated;
 }
-
-

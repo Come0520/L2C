@@ -2,6 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { customers, customerAddresses } from '@/shared/api/schema';
+import { AuditService } from '@/shared/services/audit-service';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { customerSchema, updateCustomerSchema, mergeCustomersSchema } from '../schemas';
@@ -9,6 +10,10 @@ import { revalidatePath } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { trimInput } from '@/shared/lib/utils';
+
+import { logger } from '@/shared/lib/logger';
+import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 
 // Zod schemas for Addresses (define here or import if centralized)
 const addressSchema = z.object({
@@ -38,22 +43,23 @@ const updateAddressSchema = addressSchema.partial().extend({
  * @returns 新创建的客户
  */
 export async function createCustomer(
-  input: z.infer<typeof customerSchema>,
-  userId: string,
-  tenantId: string
+  input: z.infer<typeof customerSchema>
 ) {
-  const data = customerSchema.parse(input);
+  const data = trimInput(customerSchema.parse(input));
+
+  // [Fix 5.3] 统一认证模式：从 session 获取 userId 和 tenantId
+  const session = await auth();
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
   // 权限检查：需要客户创建权限
-  const session = await auth();
-  if (session) await checkPermission(session, PERMISSIONS.CUSTOMER.CREATE);
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.CREATE)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
+
+  const userId = session.user.id;
+  const tenantId = session.user.tenantId;
 
   try {
-    // 将渠道来源和带单人存储到 preferences JSON 字段
-    const preferences: Record<string, unknown> = {};
-    if (data.source) preferences.source = data.source;
-    if (data.referrerName) preferences.referrerName = data.referrerName;
-
     const result = await CustomerService.createCustomer(
       {
         name: data.name,
@@ -65,7 +71,9 @@ export async function createCustomer(
         notes: data.notes ?? null,
         tags: data.tags ?? null,
         type: data.type ?? 'INDIVIDUAL',
-        preferences: Object.keys(preferences).length > 0 ? preferences : undefined,
+        source: data.source ?? null,
+        referrerName: data.referrerName ?? null,
+        preferences: data.preferences ?? undefined,
       } as typeof customers.$inferInsert,
       tenantId,
       userId,
@@ -73,41 +81,65 @@ export async function createCustomer(
     );
 
     if (result.isDuplicate) {
-      throw new Error(`手机号 ${data.phone} 已存在 (客户编号: ${result.customer.customerNo})`);
+      throw new AppError(`手机号 ${data.phone} 已存在 (客户编号: ${result.customer.customerNo})`, ERROR_CODES.INVALID_OPERATION, 400);
     }
 
     revalidatePath('/customers');
     return result.customer;
-  } catch (e: any) {
-    console.error('[createCustomer] Error:', e);
+  } catch (e: unknown) {
+    logger.error('[createCustomer] Error:', e, { tenantId, userId });
     throw e;
   }
 }
 
-export async function updateCustomer(input: z.infer<typeof updateCustomerSchema>, userId?: string) {
+/**
+ * 更新客户信息
+ * 
+ * 权限检查：需要 CUSTOMER.EDIT 权限
+ * 逻辑说明：使用 Service 处理业务逻辑，包含租户检查、降级校验和审计日志
+ */
+export async function updateCustomer(input: z.infer<typeof updateCustomerSchema>) {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
   // 权限检查：需要客户编辑权限
-  await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
-  const { id, data } = updateCustomerSchema.parse(input);
+  const { id, data: rawData } = updateCustomerSchema.parse(input);
+  const data = trimInput(rawData);
 
-  // 安全检查：验证客户属于当前租户
-  const existingCustomer = await db.query.customers.findFirst({
-    where: and(eq(customers.id, id), eq(customers.tenantId, session.user.tenantId)),
-  });
-  if (!existingCustomer) throw new Error('客户不存在或无权操作');
+  // 使用 Service 处理业务逻辑（含租户检查、降级校验、审计日志）
+  return await CustomerService.updateCustomer(
+    id,
+    data,
+    session.user.tenantId,
+    session.user.id
+  );
+}
 
-  const [updated] = await db
-    .update(customers)
-    .set(data)
-    .where(and(eq(customers.id, id), eq(customers.tenantId, session.user.tenantId)))
-    .returning();
+/**
+ * 删除客户 (软删除)
+ * 
+ * 权限检查：需要 CUSTOMER.DELETE 权限
+ */
+export async function deleteCustomer(id: string) {
+  const session = await auth();
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
+
+  // 权限检查
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.DELETE)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
+
+  await CustomerService.deleteCustomer(
+    id,
+    session.user.tenantId,
+    session.user.id
+  );
 
   revalidatePath('/customers');
-  revalidatePath(`/customers/${id}`);
-  return updated;
 }
 
 /**
@@ -117,19 +149,21 @@ export async function updateCustomer(input: z.infer<typeof updateCustomerSchema>
  */
 export async function addCustomerAddress(input: z.infer<typeof createAddressSchema>) {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
   // 权限检查
-  await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
   const tenantId = session.user.tenantId;
-  const data = createAddressSchema.parse(input);
+  const data = trimInput(createAddressSchema.parse(input));
 
   // 验证客户属于当前租户
   const customer = await db.query.customers.findFirst({
     where: and(eq(customers.id, data.customerId), eq(customers.tenantId, tenantId)),
   });
-  if (!customer) throw new Error('客户不存在或无权操作');
+  if (!customer) throw new AppError('客户不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
 
   return await db
     .transaction(async (tx) => {
@@ -156,6 +190,17 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
         })
         .returning();
 
+      // 记录审计日志
+      await AuditService.log(tx, {
+        tableName: 'customer_addresses',
+        recordId: newAddr.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        newValues: newAddr,
+        details: { customerId: data.customerId, label: data.label },
+        tenantId
+      });
+
       return newAddr;
     })
     .then((res) => {
@@ -164,11 +209,22 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
     });
 }
 
+/**
+ * 更新客户地址
+ * 
+ * 权限检查：需要 CUSTOMER.EDIT 权限
+ */
 export async function updateCustomerAddress(input: z.infer<typeof updateAddressSchema>) {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  const { id, ...data } = updateAddressSchema.parse(input);
+  // [Fix 3.3] 增加权限检查
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
+
+  const { id, ...rawData } = updateAddressSchema.parse(input);
+  const data = trimInput(rawData);
 
   return await db
     .transaction(async (tx) => {
@@ -179,7 +235,7 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
           eq(customerAddresses.tenantId, session.user.tenantId)
         ),
       });
-      if (!addr) throw new Error('地址不存在或无权操作');
+      if (!addr) throw new AppError('地址不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
 
       if (data.isDefault) {
         await tx
@@ -196,6 +252,18 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
         )
         .returning();
 
+      if (updated) {
+        await AuditService.log(tx, {
+          tableName: 'customer_addresses',
+          recordId: id,
+          action: 'UPDATE',
+          userId: session.user.id,
+          changedFields: data,
+          details: { customerId: addr.customerId },
+          tenantId: session.user.tenantId
+        });
+      }
+
       return updated;
     })
     .then((res) => {
@@ -203,24 +271,41 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
     });
 }
 
+/**
+ * 删除客户地址
+ * 
+ * 权限检查：需要 CUSTOMER.EDIT 权限
+ */
 export async function deleteCustomerAddress(id: string) {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
   // 权限检查：需要客户编辑权限
-  await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
   // 安全检查：验证地址属于当前租户
   const existingAddr = await db.query.customerAddresses.findFirst({
     where: and(eq(customerAddresses.id, id), eq(customerAddresses.tenantId, session.user.tenantId)),
   });
-  if (!existingAddr) throw new Error('地址不存在或无权操作');
+  if (!existingAddr) throw new AppError('地址不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
 
   await db
     .delete(customerAddresses)
     .where(
       and(eq(customerAddresses.id, id), eq(customerAddresses.tenantId, session.user.tenantId))
     );
+
+  // 记录审计日志
+  await AuditService.log(db, {
+    tableName: 'customer_addresses',
+    recordId: id,
+    action: 'DELETE',
+    userId: session.user.id,
+    details: { customerId: existingAddr.customerId },
+    tenantId: session.user.tenantId
+  });
 }
 
 /**
@@ -230,10 +315,12 @@ export async function deleteCustomerAddress(id: string) {
  */
 export async function setDefaultAddress(id: string, customerId: string) {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
   // 权限检查
-  await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
   const tenantId = session.user.tenantId;
 
@@ -241,7 +328,7 @@ export async function setDefaultAddress(id: string, customerId: string) {
   const address = await db.query.customerAddresses.findFirst({
     where: and(eq(customerAddresses.id, id), eq(customerAddresses.tenantId, tenantId)),
   });
-  if (!address) throw new Error('地址不存在或无权操作');
+  if (!address) throw new AppError('地址不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
 
   await db.transaction(async (tx) => {
     await tx
@@ -255,10 +342,27 @@ export async function setDefaultAddress(id: string, customerId: string) {
       .update(customerAddresses)
       .set({ isDefault: true })
       .where(and(eq(customerAddresses.id, id), eq(customerAddresses.tenantId, tenantId)));
+
+    // 记录审计日志
+    await AuditService.log(tx, {
+      tableName: 'customer_addresses',
+      recordId: id,
+      action: 'UPDATE',
+      userId: session.user.id,
+      details: { customerId, type: 'SET_DEFAULT' },
+      changedFields: { isDefault: true },
+      tenantId
+    });
   });
   revalidatePath(`/customers/${customerId}`);
 }
 
+/**
+ * 合并客户
+ * 将多个源客户的数据合并到目标客户，并逻辑删除源客户
+ * 
+ * 权限检查：需要 CUSTOMER.MANAGE 权限
+ */
 export async function mergeCustomersAction(
   input: z.infer<typeof mergeCustomersSchema>,
   userId: string
@@ -266,7 +370,12 @@ export async function mergeCustomersAction(
   const data = mergeCustomersSchema.parse(input);
   const session = await auth();
   const tenantId = session?.user?.tenantId;
-  if (!tenantId) throw new Error('Unauthorized');
+  if (!tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
+
+  // [Fix 3.3] 增加权限检查 (MANAGE 权限)
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.MANAGE)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
   const result = await CustomerService.mergeCustomers(
     data.targetCustomerId,
@@ -285,10 +394,21 @@ export async function mergeCustomersAction(
   return result;
 }
 
+/**
+ * 预览合并结果
+ * 计算合并后的客户数据预览，不进行实际修改
+ * 
+ * 权限检查：需要 CUSTOMER.MANAGE 权限
+ */
 export async function previewMergeAction(sourceId: string, targetId: string) {
   const session = await auth();
   const tenantId = session?.user?.tenantId;
-  if (!tenantId) throw new Error('Unauthorized');
+  if (!tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
+
+  // [Fix 3.3] 增加权限检查 (MANAGE 权限)
+  if (!await checkPermission(session, PERMISSIONS.CUSTOMER.MANAGE)) {
+    throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
+  }
 
   return await CustomerService.previewMerge(targetId, sourceId, tenantId);
 }

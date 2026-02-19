@@ -1,0 +1,16 @@
+
+> l2c@0.1.0 test
+> vitest src/features/supply-chain/__tests__/components/purchase-order-preview-dialog.test.tsx --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/bigey/Documents/Antigravity/L2C[39m
+
+ [31m鉂?[39m src/features/supply-chain/__tests__/components/purchase-order-preview-dialog.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 360[2mms[22m[39m
+[31m     [31m脳[31m renders nothing when open is false or data is null[39m[32m 30[2mms[22m[39m
+[31m     [31m脳[31m renders PO details correctly when open[39m[33m 327[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m   Start at [22m 22:17:20
+[2m   Duration [22m 4.84s[2m (transform 248ms, setup 0ms, import 2.84s, tests 360ms, environment 1.31s)[22m
+

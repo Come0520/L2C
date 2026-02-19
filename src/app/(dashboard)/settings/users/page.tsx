@@ -38,7 +38,7 @@ export default async function UsersSettingsPage() {
   }
 
   // 获取可用角色
-  let roles: any[] = [];
+  let roles: { label: string; value: string }[] = [];
   try {
     roles = await getAvailableRoles();
   } catch (error) {

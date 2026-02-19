@@ -16,7 +16,7 @@ import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 interface Channel {
     id: string;
     name: string;
-    code: string;
+    channelNo: string;
     channelType: string;
     level: string;
     contactName: string;
@@ -33,7 +33,6 @@ interface ChannelTableProps {
         tenantId: string;
         role: string;
     };
-    onEdit?: (id: string) => void;
 }
 
 const TYPE_MAP: Record<string, string> = {
@@ -83,7 +82,7 @@ export function ChannelTable({ data, currentUser }: ChannelTableProps) {
                     {data.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell>{item.code}</TableCell>
+                            <TableCell>{item.channelNo}</TableCell>
                             <TableCell>{TYPE_MAP[item.channelType] || item.channelType}</TableCell>
                             <TableCell>
                                 <Badge variant="outline">

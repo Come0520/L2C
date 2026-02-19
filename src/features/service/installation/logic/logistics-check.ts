@@ -18,11 +18,9 @@ const READY_STATUSES = ['RECEIVED', 'ARRIVED', 'COMPLETED', 'PARTIAL_RECEIVED'];
  * @param orderId - 订单 ID
  * @param tenantId - 租户 ID（必须从 session 获取）
  */
-export async function checkLogisticsReady(orderId: string, tenantId?: string): Promise<LogisticsCheckResult> {
+export async function checkLogisticsReady(orderId: string, tenantId: string): Promise<LogisticsCheckResult> {
     // 构建查询条件，包含租户隔离
-    const whereConditions = tenantId
-        ? and(eq(purchaseOrders.orderId, orderId), eq(purchaseOrders.tenantId, tenantId))
-        : eq(purchaseOrders.orderId, orderId);
+    const whereConditions = and(eq(purchaseOrders.orderId, orderId), eq(purchaseOrders.tenantId, tenantId));
 
     const pos = await db.query.purchaseOrders.findMany({
         where: whereConditions,

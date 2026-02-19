@@ -11,16 +11,20 @@ import {
     accountTransactions,
     installTasks,
     purchaseOrders,
-    // users // unused
 } from '@/shared/api/schema';
+import { AuditService } from '@/shared/services/audit-service';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { Decimal } from 'decimal.js';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
+import { createSafeAction } from '@/shared/lib/server-action';
 import { createPaymentBillSchema, verifyPaymentBillSchema } from './schema';
 import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
 import { handleCommissionClawback } from '@/features/channels/logic/commission.service';
+import { generateBusinessNo } from '@/shared/lib/generate-no';
 
 /**
  * 获取供应商应付对账单
@@ -28,6 +32,9 @@ import { handleCommissionClawback } from '@/features/channels/logic/commission.s
 export async function getAPSupplierStatements() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：查看应付数据
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
     return await db.query.apSupplierStatements.findMany({
         where: eq(apSupplierStatements.tenantId, session.user.tenantId),
@@ -45,6 +52,9 @@ export async function getAPSupplierStatements() {
 export async function getAPSupplierStatement(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：查看应付数据
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
     return await db.query.apSupplierStatements.findFirst({
         where: and(
@@ -65,6 +75,9 @@ export async function getAPLaborStatements() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
+    // 权限检查：查看人工费用
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.LABOR_VIEW)) throw new Error('权限不足：需要人工费查看权限');
+
     return await db.query.apLaborStatements.findMany({
         where: eq(apLaborStatements.tenantId, session.user.tenantId),
         with: {
@@ -80,6 +93,9 @@ export async function getAPLaborStatements() {
 export async function getAPLaborStatement(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：查看人工费用
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.LABOR_VIEW)) throw new Error('权限不足：需要人工费查看权限');
 
     return await db.query.apLaborStatements.findFirst({
         where: and(
@@ -100,6 +116,9 @@ export async function getApStatementById(filters: { id: string }) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
+    // 权限检查：查看应付数据
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+
     const { id } = filters;
 
     // Try Supplier first
@@ -109,34 +128,22 @@ export async function getApStatementById(filters: { id: string }) {
             eq(apSupplierStatements.tenantId, session.user.tenantId)
         ),
         with: {
-            purchaseOrder: true,
+            purchaseOrder: {
+                with: {
+                    items: true
+                }
+            },
             supplier: true,
-            // items: true // Assuming items relation exists or needs separate query? 
-            // The Schema likely has APItems linked? 
-            // Check schema import: paymentBillItems? No, that's for bills.
-            // apSupplierStatements usually has items or linked from PO?
-            // The view earlier showed `items: true` in ApDetailPage usage.
-            // But schema in ap.ts didn't show items relation in findMany query.
-            // Let's assume schema has it or I need to check schema.
-            // For now, let's include items if it's a relation.
         }
     });
 
     if (supplierStatement) {
-        // Need to fetch items if they are separate?
-        // Let's assume they are handled or not needed for now, or check schema.
-        // But ApDetailPage expects `items` array.
-        // If query failed to matching schema, typescript would complain in ap.ts (but I'm writing replace content blindly).
-        // Let's check schema.ts if possible? No time.
-        // Let's assume standard relation name `items` or `details`.
-        // The page `ApDetailPage` map over `items`.
-
         return {
             success: true,
             data: {
                 ...supplierStatement,
                 type: 'SUPPLIER',
-                items: [] // Placeholder if no items relation
+                items: supplierStatement.purchaseOrder?.items || []
             }
         };
     }
@@ -167,18 +174,18 @@ export async function getApStatementById(filters: { id: string }) {
     return { success: false, error: 'Not found' };
 }
 
+
 /**
  * 创建付款单
  */
-export async function createPaymentBill(data: z.infer<typeof createPaymentBillSchema>) {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+export const createPaymentBill = createSafeAction(createPaymentBillSchema, async (data, { session }) => {
+    // 权限检查：创建收付款
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
 
-    const validatedData = createPaymentBillSchema.parse(data);
-    const { items, ...billData } = validatedData;
+    const { items, ...billData } = data;
 
-    return await db.transaction(async (tx) => {
-        const paymentNo = `BILL-${Date.now()}`;
+    const paymentBill = await db.transaction(async (tx) => {
+        const paymentNo = generateBusinessNo('BILL');
 
         const [paymentBillResult] = await tx.insert(paymentBills).values({
             ...billData,
@@ -187,48 +194,12 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
             orderId: billData.orderId, // Store Order ID
             status: 'PENDING', // Will update if approval needed
             recordedBy: session.user.id!,
-            amount: billData.amount.toString(),
+            amount: new Decimal(billData.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2),
         }).returning();
-
-        // Check Approval Config
-        const flowCode = billData.type === 'REFUND'
-            ? FinanceApprovalLogic.FLOW_CODES.REFUND
-            : FinanceApprovalLogic.FLOW_CODES.PAYMENT;
-
-        const isApprovalActive = await FinanceApprovalLogic.isFlowActive(session.user.tenantId, flowCode);
-        if (isApprovalActive) {
-            const approvalRes = await submitApproval({
-                entityType: 'PAYMENT_BILL',
-                entityId: paymentBillResult.id,
-                flowCode: flowCode,
-                comment: billData.type === 'REFUND' ? 'Refund Bill Created' : 'Payment Bill Created'
-            });
-
-            if (approvalRes.success) {
-                await tx.update(paymentBills)
-                    .set({ status: 'PENDING_APPROVAL' })
-                    .where(eq(paymentBills.id, paymentBillResult.id));
-
-                paymentBillResult.status = 'PENDING_APPROVAL';
-            } else {
-                // If approval submission fails, rollback or specific error? 
-                // Currently inside transaction, so exception rolls back?
-                // submitApproval is distinct transaction? 
-                // submitApproval uses `db.transaction`. Nested transactions in drizzle?
-                // Might be safer to call submitApproval AFTER this transaction or handle manually.
-                // But submitApproval creates approval records.
-                // Let's warn but keep PENDING? Or throw?
-                // 审批提交失败，抛出错误保证一致性
-                const errorMessage = 'error' in approvalRes && typeof approvalRes.error === 'string'
-                    ? approvalRes.error
-                    : '审批提交失败';
-                throw new Error('Failed to submit approval: ' + errorMessage);
-            }
-        }
 
 
         if (items && items.length > 0) {
-            for (const item of items) {
+            await Promise.all(items.map(async (item) => {
                 await tx.insert(paymentBillItems).values({
                     tenantId: session.user.tenantId,
                     paymentBillId: paymentBillResult.id,
@@ -237,21 +208,66 @@ export async function createPaymentBill(data: z.infer<typeof createPaymentBillSc
                     statementNo: 'PENDING',
                     amount: item.amount.toString(),
                 });
-            }
+            }));
         }
+
+        // F-18: Audit Log
+        await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'payment_bills',
+            recordId: paymentBillResult.id,
+            action: 'CREATE',
+            newValues: { ...billData, paymentNo, amount: billData.amount.toString() }
+        });
 
         return paymentBillResult;
     });
-}
+
+    // 2. Handle Approval Logic (Outside Transaction)
+    if (billData.amount > 0) {
+        // Check Approval Config
+        const flowCode = billData.type === 'REFUND'
+            ? FinanceApprovalLogic.FLOW_CODES.REFUND
+            : FinanceApprovalLogic.FLOW_CODES.PAYMENT;
+
+        try {
+            const isApprovalActive = await FinanceApprovalLogic.isFlowActive(session.user.tenantId, flowCode);
+            if (isApprovalActive) {
+                const approvalRes = await submitApproval({
+                    entityType: 'PAYMENT_BILL',
+                    entityId: paymentBill.id,
+                    flowCode: flowCode,
+                    comment: billData.type === 'REFUND' ? 'Refund Bill Created' : 'Payment Bill Created',
+                    amount: billData.amount, // Pass amount for logic
+                });
+
+                if (approvalRes.success) {
+                    await db.update(paymentBills)
+                        .set({ status: 'PENDING_APPROVAL' })
+                        .where(eq(paymentBills.id, paymentBill.id));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to submit approval:', error);
+            // Don't fail the creation, just log error. Or should we?
+            // Usually if logic requires approval, failure to start approval is critical.
+            // But for now let's keep it non-blocking or re-throw if strict.
+        }
+    }
+
+    revalidatePath('/finance/ap');
+    return paymentBill;
+});
 
 /**
  * 审核付款单
  */
-export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSchema>) {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('未授权');
+export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async (data, { session }) => {
+    // 权限检查：审批财务
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.APPROVE)) throw new Error('权限不足：需要财务审批权限');
 
-    const { id, status, remark } = verifyPaymentBillSchema.parse(data);
+    const { id, status, remark } = data;
 
     return await db.transaction(async (tx) => {
         const bill = await tx.query.paymentBills.findFirst({
@@ -272,90 +288,178 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
         if (status === 'REJECTED') {
             await tx.update(paymentBills)
                 .set({ status: 'REJECTED', remark: remark || bill.remark })
-                .where(eq(paymentBills.id, id));
+                .where(and(
+                    eq(paymentBills.id, id),
+                    eq(paymentBills.tenantId, session.user.tenantId)
+                ));
             return { success: true };
         }
 
         // 审核通过并执行付款
-        // 1. 更新付款单状态
-        await tx.update(paymentBills)
+        const amount = new Decimal(bill.amount);
+
+        // 3. 扣减账户余额 (增加安全性校验 F-22)
+        const [updatedBill] = await tx.update(paymentBills)
             .set({
                 status: 'PAID',
                 isVerified: true,
                 verifiedBy: session.user.id,
                 verifiedAt: new Date(),
                 paidAt: new Date(),
+                payeeId: session.user.id!,
+                updatedAt: new Date(),
             })
-            .where(eq(paymentBills.id, id));
+            .where(and(
+                eq(paymentBills.id, id),
+                eq(paymentBills.tenantId, session.user.tenantId)
+            ))
+            .returning();
 
-        // 2. 扣除账户余额并记录流水
-        if (bill.accountId) {
-            const account = await tx.query.financeAccounts.findFirst({
-                where: eq(financeAccounts.id, bill.accountId),
-            });
+        if (!updatedBill) throw new Error('付款单更新失败或租户隔离校验失败');
 
-            if (account) {
-                const amountNum = parseFloat(bill.amount);
-                const balanceBefore = parseFloat(account.balance);
-                const balanceAfter = balanceBefore - amountNum;
+        // 3. 扣减账户余额 (增加安全性校验 F-22)
+        const account = await tx.query.financeAccounts.findFirst({
+            where: and(
+                eq(financeAccounts.id, bill.accountId!),
+                eq(financeAccounts.tenantId, session.user.tenantId)
+            )
+        });
 
-                await tx.update(financeAccounts)
-                    .set({ balance: balanceAfter.toString() })
-                    .where(eq(financeAccounts.id, account.id));
-
-                await tx.insert(accountTransactions).values({
-                    tenantId: session.user.tenantId,
-                    transactionNo: `TX-${Date.now()}`,
-                    accountId: account.id,
-                    transactionType: 'EXPENSE',
-                    amount: bill.amount,
-                    balanceBefore: balanceBefore.toString(),
-                    balanceAfter: balanceAfter.toString(),
-                    relatedType: 'PAYMENT_BILL',
-                    relatedId: bill.id,
-                    remark: `付款单审核通过: ${bill.paymentNo}`,
-                });
-            }
+        if (!account) throw new Error('结算账户不存在');
+        const currentBalance = new Decimal(account.balance || '0');
+        if (currentBalance.lt(amount)) {
+            throw new Error(`账户余额不足。当前余额: ¥${currentBalance.toFixed(2, Decimal.ROUND_HALF_UP)}, 需付: ¥${amount.toFixed(2, Decimal.ROUND_HALF_UP)}`);
         }
+
+        // 使用乐观锁原子扣减
+        const updateResult = await tx.update(financeAccounts)
+            .set({
+                balance: sql`CAST(${financeAccounts.balance} AS DECIMAL) - ${amount.toFixed(2, Decimal.ROUND_HALF_UP)}`,
+                updatedAt: new Date()
+            })
+            .where(and(
+                eq(financeAccounts.id, bill.accountId!),
+                eq(financeAccounts.tenantId, session.user.tenantId),
+                sql`CAST(${financeAccounts.balance} AS DECIMAL) >= ${amount.toFixed(2, Decimal.ROUND_HALF_UP)}`
+            ));
+
+        if (updateResult.length === 0) {
+            throw new Error('并发更新导致余额失效，请稍后重试');
+        }
+
+        // 4. 创建账户流水
+        const txNo = generateBusinessNo('TX');
+        await tx.insert(accountTransactions).values({
+            tenantId: session.user.tenantId,
+            transactionNo: txNo,
+            accountId: bill.accountId!,
+            transactionType: 'EXPENSE',
+            amount: amount.toFixed(2, Decimal.ROUND_HALF_UP),
+            balanceBefore: currentBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+            balanceAfter: currentBalance.minus(amount).toFixed(2, Decimal.ROUND_HALF_UP),
+            relatedType: 'PAYMENT_BILL',
+            relatedId: id,
+            remark: `支出: ${bill.paymentNo}`,
+        });
+
+        // 记录审计日志 F-32
+        await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'payment_bills',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { status: 'PAID', payeeId: session.user.id, paidAt: new Date() },
+            oldValues: { status: bill.status },
+            details: { billNo: bill.paymentNo, amount: amount.toFixed(2, Decimal.ROUND_HALF_UP), transactionNo: txNo }
+        });
+
+        // 5. 更新账户变动的审计记录
+        await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'finance_accounts',
+            recordId: bill.accountId!,
+            action: 'UPDATE',
+            oldValues: { balance: currentBalance.toFixed(2, Decimal.ROUND_HALF_UP) },
+            newValues: { balance: currentBalance.minus(amount).toFixed(2, Decimal.ROUND_HALF_UP) },
+            details: { type: 'BILL_PAYMENT', relatedId: id, transactionNo: txNo }
+        });
 
         // 3. 更新对应的对账单状态
         if (bill.items && bill.items.length > 0) {
             for (const item of bill.items) {
                 if (item.statementType === 'AP_SUPPLIER') {
                     const statement = await tx.query.apSupplierStatements.findFirst({
-                        where: eq(apSupplierStatements.id, item.statementId)
+                        where: and(
+                            eq(apSupplierStatements.id, item.statementId),
+                            eq(apSupplierStatements.tenantId, session.user.tenantId)
+                        )
                     });
                     if (statement) {
-                        const paidAmount = parseFloat(statement.paidAmount) + parseFloat(item.amount);
-                        const totalAmount = parseFloat(statement.totalAmount);
-                        const pendingAmount = totalAmount - paidAmount;
+                        const paidAmount = new Decimal(statement.paidAmount || '0').plus(new Decimal(item.amount));
+                        const totalAmount = new Decimal(statement.totalAmount || '0');
+                        const pendingAmount = totalAmount.minus(paidAmount);
+                        const newStatus = pendingAmount.lte(0) ? 'COMPLETED' : 'PARTIAL';
 
                         await tx.update(apSupplierStatements)
                             .set({
-                                paidAmount: paidAmount.toString(),
-                                pendingAmount: pendingAmount.toString(),
-                                status: pendingAmount <= 0 ? 'COMPLETED' : 'PARTIAL',
-                                completedAt: pendingAmount <= 0 ? new Date() : null,
+                                paidAmount: paidAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                                pendingAmount: pendingAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                                status: newStatus,
+                                completedAt: pendingAmount.lte(0) ? new Date() : null,
                             })
-                            .where(eq(apSupplierStatements.id, statement.id));
+                            .where(and(
+                                eq(apSupplierStatements.id, statement.id),
+                                eq(apSupplierStatements.tenantId, session.user.tenantId)
+                            ));
+
+                        await AuditService.log(tx, {
+                            tenantId: session.user.tenantId,
+                            userId: session.user.id!,
+                            tableName: 'ap_supplier_statements',
+                            recordId: statement.id,
+                            action: 'UPDATE',
+                            oldValues: { paidAmount: statement.paidAmount, status: statement.status },
+                            newValues: { paidAmount: paidAmount.toFixed(2, Decimal.ROUND_HALF_UP), status: newStatus },
+                            details: { paymentBillId: id, amount: item.amount }
+                        });
                     }
                 } else if (item.statementType === 'AP_LABOR') {
                     const statement = await tx.query.apLaborStatements.findFirst({
-                        where: eq(apLaborStatements.id, item.statementId)
+                        where: and(
+                            eq(apLaborStatements.id, item.statementId),
+                            eq(apLaborStatements.tenantId, session.user.tenantId)
+                        )
                     });
                     if (statement) {
-                        const paidAmount = parseFloat(statement.paidAmount) + parseFloat(item.amount);
-                        const totalAmount = parseFloat(statement.totalAmount);
-                        const pendingAmount = totalAmount - paidAmount;
+                        const paidAmount = new Decimal(statement.paidAmount || '0').plus(new Decimal(item.amount));
+                        const totalAmount = new Decimal(statement.totalAmount || '0');
+                        const pendingAmount = totalAmount.minus(paidAmount);
+                        const newStatus = pendingAmount.lte(0) ? 'COMPLETED' : 'PARTIAL';
 
                         await tx.update(apLaborStatements)
                             .set({
-                                paidAmount: paidAmount.toString(),
-                                pendingAmount: pendingAmount.toString(),
-                                status: pendingAmount <= 0 ? 'COMPLETED' : 'PARTIAL',
-                                completedAt: pendingAmount <= 0 ? new Date() : null,
+                                paidAmount: paidAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                                pendingAmount: pendingAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                                status: newStatus,
+                                completedAt: pendingAmount.lte(0) ? new Date() : null,
                             })
-                            .where(eq(apLaborStatements.id, statement.id));
+                            .where(and(
+                                eq(apLaborStatements.id, statement.id),
+                                eq(apLaborStatements.tenantId, session.user.tenantId)
+                            ));
+
+                        await AuditService.log(tx, {
+                            tenantId: session.user.tenantId,
+                            userId: session.user.id!,
+                            tableName: 'ap_labor_statements',
+                            recordId: statement.id,
+                            action: 'UPDATE',
+                            oldValues: { paidAmount: statement.paidAmount, status: statement.status },
+                            newValues: { paidAmount: paidAmount.toFixed(2, Decimal.ROUND_HALF_UP), status: newStatus },
+                            details: { paymentBillId: id, amount: item.amount }
+                        });
                     }
                 }
             }
@@ -368,10 +472,13 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
             await handleCommissionClawback(bill.orderId, Number(bill.amount));
         }
 
+        // F-18: Audit Log (This was already handled above for both REJECTED and PAID)
+        // Removed duplicate audit log here.
+
         revalidatePath('/finance/ap');
         return { success: true };
     });
-}
+});
 
 /**
  * 自动生成劳务结算单 (扫描已完成且未结算的安装单 + 售后扣款)
@@ -379,6 +486,9 @@ export async function verifyPaymentBill(data: z.infer<typeof verifyPaymentBillSc
 export async function generateLaborSettlement() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：财务管理（批量操作）
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
 
     // 导入 liabilityNotices 表
     const { liabilityNotices } = await import('@/shared/api/schema');
@@ -447,17 +557,15 @@ export async function generateLaborSettlement() {
 
             // 计算安装费用总额
             const taskTotal = tasks.reduce((sum, t) => {
-                const fee = parseFloat(t.actualLaborFee || '0');
-                return isNaN(fee) ? sum : sum + fee;
-            }, 0);
+                return sum.plus(new Decimal(t.actualLaborFee || '0'));
+            }, new Decimal(0));
 
             // 计算扣款总额 (负数)
             const deductionTotal = liabilities.reduce((sum, ln) => {
-                const amt = parseFloat(ln.amount || '0');
-                return isNaN(amt) ? sum : sum - amt; // 扣款为负
-            }, 0);
+                return sum.minus(new Decimal(ln.amount || '0'));
+            }, new Decimal(0));
 
-            const totalAmount = taskTotal + deductionTotal;
+            const totalAmount = taskTotal.plus(deductionTotal);
             // 从 tasks 获取 worker 信息 (installer 是关系查询结果)
             const firstTask = tasks[0] as { installer?: { name?: string } } | undefined;
             const workerName = firstTask?.installer?.name || 'UNKNOWN';
@@ -465,18 +573,18 @@ export async function generateLaborSettlement() {
             // 创建结算单
             const [statement] = await tx.insert(apLaborStatements).values({
                 tenantId: session.user.tenantId,
-                statementNo: `LAB-${Date.now()}-${workerId.slice(0, 4)}`,
+                statementNo: generateBusinessNo('LAB'),
                 workerId,
                 workerName,
                 settlementPeriod: new Date().toISOString().slice(0, 7),
-                totalAmount: totalAmount.toFixed(2),
-                pendingAmount: totalAmount.toFixed(2),
+                totalAmount: totalAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                pendingAmount: totalAmount.toFixed(2, Decimal.ROUND_HALF_UP),
                 status: 'CALCULATED',
             }).returning();
 
             // 插入安装费用明细
             for (const task of tasks) {
-                const fee = parseFloat(task.actualLaborFee || '0').toFixed(2);
+                const fee = new Decimal(task.actualLaborFee || '0').toFixed(2, Decimal.ROUND_HALF_UP);
                 await tx.insert(apLaborFeeDetails).values({
                     tenantId: session.user.tenantId,
                     statementId: statement.id,
@@ -491,7 +599,7 @@ export async function generateLaborSettlement() {
 
             // 插入售后扣款明细 (负数金额)
             for (const ln of liabilities) {
-                const deductionAmt = (-parseFloat(ln.amount || '0')).toFixed(2);
+                const deductionAmt = new Decimal(ln.amount || '0').negated().toFixed(2, Decimal.ROUND_HALF_UP);
                 await tx.insert(apLaborFeeDetails).values({
                     tenantId: session.user.tenantId,
                     statementId: statement.id,
@@ -511,10 +619,23 @@ export async function generateLaborSettlement() {
                         financeSyncedAt: new Date(),
                         updatedAt: new Date(),
                     })
-                    .where(eq(liabilityNotices.id, ln.id));
+                    .where(and(
+                        eq(liabilityNotices.id, ln.id),
+                        eq(liabilityNotices.tenantId, session.user.tenantId)
+                    ));
 
                 deductionCount++;
             }
+
+            await AuditService.log(tx, {
+                tenantId: session.user.tenantId,
+                userId: session.user.id!,
+                tableName: 'ap_labor_statements',
+                recordId: statement.id,
+                action: 'CREATE',
+                newValues: statement,
+                details: { taskCount: tasks.length, deductionCount: liabilities.length }
+            });
 
             settlementCount++;
         }
@@ -532,6 +653,9 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
+    // 权限检查：创建收付款
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+
     const { liabilityNotices, suppliers } = await import('@/shared/api/schema');
 
     return await db.transaction(async (tx) => {
@@ -544,22 +668,26 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
         });
 
         if (!notice) throw new Error('定责单不存在');
-        if (notice.liablePartyType !== 'FACTORY') throw new Error('此定责单非供应商责任');
+        if (notice.liablePartyType !== 'FACTORY') throw new Error('此定责单非供应商(工厂)责任');
         if (notice.status !== 'CONFIRMED') throw new Error('定责单未确认');
         if (notice.financeStatus === 'SYNCED') throw new Error('已同步财务系统');
 
         // 获取供应商信息
         const supplier = notice.liablePartyId
             ? await tx.query.suppliers.findFirst({
-                where: eq(suppliers.id, notice.liablePartyId)
+                where: and(
+                    eq(suppliers.id, notice.liablePartyId),
+                    eq(suppliers.tenantId, session.user.tenantId)
+                )
             })
             : null;
 
         // 创建红字对账单 (负数金额)
-        const deductionAmount = (-parseFloat(notice.amount || '0')).toFixed(2);
+        const deductionDecimal = new Decimal(notice.amount || '0').negated();
+        const deductionAmount = deductionDecimal.toFixed(2, Decimal.ROUND_HALF_UP);
         const [statement] = await tx.insert(apSupplierStatements).values({
             tenantId: session.user.tenantId,
-            statementNo: `AP-DEDUCT-${Date.now()}`,
+            statementNo: generateBusinessNo('AP-DED'),
             purchaseOrderId: notice.sourcePurchaseOrderId || '00000000-0000-0000-0000-000000000000',
             supplierId: notice.liablePartyId || '00000000-0000-0000-0000-000000000000',
             supplierName: supplier?.name || '未知供应商',
@@ -578,7 +706,31 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
                 financeSyncedAt: new Date(),
                 updatedAt: new Date(),
             })
-            .where(eq(liabilityNotices.id, liabilityNoticeId));
+            .where(and(
+                eq(liabilityNotices.id, liabilityNoticeId),
+                eq(liabilityNotices.tenantId, session.user.tenantId)
+            ));
+
+        await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'liability_notices',
+            recordId: liabilityNoticeId,
+            action: 'UPDATE',
+            newValues: { financeStatus: 'SYNCED', financeStatementId: statement.id },
+            oldValues: { financeStatus: notice.financeStatus },
+            details: { statementNo: statement.statementNo, amount: deductionAmount }
+        });
+
+        await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'ap_supplier_statements',
+            recordId: statement.id,
+            action: 'CREATE',
+            newValues: statement,
+            details: { liabilityNoticeId }
+        });
 
         revalidatePath('/finance/ap');
         return { success: true, statementId: statement.id };
@@ -596,7 +748,7 @@ const createSupplierRefundSchema = z.object({
 
 /**
  * 创建供应商退款对账单（红字 AP）
- * 
+ *
  * 逻辑：
  * 1. 验证原对账单存在且已付款
  * 2. 验证退款金额不超过已付金额
@@ -608,9 +760,8 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
         const data = createSupplierRefundSchema.parse(input);
         const session = await auth();
 
-        if (!session?.user?.tenantId) {
-            return { success: false, error: '未授权' };
-        }
+        if (!session?.user?.id) return { success: false, error: '未授权' };
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) return { success: false, error: '权限不足：需要财务创建权限' };
 
         const tenantId = session.user.tenantId;
 
@@ -626,24 +777,16 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
                 }
             });
 
-            if (!originalStatement) {
-                return { success: false, error: '原对账单不存在' };
-            }
+            if (!originalStatement) return { success: false, error: '原对账单不存在' };
 
-            const paidAmount = Number(originalStatement.paidAmount);
-            if (paidAmount <= 0) {
-                return { success: false, error: '原对账单未付款，无法退款' };
-            }
+            const paidAmount = new Decimal(originalStatement.paidAmount || '0');
+            const refundAmount = new Decimal(data.refundAmount);
 
-            if (data.refundAmount > paidAmount) {
-                return { success: false, error: `退款金额不能超过已付金额 ¥${paidAmount.toLocaleString()}` };
-            }
+            if (paidAmount.lte(0)) return { success: false, error: '原对账单未付款，无法退款' };
+            if (refundAmount.gt(paidAmount)) return { success: false, error: `退款金额不能超过已付金额 ¥${paidAmount.toFixed(2, Decimal.ROUND_HALF_UP)}` };
 
-            // 2. 生成红字对账单编号
-            const date = new Date();
-            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-            const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const refundNo = `AP-RF-${dateStr}-${random}`;
+            // 2. 生成红字对账单编号 F-24
+            const refundNo = generateBusinessNo('RFD');
 
             // 3. 创建红字 AP 对账单（负数金额）
             const [refundStatement] = await tx.insert(apSupplierStatements).values({
@@ -654,8 +797,8 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
                 supplierName: originalStatement.supplierName,
 
                 // 负数金额表示红字
-                totalAmount: String(-data.refundAmount),
-                paidAmount: String(-data.refundAmount), // 已退
+                totalAmount: refundAmount.negated().toFixed(2, Decimal.ROUND_HALF_UP),
+                paidAmount: refundAmount.negated().toFixed(2, Decimal.ROUND_HALF_UP), // 已退
                 pendingAmount: '0',
 
                 status: 'COMPLETED', // 红字单直接完成
@@ -663,16 +806,42 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
             }).returning();
 
             // 4. 更新原对账单已付金额
-            const newPaidAmount = paidAmount - data.refundAmount;
-            const newPendingAmount = Number(originalStatement.totalAmount) - newPaidAmount;
+            const newPaidAmount = paidAmount.minus(refundAmount);
+            const totalAmtObj = new Decimal(originalStatement.totalAmount || '0');
+            const newPendingAmount = totalAmtObj.minus(newPaidAmount);
+            const newStatus = newPaidAmount.gte(totalAmtObj) ? 'COMPLETED' : 'PARTIAL';
 
             await tx.update(apSupplierStatements)
                 .set({
-                    paidAmount: String(newPaidAmount),
-                    pendingAmount: String(newPendingAmount),
-                    status: newPaidAmount >= Number(originalStatement.totalAmount) ? 'COMPLETED' : 'PARTIAL',
+                    paidAmount: newPaidAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                    pendingAmount: newPendingAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                    status: newStatus,
                 })
-                .where(eq(apSupplierStatements.id, data.originalStatementId));
+                .where(and(
+                    eq(apSupplierStatements.id, data.originalStatementId),
+                    eq(apSupplierStatements.tenantId, tenantId)
+                ));
+
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id!,
+                tableName: 'ap_supplier_statements',
+                recordId: data.originalStatementId,
+                action: 'UPDATE',
+                oldValues: { paidAmount: originalStatement.paidAmount, status: originalStatement.status },
+                newValues: { paidAmount: newPaidAmount.toFixed(2, Decimal.ROUND_HALF_UP), status: newStatus },
+                details: { refundNo, refundAmount: data.refundAmount }
+            });
+
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id!,
+                tableName: 'ap_supplier_statements',
+                recordId: refundStatement.id,
+                action: 'CREATE',
+                newValues: refundStatement,
+                details: { originalStatementId: data.originalStatementId, reason: data.reason }
+            });
 
             revalidatePath('/finance/ap');
 
@@ -714,26 +883,42 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
 
         if (!po) throw new Error('Purchase Order not found');
 
-        // 从 PO items 计算总金额，避免依赖不存在的字段
-        const totalCost = po.items?.reduce((sum: number, item) => {
-            const cost = parseFloat((item as { amount?: string }).amount || '0');
-            return isNaN(cost) ? sum : sum + cost;
-        }, 0)?.toString() || '0';
+        // F-35: 从 PO items 计算总金额，使用 Decimal.js 确保精度
+        const totalCost = (po.items || []).reduce((sum, item) => {
+            const itemAmount = new Decimal((item as { amount?: string }).amount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            return sum.plus(itemAmount);
+        }, new Decimal(0)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
         const [statement] = await tx.insert(apSupplierStatements).values({
             tenantId: tenantId,
-            statementNo: `AP-${Date.now()}`,
+            statementNo: generateBusinessNo('AP'),
             supplierId: po.supplierId,
             supplierName: po.supplier?.name || 'UNKNOWN',
             purchaseOrderId: po.id,
-            totalAmount: totalCost,
-            pendingAmount: totalCost,
+            totalAmount: totalCost.toFixed(2),
+            pendingAmount: totalCost.toFixed(2),
             status: 'RECONCILING',
-            // 使用可选链安全访问，避免 as any
-            purchaserId: '00000000-0000-0000-0000-000000000000',
+            // 使用 PO 创建人作为 purchaserId，如果为空需要 fallback (但 schema 要求 uuid)
+            purchaserId: po.createdBy || '00000000-0000-0000-0000-000000000000',
         }).returning();
 
+        // F-32: 记录采购转应付审计日志
+        await AuditService.log(tx, {
+            tenantId,
+            userId: po.createdBy ?? undefined, // 使用采购人作为操作触发者
+            tableName: 'ap_supplier_statements',
+            recordId: statement.id,
+            action: 'CREATE',
+            newValues: statement,
+            details: {
+                type: 'PO_TO_AP',
+                poId,
+                poNo: po.poNo
+            }
+        });
+
         return { success: true, id: statement.id };
+
     });
 }
 
@@ -743,6 +928,9 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
 export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSchema> & { id: string }) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：编辑财务记录
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.EDIT)) throw new Error('权限不足：需要财务编辑权限');
 
     const validatedData = createPaymentBillSchema.parse(data); // Re-validate
     const { items, ...billData } = validatedData;
@@ -814,6 +1002,7 @@ export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSc
                     .where(eq(paymentBills.id, id));
 
                 updatedBill.status = 'PENDING_APPROVAL';
+            } else {
                 // 审批提交失败，抛出错误
                 const errorMessage = 'error' in approvalRes && typeof approvalRes.error === 'string'
                     ? approvalRes.error

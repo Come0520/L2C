@@ -2,10 +2,11 @@
 
 import { z } from 'zod';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import type { Session } from 'next-auth'; // Explicit import
+import type { Session } from 'next-auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { ChangeOrderService } from '@/services/change-order.service';
 import { submitApproval } from '@/features/approval/actions/submission';
+import Decimal from 'decimal.js';
 
 export const createChangeRequestSchema = z.object({
     orderId: z.string().uuid(),
@@ -42,7 +43,7 @@ export async function createChangeRequestAction(input: z.infer<typeof createChan
         const result = await ChangeOrderService.createRequest(input.orderId, tenantId, {
             type: input.type,
             reason: input.reason,
-            diffAmount: input.diffAmount ? parseFloat(input.diffAmount) : 0,
+            diffAmount: input.diffAmount ? new Decimal(input.diffAmount).toNumber() : 0,
             requestedBy: session.user.id,
         });
 
@@ -53,7 +54,7 @@ export async function createChangeRequestAction(input: z.infer<typeof createChan
             flowCode: 'ORDER_CHANGE',
             entityType: 'ORDER_CHANGE',
             entityId: result.id,
-            amount: result.diffAmount ? Math.abs(parseFloat(result.diffAmount)) : 0,
+            amount: result.diffAmount ? new Decimal(result.diffAmount).abs().toNumber() : 0,
             comment: input.reason,
         });
 

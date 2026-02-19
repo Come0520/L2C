@@ -3,16 +3,13 @@
 import { db } from '@/shared/api/db';
 import { roleOverrides } from '@/shared/api/schema/role-overrides';
 import { roles } from '@/shared/api/schema';
-import {
-  PERMISSION_GROUPS,
-  PERMISSION_LABELS,
-  getAllPermissions,
-} from '@/shared/config/permissions';
-import { RolePermissionService } from '@/shared/lib/role-permission-service';
+import { PERMISSIONS, getAllPermissions, PERMISSION_GROUPS, PERMISSION_LABELS } from '@/shared/config/permissions';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { AuditService } from '@/shared/services/audit-service';
+import { getRoleLabel } from '@/shared/config/roles';
 import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/shared/lib/auth';
-import { getRoleLabel } from '@/shared/config/roles';
+import { RolePermissionService } from '@/shared/lib/role-permission-service';
 
 /**
  * 角色权限覆盖的 Server Actions
@@ -183,10 +180,11 @@ export async function saveRoleOverride(
     return { success: false, message: '未授权访问' };
   }
 
-  // 检查权限：只有管理员和经理可以修改角色权限
-  const userRole = session.user.role;
-  if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
-    return { success: false, message: '没有权限修改角色配置' };
+  // 权限校验
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, message: '没有权限执行此操作' };
   }
 
   const tenantId = session.user.tenantId;
@@ -201,47 +199,72 @@ export async function saveRoleOverride(
     return { success: false, message: `无效的角色代码: ${roleCode}` };
   }
 
-  // 验证权限代码
-  const allPermissions = getAllPermissions();
-  for (const perm of [...addedPermissions, ...removedPermissions]) {
-    if (!allPermissions.includes(perm) && perm !== '**' && perm !== '*') {
-      return { success: false, message: `无效的权限代码: ${perm}` };
-    }
-  }
+  // 优化通配符处理逻辑 (D-16)
+  const finalAdded = addedPermissions.includes('**') ? ['**'] : addedPermissions;
+  const finalRemoved = removedPermissions.includes('**') ? ['**'] : removedPermissions;
 
   try {
-    // 查找现有记录
-    const existing = await db.query.roleOverrides.findFirst({
-      where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)),
-    });
-
-    if (existing) {
-      // 更新现有记录
-      await db
-        .update(roleOverrides)
-        .set({
-          addedPermissions: JSON.stringify(addedPermissions),
-          removedPermissions: JSON.stringify(removedPermissions),
-          updatedAt: new Date(),
-          updatedBy: userId,
-        })
-        .where(eq(roleOverrides.id, existing.id));
-    } else {
-      // 创建新记录
-      await db.insert(roleOverrides).values({
-        tenantId,
-        roleCode,
-        addedPermissions: JSON.stringify(addedPermissions),
-        removedPermissions: JSON.stringify(removedPermissions),
-        updatedBy: userId,
+    // 使用事务确保原子性
+    await db.transaction(async (tx) => {
+      // 查找现有记录
+      const existing = await tx.query.roleOverrides.findFirst({
+        where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)),
       });
-    }
+
+      if (existing) {
+        // 更新现有记录
+        await tx
+          .update(roleOverrides)
+          .set({
+            addedPermissions: JSON.stringify(finalAdded),
+            removedPermissions: JSON.stringify(finalRemoved),
+            updatedAt: new Date(),
+            updatedBy: userId,
+          })
+          .where(eq(roleOverrides.id, existing.id));
+
+        // 记录更新日志
+        // 记录更新日志
+        await AuditService.log(tx, {
+          tableName: 'role_overrides',
+          recordId: existing.id,
+          action: 'UPDATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          oldValues: {
+            addedPermissions: JSON.parse(existing.addedPermissions || '[]'),
+            removedPermissions: JSON.parse(existing.removedPermissions || '[]')
+          },
+          newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
+          changedFields: { roleCode }
+        });
+      } else {
+        // 创建新记录
+        const [newOverride] = await tx.insert(roleOverrides).values({
+          tenantId,
+          roleCode,
+          addedPermissions: JSON.stringify(finalAdded),
+          removedPermissions: JSON.stringify(finalRemoved),
+          updatedBy: userId,
+        }).returning({ id: roleOverrides.id });
+
+        // 记录创建日志
+        // 记录创建日志
+        await AuditService.log(tx, {
+          tableName: 'role_overrides',
+          recordId: newOverride.id,
+          action: 'CREATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved }
+        });
+      }
+    });
 
     revalidatePath('/settings/roles');
 
     return {
       success: true,
-      // Use Role Label from DB if possible, or fallback to code
       message: `角色 ${roleExists.name} 的权限配置已保存`,
     };
   } catch (error) {
@@ -261,19 +284,45 @@ export async function resetRoleOverride(
     return { success: false, message: '未授权访问' };
   }
 
-  // 检查权限
-  const userRole = session.user.role;
-  if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
-    return { success: false, message: '没有权限重置角色配置' };
+  // 权限校验
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, message: '没有权限执行此操作' };
   }
 
   const tenantId = session.user.tenantId;
 
   try {
-    // 删除覆盖记录
-    await db
-      .delete(roleOverrides)
-      .where(and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)));
+    // 使用事务确保原子性
+    await db.transaction(async (tx) => {
+      // 获取要删除的记录以便记录日志
+      const existing = await tx.query.roleOverrides.findFirst({
+        where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode))
+      });
+
+      if (existing) {
+        // 删除覆盖记录
+        await tx
+          .delete(roleOverrides)
+          .where(and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)));
+
+        // 记录日志
+        // 记录日志
+        await AuditService.log(tx, {
+          tableName: 'role_overrides',
+          recordId: existing.id,
+          action: 'DELETE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          oldValues: {
+            roleCode: existing.roleCode,
+            addedPermissions: existing.addedPermissions,
+            removedPermissions: existing.removedPermissions,
+          }
+        });
+      }
+    });
 
     revalidatePath('/settings/roles');
 
@@ -303,28 +352,87 @@ export async function saveAllRoleOverrides(
     return { success: false, message: '未授权访问' };
   }
 
-  // 检查权限
-  const userRole = session.user.role;
-  if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
-    return { success: false, message: '没有权限修改角色配置' };
+  // 权限校验
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, message: '没有权限执行此操作' };
   }
 
-  try {
-    // 逐个保存
-    for (const override of overrides) {
-      const result = await saveRoleOverride(
-        override.roleCode,
-        override.addedPermissions,
-        override.removedPermissions
-      );
-      if (!result.success) {
-        return result;
-      }
-    }
+  const tenantId = session.user.tenantId;
+  const userId = session.user.id;
 
+  try {
+    // 使用单个大事务确保批量操作的原子性
+    await db.transaction(async (tx) => {
+      for (const override of overrides) {
+        const { roleCode, addedPermissions, removedPermissions } = override;
+
+        // 验证权限代码
+        const allPermissions = getAllPermissions();
+        for (const perm of [...addedPermissions, ...removedPermissions]) {
+          if (!allPermissions.includes(perm) && perm !== '**' && perm !== '*') {
+            throw new Error(`无效的权限代码: ${perm}`);
+          }
+        }
+
+        // 优化通配符处理逻辑 (D-16)
+        const finalAdded = addedPermissions.includes('**') ? ['**'] : addedPermissions;
+        const finalRemoved = removedPermissions.includes('**') ? ['**'] : removedPermissions;
+
+        const existing = await tx.query.roleOverrides.findFirst({
+          where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)),
+        });
+
+        if (existing) {
+          await tx
+            .update(roleOverrides)
+            .set({
+              addedPermissions: JSON.stringify(finalAdded),
+              removedPermissions: JSON.stringify(finalRemoved),
+              updatedAt: new Date(),
+              updatedBy: userId,
+            })
+            .where(eq(roleOverrides.id, existing.id));
+
+          await AuditService.log(tx, {
+            tableName: 'role_overrides',
+            recordId: existing.id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: {
+              addedPermissions: existing.addedPermissions,
+              removedPermissions: existing.removedPermissions,
+            },
+            newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
+            changedFields: { roleCode }
+          });
+        } else {
+          const [newOverride] = await tx.insert(roleOverrides).values({
+            tenantId,
+            roleCode,
+            addedPermissions: JSON.stringify(finalAdded),
+            removedPermissions: JSON.stringify(finalRemoved),
+            updatedBy: userId,
+          }).returning({ id: roleOverrides.id });
+
+          await AuditService.log(tx, {
+            tableName: 'role_overrides',
+            recordId: newOverride.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved }
+          });
+        }
+      }
+    });
+
+    revalidatePath('/settings/roles');
     return { success: true, message: '所有角色权限配置已保存' };
   } catch (error) {
     console.error('批量保存角色覆盖失败:', error);
-    return { success: false, message: '保存失败，请稍后重试' };
+    return { success: false, message: (error as Error).message || '保存失败，请稍后重试' };
   }
 }

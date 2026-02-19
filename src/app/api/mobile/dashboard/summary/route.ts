@@ -9,7 +9,10 @@ import { orders, leads, paymentBills } from '@/shared/api/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/dashboard/summary');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -129,7 +132,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('仪表盘数据查询错误:', error);
+        log.error('仪表盘数据查询错误', {}, error);
         return apiError('查询仪表盘数据失败', 500);
     }
 }

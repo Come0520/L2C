@@ -15,41 +15,51 @@ export class AuditService {
         params: {
             tableName: string;
             recordId: string;
-            action: 'CREATE' | 'UPDATE' | 'DELETE';
+            action: string;
             userId?: string;
             tenantId?: string; // Optional in params, will fetch if missing
             changedFields?: Record<string, any>;
             oldValues?: Record<string, any>;
             newValues?: Record<string, any>;
+            details?: Record<string, any>;
+            traceId?: string;
+            userAgent?: string;
+            ipAddress?: string;
         }
     ) {
         try {
             let tenantId = params.tenantId;
+            let traceId = params.traceId;
+            let userAgent = params.userAgent;
+            let ipAddress = params.ipAddress;
 
-            // If tenantId is not passed, try to get it from headers (Server Actions context)
-            if (!tenantId) {
-                const { headers } = await import('next/headers');
-                const headerList = await headers(); // Await the headers() call
-                tenantId = headerList.get('x-tenant-id') || undefined;
-            }
-
-            if (!tenantId) {
-                console.warn('Audit log missing tenantId for', params.tableName, params.recordId);
-                // Depending on strictness, we might want to throw or just log a warning.
-                // For now, allow it but it might fail RLS if configured strictly or default to something.
-                // However, our schema enforces tenant_id NOT NULL. 
-                // We should probably throw if we can't find it, or let the DB error out.
+            // Header metadata extraction
+            if (!tenantId || !traceId || !userAgent || !ipAddress) {
+                try {
+                    const { headers } = await import('next/headers');
+                    const headerList = await headers();
+                    if (!tenantId) tenantId = headerList.get('x-tenant-id') || undefined;
+                    if (!traceId) traceId = headerList.get('x-trace-id') || undefined;
+                    if (!userAgent) userAgent = headerList.get('user-agent') || undefined;
+                    if (!ipAddress) ipAddress = headerList.get('x-forwarded-for') || undefined;
+                } catch {
+                    // Not in a request context (e.g. background job)
+                }
             }
 
             await db.insert(auditLogs).values({
                 tableName: params.tableName,
                 recordId: params.recordId,
                 action: params.action,
-                userId: params.userId ? params.userId : undefined,
-                tenantId: tenantId!, // Assert non-null if we are confident, or let DB throw
+                userId: params.userId || undefined,
+                tenantId: tenantId!,
                 changedFields: params.changedFields,
                 oldValues: params.oldValues,
                 newValues: params.newValues,
+                details: params.details,
+                traceId,
+                userAgent,
+                ipAddress,
             });
         } catch (error) {
             console.error('Audit log failed:', error);

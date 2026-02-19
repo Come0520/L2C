@@ -14,3 +14,8 @@ export const APPROVAL_CONSTANTS = {
         'DISPATCHER': 'WORKER'
     } as Record<string, string>
 } as const;
+
+/**
+ * 系统虚拟用户 ID (用于自动超时、自动通过等内部操作)
+ */
+export const SYSTEM_USER_ID = '__SYSTEM__' as const;

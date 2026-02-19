@@ -7,8 +7,9 @@ import Printer from 'lucide-react/dist/esm/icons/printer';
 import SplitSquareVertical from 'lucide-react/dist/esm/icons/split-square-vertical';
 import Truck from 'lucide-react/dist/esm/icons/truck';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+
 import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -20,14 +21,13 @@ import {
     confirmInstallationAction,
     requestCustomerConfirmationAction,
     customerAcceptAction,
-    customerRejectAction
 } from '../actions/orders';
 import { useRouter } from 'next/navigation';
 import { ChangeOrderDialog } from '@/features/orders/components/change-order-dialog';
 import { SplitOrderDialog } from '@/features/orders/components/split-order-dialog';
 import { DeliveryRequestDialog } from '@/features/orders/components/delivery-request-dialog';
 import { CancelOrderDialog } from '@/features/orders/components/cancel-order-dialog';
-import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
+import { RejectOrderDialog } from './reject-order-dialog';
 
 interface OrderDetailActionsProps {
     order: {
@@ -85,17 +85,6 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
         } catch { toast.error('操作失败'); }
     };
 
-    // Simple reject for now, ideally a dialog
-    const handleReject = async () => {
-        const reason = prompt('请输入驳回原因:');
-        if (!reason) return;
-        try {
-            await customerRejectAction(order.id, reason);
-            toast.success('已驳回验收');
-            router.refresh();
-        } catch { toast.error('操作失败'); }
-    };
-
     return (
         <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
@@ -134,9 +123,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                     <Button size="sm" variant="default" onClick={handleAccept} className="bg-green-600 hover:bg-green-700">
                         <CheckCircle className="h-4 w-4 mr-2" /> 确认验收
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={handleReject}>
-                        <XCircle className="h-4 w-4 mr-2" /> 驳回
-                    </Button>
+                    <RejectOrderDialog orderId={order.id} />
                 </>
             )}
 

@@ -1,7 +1,6 @@
 import { orderStatusEnum } from '@/shared/api/schema';
 
-// Helper to get type from Enum
-// Helper to get type from Enum
+// 辅助类型：从 Enum 中提取订单状态类型
 type OrderStatus = typeof orderStatusEnum.enumValues[number];
 
 export class OrderStateMachine {
@@ -10,24 +9,26 @@ export class OrderStateMachine {
         'PENDING_MEASURE': ['MEASURED', 'CANCELLED'],
         'MEASURED': ['QUOTED', 'CANCELLED'],
         'QUOTED': ['SIGNED', 'CANCELLED', 'DRAFT'],
-        'SIGNED': ['PAID', 'CANCELLED'],
-        'PAID': ['PENDING_PRODUCTION', 'PENDING_PO', 'CANCELLED'],
-        'PENDING_PO': ['PENDING_PRODUCTION', 'CANCELLED'],
-        'PENDING_PRODUCTION': ['IN_PRODUCTION', 'CANCELLED'],
-        'IN_PRODUCTION': ['PENDING_DELIVERY', 'CANCELLED'],
-        'PENDING_DELIVERY': ['PENDING_INSTALL', 'CANCELLED'],
-        'PENDING_INSTALL': ['INSTALLATION_COMPLETED', 'CANCELLED'], // Install -> Completed (Wait for check)
+        'SIGNED': ['PAID', 'CANCELLED', 'HALTED'],
+        'PAID': ['PENDING_PRODUCTION', 'PENDING_PO', 'CANCELLED', 'HALTED'],
+        'PENDING_PO': ['PENDING_PRODUCTION', 'CANCELLED', 'HALTED'],
+        'PENDING_PRODUCTION': ['IN_PRODUCTION', 'CANCELLED', 'HALTED'], // Allow Halt from Pending Production
+        'IN_PRODUCTION': ['PENDING_DELIVERY', 'CANCELLED', 'HALTED'], // Allow Halt from In Production
+        'PENDING_DELIVERY': ['PENDING_INSTALL', 'CANCELLED', 'HALTED'], // 允许叫停
+        'PENDING_INSTALL': ['INSTALLATION_COMPLETED', 'CANCELLED', 'HALTED'],
 
         'INSTALLATION_COMPLETED': ['PENDING_CONFIRMATION', 'INSTALLATION_REJECTED', 'COMPLETED', 'CANCELLED'],
-        // Can go to PENDING_CONFIRMATION (Wait for Customer), 
-        // or directly COMPLETED (if no confirmation needed? Rule says Wait-for-Customer)
-
         'PENDING_CONFIRMATION': ['COMPLETED', 'INSTALLATION_REJECTED', 'CANCELLED'],
         'INSTALLATION_REJECTED': ['PENDING_INSTALL', 'CANCELLED'], // Re-install
 
-        'COMPLETED': [],
-        'PAUSED': ['IN_PRODUCTION', 'PENDING_PRODUCTION'], // Add PAUSED transitions
-        'HALTED': ['IN_PRODUCTION', 'PENDING_PRODUCTION', 'CANCELLED'], // Add HALTED transitions
+        'COMPLETED': [], // Final state
+
+        // PAUSED 已废弃，保留为终态以满足类型约束（数据库枚举仍含此值）
+        'PAUSED': [],
+
+        // HALTED 可以恢复到生产状态或取消（合并了已废弃的 PAUSED 状态）
+        'HALTED': ['IN_PRODUCTION', 'PENDING_PRODUCTION', 'CANCELLED'],
+
         'PENDING_APPROVAL': ['PENDING_PRODUCTION', 'CANCELLED'],
         'CANCELLED': []
     };
@@ -51,6 +52,22 @@ export class OrderStateMachine {
      */
     static getNextStates(current: OrderStatus): OrderStatus[] {
         return this.transitions[current] || [];
+    }
+
+    /**
+     * 获取当前状态下可能的自动流转目标
+     * 例如：某些状态在满足时间或数据条件后可自动跳过
+     */
+    static getAutoTransition(current: OrderStatus): OrderStatus | null {
+        switch (current) {
+            case 'INSTALLATION_COMPLETED':
+                return 'COMPLETED'; // 验收完成后可自动结案（配合 T+N 策略）
+            case 'PENDING_DELIVERY':
+                // 如果是虚拟商品或无需物流，可考虑自动跳过（此处留作扩展）
+                return null;
+            default:
+                return null;
+        }
     }
 
     /**

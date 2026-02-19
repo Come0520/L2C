@@ -25,6 +25,7 @@ interface CategoryViewProps extends ColumnVisibility {
   handleClientCalc: CalcHandler;
   handleAdvancedEdit: (item: QuoteItem) => void;
   handleToggleItem: (itemId: string) => void;
+  onRowClick?: (item: QuoteItem) => void;
 }
 
 export function CategoryView({
@@ -48,6 +49,7 @@ export function CategoryView({
   handleClientCalc,
   handleAdvancedEdit,
   handleToggleItem,
+  onRowClick,
 }: CategoryViewProps) {
   const itemsByCategory: Record<string, QuoteItem[]> = {};
   items.forEach((item) => {
@@ -96,6 +98,7 @@ export function CategoryView({
           handleAdvancedEdit={handleAdvancedEdit}
           onToggleExpand={() => handleToggleItem(item.id)}
           renderChildren={renderRows}
+          onRowClick={onRowClick}
         />
       );
     });

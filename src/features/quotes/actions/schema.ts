@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+// 共享 attributes 校验规则：仅允许基础类型值，防止原型链污染或注入复杂对象
+// P1-R5-01: 安全修复
+const safeAttributesSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean(), z.null(),
+  z.array(z.union([z.string(), z.number(), z.boolean(), z.null()]))])
+).optional();
+
 export const createQuoteSchema = z.object({
   customerId: z.string().uuid(),
   leadId: z.string().uuid().optional(),
@@ -69,7 +77,9 @@ export const createQuoteItemSchema = z.object({
   foldRatio: z.number().min(0).optional(),
   processFee: z.number().min(0).optional(),
 
-  attributes: z.record(z.string(), z.any()).optional(),
+  // P1-08 安全修复：限制 attributes 值类型，禁止注入任意对象
+  // P1-08/P1-R5-01 安全修复：使用统一的安全校验规则
+  attributes: safeAttributesSchema,
   remark: z.string().optional(),
 });
 
@@ -89,7 +99,7 @@ export const updateQuoteItemSchema = z.object({
   foldRatio: z.number().min(0).optional(),
   processFee: z.number().min(0).optional(),
 
-  attributes: z.record(z.string(), z.any()).optional(),
+  attributes: safeAttributesSchema,
   remark: z.string().optional(),
   unit: z.string().max(20).optional(),
   sortOrder: z.number().int().optional(),
@@ -122,7 +132,7 @@ export const rejectQuoteDiscountSchema = z.object({
 });
 
 export const createQuickQuoteSchema = z.object({
-  leadId: z.string(),
+  leadId: z.string().uuid(),
   planType: z.string(),
   rooms: z.array(
     z.object({

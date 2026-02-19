@@ -13,8 +13,11 @@ interface Props {
     onSuccess: () => void;
 }
 
-const TYPES = [
-    { value: 'CALL', label: '电话沟通' },
+// 活动类型选项，与 activitySchema 中的 z.enum 对齐
+type ActivityType = 'VISIT' | 'PHONE' | 'WECHAT' | 'OTHER';
+
+const TYPES: { value: ActivityType; label: string }[] = [
+    { value: 'PHONE', label: '电话沟通' },
     { value: 'WECHAT', label: '微信沟通' },
     { value: 'VISIT', label: '上门拜访' },
     { value: 'OTHER', label: '其他' },
@@ -22,7 +25,7 @@ const TYPES = [
 
 export function ActivityForm({ customerId, onSuccess }: Props) {
     const [description, setDescription] = useState('');
-    const [type, setType] = useState('CALL');
+    const [type, setType] = useState<ActivityType>('PHONE');
     const [submitting, setSubmitting] = useState(false);
 
     async function handleSubmit() {

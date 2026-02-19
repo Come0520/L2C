@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getTicketDetail } from '../actions';
+import { TicketDetail } from '../types';
 import {
     Tabs,
     TabsContent,
@@ -36,7 +37,7 @@ export function AfterSalesDetail({ ticketId }: AfterSalesDetailProps) {
         return <div className="p-8 text-center">工单不存在或加载失败</div>;
     }
 
-    const ticket = data.data;
+    const ticket = data.data as unknown as TicketDetail;
 
     // SLA Logic moved to SLAStatus component
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkTimeoutsManually } from '@/features/approval/actions';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * Cron Job API route for checking approval timeouts
@@ -10,23 +11,37 @@ import { checkTimeoutsManually } from '@/features/approval/actions';
  */
 export async function GET(request: NextRequest) {
     try {
-        // Verify cron secret to prevent unauthorized access
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET || 'development-secret';
-
-        if (authHeader !== `Bearer ${cronSecret}`) {
+        // 安全修复：强制要求配置 CRON_SECRET
+        const cronSecret = process.env.CRON_SECRET;
+        if (!cronSecret) {
+            console.error('[Check Timeouts] CRON_SECRET 未配置，拒绝请求');
             return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
+                { error: 'Server configuration error: CRON_SECRET not set' },
+                { status: 500 }
             );
         }
 
-        const result = await checkTimeoutsManually();
+        const authHeader = request.headers.get('authorization');
+        const [scheme, token] = authHeader?.split(' ') || [];
+
+        if (scheme !== 'Bearer' || !token) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 使用 timingSafeEqual 防止时序攻击
+        const secretBuffer = Buffer.from(cronSecret);
+        const tokenBuffer = Buffer.from(token);
+
+        if (secretBuffer.length !== tokenBuffer.length || !timingSafeEqual(secretBuffer, tokenBuffer)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        await checkTimeoutsManually();
 
         return NextResponse.json({
             success: true,
-            timestamp: new Date().toISOString(),
-            ...(result as Record<string, unknown>)
+            message: 'Timeout check completed',
+            timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error('Cron job error:', error);

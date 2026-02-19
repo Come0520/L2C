@@ -1,11 +1,12 @@
-import { db } from "@/shared/api/db";
+import { db, type Transaction } from "@/shared/api/db";
 import { afterSalesTickets, liabilityNotices } from "@/shared/api/schema/after-sales";
-import { orders, orderItems } from "@/shared/api/schema/orders";
+import { orderItems } from "@/shared/api/schema/orders";
 import { purchaseOrders, purchaseOrderItems, suppliers } from "@/shared/api/schema/supply-chain";
 import { products } from "@/shared/api/schema/catalogs";
-import { eq, and } from "drizzle-orm";
+import { eq, and, InferSelectModel } from "drizzle-orm";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
+import { generateTicketNo, generateNoticeNo } from "@/features/after-sales/utils";
 
 export interface IssueLiabilityParams {
     tenantId: string;
@@ -32,11 +33,12 @@ export interface CreateTicketParams {
 export class AfterSalesService {
 
     /**
-     * Create After-Sales Ticket
+     * 创建售后工单
      */
     static async createTicket(params: CreateTicketParams) {
         return await db.transaction(async (tx) => {
-            const ticketNo = `AS-${Date.now()}`;
+            // P1 FIX (R2-05): 透传事务 tx 确保并发安全
+            const ticketNo = await generateTicketNo(params.tenantId, tx);
             const [ticket] = await tx.insert(afterSalesTickets).values({
                 ...params,
                 ticketNo,
@@ -44,33 +46,45 @@ export class AfterSalesService {
             }).returning();
 
             if (params.productId) {
-                await this.createRestockPO(ticket, params.productId, params.tenantId, params.createdBy);
+                // P1 FIX (R2-08): 传递 tx 保证事务原子性
+                await this.createRestockPO(tx, ticket, params.productId, params.tenantId, params.createdBy);
             }
 
             return ticket;
         });
     }
 
-    private static async createRestockPO(ticket: any, productId: string, tenantId: string, userId: string) {
+    /**
+     * 创建售后补件采购单
+     */
+    private static async createRestockPO(
+        tx: Transaction,
+        ticket: InferSelectModel<typeof afterSalesTickets>,
+        productId: string,
+        tenantId: string,
+        userId: string
+    ) {
         const poNo = `PO${format(new Date(), 'yyyyMMdd')}${randomBytes(3).toString('hex').toUpperCase()}`;
 
-        const product = await db.query.products.findFirst({
-            where: eq(products.id, productId)
+        // P0 FIX (AS-02): 添加租户隔离到产品查询，并使用事务对象 tx
+        const product = await tx.query.products.findFirst({
+            where: and(eq(products.id, productId), eq(products.tenantId, tenantId))
         });
 
         if (!product) {
             throw new Error("Product not found");
         }
 
+        // P0 FIX (AS-02): 添加租户隔离到供应商查询
         const supplier = await db.query.suppliers.findFirst({
-            where: eq(suppliers.id, product.defaultSupplierId!)
+            where: and(eq(suppliers.id, product.defaultSupplierId!), eq(suppliers.tenantId, tenantId))
         });
 
         if (!supplier) {
-            throw new Error("Default supplier not found for product");
+            throw new Error("未找到产品的默认供应商");
         }
 
-        const [po] = await db.insert(purchaseOrders).values({
+        const [po] = await tx.insert(purchaseOrders).values({
             tenantId,
             poNo,
             orderId: ticket.orderId,
@@ -79,13 +93,13 @@ export class AfterSalesService {
             supplierName: supplier.name,
             type: 'FINISHED',
             status: 'DRAFT',
-            totalAmount: product.purchasePrice || '0',
+            totalAmount: (product.purchasePrice || '0').toString(),
             paymentStatus: 'PENDING',
             createdBy: userId
         }).returning();
 
-        // Find original order item
-        const orderItem = await db.query.orderItems.findFirst({
+        // 查找原始订单行项
+        const orderItem = await tx.query.orderItems.findFirst({
             where: and(
                 eq(orderItems.orderId, ticket.orderId),
                 eq(orderItems.productId, productId)
@@ -93,10 +107,10 @@ export class AfterSalesService {
         });
 
         if (!orderItem) {
-            throw new Error("Original order item not found for restock");
+            throw new Error("未找到补件对应的原始订单项");
         }
 
-        await db.insert(purchaseOrderItems).values({
+        await tx.insert(purchaseOrderItems).values({
             tenantId,
             poId: po.id,
             orderItemId: orderItem.id,
@@ -105,8 +119,8 @@ export class AfterSalesService {
             category: product.category,
             productName: product.name,
             quantity: '1',
-            unitPrice: product.purchasePrice || '0',
-            subtotal: product.purchasePrice || '0',
+            unitPrice: (product.purchasePrice || '0').toString(),
+            subtotal: (product.purchasePrice || '0').toString(),
             remark: `售后补件 - 工单号: ${ticket.ticketNo}`
         });
 
@@ -114,17 +128,18 @@ export class AfterSalesService {
     }
 
     /**
-     * Issue Liability Notice
-     * Charges a party for errors found during after-sales.
+     * 发起定责单
+     * 针对售后过程中发现的错误向相关责任方扣款
      */
-    static async issueLiabilityNotice(params: IssueLiabilityParams) {
+    static async issueLiability(params: IssueLiabilityParams) {
         return await db.transaction(async (tx) => {
-            const noticeNo = `LN-${Date.now()}`;
+            // P1 FIX (R2-05): 透传事务 tx 确保并发安全
+            const noticeNo = await generateNoticeNo(params.tenantId, tx);
 
             const [notice] = await tx.insert(liabilityNotices).values({
                 ...params,
                 noticeNo,
-                status: 'DRAFT'
+                status: 'PENDING_CONFIRM'
             }).returning();
 
             return notice;
@@ -132,7 +147,7 @@ export class AfterSalesService {
     }
 
     /**
-     * Close Ticket
+     * 关闭工单
      */
     static async closeTicket(ticketId: string, resolution: string, tenantId: string) {
         const [updated] = await db.update(afterSalesTickets)

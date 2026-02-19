@@ -1,123 +1,226 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 import {
     AlertTriangle,
     Bell,
     CheckCircle2,
     XCircle,
-    Info,
-    ArrowRight,
+    Clock,
+    ChevronDown,
+    RefreshCw,
+    Loader2,
+    Truck,
 } from "lucide-react";
+import type {
+    AlertsResponse,
+    AlertCategory,
+    AlertItem,
+    AlertSeverity,
+} from "@/services/workbench.service";
 
-/**
- * 报警类型
- */
-type AlertType = "warning" | "error" | "info" | "success";
+// ============ 图标和颜色映射 ============
 
-/**
- * 报警项接口
- */
-interface AlertItem {
-    id: string;
-    title: string;
-    description: string;
-    type: AlertType;
-    time: string;
-    href?: string;
-}
+const SEVERITY_CONFIG: Record<AlertSeverity, {
+    icon: React.ComponentType<{ className?: string }>;
+    colorClass: string;
+    badgeVariant: "error" | "secondary";
+}> = {
+    error: {
+        icon: XCircle,
+        colorClass: "text-red-500 bg-red-500/10",
+        badgeVariant: "error",
+    },
+    warning: {
+        icon: AlertTriangle,
+        colorClass: "text-amber-500 bg-amber-500/10",
+        badgeVariant: "error",
+    },
+    info: {
+        icon: Bell,
+        colorClass: "text-blue-500 bg-blue-500/10",
+        badgeVariant: "secondary",
+    },
+};
+
+const CATEGORY_ICON: Record<AlertCategory, React.ComponentType<{ className?: string }>> = {
+    LEAD_OVERDUE: Clock,
+    SLA_OVERDUE: XCircle,
+    DELIVERY_DELAY: Truck,
+    PAYMENT_OVERDUE: AlertTriangle,
+};
+
+// ============ 主组件 ============
 
 /**
  * 报警中心 Tab 内容组件
- * 展示 SLA 超时、系统通知、审批待办等
+ * 从 API 获取真实报警数据，使用可折叠列表展示
  */
 export function AlertsTab() {
-    // 报警数据（后续可从 API 获取）
-    const alerts: AlertItem[] = [
-        {
-            id: "1",
-            title: "线索跟进超时",
-            description: "3 条线索超过 48 小时未跟进",
-            type: "warning",
-            time: "10 分钟前",
-            href: "/leads?filter=overdue",
-        },
-        {
-            id: "2",
-            title: "订单交付延迟",
-            description: "订单 #2024-0156 已超过预计交付时间",
-            type: "error",
-            time: "30 分钟前",
-            href: "/orders/2024-0156",
-        },
-        {
-            id: "3",
-            title: "报价审批待处理",
-            description: "2 个报价折扣申请等待您的审批",
-            type: "info",
-            time: "1 小时前",
-            href: "/settings/approvals",
-        },
-        {
-            id: "4",
-            title: "收款提醒",
-            description: "客户张先生的尾款 ¥12,000 已逾期 3 天",
-            type: "warning",
-            time: "2 小时前",
-            href: "/finance/ar",
-        },
-    ];
+    const [data, setData] = useState<AlertsResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [expandedCategories, setExpandedCategories] = useState<Set<AlertCategory>>(new Set());
 
-    const criticalAlerts = alerts.filter(
-        (a) => a.type === "error" || a.type === "warning"
-    );
-    const otherAlerts = alerts.filter(
-        (a) => a.type !== "error" && a.type !== "warning"
-    );
+    /** 获取报警数据 */
+    const fetchAlerts = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await fetch("/api/workbench/alerts");
+            if (!response.ok) throw new Error("获取报警信息失败");
+            const result: AlertsResponse = await response.json();
+            setData(result);
+
+            // 自动展开有报警的分类
+            const nonEmpty = new Set<AlertCategory>(
+                result.categories
+                    .filter(c => c.count > 0)
+                    .map(c => c.category)
+            );
+            setExpandedCategories(nonEmpty);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "未知错误");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAlerts();
+    }, [fetchAlerts]);
+
+    /** 切换分类展开/收起 */
+    const toggleCategory = (category: AlertCategory) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(category)) {
+                next.delete(category);
+            } else {
+                next.add(category);
+            }
+            return next;
+        });
+    };
+
+    // 加载状态
+    if (loading && !data) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">加载报警信息...</span>
+            </div>
+        );
+    }
+
+    // 错误状态
+    if (error) {
+        return (
+            <Card className="glass-liquid border-white/10">
+                <CardContent className="py-12 text-center">
+                    <p className="text-destructive mb-4">{error}</p>
+                    <Button variant="outline" onClick={fetchAlerts}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        重试
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (!data) return null;
+
+    const totalCount = data.items.length;
 
     return (
-        <div className="space-y-6">
-            {/* 紧急报警 */}
-            {criticalAlerts.length > 0 && (
-                <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        需要关注
-                    </h3>
-                    <div className="space-y-3">
-                        {criticalAlerts.map((alert) => (
-                            <AlertCard key={alert.id} alert={alert} />
-                        ))}
-                    </div>
+        <div className="space-y-4">
+            {/* 顶部概览 */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm text-muted-foreground">
+                        共 <span className="font-semibold text-foreground">{totalCount}</span> 条报警
+                    </span>
                 </div>
-            )}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchAlerts}
+                    disabled={loading}
+                    className="text-xs"
+                >
+                    <RefreshCw className={cn("h-3 w-3 mr-1", loading && "animate-spin")} />
+                    刷新
+                </Button>
+            </div>
 
-            {/* 其他通知 */}
-            {otherAlerts.length > 0 && (
-                <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                        <Bell className="h-4 w-4" />
-                        系统通知
-                    </h3>
-                    <div className="space-y-3">
-                        {otherAlerts.map((alert) => (
-                            <AlertCard key={alert.id} alert={alert} />
-                        ))}
+            {/* 分类折叠列表 */}
+            {data.categories.map(cat => {
+                const isExpanded = expandedCategories.has(cat.category);
+                const sevConfig = SEVERITY_CONFIG[cat.severity];
+                const CatIcon = CATEGORY_ICON[cat.category] || AlertTriangle;
+                const itemsInCategory = data.items.filter(i => i.category === cat.category);
+
+                return (
+                    <div key={cat.category} className="rounded-xl overflow-hidden border border-white/10">
+                        {/* 折叠触发器 */}
+                        <button
+                            onClick={() => toggleCategory(cat.category)}
+                            className={cn(
+                                "w-full flex items-center justify-between p-4 transition-all",
+                                "hover:bg-white/5 dark:hover:bg-white/3",
+                                isExpanded ? "bg-white/5 dark:bg-white/3" : "bg-transparent"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", sevConfig.colorClass)}>
+                                    <CatIcon className="h-4 w-4" />
+                                </div>
+                                <span className="font-medium text-foreground">{cat.label}</span>
+                                <Badge variant={sevConfig.badgeVariant} className="text-xs">
+                                    {cat.count}
+                                </Badge>
+                            </div>
+                            <ChevronDown
+                                className={cn(
+                                    "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                                    isExpanded && "rotate-180"
+                                )}
+                            />
+                        </button>
+
+                        {/* 展开内容 — 报警列表 */}
+                        {isExpanded && (
+                            <div className="border-t border-white/10 bg-white/2 dark:bg-black/10">
+                                {itemsInCategory.length === 0 ? (
+                                    <div className="p-6 text-center text-sm text-muted-foreground">
+                                        暂无此类报警
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-white/5">
+                                        {itemsInCategory.map(item => (
+                                            <AlertRow key={item.id} item={item} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                );
+            })}
 
             {/* 空状态 */}
-            {alerts.length === 0 && (
+            {totalCount === 0 && (
                 <Card className="glass-liquid border-white/10">
                     <CardContent className="py-12 text-center">
                         <div className="text-muted-foreground">
                             <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50 text-emerald-500" />
                             <p>暂无报警</p>
-                            <p className="text-sm mt-1">一切运行正常</p>
+                            <p className="text-sm mt-1">一切运行正常 ✅</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -126,59 +229,43 @@ export function AlertsTab() {
     );
 }
 
-/**
- * 报警卡片组件
- */
-function AlertCard({ alert }: { alert: AlertItem }) {
-    const iconMap = {
-        warning: AlertTriangle,
-        error: XCircle,
-        info: Info,
-        success: CheckCircle2,
-    };
+// ============ 报警项组件 ============
 
-    const colorMap = {
-        warning: "text-amber-500 bg-amber-500/10",
-        error: "text-red-500 bg-red-500/10",
-        info: "text-blue-500 bg-blue-500/10",
-        success: "text-emerald-500 bg-emerald-500/10",
-    };
+function AlertRow({ item }: { item: AlertItem }) {
+    const sevConfig = SEVERITY_CONFIG[item.severity];
+    const Icon = sevConfig.icon;
 
-    const Icon = iconMap[alert.type];
-    const colorClass = colorMap[alert.type];
-
-    const content = (
-        <Card className="glass-liquid border-white/10 hover:bg-white/10 dark:hover:bg-white/5 transition-all cursor-pointer group">
-            <CardContent className="p-4 flex items-start gap-4">
-                <div
-                    className={cn(
-                        "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                        colorClass
-                    )}
-                >
-                    <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-foreground truncate">{alert.title}</p>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                            {alert.time}
-                        </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {alert.description}
-                    </p>
-                </div>
-                {alert.href && (
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-3" />
-                )}
-            </CardContent>
-        </Card>
+    return (
+        <div className="flex items-start gap-4 p-4 hover:bg-white/5 transition-colors">
+            <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5", sevConfig.colorClass)}>
+                <Icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground text-sm">{item.title}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {item.description}
+                </p>
+            </div>
+            <span className="text-xs text-muted-foreground shrink-0 mt-1">
+                {item.createdAt ? formatRelativeTime(new Date(item.createdAt)) : "-"}
+            </span>
+        </div>
     );
+}
 
-    if (alert.href) {
-        return <Link href={alert.href}>{content}</Link>;
-    }
+// ============ 工具函数 ============
 
-    return content;
+/** 格式化相对时间 */
+function formatRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return "刚刚";
+    if (diffMin < 60) return `${diffMin} 分钟前`;
+    if (diffHour < 24) return `${diffHour} 小时前`;
+    if (diffDay < 7) return `${diffDay} 天前`;
+    return date.toLocaleDateString("zh-CN");
 }

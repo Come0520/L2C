@@ -20,6 +20,13 @@ const TIME_SLOT_DEFINITIONS: Record<string, { start: number; end: number }> = {
     'PM': { start: 14, end: 17 },
 };
 
+// 冲突检测阈值配置
+export const CONFLICT_CONFIG = {
+    MAX_DISTANCE_KM: 50,      // 最大赶场距离 (km)
+    MIN_TIME_GAP_HOURS: 2,    // 最小赶场间隔 (小时)
+    MAX_DAILY_TASKS: 3,       // 每日最大任务数
+};
+
 /**
  * 解析时段字符串为小时范围
  */
@@ -47,8 +54,10 @@ function isTimeOverlap(
     return slot1.start < slot2.end && slot2.start < slot1.end;
 }
 
+import { calculateHaversineDistance } from '@/shared/lib/gps-utils';
+
 /**
- * 计算两个坐标之间的距离 (Haversine 公式)
+ * 计算两个坐标之间的距离 (km)
  */
 function calculateDistance(
     loc1: { latitude: number; longitude: number } | null,
@@ -56,16 +65,15 @@ function calculateDistance(
 ): number | null {
     if (!loc1 || !loc2) return null;
 
-    const R = 6371; // 地球半径 (km)
-    const dLat = ((loc2.latitude - loc1.latitude) * Math.PI) / 180;
-    const dLon = ((loc2.longitude - loc1.longitude) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((loc1.latitude * Math.PI) / 180) *
-        Math.cos((loc2.latitude * Math.PI) / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    // shared lib 返回单位是米，我们需要千米
+    const distanceMeters = calculateHaversineDistance(
+        loc1.latitude,
+        loc1.longitude,
+        loc2.latitude,
+        loc2.longitude
+    );
+
+    return distanceMeters / 1000;
 }
 
 /**
@@ -79,9 +87,9 @@ export async function checkSchedulingConflict(
     installerId: string,
     scheduledDate: Date,
     timeSlot: string,
+    tenantId: string,  // 必填：租户隔离参数 - 移至可选参数之前
     currentTaskId?: string,
-    targetAddress?: { latitude: number; longitude: number },
-    tenantId?: string  // 新增：租户隔离参数
+    targetAddress?: { latitude: number; longitude: number }
 ): Promise<ConflictResult> {
     const startOfDay = new Date(scheduledDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -95,7 +103,7 @@ export async function checkSchedulingConflict(
             gte(installTasks.scheduledDate, startOfDay),
             lte(installTasks.scheduledDate, endOfDay),
             currentTaskId ? not(eq(installTasks.id, currentTaskId)) : undefined,
-            tenantId ? eq(installTasks.tenantId, tenantId) : undefined,  // 租户隔离
+            eq(installTasks.tenantId, tenantId),  // 租户隔离
         )
     });
 
@@ -146,7 +154,7 @@ export async function checkSchedulingConflict(
                 const distance = calculateDistance(prevLocation, targetAddress);
                 const timeGap = previousSlot ? currentSlot.start - previousSlot.end : 999;
 
-                if (distance !== null && distance > 50 && timeGap < 2) {
+                if (distance !== null && distance > CONFLICT_CONFIG.MAX_DISTANCE_KM && timeGap < CONFLICT_CONFIG.MIN_TIME_GAP_HOURS) {
                     return {
                         hasConflict: true,
                         conflictType: 'SOFT',
@@ -159,7 +167,7 @@ export async function checkSchedulingConflict(
 
     // 3. 软冲突检测：当日任务数量预警
     const activeTasks = existingTasks.filter(t => t.status !== 'COMPLETED');
-    if (activeTasks.length >= 3) {
+    if (activeTasks.length >= CONFLICT_CONFIG.MAX_DAILY_TASKS) {
         return {
             hasConflict: true,
             conflictType: 'SOFT',

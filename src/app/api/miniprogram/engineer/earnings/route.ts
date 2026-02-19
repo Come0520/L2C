@@ -1,28 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { apLaborStatements, apLaborFeeDetails } from '@/shared/api/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { eq, and, desc, type InferSelectModel } from 'drizzle-orm';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../../auth-utils';
 
-/**
- * Helper: Parse User from Token
- */
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-    };
-  } catch {
-    return null;
-  }
-}
+type LaborFeeDetail = InferSelectModel<typeof apLaborFeeDetails>;
 
 /**
  * GET /api/miniprogram/engineer/earnings
@@ -30,9 +13,9 @@ async function getUser(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     // 查询劳务结算单（按工人 ID 筛选）
@@ -57,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 获取最近的费用明细（最多 10 条）
-    const recentDetails: any[] = [];
+    const recentDetails: LaborFeeDetail[] = [];
     if (statements.length > 0) {
       const recentStatementIds = statements.slice(0, 3).map((s) => s.id);
 
@@ -65,33 +48,28 @@ export async function GET(request: NextRequest) {
         const details = await db
           .select()
           .from(apLaborFeeDetails)
-          .where(eq(apLaborFeeDetails.statementId, statementId))
+          .where(and(eq(apLaborFeeDetails.statementId, statementId), eq(apLaborFeeDetails.tenantId, user.tenantId)))
           .limit(10);
 
         recentDetails.push(...details);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        totalEarned: totalEarned.toFixed(2),
-        pendingAmount: pendingAmount.toFixed(2),
-        recentDetails: recentDetails.slice(0, 10).map((detail) => ({
-          id: detail.id,
-          description: detail.description,
-          amount: detail.amount,
-          feeType: detail.feeType,
-          installTaskNo: detail.installTaskNo,
-          createdAt: detail.createdAt,
-        })),
-      },
+    return apiSuccess({
+      totalEarned: totalEarned.toFixed(2),
+      pendingAmount: pendingAmount.toFixed(2),
+      recentDetails: recentDetails.slice(0, 10).map((detail) => ({
+        id: detail.id,
+        description: detail.description,
+        amount: detail.amount,
+        feeType: detail.feeType,
+        installTaskNo: detail.installTaskNo,
+        createdAt: detail.createdAt,
+      })),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[GET /api/miniprogram/engineer/earnings] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || '服务器错误' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : '服务器错误';
+    return apiError(message, 500);
   }
 }

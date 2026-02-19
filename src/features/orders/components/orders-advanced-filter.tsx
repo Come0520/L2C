@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -39,12 +39,12 @@ export function OrderAdvancedFilter({
     referrerOptions = [],
 }: OrderAdvancedFilterProps) {
 
-    const handleFilterChange = (key: keyof OrderFilters, value: any) => {
+    const handleFilterChange = (key: keyof OrderFilters, value: string | string[] | undefined) => {
         const newFilters = { ...filters, [key]: value === 'ALL' ? undefined : value };
         onFiltersChange(newFilters);
     };
 
-    const handleDateRangeChange = (range: any) => {
+    const handleDateRangeChange = (range: { from: Date; to: Date } | undefined) => {
         onFiltersChange({ ...filters, dateRange: range });
     };
 

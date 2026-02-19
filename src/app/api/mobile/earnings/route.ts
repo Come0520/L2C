@@ -9,7 +9,10 @@ import { installTasks, measureTasks } from '@/shared/api/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/earnings');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -40,6 +43,7 @@ export async function GET(request: NextRequest) {
             })
             .from(installTasks)
             .where(and(
+                eq(installTasks.tenantId, session.tenantId),
                 eq(installTasks.installerId, workerId),
                 eq(installTasks.status, 'COMPLETED'),
             ));
@@ -52,6 +56,7 @@ export async function GET(request: NextRequest) {
             })
             .from(installTasks)
             .where(and(
+                eq(installTasks.tenantId, session.tenantId),
                 eq(installTasks.installerId, workerId),
                 eq(installTasks.status, 'COMPLETED'),
                 gte(installTasks.completedAt, monthStart),
@@ -66,6 +71,7 @@ export async function GET(request: NextRequest) {
             })
             .from(installTasks)
             .where(and(
+                eq(installTasks.tenantId, session.tenantId),
                 eq(installTasks.installerId, workerId),
                 eq(installTasks.status, 'COMPLETED'),
                 // 假设 7 天内完成的为待结算
@@ -79,6 +85,7 @@ export async function GET(request: NextRequest) {
             })
             .from(measureTasks)
             .where(and(
+                eq(measureTasks.tenantId, session.tenantId),
                 eq(measureTasks.assignedWorkerId, workerId),
                 eq(measureTasks.status, 'COMPLETED'),
             ));
@@ -104,7 +111,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('收入统计查询错误:', error);
+        log.error('收入统计查询错误', {}, error);
         return apiError('查询收入统计失败', 500);
     }
 }

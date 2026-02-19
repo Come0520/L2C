@@ -19,11 +19,28 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
 
+import { QuoteItem } from '@/shared/api/schema/quotes';
+
 interface QuoteItemAdvancedDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: any; // Using any for now, ideally QuoteItem type
+  item: QuoteItem | null;
   onSuccess?: () => void;
+}
+
+interface QuoteItemAdvancedAttributes {
+  installPosition?: string;
+  groundClearance?: number | string;
+  openingStyle?: string;
+  fabricWidth?: number | string;
+  formula?: string;
+  headerType?: string;
+  sideLoss?: number | string;
+  bottomLoss?: number | string;
+  headerLoss?: number | string;
+  rollLength?: number | string;
+  patternRepeat?: number | string;
+  [key: string]: unknown;
 }
 
 export function QuoteItemAdvancedDrawer({
@@ -35,9 +52,9 @@ export function QuoteItemAdvancedDrawer({
   const [loading, setLoading] = useState(false);
 
   /**
-   * 报价项的动态属性集，类型不固定，故使用 any
+   * 报价项的动态属性集
    */
-  const [attributes, setAttributes] = useState<Record<string, any>>({});
+  const [attributes, setAttributes] = useState<QuoteItemAdvancedAttributes>({});
 
   const [processFee, setProcessFee] = useState<number>(0);
   const [foldRatio, setFoldRatio] = useState<number>(2);

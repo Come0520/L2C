@@ -1,6 +1,9 @@
 'use server';
 
 import { db } from '@/shared/api/db';
+import { SmsAdapter } from './adapters/sms-adapter';
+import { LarkAdapter } from './adapters/lark-adapter';
+import { WeChatAdapter } from './adapters/wechat-adapter';
 import { auth } from '@/shared/lib/auth';
 import {
     notifications,
@@ -8,9 +11,19 @@ import {
     notificationQueue,
     systemAnnouncements
 } from '@/shared/api/schema/notifications';
-import { eq, and, sql, gte, lte, isNull, or, desc } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, isNull, or, desc, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getSetting } from "@/features/settings/actions/system-settings-actions";
+import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
+import { RolePermissionService } from '@/shared/lib/role-permission-service';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { logger } from '@/shared/lib/logger';
+
+// P1 优化：复用适配器单例，避免事务内重复实例化
+const smsAdapter = new SmsAdapter();
+const wechatAdapter = new WeChatAdapter();
+const larkAdapter = new LarkAdapter();
 
 /**
  * 通知服务
@@ -25,14 +38,31 @@ import { getSetting } from "@/features/settings/actions/system-settings-actions"
 // ==================== 模板渲染 ====================
 
 /**
- * 渲染模板内容（替换变量）
+ * HTML 转义函数，防止模板注入攻击
+ */
+function escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
+ * 渲染模板内容（替换变量并进行 HTML 转义）
  */
 export function renderTemplate(
     template: string,
     params: Record<string, string | number | undefined>
 ): string {
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        return params[key] !== undefined ? String(params[key]) : match;
+        const val = params[key];
+        if (val === undefined) return match;
+        // P0 修复：对替换值进行转义，防止 XSS 攻击
+        return escapeHtml(String(val));
     });
 }
 
@@ -84,43 +114,47 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
         channels = defaultChannels || ['IN_APP'];
     }
 
-    // 4. 为每个渠道创建队列记录
-    const queueItems = [];
+    // 4. 为每个渠道创建队列记录 (事务处理)
+    const queueItems = await db.transaction(async (tx) => {
+        const items = [];
 
-    for (const channel of channels) {
-        const [item] = await db.insert(notificationQueue).values({
-            tenantId,
-            templateId: template.id,
-            templateCode: input.templateCode,
-            userId: input.userId,
-            channel,
-            title,
-            content,
-            status: 'PENDING',
-            priority: template.priority || 'NORMAL',
-            scheduledAt: input.scheduledAt,
-        }).returning();
+        for (const channel of channels) {
+            const isInApp = channel === 'IN_APP';
 
-        queueItems.push(item);
-
-        // 如果是站内信，直接创建通知记录
-        if (channel === 'IN_APP') {
-            await db.insert(notifications).values({
+            // 插入队列
+            // 如果是 IN_APP，直接标记为 SENT，因为接下来会立即写入 notifications 表
+            const [item] = await tx.insert(notificationQueue).values({
                 tenantId,
+                templateId: template.id,
+                templateCode: input.templateCode,
                 userId: input.userId,
+                channel,
                 title,
                 content,
-                type: template.notificationType,
-                channel: 'IN_APP',
-                linkUrl: input.params.linkUrl as string,
-            });
+                status: isInApp ? 'SENT' : 'PENDING',
+                priority: template.priority || 'NORMAL',
+                scheduledAt: input.scheduledAt,
+                // IN_APP 被视为立即处理
+                processedAt: isInApp ? new Date() : null,
+            }).returning();
 
-            // 更新队列状态
-            await db.update(notificationQueue)
-                .set({ status: 'SENT', processedAt: new Date() })
-                .where(eq(notificationQueue.id, item.id));
+            items.push(item);
+
+            // 如果是站内信，直接创建通知记录
+            if (isInApp) {
+                await tx.insert(notifications).values({
+                    tenantId,
+                    userId: input.userId,
+                    title,
+                    content,
+                    type: template.notificationType,
+                    channel: 'IN_APP',
+                    linkUrl: input.params.linkUrl ? String(input.params.linkUrl) : undefined,
+                });
+            }
         }
-    }
+        return items;
+    });
 
     return {
         success: true,
@@ -137,113 +171,133 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
  * 处理通知队列（由 Cron Job 调用）
  */
 export async function processNotificationQueue(batchSize: number = 50) {
-    // 获取待处理的队列项
-    const pendingItems = await db.query.notificationQueue.findMany({
-        where: and(
-            eq(notificationQueue.status, 'PENDING'),
-            or(
-                isNull(notificationQueue.scheduledAt),
-                lte(notificationQueue.scheduledAt, new Date())
+    // P1 优化：将事务拆分，避免外部 API I/O 导致队列表行锁过久
+
+    // Step 1: 批量获取待处理任务并标记为 PROCESSING
+    const itemsToProcess = await db.transaction(async (tx) => {
+        const items = await tx.select()
+            .from(notificationQueue)
+            .where(and(
+                eq(notificationQueue.status, 'PENDING'),
+                or(
+                    isNull(notificationQueue.scheduledAt),
+                    lte(notificationQueue.scheduledAt, new Date())
+                )
+            ))
+            .orderBy(
+                sql`CASE WHEN ${notificationQueue.priority} = 'URGENT' THEN 1 
+                         WHEN ${notificationQueue.priority} = 'HIGH' THEN 2 
+                         WHEN ${notificationQueue.priority} = 'NORMAL' THEN 3 
+                         ELSE 4 END`,
+                notificationQueue.createdAt
             )
-        ),
-        orderBy: [
-            sql`CASE WHEN ${notificationQueue.priority} = 'URGENT' THEN 1 
-                     WHEN ${notificationQueue.priority} = 'HIGH' THEN 2 
-                     WHEN ${notificationQueue.priority} = 'NORMAL' THEN 3 
-                     ELSE 4 END`,
-            notificationQueue.createdAt
-        ],
-        limit: batchSize,
+            .limit(batchSize)
+            .for('update', { skipLocked: true });
+
+        if (items.length === 0) return [];
+
+        const ids = items.map(i => i.id);
+        await tx.update(notificationQueue)
+            .set({ status: 'PROCESSING' })
+            .where(inArray(notificationQueue.id, ids));
+
+        return items;
     });
 
-    const results = {
-        processed: 0,
+    if (itemsToProcess.length === 0) return { processed: 0, success: 0, failed: 0 };
+
+    const stats = {
+        processed: itemsToProcess.length,
         success: 0,
         failed: 0,
     };
+    const maxRetries = 3;
 
-    for (const item of pendingItems) {
-        results.processed++;
-
+    // Step 2: 逐条串行处理（事务外，避免持锁）
+    for (const item of itemsToProcess) {
         try {
-            // 更新为处理中
-            await db.update(notificationQueue)
-                .set({ status: 'PROCESSING' })
-                .where(eq(notificationQueue.id, item.id));
-
-            // 根据渠道发送
             let sendResult = false;
+
+            // 这里我们调用一个专门用于重试和发送的内部逻辑
+            // 为了简化集成，我们手动处理 switch 逻辑
             switch (item.channel) {
                 case 'IN_APP':
-                    // 已在创建时处理
-                    sendResult = true;
+                    sendResult = true; // 已在创建时处理
                     break;
                 case 'SMS':
-                    sendResult = await sendSms(item.targetPhone || '', item.content);
-                    break;
-                case 'EMAIL':
-                    sendResult = await sendEmail(item.targetEmail || '', item.title, item.content);
+                    sendResult = await smsAdapter.send({
+                        userId: item.userId as string,
+                        tenantId: item.tenantId,
+                        title: item.title,
+                        content: item.content,
+                        type: item.priority === 'HIGH' ? 'WARNING' : 'INFO'
+                    });
                     break;
                 case 'WECHAT':
-                    sendResult = await sendWechat(item.userId || '', item.title, item.content);
+                    sendResult = await wechatAdapter.send({
+                        userId: item.userId as string,
+                        tenantId: item.tenantId,
+                        title: item.title,
+                        content: item.content,
+                        type: item.priority === 'HIGH' ? 'WARNING' : 'INFO'
+                    });
+                    break;
+                case 'LARK':
+                    sendResult = await larkAdapter.send({
+                        userId: item.userId as string,
+                        tenantId: item.tenantId,
+                        title: item.title,
+                        content: item.content,
+                        type: item.priority === 'HIGH' ? 'WARNING' : 'INFO'
+                    });
                     break;
                 default:
+                    logger.warn(`[Queue] Unsupported channel ${item.channel} for item ${item.id}`);
                     sendResult = false;
             }
 
+            // Step 3: 更新最终状态（事务外，单条记录更新）
             if (sendResult) {
                 await db.update(notificationQueue)
                     .set({ status: 'SENT', processedAt: new Date() })
                     .where(eq(notificationQueue.id, item.id));
-                results.success++;
+                stats.success++;
             } else {
                 throw new Error('发送失败');
             }
         } catch (error) {
-            const retryCount = parseInt(item.retryCount || '0') + 1;
-            // 读取全局重试配置
-            const maxRetriesSetting = await getSetting('NOTIFICATION_RETRY_COUNT') as number;
-            const maxRetries = maxRetriesSetting || parseInt(item.maxRetries || '3');
-
+            const retryCount = (item.retryCount || 0) + 1;
             await db.update(notificationQueue)
                 .set({
                     status: retryCount >= maxRetries ? 'FAILED' : 'PENDING',
-                    retryCount: String(retryCount),
+                    retryCount: retryCount,
                     lastError: error instanceof Error ? error.message : '未知错误',
                 })
                 .where(eq(notificationQueue.id, item.id));
 
-            results.failed++;
+            stats.failed++;
+            logger.error(`[NotificationQueue] Error processing item ${item.id}:`, error);
         }
     }
 
-    return results;
+    return stats;
 }
 
-// ==================== 渠道发送函数（占位符） ====================
-
-async function sendSms(phone: string, content: string): Promise<boolean> {
-    if (!phone) return false;
-    // TODO: 集成阿里云短信服务
-    console.log(`[SMS] To: ${phone}, Content: ${content}`);
-    return true;
-}
-
-async function sendEmail(email: string, subject: string, content: string): Promise<boolean> {
-    if (!email) return false;
-    // TODO: 集成邮件服务
-    console.log(`[EMAIL] To: ${email}, Subject: ${subject}`);
-    return true;
-}
-
-async function sendWechat(userId: string, title: string, content: string): Promise<boolean> {
-    if (!userId) return false;
-    // TODO: 集成微信模板消息
-    console.log(`[WECHAT] UserId: ${userId}, Title: ${title}`);
-    return true;
-}
 
 // ==================== 系统公告 ====================
+
+/**
+ * 公告创建输入校验 Schema
+ */
+const createAnnouncementSchema = z.object({
+    title: z.string().min(1, '标题不能为空').max(200, '标题不能超过200字符'),
+    content: z.string().min(1, '内容不能为空').max(10000, '内容不能超过10000字符'),
+    type: z.string().max(50, '类型不能超过50字符').optional(),
+    targetRoles: z.array(z.string()).optional(),
+    startAt: z.date(),
+    endAt: z.date().optional(),
+    isPinned: z.boolean().optional(),
+});
 
 /**
  * 获取当前有效的系统公告
@@ -265,6 +319,11 @@ export async function getActiveAnnouncements(userRole?: string) {
             or(
                 isNull(systemAnnouncements.endAt),
                 gte(systemAnnouncements.endAt, now)
+            ),
+            // P1 修复: 角色过滤参数化，防御 SQL 注入
+            or(
+                isNull(systemAnnouncements.targetRoles),
+                userRole ? sql`${systemAnnouncements.targetRoles} @> ${sql.param(JSON.stringify([userRole]))}::jsonb` : undefined
             )
         ),
         orderBy: [
@@ -278,31 +337,48 @@ export async function getActiveAnnouncements(userRole?: string) {
 /**
  * 创建系统公告
  */
-export async function createAnnouncement(input: {
-    title: string;
-    content: string;
-    type?: string;
-    targetRoles?: string[];
-    startAt: Date;
-    endAt?: Date;
-    isPinned?: boolean;
-}) {
+export async function createAnnouncement(input: z.infer<typeof createAnnouncementSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
     }
 
+    const { role, id: userId } = session.user;
+
+    // P1 优化: 权限校验统一化
+    const hasPermission = await RolePermissionService.hasPermission(userId, PERMISSIONS.NOTIFICATION.MANAGE);
+    if (!hasPermission && role !== 'ADMIN' && role !== 'MANAGER') {
+        return { success: false, error: '权限不足' };
+    }
+
+    // 输入校验
+    const validated = createAnnouncementSchema.safeParse(input);
+    if (!validated.success) {
+        return { success: false, error: validated.error.issues[0].message };
+    }
+    const data = validated.data;
+
     const [announcement] = await db.insert(systemAnnouncements).values({
         tenantId: session.user.tenantId,
-        title: input.title,
-        content: input.content,
-        type: input.type || 'INFO',
-        targetRoles: input.targetRoles,
-        startAt: input.startAt,
-        endAt: input.endAt,
-        isPinned: input.isPinned || false,
+        title: data.title,
+        content: data.content,
+        type: data.type || 'INFO',
+        targetRoles: data.targetRoles,
+        startAt: data.startAt,
+        endAt: data.endAt,
+        isPinned: data.isPinned || false,
         createdBy: session.user.id,
     }).returning();
+
+    // P2: 添加审计日志
+    await AuditService.log(db, {
+        tableName: 'system_announcements',
+        recordId: announcement.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: announcement,
+    });
 
     revalidatePath('/');
 
@@ -328,60 +404,106 @@ export async function getNotificationTemplates() {
 }
 
 /**
+ * 通知模板校验 Schema
+ */
+const upsertTemplateSchema = z.object({
+    id: z.string().optional(),
+    code: z.string().min(1, '代码不能为空').max(50, '代码不能超过50字符'),
+    name: z.string().min(1, '名称不能为空').max(100, '名称不能超过100字符'),
+    notificationType: z.string().min(1, '类型不能为空'),
+    titleTemplate: z.string().min(1, '标题模板不能为空').max(200, '标题模板不能超过200字符'),
+    contentTemplate: z.string().min(1, '内容模板不能为空').max(5000, '内容模板不能超过5000字符'),
+    smsTemplate: z.string().max(500, '短信模板不能超过500字符').optional(),
+    channels: z.array(z.string()).default(['IN_APP']),
+    paramMapping: z.array(z.object({
+        key: z.string(),
+        label: z.string(),
+        source: z.string(),
+        defaultValue: z.string().optional()
+    })).optional()
+});
+
+/**
  * 创建或更新通知模板
  */
-export async function upsertNotificationTemplate(input: {
-    id?: string;
-    code: string;
-    name: string;
-    notificationType: string;
-    titleTemplate: string;
-    contentTemplate: string;
-    smsTemplate?: string;
-    channels?: string[];
-    paramMapping?: { key: string; label: string; source: string; defaultValue?: string }[];
-}) {
+export async function upsertNotificationTemplate(input: z.infer<typeof upsertTemplateSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
     }
 
+    // 输入校验
+    const validated = upsertTemplateSchema.safeParse(input);
+    if (!validated.success) {
+        return { success: false, error: validated.error.issues[0].message };
+    }
+    const data = validated.data;
     const tenantId = session.user.tenantId;
 
-    if (input.id) {
+    // P1 修复: 增加权限校验，防止普通用户操作模板
+    const hasPermission = await RolePermissionService.hasPermission(session.user.id, PERMISSIONS.NOTIFICATION.MANAGE);
+    if (!hasPermission && session.user.role !== 'ADMIN') {
+        return { success: false, error: '权限不足' };
+    }
+
+    if (data.id) {
         // 更新
         const [updated] = await db.update(notificationTemplates)
             .set({
-                code: input.code,
-                name: input.name,
-                notificationType: input.notificationType,
-                titleTemplate: input.titleTemplate,
-                contentTemplate: input.contentTemplate,
-                smsTemplate: input.smsTemplate,
-                channels: input.channels || ['IN_APP'],
-                paramMapping: input.paramMapping,
+                code: data.code,
+                name: data.name,
+                notificationType: data.notificationType,
+                titleTemplate: data.titleTemplate,
+                contentTemplate: data.contentTemplate,
+                smsTemplate: data.smsTemplate,
+                channels: data.channels,
+                paramMapping: data.paramMapping,
                 updatedAt: new Date(),
             })
             .where(and(
-                eq(notificationTemplates.id, input.id),
+                eq(notificationTemplates.id, data.id),
                 eq(notificationTemplates.tenantId, tenantId)
             ))
             .returning();
+
+        if (!updated) {
+            return { success: false, error: '模板不存在或无权限修改' };
+        }
+
+        // P2: 添加审计日志
+        await AuditService.log(db, {
+            tableName: 'notification_templates',
+            recordId: updated.id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: updated,
+        });
 
         return { success: true, data: updated };
     } else {
         // 新建
         const [created] = await db.insert(notificationTemplates).values({
             tenantId,
-            code: input.code,
-            name: input.name,
-            notificationType: input.notificationType,
-            titleTemplate: input.titleTemplate,
-            contentTemplate: input.contentTemplate,
-            smsTemplate: input.smsTemplate,
-            channels: input.channels || ['IN_APP'],
-            paramMapping: input.paramMapping,
+            code: data.code,
+            name: data.name,
+            notificationType: data.notificationType,
+            titleTemplate: data.titleTemplate,
+            contentTemplate: data.contentTemplate,
+            smsTemplate: data.smsTemplate,
+            channels: data.channels,
+            paramMapping: data.paramMapping,
         }).returning();
+
+        // P2: 添加审计日志
+        await AuditService.log(db, {
+            tableName: 'notification_templates',
+            recordId: created.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: created,
+        });
 
         return { success: true, data: created };
     }

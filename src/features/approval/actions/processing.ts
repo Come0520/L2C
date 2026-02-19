@@ -3,33 +3,51 @@
 import { db } from "@/shared/api/db";
 import {
     approvals,
-    approvalTasks,
     approvalNodes,
-    quotes,
-    orders,
-    paymentBills,
-    receiptBills,
-    measureTasks
+    approvalTasks,
+    users
 } from "@/shared/api/schema";
-import { users } from "@/shared/api/schema/infrastructure";
 import { eq, and, asc, gt } from "drizzle-orm";
 import { auth } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ApprovalDelegationService } from "@/services/approval-delegation.service";
 import { Session } from "next-auth";
+import { type SystemSession } from "../schema";
 
 /**
  * 审批处理逻辑核心 (支持事务内递归调用)
  */
-async function _processApprovalLogic(
-    tx: any,
+import { Transaction } from "@/shared/api/db";
+import { revertEntityStatus, completeEntityStatus, findApproversByRole } from "./utils";
+import { logger } from "@/shared/lib/logger";
+import { SYSTEM_USER_ID } from "../constants";
+
+const MAX_AUTO_APPROVE_DEPTH = 10;
+
+interface PendingNotification {
+    type: 'newTask' | 'result';
+    id: string;
+}
+
+/**
+ * 审批处理逻辑核心 (支持事务内递归调用)
+ */
+export async function _processApprovalLogic(
+    tx: Transaction,
     payload: {
         taskId: string;
         action: 'APPROVE' | 'REJECT';
         comment?: string;
     },
-    session: Session
-) {
+    session: Session | SystemSession,
+    depth: number = 0
+): Promise<{ success: boolean; message?: string; error?: string; pendingNotifications?: PendingNotification[] }> {
+    const notifications: PendingNotification[] = [];
+    if (depth > MAX_AUTO_APPROVE_DEPTH) {
+        logger.warn(`[Approval] 自动审批递归超过 ${MAX_AUTO_APPROVE_DEPTH} 层，中断`);
+        return { success: true, message: '已达自动审批上限，需人工处理后续节点', pendingNotifications: [] };
+    }
+
     // 1. Get Task
     const task = await tx.query.approvalTasks.findFirst({
         where: and(
@@ -54,40 +72,12 @@ async function _processApprovalLogic(
         return { success: false, error: '任务已处理' };
     }
 
-    // Verify Approver (if assigned)
-    // For auto-approve recursion, the session.user might be the previous approver. 
-    // If task is assigned to specific user, we strictly check.
-    // However, for Auto-Approve, we are creating it as APPROVED directly? 
-    // No, we created as APPROVED in the previous step's logic, so we shouldn't be calling process('APPROVE') on it again?
-    // Wait, my auto-approve logic was:
-    // 1. Insert task as APPROVED.
-    // 2. Need to TRIGGER next node finding.
-
-    // IF I insert as APPROVED, `_processApprovalLogic` will fail at `if (task.status !== 'PENDING')`.
-    // SO: access logic for "Next Node" is inside the `else` block of `processApproval` (Lines 120+).
-    // Specifically `if (proceedToNextNode) ...`
-
-    // REFACTOR STRATEGY ADJUSTMENT:
-    // `_processApprovalLogic` handles "I am approving THIS task".
-    // It updates status -> checks parallel logic -> finds next node -> creates next tasks.
-
-    // If I want auto-approval:
-    // I should Insert the *Next* task as PENDING first?
-    // And then calling `_processApprovalLogic` on it?
-    // YES.
-    // So:
-    // 1. `isNextApproverSelf` check.
-    // 2. Insert new task as PENDING (standard flow).
-    // 3. Immediately call `_processApprovalLogic(tx, { taskId: newTask.id, action: 'APPROVE', comment: 'Auto...' }, session)`.
-
-    // BUT: `_processApprovalLogic` checks `task.approverId === session.user.id`.
-    // If I insert it with `approverId = session.user.id` (which I do), this check passes.
-    // So this works perfectly.
-
-    // Continuing logic...
-
-    if (task.approverId && task.approverId !== session.user.id) {
-        return { success: false, error: '无权处理此任务' };
+    // Verify Approver
+    const isSystemCall = session.user.id === SYSTEM_USER_ID;
+    if (!isSystemCall) {
+        if (task.approverId && task.approverId !== session.user.id) {
+            return { success: false, error: '无权处理此任务' };
+        }
     }
 
     // 2. Update Task
@@ -96,7 +86,8 @@ async function _processApprovalLogic(
             status: payload.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
             comment: payload.comment,
             actionAt: new Date(),
-            approverId: session.user.id,
+            // Only set approverId if not a system action (preserve original if it's a re-run/system check)
+            ...(!isSystemCall ? { approverId: session.user.id } : {}),
         })
         .where(eq(approvalTasks.id, payload.taskId));
 
@@ -112,9 +103,9 @@ async function _processApprovalLogic(
                 )
             });
             const total = siblingTasks.length;
-            const rejected = siblingTasks.filter((t: any) => t.status === 'REJECTED').length;
+            const rejectedCount = siblingTasks.filter(t => t.status === 'REJECTED').length;
 
-            if (rejected <= total / 2) {
+            if (rejectedCount < Math.ceil(total / 2)) {
                 shouldRejectWholeFlow = false; // Not enough rejects yet
             }
         }
@@ -128,38 +119,19 @@ async function _processApprovalLogic(
                 })
                 .where(eq(approvals.id, task.approvalId));
 
-            // Business Callback
-            if (task.approval.entityType === 'QUOTE') {
-                await tx.update(quotes)
-                    .set({ status: 'REJECTED' })
-                    .where(eq(quotes.id, task.approval.entityId));
-            } else if (task.approval.entityType === 'PAYMENT_BILL') {
-                await tx.update(paymentBills)
-                    .set({ status: 'REJECTED' })
-                    .where(eq(paymentBills.id, task.approval.entityId));
-            } else if (task.approval.entityType === 'RECEIPT_BILL') {
-                await tx.update(receiptBills)
-                    .set({ status: 'REJECTED' })
-                    .where(eq(receiptBills.id, task.approval.entityId));
-            } else if (task.approval.entityType === 'MEASURE_TASK') {
-                await tx.update(measureTasks)
-                    .set({ status: 'CANCELLED' })
-                    .where(eq(measureTasks.id, task.approval.entityId));
-            }
+            // Business Callback (Unified)
+            await revertEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId, 'REJECTED');
         }
 
     } else {
         // APPROVE - Check Parallel Logic
-
-        // Check if we need to wait for others (ALL mode)
         let proceedToNextNode = true;
 
         if (task.node.approverMode === 'ALL') {
-            if (!task.nodeId) throw new Error('Task Node ID is missing');
             const pendingTasks = await tx.query.approvalTasks.findMany({
                 where: and(
                     eq(approvalTasks.approvalId, task.approvalId),
-                    eq(approvalTasks.nodeId, task.nodeId),
+                    eq(approvalTasks.nodeId, task.nodeId!),
                     eq(approvalTasks.status, 'PENDING')
                 )
             });
@@ -168,35 +140,33 @@ async function _processApprovalLogic(
                 proceedToNextNode = false; // Wait for others
             }
         } else if (task.node.approverMode === 'ANY') {
-            if (!task.nodeId) throw new Error('Task Node ID is missing');
             // ANY mode: First approval passes the node.
             await tx.update(approvalTasks)
                 .set({ status: 'CANCELED', comment: 'Auto-canceled by parallel approval' })
                 .where(and(
                     eq(approvalTasks.approvalId, task.approvalId),
-                    eq(approvalTasks.nodeId, task.nodeId),
+                    eq(approvalTasks.nodeId, task.nodeId!),
                     eq(approvalTasks.status, 'PENDING')
                 ));
         } else if (task.node.approverMode === 'MAJORITY') {
-            if (!task.nodeId) throw new Error('Task Node ID is missing');
             const siblingTasks = await tx.query.approvalTasks.findMany({
                 where: and(
                     eq(approvalTasks.approvalId, task.approvalId),
-                    eq(approvalTasks.nodeId, task.nodeId)
+                    eq(approvalTasks.nodeId, task.nodeId!)
                 )
             });
             const total = siblingTasks.length;
-            const approved = siblingTasks.filter((t: any) => t.status === 'APPROVED').length;
+            const approvedCount = siblingTasks.filter(t => t.status === 'APPROVED').length;
 
-            if (approved <= total / 2) {
-                proceedToNextNode = false; // Needs more than half
+            if (approvedCount < Math.ceil(total / 2)) {
+                proceedToNextNode = false;
             } else {
                 // Auto-cancel remaining pending tasks for this node
                 await tx.update(approvalTasks)
                     .set({ status: 'CANCELED', comment: 'Pass by majority' })
                     .where(and(
                         eq(approvalTasks.approvalId, task.approvalId),
-                        eq(approvalTasks.nodeId, task.nodeId),
+                        eq(approvalTasks.nodeId, task.nodeId!),
                         eq(approvalTasks.status, 'PENDING')
                     ));
             }
@@ -230,13 +200,7 @@ async function _processApprovalLogic(
                             eq(users.isActive, true)
                         )
                     });
-
-                    const qualifiedUsers = allTenantUsers.filter((u: any) => {
-                        const userRoles = (u.roles as string[]) || [u.role];
-                        return userRoles.includes(nextNode.approverRole!);
-                    });
-
-                    nextApprovers = qualifiedUsers.map((u: any) => u.id);
+                    nextApprovers = findApproversByRole(allTenantUsers, nextNode.approverRole!);
                 }
 
                 // Check Auto-Approval Condition:
@@ -244,14 +208,10 @@ async function _processApprovalLogic(
                 const isNextApproverSelf = nextApprovers.length === 1 && nextApprovers[0] === session.user.id;
 
                 for (const approver of nextApprovers) {
-                    // Check Delegation (Skip if self-approving? No, still check normally, 
-                    // but if delegating to self it's same. If delegating to other, isNextApproverSelf check above might be slightly off if we don't resolve delegation BEFORE check.
-                    // IMPORTANT: We should resolve delegation BEFORE checking 'isNextApproverSelf'.
-                    // Because if I delegate to someone else, I shouldn't auto-approve.
-
                     const finalApprover = await ApprovalDelegationService.getEffectiveApprover(
                         approver,
-                        task.node.flowId
+                        task.node.flowId,
+                        task.tenantId
                     );
 
                     // Insert as PENDING first
@@ -263,22 +223,22 @@ async function _processApprovalLogic(
                         status: 'PENDING',
                     }).returning();
 
-                    // If it was me (and no delegation changed that), Auto Approve
+                    // If it was me, Auto Approve
                     if (isNextApproverSelf && finalApprover === session.user.id) {
-                        console.log(`[Auto-Approval] Node ${nextNode.name} automatically approved by ${session.user.id}`);
-                        // Recursive Call
-                        await _processApprovalLogic(tx, {
+                        logger.info(`[Auto-Approval] Node ${nextNode.name} automatically approved by ${session.user.id}`);
+                        const subResult = await _processApprovalLogic(tx, {
                             taskId: newTask.id,
                             action: 'APPROVE',
                             comment: '自动通过：审批人与上一节点/发起人相同'
-                        }, session);
+                        }, session, depth + 1);
+                        if (subResult.pendingNotifications) {
+                            notifications.push(...subResult.pendingNotifications);
+                        }
                     } else {
-                        // Notify standard new task
-                        const { ApprovalNotificationService } = await import("../services/approval-notification.service");
-                        ApprovalNotificationService.notifyNewTask(newTask.id).catch(console.error);
+                        // 收集待发送通知
+                        notifications.push({ type: 'newTask', id: newTask.id });
                     }
                 }
-
             } else {
                 // Flow Complete
                 await tx.update(approvals)
@@ -290,130 +250,38 @@ async function _processApprovalLogic(
                     .where(eq(approvals.id, task.approvalId));
 
                 // Business Callback
-                if (task.approval.entityType === 'QUOTE') {
-                    await tx.update(quotes)
-                        .set({ status: 'APPROVED' })
-                        .where(eq(quotes.id, task.approval.entityId));
-                } else if (task.approval.entityType === 'RECEIPT_BILL') {
-                    await tx.update(receiptBills)
-                        .set({ status: 'APPROVED' })
-                        .where(eq(receiptBills.id, task.approval.entityId));
-
-                    const ReceiptService = (await import("@/services/receipt.service")).ReceiptService;
-                    await ReceiptService.onApproved(
-                        task.approval.entityId,
-                        session.user.tenantId,
-                        session.user.id!
-                    );
-                } else if (task.approval.entityType === 'MEASURE_TASK') {
-                    await tx.update(measureTasks)
-                        .set({ status: 'PENDING' })
-                        .where(eq(measureTasks.id, task.approval.entityId));
-                } else if (task.approval.entityType === 'ORDER') {
-                    const flowCode = (task.approval as any).flow?.code;
-                    if (flowCode === 'ORDER_CANCELLATION_APPROVAL') {
-                        await tx.update(orders)
-                            .set({
-                                status: 'CANCELLED',
-                                isLocked: true,
-                                updatedAt: new Date()
-                            })
-                            .where(eq(orders.id, task.approval.entityId));
-                    }
-                } else if (task.approval.entityType === 'LEAD_RESTORE') {
-                    const { leads, leadStatusHistory } = await import('@/shared/api/schema');
-                    const { desc } = await import('drizzle-orm');
-
-                    const lastHistory = await tx.query.leadStatusHistory.findFirst({
-                        where: and(
-                            eq(leadStatusHistory.leadId, task.approval.entityId),
-                            eq(leadStatusHistory.newStatus, 'VOID')
-                        ),
-                        orderBy: desc(leadStatusHistory.changedAt)
-                    });
-
-                    const targetStatus = lastHistory?.oldStatus || 'PENDING_ASSIGNMENT';
-
-                    await tx.update(leads)
-                        .set({
-                            status: targetStatus as any,
-                            lostReason: null
-                        })
-                        .where(eq(leads.id, task.approval.entityId));
-
-                    await tx.insert(leadStatusHistory).values({
-                        tenantId: session.user.tenantId,
-                        leadId: task.approval.entityId,
-                        oldStatus: 'VOID',
-                        newStatus: targetStatus,
-                        changedBy: 'SYSTEM',
-                        reason: '审批通过，自动恢复'
-                    });
-                }
+                await completeEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId);
             }
         } else {
-            return { success: true, message: '已批准，等待其他人审批' };
+            return { success: true, message: '已批准，等待其他人审批', pendingNotifications: notifications };
         }
     }
 
-    // 4. Notifications (Only if NOT auto-approved/recursing)
-    // Actually, if we are in recursion, we still want to notify the RESULT if it completed the flow.
-    // The inner recursive call handles its own notifications.
-    // BUT: If I am the top level call, I processed "Approve A". "A" triggers "Auto Approve B". "B" triggers "Complete Flow".
-    // Does A need to notify anything?
-    // "Approve A" -> "B Created" (No notification needed if B is auto-approved instantly? Or notify "B approved"?)
-    // Notification Service usually sends "Approval Result" when flow is Done.
-    // My logic above calls notifyResult when flow status updates.
-
-    // In recursive `_processApprovalLogic`:
-    // It checks `if (task.approval.status === 'APPROVED')` (via DB query).
-    // Should be consistent.
-
-    const { ApprovalNotificationService } = await import("../services/approval-notification.service");
-    // Ensure we see latest state
-    // We are in transaction. `tx.query` sees updates.
+    // 4. Notifications for Result
     if (payload.action === 'REJECT') {
         const finalApproval = await tx.query.approvals.findFirst({ where: eq(approvals.id, task.approvalId) });
         if (finalApproval?.status === 'REJECTED') {
-            ApprovalNotificationService.notifyResult(task.approvalId).catch(console.error);
+            notifications.push({ type: 'result', id: task.approvalId });
         }
     } else if (payload.action === 'APPROVE') {
         const finalApproval = await tx.query.approvals.findFirst({ where: eq(approvals.id, task.approvalId) });
         if (finalApproval?.status === 'APPROVED') {
-            ApprovalNotificationService.notifyResult(task.approvalId).catch(console.error);
-        } else {
-            // If flow not done, we normally notify next tasks.
-            // But if we auto-approved next tasks, this block in the recursive call will handle it?
-            // NO.
-            // In the recursive call (for B), `finalApproval` might be APPROVED. So B notifies result.
-            // Here (for A), `finalApproval` is still PENDING.
-            // "Not finished yet, notify next approvers".
-            // We inserted next task B.
-            // If B was auto-approved, it's status is APPROVED.
-            // We shouldn't notify B.
-
-            // So: Find PENDING tasks only to notify.
-            const nextTasks = await tx.query.approvalTasks.findMany({
-                where: and(
-                    eq(approvalTasks.approvalId, task.approvalId),
-                    eq(approvalTasks.status, 'PENDING')
-                )
-            });
-            for (const nt of nextTasks) {
-                // Only notify if not effectively handled? 
-                // Duplicate notifications?
-                // If I just created B (PENDING) and then recursively approved it.
-                // B is now APPROVED.
-                // So `nextTasks` query won't find B.
-                // So correct: No notification for B.
-                ApprovalNotificationService.notifyNewTask(nt.id).catch(console.error);
-            }
+            notifications.push({ type: 'result', id: task.approvalId });
         }
     }
 
-    return { success: true, message: '处理成功' };
+    return { success: true, message: '处理成功', pendingNotifications: notifications };
 }
 
+/**
+ * 处理审批任务（通过或驳回）
+ *
+ * @param payload - 处理参数
+ * @param payload.taskId - 审批任务 ID
+ * @param payload.action - 操作：'APPROVE' 或 'REJECT'
+ * @param payload.comment - 审批备注
+ * @returns 处理结果
+ */
 export async function processApproval(payload: {
     taskId: string;
     action: 'APPROVE' | 'REJECT';
@@ -423,23 +291,56 @@ export async function processApproval(payload: {
     if (!session?.user?.tenantId) return { success: false, error: 'Unauthorized' };
 
     return db.transaction(async (tx) => {
-        return _processApprovalLogic(tx, payload, session);
+        const result = await _processApprovalLogic(tx, payload, session);
+        if (result.success) {
+            // 事务提交成功后，再实际发起异步通知
+            if (result.pendingNotifications?.length) {
+                import("../services/approval-notification.service").then(({ ApprovalNotificationService }) => {
+                    result.pendingNotifications?.forEach(notif => {
+                        if (notif.type === 'newTask') {
+                            ApprovalNotificationService.notifyNewTask(notif.id).catch(err => {
+                                logger.error(`[Approval-Notify] Failed send newTask for ${notif.id}`, err);
+                            });
+                        } else {
+                            ApprovalNotificationService.notifyResult(notif.id).catch(err => {
+                                logger.error(`[Approval-Notify] Failed send result for ${notif.id}`, err);
+                            });
+                        }
+                    });
+                });
+            }
+            revalidatePath('/approval');
+        }
+        return result;
     });
 }
 
 /**
  * 加签 (Add Approver)
- * 允许当前审批人动态增加协作审批人员
+ */
+/**
+ * 为指定任务添加额外审批人（动态加签）
+ *
+ * @param payload - 加签参数
+ * @param payload.taskId - 当前任务 ID
+ * @param payload.targetUserId - 被加签用户 ID
+ * @param payload.comment - 加签备注
+ * @returns 操作结果
  */
 export async function addApprover(payload: {
     taskId: string;
     targetUserId: string;
     comment?: string;
 }) {
+    const session = await auth();
+    if (!session?.user?.id || !session.user.tenantId) return { success: false, error: 'Unauthorized' };
+
     return await db.transaction(async (tx) => {
-        // 1. 获取当前任务
         const task = await tx.query.approvalTasks.findFirst({
-            where: eq(approvalTasks.id, payload.taskId),
+            where: and(
+                eq(approvalTasks.id, payload.taskId),
+                eq(approvalTasks.tenantId, session.user.tenantId)
+            ),
             with: {
                 approval: true
             }
@@ -449,8 +350,21 @@ export async function addApprover(payload: {
             return { success: false, error: '任务无效或已处理' };
         }
 
-        // 2. 创建新任务 (加签任务)
-        // 使用相同的 approvalId 和 nodeId，标记为 isDynamic
+        if (task.approverId !== session.user.id) {
+            return { success: false, error: '仅当前审批人可加签' };
+        }
+
+        const targetUser = await tx.query.users.findFirst({
+            where: and(
+                eq(users.id, payload.targetUserId),
+                eq(users.tenantId, session.user.tenantId),
+                eq(users.isActive, true)
+            )
+        });
+        if (!targetUser) {
+            return { success: false, error: '目标审批人不存在或不可用' };
+        }
+
         const [newTask] = await tx.insert(approvalTasks).values({
             tenantId: task.tenantId,
             approvalId: task.approvalId,
@@ -462,9 +376,12 @@ export async function addApprover(payload: {
             comment: payload.comment ? `[来自加签] ${payload.comment}` : '[加签申请]'
         }).returning();
 
-        // 3. 通知新审批人
-        const { ApprovalNotificationService } = await import("../services/approval-notification.service");
-        ApprovalNotificationService.notifyNewTask(newTask.id).catch(console.error);
+        // 加签通知 (事务后)
+        import("../services/approval-notification.service").then(({ ApprovalNotificationService }) => {
+            ApprovalNotificationService.notifyNewTask(newTask.id).catch(err => {
+                logger.error('[Approval] Failed to notify new task (dynamic)', err);
+            });
+        });
 
         revalidatePath('/approval');
         return { success: true, message: '加签成功' };

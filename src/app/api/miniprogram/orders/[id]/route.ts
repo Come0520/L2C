@@ -1,31 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { orders, orderItems, paymentSchedules } from '@/shared/api/schema';
+import { orders, paymentSchedules } from '@/shared/api/schema';
 import { eq, and, asc } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../../auth-utils';
 
-// Helper: Get User Info
-async function getUser(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const token = authHeader.slice(7);
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        return await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, payload.userId as string),
-            columns: { id: true, role: true, tenantId: true },
-        });
-    } catch {
-        return null;
-    }
-}
+
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const user = await getUser(request);
+        const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            return apiError('Unauthorized', 401);
         }
 
         const { id: orderId } = await params;
@@ -41,13 +27,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
 
         if (!order) {
-            return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+            return apiError('Order not found', 404);
         }
 
-        return NextResponse.json({ success: true, data: order });
+        return apiSuccess(order);
 
     } catch (error) {
         console.error('Get Order Detail Error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Error' }, { status: 500 });
+        return apiError('Internal Error', 500);
     }
 }

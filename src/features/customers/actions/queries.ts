@@ -1,31 +1,55 @@
 'use server';
 
-import { db } from '@/shared/api/db';
-import { customers } from '@/shared/api/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { db } from '../../../shared/api/db';
+import { customers } from '../../../shared/api/schema';
+import { eq, and, desc, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
-import { getCustomersSchema } from '@/features/customers/schemas';
-import { auth } from '@/shared/lib/auth';
+import { getCustomersSchema, customerLifecycleStages, customerPipelineStatuses } from '../schemas';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { CustomerListItem, CustomerDetail, CustomerProfile, ReferralChain } from '../types';
+import { logger } from '@/shared/lib/logger';
+import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 
 /**
  * 获取客户列表
  * 
  * 安全检查：自动从 session 获取 tenantId 实现租户隔离
  */
-export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
+export async function getCustomers(params: z.input<typeof getCustomersSchema>): Promise<{ data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } }> {
     const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+    if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
     const tenantId = session.user.tenantId;
-    const { page, pageSize, search, type, level, assignedSalesId } = getCustomersSchema.parse(params);
+    const { page, pageSize, search, type, level, assignedSalesId, lifecycleStage, pipelineStatus } = getCustomersSchema.parse(params);
     const offset = (page - 1) * pageSize;
 
     // 首先添加租户隔离条件
-    const whereConditions = [eq(customers.tenantId, tenantId)];
+    // [Fix 1.1] 过滤已合并和已删除的客户
+    const whereConditions = [
+        eq(customers.tenantId, tenantId),
+        eq(customers.isMerged, false),
+        isNull(customers.deletedAt)
+    ];
+
+    // [Fix 1.4] 数据范围权限控制
+    // 如果没有 ALL_VIEW 权限，强制只能查看自己名下的客户
+    const hasAllView = await checkPermission(session, PERMISSIONS.CUSTOMER.ALL_VIEW);
+    if (!hasAllView) {
+        // 如果用户尝试查询其他人的数据，或者是默认查询，都强制加上 assignedSalesId = userId
+        // 注意：如果用户传了 assignedSalesId 且不等于 userId，查询结果将为空 (userId AND otherId)
+        whereConditions.push(eq(customers.assignedSalesId, session.user.id));
+    } else if (assignedSalesId) {
+        // 如果有 ALL_VIEW 权限且指定了 assignedSalesId，则按指定筛选
+        whereConditions.push(eq(customers.assignedSalesId, assignedSalesId));
+    }
 
     if (search) {
+        // [Fix 3.2] SQL 注入与通配符转义
+        // 虽然 sql 模板是参数化的，但 LIKE 模式中的 % 和 _ 需要转义防止模式匹配攻击
+        const escapedSearch = search.replace(/[%_]/g, '\\$&');
         whereConditions.push(
-            sql`(${customers.name} ILIKE ${`%${search}%`} OR ${customers.phone} ILIKE ${`%${search}%`} OR ${customers.customerNo} ILIKE ${`%${search}%`})`
+            sql`(${customers.name} ILIKE ${`%${escapedSearch}%`} OR ${customers.phone} ILIKE ${`%${escapedSearch}%`} OR ${customers.customerNo} ILIKE ${`%${escapedSearch}%`})`
         );
     }
 
@@ -39,8 +63,13 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
         }
     }
 
-    if (assignedSalesId) {
-        whereConditions.push(eq(customers.assignedSalesId, assignedSalesId));
+    // [Fix 1.5] 新增字段过滤
+    if (lifecycleStage) {
+        whereConditions.push(eq(customers.lifecycleStage, lifecycleStage as (typeof customerLifecycleStages)[number]));
+    }
+
+    if (pipelineStatus) {
+        whereConditions.push(eq(customers.pipelineStatus, pipelineStatus as (typeof customerPipelineStatuses)[number]));
     }
 
     const whereClause = and(...whereConditions);
@@ -57,7 +86,7 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
             offset: offset,
         });
     } catch (error) {
-        console.error('Error fetching customers with relations, falling back to basic query:', error);
+        logger.error('Error fetching customers with relations, falling back to basic query:', error, { tenantId, params });
         // Fallback: try fetching without relations if the join fails (e.g. schema mismatch)
         data = await db.query.customers.findMany({
             where: whereClause,
@@ -83,7 +112,7 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
             total,
             totalPages: Math.ceil(total / pageSize),
         },
-    };
+    } as { data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } };
 }
 
 /**
@@ -91,9 +120,9 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>) {
  * 
  * 安全检查：自动从 session 获取 tenantId 实现租户隔离
  */
-export async function getCustomerDetail(id: string) {
+export async function getCustomerDetail(id: string): Promise<CustomerDetail | undefined> {
     const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+    if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
     const tenantId = session.user.tenantId;
 
@@ -111,7 +140,17 @@ export async function getCustomerDetail(id: string) {
         },
     });
 
-    return customer;
+    if (!customer) return undefined;
+
+    // 兼容性处理：如果新字段为空，尝试从 preferences 读取 (用于旧数据迁移过渡)
+    // 注意：customer.preferences 类型可能是 unknown，需断言
+    const prefs = (customer.preferences as Record<string, unknown>) || {};
+
+    return {
+        ...customer,
+        source: customer.source || (prefs.source as string) || null,
+        referrerName: customer.referrerName || (prefs.referrerName as string) || null,
+    };
 }
 
 // ============================================================
@@ -127,6 +166,7 @@ const getCustomerProfileSchema = z.object({
 });
 
 const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSchema, async ({ customerId }, { session }) => {
+    if (!session.user.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
 
     let customer;
@@ -201,8 +241,8 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
             phone: customer.phone,
             type: customer.type,
             level: customer.level,
-            assignedSalesName: (customer as any).assignedSales?.name,
-            referrerName: (customer as any).referrer?.name,
+            assignedSalesName: customer.assignedSales?.name,
+            referrerName: customer.referrer?.name,
             createdAt: customer.createdAt,
         },
         stats: {
@@ -226,9 +266,13 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
             SLEEPING: '沉睡客户',
             LOST: '流失客户',
         }[valueLabel],
-    };
+    } as CustomerProfile;
 });
 
+/**
+ * 获取客户画像
+ * 聚合客户基本信息、订单统计和 RFM 分析数据
+ */
 export async function getCustomerProfile(params: z.infer<typeof getCustomerProfileSchema>) {
     return getCustomerProfileActionInternal(params);
 }
@@ -242,6 +286,7 @@ const getReferralChainSchema = z.object({
 });
 
 const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, async ({ customerId }, { session }) => {
+    if (!session.user.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
 
     const customer = await db.query.customers.findFirst({
@@ -284,9 +329,13 @@ const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, 
         }
     };
 
-    return referralTree;
+    return referralTree as ReferralChain;
 });
 
+/**
+ * 获取客户转介绍链
+ * 构建包含推荐人、直接下级和二级下级的树状结构
+ */
 export async function getReferralChain(params: z.infer<typeof getReferralChainSchema>) {
     return getReferralChainActionInternal(params);
 }

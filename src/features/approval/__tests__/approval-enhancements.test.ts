@@ -5,7 +5,7 @@ import path from 'path';
 
 // Ensure env is loaded before ANY other imports (except types/vitest)
 // Force set env for test
-process.env.DATABASE_URL = 'postgresql://l2c_user:l2c_dev_password@localhost:5433/l2c_test';
+process.env.DATABASE_URL = 'postgresql://l2c_test_user:l2c_test_password@localhost:5434/l2c_test';
 
 // Setup globals or mocks that don't depend on DB
 vi.mock('@/shared/lib/auth', () => ({

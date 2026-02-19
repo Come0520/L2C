@@ -1,12 +1,15 @@
 'use server';
 
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { db } from '@/shared/api/db';
-import { reconciliations, arStatements } from '@/shared/api/schema';
+import { reconciliations, arStatements, receiptBills } from '@/shared/api/schema';
 import { eq, desc, and, inArray, gte, lte, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { revalidatePath } from 'next/cache';
+import { Decimal } from 'decimal.js';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 对账分层定义从 schema.ts 导入
 // export { RECONCILIATION_LAYERS, type ReconciliationLayer } from './schema';
@@ -18,6 +21,9 @@ import { revalidatePath } from 'next/cache';
 export async function getReconciliations() {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
+
+    // 权限检查：对账
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     try {
         const results = await db.query.reconciliations.findMany({
@@ -40,6 +46,9 @@ export async function getReconciliations() {
 export async function getReconciliation(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) return null;
+
+    // 权限检查：对账
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     try {
         return await db.query.reconciliations.findFirst({
@@ -94,9 +103,9 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
     const customerSummary: Record<string, {
         customerId: string;
         customerName: string;
-        totalAmount: number;
-        receivedAmount: number;
-        pendingAmount: number;
+        totalAmount: Decimal;
+        receivedAmount: Decimal;
+        pendingAmount: Decimal;
         orderCount: number;
         statementIds: string[];
     }> = {};
@@ -107,16 +116,16 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
             customerSummary[cid] = {
                 customerId: cid,
                 customerName: stmt.customerName || '未知客户',
-                totalAmount: 0,
-                receivedAmount: 0,
-                pendingAmount: 0,
+                totalAmount: new Decimal(0),
+                receivedAmount: new Decimal(0),
+                pendingAmount: new Decimal(0),
                 orderCount: 0,
                 statementIds: [],
             };
         }
-        customerSummary[cid].totalAmount += parseFloat(stmt.totalAmount || '0');
-        customerSummary[cid].receivedAmount += parseFloat(stmt.receivedAmount || '0');
-        customerSummary[cid].pendingAmount += parseFloat(stmt.pendingAmount || '0');
+        customerSummary[cid].totalAmount = customerSummary[cid].totalAmount.plus(stmt.totalAmount || '0');
+        customerSummary[cid].receivedAmount = customerSummary[cid].receivedAmount.plus(stmt.receivedAmount || '0');
+        customerSummary[cid].pendingAmount = customerSummary[cid].pendingAmount.plus(stmt.pendingAmount || '0');
         customerSummary[cid].orderCount++;
         customerSummary[cid].statementIds.push(stmt.id);
     }
@@ -130,17 +139,28 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
         period: { startDate, endDate },
         title: periodTitle,
         summary: {
-            totalAmount: Object.values(customerSummary).reduce((a, b) => a + b.totalAmount, 0),
-            receivedAmount: Object.values(customerSummary).reduce((a, b) => a + b.receivedAmount, 0),
-            pendingAmount: Object.values(customerSummary).reduce((a, b) => a + b.pendingAmount, 0),
+            totalAmount: Object.values(customerSummary).reduce((a, b) => a.plus(b.totalAmount), new Decimal(0)).toFixed(2, Decimal.ROUND_HALF_UP),
+            receivedAmount: Object.values(customerSummary).reduce((a, b) => a.plus(b.receivedAmount), new Decimal(0)).toFixed(2, Decimal.ROUND_HALF_UP),
+            pendingAmount: Object.values(customerSummary).reduce((a, b) => a.plus(b.pendingAmount), new Decimal(0)).toFixed(2, Decimal.ROUND_HALF_UP),
             customerCount: Object.keys(customerSummary).length,
             orderCount: Object.values(customerSummary).reduce((a, b) => a + b.orderCount, 0),
         },
-        customers: Object.values(customerSummary),
+        customers: Object.values(customerSummary).map(c => ({
+            ...c,
+            totalAmount: c.totalAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+            receivedAmount: c.receivedAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+            pendingAmount: c.pendingAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+        })),
+
     };
 });
 
 export async function generateAggregatedStatement(params: z.infer<typeof aggregateStatementsSchema>) {
+    // 权限检查：对账
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+
     return generateAggregatedStatementActionInternal(params);
 }
 
@@ -196,18 +216,24 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
             end: endDate.toISOString().slice(0, 10),
         },
         pendingCount: pendingStatements.length,
-        totalPendingAmount: pendingStatements.reduce((sum, s) => sum + parseFloat(s.pendingAmount || '0'), 0),
+        totalPendingAmount: pendingStatements.reduce((sum, s) => sum.plus(new Decimal(s.pendingAmount || '0')), new Decimal(0)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2),
         statements: pendingStatements.map(s => ({
             id: s.id,
             statementNo: s.statementNo,
             customerName: s.customerName,
-            totalAmount: parseFloat(s.totalAmount || '0'),
-            pendingAmount: parseFloat(s.pendingAmount || '0'),
+            totalAmount: new Decimal(s.totalAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2),
+            pendingAmount: new Decimal(s.pendingAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2),
         })),
+
     };
 });
 
 export async function generatePeriodStatements(params: z.infer<typeof generatePeriodStatementsSchema>) {
+    // 权限检查：对账
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+
     return generatePeriodStatementsActionInternal(params);
 }
 
@@ -230,126 +256,186 @@ const batchWriteOffSchema = z.object({
 });
 
 const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async (params, { session }) => {
-    const { statementIds, receiptId, allocations, remark } = params;
+    const { receiptId, statementIds, allocations, remark } = params;
     const tenantId = session.user.tenantId;
+    const userId = session.user.id!;
 
-    const { receiptBills } = await import('@/shared/api/schema/finance');
-    const receipt = await db.query.receiptBills.findFirst({
-        where: and(
-            eq(receiptBills.id, receiptId),
-            eq(receiptBills.tenantId, tenantId)
-        ),
-    });
+    return await db.transaction(async (tx) => {
+        // 1. 获取并校验收款单 (Receipt Bill Verification)
+        const receipt = await tx.query.receiptBills.findFirst({
+            where: and(
+                eq(receiptBills.id, receiptId),
+                eq(receiptBills.tenantId, tenantId)
+            ),
+        });
 
-    if (!receipt) {
-        return { error: '收款单不存在' };
-    }
-
-    const statements = await db.query.arStatements.findMany({
-        where: and(
-            eq(arStatements.tenantId, tenantId),
-            inArray(arStatements.id, statementIds)
-        ),
-    });
-
-    if (statements.length === 0) {
-        return { error: '没有找到要核销的账单' };
-    }
-
-    const receiptAmount = parseFloat(receipt.totalAmount || '0');
-    const usedAmount = parseFloat(receipt.usedAmount || '0');
-    const availableAmount = receiptAmount - usedAmount;
-
-    if (availableAmount <= 0) {
-        return { error: '收款单可用金额不足' };
-    }
-
-    type AllocationItem = { statementId: string; amount: number; statementNo: string };
-    let finalAllocations: AllocationItem[] = [];
-
-    if (allocations && allocations.length > 0) {
-        const totalAllocated = allocations.reduce((sum, a) => sum + a.amount, 0);
-        if (totalAllocated > availableAmount) {
-            return { error: `分配金额 (${totalAllocated}) 超出可用金额 (${availableAmount})` };
+        if (!receipt) {
+            return { error: '收款单不存在' };
         }
-        finalAllocations = allocations.map(a => ({
-            ...a,
-            statementNo: statements.find(s => s.id === a.statementId)?.statementNo || '',
-        }));
-    } else {
-        const totalPending = statements.reduce((sum, s) => sum + parseFloat(s.pendingAmount || '0'), 0);
-        const remaining = Math.min(availableAmount, totalPending);
 
-        for (const stmt of statements) {
-            const pending = parseFloat(stmt.pendingAmount || '0');
-            const allocAmount = totalPending > 0
-                ? Math.min(pending, (pending / totalPending) * remaining)
-                : 0;
+        // 仅允许 VERIFIED (已核实) 的收款单进行核销
+        if (receipt.status !== 'VERIFIED' && receipt.status !== 'PARTIAL_USED') {
+            return { error: `收款单当前状态为 ${receipt.status}，不可核销。请确保已核实。` };
+        }
 
-            if (allocAmount > 0) {
-                finalAllocations.push({
-                    statementId: stmt.id,
-                    statementNo: stmt.statementNo || '',
-                    amount: Math.round(allocAmount * 100) / 100,
-                });
+        // 2. 获取并校验待核销账单 (AR Statements Verification)
+        const statements = await tx.query.arStatements.findMany({
+            where: and(
+                eq(arStatements.tenantId, tenantId),
+                inArray(arStatements.id, statementIds)
+            ),
+        });
+
+        if (statements.length === 0) {
+            return { error: '没有找到要核销的账单' };
+        }
+
+        // 校验账单状态：已结算或已关闭的账单不可再次核销
+        const invalidStatements = statements.filter(s => s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'BAD_DEBT');
+        if (invalidStatements.length > 0) {
+            return { error: `部分账单已结清或不可核销: ${invalidStatements.map(s => s.statementNo).join(', ')}` };
+        }
+
+        const receiptAmount = new Decimal(receipt.totalAmount || '0');
+        const usedAmountBefore = new Decimal(receipt.usedAmount || '0');
+        const availableAmount = receiptAmount.minus(usedAmountBefore);
+
+        if (availableAmount.lte(0)) {
+            return { error: '收款单可用余额不足' };
+        }
+
+        // 3. 计算核销分配 (Allocation Logic)
+        type AllocationItem = { statementId: string; amount: Decimal; statementNo: string };
+        let finalAllocations: AllocationItem[] = [];
+
+        if (allocations && allocations.length > 0) {
+            const totalAllocated = allocations.reduce((sum, a) => sum.plus(new Decimal(a.amount)), new Decimal(0)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            if (totalAllocated.gt(availableAmount)) {
+                return { error: `分配金额 (${totalAllocated.toFixed(2, Decimal.ROUND_HALF_UP)}) 超出可用金额 (${availableAmount.toFixed(2, Decimal.ROUND_HALF_UP)})` };
+            }
+            finalAllocations = allocations.map(a => ({
+                statementId: a.statementId,
+                amount: new Decimal(a.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP),
+                statementNo: statements.find(s => s.id === a.statementId)?.statementNo || '',
+            }));
+        } else {
+            // 自动按顺序分配
+            let remainingToAlloc = availableAmount.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+
+            for (const stmt of statements) {
+                if (remainingToAlloc.lte(0)) break;
+
+                const pending = new Decimal(stmt.pendingAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+                const allocAmount = Decimal.min(pending, remainingToAlloc);
+
+                if (allocAmount.gt(0)) {
+                    finalAllocations.push({
+                        statementId: stmt.id,
+                        statementNo: stmt.statementNo || '',
+                        amount: allocAmount.toDecimalPlaces(2, Decimal.ROUND_HALF_UP),
+                    });
+                    remainingToAlloc = remainingToAlloc.minus(allocAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+                }
             }
         }
-    }
 
-    const writeOffResults: { statementId: string; statementNo: string; amount: number; success: boolean }[] = [];
+        // 4. 执行核销逻辑 (Execution)
+        const writeOffResults: { statementId: string; statementNo: string; amount: string; success: boolean }[] = [];
+        let totalWrittenOff = new Decimal(0);
 
-    for (const alloc of finalAllocations) {
-        const stmt = statements.find(s => s.id === alloc.statementId);
-        if (!stmt) continue;
+        for (const alloc of finalAllocations) {
+            const stmt = statements.find(s => s.id === alloc.statementId);
+            if (!stmt) continue;
 
-        const currentReceived = parseFloat(stmt.receivedAmount || '0');
-        const newReceived = currentReceived + alloc.amount;
-        const newPending = parseFloat(stmt.totalAmount || '0') - newReceived;
-        const newStatus = newPending <= 0 ? 'COMPLETED' : 'PARTIAL';
+            const currentReceived = new Decimal(stmt.receivedAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const newReceived = currentReceived.plus(alloc.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const totalStmtAmount = new Decimal(stmt.totalAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const newPending = totalStmtAmount.minus(newReceived).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
-        await db.update(arStatements)
+            // 状态流转根据剩余待收判断
+            const newStatus = newPending.lte(0) ? 'PAID' : 'PARTIAL';
+
+            await tx.update(arStatements)
+                .set({
+                    receivedAmount: newReceived.toFixed(2, Decimal.ROUND_HALF_UP),
+                    pendingAmount: Decimal.max(0, newPending).toFixed(2, Decimal.ROUND_HALF_UP),
+                    status: newStatus,
+                    updatedAt: new Date(),
+                })
+                .where(and(
+                    eq(arStatements.id, alloc.statementId),
+                    eq(arStatements.tenantId, tenantId)
+                ));
+
+            // 记录对账单审计
+            await AuditService.log(tx, {
+                tenantId,
+                userId,
+                action: 'UPDATE',
+                tableName: 'ar_statements',
+                recordId: alloc.statementId,
+                oldValues: { status: stmt.status, receivedAmount: stmt.receivedAmount },
+                newValues: { status: newStatus, receivedAmount: newReceived.toFixed(2, Decimal.ROUND_HALF_UP) },
+                details: { receiptId, amount: alloc.amount.toFixed(2, Decimal.ROUND_HALF_UP), reason: 'RECON_WRITE_OFF' }
+            });
+
+            writeOffResults.push({
+                statementId: alloc.statementId,
+                statementNo: alloc.statementNo,
+                amount: alloc.amount.toFixed(2, Decimal.ROUND_HALF_UP),
+                success: true,
+            });
+            totalWrittenOff = totalWrittenOff.plus(alloc.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+        }
+
+        // 5. 更新收款单使用情况
+        const usedAmountAfter = usedAmountBefore.plus(totalWrittenOff).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+        const newReceiptStatus = usedAmountAfter.gte(receiptAmount) ? 'FULLY_USED' : 'PARTIAL_USED';
+
+        await tx.update(receiptBills)
             .set({
-                receivedAmount: String(newReceived),
-                pendingAmount: String(Math.max(0, newPending)),
-                status: newStatus,
+                usedAmount: usedAmountAfter.toFixed(2, Decimal.ROUND_HALF_UP),
+                status: newReceiptStatus,
                 updatedAt: new Date(),
             })
-            .where(eq(arStatements.id, alloc.statementId));
+            .where(and(
+                eq(receiptBills.id, receiptId),
+                eq(receiptBills.tenantId, tenantId)
+            ));
 
-        writeOffResults.push({
-            statementId: alloc.statementId,
-            statementNo: alloc.statementNo,
-            amount: alloc.amount,
-            success: true,
+        // 记录收款单审计
+        await AuditService.log(tx, {
+            tenantId,
+            userId,
+            action: 'UPDATE',
+            tableName: 'receipt_bills',
+            recordId: receiptId,
+            oldValues: { status: receipt.status, usedAmount: receipt.usedAmount },
+            newValues: { status: newReceiptStatus, usedAmount: usedAmountAfter.toFixed(2, Decimal.ROUND_HALF_UP) },
+            details: { writeOffCount: writeOffResults.length, totalAmount: totalWrittenOff.toFixed(2, Decimal.ROUND_HALF_UP), actionType: 'BATCH_WRITE_OFF' }
         });
-    }
 
-    const totalWrittenOff = writeOffResults.reduce((sum, r) => sum + r.amount, 0);
-    const newUsedAmount = usedAmount + totalWrittenOff;
-    const newReceiptStatus = newUsedAmount >= receiptAmount ? 'FULLY_USED' : 'PARTIAL_USED';
+        revalidatePath('/finance/reconciliation');
+        revalidatePath('/finance/receipt');
 
-    await db.update(receiptBills)
-        .set({
-            usedAmount: String(newUsedAmount),
-            status: newReceiptStatus,
-            updatedAt: new Date(),
-        })
-        .where(eq(receiptBills.id, receiptId));
+        return {
+            success: true,
+            receiptId,
+            totalWrittenOff: totalWrittenOff.toFixed(2, Decimal.ROUND_HALF_UP),
 
-    revalidatePath('/finance/reconciliation');
-    revalidatePath('/finance/receipt');
-
-    return {
-        success: true,
-        receiptId,
-        totalWrittenOff,
-        writeOffCount: writeOffResults.length,
-        details: writeOffResults,
-        remark,
-    };
+            writeOffCount: writeOffResults.length,
+            details: writeOffResults,
+            remark,
+        };
+    });
 });
 
 export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>) {
+    // 权限检查：对账
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+
     return batchWriteOffActionInternal(params);
 }
 
@@ -400,15 +486,15 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
         originalPeriod: `${originalStartDate} 至 ${originalEndDate}`,
         newPeriod: `${originalStartDate} 至 ${newEndDate}`,
         movedCount: pendingStatements.length,
-        totalPendingAmount: pendingStatements.reduce((sum, s) => sum + parseFloat(s.pendingAmount || '0'), 0),
-        customerBreakdown: new Map<string, { name: string; count: number; amount: number }>(),
+        totalPendingAmount: pendingStatements.reduce((sum, s) => sum.plus(s.pendingAmount || '0'), new Decimal(0)).toFixed(2),
+        customerBreakdown: new Map<string, { name: string; count: number; amount: Decimal }>(),
     };
 
     for (const stmt of pendingStatements) {
         const cid = stmt.customerId;
-        const existing = summary.customerBreakdown.get(cid) || { name: stmt.customerName || '未知', count: 0, amount: 0 };
+        const existing = summary.customerBreakdown.get(cid) || { name: stmt.customerName || '未知', count: 0, amount: new Decimal(0) };
         existing.count++;
-        existing.amount += parseFloat(stmt.pendingAmount || '0');
+        existing.amount = existing.amount.plus(stmt.pendingAmount || '0');
         summary.customerBreakdown.set(cid, existing);
     }
 
@@ -421,11 +507,17 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
         customerBreakdown: Array.from(summary.customerBreakdown.entries()).map(([id, data]) => ({
             customerId: id,
             ...data,
+            amount: data.amount.toFixed(2),
         })),
     };
 });
 
 export async function crossPeriodReconciliation(params: z.infer<typeof crossPeriodReconciliationSchema>) {
+    // 权限检查：对账
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+
     return crossPeriodReconciliationActionInternal(params);
 }
 

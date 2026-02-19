@@ -52,7 +52,6 @@ export function NotificationSettingsConfig() {
     const onSubmit = async (data: NotificationSettingsFormData) => {
         try {
             setIsSaving(true);
-            setIsSaving(true);
             await batchUpdateSettings(data as unknown as Record<string, unknown>);
             toast.success('通知设置已保存');
         } catch (error) {

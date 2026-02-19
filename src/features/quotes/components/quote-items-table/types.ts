@@ -29,17 +29,19 @@ export interface QuoteItem {
   roomId: string | null;
   parentId: string | null;
   category: string;
-  productId?: string;
-  productName: string;
+  productId?: string | null;
+  productSku?: string | null;
+  productName?: string;
+  roomName?: string | null;
   unitPrice: string | number;
   quantity: string | number;
-  width: string | number;
-  height: string | number;
-  foldRatio?: string | number;
-  processFee?: string | number;
+  width: string | number | null;
+  height: string | number | null;
+  foldRatio?: string | number | null;
+  processFee?: string | number | null;
   subtotal: string | number;
-  remark?: string;
-  unit?: string;
+  remark?: string | null;
+  unit?: string | null;
   attributes?: QuoteItemAttributes;
   children?: QuoteItem[];
 }

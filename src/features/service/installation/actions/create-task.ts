@@ -9,6 +9,7 @@ import { ActionState, createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // Input Schema - tenantId 已移除，从 session 获取
 const GenerateInstallTasksSchema = z.object({
@@ -33,7 +34,7 @@ const generateInstallTasksFromOrderActionInternal = createSafeAction(
         const { orderId } = input;
 
         const { checkPaymentBeforeInstall } = await import('../logic/payment-check');
-        const paymentCheck = await checkPaymentBeforeInstall(orderId);
+        const paymentCheck = await checkPaymentBeforeInstall(orderId, tenantId);
 
         if (!paymentCheck.passed) {
             return {
@@ -62,7 +63,10 @@ const generateInstallTasksFromOrderActionInternal = createSafeAction(
             }
 
             const existingTasks = await tx.query.installTasks.findMany({
-                where: eq(installTasks.orderId, orderId)
+                where: and(
+                    eq(installTasks.orderId, orderId),
+                    eq(installTasks.tenantId, tenantId)
+                )
             });
 
             if (existingTasks.length > 0) {
@@ -114,6 +118,11 @@ const generateInstallTasksFromOrderActionInternal = createSafeAction(
                 }).returning();
 
                 createdTaskIds.push(newTask.id);
+
+                // 记录安装任务创建审计日志 (由订单生成)
+                await AuditService.recordFromSession(session, 'installTasks', newTask.id, 'CREATE', {
+                    new: { orderId: order.id, action: 'GENERATE_FROM_ORDER', category: newTask.category },
+                }, tx);
 
                 if (items.length > 0) {
                     await tx.insert(installItems).values(items.map(item => ({

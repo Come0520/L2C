@@ -5,13 +5,14 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { installTasks, installItems, users, customers, orders } from '@/shared/api/schema';
-import { eq, and, desc, asc, or, ilike } from 'drizzle-orm';
+import { eq, and, desc, asc, or, ilike, count } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { checkSchedulingConflict } from './logic/conflict-detection';
 import { checkLogisticsReady } from './logic/logistics-check';
 import { notifyTaskAssigned } from '@/services/wechat-subscribe-message.service';
 import { logger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // --- Schemas ---
 
@@ -101,7 +102,12 @@ const updateInstallItemSchema = z.object({
 // --- Actions ---
 
 /**
- * 获取安装任务列表
+ * 获取安装任务列表 (支持搜索、筛选与分页)
+ * @param params 
+ * @param params.page 页码
+ * @param params.pageSize 每页条数
+ * @param params.search 搜索关键字 (单号/客户名/电话/师傅名)
+ * @param params.status 任务状态
  */
 export async function getInstallTasks(params?: {
   page?: number;
@@ -113,44 +119,53 @@ export async function getInstallTasks(params?: {
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
   try {
-    const { search, status } = params || {};
+    const { search, status, page = 1, pageSize = 20 } = params || {};
+    const offset = (page - 1) * pageSize;
 
     // Build where conditions
     const conditions = [eq(installTasks.tenantId, session.user.tenantId)];
 
     if (status && status !== 'ALL') {
-      conditions.push(eq(installTasks.status, status as any));
+      conditions.push(eq(installTasks.status, status as typeof installTasks.status.enumValues[number]));
     }
 
     if (search) {
+      const searchPattern = `%${search}%`;
       conditions.push(
         or(
-          ilike(installTasks.taskNo, `%${search}%`),
-          ilike(installTasks.customerName, `%${search}%`),
-          ilike(installTasks.customerPhone, `%${search}%`)
+          ilike(installTasks.taskNo, searchPattern),
+          ilike(installTasks.customerName, searchPattern),
+          ilike(installTasks.customerPhone, searchPattern),
+          ilike(users.name, searchPattern) // Include installer name search
         )!
       );
     }
 
-    // Wait, I need to check imports. I need 'like' or 'ilike' and 'or'.
-    // Step 446 has 'or' in imports? No.
-    // Step 436 (Measurement Page) used 'or' from 'drizzle-orm'.
-    // Step 446 (Actions) used 'eq, and, desc, asc'.
-    // I need to add 'or', 'like' to imports.
+    // Get data and total count concurrently for better performance
+    const [tasksData, countResult] = await Promise.all([
+      db
+        .select({
+          installTask: installTasks,
+          order: orders,
+          customer: customers,
+          installer: users,
+        })
+        .from(installTasks)
+        .leftJoin(orders, eq(installTasks.orderId, orders.id))
+        .leftJoin(customers, eq(installTasks.customerId, customers.id))
+        .leftJoin(users, eq(installTasks.installerId, users.id))
+        .where(and(...conditions))
+        .orderBy(desc(installTasks.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+      db
+        .select({ count: count() })
+        .from(installTasks)
+        .leftJoin(users, eq(installTasks.installerId, users.id))
+        .where(and(...conditions))
+    ]);
 
-    const tasksData = await db
-      .select({
-        installTask: installTasks,
-        order: orders,
-        customer: customers,
-        installer: users,
-      })
-      .from(installTasks)
-      .leftJoin(orders, eq(installTasks.orderId, orders.id))
-      .leftJoin(customers, eq(installTasks.customerId, customers.id))
-      .leftJoin(users, eq(installTasks.installerId, users.id))
-      .where(and(...conditions))
-      .orderBy(desc(installTasks.createdAt));
+    const total = Number(countResult[0]?.count || 0);
 
     const tasks = tasksData.map((row) => ({
       ...row.installTask,
@@ -159,24 +174,20 @@ export async function getInstallTasks(params?: {
       installer: row.installer,
     }));
 
-    // Filter by search in memory if SQL too complex for quick edit without verifying Driver
-    // But let's try to do it right effectively.
-    let filteredTasks = tasks;
-    if (search) {
-      const lowerSearch = search.toLowerCase();
-      filteredTasks = tasks.filter(
-        (t) =>
-          t.taskNo?.toLowerCase().includes(lowerSearch) ||
-          t.customerName?.toLowerCase().includes(lowerSearch) ||
-          t.customerPhone?.includes(search) ||
-          t.installer?.name?.toLowerCase().includes(lowerSearch)
-      );
-    }
-
-    return { success: true, data: filteredTasks };
-  } catch (_error: any) {
+    return {
+      success: true,
+      data: tasks,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  } catch (_error: unknown) {
+    const errorMessage = _error instanceof Error ? _error.message : '未知错误';
     logger.error('加载安装任务列表失败:', _error);
-    return { success: false, error: `系统错误: ${_error.message}` };
+    return { success: false, error: `系统错误: ${errorMessage}` };
   }
 }
 
@@ -209,7 +220,8 @@ export async function getInstallTaskById(id: string) {
       },
     });
     return { success: true, data: task };
-  } catch (_error) {
+  } catch (_error: unknown) {
+    logger.error('加载任务详情失败:', _error);
     return { success: false, error: '加载任务详情失败' };
   }
 }
@@ -225,7 +237,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
   await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
 
   try {
-    await db.transaction(async (tx) => {
+    const newTask = await db.transaction(async (tx) => {
       // 1. 获取冗余信息 (客户信息、归属销售)
       // P0 修复：客户查询添加租户验证
       const customerData = await tx.query.customers.findFirst({
@@ -260,7 +272,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
       const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
       const taskNo = `INS-${datePrefix}-${randomSuffix}`;
 
-      const [newTask] = await tx
+      const [newTaskResult] = await tx
         .insert(installTasks)
         .values({
           tenantId: session.user.tenantId,
@@ -288,7 +300,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
       if (orderData?.quote?.items && orderData.quote.items.length > 0) {
         const itemsToInsert = orderData.quote.items.map((item) => ({
           tenantId: session.user.tenantId,
-          installTaskId: newTask.id,
+          installTaskId: newTaskResult.id,
           orderItemId: item.id,
           productName: item.productName,
           roomName: item.roomName,
@@ -298,17 +310,26 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
 
         await tx.insert(installItems).values(itemsToInsert);
       }
+
+      return newTaskResult;
+    });
+
+    await AuditService.recordFromSession(session, 'installTasks', newTask.id, 'CREATE', {
+      new: { orderId: data.orderId, customerId: data.customerId, sourceType: data.sourceType },
     });
 
     revalidatePath('/service/installation');
-
     return { success: true, message: '安装任务已创建' };
-  } catch (_error) {
+  } catch (_error: unknown) {
     logger.error('创建任务失败:', _error);
     return { success: false, error: '新建任务失败' };
   }
 });
 
+/**
+ * 创建安装任务 Action
+ * @param data 创建参数
+ */
 export async function createInstallTaskAction(data: z.infer<typeof createInstallTaskSchema>) {
   return createInstallTaskInternal(data);
 }
@@ -330,9 +351,9 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
         data.installerId,
         data.scheduledDate,
         data.scheduledTimeSlot,
+        session.user.tenantId, // 租户隔离 - 移到可选参数之前
         data.id,
-        undefined, // targetAddress
-        session.user.tenantId // 租户隔离
+        undefined // targetAddress
       );
 
       if (conflict.hasConflict) {
@@ -368,7 +389,10 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
     }
 
     const installer = await db.query.users.findFirst({
-      where: eq(users.id, data.installerId),
+      where: and(
+        eq(users.id, data.installerId),
+        eq(users.tenantId, session.user.tenantId) // P0-8 Fix: Tenant isolation
+      ),
     });
 
     await db
@@ -408,13 +432,23 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       }
     }
 
+    // 记录派单审计日志
+    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
+      new: { action: 'DISPATCH', installerId: data.installerId, scheduledDate: data.scheduledDate?.toISOString() },
+    });
+
     revalidatePath('/service/installation');
     return { success: true, message: '指派成功' };
-  } catch (_error) {
+  } catch (_error: unknown) {
+    logger.error('分配失败:', _error);
     return { success: false, error: '分配失败' };
   }
 });
 
+/**
+ * 指派师傅 Action
+ * @param data 指派参数
+ */
 export async function dispatchInstallTaskAction(data: z.infer<typeof dispatchTaskSchema>) {
   return dispatchInstallTaskInternal(data);
 }
@@ -485,6 +519,11 @@ const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (da
       })
       .where(and(eq(installTasks.id, data.id), eq(installTasks.tenantId, session.user.tenantId)));
 
+    // 记录签到审计日志
+    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
+      new: { action: 'CHECK_IN', location: data.location },
+    });
+
     revalidatePath('/service/installation');
 
     // 构建返回消息
@@ -501,12 +540,16 @@ const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (da
         lateMinutes,
       },
     };
-  } catch (_error) {
+  } catch (_error: unknown) {
     logger.error('签到异常:', _error);
     return { success: false, error: '签到异常' };
   }
 });
 
+/**
+ * 师傅签到 Action
+ * @param data 签到参数 (ID + 地理位置)
+ */
 export async function checkInInstallTaskAction(data: z.infer<typeof checkInTaskSchema>) {
   return checkInInstallTaskInternal(data);
 }
@@ -547,13 +590,23 @@ const checkOutInstallTaskInternal = createSafeAction(checkOutTaskSchema, async (
       })
       .where(and(eq(installTasks.id, data.id), eq(installTasks.tenantId, session.user.tenantId)));
 
+    // 记录签退审计日志
+    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
+      new: { action: 'CHECK_OUT' },
+    });
+
     revalidatePath('/service/installation');
     return { success: true, message: '已提交完工申请，待销售验收' };
-  } catch (_error) {
+  } catch (_error: unknown) {
+    logger.error('提交签退异常:', _error);
     return { success: false, error: '提交失败' };
   }
 });
 
+/**
+ * 师傅签退并提交完工申请 Action
+ * @param data 签退参数 (ID + 地理位置 + 客户签名)
+ */
 export async function checkOutInstallTaskAction(data: z.infer<typeof checkOutTaskSchema>) {
   return checkOutInstallTaskInternal(data);
 }
@@ -607,12 +660,21 @@ const confirmInstallationInternal = createSafeAction(
       // 3. 联动逻辑：TODO - 检测并更新订单状态 (Order Module Integration)
       // checkAllTasksCompleted(task.orderId)
 
+      // 记录验收确认审计日志
+      await AuditService.recordFromSession(session, 'installTasks', data.taskId, 'UPDATE', {
+        new: { action: 'CONFIRM', actualLaborFee: data.actualLaborFee, rating: data.rating },
+      });
+
       revalidatePath('/service/installation');
       return { success: true, message: '验收通过，安装完成' };
     });
   }
 );
 
+/**
+ * 销售确认验收 (正式完结) Action
+ * @param data 验收参数 (任务 ID + 实际工费 + 评分等)
+ */
 export async function confirmInstallationAction(data: z.infer<typeof confirmInstallationSchema>) {
   return confirmInstallationInternal(data);
 }
@@ -641,6 +703,13 @@ const rejectInstallationInternal = createSafeAction(
       return { success: false, error: '任务不存在或无权访问' };
     }
 
+    // P1 修复：状态校验 - 仅允许驳回【待验收】或【已签到/施工中】的任务
+    // 如果任务已完成或取消，不可驳回
+    const allowRejectStatus = ['PENDING_CONFIRM', 'PENDING_VISIT'];
+    if (!allowRejectStatus.includes(task.status || '')) {
+      return { success: false, error: `当前状态 (${task.status}) 不可驳回` };
+    }
+
     const currentRejectCount = task.rejectCount || 0;
 
     // P0 修复：更新时也加入租户隔离条件
@@ -654,11 +723,20 @@ const rejectInstallationInternal = createSafeAction(
       })
       .where(and(eq(installTasks.id, data.id), eq(installTasks.tenantId, session.user.tenantId)));
 
+    // 记录驳回审计日志
+    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
+      new: { action: 'REJECT', rejectReason: data.reason },
+    });
+
     revalidatePath('/service/installation');
     return { success: true, message: '已驳回任务' };
   }
 );
 
+/**
+ * 驳回任务 Action (返回重新指派或施工)
+ * @param data 驳回参数 (ID + 原因)
+ */
 export async function rejectInstallationAction(data: { id: string; reason: string }) {
   return rejectInstallationInternal(data);
 }
@@ -687,14 +765,24 @@ const updateInstallItemStatusInternal = createSafeAction(
           and(eq(installItems.id, data.itemId), eq(installItems.tenantId, session.user.tenantId))
         );
 
+      // 记录安装项状态更新审计日志
+      await AuditService.recordFromSession(session, 'installItems', data.itemId, 'UPDATE', {
+        new: { isInstalled: data.isInstalled, issueCategory: data.issueCategory },
+      });
+
       revalidatePath('/service/installation');
       return { success: true, message: '状态已更新' };
-    } catch (_error) {
+    } catch (_error: unknown) {
+      logger.error('更新安装项状态失败:', _error);
       return { success: false, error: '更新失败' };
     }
   }
 );
 
+/**
+ * 更新安装项状态 Action (师傅/工长操作)
+ * @param data 更新参数 (单项 ID + 安装状态 + 异常分类)
+ */
 export async function updateInstallItemStatusAction(data: z.infer<typeof updateInstallItemSchema>) {
   return updateInstallItemStatusInternal(data);
 }
@@ -738,17 +826,28 @@ const updateInstallChecklistInternal = createSafeAction(
           and(eq(installTasks.id, data.taskId), eq(installTasks.tenantId, session.user.tenantId))
         );
 
+      // 记录清单状态更新审计日志
+      await AuditService.recordFromSession(session, 'installTasks', data.taskId, 'UPDATE', {
+        new: { action: 'UPDATE_CHECKLIST', allCompleted },
+      });
+
       revalidatePath('/service/installation');
       return { success: true, message: '清单状态已更新' };
-    } catch (_error) {
+    } catch (_error: unknown) {
+      logger.error('更新清单失败:', _error);
       return { success: false, error: '更新清单失败' };
     }
   }
 );
 
+/**
+ * 更新安装清单状态 Action
+ * @param data 更新参数 (任务 ID + 检查项列表)
+ */
 export async function updateInstallChecklistAction(data: z.infer<typeof updateChecklistSchema>) {
   return updateInstallChecklistInternal(data);
 }
+
 
 /**
  * 获取可用师傅列表
@@ -766,56 +865,9 @@ export async function getInstallWorkersAction() {
       orderBy: [asc(users.name)],
     });
     return { success: true, data: workers };
-  } catch (_error) {
+  } catch (_error: unknown) {
+    logger.error('获取师傅列表失败:', _error);
     return { success: false, error: '获取师傅列表失败' };
   }
 }
 
-// --- Barrel Exports for Compatibility ---
-export async function assignInstallWorker(data: z.infer<typeof dispatchTaskSchema>) {
-  return dispatchInstallTaskAction(data);
-}
-
-export async function completeInstallTask(data: z.infer<typeof confirmInstallationSchema>) {
-  return confirmInstallationAction(data);
-}
-
-export async function rejectInstallTask(data: { id: string; reason: string }) {
-  return rejectInstallationAction(data);
-}
-
-export async function getAvailableWorkers() {
-  return getInstallWorkersAction();
-}
-
-export async function createInstallTask(data: z.infer<typeof createInstallTaskSchema>) {
-  return createInstallTaskAction(data);
-}
-
-export async function dispatchInstallTask(data: z.infer<typeof dispatchTaskSchema>) {
-  return dispatchInstallTaskAction(data);
-}
-
-export async function checkInInstallTask(data: z.infer<typeof checkInTaskSchema>) {
-  return checkInInstallTaskAction(data);
-}
-
-export async function confirmInstallation(data: z.infer<typeof confirmInstallationSchema>) {
-  return confirmInstallationAction(data);
-}
-
-export async function rejectInstallation(data: { id: string; reason: string }) {
-  return rejectInstallationAction(data);
-}
-
-export async function updateInstallItemStatus(data: z.infer<typeof updateInstallItemSchema>) {
-  return updateInstallItemStatusAction(data);
-}
-
-export async function updateInstallChecklist(data: z.infer<typeof updateChecklistSchema>) {
-  return updateInstallChecklistAction(data);
-}
-
-export async function getRecommendedWorkers() {
-  return getInstallWorkersAction();
-}

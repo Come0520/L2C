@@ -2,12 +2,14 @@
 
 import { db } from '@/shared/api/db';
 import { inventory, inventoryLogs, warehouses, products } from '@/shared/api/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
+import { SUPPLY_CHAIN_PATHS } from '../constants';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { checkPermission } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // --- Schemas ---
 
@@ -89,11 +91,28 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
             description: `手动调整: ${data.quantity > 0 ? '+' : ''}${data.quantity}`,
         });
 
-        revalidatePath('/supply-chain/inventory');
+        revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
+        // 添加审计日志
+        await AuditService.recordFromSession(session, 'inventory', currentStock?.id || 'new', 'UPDATE', {
+            old: { quantity: currentQty },
+            new: { quantity: newQty },
+            changed: {
+                quantity: data.quantity,
+                reason: data.reason,
+                type: 'ADJUST'
+            }
+        }, tx);
         return { success: true };
     });
 });
 
+/**
+ * 调整库存数量
+ * 
+ * @description 手动增加或减少特定仓库中产品的库存量。记录库存变动日志和审计日志。
+ * @param params 包含仓库 ID、产品 ID、调整数量及原因
+ */
 export async function adjustInventory(params: z.infer<typeof adjustInventorySchema>) {
     return adjustInventoryActionInternal(params);
 }
@@ -189,11 +208,27 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
             });
         }
 
-        revalidatePath('/supply-chain/inventory');
+        revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
+        // 添加审计日志 (调拨汇总日志)
+        await AuditService.recordFromSession(session, 'inventory', 'multiple', 'UPDATE', {
+            new: {
+                fromWarehouseId: data.fromWarehouseId,
+                toWarehouseId: data.toWarehouseId,
+                itemCount: data.items.length,
+                reason: data.reason
+            }
+        }, tx);
         return { success: true };
     });
 });
 
+/**
+ * 跨仓库调拨库存
+ * 
+ * @description 在两个仓库之间转移产品。在一个事务内处理源仓库扣减、目标仓库增加及变动日志记录。
+ * @param params 包含源/目标仓库 ID 及调拨产品清单
+ */
 export async function transferInventory(params: z.infer<typeof transferInventorySchema>) {
     return transferInventoryActionInternal(params);
 }
@@ -226,6 +261,12 @@ const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, as
     return results;
 });
 
+/**
+ * 获取库存水平列表
+ * 
+ * @description 根据仓库和产品 ID 过滤查询当前库存余量。
+ * @param params 过滤条件（可选仓库 ID 和产品 ID 数组）
+ */
 export async function getInventoryLevels(params: z.infer<typeof getInventorySchema>) {
     return getInventoryLevelsActionInternal(params);
 }
@@ -297,6 +338,12 @@ const checkInventoryAlertsActionInternal = createSafeAction(checkInventoryAlerts
     };
 });
 
+/**
+ * 执行库存预警检查
+ * 
+ * @description 检查库存数量是否低于安全库存 (minStock)，并返回预警列表。支持 CRITICAL 和 WARNING 级别。
+ * @param params 过滤目标仓库及默认预警阈值
+ */
 export async function checkInventoryAlerts(params: z.infer<typeof checkInventoryAlertsSchema>) {
     return checkInventoryAlertsActionInternal(params);
 }
@@ -332,23 +379,40 @@ const setminStockActionInternal = createSafeAction(setminStockSchema, async (dat
         });
     }
 
-    revalidatePath('/supply-chain/inventory');
+    revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'inventory', existing?.id || 'new', 'UPDATE', {
+        old: { minStock: existing?.minStock },
+        new: { minStock: data.minStock }
+    });
+
     return { success: true, message: `安全库存已设置为 ${data.minStock}` };
 });
 
+/**
+ * 设置产品在特定仓库的安全库存阈值
+ * 
+ * @description 更新或插入库存记录中的 minStock 字段。
+ * @param params 产品、仓库及目标阈值
+ */
 export async function setminStock(params: z.infer<typeof setminStockSchema>) {
     return setminStockActionInternal(params);
 }
 
 /**
- * 获取需要补货的产品列表
+ * 获取补货建议清单
+ * 
+ * @description 基于库存预警结果，计算建议补货量（缺口 + 缓冲）。
+ * @param warehouseId 可选仓库过滤
  */
 export async function getRestockSuggestions(warehouseId?: string) {
-    const { data } = await checkInventoryAlerts({
+    const res = await checkInventoryAlerts({
         warehouseId,
         alertThreshold: 10
     });
 
+    const data = res?.data;
     if (!data) return [];
 
     // 只返回需要补货的（预警状态）
@@ -367,3 +431,20 @@ export async function getRestockSuggestions(warehouseId?: string) {
 }
 
 
+
+/**
+ * 获取当前租户的所有仓库列表
+ * 
+ * @description 按默认仓库和创建时间排序。
+ */
+export async function getWarehouses() {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: '未授权', data: [] };
+
+    const result = await db.query.warehouses.findMany({
+        where: eq(warehouses.tenantId, session!.user.tenantId),
+        orderBy: [desc(warehouses.isDefault), desc(warehouses.createdAt)],
+    });
+
+    return { success: true, data: result };
+}

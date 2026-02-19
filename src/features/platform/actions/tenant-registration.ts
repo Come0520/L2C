@@ -40,7 +40,10 @@ const tenantApplicationSchema = z.object({
   applicantName: z.string().min(2, '联系人姓名至少2个字符').max(100, '联系人姓名最多100个字符'),
   phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入有效的手机号'),
   email: z.string().email('请输入有效的邮箱地址'),
-  password: z.string().min(6, '密码至少6位'),
+  password: z
+    .string()
+    .min(8, '密码至少8位')
+    .regex(/^(?=.*[a-zA-Z])(?=.*\d).+$/, '密码必须包含字母和数字'),
   region: z.string().min(1, '请选择地区'),
   businessDescription: z.string().max(500, '业务简介最多500个字符').optional(),
 });
@@ -115,45 +118,55 @@ export async function submitTenantApplication(
       return newTenant;
     });
 
-    // 5. 异步发送管理员通知（不阻塞返回）
+    // 5. 异步发送管理员通知 (增加简单重试机制以提高可靠性)
     (async () => {
-      try {
-        // 查询所有超级管理员
-        const admins = await db.query.users.findMany({
-          where: eq(users.isPlatformAdmin, true),
-          columns: { email: true, name: true },
-        });
+      const MAX_RETRIES = 3;
+      let attempt = 0;
 
-        if (admins.length === 0) return;
-
-        const adminEmails = admins.map((a) => a.email).filter((e): e is string => Boolean(e));
-
-        if (adminEmails.length > 0) {
-          await sendEmail({
-            to: adminEmails,
-            subject: `[L2C] 新租户入驻申请: ${data.companyName}`,
-            html: `
-                            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-                                <h2>收到新的企业入驻申请</h2>
-                                <p><strong>企业名称：</strong>${data.companyName}</p>
-                                <p><strong>联系人：</strong>${data.applicantName}</p>
-                                <p><strong>联系电话：</strong>${data.phone}</p>
-                                <p><strong>邮箱：</strong>${data.email}</p>
-                                <p><strong>所属地区：</strong>${data.region}</p>
-                                <p><strong>申请时间：</strong>${formatDate(new Date())}</p>
-                                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                                <p>请登录管理后台进行审批：</p>
-                                <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/tenants" 
-                                   style="display: inline-block; background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                                   前往审批
-                                </a>
-                            </div>
-                        `,
-            text: `收到新的企业入驻申请：${data.companyName}，请登录后台审批。`,
+      while (attempt < MAX_RETRIES) {
+        try {
+          // 查询所有超级管理员
+          const admins = await db.query.users.findMany({
+            where: eq(users.isPlatformAdmin, true),
+            columns: { email: true, name: true },
           });
+
+          if (admins.length === 0) break;
+
+          const adminEmails = admins.map((a) => a.email).filter((e): e is string => Boolean(e));
+
+          if (adminEmails.length > 0) {
+            await sendEmail({
+              to: adminEmails,
+              subject: `[L2C] 新租户入驻申请: ${data.companyName}`,
+              html: `
+                                <div style="font-family: sans-serif; padding: 20px; color: #333;">
+                                    <h2>收到新的企业入驻申请</h2>
+                                    <p><strong>企业名称：</strong>${data.companyName}</p>
+                                    <p><strong>联系人：</strong>${data.applicantName}</p>
+                                    <p><strong>联系电话：</strong>${data.phone}</p>
+                                    <p><strong>邮箱：</strong>${data.email}</p>
+                                    <p><strong>所属地区：</strong>${data.region}</p>
+                                    <p><strong>申请时间：</strong>${formatDate(new Date())}</p>
+                                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                                    <p>请登录管理后台进行审批：</p>
+                                    <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/tenants" 
+                                       style="display: inline-block; background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                                       前往审批
+                                    </a>
+                                </div>
+                            `,
+              text: `收到新的企业入驻申请：${data.companyName}，请登录后台审批。`,
+            });
+          }
+          break; // 发送成功，退出循环
+        } catch (err) {
+          attempt++;
+          console.error(`发送管理员通知失败 (尝试 ${attempt}/${MAX_RETRIES}):`, err);
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 等待 2 秒后重试
+          }
         }
-      } catch (err) {
-        console.error('发送管理员通知失败:', err);
       }
     })();
 

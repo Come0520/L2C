@@ -13,6 +13,8 @@ import { submitApproval } from '@/features/approval/actions/submission';
 import { format } from 'date-fns';
 import { randomBytes } from 'crypto';
 
+import { AuditService } from '@/shared/lib/audit-service';
+
 // 🔒 安全修复：移除客户端可控的 tenantId，从 Session 获取
 const CreateMeasureTaskSchema = z.object({
     leadId: z.string().uuid().optional(),
@@ -47,8 +49,9 @@ const createMeasureTaskActionInternal = createSafeAction(
                     eq(customers.tenantId, tenantId) // 强制租户校验
                 )
             });
+
             if (!customer) {
-                return { success: false, error: '客户不存在或无权访问' };
+                throw new Error('客户不存在或无权访问');
             }
 
             // 计算是否申请免费 (isFeeExempt)
@@ -92,6 +95,9 @@ const createMeasureTaskActionInternal = createSafeAction(
                 });
                 if (!lead) {
                     return { success: false, error: '线索不存在或无权访问' };
+                }
+                if (customer.sourceLeadId !== targetLeadId) {
+                    throw new Error('关联线索不匹配');
                 }
             } else {
                 return { success: false, error: '未找到关联线索，无法创建测量任务' };
@@ -140,6 +146,7 @@ const createMeasureTaskActionInternal = createSafeAction(
                     comment: `申请免费测量: ${measureNo}`,
                 }, tx);
 
+
                 if (!approvalResult.success) {
                     const errorMessage = 'error' in approvalResult ? approvalResult.error : 'Approval submission failed';
                     // 事务会回滚
@@ -163,7 +170,32 @@ const createMeasureTaskActionInternal = createSafeAction(
                 .where(eq(customers.id, customerId));
 
             revalidatePath('/service/measurement');
-            return { success: true, data: { taskId: newTask.id, sheetId: newSheet.id } };
+            revalidatePath('/service/measurement');
+
+            // 审计日志: 任务创建
+            await AuditService.record(
+                {
+                    tenantId: tenantId,
+                    userId: session.user.id,
+                    tableName: 'measure_tasks',
+                    recordId: newTask.id,
+                    action: 'CREATE',
+                    newValues: {
+                        leadId: targetLeadId,
+                        customerId: customerId,
+                        measureNo: measureNo,
+                        status: status,
+                        type: type,
+                        isFeeExempt: isFeeExempt,
+                    }
+                }
+            );
+
+            return {
+                taskId: newTask.id,
+                sheetId: newSheet.id,
+                status: newTask.status
+            };
         });
     }
 );

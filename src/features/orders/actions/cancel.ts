@@ -16,33 +16,22 @@ import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
+import { checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/lib/audit-service';
 
-/**
- * 撤单原因枚举
- */
-export const CANCEL_REASONS = [
-    '客户主动取消',
-    '客户无法联系',
-    '产品缺货/无法生产',
-    '价格争议',
-    '重复下单',
-    '其他原因',
-] as const;
-
-/**
- * 撤单申请Schema
- */
-const cancelOrderSchema = z.object({
-    orderId: z.string().uuid(),
-    reason: z.enum(CANCEL_REASONS),
-    remark: z.string().optional(),
-});
+import {
+    requestOrderCancellationSchema,
+    CANCELABLE_STATUSES
+} from '../action-schemas';
 
 /**
  * 申请撤单（提交审批）
  */
-export async function requestCancelOrder(input: z.infer<typeof cancelOrderSchema>) {
+export async function requestCancelOrder(input: z.infer<typeof requestOrderCancellationSchema>) {
     const session = await auth();
+    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+
     const tenantId = session?.user?.tenantId;
     const userId = session?.user?.id;
 
@@ -51,12 +40,13 @@ export async function requestCancelOrder(input: z.infer<typeof cancelOrderSchema
     }
 
     // 验证输入
-    const parsed = cancelOrderSchema.safeParse(input);
+    const parsed = requestOrderCancellationSchema.safeParse(input);
     if (!parsed.success) {
         return { success: false, error: '参数错误: ' + parsed.error.message };
     }
 
     const { orderId, reason, remark } = parsed.data;
+
 
     try {
         // 1. 查询订单
@@ -69,11 +59,8 @@ export async function requestCancelOrder(input: z.infer<typeof cancelOrderSchema
 
         if (!order) {
             return { success: false, error: '订单不存在' };
-        }
-
-        // 2. 检查订单状态是否允许撤单
-        const cancelableStatuses = ['PENDING_PURCHASE', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALL'];
-        if (!cancelableStatuses.includes(order.status || '')) {
+        }            // 2. 检查订单状态是否允许撤单（使用统一的 CANCELABLE_STATUSES 常量）
+        if (!CANCELABLE_STATUSES.includes(order.status as typeof CANCELABLE_STATUSES[number])) {
             return { success: false, error: `当前状态 ${order.status} 不允许撤单` };
         }
 
@@ -111,6 +98,18 @@ export async function requestCancelOrder(input: z.infer<typeof cancelOrderSchema
         revalidatePath('/orders');
         revalidatePath(`/orders/${orderId}`);
 
+        // 记录审计日志
+        await AuditService.record({
+            tenantId,
+            userId,
+            tableName: 'orders',
+            recordId: orderId,
+            action: 'UPDATE',
+            changedFields: { cancellationRequested: true, reason },
+            oldValues: { status: order.status },
+            newValues: { status: 'CANCELLED_REQUESTED' } // 虚拟状态，用于日志
+        });
+
         return {
             success: true,
             approvalId: 'approvalId' in approvalResult ? approvalResult.approvalId : undefined,
@@ -146,6 +145,18 @@ async function executeCancelOrder(
                     eq(orders.tenantId, tenantId)
                 ));
 
+            // 记录审计日志
+            await AuditService.record({
+                tenantId,
+                userId: approverId,
+                tableName: 'orders',
+                recordId: orderId,
+                action: 'UPDATE',
+                oldValues: { status: 'CANCELLED_REQUESTED' }, // 假设前序状态
+                newValues: { status: 'CANCELLED' },
+                changedFields: { status: 'CANCELLED' }
+            }, tx);
+
             // 2. 更新变更记录状态为APPROVED
             await tx.update(orderChanges)
                 .set({
@@ -170,10 +181,4 @@ async function executeCancelOrder(
     }
 }
 
-/**
- * 可撤单的订单状态列表
- */
-export const CANCELABLE_STATUSES = ['PENDING_PURCHASE', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALL'];
-
-// 导出常量
-export { cancelOrderSchema };
+// CANCELABLE_STATUSES 已在 action-schemas.ts 中统一定义，此处不重复导出

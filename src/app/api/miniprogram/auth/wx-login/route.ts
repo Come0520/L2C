@@ -5,11 +5,12 @@
  * 用 code 换取 openId，并检查是否已绑定用户
  * (Updated)
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { users, tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
 // 获取微信 Access Token 和 OpenID
 async function code2Session(code: string) {
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     if (!code) {
       console.error('[DEBUG] wx-login: Missing code');
-      return NextResponse.json({ success: false, error: '缺少 code 参数' }, { status: 400 });
+      return apiError('缺少 code 参数', 400);
     }
 
     // 1. 获取 openId
@@ -95,36 +96,30 @@ export async function POST(request: NextRequest) {
 
       const token = await generateToken(existingUser.id, existingUser.tenantId);
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          openId,
-          unionId,
-          user: {
-            id: existingUser.id,
-            name: existingUser.name,
-            phone: existingUser.phone,
-            email: existingUser.email,
-            role: existingUser.role,
-            tenantId: existingUser.tenantId,
-            tenantName: tenant?.name,
-            avatarUrl: existingUser.avatarUrl,
-          },
-          tenantStatus: tenant?.status,
-          token,
+      return apiSuccess({
+        openId,
+        unionId,
+        user: {
+          id: existingUser.id,
+          name: existingUser.name,
+          phone: existingUser.phone,
+          email: existingUser.email,
+          role: existingUser.role,
+          tenantId: existingUser.tenantId,
+          tenantName: tenant?.name,
+          avatarUrl: existingUser.avatarUrl,
         },
+        tenantStatus: tenant?.status,
+        token,
       });
     }
 
     // 用户不存在，返回 openId 供后续注册使用
     console.log('[DEBUG] User not found for OpenID:', openId);
-    return NextResponse.json({
-      success: true,
-      data: {
-        openId,
-        unionId,
-        user: null,
-      },
+    return apiSuccess({
+      openId,
+      unionId,
+      user: null,
     });
   } catch (error: any) {
     console.error('微信登录错误 (Detailed):', error);
@@ -137,9 +132,7 @@ export async function POST(request: NextRequest) {
       where: error.where,
       query: error.query, // Drizzle/Postgres often include the failing query
     };
-    return NextResponse.json(
-      { success: false, error: `Database Error: ${JSON.stringify(errorDetails)}` },
-      { status: 500 }
-    );
+    return apiError(`Database Error: ${JSON.stringify(errorDetails)}`, 500);
   }
 }
+

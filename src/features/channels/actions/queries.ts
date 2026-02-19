@@ -3,7 +3,8 @@
 import { db } from '@/shared/api/db';
 import { channels, channelContacts } from '@/shared/api/schema/channels';
 import { eq, and, desc, or, ilike, isNull } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 /**
  * 获取渠道列表（支持分页、搜索、类型过滤、层级过滤）
@@ -20,19 +21,27 @@ export async function getChannels(params: {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: Add Permission Check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
     const tenantId = session.user.tenantId;
     const { query, type, parentId, page = 1, pageSize = 20 } = params;
+
+    // P3 Fix: Enforce pagination limits
+    const limit = Math.min(Math.max(pageSize, 1), 100);
 
     let whereClause = eq(channels.tenantId, tenantId);
 
     // 搜索过滤
     if (query) {
+        // M-05 Fix: Escape special characters for ILIKE to prevent excessive matching
+        const escapedQuery = query.replace(/[%_]/g, '\\$&');
         whereClause = and(
             whereClause,
             or(
-                ilike(channels.name, `%${query}%`),
-                ilike(channels.code, `%${query}%`),
-                ilike(channels.phone, `%${query}%`)
+                ilike(channels.name, `%${escapedQuery}%`),
+                ilike(channels.channelNo, `%${escapedQuery}%`),
+                ilike(channels.phone, `%${escapedQuery}%`)
             )
         ) as typeof whereClause;
     }
@@ -58,33 +67,30 @@ export async function getChannels(params: {
 
     const offsetValue = (page - 1) * pageSize;
 
+
     const data = await db.query.channels.findMany({
         where: whereClause,
-        limit: pageSize,
+        limit: limit,
         offset: offsetValue,
         orderBy: [desc(channels.createdAt)],
         with: {
             contacts: true,
-            category: true,     // 关联渠道类型
+            channelCategory: true,     // 关联渠道类型
             parent: true,       // 关联父级渠道
             children: true,     // 关联子级渠道
         }
     });
 
     // 获取总数
-    const allMatching = await db.query.channels.findMany({
-        where: whereClause,
-        columns: { id: true }
-    });
-    const totalItems = allMatching.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
+    const totalItems = await db.$count(channels, whereClause);
+    const totalPages = Math.ceil(totalItems / limit);
 
     return {
         data,
         totalPages,
         totalItems,
         currentPage: page,
-        pageSize
+        pageSize: limit
     };
 }
 
@@ -97,6 +103,9 @@ export async function getChannelTree() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: Add Permission Check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
     const tenantId = session.user.tenantId;
 
     // 获取所有渠道
@@ -105,7 +114,7 @@ export async function getChannelTree() {
         orderBy: [desc(channels.createdAt)],
         with: {
             contacts: true,
-            category: true,
+            channelCategory: true,
             assignedManager: true,
         }
     });
@@ -145,6 +154,9 @@ export async function getChannelById(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: Add Permission Check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
     const tenantId = session.user.tenantId;
 
     return await db.query.channels.findFirst({
@@ -152,7 +164,6 @@ export async function getChannelById(id: string) {
         with: {
             contacts: true,
             assignedManager: true,
-            category: true,
             parent: true,
             children: {
                 with: {
@@ -168,14 +179,17 @@ export async function getChannelById(id: string) {
  * 
  * 安全检查：自动从 session 获取 tenantId
  */
-export async function getChannelByCode(code: string) {
+export async function getChannelByCode(channelNo: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // P2 Fix: Add Permission Check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
     const tenantId = session.user.tenantId;
 
     return await db.query.channels.findFirst({
-        where: and(eq(channels.code, code), eq(channels.tenantId, tenantId)),
+        where: and(eq(channels.channelNo, channelNo), eq(channels.tenantId, tenantId)),
     });
 }
 
@@ -187,6 +201,9 @@ export async function getChannelByCode(code: string) {
 export async function getChannelContacts(channelId: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // P2 Fix: Add Permission Check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
     const tenantId = session.user.tenantId;
 

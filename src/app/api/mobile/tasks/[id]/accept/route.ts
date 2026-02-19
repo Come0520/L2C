@@ -4,32 +4,32 @@
  */
 
 import { NextRequest } from 'next/server';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile:tasks:accept');
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
+import { AuditService } from '@/shared/services/audit-service';
 
-interface AcceptParams {
-    params: Promise<{ id: string }>;
-}
-
-export async function POST(request: NextRequest, { params }: AcceptParams) {
+export async function POST(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
     // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
-    }
-    const { session } = authResult;
+    const auth = await authenticateMobile(request);
+    if (!auth.success) return auth.response;
+    const session = auth.session;
 
     // 2. 权限检查
-    const roleCheck = requireWorker(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
-    }
+    const isWorker = requireWorker(session);
+    if (!isWorker.allowed) return isWorker.response;
 
     // 3. 获取请求参数
-    const { id: taskId } = await params;
+    const params = await props.params;
+    const taskId = params.id;
     let body: { accept: boolean; reason?: string };
 
     try {
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest, { params }: AcceptParams) {
     const measureTask = await db.query.measureTasks.findFirst({
         where: and(
             eq(measureTasks.id, taskId),
-            eq(measureTasks.assignedWorkerId, session.userId)
+            eq(measureTasks.assignedWorkerId, session.userId),
+            eq(measureTasks.tenantId, session.tenantId)
         ),
     });
 
@@ -64,7 +65,8 @@ export async function POST(request: NextRequest, { params }: AcceptParams) {
         const installTask = await db.query.installTasks.findFirst({
             where: and(
                 eq(installTasks.id, taskId),
-                eq(installTasks.installerId, session.userId)
+                eq(installTasks.installerId, session.userId),
+                eq(installTasks.tenantId, session.tenantId)
             ),
         });
         if (installTask) {
@@ -103,9 +105,22 @@ export async function POST(request: NextRequest, { params }: AcceptParams) {
             .where(eq(installTasks.id, taskId));
     }
 
+    // 7. 记录审计日志
+    await AuditService.log(db, {
+        tableName: taskType === 'measure' ? 'measure_tasks' : 'install_tasks',
+        recordId: taskId,
+        action: accept ? 'ACCEPT_TASK_MOBILE' : 'REJECT_TASK_MOBILE',
+        userId: session.userId,
+        tenantId: session.tenantId,
+        details: { accept, reason, taskType },
+        traceId: session.traceId,
+        userAgent: session.userAgent,
+        ipAddress: session.ipAddress,
+    });
+
     // 7. 如果拒单，记录原因（可扩展到操作日志）
     if (!accept && reason) {
-        console.log(`[工人拒单] 任务 ${taskId}, 原因: ${reason}`);
+        log.info('工人拒单', { taskId, reason });
     }
 
     return apiSuccess(

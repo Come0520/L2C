@@ -3,6 +3,7 @@
  * GET /api/miniprogram/invite/qrcode?code=xxxxxx
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
 
     if (!code) {
-      return NextResponse.json({ success: false, error: '缺少邀请码' }, { status: 400 });
+      return apiError('缺少邀请码', 400);
     }
 
     const appId = process.env.WX_APPID || process.env.WECHAT_MINI_APPID;
@@ -19,10 +20,7 @@ export async function GET(request: NextRequest) {
     // 如果没有配置小程序信息，返回一个占位图或错误（暂且返回 404 以便调试）
     if (!appId || !appSecret) {
       console.error('未配置小程序 AppID 或 AppSecret');
-      return NextResponse.json(
-        { success: false, error: '服务端未配置小程序信息' },
-        { status: 500 }
-      );
+      return apiError('服务端未配置小程序信息', 500);
     }
 
     // 1. 获取 Access Token
@@ -34,10 +32,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.errcode || !tokenData.access_token) {
       console.error('获取 Access Token 失败:', tokenData);
-      return NextResponse.json(
-        { success: false, error: '获取微信 Access Token 失败', detail: tokenData },
-        { status: 500 }
-      );
+      return apiError('获取微信 Access Token 失败', 500, tokenData);
     }
 
     const accessToken = tokenData.access_token;
@@ -67,10 +62,7 @@ export async function GET(request: NextRequest) {
     if (contentType?.includes('application/json')) {
       const errorData = await qrRes.json();
       console.error('生成小程序码失败:', errorData);
-      return NextResponse.json(
-        { success: false, error: '生成小程序码失败', detail: errorData },
-        { status: 500 }
-      );
+      return apiError('生成小程序码失败', 500, errorData);
     }
 
     const imageBuffer = await qrRes.arrayBuffer();
@@ -84,6 +76,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('处理小程序码请求错误:', error);
-    return NextResponse.json({ success: false, error: '内部服务器错误' }, { status: 500 });
+    return apiError('内部服务器错误', 500);
   }
 }

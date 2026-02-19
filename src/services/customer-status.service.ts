@@ -82,7 +82,25 @@ export class CustomerStatusService {
      * 订单完成时触发
      */
     static async onOrderCompleted(customerId: string, tenantId: string) {
-        // 检查是否还有其他未完成的订单
+        // 1. 重新计算客户画像指标
+        const [stats] = await db
+            .select({
+                totalOrders: sql<number>`count(*)`,
+                totalAmount: sql<string>`sum(${orders.totalAmount})`,
+                lastOrderAt: sql<Date>`max(${orders.createdAt})`,
+            })
+            .from(orders)
+            .where(and(
+                eq(orders.customerId, customerId),
+                eq(orders.tenantId, tenantId),
+                eq(orders.status, 'COMPLETED') // 仅统计已完成订单
+            ));
+
+        const totalOrders = Number(stats?.totalOrders || 0);
+        const totalAmount = Number(stats?.totalAmount || 0);
+        const avgOrderAmount = totalOrders > 0 ? totalAmount / totalOrders : 0;
+
+        // 2. 检查是否还有其他进行中的订单
         const activeOrders = await db.query.orders.findMany({
             where: and(
                 eq(orders.customerId, customerId),
@@ -91,19 +109,27 @@ export class CustomerStatusService {
             ),
         });
 
+        // 3. 更新客户档案
+        const updateData: Partial<typeof customers.$inferInsert> = {
+            totalOrders,
+            totalAmount: totalAmount.toString(),
+            avgOrderAmount: avgOrderAmount.toFixed(2),
+            lastOrderAt: stats?.lastOrderAt || null,
+            updatedAt: new Date(),
+        };
+
         // 如果没有活跃订单，则更新为已交付/完成
         if (activeOrders.length === 0) {
-            await db.update(customers)
-                .set({
-                    lifecycleStage: 'DELIVERED',
-                    pipelineStatus: 'COMPLETED',
-                    updatedAt: new Date(),
-                })
-                .where(and(
-                    eq(customers.id, customerId),
-                    eq(customers.tenantId, tenantId)
-                ));
+            updateData.lifecycleStage = 'DELIVERED';
+            updateData.pipelineStatus = 'COMPLETED';
         }
+
+        await db.update(customers)
+            .set(updateData)
+            .where(and(
+                eq(customers.id, customerId),
+                eq(customers.tenantId, tenantId)
+            ));
     }
 
     /**

@@ -14,6 +14,9 @@ import { revalidatePath } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
 import { QuoteService } from '@/services/quote.service';
 import { rejectQuoteDiscountSchema } from './schema';
+import { checkPermission } from '@/shared/lib/auth';
+import { AuditService } from '@/shared/lib/audit-service';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // ─── 提交报价单 ─────────────────────────────────
 
@@ -22,11 +25,21 @@ export const submitQuote = createSafeAction(
     id: z.string().uuid(),
   }),
   async (data, context) => {
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
     await QuoteLifecycleService.submit(
       data.id,
       context.session.user.tenantId,
       context.session.user.id
     );
+
+    // 审计日志：记录报价单提交
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'SUBMIT' },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
@@ -42,8 +55,19 @@ export const rejectQuote = createSafeAction(
     rejectReason: z.string().min(1),
   }),
   async (data, context) => {
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     // 🔒 安全修复：传入租户ID以便 Service 层校验归属
     await QuoteLifecycleService.reject(data.id, data.rejectReason, context.session.user.tenantId);
+
+    // 审计日志：记录报价单拒绝
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'REJECT', rejectReason: data.rejectReason },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
@@ -61,6 +85,12 @@ export const lockQuote = createSafeAction(
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
 
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
     });
@@ -72,10 +102,17 @@ export const lockQuote = createSafeAction(
       .update(quotes)
       .set({
         lockedAt: new Date(),
+        // P1-07 技术债：DB schema 无 lockedBy 列，无法记录锁定操作人
+        // 建议后续迁移中增加 lockedBy: varchar 字段
         updatedAt: new Date(),
       })
-      .where(eq(quotes.id, data.id))
+      .where(and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)))
       .returning();
+
+    // 审计日志：记录报价单锁定
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'LOCK', lockedAt: new Date().toISOString() },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     return updated;
@@ -91,6 +128,12 @@ export const unlockQuote = createSafeAction(
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
 
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
     });
@@ -100,8 +143,13 @@ export const unlockQuote = createSafeAction(
     const [updated] = await db
       .update(quotes)
       .set({ lockedAt: null, updatedAt: new Date() })
-      .where(eq(quotes.id, data.id))
+      .where(and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)))
       .returning();
+
+    // 审计日志：记录报价单解锁
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'UNLOCK' },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     return updated;
@@ -115,12 +163,23 @@ export const approveQuote = createSafeAction(
     id: z.string().uuid(),
   }),
   async (data, context) => {
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     // 🔒 安全修复：传入租户ID以便 Service 层校验归属
     await QuoteLifecycleService.approve(
       data.id,
       context.session.user.id,
       context.session.user.tenantId
     );
+
+    // 审计日志：记录报价单审批
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'APPROVE' },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
@@ -133,8 +192,19 @@ export const approveQuote = createSafeAction(
 export const rejectQuoteDiscount = createSafeAction(
   rejectQuoteDiscountSchema,
   async (data, context) => {
+    // P2-01: 权限校验
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     // 🔒 安全修复：传入租户ID以便 Service 层校验归属
     await QuoteLifecycleService.reject(data.id, data.reason, context.session.user.tenantId);
+
+    // 审计日志：记录折扣拒绝
+    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+      new: { action: 'REJECT_DISCOUNT', reason: data.reason },
+    });
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
@@ -149,11 +219,22 @@ export const convertQuoteToOrder = createSafeAction(
     quoteId: z.string().uuid(),
   }),
   async (data, context) => {
+    // P2-01: 权限校验 (转订单需要创建订单权限)
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.ORDER.CREATE);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
     const order = await QuoteLifecycleService.convertToOrder(
       data.quoteId,
       context.session.user.tenantId,
       context.session.user.id
     );
+
+    // 审计日志：记录报价转订单
+    await AuditService.recordFromSession(context.session, 'quotes', data.quoteId, 'UPDATE', {
+      new: { action: 'CONVERT_TO_ORDER', orderId: order?.id },
+    });
 
     revalidatePath('/orders');
     revalidatePath(`/quotes/${data.quoteId}`);
@@ -164,9 +245,25 @@ export const convertQuoteToOrder = createSafeAction(
 // ─── 创建新版本 ─────────────────────────────────
 
 export const createNextVersion = createSafeAction(
-  z.object({ quoteId: z.string() }),
+  z.object({ quoteId: z.string().uuid() }),
   async (data, context) => {
-    const newQuote = await QuoteService.createNextVersion(data.quoteId, context.session.user.id);
+    // P2-01: 权限校验 (创建新版本视为创建报价)
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.CREATE);
+    if (!hasPermission) {
+      throw new Error('无权执行此操作');
+    }
+
+    const newQuote = await QuoteService.createNextVersion(
+      data.quoteId,
+      context.session.user.id,
+      context.session.user.tenantId
+    );
+
+    // 审计日志：记录创建新版本
+    await AuditService.recordFromSession(context.session, 'quotes', newQuote.id, 'CREATE', {
+      new: { action: 'CREATE_VERSION', sourceQuoteId: data.quoteId },
+    });
+
     revalidatePath('/quotes');
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);

@@ -5,18 +5,18 @@ import { leads, leadStatusHistory } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { restoreLeadSchema } from '../schemas';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 // 线索状态类型（与 schema 中的 leadStatusEnum 保持一致）
-type LeadStatus = 'PENDING_ASSIGNMENT' | 'PENDING_FOLLOWUP' | 'FOLLOWING_UP' | 'WON' | 'VOID' | 'INVALID';
+type LeadStatus = 'PENDING_ASSIGNMENT' | 'PENDING_FOLLOWUP' | 'FOLLOWING_UP' | 'WON' | 'INVALID';
 
 /**
  * 恢复已作废的线索
  * 
  * 业务规则：
- * 1. 仅 VOID 状态的线索可恢复
+ * 1. 仅 INVALID 状态的线索可恢复
  * 2. 恢复到作废前的状态
  * 3. 记录恢复操作到状态历史
  * 
@@ -49,7 +49,7 @@ export async function restoreLeadAction(
             return { success: false, error: '线索不存在' };
         }
 
-        if (lead.status !== 'VOID') {
+        if (lead.status !== 'INVALID') {
             return { success: false, error: '仅可恢复已作废的线索' };
         }
 
@@ -88,25 +88,39 @@ export async function restoreLeadAction(
         }
 
         // 3. 无审批流程，直接恢复
-        // 获取作废前的状态
-        const lastHistory = await db.query.leadStatusHistory.findFirst({
-            where: and(
-                eq(leadStatusHistory.leadId, id),
-                eq(leadStatusHistory.newStatus, 'VOID')
-            ),
-            orderBy: desc(leadStatusHistory.changedAt)
-        });
+        // 使用事务处理，防止并发修改
+        const txResult = await db.transaction(async (tx) => {
+            // 锁定线索，防止并发修改
+            const [currentLead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
+                .for('update');
 
-        // 默认恢复到待分配状态
-        const targetStatus = lastHistory?.oldStatus || 'PENDING_ASSIGNMENT';
+            if (!currentLead) {
+                throw new Error('线索不存在');
+            }
 
-        // 3. 执行恢复
-        await db.transaction(async (tx) => {
+            if (currentLead.status !== 'INVALID') {
+                throw new Error('仅可恢复已作废的线索');
+            }
+
+            // 获取作废前的状态
+            const lastHistory = await tx.query.leadStatusHistory.findFirst({
+                where: and(
+                    eq(leadStatusHistory.leadId, id),
+                    eq(leadStatusHistory.newStatus, 'INVALID')
+                ),
+                orderBy: desc(leadStatusHistory.changedAt)
+            });
+
+            // 默认恢复到待分配状态
+            const targetStatus = lastHistory?.oldStatus || 'PENDING_ASSIGNMENT';
+
             // 更新线索状态
             await tx.update(leads)
                 .set({
-                    status: targetStatus as LeadStatus, // 类型断言：targetStatus 来自历史记录
-                    lostReason: null // 清除作废原因
+                    status: targetStatus as LeadStatus,
+                    lostReason: null,
+                    updatedAt: new Date()
                 })
                 .where(eq(leads.id, id));
 
@@ -114,17 +128,22 @@ export async function restoreLeadAction(
             await tx.insert(leadStatusHistory).values({
                 tenantId,
                 leadId: id,
-                oldStatus: 'VOID',
+                oldStatus: 'INVALID',
                 newStatus: targetStatus,
                 changedBy: userId,
                 reason: reason || '恢复作废线索'
             });
+
+            return { targetStatus };
         });
 
+        // 清除缓存
         revalidatePath('/leads');
         revalidatePath(`/leads/${id}`);
+        revalidateTag(`leads-${tenantId}`, 'default');
+        revalidateTag(`lead-${tenantId}-${id}`, 'default');
 
-        return { success: true, targetStatus };
+        return { success: true, targetStatus: txResult.targetStatus };
 
     } catch (error: unknown) {
         console.error('Restore lead error:', error);
@@ -158,7 +177,7 @@ export async function canRestoreLead(
         return { canRestore: false, reason: '线索不存在' };
     }
 
-    if (lead.status !== 'VOID') {
+    if (lead.status !== 'INVALID') {
         return { canRestore: false, reason: '仅可恢复已作废的线索' };
     }
 

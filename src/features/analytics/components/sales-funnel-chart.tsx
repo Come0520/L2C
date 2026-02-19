@@ -1,162 +1,151 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/ui/card";
-import { useMemo, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { cn } from "@/shared/utils";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from "recharts";
+import { TrendingUp, TrendingDown, Clock, ArrowRight } from "lucide-react";
 
-// 动态导入 Recharts 组件以减小 Bundle 体积并避免 SSR 问题
-const ResponsiveContainer = dynamic(() => import("recharts").then(mod => mod.ResponsiveContainer), { ssr: false });
-const BarChart = dynamic(() => import("recharts").then(mod => mod.BarChart), { ssr: false });
-const Bar = dynamic(() => import("recharts").then(mod => mod.Bar), { ssr: false });
-const XAxis = dynamic(() => import("recharts").then(mod => mod.XAxis), { ssr: false });
-const YAxis = dynamic(() => import("recharts").then(mod => mod.YAxis), { ssr: false });
-const Tooltip = dynamic(() => import("recharts").then(mod => mod.Tooltip), { ssr: false });
-const Cell = dynamic(() => import("recharts").then(mod => mod.Cell), { ssr: false });
-
-/**
- * 漏斗阶段数据
- */
-interface FunnelData {
-    /** 阶段名称 */
+export interface FunnelStage {
     stage: string;
-    /** 数量 */
     count: number;
-    /** 平均停留时长（天），可选 */
-    avgDays?: number;
+    conversionRate?: number | string | null;
+    avgDaysInStage?: number | string | null;
+    trend?: number | string | null;
+    previousPeriodCount?: number;
 }
 
 interface SalesFunnelChartProps {
-    data: FunnelData[];
+    data: FunnelStage[];
     className?: string;
-    /** 是否显示转化率 */
-    showConversionRate?: boolean;
-    /** 是否显示停留时长 */
-    showDuration?: boolean;
+    summary?: {
+        overallConversion: number | string;
+        avgCycleTime: number | string;
+    }
 }
 
-// 阶段颜色
-const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#10b981", "#f59e0b"];
-
-// 阶段名称映射（中文）
-const STAGE_LABELS: Record<string, string> = {
-    leads: "线索",
-    quoted: "报价",
-    ordered: "成交",
-    delivered: "交付",
-    completed: "完成",
-    // 默认使用原始值
+const STAGE_COLORS = {
+    '线索': '#94a3b8',
+    '测量': '#60a5fa',
+    '报价': '#818cf8',
+    '成交': '#34d399',
 };
 
-/**
- * 销售漏斗图组件
- * 
- * 功能：
- * 1. 各阶段数量可视化
- * 2. 阶段间转化率计算
- * 3. 平均停留时长展示
- */
-export function SalesFunnelChart({
-    data,
-    className,
-    showConversionRate = true,
-    showDuration = true,
-}: SalesFunnelChartProps) {
-    // 计算增强数据（转化率）
-    const enhancedData = useMemo(() => {
-        return data.map((item, index) => {
-            const prevCount = index > 0 ? data[index - 1].count : item.count;
-            const conversionRate = prevCount > 0 ? ((item.count / prevCount) * 100).toFixed(1) : '100';
-            const overallRate = data[0]?.count > 0
-                ? ((item.count / data[0].count) * 100).toFixed(1)
-                : '100';
-
-            return {
-                ...item,
-                label: STAGE_LABELS[item.stage.toLowerCase()] || item.stage,
-                conversionRate,
-                overallRate,
-            };
-        });
-    }, [data]);
-
-    // 总体转化率（首尾）
-    const totalConversion = useMemo(() => {
-        if (data.length < 2) return '100';
-        const first = data[0]?.count || 0;
-        const last = data[data.length - 1]?.count || 0;
-        return first > 0 ? ((last / first) * 100).toFixed(1) : '100';
-    }, [data]);
-
-    // 自定义 Tooltip 渲染函数
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const renderTooltip = useCallback((props: any) => {
-        const { active, payload } = props;
-        if (!active || !payload || !payload.length) return null;
-
-        const item = payload[0]?.payload;
-        if (!item) return null;
-        return (
-            <div className="bg-background border rounded-lg p-3 shadow-lg">
-                <p className="font-medium text-sm">{item.label}</p>
-                <p className="text-2xl font-bold text-primary">{item.count}</p>
-                {showConversionRate && (
-                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <p>阶段转化率: <span className="text-foreground font-medium">{item.conversionRate}%</span></p>
-                        <p>总体转化率: <span className="text-foreground font-medium">{item.overallRate}%</span></p>
-                    </div>
-                )}
-                {showDuration && item.avgDays !== undefined && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        平均停留: <span className="text-foreground font-medium">{item.avgDays} 天</span>
-                    </p>
-                )}
-            </div>
-        );
-    }, [showConversionRate, showDuration]);
-
+export function SalesFunnelChart({ data, className, summary }: SalesFunnelChartProps) {
     return (
-        <Card className={className}>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>销售漏斗</CardTitle>
-                        <CardDescription>线索到成交转化分析</CardDescription>
-                    </div>
-                    {showConversionRate && (
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground">总转化率</p>
-                            <p className="text-2xl font-bold text-primary">{totalConversion}%</p>
+        <Card className={cn("col-span-full lg:col-span-3", className)}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-medium">销售漏斗分析</CardTitle>
+                {summary && (
+                    <div className="flex gap-3 text-xs">
+                        <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full text-green-700">
+                            <span className="font-semibold">总转化 {summary.overallConversion}%</span>
                         </div>
-                    )}
-                </div>
+                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full text-blue-700">
+                            <Clock className="w-3 h-3" />
+                            <span className="font-semibold">{summary.avgCycleTime}天</span>
+                        </div>
+                    </div>
+                )}
             </CardHeader>
-            <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={enhancedData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                    >
-                        <XAxis type="number" hide />
-                        <YAxis
-                            type="category"
-                            dataKey="label"
-                            width={70}
-                            tick={{ fontSize: 12 }}
-                        />
-                        <Tooltip
-                            content={renderTooltip}
-                            cursor={{ fill: 'transparent' }}
-                        />
-                        <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={32}>
-                            {enhancedData.map((_entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
+            <CardContent>
+                <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                            data={data}
+                            layout="vertical"
+                            margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
+                            barSize={32}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
+                            <XAxis type="number" hide />
+                            <YAxis
+                                dataKey="stage"
+                                type="category"
+                                axisLine={false}
+                                tickLine={false}
+                                width={50}
+                                fontSize={13}
+                            />
+                            <Tooltip
+                                content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                        const item = payload[0].payload as FunnelStage;
+                                        return (
+                                            <div className="bg-white border p-3 rounded-lg shadow-lg text-sm z-50">
+                                                <div className="font-bold mb-1">{item.stage}</div>
+                                                <div className="flex justify-between gap-4 mb-1">
+                                                    <span className="text-muted-foreground">数量</span>
+                                                    <span>{item.count}</span>
+                                                </div>
+                                                {item.trend !== undefined && item.trend !== null && (
+                                                    <div className="flex justify-between gap-4 mb-1">
+                                                        <span className="text-muted-foreground">环比</span>
+                                                        <span className={Number(item.trend) >= 0 ? 'text-green-600' : 'text-red-500'}>
+                                                            {Number(item.trend) > 0 ? '+' : ''}{item.trend}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {item.avgDaysInStage && (
+                                                    <div className="flex justify-between gap-4">
+                                                        <span className="text-muted-foreground">平均耗时</span>
+                                                        <span>{item.avgDaysInStage}天</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={STAGE_COLORS[entry.stage as keyof typeof STAGE_COLORS] || '#cbd5e1'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* 漏斗详情列表 */}
+                <div className="mt-4 space-y-4">
+                    {data.map((item, index) => {
+                        // prevItem removed as it was unused
+                        return (
+                            <div key={item.stage} className="relative">
+                                {/* 转化率箭头 (仅在非第一项显示) */}
+                                {index > 0 && item.conversionRate !== null && (
+                                    <div className="absolute -top-3 left-14 flex items-center justify-center w-full">
+                                        <div className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 transform -translate-y-1/2">
+                                            <ArrowRight className="w-3 h-3" />
+                                            <span>转化率 {item.conversionRate}%</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between text-sm py-1">
+                                    <div className="flex flex-col">
+                                        <div className="font-medium">{item.stage}</div>
+                                        {item.avgDaysInStage && (
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Clock className="w-3 h-3" /> {item.avgDaysInStage}天
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <div className="font-bold">{item.count}</div>
+                                        {item.trend !== undefined && item.trend !== null && (
+                                            <div className={cn("text-xs flex items-center", Number(item.trend) >= 0 ? 'text-green-600' : 'text-red-500')}>
+                                                {Number(item.trend) >= 0 ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                {Math.abs(Number(item.trend))}%
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </CardContent>
         </Card>
     );
 }
-

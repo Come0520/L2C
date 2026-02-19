@@ -4,42 +4,27 @@
  * POST /api/miniprogram/quotes
  * Body: { customerId, rooms: [{ name, items: [{ productId, quantity, ... }] }] }
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { quotes, quoteRooms, quoteItems } from '@/shared/api/schema';
-import { users } from '@/shared/api/schema'; // users needed?
 import { eq } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../auth-utils';
 
-// Helper
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-    };
-  } catch {
-    return null;
-  }
-}
+
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const body = await request.json();
     const { customerId, rooms } = body;
 
     if (!customerId) {
-      return NextResponse.json({ success: false, error: '必须包含客户ID' }, { status: 400 });
+      return apiError('必须包含客户ID', 400);
     }
 
     // Transaction
@@ -117,9 +102,9 @@ export async function POST(request: NextRequest) {
       return newQuote;
     });
 
-    return NextResponse.json({ success: true, data: { id: result.id } });
+    return apiSuccess({ id: result.id });
   } catch (error) {
     console.error('Create Quote Error:', error);
-    return NextResponse.json({ success: false, error: '创建报价单失败 ' + error }, { status: 500 });
+    return apiError('创建报价单失败 ' + error, 500);
   }
 }

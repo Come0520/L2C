@@ -1,4 +1,5 @@
-import { pgTable, uuid, varchar, text, timestamp, index, decimal, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index, decimal, jsonb, integer } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 import { marketChannels } from './catalogs';
@@ -37,6 +38,7 @@ export const leads = pgTable('leads', {
     tags: text('tags').array(), // PostgreSQL array
     notes: text('notes'),
     lostReason: text('lost_reason'),
+    score: decimal('score', { precision: 5, scale: 2 }).default('0'), // Lead quality score (0-100)
 
     // Webhook / 外部系统集成
     externalId: varchar('external_id', { length: 100 }), // 外部系统线索ID，用于幂等性校验
@@ -61,13 +63,23 @@ export const leads = pgTable('leads', {
     updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+    version: integer('version').default(0).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ({
     leadTenantIdx: index('idx_leads_tenant').on(table.tenantId),
     leadPhoneIdx: index('idx_leads_phone').on(table.customerPhone),
     leadTenantDateIdx: index('idx_leads_tenant_date').on(table.tenantId, table.createdAt),
-    leadStatusIdx: index('idx_leads_status').on(table.status),
-    leadSalesIdx: index('idx_leads_sales').on(table.assignedSalesId),
+    leadStatusIdx: index('idx_leads_status').on(table.tenantId, table.status),
+    leadSalesIdx: index('idx_leads_sales').on(table.tenantId, table.assignedSalesId),
+    leadExternalIdIdx: index('idx_leads_external_id').on(table.externalId),
+    // [NEW] Unique Index for External System Idempotency (Scoped by Tenant)
+    leadExternalUniqueIdx: index('idx_leads_external_unique').on(table.tenantId, table.externalId).where(sql`${table.externalId} IS NOT NULL`),
+    // [NEW] Partial Unique Index for Active Leads (Scoped by Tenant + Phone) - Prevent duplicates
+    // Using SQL filter to exclude 'WON' and 'INVALID' statuses
+    leadPhoneActiveUniqueIdx: index('idx_leads_phone_active_unique').on(table.tenantId, table.customerPhone).where(sql`${table.status} NOT IN ('WON', 'INVALID')`),
+    leadSourceChannelIdx: index('idx_leads_source_channel').on(table.tenantId, table.sourceChannelId),
+    leadSourceSubIdx: index('idx_leads_source_sub').on(table.tenantId, table.sourceSubId),
+    leadIntentionIdx: index('idx_leads_intention').on(table.tenantId, table.intentionLevel),
 }));
 
 export const leadActivities = pgTable('lead_activities', {

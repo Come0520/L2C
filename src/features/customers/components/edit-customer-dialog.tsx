@@ -13,10 +13,9 @@ import { useState } from 'react';
 interface EditCustomerDialogProps {
     customer: any;
     trigger: React.ReactNode;
-    userId: string;
 }
 
-export function EditCustomerDialog({ customer, trigger, userId }: EditCustomerDialogProps) {
+export function EditCustomerDialog({ customer, trigger }: EditCustomerDialogProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -30,7 +29,6 @@ export function EditCustomerDialog({ customer, trigger, userId }: EditCustomerDi
                 </DialogHeader>
                 <CustomerForm
                     initialData={customer}
-                    userId={userId}
                     tenantId={customer.tenantId}
                     onSuccess={() => setOpen(false)}
                 />

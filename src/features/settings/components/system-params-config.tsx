@@ -49,8 +49,12 @@ export function SystemParamsConfig({ initialValues }: SystemParamsConfigProps) {
 
     const onSubmit = async (data: SystemParamsFormData) => {
         try {
-            // TODO: 调用后端 Action 保存配置
-            console.log('保存系统参数:', data);
+            const { batchUpdateSettings } = await import('@/features/settings/actions/system-settings-actions');
+            await batchUpdateSettings(
+                Object.fromEntries(
+                    Object.entries(data).map(([key, value]) => [`system.${key}`, value])
+                )
+            );
             toast.success('系统参数配置已保存');
         } catch (error) {
             toast.error('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));

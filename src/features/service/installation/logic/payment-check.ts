@@ -34,15 +34,13 @@ export interface PaymentCheckResult {
  * 
  * @param tenantId - 租户 ID（用于租户隔离验证）
  */
-export async function checkPaymentBeforeInstall(orderId: string, tenantId?: string): Promise<PaymentCheckResult> {
+export async function checkPaymentBeforeInstall(orderId: string, tenantId: string): Promise<PaymentCheckResult> {
     // 获取租户配置
     const config = await getTenantBusinessConfig();
     const arConfig = config.arPayment;
 
     // 获取订单信息 - 包含租户隔离
-    const whereConditions = tenantId
-        ? and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-        : eq(orders.id, orderId);
+    const whereConditions = and(eq(orders.id, orderId), eq(orders.tenantId, tenantId));
 
     const order = await db.query.orders.findFirst({
         where: whereConditions,

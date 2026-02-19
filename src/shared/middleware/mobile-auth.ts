@@ -24,6 +24,9 @@ export interface MobileSession {
     phone: string;
     role: MobileRole;
     name?: string;
+    traceId: string; // 请求追踪 ID
+    userAgent?: string;
+    ipAddress?: string;
 }
 
 /**
@@ -45,6 +48,8 @@ export type AuthResult =
  */
 export async function authenticateMobile(request: NextRequest): Promise<AuthResult> {
     const authHeader = request.headers.get('Authorization');
+    // 获取或生成 Trace ID
+    const traceId = request.headers.get('x-trace-id') || crypto.randomUUID();
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return {
@@ -74,6 +79,9 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
             };
         }
 
+        const userAgent = request.headers.get('user-agent') || undefined;
+        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+
         // 从 payload 中提取用户信息
         const session: MobileSession = {
             userId: payload.userId,
@@ -81,6 +89,9 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
             phone: payload.phone,
             role: payload.role,
             name: undefined,
+            traceId,
+            userAgent,
+            ipAddress,
         };
 
         return { success: true, session };

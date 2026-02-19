@@ -10,7 +10,9 @@ const LEAD_STATUS_TABS = [
     { value: 'MY_FOLLOWING', label: '我的跟进' },
     { value: 'FOLLOWING_UP', label: '跟进中' },
     { value: 'WON', label: '已成交' },
-    { value: 'VOID', label: '已作废' },
+    { value: 'PENDING_APPROVAL', label: '待审批' },
+    { value: 'INVALID', label: '无效' },
+    { value: 'ANALYTICS', label: '分析' },
 ];
 
 export function LeadsFilterBar() {

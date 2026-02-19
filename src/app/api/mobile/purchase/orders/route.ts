@@ -6,10 +6,13 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { purchaseOrders } from '@/shared/api/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, count } from 'drizzle-orm';
 import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requirePurchaser } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/purchase/orders');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -32,10 +35,15 @@ export async function GET(request: NextRequest) {
 
     try {
         // 4. 构建查询条件
-        // 使用 and() 组合多个条件
+        const VALID_STATUSES = ['DRAFT', 'PENDING_CONFIRMATION', 'PENDING_PAYMENT', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED'] as const;
+
+        if (status && !VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
+            return apiError('无效的状态参数', 400);
+        }
+
         const baseCondition = eq(purchaseOrders.tenantId, session.tenantId);
         const whereCondition = status
-            ? and(baseCondition, eq(purchaseOrders.status, status as 'DRAFT' | 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'))
+            ? and(baseCondition, eq(purchaseOrders.status, status as typeof VALID_STATUSES[number]))
             : baseCondition;
 
         // 5. 查询采购单
@@ -59,11 +67,11 @@ export async function GET(request: NextRequest) {
         });
 
         // 6. 统计总数
-        const allPOs = await db.query.purchaseOrders.findMany({
-            where: baseCondition,
-            columns: { id: true }
-        });
-        const total = allPOs.length;
+        const [totalResult] = await db
+            .select({ value: count() })
+            .from(purchaseOrders)
+            .where(whereCondition);
+        const total = totalResult.value;
 
         // 7. 格式化响应
         const items = pos.map(po => ({
@@ -81,7 +89,7 @@ export async function GET(request: NextRequest) {
         return apiPaginated(items, page, pageSize, total);
 
     } catch (error) {
-        console.error('采购单列表查询错误:', error);
+        log.error('采购单列表查询错误', {}, error);
         return apiError('查询采购单列表失败', 500);
     }
 }

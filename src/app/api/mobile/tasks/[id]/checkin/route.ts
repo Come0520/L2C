@@ -63,7 +63,8 @@ export async function POST(request: NextRequest, { params }: CheckinParams) {
     const measureTask = await db.query.measureTasks.findFirst({
         where: and(
             eq(measureTasks.id, taskId),
-            eq(measureTasks.assignedWorkerId, session.userId)
+            eq(measureTasks.assignedWorkerId, session.userId),
+            eq(measureTasks.tenantId, session.tenantId) // 添加 tenantId 过滤
         ),
     });
 
@@ -74,7 +75,8 @@ export async function POST(request: NextRequest, { params }: CheckinParams) {
         const installTask = await db.query.installTasks.findFirst({
             where: and(
                 eq(installTasks.id, taskId),
-                eq(installTasks.installerId, session.userId)
+                eq(installTasks.installerId, session.userId),
+                eq(installTasks.tenantId, session.tenantId) // 添加 tenantId 过滤
             ),
         });
         if (installTask) {
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest, { params }: CheckinParams) {
                 status: type === 'in' ? 'IN_PROGRESS' as typeof measureTasks.$inferSelect['status'] : undefined,
                 updatedAt: now,
             })
-            .where(eq(measureTasks.id, taskId));
+            .where(and(eq(measureTasks.id, taskId), eq(measureTasks.tenantId, session.tenantId))); // 添加 tenantId 过滤
     } else {
         await db.update(installTasks)
             .set({
@@ -114,7 +116,7 @@ export async function POST(request: NextRequest, { params }: CheckinParams) {
                 actualEndAt: type === 'out' ? now : undefined,
                 updatedAt: now,
             })
-            .where(eq(installTasks.id, taskId));
+            .where(and(eq(installTasks.id, taskId), eq(installTasks.tenantId, session.tenantId)));
     }
 
     return apiSuccess(

@@ -91,6 +91,7 @@ export const orders = pgTable('orders', {
     orderStatusIdx: index('idx_orders_status').on(table.status),
     orderSalesIdx: index('idx_orders_sales').on(table.salesId),
     orderChannelIdx: index('idx_orders_channel').on(table.channelId),
+    orderTenantCreatedIdx: index('idx_orders_tenant_created').on(table.tenantId, table.createdAt),
 }));
 
 export const orderItems = pgTable('order_items', {

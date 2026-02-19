@@ -4,29 +4,36 @@
  * GET /api/miniprogram/tenant/payment-config
  * POST /api/miniprogram/tenant/payment-config
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../auth-utils';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
-// Helper: Verify Admin Role
-// In a real app, middleware handles this. Here we verify manually.
+import { z } from 'zod';
+import { sql } from 'drizzle-orm';
+
+// 定义支付配置 Schema，防御 JSON 注入
+const PaymentConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  offline: z.object({
+    enabled: z.boolean().default(true),
+    instructions: z.string().max(1000, '说明文字过长').default(''),
+  }).optional(),
+  online: z.object({
+    enabled: z.boolean().default(false),
+  }).optional(),
+});
+
+// Helper: 验证管理员权限
 async function verifyAdmin(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
+  const authUser = await getMiniprogramUser(request);
+  if (!authUser) return null;
   try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    // We need to check if user is admin.
-    // Payload has userId. We fetch User -> Check Role.
-    // Optimization: Payload SHOULD have role if we put it there.
-    // Let's assume payload has userId and tenantId.
-
-    // Fetch user role
+    // 从数据库获取用户角色
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, payload.userId as string),
+      where: (u, { eq }) => eq(u.id, authUser.id),
       columns: { role: true, tenantId: true },
     });
 
@@ -43,7 +50,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await verifyAdmin(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '无权限' }, { status: 403 });
+      return apiError('无权限', 403);
     }
 
     const tenant = await db.query.tenants.findFirst({
@@ -51,22 +58,19 @@ export async function GET(request: NextRequest) {
       columns: { settings: true },
     });
 
-    const settings = (tenant?.settings as any) || {};
-    const paymentConfig = settings.payment || {
+    const settings = (tenant?.settings as Record<string, unknown>) || {};
+    // 使用 safeParse 确保返回的数据符合结构
+    const paymentParse = PaymentConfigSchema.safeParse(settings.payment);
+    const paymentConfig = paymentParse.success ? paymentParse.data : {
       enabled: true,
-      offline: {
-        enabled: true,
-        instructions: '',
-      },
-      online: {
-        enabled: false,
-      },
+      offline: { enabled: true, instructions: '' },
+      online: { enabled: false },
     };
 
-    return NextResponse.json({ success: true, data: paymentConfig });
+    return apiSuccess(paymentConfig);
   } catch (error) {
     console.error('Get Payment Config Error:', error);
-    return NextResponse.json({ success: false, error: 'Failed' }, { status: 500 });
+    return apiError('获取失败', 500);
   }
 }
 
@@ -74,31 +78,45 @@ export async function POST(request: NextRequest) {
   try {
     const user = await verifyAdmin(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '无权限' }, { status: 403 });
+      return apiError('无权限', 403);
     }
 
     const body = await request.json();
-    // specific validation could go here
 
-    const tenant = await db.query.tenants.findFirst({
-      where: eq(tenants.id, user.tenantId!),
-      columns: { settings: true },
+    // 1. Zod 安全校验 (防止 JSON 注入)
+    const validation = PaymentConfigSchema.safeParse(body);
+    if (!validation.success) {
+      return apiError(validation.error.issues[0].message, 400);
+    }
+
+    // 2. 事务中执行读写锁 (FOR UPDATE)
+    await db.transaction(async (tx) => {
+      // 获取当前租户配置并加锁
+      const [tenant] = await tx.execute(
+        sql`SELECT settings FROM ${tenants} WHERE id = ${user.tenantId!} FOR UPDATE`
+      ) as unknown as [{ settings: Record<string, unknown> }];
+
+      if (!tenant) throw new Error('租户不存在');
+
+      const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+      const newSettings = {
+        ...currentSettings,
+        payment: validation.data,
+      };
+
+      // 执行更新
+      await tx
+        .update(tenants)
+        .set({
+          settings: newSettings,
+          updatedAt: new Date()
+        })
+        .where(eq(tenants.id, user.tenantId!));
     });
 
-    const currentSettings = (tenant?.settings as any) || {};
-    const newSettings = {
-      ...currentSettings,
-      payment: body, // Overwrite payment section
-    };
-
-    await db
-      .update(tenants)
-      .set({ settings: newSettings, updatedAt: new Date() })
-      .where(eq(tenants.id, user.tenantId!));
-
-    return NextResponse.json({ success: true });
+    return apiSuccess(null);
   } catch (error) {
     console.error('Update Payment Config Error:', error);
-    return NextResponse.json({ success: false, error: 'Failed' }, { status: 500 });
+    return apiError(error instanceof Error ? error.message : '更新失败', 500);
   }
 }

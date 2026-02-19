@@ -122,6 +122,46 @@ describe('报价单模块 - 状态流转安全测试', () => {
     });
 });
 
+describe('报价单模块 - 数据防泄露 (Data Leakage Prevention)', () => {
+    it('getQuote 不应请求 costPrice 字段', async () => {
+        vi.mocked(auth).mockResolvedValue({
+            user: { id: USER_A_ID, tenantId: TENANT_A_ID },
+        } as never);
+
+        // 模拟数据库返回，即使数据库层模拟返回了 costPrice，
+        // 我们主要验证的是 findFirst 的调用参数是否排除了它，
+        // 或者是否显式选择了字段。
+        // 但由于这是一个单元测试，我们主要检查 spy 的调用参数。
+        vi.mocked(db.query.quotes.findFirst).mockResolvedValue({} as never);
+
+        const { getQuote } = await import('../queries');
+        await getQuote(QUOTE_A_ID);
+
+        // 获取调用参数
+        const callArgs = vi.mocked(db.query.quotes.findFirst).mock.calls[0][0] as any;
+
+        // 验证 items 关联查询中是否指定了 columns 来排除 costPrice
+        // 如果没有指定 columns，默认会查所有，这是不安全的
+        const itemsQuery = callArgs.with?.items;
+
+        expect(itemsQuery).toBeDefined();
+        // 必须显式定义 columns 且不能包含 costPrice (Undefined means select all in simple queries, 
+        // but typically one selects specific columns to exclude sensitive ones)
+        // 或者，由于 Drizzle 不支持排除，我们需要检查 columns 是否被定义，
+        // 并且是一个对象，并且里面没有 costPrice (或者 costPrice: false - 虽然 Drizzle 不支持 false，
+        // 而是只列出需要的 true)
+
+        // 策略: 必须使用 columns 白名单模式
+        expect(itemsQuery.columns).toBeDefined();
+
+        // 检查白名单中是否包含 costPrice (应该不包含)
+        if (itemsQuery.columns) {
+            expect(itemsQuery.columns).not.toHaveProperty('costPrice');
+        }
+    });
+
+});
+
 describe('报价单模块 - 跨租户操作防护', () => {
     beforeEach(() => {
         vi.clearAllMocks();

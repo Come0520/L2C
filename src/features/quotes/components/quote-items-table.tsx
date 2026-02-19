@@ -25,13 +25,9 @@ import { QuoteInlineAddRow } from './quote-inline-add-row';
 import { QuoteItemExpandRow } from './quote-item-expand-row';
 import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
-import { CurtainStrategy, type CurtainCalcParams } from '../calc-strategies/curtain-strategy';
-
-import {
-  WallpaperCalculator,
-  type CurtainFormula,
-  type WallpaperFormula,
-} from '@/features/quotes/logic/calculator';
+import { StrategyFactory } from '../calc-strategies/strategy-factory';
+import type { CurtainCalcParams } from '../calc-strategies/curtain-strategy';
+import type { WallpaperCalcParams } from '../calc-strategies/wallpaper-strategy';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +36,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/shared/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog';
 import dynamic from 'next/dynamic';
 
 const QuoteItemAdvancedDrawer = dynamic(
@@ -699,6 +705,14 @@ export function QuoteItemsTable({
   // 跟踪之前的空间 ID 集合，用于检测新增空间
   const prevRoomIdsRef = useRef<Set<string>>(new Set(rooms.map((r) => r.id)));
 
+  // Delete Item Dialog State
+  const [deleteItemDialogOpen, setDeleteItemDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  // Delete Room Dialog State
+  const [deleteRoomDialogOpen, setDeleteRoomDialogOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+
   // 自动展开新创建的空间
   useEffect(() => {
     const currentRoomIds = new Set(rooms.map((r) => r.id));
@@ -772,10 +786,21 @@ export function QuoteItemsTable({
 
   const handleDelete = async (id: string) => {
     if (readOnly) return;
-    if (confirm('确定删除此项吗？')) {
-      await deleteQuoteItem({ id });
+    setItemToDelete(id);
+    setDeleteItemDialogOpen(true);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete) return;
+    try {
+      await deleteQuoteItem({ id: itemToDelete });
       toast.success('已删除');
       if (onItemUpdate) onItemUpdate();
+    } catch (_error) {
+      toast.error('删除失败');
+    } finally {
+      setDeleteItemDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -804,10 +829,21 @@ export function QuoteItemsTable({
 
   const handleDeleteRoom = async (id: string) => {
     if (readOnly) return;
-    if (confirm('确定删除此空间及其所有明细吗？此操作不可恢复。')) {
-      await deleteRoom({ id });
+    setRoomToDelete(id);
+    setDeleteRoomDialogOpen(true);
+  };
+
+  const confirmDeleteRoom = async () => {
+    if (!roomToDelete) return;
+    try {
+      await deleteRoom({ id: roomToDelete });
       toast.success('空间及其明细已删除');
       if (onItemUpdate) onItemUpdate();
+    } catch (_error) {
+      toast.error('删除失败');
+    } finally {
+      setDeleteRoomDialogOpen(false);
+      setRoomToDelete(null);
     }
   };
 
@@ -857,7 +893,7 @@ export function QuoteItemsTable({
     field: string,
     value: number
   ): { quantity: number; calcResult?: CalcResult } | number | null => {
-    // ... (保持不变)
+    if (!item || !field) return null;
     const newItem = { ...item, [field]: value };
     const category = newItem.category;
 
@@ -871,63 +907,65 @@ export function QuoteItemsTable({
       foldRatio: newItem.foldRatio,
     });
 
-    // 窗帘类品类：支持 CURTAIN, CURTAIN_FABRIC, CURTAIN_SHEER (Case Insensitive)
     const upperCategory = category.toUpperCase();
     const isCurtainCategory =
       ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(upperCategory) ||
       upperCategory.includes('CURTAIN');
-    // 墙纸/墙布类品类
     const isWallCategory = ['WALLPAPER', 'WALLCLOTH'].includes(upperCategory);
 
     if (isCurtainCategory || isWallCategory) {
-      const attributes = (newItem.attributes || {}) as Record<string, unknown>;
-      const strategy = new CurtainStrategy();
+      try {
+        const attributes = (newItem.attributes || {}) as Record<string, unknown>;
+        const strategy = StrategyFactory.getStrategy(upperCategory);
 
-      if (isCurtainCategory) {
-        // Default Values matching CurtainFabricQuoteForm
-        const params: CurtainCalcParams = {
-          measuredWidth: Number(newItem.width) || 0,
-          measuredHeight: Number(newItem.height) || 0,
-          foldRatio: Number(newItem.foldRatio) || 2,
-          fabricWidth: Number(attributes.fabricWidth) || 280,
-          // Use correct type for fabricType
-          fabricType: (attributes.fabricType as 'FIXED_HEIGHT' | 'FIXED_WIDTH') || 'FIXED_HEIGHT',
-          unitPrice: Number(item.unitPrice) || 0,
-          // Advanced attributes with fallbacks
-          openingType: (attributes.openingType as 'SINGLE' | 'DOUBLE') || 'DOUBLE',
-          headerType: (attributes.headerType as 'WRAPPED' | 'ATTACHED') || 'WRAPPED',
-          clearance: Number(attributes.clearance) || 0,
-          sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
-          bottomLoss: attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : 10,
-        };
+        if (isCurtainCategory) {
+          const params: CurtainCalcParams = {
+            measuredWidth: Number(newItem.width) || 0,
+            measuredHeight: Number(newItem.height) || 0,
+            foldRatio: Number(newItem.foldRatio) || 2,
+            fabricWidth: (Number(attributes.fabricWidth) || 280) / 100, // cm to m
+            fabricType: (attributes.fabricType as 'FIXED_HEIGHT' | 'FIXED_WIDTH') || 'FIXED_HEIGHT',
+            unitPrice: Number(item.unitPrice) || 0,
+            openingType: (attributes.openingType as 'SINGLE' | 'DOUBLE') || 'DOUBLE',
+            headerType: (attributes.headerType as 'WRAPPED' | 'ATTACHED') || 'WRAPPED',
+            clearance: Number(attributes.clearance) || 0,
+            sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
+            bottomLoss: attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : 10,
+          };
 
-        const result = strategy.calculate(params);
-        console.log('[handleClientCalc] 窗帘计算结果', result);
+          const result = strategy.calculate(params);
+          console.log('[handleClientCalc] 窗帘计算结果', result);
 
-        // Return full object structure
-        return {
-          quantity: result.usage,
-          calcResult: {
-            ...result.details,
+          // Return full object structure
+          return {
             quantity: result.usage,
-          },
-        };
-      } else if (isWallCategory) {
-        // Using imported WallpaperCalculator
-        const result = WallpaperCalculator.calculate({
-          measuredWidth: Number(newItem.width) || 0,
-          measuredHeight: Number(newItem.height) || 0,
-          productWidth: Number(attributes.fabricWidth) || (category === 'WALLPAPER' ? 53 : 280),
-          rollLength: Number(attributes.rollLength) || 1000,
-          patternRepeat: Number(attributes.patternRepeat) || 0,
-          formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula,
-        });
-        console.log('[handleClientCalc] 墙纸/墙布计算结果', result);
-        if (result && typeof result.quantity === 'number' && !isNaN(result.quantity)) {
-          return result.quantity; // Wallpaper logic still returns simple number for now unless refactored
+            calcResult: {
+              ...result.details,
+              quantity: result.usage,
+            },
+          };
+        } else if (isWallCategory) {
+          const params: WallpaperCalcParams = {
+            width: Number(newItem.width) || 0,
+            height: Number(newItem.height) || 0,
+            fabricWidth:
+              (Number(attributes.fabricWidth) || (upperCategory === 'WALLPAPER' ? 53 : 280)) / 100, // cm to m
+            unitPrice: Number(item.unitPrice) || 0,
+            calcType: upperCategory,
+            rollLength: Number(attributes.rollLength) || 10, // meters
+            patternRepeat: Number(attributes.patternRepeat) || 0,
+            // Pass other legacy attributes if needed, or rely on defaults
+          };
+
+          const result = strategy.calculate(params);
+          console.log('[handleClientCalc] 墙纸/墙布计算结果', result);
+          if (typeof result.usage === 'number' && !isNaN(result.usage)) {
+            return result.usage;
+          }
         }
+      } catch (e) {
+        console.warn('Strategy calc failed', e);
       }
-      return null;
     } else {
       console.log('[handleClientCalc] 品类不匹配，跳过计算', category);
     }
@@ -1149,6 +1187,40 @@ export function QuoteItemsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteItemDialogOpen} onOpenChange={setDeleteItemDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除此商品吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive hover:bg-destructive/90">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteRoomDialogOpen} onOpenChange={setDeleteRoomDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除空间</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除此空间及其所有明细吗？此操作不可恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteRoom} className="bg-destructive hover:bg-destructive/90">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

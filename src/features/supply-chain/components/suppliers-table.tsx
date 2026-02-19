@@ -17,12 +17,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger
 } from '@/shared/ui/dropdown-menu';
-import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
-import Pencil from 'lucide-react/dist/esm/icons/pencil';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { SupplierDialog } from './supplier-dialog';
-import { deleteSupplier } from '../actions/mutations';
+import { deleteSupplier } from '../actions/supplier-actions';
 import { toast } from 'sonner';
 import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 import {
@@ -39,6 +37,7 @@ import {
 interface Supplier {
     id: string;
     name: string;
+    supplierType: "SUPPLIER" | "PROCESSOR" | "BOTH";
     contactPerson?: string | null;
     phone?: string | null;
     paymentPeriod?: string | null;
@@ -173,6 +172,7 @@ export function SuppliersTable({ data, page: _page, pageSize: _pageSize, total: 
                 initialData={editingSupplier ? {
                     id: editingSupplier.id,
                     name: editingSupplier.name,
+                    supplierType: editingSupplier.supplierType,
                     contactPerson: editingSupplier.contactPerson || undefined,
                     phone: editingSupplier.phone || undefined,
                     paymentPeriod: (editingSupplier.paymentPeriod as "CASH" | "MONTHLY") || 'CASH',

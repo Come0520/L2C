@@ -11,9 +11,10 @@ import { SplitTaskDialog } from '@/features/service/measurement/components/split
 import { FeeWaiverDialog } from '@/features/service/measurement/components/fee-waiver-dialog';
 import { MeasureStatusTabs } from '@/features/service/measurement/components/status-tabs';
 import { OperationLog } from '@/features/service/measurement/components/operation-log';
+import { GPSCheckIn } from '@/features/service/measurement/components/gps-check-in';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import User from 'lucide-react/dist/esm/icons/user';
-import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Phone from 'lucide-react/dist/esm/icons/phone';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
@@ -37,6 +38,8 @@ export default async function MeasureTaskDetailPage({
     }
 
     // 使用类型断言转换为统一类型
+    // 使用类型断言转换为统一类型
+    // TODO: 优化类型定义，避免使用 double cast (R2-CQ-01)
     const task = result.data as unknown as MeasureTaskWithRelations;
 
     // 检查费用状态
@@ -56,7 +59,7 @@ export default async function MeasureTaskDetailPage({
     const latestSheet = task.sheets?.[0];
     const measureItems = latestSheet?.items || [];
 
-    // 模拟操作日志数据 (TODO: 从数据库查询)
+    // 模拟操作日志数据 (TODO: R2-UX-05 对接审计日志服务查询真实操作记录)
     const mockOperationLogs = [
         { id: '1', action: 'CREATE', detail: '创建测量任务', operatorName: '系统', createdAt: task.createdAt || new Date() },
         ...(task.assignedWorker ? [{ id: '2', action: 'DISPATCH', detail: `指派给 ${task.assignedWorker?.name || '测量师'}`, operatorName: '派单员', createdAt: task.updatedAt || new Date() }] : []),
@@ -122,8 +125,8 @@ export default async function MeasureTaskDetailPage({
                             <span className="font-medium">{task.customer?.name || '-'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{task.customer?.phone || '-'}</span>
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span>{task.customer?.phone?.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') || '-'}</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -242,8 +245,11 @@ export default async function MeasureTaskDetailPage({
                     />
                 )}
 
-                {(task.status === 'DISPATCHED' || task.status === 'PENDING_VISIT') && (
-                    <SubmitMeasureDataDialog taskId={task.id} />
+                {(task.status === 'DISPATCHING' || task.status === 'PENDING_VISIT') && (
+                    <div className="flex items-center gap-2">
+                        {!task.checkInAt && <GPSCheckIn taskId={task.id} />}
+                        <SubmitMeasureDataDialog taskId={task.id} />
+                    </div>
                 )}
                 {task.status === 'PENDING_CONFIRM' && (
                     <>

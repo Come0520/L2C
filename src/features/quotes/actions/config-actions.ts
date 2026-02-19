@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { QuoteConfigService, type QuoteConfig } from '@/services/quote-config.service';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
+import { AuditService } from '@/shared/lib/audit-service';
 
 const updateModeSchema = z.object({
     mode: z.enum(['simple', 'advanced'])
@@ -99,10 +100,23 @@ const updateGlobalQuoteConfigActionInternal = createSafeAction(updateGlobalConfi
     // Zod schema 中 presetLoss 的所有子字段都是可选的，但 QuoteConfig 要求完整对象
     // 服务层 updateTenantConfig 会将传入的部分配置与现有配置/默认值进行深度合并
     // 因此这里的类型断言是安全的
+    const updateData: Partial<QuoteConfig> = {
+        mode: data.mode,
+        visibleFields: data.visibleFields,
+        presetLoss: data.presetLoss as QuoteConfig['presetLoss'],
+        discountControl: data.discountControl,
+        defaultPlan: data.defaultPlan,
+        planSettings: data.planSettings
+    };
     await QuoteConfigService.updateTenantConfig(
         session.user.tenantId,
-        data as unknown as Partial<QuoteConfig>
+        updateData
     );
+
+    // 审计日志：记录全局配置更新
+    await AuditService.recordFromSession(session, 'quoteConfig', session.user.tenantId, 'UPDATE', {
+        new: updateData as Record<string, unknown>,
+    });
 
     revalidatePath('/quotes');
     return { success: true };

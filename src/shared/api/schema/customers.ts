@@ -37,6 +37,10 @@ export const customers = pgTable('customers', {
     referrerCustomerId: uuid('referrer_customer_id'), // 自引用，通过 Relations 定义关联
     sourceLeadId: uuid('source_lead_id'), // 线索关联，外键通过 Relations 定义避免循环依赖
 
+    // Analysis
+    source: varchar('source', { length: 50 }), // 渠道来源
+    referrerName: varchar('referrer_name', { length: 50 }), // 带单人姓名
+
     // Loyalty
     loyaltyPoints: integer('loyalty_points').default(0),
     referralCode: varchar('referral_code', { length: 20 }).unique(),
@@ -52,6 +56,7 @@ export const customers = pgTable('customers', {
     preferences: jsonb('preferences').default({}), // style, color, budget, etc.
     notes: text('notes'),
     tags: text('tags').array().default([]),
+    version: integer('version').default(0).notNull(),
 
 
     isMerged: boolean('is_merged').default(false),
@@ -67,6 +72,9 @@ export const customers = pgTable('customers', {
     custTenantIdx: index('idx_customers_tenant').on(table.tenantId),
     custPhoneIdx: index('idx_customers_phone').on(table.phone),
     custReferrerIdx: index('idx_customers_referrer').on(table.referrerCustomerId),
+    custAssignedSalesIdx: index('idx_customers_assigned_sales').on(table.assignedSalesId),
+    custIsMergedIdx: index('idx_customers_is_merged').on(table.isMerged),
+    custCreatedAtIdx: index('idx_customers_created_at').on(table.createdAt),
 }));
 
 // 手机号查看日志表 (Phone View Logs)

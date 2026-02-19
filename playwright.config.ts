@@ -34,6 +34,13 @@ export default defineConfig({
     projects: [
         { name: 'setup', testMatch: /.*\.setup\.ts/ },
         {
+            name: 'api',
+            testMatch: /mobile-api-.*\.spec\.ts/,
+            use: {
+                baseURL: 'http://localhost:3000',
+            },
+        },
+        {
             name: 'chromium',
             use: {
                 ...devices['Desktop Chrome'],

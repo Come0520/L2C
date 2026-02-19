@@ -2,7 +2,7 @@
  * 线索管理页面
  */
 import { Suspense } from 'react';
-import { getLeads, getChannels } from '@/features/leads/actions';
+import { getLeads, getChannels, getSalesUsers } from '@/features/leads/actions';
 import { LeadsFilterBar } from '@/features/leads/components/leads-filter-bar';
 import { LeadsToolbar } from '@/features/leads/components/leads-toolbar';
 import { LeadTable } from '@/features/leads/components/lead-table';
@@ -12,6 +12,8 @@ import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { TableSkeleton } from '@/shared/ui/skeleton-variants';
+import { LeadsErrorBoundary } from '@/features/leads/components/leads-error-boundary';
+import { LeadAnalyticsDashboard } from '@/features/leads/components/lead-analytics-dashboard';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +66,7 @@ export default async function LeadsPage({
         }
         : undefined;
 
-    const [leadsResult, channels] = await Promise.all([
+    const [leadsResult, channels, salesList] = await Promise.all([
       getLeads({
         page,
         pageSize: 10,
@@ -76,37 +78,47 @@ export default async function LeadsPage({
         dateRange,
       }),
       getChannels(),
+      getSalesUsers(),
     ]);
 
     return (
-      <div className="h-[calc(100vh-8rem)] [perspective:1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
-        {/* Top Section: Tabs and Actions */}
-        <div className="flex w-full items-center justify-between">
-          <div className="flex-1">
-            <LeadsFilterBar />
+      <LeadsErrorBoundary>
+        <div className="w-full h-full flex flex-col gap-6 p-8 perspective-[1000px]">
+          {/* Top Section: Tabs and Actions */}
+          <div className="flex w-full items-center justify-between">
+            <div className="flex-1">
+              <LeadsFilterBar />
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <ExcelImportDialog />
+              <CreateLeadDialog channels={channels} tenantId={tenantId} />
+            </div>
           </div>
-          <div className="flex items-center gap-2 mb-4">
-            <ExcelImportDialog userId={userId} tenantId={tenantId} />
-            <CreateLeadDialog channels={channels} userId={userId} tenantId={tenantId} />
-          </div>
-        </div>
 
-        {/* Content Card */}
-        <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid border border-white/10 flex flex-col gap-4">
-          <LeadsToolbar tenantId={tenantId} />
-          <div className="flex-1 overflow-auto">
-            <Suspense fallback={<TableSkeleton />}>
-              <LeadTable
-                data={leadsResult.data}
-                page={page}
-                pageSize={10}
-                total={leadsResult.total}
-                userRole={userRole}
-              />
-            </Suspense>
+          {/* Content Card */}
+          <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid border border-white/10 flex flex-col gap-4">
+            {statusParam === 'ANALYTICS' ? (
+              <LeadAnalyticsDashboard />
+            ) : (
+              <>
+                <LeadsToolbar tenantId={tenantId} salesList={salesList} />
+                <div className="flex-1 overflow-auto">
+                  <Suspense fallback={<TableSkeleton />}>
+                    <LeadTable
+                      data={leadsResult.data}
+                      page={page}
+                      pageSize={10}
+                      total={leadsResult.total}
+                      userRole={userRole}
+                      userId={userId}
+                    />
+                  </Suspense>
+                </div>
+              </>
+            )}
           </div>
         </div>
-      </div>
+      </LeadsErrorBoundary>
     );
   } catch (error) {
     console.error('LeadsPage Error:', error);
@@ -116,9 +128,9 @@ export default async function LeadsPage({
         <div className="bg-destructive/10 text-destructive rounded-md p-4">
           <h3 className="font-semibold">无法加载线索数据</h3>
           <p className="mt-1 text-sm">{(error as Error).message}</p>
-          {(error as any).digest && (
+          {(error as { digest?: string }).digest && (
             <p className="text-muted-foreground mt-2 font-mono text-xs">
-              Digest: {(error as any).digest}
+              Digest: {(error as { digest?: string }).digest}
             </p>
           )}
         </div>

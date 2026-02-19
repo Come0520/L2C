@@ -59,6 +59,7 @@ export const quotes = pgTable(
     rejectReason: text('reject_reason'),
 
     lockedAt: timestamp('locked_at', { withTimezone: true }),
+    lockedBy: uuid('locked_by').references(() => users.id),
 
     // Confirmation
     customerSignatureUrl: text('customer_signature_url'),
@@ -81,6 +82,9 @@ export const quotes = pgTable(
     quoteActiveVersionIdx: uniqueIndex('idx_quotes_active_version')
       .on(table.rootQuoteId)
       .where(sql`is_active = true`),
+    // Performance Optimization (R3)
+    quoteTenantStatusIdx: index('idx_quotes_tenant_status').on(table.tenantId, table.status),
+    quoteTenantCreatedIdx: index('idx_quotes_tenant_created').on(table.tenantId, table.createdAt),
   })
 );
 

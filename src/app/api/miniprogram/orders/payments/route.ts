@@ -1,31 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, paymentSchedules } from '@/shared/api/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { eq, and } from 'drizzle-orm';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../../auth-utils';
 
-// Helper: Get User Info
-async function getUser(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const token = authHeader.slice(7);
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        return await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, payload.userId as string),
-            columns: { id: true, role: true, tenantId: true },
-        });
-    } catch {
-        return null;
-    }
-}
+
 
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUser(request);
+        const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            return apiError('Unauthorized', 401);
         }
 
         const body = await request.json();
@@ -33,7 +19,7 @@ export async function POST(request: NextRequest) {
 
         // Validation
         if (!scheduleId || !actualAmount || !proofImg || !paymentMethod) {
-            return NextResponse.json({ success: false, error: 'Missing required payment info' }, { status: 400 });
+            return apiError('Missing required payment info', 400);
         }
 
         // 1. Get Schedule
@@ -42,11 +28,11 @@ export async function POST(request: NextRequest) {
         });
 
         if (!schedule) {
-            return NextResponse.json({ success: false, error: 'Schedule not found' }, { status: 404 });
+            return apiError('Schedule not found', 404);
         }
 
         if (schedule.status === 'PAID') {
-            return NextResponse.json({ success: false, error: 'Already paid' }, { status: 400 });
+            return apiError('Already paid', 400);
         }
 
         return await db.transaction(async (tx) => {
@@ -76,7 +62,6 @@ export async function POST(request: NextRequest) {
             const newPaid = (parseFloat(order.paidAmount as string) + parseFloat(actualAmount)).toFixed(2);
             const newBalance = (parseFloat(order.totalAmount as string) - parseFloat(newPaid)).toFixed(2);
 
-            const nextStatus = parseFloat(newBalance) <= 0.01 ? 'IN_PRODUCTION' : order.status; // Auto move to production if fully paid? Or keep PENDING_PAYMENT until first pay?
             // Simple logic: If it was PENDING_PAYMENT, and we paid something, maybe move to IN_PRODUCTION? 
             // Typically deposit moves to production.
             // Let's say if Deposit is paid, we can move to production. 
@@ -96,11 +81,11 @@ export async function POST(request: NextRequest) {
                 })
                 .where(eq(orders.id, schedule.orderId));
 
-            return NextResponse.json({ success: true });
+            return apiSuccess(null);
         });
 
     } catch (error) {
         console.error('Payment Entry Error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Error' }, { status: 500 });
+        return apiError('Internal Error', 500);
     }
 }

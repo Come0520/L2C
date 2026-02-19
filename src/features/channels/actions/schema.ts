@@ -5,9 +5,9 @@ const phoneRegex = /^1[3-9]\d{9}$/;
 
 // 阶梯费率结构
 const tieredRateSchema = z.object({
-    minAmount: z.number().min(0),
-    maxAmount: z.number().optional(),
-    rate: z.number().min(0).max(100),
+    minAmount: z.coerce.number().min(0),
+    maxAmount: z.coerce.number().optional(),
+    rate: z.coerce.number().min(0).max(100),
 });
 
 // 银行账户信息结构
@@ -26,7 +26,7 @@ export const channelSchema = z.object({
 
     // 基础信息
     name: z.string().min(1, '请输入渠道名称').max(100, '渠道名称不能超过100字'),
-    code: z.string().min(1, '请输入渠道编号').max(50, '渠道编号不能超过50字'),
+    channelNo: z.string().min(1, '请输入渠道编号').max(50, '渠道编号不能超过50字'),
     category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL']).default('OFFLINE'),
     channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY', 'DOUYIN', 'XIAOHONGSHU', 'STORE', 'OTHER']),
     customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
@@ -37,16 +37,58 @@ export const channelSchema = z.object({
     // 财务配置
     commissionRate: z.coerce.number().min(0, '返点比例不能小于0').max(100, '返点比例不能超过100'),
     commissionType: z.enum(['FIXED', 'TIERED']).optional(),
-    tieredRates: z.array(tieredRateSchema).optional(),  // 替换 z.any() 为具体类型
+    tieredRates: z.array(tieredRateSchema).optional().superRefine((rates, ctx) => {
+        if (!rates || rates.length === 0) return;
+
+        // Sort by minAmount to check for overlaps
+        const sortedRates = [...rates].sort((a, b) => a.minAmount - b.minAmount);
+
+        for (let i = 0; i < sortedRates.length; i++) {
+            const current = sortedRates[i];
+
+            // 1. Check min < max
+            if (current.maxAmount !== undefined && current.maxAmount !== null) {
+                if (current.minAmount >= current.maxAmount) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `区间无效: 最小值 ${current.minAmount} 必须小于最大值 ${current.maxAmount}`,
+                        path: [i, 'minAmount']
+                    });
+                }
+            }
+
+            // 2. Check overlap with next tier
+            if (i < sortedRates.length - 1) {
+                const next = sortedRates[i + 1];
+
+                // If current has no max (Infinity), it overlaps with anything that follows
+                if (current.maxAmount === undefined || current.maxAmount === null) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `无限大区间必须是最后一个`,
+                        path: [i, 'maxAmount']
+                    });
+                } else if (current.maxAmount > next.minAmount) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `区间重叠: [${current.minAmount}, ${current.maxAmount}) 与 [${next.minAmount}, ...)`,
+                        path: [i, 'maxAmount']
+                    });
+                }
+            }
+        }
+    }),  // 替换 z.any() 为具体类型
 
     cooperationMode: z.enum(['BASE_PRICE', 'COMMISSION']),
     priceDiscountRate: z.coerce.number().min(0, '折扣率不能小于0').max(2, '折扣率不能超过2').optional(),
 
     settlementType: z.enum(['PREPAY', 'MONTHLY']),
+    creditLimit: z.coerce.number().min(0).optional(),
+    commissionTriggerMode: z.enum(['ORDER_CREATED', 'ORDER_COMPLETED', 'PAYMENT_COMPLETED']).optional(),
     bankInfo: bankInfoSchema,  // 替换 z.any() 为具体类型
 
     assignedManagerId: z.string().uuid().optional(),
-    status: z.string().default('ACTIVE'),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).default('ACTIVE'),
 }).refine((data) => {
     if (data.channelType === 'OTHER' && !data.customChannelType) {
         return false;

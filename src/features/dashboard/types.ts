@@ -23,7 +23,11 @@ export type WidgetType =
     | 'cash-flow'          // 现金流
     | 'pending-approval'   // 待审批
     | 'sales-trend'        // 销售趋势
-    | 'channel-performance'; // 渠道业绩
+    | 'channel-performance' // 渠道业绩
+    | 'executive-summary'    // 总经理摘要
+    | 'cash-flow-forecast'   // 现金流预测
+    | 'ar-aging'             // 应收账龄
+    | 'enhanced-funnel';      // 增强型漏斗
 
 export interface WidgetConfig {
     id: string;

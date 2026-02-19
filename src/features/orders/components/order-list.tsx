@@ -10,7 +10,7 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 
 import { OrderTable } from './order-table';
 import { OrderAdvancedFilter, type OrderFilters } from './orders-advanced-filter';
-import { getOrders } from '../actions/orders';
+import { getOrders } from '../actions/queries';
 import { toast } from 'sonner';
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
@@ -53,23 +53,19 @@ export function OrderList() {
         queryKey: ['orders', page, pageSize, search, statusTab, filters],
         queryFn: async () => {
             // Pass filters to getOrders
-            const result = await getOrders(
+            const result = await getOrders({
                 page,
                 pageSize,
                 search,
-                statusTab, // Pass status
-                filters.salesId as string, // Cast if needed, or update advanced filter types
-                filters.channelId as string,
-                filters.dateRange
-            );
-            if (!result || !Array.isArray(result.data)) {
-                // Handle potential error format if action returns { success: false } but type hints dictate list
-                // The new action returns { data, total... } directly if successful, or throws?
-                // Wait, action updated to return object. If error, it might throw.
-                // Let's assume action returns data object.
-                if (!result.data) throw new Error('获取订单列表失败');
+                status: statusTab,
+                salesId: filters.salesId,
+                channelId: filters.channelId,
+                dateRange: filters.dateRange,
+            });
+            if (!result?.success || !result.data?.success) {
+                throw new Error(result?.error || '获取订单列表失败');
             }
-            return result;
+            return result.data;
         },
         placeholderData: keepPreviousData,
         staleTime: 30 * 1000,
@@ -98,7 +94,7 @@ export function OrderList() {
     }, []);
 
     return (
-        <div className="h-[calc(100vh-8rem)] [perspective:1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
+        <div className="h-[calc(100vh-8rem)] perspective-[1000px] relative flex flex-col w-full items-start justify-start p-6 space-y-4">
             {/* Top Section: Tabs */}
             <div className="flex w-full items-center justify-between">
                 <div className="flex-1">
@@ -145,7 +141,7 @@ export function OrderList() {
 
                 {isLoading ? (
                     <div className="h-[400px] flex items-center justify-center glass-empty-state rounded-lg border border-dashed">
-                        <div className="flex flex-col items-center gap-2">
+                        <div className="relative h-full w-full perspective-[1000px]">
                             <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
                             <p className="text-sm text-muted-foreground font-medium">加载中...</p>
                         </div>

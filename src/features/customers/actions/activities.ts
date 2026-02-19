@@ -1,10 +1,15 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { customerActivities, users } from '@/shared/api/schema';
+import { customerActivities, customers } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { activitySchema } from '../schemas';
+import { trimInput } from '@/shared/lib/utils';
+import { AuditService } from '@/shared/services/audit-service';
+import { z } from 'zod';
 
 export interface ActivityDTO {
     id: string;
@@ -16,7 +21,7 @@ export interface ActivityDTO {
         name: string;
         avatarUrl: string | null;
     };
-    location?: any;
+    location?: string | null;
     images?: string[];
 }
 
@@ -26,6 +31,9 @@ export async function getActivities(customerId: string): Promise<{ success: bool
         if (!session?.user?.id || !session?.user?.tenantId) {
             return { success: false, error: 'Unauthorized' };
         }
+
+        // 权限检查
+        await checkPermission(session, PERMISSIONS.CUSTOMER.VIEW);
 
         const list = await db.query.customerActivities.findMany({
             where: and(
@@ -40,8 +48,7 @@ export async function getActivities(customerId: string): Promise<{ success: bool
             }
         });
 
-        // Type checking/mapping if necessary, but drizzle returns inferred types close enough
-        return { success: true, data: list as any };
+        return { success: true, data: list as ActivityDTO[] };
 
     } catch (error) {
         console.error('getActivities error:', error);
@@ -49,17 +56,29 @@ export async function getActivities(customerId: string): Promise<{ success: bool
     }
 }
 
-export async function createActivity(data: {
-    customerId: string;
-    type: string;
-    description: string;
-    images?: string[];
-    location?: any;
-}): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function createActivity(
+    input: z.infer<typeof activitySchema>
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
     try {
         const session = await auth();
         if (!session?.user?.id || !session?.user?.tenantId) {
             return { success: false, error: 'Unauthorized' };
+        }
+
+        // [Fix 5.4] 使用 activitySchema 校验并清理输入
+        const data = trimInput(activitySchema.parse(input));
+
+        // 权限检查
+        await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+
+        // 验证客户是否存在且属于当前租户
+        const customer = await db.query.customers.findFirst({
+            where: and(eq(customers.id, data.customerId), eq(customers.tenantId, session.user.tenantId)),
+            columns: { id: true }
+        });
+
+        if (!customer) {
+            return { success: false, error: 'Customer not found or access denied' };
         }
 
         const [newActivity] = await db.insert(customerActivities).values({
@@ -71,6 +90,19 @@ export async function createActivity(data: {
             location: data.location || null,
             createdBy: session.user.id
         }).returning();
+
+        // 记录审计日志
+        if (newActivity) {
+            await AuditService.log(db, {
+                tableName: 'customer_activities',
+                recordId: newActivity['id'] || `${data.customerId}-${Date.now()}`,
+                action: 'CREATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: data,
+                details: { customerId: data.customerId, type: data.type },
+            });
+        }
 
         revalidatePath(`/customers/${data.customerId}`);
         return { success: true, data: newActivity };

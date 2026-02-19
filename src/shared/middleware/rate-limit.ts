@@ -9,7 +9,7 @@
  */
 
 import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { redis } from '@/shared/lib/redis';
 
 // ============================================================
 // 类型定义
@@ -83,25 +83,8 @@ export const RATE_LIMIT_PRESETS: Record<string, RateLimitConfig> = {
 // Redis 初始化
 // ============================================================
 
-const hasUpstashConfig = !!(
-    process.env.UPSTASH_REDIS_REST_URL &&
-    process.env.UPSTASH_REDIS_REST_TOKEN
-);
-
-let redis: Redis | null = null;
+// Redis 客户端已在 @/shared/lib/redis 中初始化
 const redisLimiters = new Map<string, Ratelimit>();
-
-if (hasUpstashConfig) {
-    try {
-        redis = new Redis({
-            url: process.env.UPSTASH_REDIS_REST_URL!,
-            token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-        });
-    } catch (error) {
-        console.error('[Rate Limit] Failed to initialize Redis client:', error);
-        redis = null;
-    }
-}
 
 /**
  * 获取或创建 Redis Limiter 实例

@@ -5,7 +5,9 @@
  * Body: { productId, width, height, foldRatio, installType }
  * 返回：{ quantity, unitPrice, subtotal, breakdown }
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../auth-utils';
 
 interface CalcRequest {
     productId: string;
@@ -49,17 +51,29 @@ function calculateLinearQuantity(params: CalcRequest): number {
     return Math.round((width + 0.2) * 100) / 100;
 }
 
+
+
+/**
+ * 报价计算 API
+ * POST /api/miniprogram/calculate
+ */
 export async function POST(request: NextRequest) {
     try {
+        // 1. 认证检查（防止未授权滥用计算资源）
+        const user = await getMiniprogramUser(request);
+        if (!user || !user.tenantId) {
+            return apiError('未授权', 401);
+        }
+
         const body: CalcRequest = await request.json();
         const { productId, width, height, foldRatio = 2.0, calcType = 'CURTAIN', unitPrice = 0 } = body;
 
         // 参数验证
         if (!width || width <= 0) {
-            return NextResponse.json({ success: false, error: '请输入有效的宽度' }, { status: 400 });
+            return apiError('请输入有效的宽度', 400);
         }
         if (calcType === 'CURTAIN' && (!height || height <= 0)) {
-            return NextResponse.json({ success: false, error: '请输入有效的高度' }, { status: 400 });
+            return apiError('请输入有效的高度', 400);
         }
 
         let quantity = 0;
@@ -93,19 +107,16 @@ export async function POST(request: NextRequest) {
 
         const subtotal = Math.round(quantity * unitPrice * 100) / 100;
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                productId,
-                quantity,
-                unitPrice,
-                subtotal,
-                breakdown
-            }
+        return apiSuccess({
+            productId,
+            quantity,
+            unitPrice,
+            subtotal,
+            breakdown
         });
 
     } catch (error) {
         console.error('Calculate Error:', error);
-        return NextResponse.json({ success: false, error: '计算失败' }, { status: 500 });
+        return apiError('计算失败', 500);
     }
 }

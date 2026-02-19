@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { PackageOpen } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -31,8 +32,16 @@ import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Eye from 'lucide-react/dist/esm/icons/eye';
+import { z } from 'zod';
+import { followUpTypeEnum } from '../schemas';
+import { AssignLeadDialog } from './dialogs/assign-lead-dialog';
+import { FollowUpDialog } from './dialogs/followup-dialog';
+import { VoidLeadDialog } from './void-lead-dialog';
+import { claimFromPool } from '../actions/mutations';
+import { restoreLeadAction } from '../actions/restore';
+import { useTransition, useState, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
-import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 
 // 从查询推断类型
 type LeadData = Awaited<ReturnType<typeof getLeads>>['data'][number];
@@ -43,7 +52,8 @@ interface LeadTableProps {
     pageSize: number;
     total: number;
     userRole?: string;
-    onPageChange?: (page: number) => void;
+    userId: string;
+    onReload?: () => void;
 }
 
 // 状态映射
@@ -52,7 +62,6 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
     'PENDING_FOLLOWUP': { label: '待跟进', variant: 'default' },
     'FOLLOWING_UP': { label: '跟进中', variant: 'default' },
     'WON': { label: '已成交', variant: 'outline' },
-    'VOID': { label: '已作废', variant: 'destructive' },
     'INVALID': { label: '无效', variant: 'destructive' },
 };
 
@@ -96,7 +105,6 @@ function getActionsForStatus(status: string, isManager: boolean) {
         case 'WON':
             actions.push({ key: 'view', label: '查看', icon: <Eye className="mr-2 h-4 w-4" /> });
             break;
-        case 'VOID':
         case 'INVALID':
             if (isManager) {
                 actions.push({ key: 'restore', label: '恢复', icon: <RotateCcw className="mr-2 h-4 w-4" /> });
@@ -114,16 +122,19 @@ interface LeadTableRowProps {
     lead: LeadData;
     isManager: boolean;
     handleAction: (action: string, leadId: string) => void;
+    style?: React.CSSProperties;
+    className?: string;
 }
 
-const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleAction }: LeadTableRowProps) {
+const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) {
+    const { lead, isManager, handleAction, style, className } = props;
     const statusConfig = STATUS_MAP[lead.status || ''] || { label: lead.status || '未知', variant: 'secondary' as const };
     const intentionConfig = lead.intentionLevel ? INTENTION_MAP[lead.intentionLevel] : null;
     const actions = getActionsForStatus(lead.status || '', isManager);
     const tags = lead.tags || [];
 
     return (
-        <TableRow>
+        <TableRow style={style} className={className}>
             {/* 线索编号 */}
             <TableCell className="font-medium">
                 <Link href={`/leads/${lead.id}`} className="hover:underline text-primary">
@@ -245,13 +256,28 @@ export const LeadTable = React.memo(function LeadTable({
     page,
     pageSize,
     total,
-    userRole = 'SALES'
+    userRole = 'SALES',
+    userId,
+    onReload
 }: LeadTableProps) {
     const router = useRouter();
     const isManager = ['ADMIN', 'MANAGER', 'BOSS'].includes(userRole);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [followupDialogOpen, setFollowupDialogOpen] = useState(false);
+    const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+    const [followupType, setFollowupType] = useState<z.infer<typeof followUpTypeEnum> | undefined>(undefined);
+    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+    const [currentAssignedId, setCurrentAssignedId] = useState<string | null>(null);
+    const [, startTransition] = useTransition();
 
     // 处理操作点击
+    // 处理操作点击
     const handleAction = useCallback((action: string, leadId: string) => {
+        const lead = data.find(l => l.id === leadId);
+        if (!lead) return;
+
+        setSelectedLeadId(leadId);
+
         switch (action) {
             case 'view':
                 router.push(`/leads/${leadId}`);
@@ -260,61 +286,140 @@ export const LeadTable = React.memo(function LeadTable({
                 router.push(`/quotes/new?leadId=${leadId}`);
                 break;
             case 'followup':
-                // TODO: 打开跟进弹窗
-                toast.info('跟进功能开发中');
+                setFollowupType(undefined);
+                setFollowupDialogOpen(true);
                 break;
             case 'invite':
-                // TODO: 打开邀约弹窗
-                toast.info('邀约功能开发中');
+                setFollowupType('STORE_VISIT');
+                setFollowupDialogOpen(true);
                 break;
             case 'claim':
-                // TODO: 认领线索
-                toast.info('认领功能开发中');
+                if (confirm('确定要认领该线索吗？')) {
+                    startTransition(async () => {
+                        try {
+                            const res = await claimFromPool(leadId);
+                            if (res.success) {
+                                toast.success('认领成功');
+                                onReload?.();
+                            } else {
+                                toast.error(res.error || '认领失败');
+                            }
+                        } catch (error) {
+                            console.error('Claim error:', error);
+                            toast.error('认领失败');
+                        }
+                    });
+                }
                 break;
             case 'assign':
-                // TODO: 分配线索
-                toast.info('分配功能开发中');
+                setCurrentAssignedId(lead.assignedSales?.id || null);
+                setAssignDialogOpen(true);
                 break;
             case 'void':
-                // TODO: 作废线索
-                toast.info('作废功能开发中');
+                setVoidDialogOpen(true);
                 break;
             case 'restore':
-                // TODO: 恢复线索
-                toast.info('恢复功能开发中');
+                if (confirm('确定要恢复该线索吗？')) {
+                    startTransition(async () => {
+                        try {
+                            const res = await restoreLeadAction({ id: leadId, reason: 'Manual restore' });
+                            if (res.success) {
+                                toast.success('已恢复');
+                                onReload?.();
+                            } else {
+                                toast.error(res.error || '恢复失败');
+                            }
+                        } catch (error) {
+                            console.error('Restore error:', error);
+                            toast.error('恢复失败');
+                        }
+                    });
+                }
                 break;
         }
-    }, [router]);
+    }, [router, data, onReload]);
+
+    const parentRef = useRef<HTMLDivElement>(null);
+
+    const rowVirtualizer = useVirtualizer({
+        count: data.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 64, // 估算每行高度
+        overscan: 5,
+    });
 
     return (
         <div className="space-y-4">
-            <div className="rounded-md border overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead style={{ width: 130 }}>线索编号</TableHead>
-                            <TableHead style={{ width: 150 }}>客户信息</TableHead>
-                            <TableHead style={{ width: 60 }}>意向</TableHead>
-                            <TableHead style={{ width: 80 }}>状态</TableHead>
-                            <TableHead style={{ width: 160 }}>标签</TableHead>
-                            <TableHead style={{ width: 100 }}>来源</TableHead>
-                            <TableHead style={{ width: 80 }}>跟进销售</TableHead>
-                            <TableHead style={{ width: 100 }}>最后活动</TableHead>
-                            <TableHead style={{ width: 150 }} className="text-right">操作</TableHead>
+            <div
+                ref={parentRef}
+                className="rounded-md border overflow-auto"
+                style={{ height: '600px', position: 'relative' }}
+            >
+                <Table style={{ display: 'grid' }}>
+                    <TableHeader className="sticky top-0 bg-background z-10 shadow-sm" style={{ display: 'grid' }}>
+                        <TableRow style={{ display: 'grid', gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr' }}>
+                            <TableHead>线索编号</TableHead>
+                            <TableHead>客户信息</TableHead>
+                            <TableHead>意向</TableHead>
+                            <TableHead>状态</TableHead>
+                            <TableHead>标签</TableHead>
+                            <TableHead>来源</TableHead>
+                            <TableHead>跟进销售</TableHead>
+                            <TableHead>最后活动</TableHead>
+                            <TableHead className="text-right">操作</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody
+                        style={{
+                            height: `${rowVirtualizer.getTotalSize()}px`,
+                            position: 'relative',
+                            display: 'grid'
+                        }}
+                    >
                         {data.length === 0 ? (
-                            <EmptyTableRow colSpan={9} message="暂无数据" />
+                            <TableRow>
+                                <TableCell colSpan={9} className="h-[400px] text-center">
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <div className="bg-muted/30 p-6 rounded-full mb-4">
+                                            <PackageOpen className="w-12 h-12 text-muted-foreground opacity-20" />
+                                        </div>
+                                        <h3 className="text-xl font-bold tracking-tight">未找到线索</h3>
+                                        <p className="text-muted-foreground mt-2 mb-6 max-w-sm mx-auto">
+                                            当前的筛选列表中没有数据。这可能是因为尚未录入线索，或者当前的搜索/筛选条件过于严格。
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => router.push('/leads')}
+                                            >
+                                                重置筛选条件
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                         ) : (
-                            data.map((lead) => (
-                                <LeadTableRow
-                                    key={lead.id}
-                                    lead={lead}
-                                    isManager={isManager}
-                                    handleAction={handleAction}
-                                />
-                            ))
+                            rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                const lead = data[virtualRow.index];
+                                return (
+                                    <LeadTableRow
+                                        key={virtualRow.key}
+                                        lead={lead}
+                                        isManager={isManager}
+                                        handleAction={handleAction}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: `${virtualRow.size}px`,
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                            display: 'grid',
+                                            gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr'
+                                        }}
+                                    />
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -344,6 +449,31 @@ export const LeadTable = React.memo(function LeadTable({
                     </Button>
                 </div>
             </div>
+            {selectedLeadId && (
+                <>
+                    <AssignLeadDialog
+                        leadId={selectedLeadId}
+                        currentAssignedId={currentAssignedId}
+                        open={assignDialogOpen}
+                        onOpenChange={setAssignDialogOpen}
+                        onSuccess={onReload}
+                    />
+                    <FollowUpDialog
+                        leadId={selectedLeadId}
+                        open={followupDialogOpen}
+                        onOpenChange={setFollowupDialogOpen}
+                        onSuccess={onReload}
+                        initialType={followupType}
+                    />
+                    <VoidLeadDialog
+                        leadId={selectedLeadId}
+                        userId={userId}
+                        open={voidDialogOpen}
+                        onOpenChange={setVoidDialogOpen}
+                        onSuccess={onReload}
+                    />
+                </>
+            )}
         </div>
     );
 });

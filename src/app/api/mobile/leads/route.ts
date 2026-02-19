@@ -6,15 +6,17 @@
  */
 
 import { NextRequest } from 'next/server';
-import { db } from '@/shared/api/db';
-import { leads } from '@/shared/api/schema';
-import { eq, and, isNull, desc, or, ilike, count } from 'drizzle-orm';
 import { apiError, apiPaginated, apiSuccess } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
 import { LeadService } from '@/services/lead.service';
 import { createLeadSchema } from '@/features/leads/schemas';
+import { AuditService } from '@/shared/services/audit-service';
+import { db } from '@/shared/api/db';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/leads');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -32,61 +34,25 @@ export async function GET(request: NextRequest) {
     // 3. 解析查询参数
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'mine';  // mine | pool
+    if (type !== 'mine' && type !== 'pool') {
+        return apiError('无效的查询类型', 400);
+    }
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const keyword = searchParams.get('keyword');
 
     try {
-        // 4. 构建查询条件
-        const baseConditions = [eq(leads.tenantId, session.tenantId)];
+        // 4. 调用 Service 查询
+        const { items: leadList, total } = await LeadService.getMobileLeads(
+            session.tenantId,
+            session.userId,
+            type as 'mine' | 'pool',
+            page,
+            pageSize,
+            keyword
+        );
 
-        if (type === 'mine') {
-            // 我的客户：已分配给当前销售
-            baseConditions.push(eq(leads.assignedSalesId, session.userId));
-        } else if (type === 'pool') {
-            // 公海客户：未分配
-            baseConditions.push(isNull(leads.assignedSalesId));
-        }
-
-        // 关键词搜索
-        if (keyword) {
-            baseConditions.push(
-                or(
-                    ilike(leads.customerName, `%${keyword}%`),
-                    ilike(leads.customerPhone, `%${keyword}%`)
-                )!
-            );
-        }
-
-        // 5. 查询数据
-        const leadList = await db.query.leads.findMany({
-            where: and(...baseConditions),
-            orderBy: [desc(leads.updatedAt)],
-            limit: pageSize,
-            offset: (page - 1) * pageSize,
-            columns: {
-                id: true,
-                leadNo: true,
-                customerName: true,
-                customerPhone: true,
-                address: true,
-                status: true,
-                intentionLevel: true,
-                lastActivityAt: true,
-                nextFollowupAt: true,
-                decorationProgress: true,
-                createdAt: true,
-            }
-        });
-
-        // 6. 统计总数（使用 count() 优化性能）
-        const [totalResult] = await db
-            .select({ total: count() })
-            .from(leads)
-            .where(and(...baseConditions));
-        const total = totalResult?.total || 0;
-
-        // 7. 格式化响应
+        // 5. 格式化响应
         const items = leadList.map(lead => ({
             id: lead.id,
             leadNo: lead.leadNo,
@@ -105,11 +71,22 @@ export async function GET(request: NextRequest) {
         return apiPaginated(items, page, pageSize, total);
 
     } catch (error) {
-        console.error('客户列表查询错误:', error);
+        log.error('客户列表查询错误', {}, error);
         return apiError('查询客户列表失败', 500);
     }
 }
 
+
+
+/**
+ * 创建线索接口
+ * 
+ * @description 移动端创建新线索。集成 AuditService 业务审计。
+ * 必须具有 SALES 权限。
+ * 
+ * @param {NextRequest} request - JSON body 包含线索详细信息
+ * @returns {Promise<NextResponse>} 返回新创建的线索 ID
+ */
 export async function POST(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -125,12 +102,12 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const json = await request.json();
+        const json = await request.json() as Record<string, unknown>;
 
         // 3. 验证数据
         const parseResult = createLeadSchema.safeParse(json);
         if (!parseResult.success) {
-            console.error('[API] Validation failed:', JSON.stringify(parseResult.error, null, 2));
+            log.error('[API] Validation failed', { detail: JSON.stringify(parseResult.error, null, 2) });
             return apiError(parseResult.error.issues[0].message, 400);
         }
         const data = parseResult.data;
@@ -148,10 +125,20 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        // 5. 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'leads',
+            recordId: result.lead.id,
+            action: 'CREATE_MOBILE',
+            userId: session.userId,
+            tenantId: session.tenantId,
+            newValues: result.lead,
+        });
+
         return apiSuccess(result.lead);
 
     } catch (error) {
-        console.error('创建线索错误:', error);
+        log.error('创建线索错误', {}, error);
         return apiError('创建线索失败', 500);
     }
 }

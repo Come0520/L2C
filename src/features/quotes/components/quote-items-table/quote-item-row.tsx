@@ -41,6 +41,7 @@ interface QuoteItemRowProps extends ColumnVisibility {
   handleAdvancedEdit: (item: QuoteItem) => void;
   onToggleExpand: () => void;
   renderChildren: (nodes: QuoteItem[], level: number) => React.ReactNode;
+  onRowClick?: (item: QuoteItem) => void;
 }
 
 export const QuoteItemRow = memo(function QuoteItemRow({
@@ -67,6 +68,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
   handleAdvancedEdit,
   onToggleExpand,
   renderChildren,
+  onRowClick,
 }: QuoteItemRowProps) {
   const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
   const isAccessory = item.category === 'CURTAIN_ACCESSORY';
@@ -79,9 +81,19 @@ export const QuoteItemRow = memo(function QuoteItemRow({
       <TableRow
         key={item.id}
         className={cn(
-          'glass-row-hover transition-all duration-200',
+          'glass-row-hover transition-all duration-200 cursor-pointer',
           level > 0 ? 'bg-white/5 hover:bg-white/10' : 'hover:bg-white/5'
         )}
+        onClick={(e) => {
+          // Prevent triggering when clicking on interactive elements
+          if (
+            e.target instanceof HTMLElement &&
+            (e.target.closest('button') || e.target.closest('input'))
+          ) {
+            return;
+          }
+          onRowClick?.(item);
+        }}
       >
         <ProductNameCell
           item={item}
@@ -156,17 +168,17 @@ export const QuoteItemRow = memo(function QuoteItemRow({
       {level === 0 && isExpanded && (
         <QuoteItemExpandRow
           itemId={item.id}
-          productName={item.productName}
+          productName={item.productName || ''}
           category={item.category}
-          attributes={item.attributes as Record<string, unknown>}
+          attributes={item.attributes || {}}
           foldRatio={Number(item.foldRatio) || 2}
           processFee={Number(item.processFee) || 0}
-          remark={item.remark}
+          remark={item.remark || undefined}
           attachments={[]}
           readOnly={readOnly}
           isExpanded={isExpanded}
           onToggle={onToggleExpand}
-          onSave={() => {}}
+          onSave={() => { }}
           colSpan={colSpan}
         />
       )}

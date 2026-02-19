@@ -127,19 +127,24 @@ const styles = StyleSheet.create({
     },
 });
 
+import { QuotePdfData } from '../types';
+import { QuoteItem } from '@/shared/api/schema/quotes';
+
+// ... (retain imports)
+
 interface QuotePdfProps {
-    quote: any;
+    quote: QuotePdfData;
     mode: 'customer' | 'internal'; // Customer: No Cost/Margin; Internal: With Cost/Margin
 }
 
 export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
     // Group items by room
-    const itemsByRoom: Record<string, any[]> = {};
-    const unassignedItems: any[] = [];
+    const itemsByRoom: Record<string, QuoteItem[]> = {};
+    const unassignedItems: QuoteItem[] = [];
 
     // Helper to build tree if needed, but for PDF we might just flatten or group simply
     // Let's assume passed items are flat but have roomId
-    (quote.items || []).forEach((item: any) => {
+    (quote.items || []).forEach((item) => {
         if (item.roomId) {
             if (!itemsByRoom[item.roomId]) itemsByRoom[item.roomId] = [];
             itemsByRoom[item.roomId].push(item);
@@ -198,7 +203,7 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
                     </View>
 
                     {/* Room Groups */}
-                    {roomList.map((room: any) => {
+                    {roomList.map((room: QuotePdfData['rooms'][0]) => {
                         const items = itemsByRoom[room.id] || [];
                         if (items.length === 0) return null;
 
@@ -207,14 +212,14 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
                                 <View style={styles.roomHeader}>
                                     <Text>{room.name}</Text>
                                 </View>
-                                {items.map((item: any) => (
+                                {items.map((item: QuoteItem) => (
                                     <View style={styles.tableRow} key={item.id}>
                                         <View style={[styles.tableCol, { width: '30%' }]}>
                                             <Text>{item.productName}</Text>
                                             {item.category === 'ACCESSORY' && <Text style={{ fontSize: 8, color: '#666' }}>(附件)</Text>}
                                         </View>
                                         <View style={[styles.tableCol, { width: '15%' }]}>
-                                            <Text>{item.width > 0 ? `${item.width}x${item.height}` : '-'}</Text>
+                                            <Text>{(item.width && Number(item.width) > 0) ? `${item.width}x${item.height}` : '-'}</Text>
                                         </View>
                                         <View style={[styles.tableCol, { width: '10%' }]}>
                                             <Text>{item.quantity}</Text>
@@ -247,12 +252,12 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
                             <View style={styles.roomHeader}>
                                 <Text>未分配</Text>
                             </View>
-                            {unassignedItems.map((item: any) => (
+                            {unassignedItems.map((item: QuoteItem) => (
                                 <View style={styles.tableRow} key={item.id}>
                                     <View style={[styles.tableCol, { width: '30%' }]}><Text>{item.productName}</Text></View>
                                     {/* ... simplified cols ... */}
                                     {/* Keeping structure same for simplicity */}
-                                    <View style={[styles.tableCol, { width: '15%' }]}><Text>{item.width > 0 ? `${item.width}x${item.height}` : '-'}</Text></View>
+                                    <View style={[styles.tableCol, { width: '15%' }]}><Text>{(item.width && Number(item.width) > 0) ? `${item.width}x${item.height}` : '-'}</Text></View>
                                     <View style={[styles.tableCol, { width: '10%' }]}><Text>{item.quantity}</Text></View>
                                     <View style={[styles.tableCol, { width: '10%' }]}><Text>{item.unitPrice}</Text></View>
                                     <View style={[styles.tableCol, { width: '15%' }]}><Text>{item.subtotal}</Text></View>
@@ -276,7 +281,7 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
                     </View>
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>折扣:</Text>
-                        <Text style={styles.totalValue}>{quote.discountAmount > 0 ? `-${quote.discountAmount}` : '-'}</Text>
+                        <Text style={styles.totalValue}>{Number(quote.discountAmount) > 0 ? `-${quote.discountAmount}` : '-'}</Text>
                     </View>
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>最终金额:</Text>

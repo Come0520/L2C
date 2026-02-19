@@ -7,6 +7,16 @@ import { eq, and, desc, between, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { customAlphabet } from 'nanoid';
+import { Decimal } from 'decimal.js';
+import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
+
+// P2 Fix: Fix lint error (unused import is now used, check if we need to remove or keep)
+// AuditService IS used in the added chunks. 
+
+
+const generateRandomSuffix = customAlphabet('0123456789', 6);
 
 // ==================== 结算单 Actions ====================
 
@@ -17,10 +27,9 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 function generateSettlementNo(): string {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-    return `STL${year}${month}${day}${random}`;
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `STL${year}${month}${day}${generateRandomSuffix()}`;
 }
 
 /**
@@ -43,63 +52,104 @@ export async function createSettlement(params: {
     const tenantId = session.user.tenantId;
     const { channelId, periodStart, periodEnd, adjustmentAmount = 0 } = params;
 
+    // P2 Fix: UUID Validation
+    if (channelId) z.string().uuid().parse(channelId);
+
     // 验证渠道属于当前租户
     const channel = await db.query.channels.findFirst({
         where: and(eq(channels.id, channelId), eq(channels.tenantId, tenantId))
     });
     if (!channel) throw new Error('渠道不存在或无权操作');
 
-    return await db.transaction(async (tx) => {
-        // 获取该周期内待结算的佣金记录
-        const pendingCommissions = await tx.query.channelCommissions.findMany({
-            where: and(
-                eq(channelCommissions.tenantId, tenantId),
-                eq(channelCommissions.channelId, channelId),
-                eq(channelCommissions.status, 'PENDING'),
-                between(channelCommissions.createdAt, periodStart, periodEnd)
-            ),
-        });
+    // P2 Fix: Retry mechanism for unique constraint violation (Settlement No Collision)
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
 
-        if (pendingCommissions.length === 0) {
-            throw new Error('该周期内没有待结算的佣金记录');
+    while (true) {
+        try {
+            return await db.transaction(async (tx) => {
+                // 获取该周期内待结算的佣金记录
+                const pendingCommissions = await tx.query.channelCommissions.findMany({
+                    where: and(
+                        eq(channelCommissions.tenantId, tenantId),
+                        eq(channelCommissions.channelId, channelId),
+                        eq(channelCommissions.status, 'PENDING'),
+                        between(channelCommissions.createdAt, periodStart, periodEnd)
+                    ),
+                });
+
+                if (pendingCommissions.length === 0) {
+                    throw new Error('该周期内没有待结算的佣金记录');
+                }
+
+                // P0 Fix: Calculate total commission using Decimal.js
+                const totalCommission = pendingCommissions.reduce(
+                    (sum, c) => sum.plus(new Decimal(c.amount || '0')),
+                    new Decimal(0)
+                );
+
+                const adjustmentDecimal = new Decimal(adjustmentAmount);
+                const finalAmount = totalCommission.plus(adjustmentDecimal);
+
+                // 创建结算单
+                const [settlement] = await tx.insert(channelSettlements).values({
+                    tenantId,
+                    settlementNo: generateSettlementNo(),
+                    channelId,
+                    periodStart,
+                    periodEnd,
+                    totalCommission: totalCommission.toFixed(2),
+                    adjustmentAmount: adjustmentDecimal.toFixed(2),
+                    finalAmount: finalAmount.toFixed(2),
+                    status: 'DRAFT',
+                    createdBy: session.user.id,
+                }).returning();
+
+                // 更新佣金记录状态为已结算
+                const commissionIds = pendingCommissions.map(c => c.id);
+                const updatedCommissions = await tx.update(channelCommissions)
+                    .set({
+                        status: 'SETTLED',
+                        settlementId: settlement.id,
+                        settledAt: new Date(),
+                        updatedAt: new Date(),
+                    })
+                    .where(and(
+                        inArray(channelCommissions.id, commissionIds),
+                        eq(channelCommissions.status, 'PENDING') // Critical: Ensure they are still pending
+                    ))
+                    .returning();
+
+                if (updatedCommissions.length !== commissionIds.length) {
+                    throw new Error('部分佣金记录已被处理，请刷新后重试');
+                }
+
+                // P1 Fix: Audit Log
+                await AuditService.log(tx, {
+                    tableName: 'channel_settlements',
+                    recordId: settlement.id,
+                    action: 'CREATE',
+                    userId: session.user.id,
+                    tenantId,
+                    newValues: settlement,
+                    details: { reason: 'Settlement creation', commissionCount: commissionIds.length }
+                });
+
+                revalidatePath('/channels');
+                revalidatePath('/finance/settlements');
+                return settlement;
+            });
+        } catch (error: unknown) {
+            // Check for unique constraint violation code (Postgres: 23505)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if ((error as any)?.code === '23505' && retryCount < MAX_RETRIES) {
+                console.warn(`Settlement No collision detected, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+                retryCount++;
+                continue;
+            }
+            throw error;
         }
-
-        // 计算佣金总额
-        const totalCommission = pendingCommissions.reduce(
-            (sum, c) => sum + parseFloat(c.amount || '0'),
-            0
-        );
-        const finalAmount = totalCommission + adjustmentAmount;
-
-        // 创建结算单
-        const [settlement] = await tx.insert(channelSettlements).values({
-            tenantId,
-            settlementNo: generateSettlementNo(),
-            channelId,
-            periodStart,
-            periodEnd,
-            totalCommission: totalCommission.toFixed(2),
-            adjustmentAmount: adjustmentAmount.toFixed(2),
-            finalAmount: finalAmount.toFixed(2),
-            status: 'DRAFT',
-            createdBy: session.user.id,
-        }).returning();
-
-        // 更新佣金记录状态为已结算
-        const commissionIds = pendingCommissions.map(c => c.id);
-        await tx.update(channelCommissions)
-            .set({
-                status: 'SETTLED',
-                settlementId: settlement.id,
-                settledAt: new Date(),
-                updatedAt: new Date(),
-            })
-            .where(inArray(channelCommissions.id, commissionIds));
-
-        revalidatePath('/channels');
-        revalidatePath('/finance/settlements');
-        return settlement;
-    });
+    }
 }
 
 /**
@@ -122,6 +172,8 @@ export async function getSettlements(params: {
     let whereClause = eq(channelSettlements.tenantId, tenantId);
 
     if (channelId) {
+        // P2 Fix: UUID Validation
+        z.string().uuid().parse(channelId);
         whereClause = and(whereClause, eq(channelSettlements.channelId, channelId)) as typeof whereClause;
     }
 
@@ -141,15 +193,13 @@ export async function getSettlements(params: {
         }
     });
 
-    const countResult = await db.query.channelSettlements.findMany({
-        where: whereClause,
-        columns: { id: true },
-    });
+    // Get count
+    const totalItems = await db.$count(channelSettlements, whereClause);
 
     return {
         data,
-        totalItems: countResult.length,
-        totalPages: Math.ceil(countResult.length / pageSize),
+        totalItems: totalItems,
+        totalPages: Math.ceil(totalItems / pageSize),
         currentPage: page,
     };
 }
@@ -163,6 +213,9 @@ export async function getSettlementById(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: UUID Validation
+    z.string().uuid().parse(id);
+
     const tenantId = session.user.tenantId;
 
     const settlement = await db.query.channelSettlements.findFirst({
@@ -172,6 +225,7 @@ export async function getSettlementById(id: string) {
         ),
         with: {
             channel: true,
+            createdBy: true, // P1 Fix: need to know who created it
         }
     });
 
@@ -179,7 +233,10 @@ export async function getSettlementById(id: string) {
 
     // 获取关联的佣金记录
     const commissions = await db.query.channelCommissions.findMany({
-        where: eq(channelCommissions.settlementId, id),
+        where: and(
+            eq(channelCommissions.settlementId, id),
+            eq(channelCommissions.tenantId, tenantId)
+        ),
         orderBy: [desc(channelCommissions.createdAt)],
     });
 
@@ -197,6 +254,9 @@ export async function getSettlementById(id: string) {
 export async function submitSettlementForApproval(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // P2 Fix: UUID Validation
+    z.string().uuid().parse(id);
 
     await checkPermission(session, PERMISSIONS.CHANNEL.MANAGE_SETTLEMENT);
 
@@ -228,6 +288,9 @@ export async function approveSettlement(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    // P2 Fix: UUID Validation
+    z.string().uuid().parse(id);
+
     // 审批需要财务审批权限
     await checkPermission(session, PERMISSIONS.FINANCE.APPROVE);
 
@@ -247,6 +310,11 @@ export async function approveSettlement(id: string) {
         throw new Error('结算单不存在或状态不正确');
     }
 
+    // P1 Fix: Prevent Self-Approval (Segregation of Duties)
+    if (settlement.createdBy === session.user.id) {
+        throw new Error('违反职责分离原则：禁止审批自己创建的结算单');
+    }
+
     return await db.transaction(async (tx) => {
         // 更新结算单状态为已审批
         const [updated] = await tx.update(channelSettlements)
@@ -255,11 +323,14 @@ export async function approveSettlement(id: string) {
                 approvedBy: session.user.id,
                 approvedAt: new Date(),
             })
-            .where(eq(channelSettlements.id, id))
+            .where(and(
+                eq(channelSettlements.id, id),
+                eq(channelSettlements.tenantId, tenantId)
+            ))
             .returning();
 
         // 自动创建付款单
-        const paymentNo = `BILL-CH-${Date.now()}`;
+        const paymentNo = `BILL-${generateSettlementNo().replace('STL', '')}`;
 
         const [paymentBill] = await tx.insert(paymentBills).values({
             tenantId,
@@ -272,14 +343,28 @@ export async function approveSettlement(id: string) {
             status: 'PENDING',
             paymentMethod: 'BANK', // 默认银行转账
             proofUrl: '', // 待付款后补充
-            recordedBy: session.user.id!,
+            recordedBy: session.user.id,
             remark: `渠道结算付款 - ${settlement.settlementNo}`,
         }).returning();
 
         // 更新结算单关联付款单
         await tx.update(channelSettlements)
             .set({ paymentBillId: paymentBill.id })
-            .where(eq(channelSettlements.id, id));
+            .where(and(
+                eq(channelSettlements.id, id),
+                eq(channelSettlements.tenantId, tenantId)
+            ));
+
+        // P1 Fix: Audit Log
+        await AuditService.log(tx, {
+            tableName: 'channel_settlements',
+            recordId: id,
+            action: 'APPROVE',
+            userId: session.user.id,
+            tenantId,
+            newValues: { status: 'APPROVED', paymentBillId: paymentBill.id },
+            details: { reason: 'Settlement approval', paymentBillNo: paymentNo }
+        });
 
         revalidatePath('/channels');
         revalidatePath('/finance/settlements');
@@ -297,6 +382,10 @@ export async function approveSettlement(id: string) {
 export async function markSettlementPaid(id: string, paymentBillId?: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    // P2 Fix: UUID Validation
+    z.string().uuid().parse(id);
+    if (paymentBillId) z.string().uuid().parse(paymentBillId);
 
     await checkPermission(session, PERMISSIONS.FINANCE.APPROVE);
 
@@ -323,7 +412,21 @@ export async function markSettlementPaid(id: string, paymentBillId?: string) {
                 status: 'PAID',
                 updatedAt: new Date(),
             })
-            .where(eq(channelCommissions.settlementId, id));
+            .where(and(
+                eq(channelCommissions.settlementId, id),
+                eq(channelCommissions.tenantId, tenantId)
+            ));
+
+        // P1 Fix: Audit Log
+        await AuditService.log(tx, {
+            tableName: 'channel_settlements',
+            recordId: settlement.id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: { status: 'PAID', paymentBillId },
+            details: { reason: 'Settlement paid' }
+        });
 
         revalidatePath('/channels');
         revalidatePath('/finance/settlements');

@@ -1,28 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../../auth-utils';
 
-/**
- * Helper: Parse User from Token
- */
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-    };
-  } catch {
-    return null;
-  }
-}
+
 
 /**
  * POST /api/miniprogram/tasks/[id]/check-in
@@ -30,9 +13,9 @@ async function getUser(request: NextRequest) {
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { id } = await params;
@@ -40,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { latitude, longitude, accuracy } = body;
 
     if (!latitude || !longitude) {
-      return NextResponse.json({ success: false, error: '缺少位置信息' }, { status: 400 });
+      return apiError('缺少位置信息', 400);
     }
 
     // 查询任务
@@ -51,22 +34,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .limit(1);
 
     if (!task.length) {
-      return NextResponse.json({ success: false, error: '任务不存在' }, { status: 404 });
+      return apiError('任务不存在', 404);
     }
 
     const t = task[0];
 
     // 权限校验：只有被指派的工人可以签到
     if (t.assignedWorkerId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: '只有被指派的工人可以签到' },
-        { status: 403 }
-      );
+      return apiError('只有被指派的工人可以签到', 403);
     }
 
     // 状态校验：必须是待上门状态
     if (t.status !== 'PENDING_VISIT') {
-      return NextResponse.json({ success: false, error: '当前状态不允许签到' }, { status: 400 });
+      return apiError('当前状态不允许签到', 400);
     }
 
     // 更新签到信息
@@ -77,17 +57,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         checkInLocation: { latitude, longitude, accuracy },
         updatedAt: new Date(),
       })
-      .where(eq(measureTasks.id, id));
+      .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, user.tenantId)));
 
-    return NextResponse.json({
-      success: true,
-      message: '签到成功',
-    });
-  } catch (error: any) {
+    return apiSuccess({ message: '签到成功' });
+  } catch (error) {
     console.error('[POST /api/miniprogram/tasks/[id]/check-in] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || '服务器错误' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : '服务器错误';
+    return apiError(message, 500);
   }
 }

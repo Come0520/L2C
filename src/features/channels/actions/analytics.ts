@@ -2,8 +2,9 @@
 
 import { db } from '@/shared/api/db';
 import { channels, channelCommissions } from '@/shared/api/schema';
-import { eq, sql, desc, and } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { eq, sql, desc, and, inArray } from 'drizzle-orm';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // 类型定义（导出供组件使用）
 export interface ChannelAnalyticsData {
@@ -23,11 +24,7 @@ export interface ChannelAnalyticsData {
  * 
  * 安全检查：自动从 session 获取 tenantId
  */
-/**
- * 获取渠道分析数据
- * 
- * 安全检查：自动从 session 获取 tenantId
- */
+
 export async function getChannelAnalytics(params?: {
     startDate?: Date;
     endDate?: Date;
@@ -36,8 +33,14 @@ export async function getChannelAnalytics(params?: {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
 
+    // P1 Fix: Add permission check
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
     const tenantId = session.user.tenantId;
-    const { startDate, endDate, limit = 50 } = params || {};
+    const { startDate, endDate, limit: rawLimit = 50 } = params || {};
+
+    // P3 Fix: 限制最大查询数量
+    const limit = Math.min(Math.max(rawLimit, 1), 100);
 
     // 1. Fetch Basic Channel Stats (Top N by Deal Amount to reduce set size)
     // 注意：totalLeads 和 totalDealAmount 是累积值，不支持时间范围过滤（除非有历史快照表）
@@ -64,7 +67,7 @@ export async function getChannelAnalytics(params?: {
     // 2. Calculate Commissions per Channel (Cost) - Filtered by Channel IDs and Date
     let commissionWhere = and(
         eq(channelCommissions.tenantId, tenantId),
-        sql`${channelCommissions.channelId} IN ${channelIds}`
+        inArray(channelCommissions.channelId, channelIds)
     );
 
     if (startDate && endDate) {

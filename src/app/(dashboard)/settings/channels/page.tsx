@@ -1,7 +1,7 @@
 
 import { Suspense } from 'react';
-import { getChannels, getChannelCategories } from '@/features/settings/actions';
-import { getChannelCategories as getChannelCategoryTypes } from '@/features/channels/actions/categories';
+import { getChannels } from '@/features/channels/actions/queries';
+import { getChannelCategories } from '@/features/channels/actions/categories';
 import { auth } from '@/shared/lib/auth';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { ChannelListWrapper } from './channel-list-wrapper';
@@ -25,15 +25,16 @@ export default async function ChannelsPage() {
     const session = await auth();
     const tenantId = session?.user?.tenantId || '';
 
-    const [channelsRes, categoriesRes, categoryTypesRes, gradeDiscounts] = await Promise.all([
-        getChannels(),
-        getChannelCategories(),
-        tenantId ? getChannelCategoryTypes() : Promise.resolve([]),
+    // Fetch channels (page 1, large size to show list)
+    // In a real scenario, ChannelList should support server-side pagination or we fetch a reasonable amount.
+    // For config page, maybe we want all? getChannels supports pagination.
+    const [channelsRes, categoryTypesRes, gradeDiscounts] = await Promise.all([
+        getChannels({ page: 1, pageSize: 100 }), // Fetch list of actual channels
+        tenantId ? getChannelCategories() : Promise.resolve([]),
         getChannelGradeDiscounts(),
     ]);
 
-    const channels = channelsRes.success ? (channelsRes.data || []) : [];
-    const categories = categoriesRes.success ? (categoriesRes.data || []) : [];
+    const channels = channelsRes.data || [];
     const categoryTypes = categoryTypesRes || [];
 
     return (
@@ -53,12 +54,12 @@ export default async function ChannelsPage() {
 
                 <TabsContent value="list" className="space-y-4">
                     <div className="flex justify-end">
-                        <ChannelFormWrapper categories={categories} />
+                        <ChannelFormWrapper categories={categoryTypes} tenantId={tenantId} />
                     </div>
                     <Suspense fallback={<ListSkeleton />}>
                         <ChannelListWrapper
                             initialData={channels}
-                            categories={categories}
+                            categories={categoryTypes}
                         />
                     </Suspense>
                 </TabsContent>

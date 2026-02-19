@@ -5,35 +5,35 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { orders, installTasks, customers } from '@/shared/api/schema';
+import { installTasks, orders, customers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
-interface ProgressParams {
+const log = createLogger('mobile/orders/[id]/install-progress');
+
+interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-export async function GET(request: NextRequest, { params }: ProgressParams) {
-    // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
-    }
-    const { session } = authResult;
-
-    // 2. 权限检查
-    const roleCheck = requireCustomer(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
-    }
-
+export async function GET(
+    request: NextRequest,
+    { params }: RouteParams
+) {
     const { id: orderId } = await params;
+    const auth = await authenticateMobile(request);
+    if (!auth.success) return auth.response;
+
+
+    const session = auth.session;
+    const isCustomer = requireCustomer(session);
+    if (!isCustomer.allowed) return isCustomer.response;
 
     try {
         // 3. 验证订单归属
         const customer = await db.query.customers.findFirst({
-            where: eq(customers.phone, session.phone),
+            where: and(eq(customers.phone, session.phone), eq(customers.tenantId, session.tenantId)),
             columns: { id: true }
         });
 
@@ -59,7 +59,10 @@ export async function GET(request: NextRequest, { params }: ProgressParams) {
 
         // 4. 查询安装任务
         const tasks = await db.query.installTasks.findMany({
-            where: eq(installTasks.orderId, orderId),
+            where: and(
+                eq(installTasks.orderId, orderId),
+                eq(installTasks.tenantId, session.tenantId)
+            ),
             columns: {
                 id: true,
                 taskNo: true,
@@ -100,7 +103,7 @@ export async function GET(request: NextRequest, { params }: ProgressParams) {
         });
 
     } catch (error) {
-        console.error('安装进度查询错误:', error);
+        log.error('安装进度查询错误', {}, error);
         return apiError('查询安装进度失败', 500);
     }
 }

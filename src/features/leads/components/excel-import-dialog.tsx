@@ -18,8 +18,6 @@ import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
 interface ExcelImportDialogProps {
-    userId: string;
-    tenantId: string;
     onSuccess?: () => void;
 }
 
@@ -34,13 +32,58 @@ const FIELD_MAPPING: Record<string, string> = {
     '备注': 'remark'
 };
 
-export function ExcelImportDialog({ userId: _userId, tenantId: _tenantId, onSuccess }: ExcelImportDialogProps) {
+interface ImportedLead {
+    customerName: string;
+    customerPhone: string;
+    customerWechat?: string;
+    community?: string;
+    address?: string;
+    estimatedAmount?: number;
+    remark?: string;
+}
+
+/** 排除掉非字符串类型的字段 */
+type StringFieldKey = Exclude<keyof ImportedLead, 'estimatedAmount'>;
+
+/** 
+ * 将 Excel 的一行原始数据映射为线索对象
+ * 消除 any 赋值，确保类型安全
+ */
+function mapExcelRowToLead(row: Record<string, unknown>): ImportedLead {
+    const newRow: Partial<ImportedLead> = {};
+    Object.keys(row).forEach(key => {
+        const fieldName = FIELD_MAPPING[key] as keyof ImportedLead | undefined;
+        if (fieldName) {
+            const rawValue = row[key];
+            if (fieldName === 'estimatedAmount') {
+                newRow[fieldName] = rawValue ? Number(rawValue) : undefined;
+            } else {
+                // 类型安全赋值：fieldName 已确定不是 estimatedAmount，故必为 StringFieldKey
+                const stringKey = fieldName as StringFieldKey;
+                newRow[stringKey] = String(rawValue || '').trim();
+            }
+        }
+    });
+    return newRow as ImportedLead;
+}
+
+interface ImportError {
+    row: number;
+    error: string;
+}
+
+interface ImportResult {
+    successCount: number;
+    errors: ImportError[];
+}
+
+export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
     const [open, setOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
-    const [previewData, setPreviewData] = useState<any[]>([]);
+    const [previewData, setPreviewData] = useState<ImportedLead[]>([]);
     const [stats, setStats] = useState<{ total: number; valid: number } | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [importResult, setImportResult] = useState<{ successCount: number; errors: any[] } | null>(null);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
     const downloadTemplate = async () => {
         const XLSX = await import('xlsx');
@@ -64,20 +107,12 @@ export function ExcelImportDialog({ userId: _userId, tenantId: _tenantId, onSucc
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+            const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
-            // Map keys
-            const mappedData = jsonData.map(row => {
-                const newRow: any = {};
-                Object.keys(row).forEach(key => {
-                    if (FIELD_MAPPING[key]) {
-                        newRow[FIELD_MAPPING[key]] = row[key];
-                    }
-                });
-                return newRow;
-            });
+            // 映射字段（统一使用工具函数）
+            const mappedData = jsonData.map(mapExcelRowToLead);
 
-            setPreviewData(mappedData.slice(0, 5)); // Preview first 5
+            setPreviewData(mappedData.slice(0, 5)); // 预览前 5 条
             setStats({ total: mappedData.length, valid: mappedData.length }); // Simple stat
         };
         reader.readAsArrayBuffer(selectedFile);
@@ -95,39 +130,32 @@ export function ExcelImportDialog({ userId: _userId, tenantId: _tenantId, onSucc
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+                const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
-                // Map keys
-                const mappedData = jsonData.map(row => {
-                    const newRow: any = {};
-                    Object.keys(row).forEach(key => {
-                        if (FIELD_MAPPING[key]) {
-                            const fieldName = FIELD_MAPPING[key];
-                            const rawValue = row[key];
-                            if (fieldName === 'estimatedAmount') {
-                                newRow[fieldName] = rawValue ? Number(rawValue) : undefined;
-                            } else {
-                                newRow[fieldName] = String(rawValue || '').trim();
-                            }
-                        }
-                    });
-                    return newRow;
-                });
+                // 映射字段（统一使用工具函数）
+                const mappedData = jsonData.map(mapExcelRowToLead);
 
-                const result = await importLeads(mappedData);
-                setImportResult(result);
+                const res = await importLeads(mappedData);
 
-                if (result.successCount > 0) {
-                    toast.success(`成功导入 ${result.successCount} 条线索`);
-                    onSuccess?.();
+                if (res.success && res.data) {
+                    const result = res.data;
+                    setImportResult(result);
+
+                    if (result.successCount > 0) {
+                        toast.success(`成功导入 ${result.successCount} 条线索`);
+                        onSuccess?.();
+                    }
+
+                    if (result.errors.length > 0) {
+                        toast.warning(`${result.errors.length} 条数据导入失败，请查看详情`);
+                    }
+                } else {
+                    toast.error(res.error || '导入失败');
                 }
 
-                if (result.errors.length > 0) {
-                    toast.warning(`${result.errors.length} 条数据导入失败，请查看详情`);
-                }
-
-            } catch (err: any) {
-                toast.error('导入失败: ' + err.message);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : '未知错误';
+                toast.error('导入失败: ' + message);
             } finally {
                 setIsUploading(false);
             }

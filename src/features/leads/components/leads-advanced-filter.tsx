@@ -10,10 +10,10 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
-import { addDays, format } from 'date-fns';
+import { format } from 'date-fns';
 
 interface LeadsAdvancedFilterProps {
     tenantId: string;
@@ -72,7 +72,7 @@ export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedF
         updateUrl({ [key]: value });
     };
 
-    const handleDateRangeChange = (range: any) => {
+    const handleDateRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
         const from = range?.from ? format(range.from, 'yyyy-MM-dd') : '';
         const to = range?.to ? format(range.to, 'yyyy-MM-dd') : '';
         setFilters(prev => ({ ...prev, dateFrom: from, dateTo: to }));

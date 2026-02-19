@@ -16,6 +16,8 @@ import { eq, and, inArray, type InferSelectModel } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { getFinanceConfigCached } from "@/features/finance/services/finance-config-service";
 import { isWithinAllowedDifference } from "@/features/finance/services/finance-config-utils";
+import { generateBusinessNo } from "@/shared/lib/generate-no";
+import { AuditService } from "@/shared/services/audit-service";
 
 export interface CreatePaymentOrderData {
     customerId?: string;
@@ -91,7 +93,7 @@ export class FinanceService {
      */
     static async createPaymentOrder(data: CreatePaymentOrderData, tenantId: string, userId: string) {
         return await db.transaction(async (tx) => {
-            const paymentNo = `PAY-${Date.now()}`;
+            const paymentNo = generateBusinessNo('PAY');
 
             const [paymentOrderResult] = await tx.insert(paymentOrders).values({
                 tenantId,
@@ -115,7 +117,10 @@ export class FinanceService {
             if (data.items && data.items.length > 0) {
                 for (const item of data.items) {
                     const orderRecord = await tx.query.orders.findFirst({
-                        where: eq(orders.id, item.orderId),
+                        where: and(
+                            eq(orders.id, item.orderId),
+                            eq(orders.tenantId, tenantId)
+                        ),
                     });
 
                     await tx.insert(paymentOrderItems).values({
@@ -127,6 +132,16 @@ export class FinanceService {
                     });
                 }
             }
+            // F-18: Audit Log
+            await AuditService.log(tx, {
+                tenantId,
+                userId,
+                tableName: 'payment_orders',
+                recordId: paymentOrderResult.id,
+                action: 'CREATE',
+                newValues: { ...data, paymentNo }
+            });
+
             return paymentOrderResult;
         });
     }
@@ -156,7 +171,10 @@ export class FinanceService {
             if (status === 'REJECTED') {
                 await tx.update(paymentOrders)
                     .set({ status: 'REJECTED', remark: remark || order.remark })
-                    .where(eq(paymentOrders.id, id));
+                    .where(and(
+                        eq(paymentOrders.id, id),
+                        eq(paymentOrders.tenantId, tenantId)
+                    ));
                 return { success: true };
             }
 
@@ -167,12 +185,18 @@ export class FinanceService {
                     verifiedBy: userId,
                     verifiedAt: new Date(),
                 })
-                .where(eq(paymentOrders.id, id));
+                .where(and(
+                    eq(paymentOrders.id, id),
+                    eq(paymentOrders.tenantId, tenantId)
+                ));
 
             // Update Finance Account
             if (order.accountId) {
                 const account = await tx.query.financeAccounts.findFirst({
-                    where: eq(financeAccounts.id, order.accountId),
+                    where: and(
+                        eq(financeAccounts.id, order.accountId),
+                        eq(financeAccounts.tenantId, tenantId)
+                    )
                 });
 
                 if (account) {
@@ -182,11 +206,14 @@ export class FinanceService {
 
                     await tx.update(financeAccounts)
                         .set({ balance: balanceAfter.toString() })
-                        .where(eq(financeAccounts.id, account.id));
+                        .where(and(
+                            eq(financeAccounts.id, account.id),
+                            eq(financeAccounts.tenantId, tenantId)
+                        ));
 
                     await tx.insert(accountTransactions).values({
                         tenantId,
-                        transactionNo: `TX-${Date.now()}`,
+                        transactionNo: generateBusinessNo('TX'),
                         accountId: account.id,
                         transactionType: 'INCOME',
                         amount: order.totalAmount,
@@ -245,7 +272,10 @@ export class FinanceService {
                                 status: newStatus,
                                 completedAt: (pending.lte(0) || allowDifference) ? new Date() : null,
                             })
-                            .where(eq(arStatements.id, statement.id));
+                            .where(and(
+                                eq(arStatements.id, statement.id),
+                                eq(arStatements.tenantId, tenantId)
+                            ));
 
                         // Calculate Commission if newly PAID
                         if (newStatus === 'PAID' && statement.channelId) {
@@ -254,6 +284,18 @@ export class FinanceService {
                     }
                 }
             }
+            // F-18: Audit Log
+            await AuditService.log(tx, {
+                tenantId,
+                userId,
+                tableName: 'payment_orders',
+                recordId: id,
+                action: 'UPDATE',
+                changedFields: { status: 'VERIFIED', balance: 'UPDATED' },
+                oldValues: { status: order.status },
+                newValues: { status: 'VERIFIED' }
+            });
+
             return { success: true };
         });
     }
@@ -271,7 +313,10 @@ export class FinanceService {
         } else if (mode === 'BASE_PRICE') {
             // Fetch order items to calculate base cost
             const items = await tx.query.orderItems.findMany({
-                where: eq(orderItems.orderId, statement.orderId),
+                where: and(
+                    eq(orderItems.orderId, statement.orderId),
+                    eq(orderItems.tenantId, tenantId)
+                ),
             });
 
             if (items.length > 0) {
@@ -310,7 +355,7 @@ export class FinanceService {
         if (commissionAmount.gt(0)) {
             await tx.insert(commissionRecords).values({
                 tenantId,
-                commissionNo: `COMM-${Date.now()}`,
+                commissionNo: generateBusinessNo('COMM'),
                 arStatementId: statement.id,
                 orderId: statement.orderId,
                 channelId: statement.channelId,
@@ -329,7 +374,10 @@ export class FinanceService {
                     commissionAmount: commissionAmount.toString(),
                     commissionStatus: 'CALCULATED',
                 })
-                .where(eq(arStatements.id, statement.id));
+                .where(and(
+                    eq(arStatements.id, statement.id),
+                    eq(arStatements.tenantId, tenantId)
+                ));
         }
     }
 }

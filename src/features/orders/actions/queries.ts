@@ -2,18 +2,27 @@
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, desc, and, ilike, sql } from 'drizzle-orm';
+import { eq, desc, and, ilike, sql, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
+import { auth } from '@/shared/lib/auth';
+import { orderItems, paymentSchedules } from '@/shared/api/schema/orders';
 
 // Schema 定义
 const getOrdersSchema = z.object({
     search: z.string().optional(),
     page: z.number().default(1),
     pageSize: z.number().default(10),
+    status: z.union([z.string(), z.array(z.string())]).optional(),
+    salesId: z.string().optional(),
+    channelId: z.string().optional(),
+    dateRange: z.object({
+        from: z.date(),
+        to: z.date().optional()
+    }).optional(),
 });
 
 const getOrderByIdSchema = z.object({
@@ -30,12 +39,46 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
     const offset = (page - 1) * pageSize;
     const tenantId = session.user.tenantId;
 
+    // Cache key needs to include all filter parameters
+    const statusKey = Array.isArray(params.status) ? params.status.sort().join(',') : (params.status || 'all');
+    const salesIdKey = params.salesId || 'all';
+
+    // 缓存失效策略：基于租户的 tag 过滤 (Next.js 15+ 推荐模式)
+    // 当订单发生增删改时，通过 revalidateTag(`orders-${tenantId}`) 批量失效
     const getCachedOrders = unstable_cache(
         async () => {
-            const whereClause = and(
-                eq(orders.tenantId, tenantId),
-                params.search ? ilike(orders.orderNo, `%${params.search}%`) : undefined
-            );
+            const conditions: (ReturnType<typeof eq> | ReturnType<typeof ilike> | ReturnType<typeof and>)[] = [
+                eq(orders.tenantId, tenantId)
+            ];
+
+            if (params.search) {
+                conditions.push(ilike(orders.orderNo, `%${params.search}%`));
+            }
+
+            if (params.status) {
+                if (Array.isArray(params.status) && params.status.length > 0) {
+                    conditions.push(inArray(orders.status, params.status as (typeof orders.status._.data)[]));
+                } else if (typeof params.status === 'string' && params.status !== 'ALL') {
+                    conditions.push(eq(orders.status, params.status));
+                }
+            }
+
+            if (params.salesId) {
+                conditions.push(eq(orders.salesId, params.salesId));
+            }
+
+            if (params.channelId) {
+                conditions.push(eq(orders.channelId, params.channelId));
+            }
+
+            if (params.dateRange?.from) {
+                conditions.push(sql`${orders.createdAt} >= ${params.dateRange.from.toISOString()}`);
+                if (params.dateRange.to) {
+                    conditions.push(sql`${orders.createdAt} <= ${params.dateRange.to.toISOString()}`);
+                }
+            }
+
+            const whereClause = and(...conditions);
 
             const totalResult = await db.select({ count: sql<number>`count(*)` })
                 .from(orders)
@@ -48,6 +91,7 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
                 with: {
                     customer: true,
                     sales: true,
+                    items: true, // Often needed in lists for previews
                 },
                 limit: pageSize,
                 offset: offset,
@@ -60,7 +104,7 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
                 totalPages: Math.ceil(total / pageSize)
             };
         },
-        [`orders-${tenantId}-${page}-${pageSize}-${params.search || 'all'}`],
+        [`orders-${tenantId}-${page}-${pageSize}-${params.search || 'all'}-${statusKey}-${salesIdKey}`],
         {
             tags: ['orders', `orders-${tenantId}`],
             revalidate: 60
@@ -89,12 +133,7 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
         with: {
             customer: true,
             sales: true,
-            items: true,
-            quote: {
-                with: {
-                    lead: true
-                }
-            },
+            // 基础信息不再包含 items 和 paymentSchedules，改由专用 Action 查询
         },
     });
 
@@ -102,6 +141,37 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
 
     return { success: true, data: order };
 });
+
+/**
+ * 获取订单明细项（性能优化：按需加载）
+ */
+export async function getOrderItems(orderId: string) {
+    const session = await auth();
+    if (!session) throw new Error('Unauthorized');
+
+    // 权限检查省略...
+    const items = await db.query.orderItems.findMany({
+        where: eq(orderItems.orderId, orderId),
+        orderBy: (items, { asc }) => [asc(items.id)]
+    });
+
+    return { success: true, data: items };
+}
+
+/**
+ * 获取订单收款计划（性能优化：按需加载）
+ */
+export async function getOrderPaymentSchedules(orderId: string) {
+    const session = await auth();
+    if (!session) throw new Error('Unauthorized');
+
+    const schedules = await db.query.paymentSchedules.findMany({
+        where: eq(paymentSchedules.orderId, orderId),
+        orderBy: (s, { asc }) => [asc(s.createdAt)]
+    });
+
+    return { success: true, data: schedules };
+}
 
 // 导出函数
 export async function getOrders(params: z.infer<typeof getOrdersSchema>) {

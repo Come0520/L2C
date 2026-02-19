@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/api/db';
-import { sql } from 'drizzle-orm';
+import { sql, and, eq } from 'drizzle-orm';
+import { users } from '@/shared/api/schema';
 import {
     handleWebhookRequest,
     WebhookLeadPayload,
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
         // 注意：PostgreSQL JSONB 查询语法
         const matchedTenant = await db.query.tenants.findFirst({
             where: sql`settings->>'webhookAccessToken' = ${accessToken}`,
-            columns: { id: true }
+            columns: { id: true, settings: true }
         });
 
         if (!matchedTenant) {
@@ -80,8 +81,34 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. 处理 Webhook 请求
-        // 使用系统用户ID作为创建者 (可配置为租户的默认用户)
-        const systemUserId = 'system'; // TODO: 从租户配置获取默认用户ID
+        // 逻辑：优先尝试从 Tenant Settings 获取默认用户 ID，否则降级为查询该租户第一个 ADMIN 用户
+        // settings 结构假设: { "webhookUserId": "uuid" }
+        const tenantSettings = matchedTenant.settings as Record<string, unknown> || {};
+        let systemUserId = typeof tenantSettings.webhookUserId === 'string' ? tenantSettings.webhookUserId : undefined;
+
+        if (!systemUserId) {
+            const adminUser = await db.query.users.findFirst({
+                where: and(
+                    eq(users.tenantId, matchedTenantId),
+                    sql`roles @> '["ADMIN"]'` // 查找包含 ADMIN 角色的用户
+                ),
+                columns: { id: true },
+                orderBy: sql`created_at ASC`
+            });
+            systemUserId = adminUser?.id;
+        }
+
+        if (!systemUserId) {
+            console.error(`[Webhook] No system user found for tenant ${matchedTenantId}`);
+            // Revert to 'system' just to not fail, or fail? Requirement says "若无，则需...显式指定".
+            // Let's use 'system' as ultimate fallback but log error, or fail.
+            // Given requirements urgency, if no admin found, maybe critical.
+            // But let's fallback to 'system' string to prevent total breakage if legacy.
+            return NextResponse.json(
+                { code: 500, message: 'Configuration Error: No admin user found for tenant. Configure webhookUserId in tenant settings.' },
+                { status: 500 }
+            );
+        }
 
         const result: WebhookResponse = await handleWebhookRequest(
             payload,

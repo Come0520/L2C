@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum, channelStatusEnum, commissionTriggerModeEnum } from './enums';
 
@@ -17,6 +17,8 @@ export const channelCategories = pgTable('channel_categories', {
 }, (table) => ({
     categoryTenantIdx: index('idx_channel_categories_tenant').on(table.tenantId),
     categoryCodeIdx: index('idx_channel_categories_code').on(table.tenantId, table.code),
+    uniqueCode: uniqueIndex('uq_channel_categories_code').on(table.tenantId, table.code),
+    uniqueName: uniqueIndex('uq_channel_categories_name').on(table.tenantId, table.name),
 }));
 
 export const channels = pgTable('channels', {
@@ -33,7 +35,7 @@ export const channels = pgTable('channels', {
     channelType: channelTypeEnum('channel_type').notNull(),
     customChannelType: varchar('custom_channel_type', { length: 50 }), // 自定义渠道类型名称 (当 channelType=OTHER 时使用)
     name: varchar('name', { length: 100 }).notNull(),
-    code: varchar('code', { length: 50 }).notNull(), // Unique per tenant potentially, but keeping global unique for simplicity or enforce logic app side? req says "QD2026xxxx".
+    channelNo: varchar('channel_no', { length: 50 }).notNull(), // Unique per tenant potentially, but keeping global unique for simplicity or enforce logic app side? req says "QD2026xxxx".
     level: channelLevelEnum('level').notNull().default('C'),
 
     // Primary Contact (Redundant but for quick access as per req)
@@ -41,7 +43,7 @@ export const channels = pgTable('channels', {
     phone: varchar('phone', { length: 20 }).notNull(),
 
     // Financial Config
-    commissionRate: decimal('commission_rate', { precision: 5, scale: 2 }).notNull(), // e.g. 10.00 for 10%
+    commissionRate: decimal('commission_rate', { precision: 5, scale: 2 }).notNull(), // e.g. 10.00 for 10% (Stored as percentage value, not fraction)
     commissionType: commissionTypeEnum('commission_type'), // FIXED / TIERED
     tieredRates: jsonb('tiered_rates'), // [{"min": 0, "rate": 10}, ...]
 
@@ -69,9 +71,12 @@ export const channels = pgTable('channels', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
 }, (table) => ({
     channelTenantIdx: index('idx_channels_tenant').on(table.tenantId),
-    channelCodeIdx: index('idx_channels_code').on(table.code),
+    channelCodeIdx: index('idx_channels_code').on(table.channelNo),
     channelPhoneIdx: index('idx_channels_phone').on(table.phone),
     channelParentIdx: index('idx_channels_parent').on(table.parentId),  // 层级查询优化
+    // 业务唯一性约束
+    uniqueCode: uniqueIndex('idx_channels_code_unique').on(table.tenantId, table.channelNo),
+    uniqueName: uniqueIndex('idx_channels_name_unique').on(table.tenantId, table.name),
 }));
 
 export const channelContacts = pgTable('channel_contacts', {
@@ -128,6 +133,8 @@ export const channelCommissions = pgTable('channel_commissions', {
     commissionChannelIdx: index('idx_commissions_channel').on(table.channelId),
     commissionStatusIdx: index('idx_commissions_status').on(table.status),
     commissionOrderIdx: index('idx_commissions_order').on(table.orderId),
+    // Composite index for common query pattern
+    idx_commissions_list: index('idx_commissions_list').on(table.tenantId, table.channelId, table.status),
 }));
 
 // 渠道结算单表 (Channel Settlements)

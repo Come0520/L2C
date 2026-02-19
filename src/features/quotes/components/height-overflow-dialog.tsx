@@ -12,7 +12,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { AlertTriangle, Check } from 'lucide-react';
-import type { AlternativeSolution } from '../logic/calculator';
+import type { AlternativeSolution } from '../calc-strategies/types';
 
 /**
  * 超高方案对比弹窗 Props

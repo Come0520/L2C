@@ -54,17 +54,23 @@ export const measureTasks = pgTable(
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     checkInAt: timestamp('check_in_at', { withTimezone: true }),
     checkInLocation: jsonb('check_in_location'),
+    isLate: boolean('is_late').default(false),
+    lateMinutes: integer('late_minutes').default(0), // Added RC-06
     type: measureTypeEnum('type').default('BLIND'),
 
     assignedWorkerId: uuid('assigned_worker_id').references(() => users.id),
 
     versionDisplay: varchar('version_display', { length: 20 }),
-    parentId: uuid('parent_id').references((): AnyPgColumn => measureTasks.id), // 版本自引用
+    // Variant 字段用于方案分支 (A/B/C)
+    variant: varchar('variant', { length: 50 }), // Added RC-06
+    parentId: uuid('parent_id').references((): AnyPgColumn => measureTasks.id),
 
     round: integer('round').default(1).notNull(),
     remark: text('remark'),
     rejectCount: integer('reject_count').default(0).notNull(),
     rejectReason: text('reject_reason'),
+    rejectHistory: jsonb('reject_history'), // Added RC-06
+    cancelReason: text('cancel_reason'),
 
     // 工费字段 (Labor Fee)
     laborFee: decimal('labor_fee', { precision: 12, scale: 2 }),
@@ -87,6 +93,8 @@ export const measureTasks = pgTable(
     measureTenantIdx: index('idx_measure_tasks_tenant').on(table.tenantId),
     measureLeadIdx: index('idx_measure_tasks_lead').on(table.leadId),
     measureStatusIdx: index('idx_measure_tasks_status').on(table.status),
+    measureWorkerIdx: index('idx_measure_tasks_worker').on(table.assignedWorkerId), // DB-01
+    measureCustomerIdx: index('idx_measure_tasks_customer').on(table.customerId), // DB-03
   })
 );
 
@@ -110,7 +118,9 @@ export const measureSheets = pgTable('measure_sheets', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .$onUpdateFn(() => new Date()),
-});
+}, (table) => ({
+  measureSheetTenantTaskIdx: index('idx_measure_sheets_tenant_task').on(table.tenantId, table.taskId), // DB-02
+}));
 
 export const measureItems = pgTable(
   'measure_items',
@@ -195,6 +205,7 @@ export const installTasks = pgTable(
 
     laborFee: decimal('labor_fee', { precision: 12, scale: 2 }),
     actualLaborFee: decimal('actual_labor_fee', { precision: 12, scale: 2 }),
+    feeCheckStatus: feeCheckStatusEnum('fee_check_status').default('NONE'),
     adjustmentReason: text('adjustment_reason'),
     feeBreakdown: jsonb('fee_breakdown'),
 
@@ -225,6 +236,9 @@ export const installTasks = pgTable(
     installStatusIdx: index('idx_install_status').on(table.status),
     installInstallerIdx: index('idx_install_installer').on(table.installerId),
     installScheduledDateIdx: index('idx_install_scheduled_date').on(table.scheduledDate),
+    installCustomerIdx: index('idx_install_customer').on(table.customerId),
+    installTenantStatusIdx: index('idx_install_tenant_status').on(table.tenantId, table.status),
+    installTenantScheduledIdx: index('idx_install_tenant_scheduled').on(table.tenantId, table.scheduledDate),
   })
 );
 
@@ -299,5 +313,6 @@ export const measureTaskSplits = pgTable(
   (table) => ({
     splitTenantIdx: index('idx_measure_task_splits_tenant').on(table.tenantId),
     splitOriginalTaskIdx: index('idx_measure_task_splits_original').on(table.originalTaskId),
+    splitNewTaskIdx: index('idx_measure_task_splits_new').on(table.newTaskId),
   })
 );

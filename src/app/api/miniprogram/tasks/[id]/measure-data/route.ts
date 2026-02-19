@@ -1,29 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../../auth-utils';
 import { z } from 'zod';
 
-/**
- * Helper: Parse User from Token
- */
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-    };
-  } catch {
-    return null;
-  }
-}
+
 
 // 数据验证 Schema
 const measureDataSchema = z.object({
@@ -53,9 +36,9 @@ const measureDataSchema = z.object({
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { id } = await params;
@@ -64,10 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 数据验证
     const validationResult = measureDataSchema.safeParse(body);
     if (!validationResult.success) {
-      return NextResponse.json(
-        { success: false, error: '数据格式错误', details: validationResult.error.issues },
-        { status: 400 }
-      );
+      return apiError('数据格式错误', 400);
     }
 
     const data = validationResult.data;
@@ -80,17 +60,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .limit(1);
 
     if (!task.length) {
-      return NextResponse.json({ success: false, error: '任务不存在' }, { status: 404 });
+      return apiError('任务不存在', 404);
     }
 
     const t = task[0];
 
     // 权限校验：只有被指派的工人可以提交
     if (t.assignedWorkerId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: '只有被指派的工人可以提交测量数据' },
-        { status: 403 }
-      );
+      return apiError('只有被指派的工人可以提交测量数据', 403);
     }
 
     // 在事务中创建测量单和明细
@@ -104,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           round: data.round,
           variant: data.variant,
           sitePhotos: data.sitePhotos || [],
-          status: 'CONFIRMED', // 提交即为确认（师傅端逻辑）
+          status: 'DRAFT', // 改为 DRAFT，进入审核流
         })
         .returning();
 
@@ -136,21 +113,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           status: 'PENDING_CONFIRM',
           updatedAt: new Date(),
         })
-        .where(eq(measureTasks.id, id));
+        .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, user.tenantId)));
 
       return sheet;
     });
 
-    return NextResponse.json({
-      success: true,
-      message: '提交成功',
-      data: { sheetId: result.id },
-    });
-  } catch (error: any) {
+    return apiSuccess({ sheetId: result.id });
+  } catch (error: unknown) {
     console.error('[POST /api/miniprogram/tasks/[id]/measure-data] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || '服务器错误' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : '服务器错误';
+    return apiError(message, 500);
   }
 }

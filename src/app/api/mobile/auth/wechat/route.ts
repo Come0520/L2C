@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { env } from '@/shared/config/env';
 import { generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
+import { createLogger } from '@/shared/lib/logger';
 
 /**
  * 微信登录请求体
@@ -34,6 +35,8 @@ interface WxSessionResponse {
     errmsg?: string;
 }
 
+
+const log = createLogger('mobile/auth/wechat');
 export async function POST(request: NextRequest) {
     // 1. 解析请求体
     let body: WechatLoginBody;
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
         const wxData: WxSessionResponse = await wxResponse.json();
 
         if (wxData.errcode) {
-            console.error('微信登录失败:', wxData);
+            log.error('微信登录失败', {}, wxData);
             return apiError(`微信登录失败: ${wxData.errmsg}`, 400);
         }
 
@@ -106,8 +109,9 @@ export async function POST(request: NextRequest) {
         if (!customer) {
             return apiSuccess({
                 needBinding: true,
-                openid,
-                unionid,
+                // P4.1: 脱敏处理 OpenID，不直接返回完整敏感信息
+                openid: openid.substring(0, 4) + '****' + openid.substring(openid.length - 4),
+                unionid: unionid ? unionid.substring(0, 4) + '****' + unionid.substring(unionid.length - 4) : undefined,
             }, '请绑定手机号完成注册');
         }
 
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
             'CUSTOMER'
         );
 
-        console.log(`[微信登录] 客户 ${customer.name} 登录成功`);
+        log.info(`微信登录: 客户 ${customer.name} 登录成功`);
 
         return apiSuccess({
             needBinding: false,
@@ -141,7 +145,7 @@ export async function POST(request: NextRequest) {
         }, '登录成功');
 
     } catch (error) {
-        console.error('微信登录错误:', error);
+        log.error('微信登录错误', {}, error);
         return apiError('微信登录失败', 500);
     }
 }

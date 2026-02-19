@@ -146,8 +146,8 @@ const navLinks = [
  * @returns 是否有权限访问该模块
  */
 function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
-  // ADMIN 和平台管理员拥有所有权限
-  if (roles.includes('ADMIN')) return true;
+  // ADMIN / TENANT_ADMIN 拥有全部模块访问权限
+  if (roles.includes('ADMIN') || roles.includes('TENANT_ADMIN')) return true;
 
   // 从 ROLES 配置中检查用户的任一角色是否拥有该模块的某个权限
   for (const roleCode of roles) {

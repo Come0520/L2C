@@ -8,7 +8,7 @@ import { PaymentEntryDialog } from './payment-entry-dialog';
 import Link from 'next/link';
 import { ChevronLeft, Printer, ShoppingBag } from 'lucide-react';
 
-interface OrderItem {
+export interface OrderItem {
   id: string;
   roomName?: string;
   productName?: string;
@@ -17,7 +17,7 @@ interface OrderItem {
   quantity?: number | string;
 }
 
-interface PaymentScheduleItem {
+export interface PaymentScheduleItem {
   id: string;
   name: string;
   amount: string;
@@ -27,7 +27,7 @@ interface PaymentScheduleItem {
   proofImg?: string | null;
 }
 
-interface OrderData {
+export interface OrderData {
   id: string;
   orderNo: string;
   status: string | null;
@@ -114,7 +114,7 @@ export function OrderDashboardView({ order }: Props) {
                         {item.roomName} - {item.productName}
                       </div>
                       <div className="text-muted-foreground mt-1 text-sm">
-                        {(item.attributes as any)?.sku || '标准规格'}
+                        {(item.attributes as Record<string, string>)?.sku || '标准规格'}
                       </div>
                     </div>
                     <div className="text-right">

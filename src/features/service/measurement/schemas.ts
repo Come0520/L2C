@@ -77,6 +77,8 @@ export const splitMeasureTaskSchema = z.object({
     splits: z.array(z.object({
         category: z.enum(PRODUCT_CATEGORIES).describe('品类'),
         workerId: z.string().uuid().optional().describe('指派的测量师 ID'),
+        laborFee: z.number().nonnegative().optional().describe('预估工费'),
+        remark: z.string().optional().describe('备注'),
     })).min(2, '拆单至少需要两个品类'),
     reason: z.string().optional().describe('拆单原因'),
 });

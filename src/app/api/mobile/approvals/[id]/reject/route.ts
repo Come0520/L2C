@@ -9,6 +9,9 @@ import { approvalTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile/approvals/[id]/reject');
 
 interface RejectParams {
     params: Promise<{ id: string }>;
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest, { params }: RejectParams) {
             })
             .where(eq(approvalTasks.id, taskId));
 
-        console.log(`[审批驳回] 任务 ${taskId}, 原因: ${reason}`);
+        log.info(`审批驳回: 任务 ${taskId}, 原因: ${reason}`);
 
         return apiSuccess(
             {
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest, { params }: RejectParams) {
         );
 
     } catch (error) {
-        console.error('审批驳回错误:', error);
+        log.error('审批驳回错误', {}, error);
         return apiError('审批驳回失败', 500);
     }
 }

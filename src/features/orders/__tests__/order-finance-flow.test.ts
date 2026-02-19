@@ -70,13 +70,18 @@ vi.mock('next-auth', () => ({
 // Import Actions
 import { createOrderFromQuote, confirmOrderProduction } from '../actions';
 
+// Mock Split Engine to avoid complex DB mocking
+vi.mock('@/features/supply-chain/actions/split-engine', () => ({
+    executeSplitRouting: vi.fn().mockResolvedValue({ success: true, method: 'MOCK_SPLIT' })
+}));
+
 describe('Order & Finance Integration Flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
     const VALID_QUOTE_ID = '123e4567-e89b-12d3-a456-426614174001';
-    const VALID_ORDER_ID = '123e4567-e89b-12d3-a456-426614174002';
+    const VALID_ORDER_ID = '123e4567-e89b-12d3-a456-426614174002'; // Consistent with mockDbInsert
     const VALID_CUST_ID = '123e4567-e89b-12d3-a456-426614174003';
     const VALID_TENANT_ID = '123e4567-e89b-12d3-a456-426614174999';
 
@@ -97,8 +102,41 @@ describe('Order & Finance Integration Flow', () => {
             },
             items: []
         };
+
+        // Mock DB Insert to return our VALID_ORDER_ID
+        mockDbInsert.mockReturnValue({
+            values: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{
+                    id: VALID_ORDER_ID,
+                    orderNo: 'OD-123',
+                    statementNo: 'AR-123',
+                    tenantId: VALID_TENANT_ID
+                }])
+            })
+        });
+
         mockDbQuery.quotes.findFirst.mockResolvedValue(quote);
-        mockDbQuery.orders.findFirst.mockResolvedValue(null);
+
+        // Setup initial order find (for Commission check)
+        const createdOrderMock = {
+            id: VALID_ORDER_ID,
+            orderNo: 'OD-123',
+            status: 'PAID', // Fix: Order must be PAID
+            tenantId: VALID_TENANT_ID,
+            totalAmount: '10000',
+            paidAmount: '3000',
+            settlementType: 'CASH',
+            depositRatio: '0.3',
+            productionTrigger: 'DEPOSIT_REQUIRED',
+            customer: { creditLimit: 0 },
+            approvalStatus: 'NONE'
+        };
+        // Allow findFirst to return:
+        // 1. null (when checking if order exists for quote)
+        // 2. order (when checking commission after creation)
+        mockDbQuery.orders.findFirst
+            .mockResolvedValueOnce(null)
+            .mockResolvedValue(createdOrderMock);
 
         // 2. Create Order
         const result = await createOrderFromQuote({ quoteId: VALID_QUOTE_ID });
@@ -108,7 +146,7 @@ describe('Order & Finance Integration Flow', () => {
         const orderMock = {
             id: VALID_ORDER_ID,
             orderNo: 'OD-123',
-            status: 'PENDING_PO',
+            status: 'PAID', // Fix: match the required status for confirmProduction
             tenantId: VALID_TENANT_ID,
             totalAmount: '10000',
             paidAmount: '3000', // Pre-paid deposit for mock

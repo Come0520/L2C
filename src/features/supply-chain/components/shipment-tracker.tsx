@@ -3,12 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import Truck from 'lucide-react/dist/esm/icons/truck';
 
+import { ShipmentTrackingData } from '../types';
+
 interface ShipmentTrackerProps {
     orderId?: string;
     company?: string;
     trackingNo?: string;
     status?: string;
-    trackingData?: any;
+    trackingData?: ShipmentTrackingData;
     updatedAt?: string | Date;
 }
 

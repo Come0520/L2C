@@ -6,8 +6,11 @@
  */
 
 import { NextRequest } from 'next/server';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile:tasks:measurement');
 import { db } from '@/shared/api/db';
-import { measureTasks } from '@/shared/api/schema';
+import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
         return apiError('请求体格式错误', 400);
     }
 
-    const { plans, notes, voiceNotes } = body;
+    const { plans } = body as MeasurementBody;
 
     // 4. 参数校验
     if (!plans || !Array.isArray(plans) || plans.length === 0) {
@@ -98,6 +101,7 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
     const task = await db.query.measureTasks.findFirst({
         where: and(
             eq(measureTasks.id, taskId),
+            eq(measureTasks.tenantId, session.tenantId),
             eq(measureTasks.assignedWorkerId, session.userId)
         ),
     });
@@ -115,29 +119,61 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
 
     const now = new Date();
 
-    // 7. 保存测量数据（简化处理，实际应存储到 measure_items 表）
-    // 这里将数据结构化存储
-    const _measurementData = {
-        plans,
-        notes,
-        voiceNotes,
-        submittedAt: now.toISOString(),
-        submittedBy: session.userId,
-    };
-
-    // 更新任务状态和数据
-    await db.update(measureTasks)
-        .set({
-            status: 'PENDING_CONFIRM' as typeof measureTasks.$inferSelect['status'],
-            // items: measurementData,  // 如果有 JSONB 字段
+    // 7. 保存测量数据
+    await db.transaction(async (tx) => {
+        // 创建测量单 (Snapshot)
+        const [sheet] = await tx.insert(measureSheets).values({
+            tenantId: session.tenantId,
+            taskId: taskId,
+            round: 1, // 默认为第1轮
+            variant: 'A', // 默认方案A
+            sitePhotos: [], // 暂不支持上传
+            status: 'DRAFT',
+            createdAt: now,
             updatedAt: now,
-        })
-        .where(eq(measureTasks.id, taskId));
+        }).returning();
+
+        // 插入测量项
+        if (plans.length > 0) {
+            const itemsToInsert = plans.flatMap(plan =>
+                plan.items.map(item => ({
+                    tenantId: session.tenantId,
+                    sheetId: sheet.id,
+                    roomName: item.roomName,
+                    windowType: item.windowType,
+                    width: item.width.toString(),
+                    height: item.height.toString(),
+                    installType: item.installType,
+                    bracketDist: item.bracketDist?.toString(),
+                    wallMaterial: item.wallMaterial as any,
+                    hasBox: item.hasBox || false,
+                    boxDepth: item.boxDepth?.toString(),
+                    isElectric: item.isElectric || false,
+                    remark: item.remark || plan.planName, // 将方案名作为备注的一部分
+                }))
+            );
+
+            if (itemsToInsert.length > 0) {
+                await tx.insert(measureItems).values(itemsToInsert);
+            }
+        }
+
+        // 更新任务状态
+        await tx.update(measureTasks)
+            .set({
+                status: 'PENDING_CONFIRM', // type safety handled by drizzle infer
+                updatedAt: now,
+            })
+            .where(and(
+                eq(measureTasks.id, taskId),
+                eq(measureTasks.tenantId, session.tenantId)
+            ));
+    });
 
     // 统计信息
     const totalItems = plans.reduce((sum, plan) => sum + plan.items.length, 0);
 
-    console.log(`[测量数据提交] 任务 ${taskId}, 方案数: ${plans.length}, 项目数: ${totalItems}`);
+    log.warn('测量数据提交', { taskId, planCount: plans.length, itemCount: totalItems });
 
     return apiSuccess(
         {

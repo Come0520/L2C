@@ -1,5 +1,12 @@
+import dynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
-import { TenantFeatureControl } from '@/features/settings/components/tenant-feature-control';
+import { Skeleton } from '@/shared/ui/skeleton';
+
+/** 懒加载：租户功能开关组件 */
+const TenantFeatureControl = dynamic(
+    () => import('@/features/settings/components/tenant-feature-control').then(m => m.TenantFeatureControl),
+    { loading: () => <Skeleton className="h-[350px] w-full rounded-lg" /> }
+);
 
 /**
  * 功能开关设置页面

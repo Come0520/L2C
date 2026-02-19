@@ -5,10 +5,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/form';
 
+/** 角色表单初始数据类型 */
+interface RoleFormData {
+    id?: string;
+    code: string;
+    name: string;
+    description?: string;
+}
+
 interface RoleFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    initialData?: any;
+    initialData?: RoleFormData;
     onSuccess: () => void;
 }
 
@@ -20,7 +28,7 @@ export function RoleForm({ open, onOpenChange, initialData, onSuccess }: RoleFor
                 <DialogHeader>
                     <DialogTitle>{initialData ? 'Edit Role' : 'Create Role'}</DialogTitle>
                 </DialogHeader>
-                 <div className="py-4 text-center text-muted-foreground">
+                <div className="py-4 text-center text-muted-foreground">
                     Role form not available in recovery mode.
                 </div>
             </DialogContent>

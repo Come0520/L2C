@@ -10,54 +10,33 @@ import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { parseSettingValue, validateValueType } from './setting-utils';
+
+/**
+ * 输入校验 Schema
+ * 防止恶意输入注入和格式错误
+ */
+const categorySchema = z.string()
+  .min(1, '分类标识不能为空')
+  .max(50, '分类标识过长')
+  .regex(/^[a-z][a-z0-9_-]*$/i, '分类标识仅允许字母、数字、下划线和连字符');
+
+const settingKeySchema = z.string()
+  .min(1, '配置键不能为空')
+  .max(100, '配置键过长')
+  .regex(/^[a-z][a-z0-9_.:-]*$/i, '配置键格式不合法');
+
+const batchSettingsSchema = z.record(
+  settingKeySchema,
+  z.unknown()
+).refine(obj => Object.keys(obj).length > 0, '至少需要一个配置项')
+  .refine(obj => Object.keys(obj).length <= 50, '单次最多更新 50 个配置项');
 
 /**
  * 系统设置 Server Actions
  * 提供配置的增删改查操作
  */
-
-/**
- * 解析配置值
- */
-export function parseSettingValue(value: string, valueType: string): unknown {
-  switch (valueType) {
-    case 'BOOLEAN':
-      return value === 'true';
-    case 'INTEGER':
-      return parseInt(value, 10);
-    case 'DECIMAL':
-      return parseFloat(value);
-    case 'JSON':
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    case 'ENUM':
-    default:
-      return value;
-  }
-}
-
-/**
- * 校验配置值类型
- */
-export function validateValueType(value: unknown, expectedType: string): boolean {
-  switch (expectedType) {
-    case 'BOOLEAN':
-      return typeof value === 'boolean';
-    case 'INTEGER':
-      return Number.isInteger(Number(value));
-    case 'DECIMAL':
-      return !isNaN(Number(value));
-    case 'JSON':
-      return typeof value === 'object' || typeof value === 'string';
-    case 'ENUM':
-      return typeof value === 'string';
-    default:
-      return true;
-  }
-}
 
 /**
  * 根据分类获取系统设置
@@ -70,6 +49,9 @@ export function validateValueType(value: unknown, expectedType: string): boolean
  * @throws Error 未授权访问时抛出
  */
 export async function getSettingsByCategory(category: string) {
+  const parsed = categorySchema.safeParse(category);
+  if (!parsed.success) throw new Error(`参数校验失败: ${parsed.error.issues[0].message}`);
+
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('未授权');
 
@@ -184,6 +166,9 @@ async function updateSettingInternal(
  * 更新单个配置
  */
 export async function updateSetting(key: string, value: unknown) {
+  const parsed = settingKeySchema.safeParse(key);
+  if (!parsed.success) throw new Error(`配置键校验失败: ${parsed.error.issues[0].message}`);
+
   const session = await auth();
   if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
 
@@ -211,6 +196,9 @@ export async function updateSetting(key: string, value: unknown) {
  * @throws Error 未授权访问或权限不足时抛出
  */
 export async function batchUpdateSettings(settings: Record<string, unknown>) {
+  const parsed = batchSettingsSchema.safeParse(settings);
+  if (!parsed.success) throw new Error(`批量配置校验失败: ${parsed.error.issues[0].message}`);
+
   const session = await auth();
   if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
 

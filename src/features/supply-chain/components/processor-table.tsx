@@ -16,11 +16,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger
 } from '@/shared/ui/dropdown-menu';
-import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
-import Pencil from 'lucide-react/dist/esm/icons/pencil';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState, useCallback } from 'react';
-import { deleteSupplier } from '../actions/mutations';
+import { deleteSupplier } from '../actions/supplier-actions';
 import { toast } from 'sonner';
 import {
     AlertDialog,
@@ -58,7 +56,7 @@ interface ProcessorTableProps {
     onSuccess?: () => void;
 }
 
-export function ProcessorTable({ data, page, pageSize, total, onPageChange, onEdit, onSuccess }: ProcessorTableProps) {
+export function ProcessorTable({ data, page: _page, pageSize: _pageSize, total: _total, onPageChange: _onPageChange, onEdit, onSuccess }: ProcessorTableProps) {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 

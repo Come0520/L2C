@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { customerSchema, updateCustomerSchema } from '../schemas';
+import { customerSchema } from '../schemas';
 import {
     Form,
     FormControl,
@@ -26,13 +26,12 @@ import { createCustomer, updateCustomer } from '../actions/mutations';
 import { toast } from 'sonner';
 import { useTransition } from 'react';
 import { z } from 'zod';
+import { CustomerDetail } from '@/features/customers/types';
 
 interface CustomerFormProps {
     onSuccess?: (customer?: { id: string }) => void;
-    userId: string;
     tenantId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData?: any; // 客户数据结构复杂，后续可定义具体类型
+    initialData?: Partial<CustomerDetail>;
 }
 
 type FormValues = z.infer<typeof customerSchema>;
@@ -46,35 +45,36 @@ type FormValues = z.infer<typeof customerSchema>;
  * - 渠道来源和带单人
  * - 地址和备注
  */
-export function CustomerForm({ onSuccess, userId, tenantId, initialData }: CustomerFormProps) {
+export function CustomerForm({ onSuccess, tenantId, initialData }: CustomerFormProps) {
     const [isPending, startTransition] = useTransition();
     const isEdit = !!initialData;
 
     const form = useForm<FormValues>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(customerSchema) as any,
         defaultValues: {
             name: initialData?.name || '',
             phone: initialData?.phone || '',
-            phoneSecondary: initialData?.phoneSecondary || '',
+            phoneSecondary: initialData?.phoneSecondary || undefined,
             wechat: initialData?.wechat || '',
-            type: initialData?.type || 'INDIVIDUAL',
-            level: initialData?.level || 'D',
-            address: initialData?.addresses?.find((a: any) => a.isDefault)?.address || '',
+            type: (initialData?.type as unknown as FormValues['type']) || 'INDIVIDUAL',
+            level: (initialData?.level as unknown as FormValues['level']) || 'D',
+            address: initialData?.addresses?.find((a) => a.isDefault)?.address || '',
             notes: initialData?.notes || '',
             source: initialData?.source || '',
             referrerName: initialData?.referrerName || '',
-        } as any,
+        },
     });
 
     const onSubmit = (values: FormValues) => {
         startTransition(async () => {
             try {
-                if (isEdit) {
-                    await updateCustomer({ id: initialData.id, data: values }, userId);
+                if (isEdit && initialData?.id) {
+                    await updateCustomer({ id: initialData.id, data: values });
                     toast.success('客户更新成功');
                     onSuccess?.();
                 } else {
-                    const result = await createCustomer(values, userId, tenantId);
+                    const result = await createCustomer(values);
                     toast.success('客户创建成功');
                     onSuccess?.(result);
                 }

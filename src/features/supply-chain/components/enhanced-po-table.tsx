@@ -18,14 +18,51 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import Eye from 'lucide-react/dist/esm/icons/eye';
 import Printer from 'lucide-react/dist/esm/icons/printer';
 import Filter from 'lucide-react/dist/esm/icons/filter';
-import { StatusBadge } from '@/shared/ui/status-badge';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { PurchaseOrderPreviewDialog } from './purchase-order-preview-dialog';
+import { AddLogisticsDialog } from './add-logistics-dialog';
+import { ConfirmQuoteDialog } from './confirm-quote-dialog';
+import { ConfirmPaymentDialog } from './confirm-payment-dialog';
+import { ConfirmReceiptDialog } from './confirm-receipt-dialog';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import FileCheck from 'lucide-react/dist/esm/icons/file-check';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import PackageCheck from 'lucide-react/dist/esm/icons/package-check';
+import { PO_STATUS_LABELS } from '../constants';
+
+
+interface PurchaseOrderItem {
+    id: string;
+    productId: string;
+    productName: string;
+    quantity: string | number;
+    unitPrice: string | number;
+    subtotal: string | number;
+}
+
+interface PurchaseOrder {
+    id: string;
+    poNo: string;
+    status: string | null;
+    supplierName: string;
+    createdAt: string | Date | null;
+    expectedDate?: string | Date;
+    totalAmount: string | number;
+    logisticsNo?: string;
+    logisticsCompany?: string;
+    shippedAt?: string | Date;
+    remark?: string;
+    orderId?: string | null;
+    order?: { orderNo: string } | null;
+    creator?: { name: string } | null;
+    items?: PurchaseOrderItem[];
+    type?: 'FINISHED' | 'FABRIC' | 'STOCK'; // Add type
+    paymentStatus?: 'PENDING' | 'PAID' | 'PARTIAL'; // Add paymentStatus
+}
 
 interface POTableProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: any[];
-    onFilterChange?: (filters: POFilters) => void;
+    data: PurchaseOrder[];
 }
 
 export interface POFilters {
@@ -38,12 +75,10 @@ export interface POFilters {
 
 const STATUS_TABS = [
     { value: 'all', label: '全部' },
-    { value: 'DRAFT', label: '草稿' },
-    { value: 'IN_PRODUCTION', label: '生产中' },
-    { value: 'READY', label: '备货完成' },
-    { value: 'SHIPPED', label: '已发货' },
-    { value: 'DELIVERED', label: '已到货' },
-    { value: 'CANCELLED', label: '已取消' },
+    { value: 'pending', label: '待处理' },
+    { value: 'active', label: '执行中' },
+    { value: 'inbound', label: '物流/入库' },
+    { value: 'history', label: '历史归档' },
 ];
 
 export function EnhancedPOTable({ data }: POTableProps) {
@@ -52,12 +87,17 @@ export function EnhancedPOTable({ data }: POTableProps) {
     const searchParams = useSearchParams();
 
     // Initialize state from URL params
-    const initialStatus = searchParams.get('status') || 'all';
     const initialSearch = searchParams.get('search') || '';
     const initialPaymentStatus = searchParams.get('paymentStatus') || 'all';
 
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [showFilters, setShowFilters] = useState(false);
+    const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
+    const [logisticsPOId, setLogisticsPOId] = useState<string | null>(null);
+    const [quotePOId, setQuotePOId] = useState<string | null>(null);
+    const [paymentPOId, setPaymentPOId] = useState<string | null>(null);
+    const [receiptPO, setReceiptPO] = useState<PurchaseOrder | null>(null);
+
 
     // Create a query update handler
     const createQueryString = useCallback(
@@ -123,7 +163,7 @@ export function EnhancedPOTable({ data }: POTableProps) {
     };
 
     const handleBatchConfirm = () => {
-        console.log('Batch confirm:', Array.from(selectedIds));
+        // console.log('Batch confirm:', Array.from(selectedIds));
     };
 
     return (
@@ -222,14 +262,17 @@ export function EnhancedPOTable({ data }: POTableProps) {
                                         />
                                     </TableCell>
                                     <TableCell className="font-medium">
-                                        <Link href={`/supply-chain/po/${item.id}`} className="hover:underline">
+                                        <button
+                                            onClick={() => setPreviewPO(item)}
+                                            className="hover:underline text-left"
+                                        >
                                             {item.poNo}
-                                        </Link>
+                                        </button>
                                     </TableCell>
                                     <TableCell>
-                                        {item.orderNo && (
+                                        {item.order?.orderNo && (
                                             <Link href={`/orders/${item.orderId}`} className="text-sm text-muted-foreground hover:underline">
-                                                {item.orderNo}
+                                                {item.order.orderNo}
                                             </Link>
                                         )}
                                     </TableCell>
@@ -246,7 +289,15 @@ export function EnhancedPOTable({ data }: POTableProps) {
                                     </TableCell>
                                     <TableCell className="text-right">¥{item.totalAmount}</TableCell>
                                     <TableCell>
-                                        <StatusBadge status={item.status} />
+                                        <span className={
+                                            item.status === 'COMPLETED' ? 'glass-alert-success px-2 py-1 rounded text-xs' :
+                                                item.status === 'CANCELLED' ? 'glass-step-inactive px-2 py-1 rounded text-xs' :
+                                                    item.status === 'PENDING_PAYMENT' || item.status === 'PENDING_CONFIRMATION' ? 'glass-alert-warning px-2 py-1 rounded text-xs' :
+                                                        item.status === 'DRAFT' ? 'glass-step-inactive px-2 py-1 rounded text-xs' :
+                                                            'glass-alert-info px-2 py-1 rounded text-xs'
+                                        }>
+                                            {PO_STATUS_LABELS[item.status ?? ''] || item.status || '-'}
+                                        </span>
                                     </TableCell>
                                     <TableCell>
                                         <span className={
@@ -259,13 +310,56 @@ export function EnhancedPOTable({ data }: POTableProps) {
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
-                                        {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm')}
+                                        {item.createdAt ? format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm') : '-'}
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" asChild>
-                                            <Link href={`/supply-chain/po/${item.id}`}>
-                                                <Eye className="h-4 w-4" />
-                                            </Link>
+                                    <TableCell className="text-right space-x-1">
+                                        {item.status === 'READY' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setLogisticsPOId(item.id)}
+                                                title="填写物流"
+                                            >
+                                                <Truck className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        {item.status === 'PENDING_CONFIRMATION' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setQuotePOId(item.id)}
+                                                title="确认报价"
+                                            >
+                                                <FileCheck className="h-4 w-4 text-orange-500" />
+                                            </Button>
+                                        )}
+                                        {item.status === 'PENDING_PAYMENT' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setPaymentPOId(item.id)}
+                                                title="确认付款"
+                                            >
+                                                <CreditCard className="h-4 w-4 text-blue-500" />
+                                            </Button>
+                                        )}
+                                        {item.status === 'SHIPPED' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setReceiptPO(item)}
+                                                title="确认收货"
+                                            >
+                                                <PackageCheck className="h-4 w-4 text-green-500" />
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setPreviewPO(item)}
+                                            title="查看详情"
+                                        >
+                                            <Eye className="h-4 w-4" />
                                         </Button>
                                         <Button variant="ghost" size="icon">
                                             <Printer className="h-4 w-4" />
@@ -277,6 +371,56 @@ export function EnhancedPOTable({ data }: POTableProps) {
                     </TableBody>
                 </Table>
             </div>
+
+            <PurchaseOrderPreviewDialog
+                open={!!previewPO}
+                onOpenChange={(open) => !open && setPreviewPO(null)}
+                data={previewPO}
+            />
+
+            {logisticsPOId && (
+                <AddLogisticsDialog
+                    open={!!logisticsPOId}
+                    onClose={() => {
+                        setLogisticsPOId(null);
+                        router.refresh();
+                    }}
+                    poId={logisticsPOId}
+                />
+            )}
+
+            {quotePOId && (
+                <ConfirmQuoteDialog
+                    open={!!quotePOId}
+                    onOpenChange={(open) => !open && setQuotePOId(null)}
+                    poId={quotePOId}
+                    defaultAmount={data.find(p => p.id === quotePOId)?.totalAmount}
+                />
+            )}
+
+            {paymentPOId && (
+                <ConfirmPaymentDialog
+                    open={!!paymentPOId}
+                    onOpenChange={(open) => !open && setPaymentPOId(null)}
+                    poId={paymentPOId}
+                    totalAmount={data.find(p => p.id === paymentPOId)?.totalAmount}
+                />
+            )}
+
+            {receiptPO && receiptPO.items && (
+                <ConfirmReceiptDialog
+                    open={!!receiptPO}
+                    onOpenChange={(open) => !open && setReceiptPO(null)}
+                    po={{
+                        id: receiptPO.id,
+                        items: receiptPO.items.map(i => ({
+                            productId: i.productId,
+                            productName: i.productName,
+                            quantity: i.quantity
+                        }))
+                    }}
+                />
+            )}
         </div>
     );
 }

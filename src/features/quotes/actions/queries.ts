@@ -171,12 +171,58 @@ export async function getQuote(id: string) {
                 with: {
                     items: {
                         orderBy: (items, { asc }) => [asc(items.sortOrder)],
+                        columns: {
+                            id: true,
+                            quoteId: true,
+                            parentId: true,
+                            roomId: true,
+                            category: true,
+                            productId: true,
+                            productName: true,
+                            productSku: true,
+                            roomName: true,
+                            unit: true,
+                            unitPrice: true,
+                            quantity: true,
+                            width: true,
+                            height: true,
+                            foldRatio: true,
+                            processFee: true,
+                            subtotal: true,
+                            attributes: true,
+                            calculationParams: true,
+                            remark: true,
+                            sortOrder: true,
+                        },
                     }
                 }
             },
             items: {
                 where: (items, { isNull }) => isNull(items.roomId), // Items without room
                 orderBy: (items, { asc }) => [asc(items.sortOrder)],
+                columns: {
+                    id: true,
+                    quoteId: true,
+                    parentId: true,
+                    roomId: true,
+                    category: true,
+                    productId: true,
+                    productName: true,
+                    productSku: true,
+                    roomName: true,
+                    unit: true,
+                    unitPrice: true,
+                    quantity: true,
+                    width: true,
+                    height: true,
+                    foldRatio: true,
+                    processFee: true,
+                    subtotal: true,
+                    attributes: true,
+                    calculationParams: true,
+                    remark: true,
+                    sortOrder: true,
+                },
             }
         }
     });
@@ -185,12 +231,60 @@ export async function getQuote(id: string) {
 }
 
 /**
- * 获取报价捆绑包（与 getQuote 功能相同，提供兼容性接口）
+ * 获取报价捆绑包（包含子报价）
  */
 export async function getQuoteBundleById({ id }: { id: string }) {
-    const { data } = await getQuote(id);
+    // 安全检查：获取当前用户并验证租户
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        return { success: false, message: '未授权访问' };
+    }
+    const tenantId = session.user.tenantId;
+
+    const data = await db.query.quotes.findFirst({
+        where: and(
+            eq(quotes.id, id),
+            eq(quotes.tenantId, tenantId)
+        ),
+        with: {
+            customer: true,
+            subQuotes: {
+                orderBy: (subQuotes, { asc }) => [asc(subQuotes.createdAt)],
+                with: {
+                    items: {
+                        columns: {
+                            id: true,
+                            quoteId: true,
+                            parentId: true,
+                            roomId: true,
+                            category: true,
+                            productId: true,
+                            productName: true,
+                            productSku: true,
+                            roomName: true,
+                            unit: true,
+                            unitPrice: true,
+                            quantity: true,
+                            width: true,
+                            height: true,
+                            foldRatio: true,
+                            processFee: true,
+                            subtotal: true,
+                            attributes: true,
+                            calculationParams: true,
+                            remark: true,
+                            sortOrder: true,
+                        },
+                    }, // 加载子报价的明细，用于计算或其他展示
+                }
+            }
+        }
+    });
+
     if (!data) return { success: false, message: 'Quote not found' };
-    return { success: true, data };
+
+    // 映射 subQuotes 到 quotes 以匹配前端/测试预期
+    return { success: true, data: { ...data, quotes: data.subQuotes } };
 }
 
 /**

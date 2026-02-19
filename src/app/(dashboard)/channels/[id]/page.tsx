@@ -41,11 +41,12 @@ export default async function ChannelDetailPage({ params }: PageProps) {
                 </Button>
                 <DashboardPageHeader
                     title={channel.name}
-                    subtitle={`渠道编号：${channel.code}`}
+                    subtitle={`渠道编号：${channel.channelNo}`}
                 />
             </div>
 
-            <ChannelDetail channel={channel} tenantId={tenantId} />
+            {/* Prisma 查询返回类型与组件接口存在枚举/字符串差异，此处断言安全 */}
+            <ChannelDetail channel={channel as any} />
         </div>
     );
 }

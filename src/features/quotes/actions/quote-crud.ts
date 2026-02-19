@@ -8,11 +8,13 @@
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
+import { AuditService } from '@/shared/lib/audit-service';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { QuoteService } from '@/services/quote.service';
 import { DiscountControlService } from '@/services/discount-control.service';
+import Decimal from 'decimal.js';
 import { createQuoteSchema, updateQuoteSchema, createQuoteBundleSchema } from './schema';
 import { updateBundleTotal } from './shared-helpers';
 
@@ -42,6 +44,11 @@ export const createQuoteBundleActionInternal = createSafeAction(
 
     // 设置 rootQuoteId
     await db.update(quotes).set({ rootQuoteId: newBundle.id }).where(eq(quotes.id, newBundle.id));
+
+    // 审计日志：记录报价套餐创建
+    await AuditService.recordFromSession(context.session, 'quotes', newBundle.id, 'CREATE', {
+      new: { quoteNo: newBundle.quoteNo, customerId: data.customerId, type: 'BUNDLE' },
+    });
 
     revalidatePath('/quotes');
     return newBundle;
@@ -83,8 +90,13 @@ const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (dat
 
   // 若加入套餐，更新套餐总额
   if (data.bundleId) {
-    await updateBundleTotal(data.bundleId);
+    await updateBundleTotal(data.bundleId, tenantId);
   }
+
+  // 审计日志：记录报价单创建
+  await AuditService.recordFromSession(context.session, 'quotes', newQuote.id, 'CREATE', {
+    new: { quoteNo: newQuote.quoteNo, customerId: data.customerId, bundleId: data.bundleId },
+  });
 
   revalidatePath('/quotes');
   return newQuote;
@@ -107,35 +119,42 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   if (!quote) throw new Error('报价单不存在或无权操作');
 
-  // 折扣逻辑
-  const totalAmount = Number(quote.totalAmount || 0);
-  const oldRate = Number(quote.discountRate || 1);
-  const newRate = updateData.discountRate !== undefined ? Number(updateData.discountRate) : oldRate;
-  const newDiscountAmount =
-    updateData.discountAmount !== undefined
-      ? Number(updateData.discountAmount)
-      : Number(quote.discountAmount || 0);
+  // 折扣逻辑（使用 Decimal.js 保证精度一致性）
+  const totalAmountDec = new Decimal(quote.totalAmount || 0);
+  const oldRate = new Decimal(quote.discountRate || 1);
+  const newRate = updateData.discountRate !== undefined
+    ? new Decimal(updateData.discountRate)
+    : oldRate;
+  const newDiscountAmountDec = updateData.discountAmount !== undefined
+    ? new Decimal(updateData.discountAmount)
+    : new Decimal(quote.discountAmount || 0);
 
   // 审批检查
   const requiresApproval = await DiscountControlService.checkRequiresApproval(
     quote.tenantId,
-    newRate
+    newRate.toNumber()
   );
 
-  // 计算最终金额
-  const finalAmount = Math.max(0, totalAmount * newRate - newDiscountAmount);
+  // 计算最终金额（精确计算）
+  const finalAmountDec = Decimal.max(0, totalAmountDec.mul(newRate).sub(newDiscountAmountDec));
 
   await db
     .update(quotes)
     .set({
       ...updateData,
-      discountRate: newRate.toString(),
-      discountAmount: newDiscountAmount.toString(),
-      finalAmount: finalAmount.toString(),
+      discountRate: newRate.toFixed(4),
+      discountAmount: newDiscountAmountDec.toFixed(2),
+      finalAmount: finalAmountDec.toFixed(2),
       approvalRequired: requiresApproval,
       updatedAt: new Date(),
     })
     .where(and(eq(quotes.id, id), eq(quotes.tenantId, userTenantId)));
+
+  // 审计日志：记录报价单更新
+  await AuditService.recordFromSession(context.session, 'quotes', id, 'UPDATE', {
+    old: { discountRate: quote.discountRate, discountAmount: quote.discountAmount },
+    new: { discountRate: newRate.toFixed(4), discountAmount: newDiscountAmountDec.toFixed(2), finalAmount: finalAmountDec.toFixed(2) },
+  });
 
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
@@ -163,8 +182,14 @@ export const copyQuote = createSafeAction(
     const newQuote = await QuoteService.copyQuote(
       data.quoteId,
       context.session.user.id,
+      userTenantId,
       data.targetCustomerId
     );
+
+    // 审计日志：记录报价单复制
+    await AuditService.recordFromSession(context.session, 'quotes', newQuote.id, 'CREATE', {
+      new: { sourceQuoteId: data.quoteId, targetCustomerId: data.targetCustomerId },
+    });
 
     revalidatePath('/quotes');
     return newQuote;

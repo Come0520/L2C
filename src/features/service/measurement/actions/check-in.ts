@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { validateGpsCheckIn, calculateLateMinutes } from '@/shared/lib/gps-utils';
 import { auth } from '@/shared/lib/auth';
 
+import { AuditService } from '@/shared/lib/audit-service';
+
 // 输入校验 Schema
 const CheckInMeasureTaskSchema = z.object({
     taskId: z.string().uuid(),
@@ -85,12 +87,34 @@ const checkInMeasureTaskActionInternal = createSafeAction(
                 .set({
                     checkInAt: new Date(),
                     checkInLocation: checkInInfo,
+                    // 持久化迟到数据 (BLO-02)
+                    isLate: checkInInfo.isLate,
+                    lateMinutes: checkInInfo.lateMinutes,
                     // 签到后状态保持 PENDING_VISIT，提交数据后才变更
                 })
                 .where(eq(measureTasks.id, taskId));
 
             revalidatePath('/service/measurement');
             revalidatePath(`/service/measurement/${taskId}`);
+
+
+            // 审计日志: 记录签到
+            await AuditService.record(
+                {
+                    tenantId: tenantId,
+                    userId: userId,
+                    tableName: 'measure_tasks',
+                    recordId: taskId,
+                    action: 'UPDATE',
+                    changedFields: {
+                        checkInAt: new Date(),
+                        checkInLocation: checkInInfo,
+                        isLate: checkInInfo.isLate,
+                        lateMinutes: checkInInfo.lateMinutes,
+                    }
+                }
+            );
+
             return {
                 success: true,
                 data: { checkInAt: new Date(), gpsResult, lateMinutes }
@@ -99,6 +123,19 @@ const checkInMeasureTaskActionInternal = createSafeAction(
     }
 );
 
+/**
+ * 测量任务签到
+ *
+ * 功能流程：
+ * 1. 验证用户身份与租户隔离
+ * 2. 确认当前用户是被指派测量师
+ * 3. GPS 位置校验（可选）
+ * 4. 迟到检测（基于系统配置的阈值）
+ * 5. 更新任务签到信息并记录审计日志
+ *
+ * @param params - 签到参数，包含 taskId、经纬度和可选的目标坐标
+ * @returns ActionState 包含签到时间、GPS 校验结果和迟到分钟数
+ */
 export async function checkInMeasureTask(params: CheckInMeasureTaskInput) {
     return checkInMeasureTaskActionInternal(params);
 }

@@ -5,13 +5,28 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { AlertCircle } from 'lucide-react';
 
+interface SnapshotItem {
+    productName: string;
+    specification?: string;
+    quantity: number;
+    unit: string;
+    unitPrice: string;
+    subtotal: string;
+}
+
 interface SnapshotComparisonProps {
-    currentItems?: any[]; // Optional if we want to compare
-    snapshotData: any; // JSON with quote.items
+    currentItems?: SnapshotItem[]; // Optional if we want to compare
+    snapshotData: {
+        generatedAt?: string;
+        quote?: {
+            items?: SnapshotItem[];
+            totalAmount?: string | number;
+        }
+    };
 }
 
 export function SnapshotComparison({ snapshotData }: SnapshotComparisonProps) {
-    const snapshotItems = snapshotData?.quote?.items || [];
+    const snapshotItems = (snapshotData?.quote?.items || []) as SnapshotItem[];
 
     if (snapshotItems.length === 0) {
         return null;
@@ -46,7 +61,7 @@ export function SnapshotComparison({ snapshotData }: SnapshotComparisonProps) {
 
                         {/* Expandable or detailed view could go here. For now, just summary */}
                         <div className="mt-3 grid grid-cols-1 gap-1">
-                            {snapshotItems.slice(0, 3).map((item: any, idx: number) => (
+                            {snapshotItems.slice(0, 3).map((item, idx) => (
                                 <div key={idx} className="flex justify-between text-xs text-muted-foreground border-b border-border/50 pb-1 last:border-0">
                                     <span>{item.productName}</span>
                                     <span>x{item.quantity}</span>

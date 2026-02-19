@@ -36,6 +36,8 @@ import {
   packageProducts,
   fabricInventory,
   fabricInventoryLogs,
+  poPayments,
+  poShipments,
 } from './supply-chain';
 
 import { orders, orderItems, paymentSchedules, orderChanges } from './orders';
@@ -65,6 +67,7 @@ import {
   measureTasks,
   measureSheets,
   measureItems,
+  measureTaskSplits,
   installTasks,
   installItems,
   installPhotos,
@@ -273,7 +276,7 @@ export const channelsRelations = relations(channels, ({ one, many }) => ({
     relationName: 'channelHierarchy',
   }),
   // 关联渠道类型
-  category: one(channelCategories, {
+  channelCategory: one(channelCategories, {
     fields: [channels.categoryId],
     references: [channelCategories.id],
   }),
@@ -329,6 +332,8 @@ export const purchaseOrdersRelations = relations(purchaseOrders, ({ one, many })
     references: [suppliers.id],
   }),
   items: many(purchaseOrderItems),
+  payments: many(poPayments),
+  shipments: many(poShipments),
   creator: one(users, {
     fields: [purchaseOrders.createdBy],
     references: [users.id],
@@ -339,6 +344,36 @@ export const purchaseOrderItemsRelations = relations(purchaseOrderItems, ({ one 
   po: one(purchaseOrders, {
     fields: [purchaseOrderItems.poId],
     references: [purchaseOrders.id],
+  }),
+}));
+
+export const poPaymentsRelations = relations(poPayments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [poPayments.tenantId],
+    references: [tenants.id],
+  }),
+  po: one(purchaseOrders, {
+    fields: [poPayments.poId],
+    references: [purchaseOrders.id],
+  }),
+  creator: one(users, {
+    fields: [poPayments.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const poShipmentsRelations = relations(poShipments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [poShipments.tenantId],
+    references: [tenants.id],
+  }),
+  po: one(purchaseOrders, {
+    fields: [poShipments.poId],
+    references: [purchaseOrders.id],
+  }),
+  creator: one(users, {
+    fields: [poShipments.createdBy],
+    references: [users.id],
   }),
 }));
 
@@ -406,6 +441,14 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
   }),
   items: many(quoteItems),
   rooms: many(quoteRooms),
+  bundle: one(quotes, {
+    fields: [quotes.bundleId],
+    references: [quotes.id],
+    relationName: 'quoteBundle',
+  }),
+  subQuotes: many(quotes, {
+    relationName: 'quoteBundle',
+  }),
 }));
 
 export const quoteRoomsRelations = relations(quoteRooms, ({ one, many }) => ({
@@ -479,6 +522,27 @@ export const measureItemsRelations = relations(measureItems, ({ one }) => ({
   sheet: one(measureSheets, {
     fields: [measureItems.sheetId],
     references: [measureSheets.id],
+  }),
+}));
+
+export const measureTaskSplitsRelations = relations(measureTaskSplits, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [measureTaskSplits.tenantId],
+    references: [tenants.id],
+  }),
+  originalTask: one(measureTasks, {
+    fields: [measureTaskSplits.originalTaskId],
+    references: [measureTasks.id],
+    relationName: 'measureTaskSplitOriginal',
+  }),
+  newTask: one(measureTasks, {
+    fields: [measureTaskSplits.newTaskId],
+    references: [measureTasks.id],
+    relationName: 'measureTaskSplitNew',
+  }),
+  creator: one(users, {
+    fields: [measureTaskSplits.createdBy],
+    references: [users.id],
   }),
 }));
 

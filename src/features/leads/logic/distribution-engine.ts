@@ -3,7 +3,9 @@
 import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { getSetting } from "@/features/settings/actions/system-settings-actions";
+import { getSettingInternal } from "@/features/settings/actions/system-settings-actions";
+import { AuditService } from '@/shared/services/audit-service';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 /**
  * 分配策略类型
@@ -38,7 +40,7 @@ const DEFAULT_CONFIG: DistributionConfig = {
  */
 async function getTenantDistributionConfig(tenantId: string): Promise<DistributionConfig> {
     // 1. 从新系统设置表中获取分配规则（使用统一的键名）
-    const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE') as DistributionStrategy;
+    const assignRule = await getSettingInternal('LEAD_AUTO_ASSIGN_RULE', tenantId) as DistributionStrategy;
 
     // 2. 从原租户设置中获取轮转指针等数据
     const tenant = await db.query.tenants.findFirst({
@@ -102,13 +104,18 @@ async function getAvailableSalesList(tenantId: string): Promise<{ id: string; na
  * 执行轮转分配（使用事务保证原子性）
  * 按销售顺序依次分配新线索
  */
-export async function distributeToNextSales(tenantId: string): Promise<{
+export async function distributeToNextSales(
+    tenantId: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    externalTx?: PgTransaction<any, any, any> // Drizzle 事务类型泛型过于复杂，此处使用 any
+): Promise<{
     salesId: string | null;
     salesName: string | null;
     strategy: DistributionStrategy;
 }> {
-    // 使用事务确保读取和更新是原子操作
-    return await db.transaction(async (tx) => {
+    // 包装逻辑：如果有外部事务则直接使用，否则创建新事务
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const executeLogic = async (tx: PgTransaction<any, any, any>) => {
         // 使用 FOR UPDATE 锁定租户记录，防止并发分配
         const [tenant] = await tx.select()
             .from(tenants)
@@ -120,7 +127,7 @@ export async function distributeToNextSales(tenantId: string): Promise<{
         }
 
         // 获取分配策略
-        const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE') as DistributionStrategy;
+        const assignRule = await getSettingInternal('LEAD_AUTO_ASSIGN_RULE', tenantId) as DistributionStrategy;
         const settings = tenant.settings as { distribution?: Partial<DistributionConfig> } | null;
         const config: DistributionConfig = {
             ...DEFAULT_CONFIG,
@@ -134,13 +141,12 @@ export async function distributeToNextSales(tenantId: string): Promise<{
         }
 
         // 获取可用销售列表
-        const salesUsers = await tx.query.users.findMany({
-            where: and(
+        const salesUsers = await tx.select({ id: users.id, name: users.name })
+            .from(users)
+            .where(and(
                 eq(users.tenantId, tenantId),
                 eq(users.isActive, true)
-            ),
-            columns: { id: true, name: true }
-        });
+            ));
         const salesList = salesUsers.map(u => ({ id: u.id, name: u.name || '' }));
 
         if (salesList.length === 0) {
@@ -167,6 +173,15 @@ export async function distributeToNextSales(tenantId: string): Promise<{
                 .set({ settings: newSettings })
                 .where(eq(tenants.id, tenantId));
 
+            // 审计日志：记录自动轮转分配
+            await AuditService.log(tx as unknown as Parameters<typeof AuditService.log>[0], {
+                tableName: 'leads',
+                recordId: tenantId, // 此处暂用 tenantId，实际线索ID由调用方补充
+                action: 'AUTO_ASSIGN',
+                tenantId,
+                details: { strategy: 'ROUND_ROBIN', assignedSalesId: nextSales.id, assignedSalesName: nextSales.name },
+            });
+
             return {
                 salesId: nextSales.id,
                 salesName: nextSales.name,
@@ -174,11 +189,22 @@ export async function distributeToNextSales(tenantId: string): Promise<{
             };
         }
 
-        // TODO: 负载均衡模式 - 优先分配给线索最少的销售
-        // TODO: 渠道指定模式 - 特定渠道分配给指定销售
+        // 暂未实现的策略
+        if (config.strategy === 'LOAD_BALANCE' || config.strategy === 'CHANNEL_SPECIFIC') {
+            console.warn(`[Distribution] Strategy ${config.strategy} is not yet implemented. Falling back to MANUAL.`);
+            return { salesId: null, salesName: null, strategy: config.strategy };
+        }
 
         return { salesId: null, salesName: null, strategy: config.strategy };
-    });
+    };
+
+    if (externalTx) {
+        return await executeLogic(externalTx);
+    } else {
+        return await db.transaction(async (tx) => {
+            return await executeLogic(tx);
+        });
+    }
 }
 
 /**

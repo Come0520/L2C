@@ -56,6 +56,15 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(),
+  headers: vi.fn(),
+}));
+
+vi.mock('next/cookies', () => ({
+  cookies: vi.fn(),
+}));
+
 vi.mock('@/shared/lib/server-action', () => ({
   createSafeAction: vi.fn((schema, handler) => {
     // 模拟 createSafeAction：直接调用 handler 并注入 mock context
@@ -113,20 +122,19 @@ vi.mock('../../services/accessory-linkage.service', () => ({
   },
 }));
 
-vi.mock('../../logic/calculator', () => ({
-  CurtainCalculator: {
-    calculate: vi.fn().mockReturnValue({ quantity: 5, warnings: [] }),
-  },
-  WallpaperCalculator: {
-    calculate: vi.fn().mockReturnValue({ quantity: 3, warnings: [] }),
+vi.mock('../calc-strategies/strategy-factory', () => ({
+  StrategyFactory: {
+    getStrategy: vi.fn(() => ({
+      calculate: vi.fn().mockReturnValue({
+        usage: 5,
+        subtotal: 100,
+        details: { warning: undefined },
+      }),
+    })),
   },
 }));
 
-vi.mock('../../logic/size-validator', () => ({
-  SizeValidator: {
-    validate: vi.fn().mockReturnValue({ valid: true, messages: [] }),
-  },
-}));
+
 
 // ── 辅助函数 ────────────────────────────
 

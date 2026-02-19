@@ -9,7 +9,7 @@ import {
     voidLeadSchema,
     convertLeadSchema
 } from '../schemas';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { LeadService } from '@/services/lead.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -88,10 +88,12 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
 
     revalidatePath('/leads');
     revalidatePath(`/leads/${id}`);
+    revalidateTag(`leads-${session.user.tenantId}`, 'default');
+    revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
     return updated;
 }
 
-export async function assignLead(input: z.infer<typeof assignLeadSchema>, userId: string) {
+export async function assignLead(input: z.infer<typeof assignLeadSchema>) {
     // 认证和权限检查
     const session = await auth();
     if (!session?.user?.tenantId || !session?.user?.id) {
@@ -104,6 +106,8 @@ export async function assignLead(input: z.infer<typeof assignLeadSchema>, userId
     const updated = await LeadService.assignLead(id, salesId, session.user.tenantId, session.user.id);
 
     revalidatePath('/leads');
+    revalidateTag(`leads-${session.user.tenantId}`, 'default');
+    revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
     return updated;
 }
 
@@ -123,47 +127,55 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) 
 
     revalidatePath(`/leads/${leadId}`);
     revalidatePath('/leads');
+    revalidateTag(`leads-${tenantId}`, 'default');
+    revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
 }
 
-export async function voidLead(input: z.infer<typeof voidLeadSchema>, userId: string) {
+export async function voidLead(input: z.infer<typeof voidLeadSchema>) {
     // 认证和权限检查
     const session = await auth();
-    if (!session?.user?.tenantId) {
+    if (!session?.user?.tenantId || !session?.user?.id) {
         throw new Error('Unauthorized: 未登录或缺少租户信息');
     }
     await checkPermission(session, PERMISSIONS.LEAD.DELETE);
 
     const { id, reason } = voidLeadSchema.parse(input);
 
-    await LeadService.voidLead(id, reason, session.user.tenantId, userId);
+    await LeadService.voidLead(id, reason, session.user.tenantId, session.user.id);
 
     revalidatePath('/leads');
+    revalidateTag(`leads-${session.user.tenantId}`, 'default');
+    revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
 }
 
-export async function releaseToPool(leadId: string, userId: string) {
+export async function releaseToPool(leadId: string) {
     // 认证和权限检查
     const session = await auth();
-    if (!session?.user?.tenantId) {
+    if (!session?.user?.tenantId || !session?.user?.id) {
         throw new Error('Unauthorized: 未登录或缺少租户信息');
     }
     await checkPermission(session, PERMISSIONS.LEAD.TRANSFER);
 
-    await LeadService.releaseToPool(leadId, session.user.tenantId, userId);
+    await LeadService.releaseToPool(leadId, session.user.tenantId, session.user.id);
 
     revalidatePath('/leads');
+    revalidateTag(`leads-${session.user.tenantId}`, 'default');
+    revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
 }
 
-export async function claimFromPool(leadId: string, userId: string) {
+export async function claimFromPool(leadId: string) {
     // 认证和权限检查
     const session = await auth();
-    if (!session?.user?.tenantId) {
+    if (!session?.user?.tenantId || !session?.user?.id) {
         throw new Error('Unauthorized: 未登录或缺少租户信息');
     }
     await checkPermission(session, PERMISSIONS.LEAD.EDIT);
 
-    await LeadService.claimFromPool(leadId, session.user.tenantId, userId);
+    await LeadService.claimFromPool(leadId, session.user.tenantId, session.user.id);
 
     revalidatePath('/leads');
+    revalidateTag(`leads-${session.user.tenantId}`, 'default');
+    revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
 }
 
 export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
@@ -183,6 +195,8 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
     revalidatePath('/leads');
     // Also revalidate customers list as a new customer might be created
     revalidatePath('/customers');
+    revalidateTag(`leads-${tenantId}`, 'default');
+    revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
 
     return newCustomerId;
 }
@@ -253,5 +267,6 @@ export async function importLeads(data: unknown[]) {
     }
 
     revalidatePath('/leads');
+    revalidateTag(`leads-${tenantId}`, 'default');
     return { successCount, errors };
 }

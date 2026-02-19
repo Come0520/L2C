@@ -1,28 +1,12 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { salesTargets, users } from '@/shared/api/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { eq, and } from 'drizzle-orm';
+import { getMiniprogramUser } from '../../auth-utils';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
-// Helper: Auth & Role Check
-async function getUser(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const token = authHeader.slice(7);
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
 
-        const user = await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, payload.userId as string),
-            columns: { id: true, role: true, tenantId: true },
-        });
-        return user;
-    } catch {
-        return null;
-    }
-}
 
 /**
  * GET /api/miniprogram/sales/targets
@@ -33,8 +17,8 @@ async function getUser(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
     try {
-        const user = await getUser(request);
-        if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        const user = await getMiniprogramUser(request);
+        if (!user) return apiError('Unauthorized', 401);
 
         const { searchParams } = new URL(request.url);
         const now = new Date();
@@ -66,38 +50,6 @@ export async function GET(request: NextRequest) {
         if (filterUserId) {
             conditions.push(eq(salesTargets.userId, filterUserId));
         }
-
-        // Query targets with user info
-        const rows = await db.select({
-            id: salesTargets.id,
-            userId: salesTargets.userId,
-            year: salesTargets.year,
-            month: salesTargets.month,
-            targetAmount: salesTargets.targetAmount,
-            updatedAt: salesTargets.updatedAt,
-            userName: users.name,
-            userAvatar: users.avatarUrl
-        })
-            .from(salesTargets)
-            .rightJoin(users, and(
-                eq(users.id, salesTargets.userId),
-                eq(salesTargets.year, year),
-                eq(salesTargets.month, month),
-                eq(salesTargets.tenantId, user.tenantId)
-            ))
-            .where(and(
-                eq(users.tenantId, user.tenantId),
-                eq(users.role, 'sales'),
-                eq(users.isActive, true)
-            ));
-
-        // Result will have null salesTargets fields if no target set
-        const data = rows.map(r => ({
-            userId: r.userId, // from right join, r.userId might be (users.id) actually if we select properly. 
-            // distinct issue: rightJoin users means we iterate users.
-            // Wait, rightJoin syntax in drizzle: .from(salesTargets).rightJoin(users, ...)
-            // We want ALL sales users, and their targets if exist.
-        }));
 
         // Better approach: Select from Users, left join Targets
         const result = await db.select({
@@ -131,11 +83,11 @@ export async function GET(request: NextRequest) {
             updatedAt: r.updatedAt
         }));
 
-        return NextResponse.json({ success: true, data: formatted });
+        return apiSuccess(formatted);
 
     } catch (error) {
         console.error('Get Targets Error:', error);
-        return NextResponse.json({ success: false, error: 'Failed to fetch targets' }, { status: 500 });
+        return apiError('Failed to fetch targets', 500);
     }
 }
 
@@ -146,18 +98,18 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUser(request);
-        if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        const user = await getMiniprogramUser(request);
+        if (!user) return apiError('Unauthorized', 401);
 
         if (!['admin', 'manager', 'BOSS'].includes(user.role?.toLowerCase() || '')) {
-            return NextResponse.json({ success: false, error: 'Permission denied' }, { status: 403 });
+            return apiError('Permission denied', 403);
         }
 
         const body = await request.json();
         const { userId, year, month, targetAmount } = body;
 
         if (!userId || !year || !month || targetAmount === undefined) {
-            return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
+            return apiError('Missing required fields', 400);
         }
 
         // Upsert logic
@@ -180,10 +132,10 @@ export async function POST(request: NextRequest) {
                 }
             });
 
-        return NextResponse.json({ success: true });
+        return apiSuccess(null);
 
     } catch (error) {
         console.error('Set Target Error:', error);
-        return NextResponse.json({ success: false, error: 'Failed to set target' }, { status: 500 });
+        return apiError('Failed to set target', 500);
     }
 }

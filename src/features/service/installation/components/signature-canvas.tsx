@@ -7,6 +7,7 @@ import { cn } from '@/shared/utils';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import Check from 'lucide-react/dist/esm/icons/check';
 import X from 'lucide-react/dist/esm/icons/x';
+import type SignatureCanvasLib from 'react-signature-canvas';
 
 interface SignatureCanvasProps {
     onConfirm: (blob: Blob) => void;
@@ -17,10 +18,10 @@ interface SignatureCanvasProps {
 const ReactSignatureCanvas = dynamic(() => import('react-signature-canvas'), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
-}) as any;
+});
 
 export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCanvasProps) {
-    const sigCanvas = useRef<any>(null);
+    const sigCanvas = useRef<SignatureCanvasLib>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 500, height: 200 });
 

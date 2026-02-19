@@ -3,8 +3,11 @@
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { liabilityNotices } from '@/shared/api/schema/after-sales';
-import { eq, and, sql } from 'drizzle-orm';
-import { z } from 'zod';
+import { suppliers } from '@/shared/api/schema/supply-chain';
+import { customers } from '@/shared/api/schema/customers';
+import { users } from '@/shared/api/schema/infrastructure';
+import { purchaseOrders } from '@/shared/api/schema/supply-chain';
+import { eq, and, sql, sum } from 'drizzle-orm';
 
 /**
  * 扣款安全水位逻辑
@@ -19,15 +22,24 @@ import { z } from 'zod';
 export const DEDUCTION_SAFETY_CONFIG = {
     // 安装工最大累计欠款额度
     INSTALLER_MAX_DEDUCTION: 5000,
+    // 测量员最大累计欠款额度
+    MEASURER_MAX_DEDUCTION: 2000,
+    // 物流公司最大累计欠款额度
+    LOGISTICS_MAX_DEDUCTION: 5000,
     // 供应商最大累计欠款比例（相对于历史采购额）
     SUPPLIER_MAX_RATIO: 0.1,
+    // 默认备选最大限额 (当无法计算动态限额时)
+    DEFAULT_MAX_DEDUCTION: 50000,
     // 预警阈值（达到最大值的百分比时预警）
     WARNING_THRESHOLD: 0.8,
 } as const;
 
+// P1 FIX (AS-10): 支持全量责任方类型
+export type LiablePartyType = 'COMPANY' | 'FACTORY' | 'INSTALLER' | 'MEASURER' | 'LOGISTICS' | 'CUSTOMER';
+
 // 欠款账本类型
 export interface DeductionLedger {
-    partyType: 'INSTALLER' | 'FACTORY';
+    partyType: LiablePartyType;
     partyId: string;
     partyName: string;
     totalDeducted: number;     // 累计扣款
@@ -52,7 +64,7 @@ export interface DeductionCheckResult {
  * 获取责任方的欠款账本
  */
 export async function getDeductionLedger(
-    partyType: 'INSTALLER' | 'FACTORY',
+    partyType: LiablePartyType,
     partyId: string
 ): Promise<DeductionLedger | null> {
     const session = await auth();
@@ -89,14 +101,63 @@ export async function getDeductionLedger(
 
     const pendingAmount = totalDeducted - totalSettled;
 
-    // 计算最大额度
-    let maxAllowed = 0;
-    if (partyType === 'INSTALLER') {
+    // P1 FIX (AS-17/AS-11): 关联查询责任方名称并计算动态限额
+    let partyName = '未知责任方';
+    let maxAllowed: number = DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION;
+
+    if (partyType === 'FACTORY') {
+        const supplier = await db.query.suppliers.findFirst({
+            where: and(eq(suppliers.id, partyId), eq(suppliers.tenantId, tenantId)),
+            columns: { name: true }
+        });
+        partyName = supplier?.name || '未知供应商';
+
+        // P1 FIX (AS-11): 动态计算供应商限额 = 历史采购总额 * 10%
+        const [poSummary] = await db
+            .select({ total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`) })
+            .from(purchaseOrders)
+            .where(and(
+                eq(purchaseOrders.supplierId, partyId),
+                eq(purchaseOrders.tenantId, tenantId),
+                sql`${purchaseOrders.status} != 'CANCELED'`
+            ));
+
+        const historicalPurchaseAmount = Number(poSummary?.total || 0);
+        maxAllowed = Math.max(
+            DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION,
+            historicalPurchaseAmount * DEDUCTION_SAFETY_CONFIG.SUPPLIER_MAX_RATIO
+        );
+    } else if (partyType === 'INSTALLER') {
+        const user = await db.query.users.findFirst({
+            where: and(eq(users.id, partyId), eq(users.tenantId, tenantId)),
+            columns: { name: true }
+        });
+        partyName = user?.name || '未知安装工';
         maxAllowed = DEDUCTION_SAFETY_CONFIG.INSTALLER_MAX_DEDUCTION;
-    } else if (partyType === 'FACTORY') {
-        // 供应商按历史采购额比例计算
-        // TODO: 查询历史采购总额
-        maxAllowed = 50000; // 暂时固定值
+    } else if (partyType === 'MEASURER') {
+        const user = await db.query.users.findFirst({
+            where: and(eq(users.id, partyId), eq(users.tenantId, tenantId)),
+            columns: { name: true }
+        });
+        partyName = user?.name || '未知测量员';
+        maxAllowed = DEDUCTION_SAFETY_CONFIG.MEASURER_MAX_DEDUCTION;
+    } else if (partyType === 'LOGISTICS') {
+        const supplier = await db.query.suppliers.findFirst({
+            where: and(eq(suppliers.id, partyId), eq(suppliers.tenantId, tenantId)),
+            columns: { name: true }
+        });
+        partyName = supplier?.name || '未知物流公司';
+        maxAllowed = DEDUCTION_SAFETY_CONFIG.LOGISTICS_MAX_DEDUCTION;
+    } else if (partyType === 'CUSTOMER') {
+        const customer = await db.query.customers.findFirst({
+            where: and(eq(customers.id, partyId), eq(customers.tenantId, tenantId)),
+            columns: { name: true }
+        });
+        partyName = customer?.name || '未知客户';
+        maxAllowed = 9999999; // 客户无实际"欠款"限制
+    } else if (partyType === 'COMPANY') {
+        partyName = '公司内部';
+        maxAllowed = 9999999; // 公司内部无限制
     }
 
     const usedRatio = maxAllowed > 0 ? pendingAmount / maxAllowed : 0;
@@ -111,7 +172,7 @@ export async function getDeductionLedger(
     return {
         partyType,
         partyId,
-        partyName: '', // 需要关联查询
+        partyName, // P1 FIX: 已补充名称
         totalDeducted,
         totalSettled,
         pendingAmount,
@@ -125,7 +186,7 @@ export async function getDeductionLedger(
  * 检查是否可以新增扣款
  */
 export async function checkDeductionAllowed(
-    partyType: 'INSTALLER' | 'FACTORY',
+    partyType: LiablePartyType,
     partyId: string,
     newDeductionAmount: number
 ): Promise<DeductionCheckResult> {
@@ -216,34 +277,10 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
         .where(eq(liabilityNotices.tenantId, tenantId))
         .groupBy(liabilityNotices.liablePartyType, liabilityNotices.liablePartyId);
 
-    return result
-        .filter(r => r.partyId)
-        .map(r => {
-            const totalDeducted = Number(r.totalDeducted || 0);
-            const totalSettled = Number(r.totalSettled || 0);
-            const pendingAmount = totalDeducted - totalSettled;
-
-            const isInstaller = r.partyType === 'INSTALLER';
-            const maxAllowed = isInstaller
-                ? DEDUCTION_SAFETY_CONFIG.INSTALLER_MAX_DEDUCTION
-                : 50000;
-
-            const usedRatio = maxAllowed > 0 ? pendingAmount / maxAllowed : 0;
-
-            let status: DeductionLedger['status'] = 'NORMAL';
-            if (usedRatio >= 1) status = 'BLOCKED';
-            else if (usedRatio >= DEDUCTION_SAFETY_CONFIG.WARNING_THRESHOLD) status = 'WARNING';
-
-            return {
-                partyType: r.partyType as 'INSTALLER' | 'FACTORY',
-                partyId: r.partyId!,
-                partyName: '', // 需要关联查询补充
-                totalDeducted,
-                totalSettled,
-                pendingAmount,
-                maxAllowed,
-                usedRatio,
-                status,
-            };
-        });
+    return Promise.all(result
+        .filter(r => r.partyId && r.partyType)
+        .map(async r => {
+            const ledger = await getDeductionLedger(r.partyType as LiablePartyType, r.partyId!);
+            return ledger!;
+        }));
 }

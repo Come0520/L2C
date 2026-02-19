@@ -1,56 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../../../../auth-utils';
 
-// Helper: Get User Info
-async function getUser(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const token = authHeader.slice(7);
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        return await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, payload.userId as string),
-            columns: { id: true, role: true, tenantId: true },
-        });
-    } catch {
-        return null;
-    }
-}
+
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const user = await getUser(request);
+        const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            return apiError('Unauthorized', 401);
         }
 
         const { id: taskId } = await params;
         const body = await request.json();
         const { photos, signatureUrl, remark } = body;
 
-        // Validation
-        if (!photos || photos.length === 0) {
-            return NextResponse.json({ success: false, error: '请上传现场照片' }, { status: 400 });
-        }
-
-        // Verify Task ownership
-        const task = await db.query.installTasks.findFirst({
-            where: and(
-                eq(installTasks.id, taskId),
-                eq(installTasks.tenantId, user.tenantId),
-                eq(installTasks.installerId, user.id)
-            )
-        });
-
-        if (!task) {
-            return NextResponse.json({ success: false, error: 'Task not found or not assigned to you' }, { status: 404 });
-        }
-
         return await db.transaction(async (tx) => {
+            // Verify Task ownership
+            const task = await tx.query.installTasks.findFirst({
+                where: and(
+                    eq(installTasks.id, taskId),
+                    eq(installTasks.tenantId, user.tenantId),
+                    eq(installTasks.installerId, user.id)
+                )
+            });
+
+            if (!task) {
+                return apiError('Task not found or not assigned to you', 404);
+            }
+
             // 1. Update Task Status
             await tx.update(installTasks)
                 .set({
@@ -75,11 +56,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 await tx.insert(installPhotos).values(photoRecords);
             }
 
-            return NextResponse.json({ success: true });
+            return apiSuccess(null);
         });
 
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Complete Task Error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Error' }, { status: 500 });
+        return apiError('Internal Error', 500);
     }
 }
+

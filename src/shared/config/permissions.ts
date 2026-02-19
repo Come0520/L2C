@@ -91,6 +91,7 @@ export const PERMISSIONS = {
         DISPATCH: 'measure.dispatch',    // 派发测量任务
         COMPLETE: 'measure.complete',    // 完成测量任务
         VIEW: 'measure.view',            // 访问测量模块
+        MANAGE: 'measure.manage',        // 管理测量任务 (新增)
     },
 
     // ==================== 安装模块 ====================
@@ -340,6 +341,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'measure.dispatch': '派发测量任务',
     'measure.complete': '完成测量任务',
     'measure.view': '访问测量模块',
+    'measure.manage': '管理测量任务',
     // 安装
     'install.all.view': '查看所有安装任务',
     'install.own.view': '查看我的安装任务',

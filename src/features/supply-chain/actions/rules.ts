@@ -4,77 +4,95 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { splitRouteRules, suppliers } from '@/shared/api/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { AuditService } from '@/shared/lib/audit-service';
 
-import { auth, checkPermission } from '@/shared/lib/auth';
-import { PERMISSIONS } from '@/shared/config/permissions';
+import { requireAuth, requireManagePermission, requireViewPermission } from '../helpers';
+import { SUPPLY_CHAIN_PATHS } from '../constants';
 
 import { splitRuleSchema, type SplitRuleInput } from './rules.schema';
 export type { SplitRuleInput };
 
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error('未授权');
-  }
-  return session.user;
-}
+// 移除本地 requireUser，使用 helpers.ts 中的 requireAuth
 
+/**
+ * 获取当前租户的所有拆单规则清单
+ * 
+ * @description 按优先级降序排列规则。
+ * @returns {Promise<SplitRouteRule[]>}
+ */
 export async function getSplitRules() {
-  const user = await requireUser();
+  const authResult = await requireAuth();
+  if (!authResult.success) throw new Error(authResult.error);
+  const session = authResult.session;
 
-  // 权限检查
-  const session = await auth();
-  if (session) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.VIEW);
-  }
+  const permResult = await requireViewPermission(session); // 或 requireManagePermission? 原代码是 VIEW
+  if (!permResult.success) throw new Error(permResult.error);
 
   return await db
     .select()
     .from(splitRouteRules)
-    .where(eq(splitRouteRules.tenantId, user.tenantId))
+    .where(eq(splitRouteRules.tenantId, session.user.tenantId))
     .orderBy(desc(splitRouteRules.priority));
 }
 
+/**
+ * 创建新的拆单规则
+ * 
+ * @description 包含 Zod 验证和审计日志。
+ * @param input 符合 SplitRuleInput 结构的数据
+ * @returns {Promise<{success: true}>}
+ */
 export async function createSplitRule(input: SplitRuleInput) {
-  const user = await requireUser();
+  const authResult = await requireAuth();
+  if (!authResult.success) throw new Error(authResult.error);
+  const session = authResult.session;
 
-  // 权限检查
-  const session = await auth();
-  if (session) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-  }
+  const permResult = await requireManagePermission(session);
+  if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
 
   await db.insert(splitRouteRules).values({
-    tenantId: user.tenantId,
-    createdBy: user.id,
+    tenantId: session.user.tenantId,
+    createdBy: session.user.id,
     name: validated.name,
     priority: validated.priority,
     conditions: validated.conditions,
     targetType: validated.targetType,
     targetSupplierId: validated.targetSupplierId,
-    isActive: validated.isActive === 1, // 转换为 boolean
+    isActive: validated.isActive,
   });
 
-  revalidatePath('/supply-chain/rules');
+  // 记录审计日志
+  await AuditService.recordFromSession(session, 'splitRouteRules', 'new', 'CREATE', {
+    new: validated
+  });
+
+  revalidatePath(SUPPLY_CHAIN_PATHS.RULES);
   return { success: true };
 }
 
+/**
+ * 更新指定的拆单规则
+ * 
+ * @description 包含租户归属权安全检查和审计日志。
+ * @param id 规则 ID
+ * @param input 待更新的规则数据
+ * @returns {Promise<{success: true}>}
+ */
 export async function updateSplitRule(id: string, input: SplitRuleInput) {
-  const user = await requireUser();
+  const authResult = await requireAuth();
+  if (!authResult.success) throw new Error(authResult.error);
+  const session = authResult.session;
 
-  // 权限检查
-  const session = await auth();
-  if (session) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-  }
+  const permResult = await requireManagePermission(session);
+  if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
 
   // 安全检查：验证规则属于当前租户
   const existingRule = await db.query.splitRouteRules.findFirst({
-    where: and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, user.tenantId)),
+    where: and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, session.user.tenantId)),
   });
   if (!existingRule) {
     throw new Error('规则不存在或无权操作');
@@ -88,27 +106,38 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
       conditions: validated.conditions,
       targetType: validated.targetType,
       targetSupplierId: validated.targetSupplierId,
-      isActive: validated.isActive === 1, // 转换为 boolean
+      isActive: validated.isActive,
       updatedAt: new Date(),
     })
-    .where(and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, user.tenantId)));
+    .where(and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, session.user.tenantId)));
 
-  revalidatePath('/supply-chain/rules');
+  // 记录审计日志
+  await AuditService.recordFromSession(session, 'splitRouteRules', id, 'UPDATE', {
+    new: validated
+  });
+
+  revalidatePath(SUPPLY_CHAIN_PATHS.RULES);
   return { success: true };
 }
 
+/**
+ * 删除指定的拆单规则
+ * 
+ * @description 包含租户归属权安全检查。
+ * @param id 规则 ID
+ * @returns {Promise<{success: true}>}
+ */
 export async function deleteSplitRule(id: string) {
-  const user = await requireUser();
+  const authResult = await requireAuth();
+  if (!authResult.success) throw new Error(authResult.error);
+  const session = authResult.session;
 
-  // 权限检查
-  const session = await auth();
-  if (session) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-  }
+  const permResult = await requireManagePermission(session);
+  if (!permResult.success) throw new Error(permResult.error);
 
   // 安全检查：验证规则属于当前租户
   const existingRule = await db.query.splitRouteRules.findFirst({
-    where: and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, user.tenantId)),
+    where: and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, session.user.tenantId)),
   });
   if (!existingRule) {
     throw new Error('规则不存在或无权操作');
@@ -116,14 +145,25 @@ export async function deleteSplitRule(id: string) {
 
   await db
     .delete(splitRouteRules)
-    .where(and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, user.tenantId)));
+    .where(and(eq(splitRouteRules.id, id), eq(splitRouteRules.tenantId, session.user.tenantId)));
 
-  revalidatePath('/supply-chain/rules');
+  // 记录审计日志
+  await AuditService.recordFromSession(session, 'splitRouteRules', id, 'DELETE');
+
+  revalidatePath(SUPPLY_CHAIN_PATHS.RULES);
   return { success: true };
 }
 
+/**
+ * 获取租户下的所有供应商列表 (简单清单)
+ * 
+ * @description 用于在规则配置界面展示供应商下拉选择。
+ * @returns {Promise<{id: string, name: string, supplierNo: string}[]>}
+ */
 export async function getAllSuppliers() {
-  const user = await requireUser();
+  const authResult = await requireAuth();
+  if (!authResult.success) throw new Error(authResult.error);
+  const session = authResult.session;
 
   return await db
     .select({
@@ -132,5 +172,5 @@ export async function getAllSuppliers() {
       supplierNo: suppliers.supplierNo,
     })
     .from(suppliers)
-    .where(eq(suppliers.tenantId, user.tenantId));
+    .where(eq(suppliers.tenantId, session.user.tenantId));
 }

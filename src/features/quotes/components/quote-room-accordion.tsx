@@ -5,39 +5,35 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { ChevronDown, ChevronUp, Trash2, GripVertical, Plus } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/shared/ui/alert-dialog';
 
-interface RoomData {
+// ... interface definitions ...
+export interface RoomData {
     id: string;
     name: string;
-    /** 该空间的商品数量 */
-    itemCount?: number;
-    /** 该空间的小计金额 */
-    subtotal?: number;
+    [key: string]: any;
 }
 
-interface QuoteRoomAccordionProps {
-    /** 空间数据 */
+export interface QuoteRoomAccordionProps {
     room: RoomData;
-    /** 是否展开 */
     isExpanded: boolean;
-    /** 切换展开/收起 */
-    onToggle: (roomId: string) => void;
-    /** 是否只读 */
+    onToggle: (id: string) => void;
     readOnly?: boolean;
-    /** 重命名空间回调 */
-    onRename?: (roomId: string, newName: string) => void;
-    /** 删除空间回调 */
-    onDelete?: (roomId: string) => void;
-    /** 子内容（商品列表） */
+    onRename?: (id: string, name: string) => void;
+    onDelete?: (id: string) => void;
     children: ReactNode;
-    /** 额外的 className */
     className?: string;
 }
 
-/**
- * 空间抽屉组件
- * 支持展开/收起，聚焦模式交互
- */
 export function QuoteRoomAccordion({
     room,
     isExpanded,
@@ -50,6 +46,7 @@ export function QuoteRoomAccordion({
 }: QuoteRoomAccordionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(room.name);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     // 格式化金额
     const formatAmount = (amount: number | undefined): string => {
@@ -140,9 +137,7 @@ export function QuoteRoomAccordion({
                             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm('确定删除此空间及其所有明细吗？')) {
-                                    onDelete?.(room.id);
-                                }
+                                setIsDeleteDialogOpen(true);
                             }}
                         >
                             <Trash2 className="w-4 h-4" />
@@ -174,6 +169,27 @@ export function QuoteRoomAccordion({
                     {children}
                 </div>
             )}
+
+            {/* 删除确认对话框 */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除空间？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            您确定要删除空间“{room.name}”吗？此空间内的所有商品也将被一并删除，且操作无法撤销。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => onDelete?.(room.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            确认删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -16,15 +16,25 @@ export default async function InstallationPage({
     const params = await searchParams;
     const search = typeof params.search === 'string' ? params.search : undefined;
     const status = typeof params.status === 'string' ? params.status : undefined;
+    const page = typeof params.page === 'string' ? parseInt(params.page) : 1;
 
-    const result = await getInstallTasks({
-        search,
-        status: status === 'ALL' ? undefined : status,
-    });
+    // 并行获取数据和统计信息
+    const [result, statsResult] = await Promise.all([
+        getInstallTasks({
+            search,
+            status: status === 'ALL' ? undefined : status,
+            page,
+            pageSize: 20
+        }),
+        getInstallationStats()
+    ]);
+
     const tasks = result.success ? (result.data || []) : [];
+    const pagination = result.success ? result.pagination : undefined;
+    const stats = statsResult.success ? statsResult.data : [];
 
     return (
-        <div className="h-full flex flex-col gap-4 p-4">
+        <div className="h-full flex flex-col gap-6 p-6">
             {/* Header Section - Tabs 和新建按钮同一行 */}
             <div className="flex items-center justify-between">
                 <UrlSyncedTabs
@@ -42,19 +52,28 @@ export default async function InstallationPage({
                 <CreateInstallTaskDialog />
             </div>
 
+            {/* 统计概览区域 */}
+            <InstallationStats stats={stats as any} />
+
             {/* 主内容区域 - 玻璃态容器 */}
-            <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-2xl border border-white/20 p-4 gap-4">
+            <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-3xl border border-white/10 p-4 gap-4">
                 <InstallationToolbar />
 
                 <div className="flex-1 min-h-0 overflow-auto">
                     <Suspense fallback={<TableSkeleton />}>
-                        <InstallTaskTable data={tasks} />
+                        <InstallTaskTable
+                            data={tasks}
+                            pagination={pagination}
+                        />
                     </Suspense>
                 </div>
             </div>
         </div>
     );
 }
+
+import { InstallationStats } from '@/features/service/installation/components/installation-stats';
+import { getInstallationStats } from '@/features/service/installation/actions';
 
 function TableSkeleton() {
     return (

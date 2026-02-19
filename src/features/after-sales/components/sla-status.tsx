@@ -7,8 +7,16 @@ import { format, differenceInHours, differenceInMinutes, isPast } from "date-fns
 import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
+import { TicketDetail } from "../types";
+
 interface SLAStatusProps {
-    ticket: any;
+    ticket: TicketDetail;
+}
+
+interface SLAStatusType {
+    status: 'unset' | 'ok' | 'overdue' | 'urgent' | 'warning' | 'normal';
+    color: string;
+    text: string;
 }
 
 export function SLAStatus({ ticket }: SLAStatusProps) {
@@ -20,7 +28,7 @@ export function SLAStatus({ ticket }: SLAStatusProps) {
     const closureDeadline = ticket.slaClosureDeadline ? new Date(ticket.slaClosureDeadline) : null;
 
     // Helper to get status color and text
-    const getDeadlineStatus = (deadline: Date | null, isCompleted: boolean) => {
+    const getDeadlineStatus = (deadline: Date | null, isCompleted: boolean): SLAStatusType => {
         if (!deadline) return { status: 'unset', color: 'bg-gray-200', text: '未设置' };
         if (isCompleted) return { status: 'ok', color: 'bg-green-500', text: '已达成' };
 
@@ -47,7 +55,7 @@ export function SLAStatus({ ticket }: SLAStatusProps) {
     // Current Active Deadline for Main Display
     let activeDeadline = null;
     let activeLabel = '';
-    let activeStatus = null;
+    let activeStatus: SLAStatusType | null = null;
 
     if (!isResponded && responseDeadline) {
         activeDeadline = responseDeadline;
@@ -117,7 +125,7 @@ export function SLAStatus({ ticket }: SLAStatusProps) {
     );
 }
 
-function SLAStep({ label, deadline, status, isCompleted }: { label: string, deadline: Date | null, status: any, isCompleted: boolean }) {
+function SLAStep({ label, deadline, status, isCompleted }: { label: string, deadline: Date | null, status: SLAStatusType, isCompleted: boolean }) {
     return (
         <div className="flex items-center gap-3 text-sm">
             <div className={cn("flex items-center justify-center w-6 h-6 rounded-full border shrink-0",

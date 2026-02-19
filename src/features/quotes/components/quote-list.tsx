@@ -179,8 +179,24 @@ export function QuoteList() {
                 </TableRow>
               ) : quotes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    暂无报价单
+                  <TableCell colSpan={7} className="h-[400px] text-center">
+                    <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+                      <div className="rounded-full bg-muted/50 p-6">
+                        <Layout className="h-10 w-10 opacity-50" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-foreground">暂无报价单</h3>
+                        <p className="text-sm">
+                          {activeTab === 'ALL'
+                            ? '当前还没有任何报价单，创建一个新的开始吧。'
+                            : `在"${STATUS_LABELS[activeTab] || activeTab}"状态下暂无报价单。`}
+                        </p>
+                      </div>
+                      <Button onClick={handleCreate} disabled={creating}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        新建报价
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

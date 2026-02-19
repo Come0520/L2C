@@ -4,6 +4,8 @@ import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 import { roles } from '@/shared/api/schema';
 import { eq, asc } from 'drizzle-orm';
+import { ROLES } from '@/shared/config/roles';
+
 
 export type RoleOption = {
   label: string;
@@ -12,7 +14,7 @@ export type RoleOption = {
   isSystem: boolean;
 };
 
-import { DEFAULT_ROLES } from '../constants/roles';
+
 
 export async function getAvailableRoles(): Promise<RoleOption[]> {
   const session = await auth();
@@ -30,16 +32,17 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
       // Auto-initialize default roles for the tenant
       console.log(`Initializing default roles for tenant: ${session.user.tenantId}`);
 
-      const newRoles = DEFAULT_ROLES.map((role) => ({
+      const newRoles = Object.values(ROLES).map((role) => ({
         tenantId: session.user.tenantId,
         name: role.name,
         code: role.code,
         description: role.description,
+        permissions: role.permissions, // Include permissions for completeness, though schema defaults might vary
         isSystem: role.isSystem,
       }));
 
-      // Insert default roles
-      await db.insert(roles).values(newRoles);
+      // Insert default roles (使用 onConflictDoNothing 防止并发初始化竞态)
+      await db.insert(roles).values(newRoles).onConflictDoNothing();
 
       // Fetch again to get IDs and correct types
       const initializedRoles = await db.query.roles.findMany({
@@ -62,7 +65,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
       isSystem: r.isSystem || false,
     }));
   } catch (error) {
-    console.error('Failed to fetch roles:', error);
+    console.warn('获取可用角色失败:', error);
     return [];
   }
 }

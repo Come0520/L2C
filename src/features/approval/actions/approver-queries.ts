@@ -12,10 +12,14 @@ export async function searchApprovers(query: string) {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
 
+    // 输入净化：限制长度并转义通配符
+    const sanitized = query.slice(0, 50).replace(/[%_\\]/g, '\\$&');
+
     return await db.query.users.findMany({
         where: and(
             eq(users.tenantId, session.user.tenantId),
-            ilike(users.name, `%${query}%`)
+            eq(users.isActive, true),
+            ilike(users.name, `%${sanitized}%`)
         ),
         columns: {
             id: true,

@@ -26,11 +26,15 @@ import {
     ConversionFunnelWidget,
 } from './service-widgets';
 import { ChannelPerformanceWidget } from './channel-widgets';
+import { ExecutiveSummaryWidget } from './executive-summary-widget';
+import { CashFlowForecastWidget } from './cash-flow-forecast-widget';
+import { ARAgingWidget } from './ar-aging-widget';
+import { EnhancedFunnelWidget } from './enhanced-funnel-widget';
 
 /**
  * Widget 组件映射表
  */
-const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
+const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType<any>> = {
     // 销售专属
     'sales-target': SalesTargetWidget,
     'sales-leads': SalesLeadsWidget,
@@ -41,7 +45,9 @@ const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
     'team-sales': TeamSalesWidget,
     'team-target': TeamTargetWidget,
     'team-leaderboard': TeamLeaderboardWidget,
+    'executive-summary': ExecutiveSummaryWidget,
     'conversion-funnel': ConversionFunnelWidget,
+    'enhanced-funnel': EnhancedFunnelWidget,
 
     // 派单员
     'pending-measure': PendingMeasureWidget,
@@ -50,8 +56,10 @@ const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
 
     // 财务
     'ar-summary': ARSummaryWidget,
+    'ar-aging': ARAgingWidget,
     'ap-summary': APSummaryWidget,
     'cash-flow': CashFlowWidget,
+    'cash-flow-forecast': CashFlowForecastWidget,
 
     // 通用
     'pending-approval': PendingApprovalWidget,

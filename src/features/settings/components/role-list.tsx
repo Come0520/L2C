@@ -12,9 +12,16 @@ import { Button } from '@/shared/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 
+/** 角色列表项类型 */
+interface RoleItem {
+    id: string;
+    name: string;
+    code: string;
+}
+
 interface RoleListProps {
-    data: any[];
-    onEdit?: (role: any) => void;
+    data: RoleItem[];
+    onEdit?: (role: RoleItem) => void;
 }
 
 export function RoleList({ data, onEdit }: RoleListProps) {

@@ -17,17 +17,20 @@ export function clearFinanceConfigCache(tenantId: string): void {
     configCache.delete(tenantId);
 }
 
+import { Decimal } from 'decimal.js';
+
 /**
  * 判断差额是否在允许范围内
  */
 export function isWithinAllowedDifference(
     config: FinanceConfig,
-    difference: number
+    difference: number | string | Decimal
 ): boolean {
+    const diff = new Decimal(difference);
     if (!config.allow_difference) {
-        return difference === 0;
+        return diff.isZero();
     }
-    return Math.abs(difference) <= config.max_difference_amount;
+    return diff.abs().lte(config.max_difference_amount);
 }
 
 /**
@@ -35,14 +38,16 @@ export function isWithinAllowedDifference(
  */
 export function getDifferenceHandlingResult(
     config: FinanceConfig,
-    difference: number
+    difference: number | string | Decimal
 ): {
     allowed: boolean;
     action: 'NONE' | 'AUTO_ADJUST' | 'MANUAL_RECORD' | 'FORBIDDEN';
     message: string;
 } {
+    const diff = new Decimal(difference);
+
     // 无差异
-    if (difference === 0) {
+    if (diff.isZero()) {
         return { allowed: true, action: 'NONE', message: '金额匹配' };
     }
 
@@ -52,11 +57,12 @@ export function getDifferenceHandlingResult(
     }
 
     // 差异超出允许范围
-    if (Math.abs(difference) > config.max_difference_amount) {
+    const absDiff = diff.abs();
+    if (absDiff.gt(config.max_difference_amount)) {
         return {
             allowed: false,
             action: 'FORBIDDEN',
-            message: `差额 ${Math.abs(difference).toFixed(2)} 元超出允许范围 ${config.max_difference_amount} 元`,
+            message: `差额 ${absDiff.toFixed(2)} 元超出允许范围 ${config.max_difference_amount} 元`,
         };
     }
 
@@ -64,7 +70,7 @@ export function getDifferenceHandlingResult(
     return {
         allowed: true,
         action: config.difference_handling,
-        message: `差额 ${Math.abs(difference).toFixed(2)} 元，${config.difference_handling === 'AUTO_ADJUST' ? '自动调整' : '需人工确认'
+        message: `差额 ${absDiff.toFixed(2)} 元，${config.difference_handling === 'AUTO_ADJUST' ? '自动调整' : '需人工确认'
             }`,
     };
 }
@@ -72,32 +78,34 @@ export function getDifferenceHandlingResult(
 /**
  * 根据配置进行抹零
  */
-export function applyRounding(config: FinanceConfig, amount: number): number {
+export function applyRounding(config: FinanceConfig, amount: number | string | Decimal): number {
+    const amt = new Decimal(amount);
     if (!config.allow_rounding) {
-        return amount;
+        return amt.toNumber();
     }
 
     // 确定精度
-    let precision: number;
+    let precision: Decimal;
     switch (config.rounding_unit) {
         case 'YUAN':
-            precision = 1; // 精确到元
+            precision = new Decimal(1); // 精确到元
             break;
         case 'JIAO':
-            precision = 0.1; // 精确到角
+            precision = new Decimal(0.1); // 精确到角
             break;
         case 'FEN':
-            precision = 0.01; // 精确到分
+            precision = new Decimal(0.01); // 精确到分
             break;
         default:
-            precision = 1;
+            precision = new Decimal(1);
     }
 
     // 应用舍入模式
     if (config.rounding_mode === 'ROUND_DOWN') {
-        return Math.floor(amount / precision) * precision;
+        // 向下取整： amt / precision 后的整数部分 * precision
+        return amt.div(precision).floor().mul(precision).toNumber();
     } else {
         // ROUND_HALF_UP (四舍五入)
-        return Math.round(amount / precision) * precision;
+        return amt.div(precision).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).mul(precision).toNumber();
     }
 }

@@ -7,7 +7,8 @@
  * POST /api/miniprogram/tasks/[id]
  * 更新任务状态或上传信息
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { db } from '@/shared/api/db';
 import {
   measureTasks,
@@ -18,36 +19,18 @@ import {
   leads,
 } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../auth-utils';
 
-/**
- * Helper: Parse User from Token
- */
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-    };
-  } catch {
-    return null;
-  }
-}
+
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> } // Next.js 15+ params is async
 ) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { id } = await params;
@@ -55,7 +38,7 @@ export async function GET(
     const type = searchParams.get('type'); // 'measure' or 'install'
 
     if (!type) {
-      return NextResponse.json({ success: false, error: '缺少任务类型参数' }, { status: 400 });
+      return apiError('缺少任务类型参数', 400);
     }
 
     let taskData = null;
@@ -71,19 +54,33 @@ export async function GET(
         .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, user.tenantId)))
         .limit(1);
       if (!rawTask.length)
-        return NextResponse.json({ success: false, error: '任务不存在' }, { status: 404 });
+        return apiError('任务不存在', 404);
 
       const t = rawTask[0];
 
-      // Fetch Customer
+      // 查询客户（添加 tenantId 过滤）
       const customer = await db
         .select()
         .from(customers)
-        .where(eq(customers.id, t.customerId))
+        .where(
+          and(
+            eq(customers.id, t.customerId),
+            eq(customers.tenantId, user.tenantId)
+          )
+        )
         .limit(1);
 
       // Fetch Measure Sheets (if any)
-      const sheets = await db.select().from(measureSheets).where(eq(measureSheets.taskId, t.id));
+      // P1 修复：添加 tenantId 过滤
+      const sheets = await db
+        .select()
+        .from(measureSheets)
+        .where(
+          and(
+            eq(measureSheets.taskId, t.id),
+            eq(measureSheets.tenantId, user.tenantId)
+          )
+        );
 
       // 查询工费定价规则
       let laborFeeRule = null;
@@ -131,10 +128,10 @@ export async function GET(
       let quoteSummary = null;
       if (t.type === 'QUOTE_BASED' && t.leadId) {
         const leadData = await db.query.leads.findFirst({
-          where: eq(leads.id, t.leadId),
+          where: and(eq(leads.id, t.leadId), eq(leads.tenantId, user.tenantId)),
           with: {
             quotes: {
-              orderBy: (quotes: any, { desc }: any) => [desc(quotes.createdAt)],
+              orderBy: (quotes, { desc }) => [desc(quotes.createdAt)],
               limit: 1,
               with: {
                 rooms: {
@@ -142,7 +139,6 @@ export async function GET(
                     items: {
                       columns: {
                         id: true,
-                        roomName: true,
                         productName: true,
                         width: true,
                         height: true,
@@ -155,11 +151,12 @@ export async function GET(
           },
         });
 
-        if ((leadData as any)?.quotes?.[0]) {
+        if (leadData?.quotes?.[0]) {
+          const firstQuote = leadData.quotes[0];
           quoteSummary = {
-            quoteNo: (leadData as any).quotes[0].quoteNo,
-            rooms: (leadData as any).quotes[0].rooms.map((room: any) => ({
-              roomName: room.roomName,
+            quoteNo: firstQuote.quoteNo,
+            rooms: firstQuote.rooms.map((room) => ({
+              roomName: room.name,
               items: room.items,
             })),
           };
@@ -172,10 +169,10 @@ export async function GET(
         sheets: sheets,
         laborFeeRule: laborFeeRule
           ? {
-              unitType: laborFeeRule.unitType,
-              unitPrice: laborFeeRule.unitPrice,
-              baseFee: laborFeeRule.baseFee,
-            }
+            unitType: laborFeeRule.unitType,
+            unitPrice: laborFeeRule.unitPrice,
+            baseFee: laborFeeRule.baseFee,
+          }
           : null,
         quoteSummary,
       };
@@ -186,28 +183,25 @@ export async function GET(
         .where(and(eq(installTasks.id, id), eq(installTasks.tenantId, user.tenantId)))
         .limit(1);
       if (!rawTask.length)
-        return NextResponse.json({ success: false, error: '任务不存在' }, { status: 404 });
+        return apiError('任务不存在', 404);
 
       taskData = {
         ...rawTask[0],
       };
     }
 
-    return NextResponse.json({
-      success: true,
-      data: taskData,
-    });
+    return apiSuccess(taskData);
   } catch (error) {
     console.error('Get Task Detail Error:', error);
-    return NextResponse.json({ success: false, error: '获取详情失败' }, { status: 500 });
+    return apiError('获取详情失败', 500);
   }
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { id } = await params;
@@ -220,7 +214,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await db
           .update(measureTasks)
           .set({ status: data.status, updatedAt: new Date() })
-          .where(eq(measureTasks.id, id));
+          .where(
+            and(
+              eq(measureTasks.id, id),
+              eq(measureTasks.tenantId, user.tenantId)
+            )
+          );
       }
       // Add more actions as needed
     } else if (type === 'install') {
@@ -228,13 +227,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await db
           .update(installTasks)
           .set({ status: data.status, updatedAt: new Date() })
-          .where(eq(installTasks.id, id));
+          .where(
+            and(
+              eq(installTasks.id, id),
+              eq(installTasks.tenantId, user.tenantId)
+            )
+          );
       }
     }
 
-    return NextResponse.json({ success: true, message: '更新成功' });
+    return apiSuccess({ message: '更新成功' });
   } catch (error) {
     console.error('Update Task Error:', error);
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 });
+    return apiError('更新失败', 500);
   }
 }

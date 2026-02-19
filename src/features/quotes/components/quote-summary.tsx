@@ -3,7 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Separator } from '@/shared/ui/separator';
 
-export function QuoteSummary({ quote }: { quote: any }) {
+import { QuoteSummaryData } from '../types';
+
+export function QuoteSummary({ quote }: { quote: QuoteSummaryData }) {
     return (
         <Card>
             <CardHeader>

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { QuoteTemplateService } from '@/services/quote-template.service';
+import { AuditService } from '@/shared/lib/audit-service';
 
 /**
  * 报价模板 Server Actions
@@ -22,11 +23,15 @@ const saveQuoteAsTemplateSchema = z.object({
 const saveQuoteAsTemplateActionInternal = createSafeAction(
     saveQuoteAsTemplateSchema,
     async (data, context) => {
+        const tenantId = context.session.user.tenantId; // Get tenantId
+        if (!tenantId) throw new Error('Unauthorized');
+
         const template = await QuoteTemplateService.saveAsTemplate(
             data.quoteId,
             data.name,
             data.description,
             context.session.user.id,
+            tenantId, // Pass tenantId
             {
                 category: data.category,
                 tags: data.tags,
@@ -35,6 +40,12 @@ const saveQuoteAsTemplateActionInternal = createSafeAction(
         );
 
         revalidatePath('/quotes/templates');
+
+        // 审计日志：记录模板保存
+        await AuditService.recordFromSession(context.session, 'quoteTemplates', template.id, 'CREATE', {
+            new: { name: data.name, sourceQuoteId: data.quoteId },
+        });
+
         return {
             success: true,
             templateId: template.id,
@@ -55,14 +66,24 @@ const createQuoteFromTemplateSchema = z.object({
 const createQuoteFromTemplateActionInternal = createSafeAction(
     createQuoteFromTemplateSchema,
     async (data, context) => {
+        const tenantId = context.session.user.tenantId; // Get tenantId
+        if (!tenantId) throw new Error('Unauthorized');
+
         const quote = await QuoteTemplateService.createQuoteFromTemplate(
             data.templateId,
             data.customerId,
-            context.session.user.id
+            context.session.user.id,
+            tenantId // Pass tenantId
         );
 
         revalidatePath('/quotes');
         revalidatePath(`/quotes/${quote.id}`);
+
+        // 审计日志：记录从模板创建报价
+        await AuditService.recordFromSession(context.session, 'quotes', quote.id, 'CREATE', {
+            new: { templateId: data.templateId, customerId: data.customerId },
+        });
+
         return {
             success: true,
             quoteId: quote.id,
@@ -76,28 +97,35 @@ export async function createQuoteFromTemplate(params: z.infer<typeof createQuote
 }
 
 const getQuoteTemplatesSchema = z.object({
-    category: z.string().optional(),
-    search: z.string().optional(),
-    limit: z.number().optional(),
-    offset: z.number().optional()
+    excludeId: z.string().uuid().optional(),
+    category: z.string().optional()
 });
 
 const getQuoteTemplatesActionInternal = createSafeAction(
     getQuoteTemplatesSchema,
     async (data, context) => {
-        const templates = await QuoteTemplateService.getTemplates(
-            context.session.user.tenantId,
-            {
-                ...data,
-                userId: context.session.user.id,
-                includePublic: true
-            }
-        );
+        const tenantId = context.session.user.tenantId;
+        if (!tenantId) throw new Error('Unauthorized');
+
+        const result = await QuoteTemplateService.getTemplates(tenantId, data);
+
+        // Map to UI model
+        const mappedTemplates = result.templates.map(t => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            category: t.category,
+            tags: t.tags,
+            isPublic: t.isPublic,
+            createdAt: t.createdAt,
+            creator: t.creator,
+            itemCount: t.items.length,
+            roomCount: t.rooms.length
+        }));
 
         return {
-            templates,
-            total: templates.length,
-            categories: [...new Set(templates.map(t => t.category).filter(Boolean))]
+            templates: mappedTemplates,
+            categories: result.categories
         };
     }
 );
@@ -112,8 +140,11 @@ const getQuoteTemplateSchema = z.object({
 
 const getQuoteTemplateActionInternal = createSafeAction(
     getQuoteTemplateSchema,
-    async (data, _context) => {
-        const template = await QuoteTemplateService.getTemplate(data.templateId);
+    async (data, context) => { // Rename _context to context
+        const tenantId = context.session.user.tenantId;
+        if (!tenantId) throw new Error('Unauthorized');
+
+        const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
         if (!template) {
             throw new Error('模板不存在');
         }
@@ -131,8 +162,15 @@ const deleteQuoteTemplateSchema = z.object({
 
 const deleteQuoteTemplateActionInternal = createSafeAction(
     deleteQuoteTemplateSchema,
-    async (data, _context) => {
-        await QuoteTemplateService.deleteTemplate(data.templateId);
+    async (data, context) => { // Rename _context to context
+        const tenantId = context.session.user.tenantId;
+        if (!tenantId) throw new Error('Unauthorized');
+
+        await QuoteTemplateService.deleteTemplate(data.templateId, tenantId); // Pass tenantId
+
+        // 审计日志：记录模板删除
+        await AuditService.recordFromSession(context.session, 'quoteTemplates', data.templateId, 'DELETE');
+
         revalidatePath('/quotes/templates');
         return { success: true, message: '模板已删除' };
     }
@@ -148,8 +186,11 @@ const applyQuoteTemplateSchema = z.object({
 
 const applyQuoteTemplateActionInternal = createSafeAction(
     applyQuoteTemplateSchema,
-    async (data, _context) => {
-        const template = await QuoteTemplateService.getTemplate(data.templateId);
+    async (data, context) => { // Rename _context to context
+        const tenantId = context.session.user.tenantId;
+        if (!tenantId) throw new Error('Unauthorized');
+
+        const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
         if (!template) {
             throw new Error('模板不存在');
         }

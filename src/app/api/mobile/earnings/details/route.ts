@@ -9,36 +9,30 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks } from '@/shared/api/schema';
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
-import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
+import { apiError, apiPaginated } from '@/shared/lib/api-response';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/earnings/details');
 export async function GET(request: NextRequest) {
-    // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
-    }
-    const { session } = authResult;
+    const auth = await authenticateMobile(request);
+    if (!auth.success) return auth.response;
 
-    // 2. 权限检查
-    const roleCheck = requireWorker(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
-    }
+    const session = auth.session;
+    const isWorker = requireWorker(session);
+    if (!isWorker.allowed) return isWorker.response;
 
-    const workerId = session.userId;
-
-    // 3. 解析查询参数
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const startDate = searchParams.get('startDate'); // YYYY-MM-DD
+    const endDate = searchParams.get('endDate');     // YYYY-MM-DD
 
     try {
-        // 4. 构建查询条件
         const conditions = [
-            eq(installTasks.installerId, workerId),
+            eq(installTasks.installerId, session.userId),
+            eq(installTasks.tenantId, session.tenantId),
             eq(installTasks.status, 'COMPLETED'),
         ];
 
@@ -55,13 +49,7 @@ export async function GET(request: NextRequest) {
             orderBy: [desc(installTasks.completedAt)],
             limit: pageSize,
             offset: (page - 1) * pageSize,
-            with: {
-                customer: {
-                    columns: {
-                        name: true,
-                    }
-                }
-            },
+            with: {},
             columns: {
                 id: true,
                 taskNo: true,
@@ -85,7 +73,7 @@ export async function GET(request: NextRequest) {
             taskNo: task.taskNo,
             type: 'install' as const,
             category: task.category,
-            customerName: task.customer?.name || '未知客户',
+            customerName: '未知客户', // TODO: 需要通过 customerId 单独查询客户名称
             address: task.address,
             fee: task.actualLaborFee ? parseFloat(String(task.actualLaborFee)) : 0,
             completedAt: task.completedAt?.toISOString(),
@@ -95,7 +83,7 @@ export async function GET(request: NextRequest) {
         return apiPaginated(details, page, pageSize, total);
 
     } catch (error) {
-        console.error('收入明细查询错误:', error);
+        log.error('收入明细查询错误', {}, error);
         return apiError('查询收入明细失败', 500);
     }
 }

@@ -6,11 +6,14 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, customers } from '@/shared/api/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { OrderStatusMap, getStatusText } from '@/shared/lib/status-maps';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/orders');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -33,7 +36,7 @@ export async function GET(request: NextRequest) {
     try {
         // 4. 根据客户手机号查找客户
         const customer = await db.query.customers.findFirst({
-            where: eq(customers.phone, session.phone),
+            where: and(eq(customers.phone, session.phone), eq(customers.tenantId, session.tenantId)),
             columns: { id: true }
         });
 
@@ -85,7 +88,7 @@ export async function GET(request: NextRequest) {
         return apiPaginated(items, page, pageSize, total);
 
     } catch (error) {
-        console.error('订单列表查询错误:', error);
+        log.error('订单列表查询错误', {}, error);
         return apiError('查询订单列表失败', 500);
     }
 }

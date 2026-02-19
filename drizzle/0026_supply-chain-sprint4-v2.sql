@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_inventory_warehouse_product" ON "inventory" USING btree ("warehouse_id","product_id");

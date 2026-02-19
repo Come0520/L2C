@@ -1,285 +1,288 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { measureTasks } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { measureTasks, measureTaskSplits } from '@/shared/api/schema';
+import { eq, and, sql } from 'drizzle-orm';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { auth } from '@/shared/lib/auth';
+import { splitMeasureTaskSchema } from '../schemas';
+import { generateMeasureNo } from '../utils'; // 修复无效 import
+import { MeasurementService } from '@/services/measurement.service';
+import { checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions'; // Fix: Import PERMISSIONS
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
-import { generateMeasureNo } from '../utils';
-import {
-    dispatchMeasureTaskSchema,
-    checkInSchema
-} from '../schemas';
+import { AuditService } from '@/shared/lib/audit-service';
 
-// generateMeasureNo 移除，createMeasureTask 移除
+// ----------------------------------------------------------------------
+// Dispatch & Assign
+// ----------------------------------------------------------------------
 
 /**
- * 指派测量任务
+ * 指派测量师并将任务状态改为 DISPATCHING
+ * @param input - { id: string, workerId: string, scheduledAt: string | Date }
  */
-export async function dispatchMeasureTask(input: z.infer<typeof dispatchMeasureTaskSchema>) {
-    // 🔒 安全校验：获取当前用户身份
-    const { auth } = await import('@/shared/lib/auth');
+export async function dispatchMeasureTask(input: unknown) {
     const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权访问' };
-    }
-    const tenantId = session.user.tenantId;
+    if (!session?.user?.tenantId) throw new Error('未授权');
 
-    const { id, assignedWorkerId, scheduledAt } = dispatchMeasureTaskSchema.parse(input);
+    // 权限校验
+    await checkPermission(session, PERMISSIONS.MEASURE.DISPATCH);
 
-    // 🔒 安全校验：验证任务归属当前租户
-    const task = await db.query.measureTasks.findFirst({
-        where: and(
-            eq(measureTasks.id, id),
-            eq(measureTasks.tenantId, tenantId)
-        ),
-        columns: { id: true, status: true }
+    // 输入校验
+    const schema = z.object({
+        id: z.string().uuid(),
+        workerId: z.string().uuid(),
+        scheduledAt: z.string().datetime().or(z.date()),
     });
 
-    if (!task) {
-        return { success: false, error: '任务不存在或无权访问' };
+    const parsed = schema.safeParse(input);
+    if (!parsed.success) {
+        throw new Error('无效的参数: ' + parsed.error.message);
     }
 
-    // TODO: 添加角色校验，确保只有派单员/管理员可以指派
+    const { id, workerId, scheduledAt } = parsed.data;
 
-    const [updated] = await db.update(measureTasks)
-        .set({
-            assignedWorkerId,
-            scheduledAt: new Date(scheduledAt),
-            status: 'DISPATCHING',
-        })
-        .where(eq(measureTasks.id, id))
-        .returning();
+    // Use Service Layer for core logic
+    await MeasurementService.dispatchTask(
+        id,
+        workerId,
+        new Date(scheduledAt),
+        session.user.id,
+        session.user.tenantId
+    );
 
+    await AuditService.recordFromSession(
+        session,
+        'measure_tasks',
+        id,
+        'UPDATE',
+        {
+            changed: {
+                status: 'DISPATCHED',
+                workerId: workerId,
+                scheduledAt: scheduledAt,
+            }
+        }
+    );
+
+    revalidateTag('measure-task');
     revalidatePath('/service/measurement');
-    revalidatePath(`/service/measurement/${id}`);
-    return { success: true, data: updated };
+    return { success: true };
 }
 
 /**
- * 测量师接单
+ * 测量师确认接单，状态由 DISPATCHING 改为 PENDING_VISIT
+ * @param id - 测量任务 ID
  */
 export async function acceptMeasureTask(id: string) {
-    // 🔒 安全校验：获取当前用户身份
-    const { auth } = await import('@/shared/lib/auth');
     const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) {
-        return { success: false, error: '未授权访问' };
-    }
-    const tenantId = session.user.tenantId;
-    const userId = session.user.id;
+    if (!session?.user?.tenantId) throw new Error('未授权');
 
-    // 🔒 安全校验：验证任务归属当前租户
     const task = await db.query.measureTasks.findFirst({
         where: and(
             eq(measureTasks.id, id),
-            eq(measureTasks.tenantId, tenantId)
+            eq(measureTasks.tenantId, session.user.tenantId)
         ),
-        columns: { id: true, assignedWorkerId: true, status: true }
     });
 
-    if (!task) {
-        return { success: false, error: '任务不存在或无权访问' };
-    }
+    if (!task) throw new Error('Task not found');
+    if (task.assignedWorkerId !== session.user.id) throw new Error('Unauthorized access');
+    if (task.status !== 'DISPATCHING') throw new Error('任务状态不正确，无法接单');
 
-    // 🔒 安全校验：只有被指派的测量师才能接单
-    if (task.assignedWorkerId !== userId) {
-        return { success: false, error: '只有被指派的测量师才能接单' };
-    }
-
-    const [updated] = await db.update(measureTasks)
+    await db.update(measureTasks)
         .set({
             status: 'PENDING_VISIT',
+            updatedAt: new Date(),
         })
-        .where(eq(measureTasks.id, id))
-        .returning();
+        .where(and(
+            eq(measureTasks.id, id),
+            eq(measureTasks.tenantId, session.user.tenantId)
+        ));
 
+    revalidateTag('measure-task');
     revalidatePath('/service/measurement');
-    revalidatePath(`/service/measurement/${id}`);
-    return { success: true, data: updated };
+    return { success: true };
 }
 
+// ----------------------------------------------------------------------
+// Split Task (拆单)
+// ----------------------------------------------------------------------
+
+// ... (existing imports)
+
+// Fix: splitMeasureTask Logic
 /**
- * 现场签到
+ * 测量任务拆分逻辑 (例如不同品类由不同师父测量)
+ * 会将原任务取消，并创建多个关联的新任务
+ * @param input - splitMeasureTaskSchema 校验的数据
  */
-export async function checkInMeasureTask(input: z.infer<typeof checkInSchema>) {
-    const { id, location } = checkInSchema.parse(input);
-
-    // 获取任务信息
-    const task = await db.query.measureTasks.findFirst({
-        where: eq(measureTasks.id, id),
-        columns: {
-            id: true,
-            scheduledAt: true,
-        }
-    });
-
-    if (!task) {
-        return { success: false, error: '任务不存在' };
+export async function splitMeasureTask(input: unknown) {
+    const session = await auth();
+    if (!session?.user?.id || !session?.user?.tenantId) {
+        return { success: false, error: 'Unauthorized' };
     }
 
-    // 迟到检测
-    let isLate = false;
-    let lateMinutes = 0;
-
-    if (task.scheduledAt) {
-        const { calculateLateMinutes } = await import('@/shared/lib/gps-utils');
-        const scheduledTime = new Date(task.scheduledAt);
-        const checkInTime = new Date();
-
-        lateMinutes = calculateLateMinutes(scheduledTime, checkInTime);
-        isLate = lateMinutes > 0;
+    const { success, data, error } = splitMeasureTaskSchema.safeParse(input);
+    if (!success) {
+        return { success: false, error: error.message };
     }
 
-    // 注意：GPS 距离校验需要 schema 添加 addressLocation 字段后启用
-    const [updated] = await db.update(measureTasks)
-        .set({
-            checkInAt: new Date(),
-            checkInLocation: location,
-        })
-        .where(eq(measureTasks.id, id))
-        .returning();
-
-    revalidatePath('/service/measurement');
-    revalidatePath(`/service/measurement/${id}`);
-
-    // 构建返回消息
-    let message = '签到成功';
-    if (isLate) {
-        message += `，迟到 ${lateMinutes} 分钟`;
-    }
-
-    return {
-        success: true,
-        data: updated,
-        message,
-        gpsInfo: {
-            isLate,
-            lateMinutes,
-        }
-    };
-}
-
-/**
- * 提交测量数据 (Stub)
- */
-export async function submitMeasureData(_input: unknown) {
-    return { success: true, data: {} };
-}
-
-/**
- * 申请费用减免 (Stub)
- */
-export async function requestFeeWaiver(_input: unknown) {
-    return { success: true, data: {} };
-}
-
-/**
- * 拆分测量任务
- * 
- * 业务逻辑：
- * 1. 取消原任务
- * 2. 按品类创建新的测量任务
- * 3. 记录拆单关系到 measureTaskSplits 表
- * 4. 如果指定了 workerId，自动指派测量师
- * 
- * @param input - 拆单请求数据
- */
-export async function splitMeasureTask(input: z.infer<typeof splitMeasureTaskSchema>) {
-    const { splitMeasureTaskSchema: schema } = await import('../schemas');
-    const { measureTaskSplits } = await import('@/shared/api/schema');
-    const { auth } = await import('@/shared/lib/auth');
+    const { originalTaskId, splits, reason } = data; // use 'splits' from schema
 
     try {
-        const data = schema.parse(input);
-        const session = await auth();
-
-        if (!session?.user?.tenantId) {
-            return { success: false, error: '未授权' };
-        }
-
-        const tenantId = session.user.tenantId;
-        const userId = session.user.id;
-
-        return await db.transaction(async (tx) => {
-            // 1. 获取原任务信息（🔒 强制租户隔离）
+        await db.transaction(async (tx) => {
+            // 1. 验证原任务
             const originalTask = await tx.query.measureTasks.findFirst({
                 where: and(
-                    eq(measureTasks.id, data.originalTaskId),
-                    eq(measureTasks.tenantId, tenantId) // 🔒 租户校验
+                    eq(measureTasks.id, originalTaskId),
+                    eq(measureTasks.tenantId, session.user.tenantId)
                 ),
             });
 
-            if (!originalTask) {
-                throw new Error('任务不存在或无权访问');
-            }
-
-            if (originalTask.status === 'COMPLETED' || originalTask.status === 'CANCELLED') {
-                throw new Error('已完成或已取消的任务无法拆分');
-            }
+            if (!originalTask) throw new Error('原任务不存在');
+            if (originalTask.status === 'COMPLETED') throw new Error('已完成任务不可拆分');
 
             // 2. 取消原任务
             await tx.update(measureTasks)
                 .set({
                     status: 'CANCELLED',
-                    remark: `[拆单] ${data.reason || '按品类拆分'} (拆分为 ${data.splits.length} 个子任务)`,
+                    cancelReason: `拆分重派: ${reason}`,
+                    updatedAt: new Date(),
                 })
-                .where(eq(measureTasks.id, data.originalTaskId));
+                .where(and(
+                    eq(measureTasks.id, originalTaskId),
+                    eq(measureTasks.tenantId, session.user.tenantId)
+                ));
 
-            // 3. 按品类创建新任务
-            const newTaskIds: string[] = [];
+            // 3. 创建新任务
+            const createdTaskIds: string[] = [];
 
-            for (let i = 0; i < data.splits.length; i++) {
-                const split = data.splits[i];
-                const measureNo = await generateMeasureNo();
+            for (const splitItem of splits) {
+                // 生成新单号 (M + 日期 + 序号)
+                const measureNo = await generateMeasureNo(session.user.tenantId);
 
-                const [newTask] = await tx.insert(measureTasks).values({
-                    tenantId,
-                    measureNo,
+                // 将 category 和 remark 组合到 remark 中，或者仅 remark
+                const fullRemark = splitItem.remark
+                    ? `[${splitItem.category}] ${splitItem.remark}`
+                    : `[${splitItem.category}] 拆分任务`;
+
+                const [inserted] = await tx.insert(measureTasks).values({
+                    tenantId: session.user.tenantId,
+                    measureNo: measureNo,
                     leadId: originalTask.leadId,
                     customerId: originalTask.customerId,
-                    scheduledAt: originalTask.scheduledAt,
-                    remark: `[拆单自 ${originalTask.measureNo}] 品类: ${split.category}`,
-                    isFeeExempt: originalTask.isFeeExempt,
-                    type: originalTask.type,
-                    status: split.workerId ? 'DISPATCHING' : 'PENDING',
-                    assignedWorkerId: split.workerId,
-                    parentId: data.originalTaskId, // 关联原任务
-                }).returning();
+                    status: 'PENDING',
+                    laborFee: splitItem.laborFee ? String(splitItem.laborFee) : null,
+                    remark: fullRemark,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }).returning({ id: measureTasks.id });
 
-                newTaskIds.push(newTask.id);
+                createdTaskIds.push(inserted.id);
 
-                // 4. 记录拆单关系
+                // 4. 记录拆分关系
                 await tx.insert(measureTaskSplits).values({
-                    tenantId,
-                    originalTaskId: data.originalTaskId,
-                    newTaskId: newTask.id,
-                    reason: `品类: ${split.category}`,
-                    createdBy: userId,
+                    tenantId: session.user.tenantId,
+                    originalTaskId: originalTaskId,
+                    newTaskId: inserted.id,
+                    reason: reason,
+                    createdBy: session.user.id, // Fix: operatorId -> createdBy
+                    createdAt: new Date(),
                 });
+
+                // 审计：创建新任务
+                await AuditService.recordFromSession(
+                    session,
+                    'measure_tasks',
+                    inserted.id,
+                    'CREATE',
+                    {
+                        new: {
+                            measureNo,
+                            leadId: originalTask.leadId,
+                            customerId: originalTask.customerId,
+                            status: 'PENDING',
+                            remark: fullRemark,
+                        }
+                    },
+                    tx
+                );
             }
 
-            return {
-                success: true,
-                data: {
-                    originalTaskId: data.originalTaskId,
-                    newTaskIds,
-                    splitCount: data.splits.length,
+            // 审计：取消原任务
+            await AuditService.recordFromSession(
+                session,
+                'measure_tasks',
+                originalTaskId,
+                'UPDATE',
+                {
+                    changed: {
+                        status: 'CANCELLED',
+                        cancelReason: `拆分重派: ${reason}`,
+                    }
                 },
-            };
-        }).then((result) => {
-            revalidatePath('/service/measurement');
-            return result;
+                tx
+            );
         });
-    } catch (error: unknown) {
-        console.error('拆单失败:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : '拆单失败'
-        };
+
+        revalidateTag('measure-task');
+        revalidatePath('/service/measurement');
+        return { success: true };
+    } catch (error) {
+        console.error('Split task failed:', error);
+        return { success: false, error: error instanceof Error ? error.message : '拆单失败' };
     }
 }
 
-// 导入 schema 类型用于函数签名
-import { splitMeasureTaskSchema } from '../schemas';
+// ----------------------------------------------------------------------
+// Fee Waiver (费用豁免)
+// ----------------------------------------------------------------------
 
+import { feeWaiverSchema } from '../schemas';
+
+/**
+ * 申请费用豁免，允许在未支付定金的情况下进行派单
+ * @param input - { taskId: string, reason: string }
+ */
+export async function requestFeeWaiver(input: unknown) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+
+    const parsed = feeWaiverSchema.safeParse(input);
+    if (!parsed.success) {
+        throw new Error('无效参数: ' + parsed.error.message);
+    }
+
+    const { taskId, reason } = parsed.data;
+
+    // 权限校验：通常需要经理或以上权限
+    await checkPermission(session, PERMISSIONS.MEASURE.MANAGE);
+
+    await db.update(measureTasks)
+        .set({
+            isFeeExempt: true,
+            remark: sql`${measureTasks.remark} || '\n[费用豁免申请] ' || ${reason}`,
+            updatedAt: new Date(),
+        })
+        .where(and(
+            eq(measureTasks.id, taskId),
+            eq(measureTasks.tenantId, session.user.tenantId)
+        ));
+
+    await AuditService.recordFromSession(
+        session,
+        'measure_tasks',
+        taskId,
+        'UPDATE',
+        {
+            changed: {
+                isFeeExempt: true,
+                feeWaiverReason: reason,
+            }
+        }
+    );
+
+    revalidateTag('measure-task');
+    revalidatePath('/service/measurement');
+    return { success: true };
+}

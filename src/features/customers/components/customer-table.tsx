@@ -19,21 +19,10 @@ import User from 'lucide-react/dist/esm/icons/user';
 import { MaskedPhone } from '@/shared/components/masked-phone';
 import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 
-interface Customer {
-    id: string;
-    customerNo: string | null;
-    name: string;
-    phone: string | null;
-    level: string | null;
-    type: string | null;
-    totalAmount: string | number | null;
-    totalOrders: number | null;
-    assignedSales?: { name: string | null } | null;
-    lastOrderAt: Date | null | string;
-}
+import { CustomerListItem } from '@/features/customers/types';
 
 interface CustomerTableProps {
-    data: Customer[];
+    data: CustomerListItem[];
 
     currentUser: {
         id: string;

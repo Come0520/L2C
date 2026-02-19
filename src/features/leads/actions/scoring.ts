@@ -5,8 +5,8 @@ import { leads } from '@/shared/api/schema';
 import { eq, and, or, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
+import { escapeSqlLike } from '@/shared/lib/utils';
 import {
-    SOURCE_WEIGHTS,
     INTENTION_WEIGHTS,
     DEFAULT_SOURCE_SCORE,
     UNKNOWN_CHANNEL_SCORE,
@@ -117,7 +117,7 @@ const checkLeadDuplicateInternal = createSafeAction(checkDuplicateSchema, async 
 
     // 地址模糊匹配
     if (address && address.length >= 5) {
-        matchConditions.push(ilike(leads.address, `%${address.slice(0, 20)}%`));
+        matchConditions.push(ilike(leads.address, `%${escapeSqlLike(address.slice(0, 20))}%`));
     }
 
     // 姓名匹配（辅助）
@@ -194,7 +194,7 @@ const batchCheckDuplicateSchema = z.object({
         phone: z.string().optional(),
         address: z.string().optional(),
         name: z.string().optional(),
-    })),
+    })).max(500, '每次最多支持500条数据'),
 });
 
 const batchCheckLeadDuplicatesInternal = createSafeAction(batchCheckDuplicateSchema, async ({ items }, { session }) => {

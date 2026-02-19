@@ -3,11 +3,12 @@
  *
  * POST /api/miniprogram/invite/accept
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { invitations, users, tenants } from '@/shared/api/schema';
 import { eq, and, gt } from 'drizzle-orm';
 import { SignJWT, jwtVerify } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
 // 从 Token 获取 OpenID (假设前端在未登录状态下可能通过 header 或其他方式传递 openId，或者先调用了 auth/wx-login 拿到了 token)
 // 但通常逻辑是：小程序端先 wx.login 换取了 openId (但没注册)，此时可能有临时 token 或仅有 openId。
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { code } = body;
 
     if (!code) {
-      return NextResponse.json({ success: false, error: '请输入邀请码' }, { status: 400 });
+      return apiError('请输入邀请码', 400);
     }
 
     // 1. 验证 Token (获取当前操作人的 OpenID)
@@ -69,10 +70,7 @@ export async function POST(request: NextRequest) {
     const openId = bodyOpenId;
 
     if (!openId) {
-      return NextResponse.json(
-        { success: false, error: 'OpenID 缺失，请重新登录' },
-        { status: 401 }
-      );
+      return apiError('OpenID 缺失，请重新登录', 401);
     }
 
     // 2. 查找邀请码
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!invite) {
-      return NextResponse.json({ success: false, error: '邀请码无效或已过期' }, { status: 404 });
+      return apiError('邀请码无效或已过期', 404);
     }
 
     // 3. 查找或创建用户
@@ -99,10 +97,7 @@ export async function POST(request: NextRequest) {
         // 已加入其他租户，暂不支持多租户切换 (根据架构设计：单点)
         // 策略：覆盖？提示？
         // 现阶段：直接报错，提示先退出
-        return NextResponse.json(
-          { success: false, error: '您已加入其他企业，请先联系管理员退出' },
-          { status: 409 }
-        );
+        return apiError('您已加入其他企业，请先联系管理员退出', 409);
       }
 
       await db
@@ -144,19 +139,16 @@ export async function POST(request: NextRequest) {
     // 6. 生成正式 Token
     const token = await generateToken(user!.id, invite.tenantId);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          ...user,
-          tenantName: tenant?.name,
-        },
-        token,
-        tenantStatus: tenant?.status,
+    return apiSuccess({
+      user: {
+        ...user,
+        tenantName: tenant?.name,
       },
+      token,
+      tenantStatus: tenant?.status,
     });
   } catch (error) {
     console.error('接受邀请失败:', error);
-    return NextResponse.json({ success: false, error: '系统错误' }, { status: 500 });
+    return apiError('系统错误', 500);
   }
 }

@@ -53,18 +53,18 @@ export function LeadStatusBar({ status, leadId }: LeadStatusBarProps) {
     // Determine current step index
     let currentIndex = STATUS_STEPS.findIndex(s => s.value === status);
 
-    // Fallback or handling for VOID/INVALID
-    const isVoid = status === 'VOID' || status === 'INVALID';
-    if (isVoid) {
+    // Fallback or handling for INVALID
+    const isInvalid = status === 'INVALID';
+    if (isInvalid) {
         currentIndex = -1;
     }
 
     return (
         <div className="w-full py-4">
-            {isVoid ? (
+            {isInvalid ? (
                 <div className="glass-alert-error flex items-center justify-between p-2 text-red-600 rounded-md">
-                    <span className="font-medium">当前状态：已作废 ({status === 'VOID' ? '手动作废' : '无效'})</span>
-                    {leadId && status === 'VOID' && (
+                    <span className="font-medium">当前状态：无效 (INVALID)</span>
+                    {leadId && (
                         <RestoreButton leadId={leadId} />
                     )}
                 </div>

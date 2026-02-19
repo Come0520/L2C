@@ -17,11 +17,14 @@ interface NotificationListProps {
     total: number;
 }
 
+import { useRouter } from 'next/navigation';
+
 export function NotificationList({ initialNotifications, total }: NotificationListProps) {
     const [list, setList] = useState<Notification[]>(initialNotifications);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [hasMore, setHasMore] = useState(initialNotifications.length < total);
+    const router = useRouter();
 
     const loadMore = async () => {
         if (isLoading || !hasMore) return;
@@ -30,9 +33,13 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
             const res = await getNotificationsAction({ page: page + 1, limit: 20, onlyUnread: false });
             if (res?.data?.data) {
                 const newItems = res.data.data;
+                const metaTotal = res.data.meta.total;
+
                 setList(prev => [...prev, ...newItems]);
                 setPage(p => p + 1);
-                if (list.length + newItems.length >= res.data.meta.total) {
+
+                // 更稳健的 hasMore 判断
+                if (newItems.length < 20 || (list.length + newItems.length >= metaTotal)) {
                     setHasMore(false);
                 }
             }
@@ -43,10 +50,24 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
         }
     };
 
+    const handleCardClick = (n: Notification) => {
+        if (!n.isRead) {
+            handleMarkAsRead(n.id);
+        }
+        if (n.linkUrl) {
+            router.push(n.linkUrl);
+        }
+    };
+
     const handleMarkAsRead = async (id: string) => {
+        // Optimistic update
+        setList(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+
         const res = await markAsReadAction({ ids: [id] });
-        if (res?.data?.success) {
-            setList(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        if (!res?.data?.success) {
+            // P2 修复：失败时回滚状态
+            setList(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+            toast.error('标记已读失败');
         }
     };
 
@@ -55,6 +76,8 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
         if (res?.data?.success) {
             setList(prev => prev.map(n => ({ ...n, isRead: true })));
             toast.success('全部已读');
+        } else {
+            toast.error('操作失败');
         }
     };
 
@@ -80,12 +103,13 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
                     {list.map((n) => (
                         <div
                             key={n.id}
+                            onClick={() => handleCardClick(n)}
                             className={cn(
-                                "relative flex gap-4 p-4 rounded-lg border transition-all hover:bg-muted/50",
+                                "relative flex gap-4 p-4 rounded-lg border transition-all hover:bg-muted/50 cursor-pointer",
                                 n.isRead ? "glass-step-inactive opacity-60" : "bg-card shadow-sm border-l-4 border-l-primary"
                             )}
                         >
-                            {/* Unread Dot */}
+                            {/* ... (Unread Dot remains same) */}
                             {!n.isRead && (
                                 <span className="absolute top-4 right-4 flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
@@ -113,7 +137,15 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
                                 </p>
                                 <div className="flex items-center gap-4 pt-2">
                                     <span className="text-xs text-muted-foreground">
-                                        {n.createdAt && formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: zhCN })}
+                                        {n.createdAt && (() => {
+                                            try {
+                                                const date = new Date(n.createdAt);
+                                                if (isNaN(date.getTime())) return '无效日期';
+                                                return formatDistanceToNow(date, { addSuffix: true, locale: zhCN });
+                                            } catch {
+                                                return '无效日期';
+                                            }
+                                        })()}
                                     </span>
                                     {n.channel !== 'IN_APP' && (
                                         <Badge variant="outline" className="text-[10px] h-5 px-1">
@@ -121,12 +153,17 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
                                         </Badge>
                                     )}
                                     <div className="flex-1" />
+                                    {/* 阻止冒泡，避免触发 Card Click 跳转但没有标记已读? 其实 Card Click 包含了标记已读。
+                                        这里保留按钮供显式操作 */}
                                     {!n.isRead && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-6 text-xs px-2"
-                                            onClick={() => handleMarkAsRead(n.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMarkAsRead(n.id);
+                                            }}
                                         >
                                             <Check className="w-3 h-3 mr-1" /> 标为已读
                                         </Button>

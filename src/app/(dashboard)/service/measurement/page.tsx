@@ -8,8 +8,9 @@ import { Pagination } from '@/shared/ui/pagination';
 import { Metadata } from 'next';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { db } from '@/shared/api/db';
-import { users } from '@/shared/api/schema';
-import { eq, or } from 'drizzle-orm';
+import { users, channels } from '@/shared/api/schema';
+import { eq, or, and } from 'drizzle-orm';
+import { auth } from '@/shared/lib/auth';
 
 export const metadata: Metadata = {
     title: '测量管理 - L2C',
@@ -36,18 +37,35 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
     const params = await searchParams;
     const page = Number(params.page) || 1;
     const search = params.search || '';
-    const status = params.status || '';
+    const status = params.status || 'ALL';
+
+    // 获取当前用户租户信息 (R2-SEC-02)
+    const session = await auth();
+    const tenantId = session?.user?.tenantId;
+
+    if (!tenantId) {
+        // 如果没有租户 ID，理论上应该重定向或报错，这里简单处理为空数据
+        return (
+            <div className="p-4 text-destructive">
+                未授权访问：无法获取租户信息
+            </div>
+        );
+    }
 
     // 获取筛选选项数据
     const [workersResult, salesList, channelList] = await Promise.all([
         getAvailableWorkers(),
-        // 获取销售人员列表
+        // 获取销售人员列表 (R2-SEC-02: 增加租户隔离)
         db.query.users.findMany({
-            where: or(eq(users.role, 'SALES'), eq(users.role, 'STORE_MANAGER')),
+            where: and(
+                eq(users.tenantId, tenantId),
+                or(eq(users.role, 'SALES'), eq(users.role, 'STORE_MANAGER'))
+            ),
             columns: { id: true, name: true },
         }),
-        // 获取渠道列表
+        // 获取渠道列表 (R2-SEC-02: 增加租户隔离)
         db.query.channels?.findMany?.({
+            where: eq(channels.tenantId, tenantId),
             columns: { id: true, name: true },
         }).catch(() => []) ?? [],
     ]);
@@ -70,7 +88,20 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
         dateTo: params.dateTo,
     });
 
-    const totalPages = Math.ceil((tasks.total || 0) / (Number(params.pageSize) || 10));
+    const totalCount = ('total' in tasks) ? Number(tasks.total) : 0;
+    const totalPages = Math.ceil(totalCount / (Number(params.pageSize) || 10));
+
+    // 定义 Tab 状态，与后端枚举对齐
+    const STATUS_TABS = [
+        { label: '全部', value: 'ALL' },
+        { label: '待审批', value: 'PENDING_APPROVAL' },
+        { label: '待测量', value: 'PENDING' },
+        { label: '派单中', value: 'DISPATCHING' },
+        { label: '待上门', value: 'PENDING_VISIT' },
+        { label: '待确认', value: 'PENDING_CONFIRM' },
+        { label: '已完成', value: 'COMPLETED' },
+        { label: '已取消', value: 'CANCELLED' },
+    ];
 
     return (
         <div className="h-full flex flex-col gap-4 p-4">
@@ -80,13 +111,7 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
                     paramName="status"
                     defaultValue="ALL"
                     layoutId="measurement-status-tabs"
-                    tabs={[
-                        { value: 'ALL', label: '全部任务' },
-                        { value: 'PENDING', label: '待测量' },
-                        { value: 'SCHEDULED', label: '已排期' },
-                        { value: 'COMPLETED', label: '已完成' },
-                        { value: 'CANCELLED', label: '已取消' },
-                    ]}
+                    tabs={STATUS_TABS}
                 />
                 <CreateMeasureTaskDialog />
             </div>
@@ -101,7 +126,7 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
 
                 <div className="flex-1 min-h-0 overflow-auto">
                     <Suspense fallback={<TableSkeleton />}>
-                        <MeasureTaskTable data={tasks.data as any} />
+                        <MeasureTaskTable data={tasks.success && tasks.data ? tasks.data : []} />
                     </Suspense>
                 </div>
 

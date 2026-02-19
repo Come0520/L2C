@@ -148,7 +148,7 @@ export const leadStatusEnum = pgEnum('lead_status', [
   'FOLLOWING_UP',
   'INVALID',
   'WON',
-  'VOID', // Keeping VOID for backward compatibility if needed, or remove if strictly following new reqs. Req said INVALID. But code had VOID. I'll add INVALID and keep VOID if code uses it, or map. Let's stick to Requirements: INVALID. But existing code uses VOID. I will add both or migrate. Code `voidLead` uses VOID. I'll add both for now to be safe.
+  'PENDING_APPROVAL',
 ]);
 
 export const intentionLevelEnum = pgEnum('intention_level', ['HIGH', 'MEDIUM', 'LOW']);
@@ -160,6 +160,7 @@ export const leadActivityTypeEnum = pgEnum('lead_activity_type', [
   'HOME_VISIT',
   'QUOTE_SENT',
   'SYSTEM',
+  'OTHER',
 ]);
 
 export const channelCategoryEnum = pgEnum('channel_category', ['ONLINE', 'OFFLINE', 'REFERRAL']);
@@ -205,6 +206,7 @@ export const feeCheckStatusEnum = pgEnum('fee_check_status', [
 
 export const measureSheetStatusEnum = pgEnum('measure_sheet_status', [
   'DRAFT',
+  'SUBMITTED', // P1 Fix: Added for review workflow
   'CONFIRMED',
   'ARCHIVED',
 ]);
@@ -403,16 +405,16 @@ export const orderItemStatusEnum = pgEnum('order_item_status', [
   'CANCELLED', // 已取消
 ]);
 
-// [NEW] 采购单状态枚举
 export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', [
   'DRAFT', // 草稿
-  'PENDING', // 待确认
-  'CONFIRMED', // 已确认
-  'IN_PRODUCTION', // 生产中
-  'READY', // 待发货
-  'SHIPPED', // 已发货
-  'DELIVERED', // 已送达
-  'COMPLETED', // 已完成
+  'PENDING_CONFIRMATION', // 待确认 (商家确认报价/接单)
+  'PENDING_PAYMENT', // 待付款 (已确认，等待财务付款)
+  'IN_PRODUCTION', // 生产中 (工厂生产)
+  'READY', // 备货完成 (等待发货)
+  'SHIPPED', // 已发货 (物流中)
+  'PARTIALLY_RECEIVED', // 部分收货 (仅部分商品已入库)
+  'DELIVERED', // 已送达 (仓库收货)
+  'COMPLETED', // 已完成 (入库质检完成，订单关闭)
   'CANCELLED', // 已取消
 ]);
 

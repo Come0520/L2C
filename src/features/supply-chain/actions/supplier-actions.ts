@@ -1,19 +1,23 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { suppliers } from '@/shared/api/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { suppliers, purchaseOrders, afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
+import { eq, desc, and, sql, count, gte, lte, inArray } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { generateDocNo } from '@/shared/lib/utils';
 import { revalidatePath } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { z } from 'zod';
+import { AuditService } from '@/shared/lib/audit-service';
 import {
     createSupplierSchema,
     getSuppliersSchema,
     getSupplierByIdSchema,
-    updateSupplierSchema
+    updateSupplierSchema,
+    deleteSupplierSchema
 } from '../schemas';
+import { SUPPLY_CHAIN_PATHS } from '../constants';
 
 const createSupplierActionInternal = createSafeAction(createSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
@@ -52,10 +56,26 @@ const createSupplierActionInternal = createSafeAction(createSupplierSchema, asyn
         createdBy: session.user.id,
     }).returning();
 
-    revalidatePath('/supply-chain/suppliers');
+    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'suppliers', supplier.id, 'CREATE', {
+        new: {
+            supplierNo: supplier.supplierNo,
+            name: supplier.name,
+            supplierType: supplier.supplierType
+        }
+    });
+
     return { id: supplier.id };
 });
 
+/**
+ * 创建新供应商
+ * 
+ * @description 包含基本信息、财务信息及合同附件。自动生成供应商编号 (SUP-*)。
+ * @param params 符合 createSupplierSchema 的输入数据
+ */
 export async function createSupplier(params: z.infer<typeof createSupplierSchema>) {
     return createSupplierActionInternal(params);
 }
@@ -104,12 +124,18 @@ const getSuppliersActionInternal = createSafeAction(getSuppliersSchema, async (p
     };
 });
 
+/**
+ * 分页获取供应商列表
+ * 
+ * @description 支持模糊搜索（名称/编号）及类型过滤（供应商/加工厂）。
+ * @param params 分页、搜索及过滤参数
+ */
 export async function getSuppliers(params: z.infer<typeof getSuppliersSchema>) {
     return getSuppliersActionInternal(params);
 }
 
 const getSupplierByIdActionInternal = createSafeAction(getSupplierByIdSchema, async ({ id }, { session }) => {
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
     const supplier = await db.query.suppliers.findFirst({
         where: and(
@@ -123,6 +149,11 @@ const getSupplierByIdActionInternal = createSafeAction(getSupplierByIdSchema, as
     return supplier;
 });
 
+/**
+ * 根据 ID 获取供应商详情
+ * 
+ * @param params 包含供应商 ID
+ */
 export async function getSupplierById(params: z.infer<typeof getSupplierByIdSchema>) {
     return getSupplierByIdActionInternal(params);
 }
@@ -145,10 +176,20 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
 
     if (!supplier) throw new Error('更新失败，未找到供应商');
 
-    revalidatePath('/supply-chain/suppliers');
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'suppliers', id, 'UPDATE', {
+        new: updates
+    });
+
+    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
     return { id: supplier.id };
 });
 
+/**
+ * 更新供应商信息
+ * 
+ * @param params 包含供应商 ID 及更新字段
+ */
 export async function updateSupplier(params: z.infer<typeof updateSupplierSchema>) {
     return updateSupplierActionInternal(params);
 }
@@ -156,10 +197,6 @@ export async function updateSupplier(params: z.infer<typeof updateSupplierSchema
 // ============================================================
 // [Supply-02] 供应商评价体系
 // ============================================================
-
-import { purchaseOrders, afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
-import { count, gte, lte } from 'drizzle-orm';
-import { z } from 'zod';
 
 const getSupplierRatingSchema = z.object({
     supplierId: z.string().uuid(),
@@ -191,32 +228,44 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
     }
 
     // 1. 交期准时率
+    // P1-06 修复：覆盖 DELIVERED、COMPLETED、PARTIALLY_RECEIVED 状态
+    const completedStatuses = ['DELIVERED', 'COMPLETED', 'PARTIALLY_RECEIVED'] as const;
     const allDeliveredPOs = await db.query.purchaseOrders.findMany({
         where: and(
             eq(purchaseOrders.supplierId, supplierId),
             eq(purchaseOrders.tenantId, tenantId),
-            eq(purchaseOrders.status, 'DELIVERED'),
+            inArray(purchaseOrders.status, [...completedStatuses]),
             ...dateConditions
         ),
         columns: {
             id: true,
             shippedAt: true,
+            deliveredAt: true,
+            expectedDate: true,
             createdAt: true,
         }
     });
 
     const totalDelivered = allDeliveredPOs.length;
-    const defaultLeadDays = 7;
+    // P1-02 修复（1/3）：使用 expectedDate 作为交期基准，回退到 createdAt + 7天
+    const DEFAULT_LEAD_DAYS = 7;
     const onTimeCount = allDeliveredPOs.filter(po => {
-        if (!po.shippedAt || !po.createdAt) return false;
-        const shipped = new Date(po.shippedAt);
-        const expected = new Date(new Date(po.createdAt).getTime() + defaultLeadDays * 24 * 60 * 60 * 1000);
-        return shipped <= expected;
+        // 用实际到货日期（deliveredAt）或发货日期（shippedAt）作为完成基准
+        const actualDate = po.deliveredAt || po.shippedAt;
+        if (!actualDate || !po.createdAt) return false;
+
+        const actual = new Date(actualDate);
+        // 优先使用预期交期，否则回退到创建日期 + 默认交期
+        const expected = po.expectedDate
+            ? new Date(po.expectedDate)
+            : new Date(new Date(po.createdAt).getTime() + DEFAULT_LEAD_DAYS * 24 * 60 * 60 * 1000);
+        return actual <= expected;
     }).length;
 
     const onTimeRate = totalDelivered > 0 ? Math.round((onTimeCount / totalDelivered) * 100) : null;
 
     // 2. 质量合格率
+    // P1-02 修复（2/3）：通过 liablePartyId 关联当前供应商，避免所有供应商共享同一质量数据
     const qualityIssues = await db
         .select({ count: count(liabilityNotices.id) })
         .from(liabilityNotices)
@@ -224,6 +273,7 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
         .where(and(
             eq(afterSalesTickets.tenantId, tenantId),
             eq(liabilityNotices.liablePartyType, 'FACTORY'),
+            eq(liabilityNotices.liablePartyId, supplierId),
             eq(liabilityNotices.status, 'CONFIRMED'),
         ));
 
@@ -254,6 +304,15 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
     };
 });
 
+/**
+ * 获取供应商绩效评价数据
+ * 
+ * @description 计算三个维度的指标：
+ * 1. 交期准时率 (40%): 实际到货日期 vs 预期交期。
+ * 2. 质量合格率 (60%): 交付总量 vs 售后责任判定 (CONFIRMED) 次数。
+ * 3. 综合评分: 加权总分及星级/等级标签。
+ * @param params 供应商 ID 及可选时间范围
+ */
 export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>) {
     return getSupplierRatingActionInternal(params);
 }
@@ -293,6 +352,48 @@ const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSc
     return { rankings, total: rankings.length };
 });
 
+const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, async ({ id }, { session }) => {
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+
+    // 检查是否有依赖数据（如采购单等）
+    const poExists = await db.query.purchaseOrders.findFirst({
+        where: and(
+            eq(purchaseOrders.supplierId, id),
+            eq(purchaseOrders.tenantId, session.user.tenantId)
+        )
+    });
+
+    if (poExists) {
+        throw new Error('该供应商已有采购数据，无法删除');
+    }
+
+    await db.delete(suppliers).where(and(
+        eq(suppliers.id, id),
+        eq(suppliers.tenantId, session.user.tenantId)
+    ));
+
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'suppliers', id, 'DELETE');
+
+    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+    return { success: true };
+});
+
+/**
+ * 删除供应商
+ * 
+ * @description 仅限没有任何采购关联数据的供应商。
+ * @param params 包含供应商 ID
+ */
+export async function deleteSupplier(params: z.infer<typeof deleteSupplierSchema>) {
+    return deleteSupplierActionInternal(params);
+}
+
+/**
+ * 获取供应商交付量排名
+ * 
+ * @description 根据已交付 (DELIVERED) 的采购单数量进行降序排列。
+ */
 export async function getSupplierRankings() {
     return getSupplierRankingsActionInternal({});
 }

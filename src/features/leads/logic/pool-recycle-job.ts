@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { leads, leadStatusHistory, tenants } from '@/shared/api/schema';
-import { eq, and, lt, isNull } from 'drizzle-orm';
+import { eq, and, lt, isNull, inArray } from 'drizzle-orm';
 
 /**
  * 租户 SLA 配置
@@ -57,31 +57,33 @@ async function recycleNoContactLeads(tenantId: string, config: TenantSlaConfig):
         columns: { id: true, leadNo: true, status: true }
     });
 
-    const recycledIds: string[] = [];
 
-    for (const lead of leadsToRecycle) {
-        await db.transaction(async (tx) => {
-            // 更新状态
-            await tx.update(leads)
-                .set({
-                    status: 'PENDING_ASSIGNMENT',
-                    assignedSalesId: null,
-                    assignedAt: null
-                })
-                .where(eq(leads.id, lead.id));
 
-            // 记录状态变更
-            await tx.insert(leadStatusHistory).values({
+    if (leadsToRecycle.length === 0) return [];
+
+    const recycledIds = leadsToRecycle.map(l => l.id);
+
+    await db.transaction(async (tx) => {
+        // 批量更新状态
+        await tx.update(leads)
+            .set({
+                status: 'PENDING_ASSIGNMENT',
+                assignedSalesId: null,
+                assignedAt: null
+            })
+            .where(inArray(leads.id, recycledIds));
+
+        // 批量插入历史记录
+        await tx.insert(leadStatusHistory).values(
+            leadsToRecycle.map(lead => ({
                 tenantId,
                 leadId: lead.id,
                 oldStatus: lead.status || 'PENDING_FOLLOWUP',
                 newStatus: 'PENDING_ASSIGNMENT',
                 reason: `自动回收：分配后 ${config.noContactTimeoutHours} 小时无跟进`
-            });
-        });
-
-        recycledIds.push(lead.id);
-    }
+            }))
+        );
+    });
 
     return recycledIds;
 }
@@ -105,29 +107,31 @@ async function recycleNoDealLeads(tenantId: string, config: TenantSlaConfig): Pr
         columns: { id: true, leadNo: true, status: true }
     });
 
-    const recycledIds: string[] = [];
+    if (leadsToRecycle.length === 0) return [];
 
-    for (const lead of leadsToRecycle) {
-        await db.transaction(async (tx) => {
-            await tx.update(leads)
-                .set({
-                    status: 'PENDING_ASSIGNMENT',
-                    assignedSalesId: null,
-                    assignedAt: null
-                })
-                .where(eq(leads.id, lead.id));
+    const recycledIds = leadsToRecycle.map(l => l.id);
 
-            await tx.insert(leadStatusHistory).values({
+    await db.transaction(async (tx) => {
+        // 批量更新状态
+        await tx.update(leads)
+            .set({
+                status: 'PENDING_ASSIGNMENT',
+                assignedSalesId: null,
+                assignedAt: null
+            })
+            .where(inArray(leads.id, recycledIds));
+
+        // 批量插入历史记录
+        await tx.insert(leadStatusHistory).values(
+            leadsToRecycle.map(lead => ({
                 tenantId,
                 leadId: lead.id,
                 oldStatus: lead.status || 'FOLLOWING_UP',
                 newStatus: 'PENDING_ASSIGNMENT',
                 reason: `自动回收：跟进 ${config.noDealTimeoutDays} 天未转报价`
-            });
-        });
-
-        recycledIds.push(lead.id);
-    }
+            }))
+        );
+    });
 
     return recycledIds;
 }

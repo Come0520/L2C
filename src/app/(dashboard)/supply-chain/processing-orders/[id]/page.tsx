@@ -22,7 +22,7 @@ export default async function ProcessingOrderDetailPage({
     const po = res.data as any;
 
     // Fetch related shipments
-    const shipmentsRes = await getShipments({ referenceId: po.id }); // Should return shipments linked to this PO
+    const shipmentsRes = await getShipments({ poId: po.id });
     // Note: Shipments might be linked via referenceType='PROCESSING_ORDER'
     // But material shipments might be linked to materialPoId?
     // Let's list shipments directly linked to this PO first.
@@ -97,7 +97,7 @@ export default async function ProcessingOrderDetailPage({
                                 <ShipmentTracker
                                     key={shipment.id}
                                     company={shipment.logisticsCompany}
-                                    trackingNo={shipment.trackingNo}
+                                    trackingNo={shipment.logisticsNo}
                                     status={shipment.status}
                                     trackingData={shipment.trackingData}
                                     updatedAt={shipment.updatedAt}

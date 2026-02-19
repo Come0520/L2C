@@ -12,7 +12,6 @@ import { useState } from 'react';
 
 interface CreateCustomerDialogProps {
     trigger: React.ReactNode;
-    userId: string;
     tenantId: string;
     /** 可选：创建成功后的回调，传入新建客户的 ID */
     onSuccess?: (customer?: { id: string }) => void;
@@ -23,7 +22,7 @@ interface CreateCustomerDialogProps {
  *
  * 用于快速创建新客户，可选择在创建成功后执行回调
  */
-export function CreateCustomerDialog({ trigger, userId, tenantId, onSuccess }: CreateCustomerDialogProps) {
+export function CreateCustomerDialog({ trigger, tenantId, onSuccess }: CreateCustomerDialogProps) {
     const [open, setOpen] = useState(false);
 
     /**
@@ -44,7 +43,6 @@ export function CreateCustomerDialog({ trigger, userId, tenantId, onSuccess }: C
                     <DialogTitle>新建客户</DialogTitle>
                 </DialogHeader>
                 <CustomerForm
-                    userId={userId}
                     tenantId={tenantId}
                     onSuccess={handleSuccess}
                 />

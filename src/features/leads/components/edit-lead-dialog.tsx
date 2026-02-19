@@ -9,15 +9,17 @@ import {
 } from '@/shared/ui/dialog';
 import { LeadForm } from './lead-form';
 import { useState } from 'react';
+import { type InferSelectModel } from 'drizzle-orm';
+import { leads } from '@/shared/api/schema/leads';
 
 interface EditLeadDialogProps {
-    lead: any;
+    lead: InferSelectModel<typeof leads>;
     trigger: React.ReactNode;
-    channels: any[];
-    userId: string;
+    channels: Array<{ id: string; name: string }>;
+    tenantId: string;
 }
 
-export function EditLeadDialog({ lead, trigger, channels, userId }: EditLeadDialogProps) {
+export function EditLeadDialog({ lead, trigger, channels, tenantId }: EditLeadDialogProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -32,9 +34,8 @@ export function EditLeadDialog({ lead, trigger, channels, userId }: EditLeadDial
                 <LeadForm
                     initialData={lead}
                     channels={channels}
-                    userId={userId}
-                    tenantId={lead.tenantId}
                     onSuccess={() => setOpen(false)}
+                    tenantId={tenantId}
                 />
             </DialogContent>
         </Dialog>

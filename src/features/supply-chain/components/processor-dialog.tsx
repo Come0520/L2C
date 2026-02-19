@@ -19,6 +19,7 @@ import { ProcessorFormPrices } from './processor-form-prices';
 import { ProcessorFormFiles } from './processor-form-files';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { z } from 'zod';
+import { ProcessorFormData } from '../types';
 
 // 扩展 Schema 类型以适应表单
 type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
@@ -27,6 +28,7 @@ type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
 interface ProcessorDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialData?: any;
     onSuccess?: () => void;
@@ -37,10 +39,10 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
     const [activeTab, setActiveTab] = useState("basic");
 
     const form = useForm<CreateSupplierInput>({
-        resolver: zodResolver(createSupplierSchema) as any,
+        resolver: zodResolver(createSupplierSchema),
         defaultValues: {
-            supplierType: 'PROCESSOR',
-            paymentPeriod: 'CASH',
+            supplierType: 'PROCESSOR' as const,
+            paymentPeriod: 'CASH' as const,
             processingPrices: { items: [] },
             ...initialData
         },
@@ -58,7 +60,7 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
         }
     }, [initialData, open, form]);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: CreateSupplierInput) => {
         setIsSubmitting(true);
         try {
             if (initialData?.id) {

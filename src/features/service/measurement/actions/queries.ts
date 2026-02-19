@@ -1,11 +1,13 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { measureTasks, measureSheets, users } from '@/shared/api/schema';
-import { eq, and, desc, or, ilike, count, gte, lte } from 'drizzle-orm';
+import { measureTasks, measureSheets, users, leads, customers } from '@/shared/api/schema';
+import { eq, and, desc, or, ilike, gte, lte, count } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { MEASURE_TASK_STATUS } from '../schemas';
-
+import { MeasureTaskStatus } from '../types';
+import { checkDispatchAdmission } from '../logic/fee-admission';
+import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 /**
  * 测量任务查询筛选参数
@@ -28,17 +30,13 @@ export interface MeasureTaskQueryFilters {
 /**
  * 获取测量任务列表
  * 
- * 支持筛选条件：
- * - status: 任务状态
- * - search: 搜索（测量单号、备注、地址、渠道、客户）
- * - workerId: 测量师 ID
- * - salesId: 销售 ID 
- * - address: 地址关键词
- * - channel: 渠道
- * - customerName: 客户名称
- * - dateFrom/dateTo: 预约日期范围
+ * 使用 React cache() 进行请求级去重，避免同一请求周期内重复查询数据库。
+ * 由于列表查询条件复杂，不适合使用 key-based 缓存。
+ * 
+ * @param filters - 筛选条件
+ * @returns 任务列表分页数据
  */
-export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
+export const getMeasureTasks = cache(async (filters: MeasureTaskQueryFilters) => {
     // 🔒 安全校验：强制租户隔离
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -60,96 +58,124 @@ export async function getMeasureTasks(filters: MeasureTaskQueryFilters) {
         dateTo,
     } = filters;
 
-    // 🔒 强制添加租户过滤条件
-    const whereConditions = [eq(measureTasks.tenantId, tenantId)];
+    const offset = (page - 1) * pageSize;
+    const conditions = [eq(measureTasks.tenantId, tenantId)];
 
-    // 状态筛选（使用枚举校验）
-    if (status && MEASURE_TASK_STATUS.includes(status as (typeof MEASURE_TASK_STATUS)[number])) {
-        whereConditions.push(eq(measureTasks.status, status as (typeof MEASURE_TASK_STATUS)[number]));
+    if (status && status !== 'ALL') {
+        conditions.push(eq(measureTasks.status, status as MeasureTaskStatus));
     }
 
-    // 测量师筛选
     if (workerId) {
-        whereConditions.push(eq(measureTasks.assignedWorkerId, workerId));
+        conditions.push(eq(measureTasks.assignedWorkerId, workerId));
     }
 
-    // 日期范围筛选
-    if (dateFrom) {
-        whereConditions.push(gte(measureTasks.scheduledAt, new Date(dateFrom)));
+    if (salesId) {
+        conditions.push(eq(leads.assignedSalesId, salesId));
     }
+
+    if (channel) {
+        conditions.push(eq(leads.channelId, channel));
+    }
+
+    if (address) {
+        const pattern = `%${address}%`;
+        conditions.push(or(
+            ilike(leads.address, pattern),
+            ilike(leads.community, pattern)
+        )!);
+    }
+
+    if (customerName) {
+        conditions.push(ilike(customers.name, `%${customerName}%`));
+    }
+
+    if (dateFrom) {
+        conditions.push(gte(measureTasks.scheduledAt, new Date(dateFrom)));
+    }
+
     if (dateTo) {
-        // 日期结束包含当天，设置为当天 23:59:59
+        // End of the day
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
-        whereConditions.push(lte(measureTasks.scheduledAt, endDate));
+        conditions.push(lte(measureTasks.scheduledAt, endDate));
     }
 
-    // 通用搜索（测量单号、备注）
     if (search) {
-        const searchCondition = or(
-            ilike(measureTasks.measureNo, `%${search}%`),
-            ilike(measureTasks.remark, `%${search}%`)
-        );
-        if (searchCondition) {
-            whereConditions.push(searchCondition);
-        }
+        const pattern = `%${search}%`;
+        conditions.push(or(
+            ilike(measureTasks.measureNo, pattern),
+            ilike(measureTasks.remark, pattern),
+            ilike(customers.name, pattern),
+            ilike(customers.phone, pattern),
+            ilike(leads.address, pattern),
+            ilike(leads.community, pattern)
+        )!);
     }
 
-    const whereClause = and(...whereConditions);
+    try {
+        const tasks = await db.select({
+            id: measureTasks.id,
+            measureNo: measureTasks.measureNo,
+            status: measureTasks.status,
+            scheduledAt: measureTasks.scheduledAt,
+            createdAt: measureTasks.createdAt,
+            rejectCount: measureTasks.rejectCount,
+            rejectReason: measureTasks.rejectReason,
+            tenantId: measureTasks.tenantId,
+            customerId: measureTasks.customerId,
+            customer: {
+                name: customers.name,
+                phone: customers.phone
+            },
+            lead: {
+                community: leads.community,
+                address: leads.address
+            },
+            assignedWorker: {
+                id: users.id,
+                name: users.name
+            },
+        })
+            .from(measureTasks)
+            .leftJoin(customers, eq(measureTasks.customerId, customers.id))
+            .leftJoin(leads, eq(measureTasks.leadId, leads.id))
+            .leftJoin(users, eq(measureTasks.assignedWorkerId, users.id))
+            .where(and(...conditions))
+            .orderBy(desc(measureTasks.createdAt))
+            .limit(pageSize)
+            .offset(offset);
 
-    const [total] = await db
-        .select({ count: count() })
-        .from(measureTasks)
-        .where(whereClause);
+        const [totalResult] = await db.select({ count: count() })
+            .from(measureTasks)
+            .leftJoin(customers, eq(measureTasks.customerId, customers.id))
+            .leftJoin(leads, eq(measureTasks.leadId, leads.id))
+            .leftJoin(users, eq(measureTasks.assignedWorkerId, users.id))
+            .where(and(...conditions));
 
-    // 查询任务列表（包含关联数据）
-    let rows = await db.query.measureTasks.findMany({
-        where: whereClause,
-        with: {
-            assignedWorker: true,
-            lead: true,
-            customer: true,
-        },
-        orderBy: [desc(measureTasks.createdAt)],
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-    });
-
-    // 关联表筛选（在应用层过滤）
-    // 注意：Drizzle ORM 的 with 查询暂不支持在关联表上直接过滤
-    // 如需严格分页准确性，应使用 SQL JOIN 查询
-    if (salesId) {
-        rows = rows.filter(row => row.lead?.assignedSalesId === salesId);
+        return {
+            success: true,
+            data: tasks.map(t => ({
+                ...t,
+                scheduledAt: t.scheduledAt?.toISOString() || null,
+                createdAt: t.createdAt?.toISOString() || null,
+                address: t.lead ? `${t.lead.community || ''} ${t.lead.address || ''}`.trim() : ''
+            })),
+            total: totalResult?.count || 0
+        };
+    } catch (error) {
+        console.error('getMeasureTasks error:', error);
+        return { success: false, error: '获取列表失败', data: [] };
     }
-    if (address) {
-        const addressLower = address.toLowerCase();
-        rows = rows.filter(row =>
-            row.lead?.address?.toLowerCase().includes(addressLower) ||
-            row.lead?.community?.toLowerCase().includes(addressLower)
-        );
-    }
-    if (channel) {
-        rows = rows.filter(row => row.lead?.channelId === channel);
-    }
-    if (customerName) {
-        const nameLower = customerName.toLowerCase();
-        rows = rows.filter(row =>
-            row.customer?.name?.toLowerCase().includes(nameLower)
-        );
-    }
-
-    return {
-        success: true,
-        data: rows,
-        total: total?.count || 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((total?.count || 0) / pageSize),
-    };
-}
+});
 
 /**
  * 获取测量任务详情 (包含最新的测量单和明细)
+ * 
+ * 使用 unstable_cache 进行缓存，缓存标签为 `measure-task-${id}`。
+ * 任何任务修改（状态变更、派工、费用豁免）都应触发此标签失效。
+ * 
+ * @param id - 任务 ID
+ * @returns 任务详情
  */
 export async function getMeasureTaskById(id: string) {
     // 🔒 安全校验：强制租户隔离
@@ -159,24 +185,35 @@ export async function getMeasureTaskById(id: string) {
     }
     const tenantId = session.user.tenantId;
 
-    const task = await db.query.measureTasks.findFirst({
-        where: and(
-            eq(measureTasks.id, id),
-            eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
-        ),
-        with: {
-            assignedWorker: true,
-            lead: true,
-            customer: true,
-            sheets: {
-                orderBy: [desc(measureSheets.createdAt)],
-                limit: 1,
+    const getTask = unstable_cache(
+        async () => {
+            return await db.query.measureTasks.findFirst({
+                where: and(
+                    eq(measureTasks.id, id),
+                    eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
+                ),
                 with: {
-                    items: true,
+                    assignedWorker: true,
+                    lead: true,
+                    customer: true,
+                    sheets: {
+                        orderBy: [desc(measureSheets.createdAt)],
+                        limit: 1,
+                        with: {
+                            items: true,
+                        }
+                    }
                 }
-            }
+            });
+        },
+        [`measure-task-${id}`],
+        {
+            tags: [`measure-task-${id}`, 'measure-task'],
+            revalidate: 3600 // 1 hour default
         }
-    });
+    );
+
+    const task = await getTask();
 
     if (!task) {
         return { success: false, error: '任务不存在或无权访问' };
@@ -187,6 +224,11 @@ export async function getMeasureTaskById(id: string) {
 
 /**
  * 获取可指派的测量师傅列表
+ * 
+ * 使用 unstable_cache 缓存，缓存标签为 `workers-${tenantId}`。
+ * 缓存时间 1小时。
+ * 
+ * @returns 测量师列表
  */
 export async function getAvailableWorkers() {
     // 🔒 安全校验：强制租户隔离
@@ -196,18 +238,32 @@ export async function getAvailableWorkers() {
     }
     const tenantId = session.user.tenantId;
 
-    // 只返回当前租户的测量师傅（角色为 WORKER）
-    const workers = await db.query.users.findMany({
-        where: and(
-            eq(users.role, 'WORKER'),
-            eq(users.tenantId, tenantId) // 🔒 强制租户过滤
-        ),
-    });
+    const getWorkers = unstable_cache(
+        async () => {
+            // 只返回当前租户的测量师傅（角色为 WORKER）
+            return await db.query.users.findMany({
+                where: and(
+                    eq(users.role, 'WORKER'),
+                    eq(users.tenantId, tenantId) // 🔒 强制租户过滤
+                ),
+            });
+        },
+        [`workers-${tenantId}`],
+        {
+            tags: [`workers-${tenantId}`, 'workers'],
+            revalidate: 3600 // 1 hour
+        }
+    );
+
+    const workers = await getWorkers();
     return { success: true, data: workers };
 }
 
 /**
  * 获取测量任务的版本历史 (所有测量单)
+ * 
+ * @param taskId - 任务 ID
+ * @returns 测量单列表
  */
 export async function getMeasureTaskVersions(taskId: string) {
     // 🔒 安全校验：强制租户隔离
@@ -242,6 +298,9 @@ export async function getMeasureTaskVersions(taskId: string) {
 
 /**
  * 检查测量任务的费用状态 (定金检查)
+ * 
+ * @param taskId - 任务 ID
+ * @returns 费用状态及派工许可
  */
 export async function checkMeasureFeeStatus(taskId: string) {
     // 🔒 安全校验：强制租户隔离
@@ -278,33 +337,30 @@ export async function checkMeasureFeeStatus(taskId: string) {
         };
     }
 
-    // 2. 检查是否有已支付的定金订单
-    // TODO: 添加 orders.type 字段以严格区分定金订单
-    // 目前使用订单号前缀 'EM' 作为备选判断
-    const earnestOrder = task.customer.orders.find(o =>
-        o.status === 'PAID' && o.orderNo.startsWith('EM')
+    // 2. 使用统一的费用准入/定金检查逻辑
+    // 由于 checkMeasureFeeStatus 通常在派单前调用，我们使用 checkDispatchAdmission
+
+    // 获取关联订单ID (如果没有直接绑定，尝试查找最近的有效订单)
+    // 假设 measureTasks 没有 orderId 字段（Schema confirmed usually attached to lead/customer）
+    // 我们尝试从 customer.orders 中找一个 'PAID' 或 'PARTIAL_PAID' 的订单，或者最近的订单?
+    // checkDispatchAdmission 需要 orderId。如果没有 Order，它认为 "现场收费"。
+
+    // 优先查找有效订单 (已付定金的)
+    // TODO: 应该有一个明确的 Link 关系。如果业务逻辑是 "关联任意有效订单即可"，则：
+    const validOrder = task.customer?.orders?.find(o =>
+        (o.status === 'PAID') && Number(o.totalAmount) > 0
     );
 
-    // 假设标准测量费 (未来应从配置读取)
-    const STANDARD_MEASURE_FEE = 200;
-
-    // Fallback: 检查是否有任意已支付订单覆盖测量费
-    const hasSufficientPayment = (earnestOrder && Number(earnestOrder.totalAmount) >= STANDARD_MEASURE_FEE) ||
-        task.customer.orders.some(o => o.status === 'PAID' && Number(o.totalAmount) >= STANDARD_MEASURE_FEE);
-
-    if (hasSufficientPayment) {
-        return {
-            success: true,
-            feeStatus: 'PAID',
-            canDispatch: true,
-            message: '定金已支付'
-        };
-    }
+    const checkResult = await checkDispatchAdmission(
+        validOrder?.id || null,
+        task.leadId || '',
+        tenantId
+    );
 
     return {
         success: true,
-        feeStatus: 'PENDING',
-        canDispatch: false,
-        message: '需支付定金或申请豁免'
+        feeStatus: checkResult.canDispatch ? 'PAID' : 'PENDING',
+        canDispatch: checkResult.canDispatch,
+        message: checkResult.reason || (checkResult.canDispatch ? '费用检查通过' : '需支付定金')
     };
 }

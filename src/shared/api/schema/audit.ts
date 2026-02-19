@@ -12,11 +12,17 @@ export const auditLogs = pgTable('audit_logs', {
     changedFields: jsonb('changed_fields'), // { field: { old: val, new: val } } or list of fields
     oldValues: jsonb('old_values'),
     newValues: jsonb('new_values'),
+    details: jsonb('details'),
+
+    traceId: text('trace_id'),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
     auditTenantIdx: index('idx_audit_logs_tenant').on(table.tenantId),
     auditTableIdx: index('idx_audit_logs_table').on(table.tableName),
     auditCreatedIdx: index('idx_audit_logs_created').on(table.createdAt),
+    auditRecordIdx: index('idx_audit_logs_record').on(table.tableName, table.recordId),
 }));
 

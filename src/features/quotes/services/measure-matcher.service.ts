@@ -13,7 +13,7 @@ export class MeasureMatcherService {
     /**
      * Auto-match measurement items to existing quote items or generate new drafts
      */
-    static autoMatch(measureItems: MeasureItem[], existingQuoteItems: any[] = []): MatchResult[] {
+    static autoMatch(measureItems: MeasureItem[], existingQuoteItems: QuoteItem[] = []): MatchResult[] {
         const results: MatchResult[] = [];
         const usedQuoteItemIds = new Set<string>();
 
@@ -22,7 +22,7 @@ export class MeasureMatcherService {
             const draft = mapMeasureItemToQuoteItem(item);
 
             // 2. Try to find match in existing items
-            let bestMatch: any = null;
+            let bestMatch: QuoteItem | null = null;
             let maxScore = 0;
 
             for (const qItem of existingQuoteItems) {
@@ -58,7 +58,7 @@ export class MeasureMatcherService {
         return results;
     }
 
-    private static calculateMatchScore(measure: MeasureItem, quote: any): number {
+    private static calculateMatchScore(measure: MeasureItem, quote: QuoteItem): number {
         let score = 0;
 
         // Room Name Match (Primary factor)

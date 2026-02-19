@@ -7,6 +7,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 租户业务配置相关类型和Server Actions
@@ -72,22 +73,22 @@ const DEFAULT_WORKFLOW_CONFIG: WorkflowModeConfig = {
 // Zod Schemas
 const arPaymentSchema = z.object({
     enableInstallment: z.boolean(),
-    minDepositRatio: z.number().min(0).max(1),
-    minDepositAmount: z.number().min(0),
-    depositCalcRule: z.enum(['HIGHER', 'LOWER', 'RATIO_ONLY', 'AMOUNT_ONLY']),
+    minDepositRatio: z.number().min(0, '比例不能小于 0').max(1, '比例不能大于 1'),
+    minDepositAmount: z.number().min(0, '金额不能小于 0'),
+    depositCalcRule: z.enum(['HIGHER', 'LOWER', 'RATIO_ONLY', 'AMOUNT_ONLY'], { message: '无效的计算规则' }),
     allowDebtInstallCash: z.boolean(),
     requireDebtInstallApproval: z.boolean(),
 });
 
 const apPaymentSchema = z.object({
-    prepaidBonusType: z.enum(['BALANCE', 'GOODS']),
-    prepaidBonusRatio: z.number().min(0).max(1),
+    prepaidBonusType: z.enum(['BALANCE', 'GOODS'], { message: '无效的赠送方式' }),
+    prepaidBonusRatio: z.number().min(0, '比例不能小于 0').max(1, '比例不能大于 1'),
 });
 
 const workflowModeSchema = z.object({
     enableLeadAssignment: z.boolean(),
-    measureDispatchMode: z.enum(['SELF', 'DISPATCHER', 'SALES']),
-    installDispatchMode: z.enum(['SELF', 'DISPATCHER', 'SALES']),
+    measureDispatchMode: z.enum(['SELF', 'DISPATCHER', 'SALES'], { message: '无效的派单模式' }),
+    installDispatchMode: z.enum(['SELF', 'DISPATCHER', 'SALES'], { message: '无效的派单模式' }),
     enableLaborFeeCalc: z.boolean(),
     enableOutsourceProcessing: z.boolean(),
     enablePurchaseApproval: z.boolean(),
@@ -141,22 +142,36 @@ export async function updateARPaymentConfig(config: ARPaymentConfig) {
         return { success: false, error: validated.error.message };
     }
 
-    const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, session.user.tenantId),
-        columns: { settings: true },
+    await db.transaction(async (tx) => {
+        const [tenant] = await tx.select({ settings: tenants.settings })
+            .from(tenants)
+            .where(eq(tenants.id, session.user.tenantId))
+            .for('update'); // 锁定行以避免竞态条件
+
+        const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+
+        await tx.update(tenants)
+            .set({
+                settings: {
+                    ...currentSettings,
+                    arPayment: validated.data,
+                },
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, session.user.tenantId));
+
+        // 记录审计日志
+        // 记录审计日志
+        await AuditService.log(tx, {
+            tableName: 'tenants',
+            recordId: session.user.tenantId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: { arPayment: currentSettings.arPayment },
+            newValues: { arPayment: validated.data }
+        });
     });
-
-    const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-
-    await db.update(tenants)
-        .set({
-            settings: {
-                ...currentSettings,
-                arPayment: validated.data,
-            },
-            updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, session.user.tenantId));
 
     revalidatePath('/settings/finance/ar');
     return { success: true };
@@ -183,22 +198,36 @@ export async function updateAPPaymentConfig(config: APPaymentConfig) {
         return { success: false, error: validated.error.message };
     }
 
-    const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, session.user.tenantId),
-        columns: { settings: true },
+    await db.transaction(async (tx) => {
+        const [tenant] = await tx.select({ settings: tenants.settings })
+            .from(tenants)
+            .where(eq(tenants.id, session.user.tenantId))
+            .for('update');
+
+        const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+
+        await tx.update(tenants)
+            .set({
+                settings: {
+                    ...currentSettings,
+                    apPayment: validated.data,
+                },
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, session.user.tenantId));
+
+        // 记录审计日志
+        // 记录审计日志
+        await AuditService.log(tx, {
+            tableName: 'tenants',
+            recordId: session.user.tenantId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: { apPayment: currentSettings.apPayment },
+            newValues: { apPayment: validated.data }
+        });
     });
-
-    const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-
-    await db.update(tenants)
-        .set({
-            settings: {
-                ...currentSettings,
-                apPayment: validated.data,
-            },
-            updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, session.user.tenantId));
 
     revalidatePath('/settings/finance/ap');
     return { success: true };
@@ -225,22 +254,36 @@ export async function updateWorkflowModeConfig(config: WorkflowModeConfig) {
         return { success: false, error: validated.error.message };
     }
 
-    const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, session.user.tenantId),
-        columns: { settings: true },
+    await db.transaction(async (tx) => {
+        const [tenant] = await tx.select({ settings: tenants.settings })
+            .from(tenants)
+            .where(eq(tenants.id, session.user.tenantId))
+            .for('update');
+
+        const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+
+        await tx.update(tenants)
+            .set({
+                settings: {
+                    ...currentSettings,
+                    workflowMode: validated.data,
+                },
+                updatedAt: new Date(),
+            })
+            .where(eq(tenants.id, session.user.tenantId));
+
+        // 记录审计日志
+        // 记录审计日志
+        await AuditService.log(tx, {
+            tableName: 'tenants',
+            recordId: session.user.tenantId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: { workflowMode: currentSettings.workflowMode },
+            newValues: { workflowMode: validated.data }
+        });
     });
-
-    const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-
-    await db.update(tenants)
-        .set({
-            settings: {
-                ...currentSettings,
-                workflowMode: validated.data,
-            },
-            updatedAt: new Date(),
-        })
-        .where(eq(tenants.id, session.user.tenantId));
 
     revalidatePath('/settings/workflow');
     return { success: true };

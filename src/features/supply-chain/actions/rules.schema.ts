@@ -7,7 +7,7 @@ export const splitRuleSchema = z.object({
   conditions: z.string().min(1, '条件不能为空'), // Should be valid JSON string
   targetType: z.enum(['PURCHASE_ORDER', 'SERVICE_TASK']),
   targetSupplierId: z.string().nullable().optional(),
-  isActive: z.coerce.number().int().default(1),
+  isActive: z.boolean().default(true),
 });
 
 export type SplitRuleInput = z.infer<typeof splitRuleSchema>;

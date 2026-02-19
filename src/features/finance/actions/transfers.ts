@@ -11,27 +11,14 @@
 
 import { db } from '@/shared/api/db';
 import { financeAccounts, accountTransactions, internalTransfers } from '@/shared/api/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-
-// 生成调拨单号
-function generateTransferNo(): string {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `TRF-${dateStr}-${random}`;
-}
-
-// 生成流水号
-function generateTransactionNo(prefix: string): string {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `${prefix}-${dateStr}-${random}`;
-}
+import { Decimal } from 'decimal.js';
+import { generateBusinessNo } from '@/shared/lib/generate-no';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 创建调拨单 Schema
 const createTransferSchema = z.object({
@@ -64,7 +51,9 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
         const userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+            return { success: false, error: '权限不足：需要财务管理权限' };
+        }
 
         // 验证不能自己转给自己
         if (data.fromAccountId === data.toAccountId) {
@@ -88,9 +77,10 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 return { success: false, error: '源账户已停用' };
             }
 
-            const fromBalance = Number(fromAccount.balance);
-            if (fromBalance < data.amount) {
-                return { success: false, error: `源账户余额不足，当前余额: ¥${fromBalance.toLocaleString()}` };
+            const fromBalance = new Decimal(fromAccount.balance || '0');
+            const transferAmount = new Decimal(data.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            if (fromBalance.lt(transferAmount)) {
+                return { success: false, error: `源账户余额不足，当前余额: ¥${fromBalance.toFixed(2, Decimal.ROUND_HALF_UP)}` };
             }
 
             // 2. 获取目标账户
@@ -109,8 +99,8 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 return { success: false, error: '目标账户已停用' };
             }
 
-            const transferNo = generateTransferNo();
-            const toBalance = Number(toAccount.balance);
+            const transferNo = generateBusinessNo('TRF');
+            const toBalance = new Decimal(toAccount.balance || '0');
 
             // 3. 创建调拨单 (先创建，后更新关联)
             const [transfer] = await tx.insert(internalTransfers).values({
@@ -118,7 +108,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 transferNo,
                 fromAccountId: data.fromAccountId,
                 toAccountId: data.toAccountId,
-                amount: String(data.amount),
+                amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
                 status: 'COMPLETED',
                 remark: data.remark,
                 createdBy: userId,
@@ -127,46 +117,74 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             }).returning();
 
             // 4. 扣减源账户余额
+            const fromNewBalance = fromBalance.minus(transferAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             await tx.update(financeAccounts)
                 .set({
-                    balance: sql`${financeAccounts.balance} - ${data.amount}`,
+                    balance: fromNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    updatedAt: new Date()
                 })
-                .where(eq(financeAccounts.id, data.fromAccountId));
+                .where(and(
+                    eq(financeAccounts.id, data.fromAccountId),
+                    eq(financeAccounts.tenantId, tenantId),
+                    eq(financeAccounts.balance, fromBalance.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁检查
+                ));
+
 
             // 5. 创建源账户流水（支出）
             const [fromTransaction] = await tx.insert(accountTransactions).values({
                 tenantId,
-                transactionNo: generateTransactionNo('TXN-OUT'),
+                transactionNo: generateBusinessNo('TXN-OUT'),
                 accountId: data.fromAccountId,
                 transactionType: 'EXPENSE',
-                amount: String(data.amount),
-                balanceBefore: String(fromBalance),
-                balanceAfter: String(fromBalance - data.amount),
+                amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceBefore: fromBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceAfter: fromBalance.minus(transferAmount).toFixed(2, Decimal.ROUND_HALF_UP),
                 relatedType: 'INTERNAL_TRANSFER',
                 relatedId: transfer.id,
                 remark: `资金调拨至 ${toAccount.accountName}`,
             }).returning();
 
             // 6. 增加目标账户余额
+            const toNewBalance = toBalance.plus(transferAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             await tx.update(financeAccounts)
                 .set({
-                    balance: sql`${financeAccounts.balance} + ${data.amount}`,
+                    balance: toNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    updatedAt: new Date()
                 })
-                .where(eq(financeAccounts.id, data.toAccountId));
+                .where(and(
+                    eq(financeAccounts.id, data.toAccountId),
+                    eq(financeAccounts.tenantId, tenantId)
+                ));
+
 
             // 7. 创建目标账户流水（收入）
             const [toTransaction] = await tx.insert(accountTransactions).values({
                 tenantId,
-                transactionNo: generateTransactionNo('TXN-IN'),
+                transactionNo: generateBusinessNo('TXN-IN'),
                 accountId: data.toAccountId,
                 transactionType: 'INCOME',
-                amount: String(data.amount),
-                balanceBefore: String(toBalance),
-                balanceAfter: String(toBalance + data.amount),
+                amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceBefore: toBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceAfter: toBalance.plus(transferAmount).toFixed(2, Decimal.ROUND_HALF_UP),
                 relatedType: 'INTERNAL_TRANSFER',
                 relatedId: transfer.id,
                 remark: `资金调入自 ${fromAccount.accountName}`,
             }).returning();
+
+            // 审计日志 F-32
+            await AuditService.log(tx, {
+                tenantId,
+                userId: userId!,
+                tableName: 'internal_transfers',
+                recordId: transfer.id,
+                action: 'CREATE_TRANSFER',
+                newValues: transfer,
+                details: {
+                    from: fromAccount.accountName,
+                    to: toAccount.accountName,
+                    amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP)
+                }
+            });
 
             // 8. 更新调拨单关联流水
             await tx.update(internalTransfers)
@@ -208,8 +226,12 @@ export async function getInternalTransfers(page = 1, pageSize = 20) {
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权', data: [] };
     }
-
     const tenantId = session.user.tenantId;
+
+    // 权限检查 F-29
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+        return { success: false, error: '权限不足：需要财务查看权限', data: [] };
+    }
     const offset = (page - 1) * pageSize;
 
     const transfers = await db.query.internalTransfers.findMany({
@@ -249,10 +271,11 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         }
 
         const tenantId = session.user.tenantId;
-        const _userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+            return { success: false, error: '权限不足：需要财务管理权限' };
+        }
 
         return await db.transaction(async (tx) => {
 
@@ -273,50 +296,89 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             }
 
             if (transfer.status !== 'COMPLETED') {
-                return { success: false, error: '仅已完成的调拨单可冲销' };
+                return { success: false, error: '调拨单状态不可冲销（可能已冲销或非完成状态）' };
             }
 
-            const amount = Number(transfer.amount);
+            // F-30: 幂等性保护 - 尝试原子更新状态为 CANCELLING
+            const [lockedTransfer] = await tx.update(internalTransfers)
+                .set({ status: 'CANCELLING', updatedAt: new Date() })
+                .where(and(
+                    eq(internalTransfers.id, transferId),
+                    eq(internalTransfers.tenantId, tenantId),
+                    eq(internalTransfers.status, 'COMPLETED')
+                ))
+                .returning();
+
+            if (!lockedTransfer) {
+                return { success: false, error: '调拨单已被锁定或状态已变更' };
+            }
+
+            const amount = new Decimal(transfer.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
             // 2. 获取当前账户余额
             const fromAccount = await tx.query.financeAccounts.findFirst({
-                where: eq(financeAccounts.id, transfer.fromAccountId)
+                where: and(
+                    eq(financeAccounts.id, transfer.fromAccountId),
+                    eq(financeAccounts.tenantId, tenantId)
+                )
             });
             const toAccount = await tx.query.financeAccounts.findFirst({
-                where: eq(financeAccounts.id, transfer.toAccountId)
+                where: and(
+                    eq(financeAccounts.id, transfer.toAccountId),
+                    eq(financeAccounts.tenantId, tenantId)
+                )
             });
 
             if (!fromAccount || !toAccount) {
                 return { success: false, error: '关联账户不存在' };
             }
 
-            const fromBalance = Number(fromAccount.balance);
-            const toBalance = Number(toAccount.balance);
+            const fromBalance = new Decimal(fromAccount.balance || '0');
+            const toBalance = new Decimal(toAccount.balance || '0');
 
             // 检查目标账户余额是否足够冲销
-            if (toBalance < amount) {
-                return { success: false, error: `目标账户余额不足，无法冲销。当前余额: ¥${toBalance.toLocaleString()}` };
+            if (toBalance.lt(amount)) {
+                // 恢复状态并报错
+                await tx.update(internalTransfers).set({ status: 'COMPLETED' }).where(eq(internalTransfers.id, transferId));
+                return { success: false, error: `目标账户余额不足，无法冲销。当前余额: ¥${toBalance.toFixed(2, Decimal.ROUND_HALF_UP)}` };
             }
 
             // 3. 恢复源账户余额（加回）
+            const fromNewBalance = fromBalance.plus(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             await tx.update(financeAccounts)
-                .set({ balance: sql`${financeAccounts.balance} + ${amount}` })
-                .where(eq(financeAccounts.id, transfer.fromAccountId));
+                .set({
+                    balance: fromNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    updatedAt: new Date()
+                })
+                .where(and(
+                    eq(financeAccounts.id, transfer.fromAccountId),
+                    eq(financeAccounts.tenantId, tenantId)
+                ));
+
 
             // 4. 扣减目标账户余额
+            const toNewBalance = toBalance.minus(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             await tx.update(financeAccounts)
-                .set({ balance: sql`${financeAccounts.balance} - ${amount}` })
-                .where(eq(financeAccounts.id, transfer.toAccountId));
+                .set({
+                    balance: toNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    updatedAt: new Date()
+                })
+                .where(and(
+                    eq(financeAccounts.id, transfer.toAccountId),
+                    eq(financeAccounts.tenantId, tenantId),
+                    eq(financeAccounts.balance, toBalance.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁
+                ));
+
 
             // 5. 创建冲销流水 - 源账户收入
             await tx.insert(accountTransactions).values({
                 tenantId,
-                transactionNo: generateTransactionNo('REV-IN'),
+                transactionNo: generateBusinessNo('REV-IN'),
                 accountId: transfer.fromAccountId,
                 transactionType: 'INCOME',
-                amount: String(amount),
-                balanceBefore: String(fromBalance),
-                balanceAfter: String(fromBalance + amount),
+                amount: amount.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceBefore: fromBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceAfter: fromBalance.plus(amount).toFixed(2, Decimal.ROUND_HALF_UP),
                 relatedType: 'TRANSFER_REVERSAL',
                 relatedId: transfer.id,
                 remark: `冲销调拨: ${transfer.transferNo}${reason ? ` (${reason})` : ''}`,
@@ -325,15 +387,27 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             // 6. 创建冲销流水 - 目标账户支出
             await tx.insert(accountTransactions).values({
                 tenantId,
-                transactionNo: generateTransactionNo('REV-OUT'),
+                transactionNo: generateBusinessNo('REV-OUT'),
                 accountId: transfer.toAccountId,
                 transactionType: 'EXPENSE',
-                amount: String(amount),
-                balanceBefore: String(toBalance),
-                balanceAfter: String(toBalance - amount),
+                amount: amount.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceBefore: toBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                balanceAfter: toBalance.minus(amount).toFixed(2, Decimal.ROUND_HALF_UP),
                 relatedType: 'TRANSFER_REVERSAL',
                 relatedId: transfer.id,
                 remark: `冲销调拨: ${transfer.transferNo}${reason ? ` (${reason})` : ''}`,
+            });
+
+            // 审计日志 F-32
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id!,
+                tableName: 'internal_transfers',
+                recordId: transfer.id,
+                action: 'UPDATE', // 此操作属于更新状态
+                newValues: { status: 'CANCELLED', reason },
+                oldValues: { status: 'COMPLETED' },
+                details: { transferNo: transfer.transferNo, amount: amount.toFixed(2, Decimal.ROUND_HALF_UP) }
             });
 
             // 7. 更新调拨单状态为已取消
@@ -376,11 +450,17 @@ export async function getInternalTransfer(id: string) {
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
     }
+    const tenantId = session.user.tenantId;
+
+    // 权限检查 F-29
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+        return { success: false, error: '权限不足：需要财务查看权限' };
+    }
 
     const transfer = await db.query.internalTransfers.findFirst({
         where: and(
             eq(internalTransfers.id, id),
-            eq(internalTransfers.tenantId, session.user.tenantId)
+            eq(internalTransfers.tenantId, tenantId)
         ),
         with: {
             fromAccount: true,

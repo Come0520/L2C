@@ -1,39 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, orderItems, quotes, paymentSchedules } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
 import { generateOrderNo } from '@/shared/lib/generators';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { getMiniprogramUser } from '../auth-utils';
 
-// Helper: Get User Info
-async function getUser(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    try {
-        const token = authHeader.slice(7);
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        return await db.query.users.findFirst({
-            where: (u, { eq }) => eq(u.id, payload.userId as string),
-            columns: { id: true, role: true, tenantId: true },
-        });
-    } catch {
-        return null;
-    }
-}
+
 
 export async function GET(request: NextRequest) {
     try {
-        const user = await getUser(request);
+        const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            return apiError('Unauthorized', 401);
         }
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
 
         const conditions = [eq(orders.tenantId, user.tenantId)];
-        if (status && status !== 'ALL') {
+        const VALID_STATUSES = ['PENDING', 'PENDING_PO', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'Draft']; // Add other statuses as needed
+        if (status && status !== 'ALL' && VALID_STATUSES.includes(status)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             conditions.push(eq(orders.status, status as any));
         }
 
@@ -47,26 +35,26 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        return NextResponse.json({ success: true, data: list });
+        return apiSuccess(list);
 
     } catch (error) {
         console.error('Get Orders Error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Error' }, { status: 500 });
+        return apiError('Internal Error', 500);
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUser(request);
+        const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            return apiError('Unauthorized', 401);
         }
 
         const body = await request.json();
         const { quoteId } = body;
 
         if (!quoteId) {
-            return NextResponse.json({ success: false, error: 'Quote ID required' }, { status: 400 });
+            return apiError('Quote ID required', 400);
         }
 
         // 1. Fetch Quote
@@ -78,12 +66,12 @@ export async function POST(request: NextRequest) {
         });
 
         if (!quote) {
-            return NextResponse.json({ success: false, error: 'Quote not found' }, { status: 404 });
+            return apiError('Quote not found', 404);
         }
 
         // Logic Check: Quote must be ORDERED
         if (quote.status !== 'ORDERED') {
-            return NextResponse.json({ success: false, error: 'Quote must be confirmed first' }, { status: 400 });
+            return apiError('Quote must be confirmed first', 400);
         }
 
         // TODO: Check if order already exists for this quote? (Optional but good practice)
@@ -120,6 +108,7 @@ export async function POST(request: NextRequest) {
                     roomName: item.roomName || 'Unknown Room',
                     productId: item.productId,
                     productName: item.productName,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     category: item.category as any,
                     quantity: item.quantity,
                     width: item.width,
@@ -161,11 +150,11 @@ export async function POST(request: NextRequest) {
                 .set({ status: 'ORDERED' }) // Assume we add this status or use existing logical equivalent
                 .where(eq(quotes.id, quote.id));
 
-            return NextResponse.json({ success: true, data: newOrder });
+            return apiSuccess(newOrder);
         });
 
     } catch (error) {
         console.error('Create Order Error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Error' }, { status: 500 });
+        return apiError('Internal Error', 500);
     }
 }

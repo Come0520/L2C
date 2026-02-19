@@ -1,9 +1,10 @@
 import { StandardProductStrategy } from './standard-product-strategy';
 import { WallpaperStrategy } from './wallpaper-strategy';
 import { CurtainStrategy } from './curtain-strategy';
+import type { BaseCalcStrategy, CalcParams, CalcResult } from './base-strategy';
 
 export class StrategyFactory {
-    static getStrategy(category: string) {
+    static getStrategy(category: string): BaseCalcStrategy<CalcParams, CalcResult> {
         switch (category) {
             case 'WALLPAPER':
             case 'WALLCLOTH':

@@ -7,3 +7,5 @@ export { OrderSettingsConfig } from './order-settings-config';
 export { ApprovalSettingsConfig } from './approval-settings-config';
 export { NotificationSettingsConfig } from './notification-settings-config';
 export { ReportSettingsConfig } from './report-settings-config';
+export { ShowroomSettingsConfig } from './showroom-settings-config';
+

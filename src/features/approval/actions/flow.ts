@@ -65,6 +65,11 @@ const createApprovalFlowActionInternal = createSafeAction(
     }
 );
 
+/**
+ * 创建新的审批流程定义（仅基础信息）
+ * @param params - 流程名称、编码、描述
+ * @returns 流程对象
+ */
 export async function createApprovalFlow(params: z.infer<typeof createFlowSchema>) {
     return createApprovalFlowActionInternal(params);
 }
@@ -75,14 +80,23 @@ const saveFlowDefinitionActionInternal = createSafeAction(
         const { tenantId } = session.user;
         if (!tenantId) throw new Error('Unauthorized');
 
-        await db.update(approvalFlows)
+        const [updated] = await db.update(approvalFlows)
             .set({ definition, updatedAt: new Date() })
-            .where(eq(approvalFlows.id, flowId));
+            .where(and(eq(approvalFlows.id, flowId), eq(approvalFlows.tenantId, tenantId)))
+            .returning({ id: approvalFlows.id });
 
+        if (!updated) {
+            throw new Error('未找到审批流或无权修改');
+        }
         return { success: true };
     }
 );
 
+/**
+ * 保存流程图定义（画板上的节点和连线）
+ * @param params - 流程 ID 及图义 JSON
+ * @returns 成功标识
+ */
 export async function saveFlowDefinition(params: z.infer<typeof saveFlowDefinitionSchema>) {
     return saveFlowDefinitionActionInternal(params);
 }
@@ -108,11 +122,17 @@ const publishApprovalFlowActionInternal = createSafeAction(
         // 类型安全：将数据库中的 definition 转换为正确的类型
         const definition = flow.definition as { nodes: ApprovalNode[], edges: ApprovalEdge[] };
 
+        // P2-2: 发布前校验节点数
+        const nodes = definition.nodes || [];
+        if (!nodes || nodes.length < 2) { // 至少需要 Start 和 End
+            return { success: false, error: "审批流必须包含至少一个有效环节" };
+        }
+
         const flatNodes = flattenApprovalGraph(definition.nodes, definition.edges);
 
         await db.transaction(async (tx) => {
             await tx.delete(approvalNodes)
-                .where(eq(approvalNodes.flowId, flowId));
+                .where(and(eq(approvalNodes.flowId, flowId), eq(approvalNodes.tenantId, tenantId)));
 
             if (flatNodes.length > 0) {
                 await tx.insert(approvalNodes).values(
@@ -142,6 +162,14 @@ const publishApprovalFlowActionInternal = createSafeAction(
     }
 );
 
+/**
+ * 发布审批流程
+ *
+ * 将图形定义（DAG）扁平化为线性节点序列存入数据库，并激活流程。
+ *
+ * @param params - 流程 ID
+ * @returns 发布结果
+ */
 export async function publishApprovalFlow(params: z.infer<typeof publishFlowSchema>) {
     return publishApprovalFlowActionInternal(params);
 }

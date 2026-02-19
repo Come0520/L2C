@@ -32,8 +32,9 @@ export function AddApproverDialog({ taskId, onComplete }: { taskId: string; onCo
         try {
             const results = await searchApprovers(searchQuery);
             setUsers(results as UserOption[]);
-        } catch (err: any) {
-            toast.error(err.message || '搜索失败');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : '搜索失败';
+            toast.error(message);
         } finally {
             setIsSearching(false);
         }
@@ -58,8 +59,9 @@ export function AddApproverDialog({ taskId, onComplete }: { taskId: string; onCo
             } else {
                 toast.error(result.error || '加签失败');
             }
-        } catch (err: any) {
-            toast.error(err.message || '系统错误');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : '协作邀请失败';
+            toast.error(message);
         } finally {
             setIsSubmitting(false);
         }

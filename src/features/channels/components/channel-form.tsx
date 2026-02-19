@@ -11,32 +11,53 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { createChannel, updateChannel } from '../actions/mutations';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { BankInfoForm } from './bank-info-form';
+import { TieredRatesForm } from './tiered-rates-form';
 
 interface ChannelFormProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData?: any; // 渠道数据结构复杂，后续可定义具体类型
+    initialData?: Partial<ChannelInput> & { id?: string; tieredRates?: unknown; bankInfo?: unknown };
     tenantId: string;
 }
 
 export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormProps) {
     const router = useRouter();
+
+    const parseJson = (val: unknown) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    };
+
     const form = useForm<ChannelInput>({
+        // zodResolver 与 react-hook-form 泛型不完全兼容，需保留 as any（已知问题）
         resolver: zodResolver(channelSchema) as any,
-        defaultValues: initialData || {
-            category: 'OFFLINE',
-            channelType: 'DECORATION_CO',
-            level: 'C',
-            name: '',
-            code: '',
-            contactName: '',
-            phone: '',
-            commissionRate: 0,
-            commissionType: 'FIXED',
-            cooperationMode: 'COMMISSION',
-            priceDiscountRate: 1,
-            settlementType: 'MONTHLY',
+        defaultValues: {
+            category: initialData?.category || 'OFFLINE',
+            channelType: initialData?.channelType || 'DECORATION_CO',
+            level: initialData?.level || 'C',
+            name: initialData?.name || '',
+            channelNo: initialData?.channelNo || '',
+            contactName: initialData?.contactName || '',
+            phone: initialData?.phone || '',
+            commissionRate: initialData?.commissionRate ? Number(initialData.commissionRate) : 0,
+            commissionType: initialData?.commissionType || 'FIXED',
+            cooperationMode: initialData?.cooperationMode || 'COMMISSION',
+            priceDiscountRate: initialData?.priceDiscountRate ? Number(initialData.priceDiscountRate) : 1,
+            settlementType: initialData?.settlementType || 'MONTHLY',
+            bankInfo: parseJson(initialData?.bankInfo),
+            tieredRates: parseJson(initialData?.tieredRates),
+            customChannelType: initialData?.customChannelType,
+            parentId: initialData?.parentId,
+            hierarchyLevel: initialData?.hierarchyLevel || 1,
+            categoryId: initialData?.categoryId,
+            assignedManagerId: initialData?.assignedManagerId,
+            status: initialData?.status || 'ACTIVE',
         },
     });
+
+    const category = form.watch('category');
+    const commissionType = form.watch('commissionType');
 
     const onSubmit = async (data: ChannelInput) => {
         try {
@@ -78,10 +99,10 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
                         />
                         <FormField
                             control={form.control}
-                            name="code"
+                            name="channelNo"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>渠道编码</FormLabel>
+                                    <FormLabel>渠道编号</FormLabel>
                                     <FormControl>
                                         <Input placeholder="例如: QD2026001" {...field} />
                                     </FormControl>
@@ -128,14 +149,14 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {form.watch('category') === 'ONLINE' && (
+                                            {category === 'ONLINE' && (
                                                 <>
                                                     <SelectItem value="DOUYIN">抖音</SelectItem>
                                                     <SelectItem value="XIAOHONGSHU">小红书</SelectItem>
                                                     <SelectItem value="OTHER">其他线上</SelectItem>
                                                 </>
                                             )}
-                                            {form.watch('category') === 'OFFLINE' && (
+                                            {category === 'OFFLINE' && (
                                                 <>
                                                     <SelectItem value="DECORATION_CO">装饰公司</SelectItem>
                                                     <SelectItem value="DESIGNER">独立设计师</SelectItem>
@@ -143,13 +164,13 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
                                                     <SelectItem value="STORE">自营门店</SelectItem>
                                                 </>
                                             )}
-                                            {form.watch('category') === 'REFERRAL' && (
+                                            {category === 'REFERRAL' && (
                                                 <>
                                                     <SelectItem value="OTHER">通用转介绍</SelectItem>
                                                 </>
                                             )}
                                             {/* Fallback to show all if no category selected (should not happen with default) */}
-                                            {!form.watch('category') && <SelectItem value="OTHER">请先选择大类</SelectItem>}
+                                            {!category && <SelectItem value="OTHER">请先选择大类</SelectItem>}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -220,67 +241,104 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
                     <CardHeader>
                         <CardTitle>财务与商务</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="cooperationMode"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>合作模式</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="选择模式" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="BASE_PRICE">供货价模式 (差价即佣金)</SelectItem>
-                                            <SelectItem value="COMMISSION">佣金模式 (按比例结算)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
+                    <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="cooperationMode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>合作模式</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="选择模式" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="BASE_PRICE">供货价模式 (差价即佣金)</SelectItem>
+                                                <SelectItem value="COMMISSION">佣金模式 (按比例结算)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="settlementType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>结算方式</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="选择方式" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="PREPAY">预付 (先款后货)</SelectItem>
+                                                <SelectItem value="MONTHLY">月结 (定期结算)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="commissionType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>费率类型</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="选择类型" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="FIXED">固定比例</SelectItem>
+                                                <SelectItem value="TIERED">阶梯费率</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+
+                            {commissionType === 'FIXED' && (
+                                <FormField
+                                    control={form.control}
+                                    name="commissionRate"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>返佣比例 (%)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(e.target.value)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="commissionRate"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>返佣比例 (%)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            {...field}
-                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="settlementType"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>结算方式</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="选择方式" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="PREPAY">预付 (先款后货)</SelectItem>
-                                            <SelectItem value="MONTHLY">月结 (定期结算)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        </div>
+
+                        {commissionType === 'TIERED' && (
+                            <TieredRatesForm form={form} />
+                        )}
+
+                        <div className="pt-4 border-t">
+                            <BankInfoForm form={form} />
+                        </div>
                     </CardContent>
                 </Card>
 

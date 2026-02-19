@@ -5,7 +5,8 @@
  */
 'use server';
 
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import {
   generateEmployeeInviteLink,
   generateCustomerInviteLink,
@@ -14,6 +15,14 @@ import {
   verifyInviteToken,
 } from '@/shared/lib/invite-token';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const registrationSchema = z.object({
+  name: z.string().min(1, '姓名必填'),
+  phone: z.string().min(1, '手机号必填'),
+  email: z.string().email('邮箱格式错误').optional().or(z.literal('')),
+  password: z.string().min(8, '密码至少8位'),
+});
 
 // ============================================================
 // 员工邀请
@@ -29,11 +38,9 @@ export async function createEmployeeInviteLink(defaultRoles?: string[]) {
   }
 
   // 检查权限（只有管理员可以邀请员工）
-  const allowedRoles = ['ADMIN', 'OWNER', 'TENANT_ADMIN'];
-  if (
-    !allowedRoles.includes(session.user.role) &&
-    !session.user.roles?.some((r) => allowedRoles.includes(r))
-  ) {
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
     return { success: false, error: '无权限邀请员工' };
   }
 
@@ -104,7 +111,12 @@ export async function registerEmployee(
     password: string;
   }
 ) {
-  const result = await registerEmployeeByInvite(token, userData);
+  const validated = registrationSchema.safeParse(userData);
+  if (!validated.success) {
+    return { success: false, error: '输入数据格式错误：' + validated.error.message };
+  }
+
+  const result = await registerEmployeeByInvite(token, validated.data);
   if (result.success) {
     revalidatePath('/settings/users');
   }
@@ -123,7 +135,12 @@ export async function registerCustomer(
     password: string;
   }
 ) {
-  const result = await registerCustomerByInvite(token, userData);
+  const validated = registrationSchema.safeParse(userData);
+  if (!validated.success) {
+    return { success: false, error: '输入数据格式错误：' + validated.error.message };
+  }
+
+  const result = await registerCustomerByInvite(token, validated.data);
   if (result.success) {
     revalidatePath('/customers');
   }

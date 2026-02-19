@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile } from '@/shared/middleware/mobile-auth';
 import { getOSSToken } from '@/features/upload/actions/oss-token';
+import { createLogger } from '@/shared/lib/logger';
 
 /**
  * OSS 临时上传凭证接口
@@ -11,6 +12,8 @@ import { getOSSToken } from '@/features/upload/actions/oss-token';
  * @header Authorization: Bearer {accessToken}
  * @returns { success: boolean, data: { AccessKeyId, AccessKeySecret, SecurityToken, Expiration, bucket, region } }
  */
+
+const log = createLogger('mobile/upload/oss-token');
 export async function GET(request: NextRequest) {
     try {
         // 1. 认证
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest) {
         return apiSuccess(result.data);
 
     } catch (error) {
-        console.error('OSS Token 获取错误:', error);
+        log.error('OSS Token 获取错误', {}, error);
         return apiError('服务器内部错误', 500);
     }
 }

@@ -26,7 +26,7 @@ export default async function PlatformLayout({
 
     if (!user?.isPlatformAdmin) {
         // 非管理员，重定向到首页
-        redirect('/workbench');
+        redirect('/');
     }
 
     return (

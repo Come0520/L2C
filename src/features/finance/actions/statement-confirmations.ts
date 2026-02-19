@@ -9,9 +9,13 @@
 import { db } from '@/shared/api/db';
 import { statementConfirmations, statementConfirmationDetails, arStatements, apSupplierStatements } from '@/shared/api/schema';
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { Decimal } from 'decimal.js';
+import { AuditService } from '@/shared/services/audit-service';
+
 
 // 生成确认单号
 function generateConfirmationNo(type: string): string {
@@ -45,6 +49,11 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
 
         if (!session?.user?.tenantId) {
             return { success: false, error: '未授权' };
+        }
+
+        // 权限检查：对账
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) {
+            return { success: false, error: '权限不足：需要对账权限' };
         }
 
         const tenantId = session.user.tenantId;
@@ -95,10 +104,11 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
                 return { success: false, error: '该周期内没有找到账单' };
             }
 
-            // 计算总金额
+            // 计算总金额 (F-35: 精度加固)
             const totalAmount = statements.reduce((sum, s) => {
-                return sum + parseFloat(s.totalAmount || '0');
-            }, 0);
+                return sum.plus(new Decimal(s.totalAmount || '0'));
+            }, new Decimal(0));
+
 
             // 生成周期标签
             const periodLabel = data.periodLabel ||
@@ -133,6 +143,20 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
                 });
             }
 
+            // F-32: 记录生成审计
+            await AuditService.log(tx, {
+                tenantId,
+                userId: userId!,
+                tableName: 'statement_confirmations',
+                recordId: confirmation.id,
+                action: 'CREATE',
+                newValues: confirmation,
+                details: {
+                    type: data.type,
+                    statementCount: statements.length
+                }
+            });
+
             revalidatePath('/finance/confirmations');
 
             return {
@@ -141,10 +165,11 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
                     confirmationId: confirmation.id,
                     confirmationNo: confirmation.confirmationNo,
                     statementCount: statements.length,
-                    totalAmount,
+                    totalAmount: totalAmount.toNumber(),
                 },
                 message: '对账确认单已生成'
             };
+
         });
     } catch (error) {
         console.error('生成对账确认单失败:', error);
@@ -169,6 +194,11 @@ export async function confirmStatement(
             return { success: false, error: '未授权' };
         }
 
+        // 权限检查：对账
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) {
+            return { success: false, error: '权限不足：需要对账权限' };
+        }
+
         const tenantId = session.user.tenantId;
 
         return await db.transaction(async (tx) => {
@@ -185,7 +215,8 @@ export async function confirmStatement(
             }
 
             const hasDisputes = disputedItems && disputedItems.length > 0;
-            let disputedAmount = 0;
+            let disputedAmount = new Decimal(0);
+
 
             // 处理争议项
             if (hasDisputes) {
@@ -202,8 +233,9 @@ export async function confirmStatement(
                             })
                             .where(eq(statementConfirmationDetails.id, item.detailId));
 
-                        disputedAmount += parseFloat(detail.documentAmount);
+                        disputedAmount = disputedAmount.plus(new Decimal(detail.documentAmount));
                     }
+
                 }
             }
 
@@ -216,19 +248,33 @@ export async function confirmStatement(
                 ));
 
             // 更新确认单状态
-            const totalAmount = parseFloat(confirmation.totalAmount);
-            const confirmedAmount = totalAmount - disputedAmount;
+            const totalAmount = new Decimal(confirmation.totalAmount);
+            const confirmedAmount = totalAmount.minus(disputedAmount);
+
+            const updatedValues = {
+                status: hasDisputes ? 'DISPUTED' : 'CONFIRMED',
+                confirmedAmount: confirmedAmount.toFixed(2),
+                disputedAmount: disputedAmount.toFixed(2),
+                confirmedAt: new Date(),
+                confirmedBy,
+                updatedAt: new Date(),
+            };
 
             await tx.update(statementConfirmations)
-                .set({
-                    status: hasDisputes ? 'DISPUTED' : 'CONFIRMED',
-                    confirmedAmount: confirmedAmount.toFixed(2),
-                    disputedAmount: disputedAmount.toFixed(2),
-                    confirmedAt: new Date(),
-                    confirmedBy,
-                    updatedAt: new Date(),
-                })
+                .set(updatedValues)
                 .where(eq(statementConfirmations.id, confirmationId));
+
+            // F-32: 记录确认审计
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id!,
+                tableName: 'statement_confirmations',
+                recordId: confirmationId,
+                action: 'UPDATE',
+                oldValues: confirmation,
+                newValues: updatedValues,
+                details: { confirmedBy }
+            });
 
             revalidatePath('/finance/confirmations');
 
@@ -236,6 +282,7 @@ export async function confirmStatement(
                 success: true,
                 message: hasDisputes ? '对账已确认（含争议）' : '对账已确认'
             };
+
         });
     } catch (error) {
         console.error('确认对账失败:', error);
@@ -253,6 +300,11 @@ export async function getStatementConfirmations(page = 1, pageSize = 20) {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权', data: [] };
+    }
+
+    // 权限检查：查看财务数据
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+        return { success: false, error: '权限不足：需要财务查看权限', data: [] };
     }
 
     const tenantId = session.user.tenantId;

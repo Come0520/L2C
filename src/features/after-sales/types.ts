@@ -1,25 +1,9 @@
+// Export inferred type for Ticket Detail
+import { getTicketDetail, getAfterSalesTickets } from './actions';
 
-import {
-    afterSalesTickets,
-    liabilityNotices
-} from '@/shared/api/schema';
-import { InferSelectModel } from 'drizzle-orm';
+type ActionResponse = Awaited<ReturnType<typeof getTicketDetail>>;
+export type TicketDetail = NonNullable<NonNullable<ActionResponse['data']>['data']>;
+export type LiabilityNotice = NonNullable<TicketDetail['notices']>[number];
 
-export type Ticket = InferSelectModel<typeof afterSalesTickets>;
-export type LiabilityNotice = InferSelectModel<typeof liabilityNotices>;
-
-export type TicketDetail = Ticket & {
-    customer?: {
-        id: string;
-        name: string | null;
-        phone: string | null;
-        defaultAddress: string | null;
-    };
-    order?: {
-        orderNo: string;
-    } | null;
-    assignee?: {
-        name: string | null;
-    } | null;
-    liabilityNotices: LiabilityNotice[];
-};
+type ListActionResponse = Awaited<ReturnType<typeof getAfterSalesTickets>>;
+export type TicketListItem = NonNullable<ListActionResponse['data']>[number];

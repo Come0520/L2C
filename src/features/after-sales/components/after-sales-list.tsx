@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getAfterSalesTickets } from '../actions';
+import { TicketListItem } from "../types";
 import { Button } from '@/shared/ui/button';
 import {
     Table,
@@ -32,7 +33,7 @@ export function AfterSalesList() {
     const status = searchParams.get('status') || 'all';
 
     const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
+    const [page, _setPage] = useState(1);
 
     const debouncedSearch = useDebounce(search, 500);
 
@@ -112,7 +113,7 @@ export function AfterSalesList() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                tickets.map((ticket: any) => (
+                                tickets.map((ticket: TicketListItem) => (
                                     <TableRow key={ticket.id}>
                                         <TableCell className="font-medium">
                                             <Link href={`/after-sales/${ticket.id}`} className="hover:underline text-blue-600">

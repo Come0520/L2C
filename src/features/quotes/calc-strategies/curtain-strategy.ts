@@ -1,6 +1,6 @@
-import { BaseCalcStrategy } from './base-strategy';
+import { BaseCalcStrategy, type CalcParams } from './base-strategy';
 
-export interface CurtainCalcParams {
+export interface CurtainCalcParams extends CalcParams {
     measuredWidth: number;   // 测量宽度 (cm)
     measuredHeight: number;  // 测量高度 (cm)
     foldRatio?: number;      // 褶皱倍数 (默认 2.0)
@@ -35,7 +35,7 @@ export interface CurtainCalcResult {
     };
 }
 
-export class CurtainStrategy extends BaseCalcStrategy {
+export class CurtainStrategy extends BaseCalcStrategy<CurtainCalcParams, CurtainCalcResult> {
     private readonly DEFAULTS = {
         SIDE_LOSS: 10,       // 默认每片主要边总损耗 (实际上逻辑是每边5cm, total=10 for 1 piece side-by-side?) 
         // 文档: "双开(2片)增加 10cm; 单开(1片)增加 5cm" => 每片增加 5cm? 

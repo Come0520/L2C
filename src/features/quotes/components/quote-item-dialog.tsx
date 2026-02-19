@@ -21,7 +21,7 @@ import {
   validateDimensions,
 } from '@/features/quotes/utils/dimension-validation';
 import { HeightOverflowDialog } from './height-overflow-dialog';
-import type { AlternativeSolution } from '../logic/calculator';
+import type { AlternativeSolution } from '../calc-strategies/types';
 import { CurtainFabricQuoteForm } from './curtain-fabric-quote-form';
 
 /**
@@ -231,7 +231,7 @@ export function QuoteItemDialog({
         remark,
         attributes: {
           ...selectedProduct.specs,
-          productImage: selectedProduct.images?.[0],
+          productImage: selectedProduct.images?.[0] ?? null,
           // 传递帘头工艺和底边配置
           headerType: selectedHeaderType,
           bottomLoss: selectedBottomLoss,

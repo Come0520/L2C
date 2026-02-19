@@ -1,4 +1,11 @@
-import { SystemSettingsPanel } from '@/features/settings/components/system-settings-panel';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/shared/ui/skeleton';
+
+/** 懒加载：系统设置面板（含 8 类配置） */
+const SystemSettingsPanel = dynamic(
+    () => import('@/features/settings/components/system-settings-panel').then(m => m.SystemSettingsPanel),
+    { loading: () => <Skeleton className="h-[500px] w-full rounded-lg" /> }
+);
 
 export const metadata = {
     title: '系统设置',

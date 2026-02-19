@@ -138,6 +138,90 @@ export const compareItems = (oldItem: ExtendedItem, newItem: ExtendedItem): Item
 
 type DiffType = 'UNCHANGED' | 'MODIFIED' | 'ADDED' | 'REMOVED';
 
-export function compareQuoteVersions(_v1: QuoteVersion, _v2: QuoteVersion) {
-    return { changes: [] };
+export interface QuoteVersionDiff {
+    items: Array<{
+        itemId: string;
+        name: string;
+        diff: ItemDiff;
+    }>;
+    summary: {
+        totalAmount?: FieldChange;
+        discount?: FieldChange;
+        finalAmount?: FieldChange;
+        [key: string]: FieldChange | undefined; // Allow dynamic access
+    };
+}
+
+export interface ExtendedQuoteVersion extends QuoteVersion {
+    totalAmount?: number;
+    discount?: number;
+    finalAmount?: number;
+}
+
+export function compareQuoteVersions(v1: ExtendedQuoteVersion, v2: ExtendedQuoteVersion): QuoteVersionDiff {
+    const diff: QuoteVersionDiff = {
+        items: [],
+        summary: {}
+    };
+
+    // 1. Compare Summary Fields
+    const summaryFields: (keyof ExtendedQuoteVersion)[] = ['totalAmount', 'discount', 'finalAmount'];
+    for (const field of summaryFields) {
+        if (!areEqual(v1[field], v2[field])) {
+            // P2-R5-02: Removed @ts-ignore by adding index signature to QuoteVersionDiff.summary
+            diff.summary[field as string] = {
+                oldValue: v1[field],
+                newValue: v2[field]
+            };
+        }
+    }
+
+    // 2. Compare Items
+    const v1Items = new Map(v1.items?.map(i => [i.id, i]) || []);
+    const v2Items = new Map(v2.items?.map(i => [i.id, i]) || []);
+
+    const allIds = new Set([...v1Items.keys(), ...v2Items.keys()]);
+
+    for (const id of allIds) {
+        const item1 = v1Items.get(id);
+        const item2 = v2Items.get(id);
+
+        if (item1 && item2) {
+            // Modified or Unchanged
+            const itemDiff = compareItems(item1, item2);
+            if (itemDiff.type !== 'UNCHANGED') {
+                diff.items.push({
+                    itemId: id,
+                    name: item2.name || item1.name || 'Unknown',
+                    diff: itemDiff
+                });
+            }
+        } else if (item1) {
+            // Removed
+            diff.items.push({
+                itemId: id,
+                name: item1.name || 'Unknown',
+                diff: {
+                    type: 'REMOVED',
+                    changes: {
+                        _self: { oldValue: item1, newValue: undefined }
+                    }
+                }
+            });
+        } else if (item2) {
+            // Added
+            diff.items.push({
+                itemId: id,
+                name: item2.name || 'Unknown',
+                diff: {
+                    type: 'ADDED',
+                    changes: {
+                        _self: { oldValue: undefined, newValue: item2 }
+                    }
+                }
+            });
+        }
+    }
+
+    return diff;
 }

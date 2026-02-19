@@ -5,7 +5,9 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 
 /**
  * 工作流管理 Actions - 占位实现
- * TODO: 待工作流模块正式开发后完善
+ *
+ * @todo [P3] 待工作流模块正式开发后，替换占位函数为实际数据库操作和业务逻辑。
+ * 当前 createWorkflow / updateWorkflow / deleteWorkflow 仅做权限校验，不执行持久化。
  */
 
 interface WorkflowData {

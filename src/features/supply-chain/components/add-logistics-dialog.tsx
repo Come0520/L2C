@@ -1,19 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { addPOLogistics } from '../actions/po-actions';
 import { toast } from 'sonner';
 
+// 支持两种使用模式：受控模式 (open/onClose) 和触发器模式 (trigger)
 interface AddLogisticsDialogProps {
     poId: string;
-    open: boolean;
-    onClose: () => void;
+    open?: boolean;
+    onClose?: () => void;
+    trigger?: ReactNode;
 }
 
 interface LogisticsFormData {
@@ -23,7 +25,18 @@ interface LogisticsFormData {
     remark: string;
 }
 
-export function AddLogisticsDialog({ poId, open, onClose }: AddLogisticsDialogProps) {
+export function AddLogisticsDialog({ poId, open: controlledOpen, onClose, trigger }: AddLogisticsDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    // 如果提供 trigger，则使用内部状态管理；否则使用受控模式
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const handleOpenChange = (value: boolean) => {
+        if (isControlled) {
+            if (!value && onClose) onClose();
+        } else {
+            setInternalOpen(value);
+        }
+    };
     const form = useForm<LogisticsFormData>({
         defaultValues: {
             company: '',
@@ -44,7 +57,7 @@ export function AddLogisticsDialog({ poId, open, onClose }: AddLogisticsDialogPr
             });
             toast.success('物流信息已填写');
             form.reset();
-            onClose();
+            handleOpenChange(false);
         } catch (error) {
             toast.error('填写物流信息失败');
             console.error(error);
@@ -52,7 +65,8 @@ export function AddLogisticsDialog({ poId, open, onClose }: AddLogisticsDialogPr
     };
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>填写物流信息</DialogTitle>
@@ -97,7 +111,7 @@ export function AddLogisticsDialog({ poId, open, onClose }: AddLogisticsDialogPr
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>
+                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                             取消
                         </Button>
                         <Button type="submit">

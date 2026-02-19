@@ -15,6 +15,7 @@ import {
 } from '@/shared/ui/popover';
 import { CreateCustomerDialog } from './create-customer-dialog';
 import { getCustomers } from '@/features/customers/actions/queries';
+import { CustomerListItem } from '@/features/customers/types';
 
 /**
  * 防抖 Hook
@@ -37,9 +38,8 @@ function useDebounceValue<T>(value: T, delay: number): T {
 
 interface CustomerComboboxProps {
     value?: string;
-    onChange: (value: string, customer?: any) => void;
+    onChange: (value: string, customer?: CustomerListItem) => void;
     disabled?: boolean;
-    userId: string;
     tenantId: string;
 }
 
@@ -49,7 +49,7 @@ interface CustomerComboboxProps {
  * 支持搜索现有客户和快速新建客户
  * 新建客户后会自动选中该客户
  */
-export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }: CustomerComboboxProps) {
+export function CustomerCombobox({ value, onChange, disabled, tenantId }: CustomerComboboxProps) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounceValue(search, 500);
@@ -73,14 +73,14 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
     });
 
     // Safety check for data array
-    const data = Array.isArray(customerData) ? customerData : [];
+    const data = (Array.isArray(customerData) ? customerData : []) as CustomerListItem[];
 
-    const selectedCustomer = data.find((c: any) => c.id === value);
+    const selectedCustomer = data.find((c) => c.id === value);
 
     /**
      * 处理客户选择
      */
-    const handleSelect = (customer: any) => {
+    const handleSelect = (customer: CustomerListItem) => {
         onChange(customer.id, customer);
         setOpen(false);
     };
@@ -94,7 +94,7 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
             // 刷新客户列表缓存
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             // 自动选中新建的客户
-            onChange(customer.id, customer);
+            onChange(customer.id, undefined);
         }
     };
 
@@ -131,7 +131,7 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
                             <div className="p-4 text-center text-sm text-gray-500">未找到相关客户</div>
                         ) : (
                             <div className="max-h-[200px] overflow-auto">
-                                {data.map((customer: any) => (
+                                {data.map((customer) => (
                                     <button
                                         key={customer.id}
                                         type="button"
@@ -169,7 +169,6 @@ export function CustomerCombobox({ value, onChange, disabled, userId, tenantId }
                         新建
                     </Button>
                 }
-                userId={userId}
                 tenantId={tenantId}
                 onSuccess={handleCustomerCreated}
             />

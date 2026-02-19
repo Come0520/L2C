@@ -14,7 +14,7 @@ interface FlatNode {
 interface Condition {
     field: string;
     operator: string;
-    value: string;
+    value: string | number | boolean | string[];
 }
 
 // 节点 data 字段接口
@@ -46,12 +46,19 @@ export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[
     const visited = new Set<string>();
     let currentLevel = 0;
 
+    const MAX_ITERATIONS = 500;
+    let iterations = 0;
+
     // Queue for BFS: { nodeId, inheritedConditions, level }
     let queue: { id: string; conditions: Condition[]; level: number }[] = [
         { id: startNode.id, conditions: [], level: 1 }
     ];
 
     while (queue.length > 0) {
+        if (++iterations > MAX_ITERATIONS) {
+            throw new Error('审批流程图遍历超过最大限制，请检查是否存在循环引用');
+        }
+
         // Sort queue by level to ensure approximate topological order handling
         queue = queue.toSorted((a, b) => a.level - b.level);
         const current = queue.shift()!;
@@ -89,14 +96,12 @@ export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[
             // Real implementation needs edge labels.
             // For MVP: assume node.data.condition is the condition string
             if (node.data?.condition) {
-                // Parse condition string "amount > 5000" -> object
-                // This parser is primitive
-                const parts = node.data.condition.split(' ');
-                if (parts.length >= 3) {
+                const match = node.data.condition.match(/^\s*(\w+)\s*([><=!]+)\s*(.+)\s*$/);
+                if (match) {
                     nextConditions.push({
-                        field: parts[0],
-                        operator: convertOperator(parts[1]),
-                        value: parts[2]
+                        field: match[1],
+                        operator: convertOperator(match[2]),
+                        value: match[3].trim()
                     });
                 }
             }

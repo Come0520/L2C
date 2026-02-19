@@ -9,7 +9,10 @@ import { purchaseOrders } from '@/shared/api/schema';
 import { eq, and, or } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requirePurchaser } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/purchase/pending-pool');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
             eq(purchaseOrders.tenantId, session.tenantId),
             or(
                 eq(purchaseOrders.status, 'DRAFT'),
-                eq(purchaseOrders.status, 'PENDING')
+                eq(purchaseOrders.status, 'PENDING_CONFIRMATION')
             )
         ];
 
@@ -97,7 +100,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('待采购池查询错误:', error);
+        log.error('待采购池查询错误', {}, error);
         return apiError('查询待采购池失败', 500);
     }
 }

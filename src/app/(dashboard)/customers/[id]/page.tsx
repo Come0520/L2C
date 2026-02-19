@@ -95,7 +95,6 @@ export default async function CustomerDetailPage({
                         />
                         <EditCustomerDialog
                             customer={customer}
-                            userId={userId}
                             trigger={
                                 <Button variant="outline">
                                     <Edit className="h-4 w-4 mr-2" />
@@ -198,8 +197,8 @@ export default async function CustomerDetailPage({
                         </TabsContent>
                         <TabsContent value="referrals" className="mt-4">
                             <div className="space-y-2">
-                                {customer.referrals?.length > 0 ? (
-                                    customer.referrals.map((ref: { id: string; name: string; customerNo: string; createdAt: Date | null }) => (
+                                {(customer.referrals?.length || 0) > 0 ? (
+                                    customer.referrals!.map((ref: { id: string; name: string; customerNo: string; createdAt: Date | null }) => (
                                         <div key={ref.id} className="flex justify-between items-center p-3 border rounded bg-white">
                                             <div className="flex flex-col">
                                                 <Link href={`/customers/${ref.id}`} className="font-medium text-blue-600 hover:underline">

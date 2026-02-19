@@ -1,11 +1,12 @@
 'use server';
 
-import { db } from '@/shared/api/db';
+import { db, type Transaction } from '@/shared/api/db';
 import { laborRates } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // ============================================================
 // Schema Definitions
@@ -39,8 +40,10 @@ const upsertLaborRateSchema = z.object({
 
 /**
  * 获取指定实体的劳务工费规则列表
- * @param entityType - 实体类型 ('TENANT' 或 'WORKER')
- * @param entityId - 实体 ID
+ * 
+ * @param entityType - 实体类型 ('TENANT' | 'WORKER')
+ * @param entityId - 实体 ID (租户 ID 或师傅 ID)
+ * @returns 包含成功状态和费率数据的对象
  */
 export async function getLaborRates(entityType: 'TENANT' | 'WORKER', entityId: string) {
     const session = await auth();
@@ -58,7 +61,7 @@ export async function getLaborRates(entityType: 'TENANT' | 'WORKER', entityId: s
         });
 
         return { success: true, data: rates };
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('获取工费规则失败:', error);
         return { success: false, error: '获取工费规则失败' };
     }
@@ -66,6 +69,8 @@ export async function getLaborRates(entityType: 'TENANT' | 'WORKER', entityId: s
 
 /**
  * 获取租户标准工费规则
+ * 
+ * @returns 包含成功状态和租户级标准费率数据的对象
  */
 export async function getTenantLaborRates() {
     const session = await auth();
@@ -77,7 +82,52 @@ export async function getTenantLaborRates() {
 }
 
 /**
- * 更新或创建劳务工费规则
+ * 内部逻辑：更新或创建劳务工费规则 (支持事务)
+ */
+async function upsertLaborRateInternal(
+    tx: Transaction,
+    tenantId: string,
+    validated: z.infer<typeof upsertLaborRateSchema>
+) {
+    // 查找是否已存在该规则
+    const existing = await tx.query.laborRates.findFirst({
+        where: and(
+            eq(laborRates.tenantId, tenantId),
+            eq(laborRates.entityType, validated.entityType),
+            eq(laborRates.entityId, validated.entityId),
+            eq(laborRates.category, validated.category)
+        ),
+    });
+
+    if (existing) {
+        // 更新现有规则
+        await tx.update(laborRates)
+            .set({
+                unitPrice: String(validated.unitPrice),
+                baseFee: String(validated.baseFee),
+                unitType: validated.unitType,
+                updatedAt: new Date(),
+            })
+            .where(eq(laborRates.id, existing.id));
+    } else {
+        // 创建新规则
+        await tx.insert(laborRates).values({
+            tenantId: tenantId,
+            entityType: validated.entityType,
+            entityId: validated.entityId,
+            category: validated.category,
+            unitPrice: String(validated.unitPrice),
+            baseFee: String(validated.baseFee),
+            unitType: validated.unitType,
+        });
+    }
+}
+
+/**
+ * 更新或创建劳务工费规则 (单条)
+ * 
+ * @param data - 符合 upsertLaborRateSchema 规范的费率数据
+ * @returns 包含成功状态的操作结果
  */
 export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema>) {
     const session = await auth();
@@ -87,43 +137,21 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
 
     try {
         const validated = upsertLaborRateSchema.parse(data);
+        const tenantId = session.user.tenantId;
 
-        // 查找是否已存在该规则
-        const existing = await db.query.laborRates.findFirst({
-            where: and(
-                eq(laborRates.tenantId, session.user.tenantId),
-                eq(laborRates.entityType, validated.entityType),
-                eq(laborRates.entityId, validated.entityId),
-                eq(laborRates.category, validated.category)
-            ),
+        // 使用事务确保审计与操作原子性
+        await db.transaction(async (tx) => {
+            await upsertLaborRateInternal(tx, tenantId, validated);
+
+            // 记录工费配置审计日志
+            await AuditService.recordFromSession(session, 'laborRates', validated.entityId, 'UPDATE', {
+                new: { action: 'UPSERT_LABOR_RATE', ...validated },
+            }, tx);
         });
-
-        if (existing) {
-            // 更新现有规则
-            await db.update(laborRates)
-                .set({
-                    unitPrice: String(validated.unitPrice),
-                    baseFee: String(validated.baseFee),
-                    unitType: validated.unitType,
-                    updatedAt: new Date(),
-                })
-                .where(eq(laborRates.id, existing.id));
-        } else {
-            // 创建新规则
-            await db.insert(laborRates).values({
-                tenantId: session.user.tenantId,
-                entityType: validated.entityType,
-                entityId: validated.entityId,
-                category: validated.category,
-                unitPrice: String(validated.unitPrice),
-                baseFee: String(validated.baseFee),
-                unitType: validated.unitType,
-            });
-        }
 
         revalidatePath('/settings/labor-pricing');
         return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('保存工费规则失败:', error);
         return { success: false, error: '保存工费规则失败' };
     }
@@ -131,6 +159,9 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
 
 /**
  * 批量更新租户标准工费规则
+ * 
+ * @param rates - 费率项数组
+ * @returns 包含成功状态的操作结果
  */
 export async function batchUpsertTenantLaborRates(
     rates: Array<{
@@ -146,27 +177,43 @@ export async function batchUpsertTenantLaborRates(
     }
 
     try {
-        for (const rate of rates) {
-            await upsertLaborRate({
-                entityType: 'TENANT',
-                entityId: session.user.tenantId,
-                category: rate.category,
-                unitPrice: rate.unitPrice,
-                baseFee: rate.baseFee ?? 0,
-                unitType: rate.unitType,
-            });
-        }
+        const tenantId = session.user.tenantId;
+
+        // 批量操作使用事务
+        await db.transaction(async (tx) => {
+            for (const rate of rates) {
+                // 构造完整数据对象
+                const data = {
+                    entityType: 'TENANT' as const,
+                    entityId: tenantId,
+                    category: rate.category,
+                    unitPrice: rate.unitPrice,
+                    baseFee: rate.baseFee ?? 0,
+                    unitType: rate.unitType,
+                };
+
+                // 验证数据 (复用 Schema 验证)
+                const validated = upsertLaborRateSchema.parse(data);
+
+                await upsertLaborRateInternal(tx, tenantId, validated);
+            }
+
+            // 记录批量更新审计日志
+            await AuditService.recordFromSession(session, 'tenants', tenantId, 'UPDATE', {
+                new: { action: 'BATCH_UPSERT_LABOR_RATES', count: rates.length },
+            }, tx);
+        });
 
         revalidatePath('/settings/labor-pricing');
         return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('批量保存工费规则失败:', error);
         return { success: false, error: '批量保存工费规则失败' };
     }
 }
 
 // ============================================================
-// 工费计算逻辑
+// 工费计算逻辑 (Business Logic)
 // ============================================================
 
 interface LaborFeeCalculationInput {
@@ -176,8 +223,15 @@ interface LaborFeeCalculationInput {
 }
 
 /**
- * 计算劳务工费
- * 优先使用师傅个性化价格，兜底使用租户标准价
+ * 计算劳务工费 (分级差价算法)
+ * 
+ * 费率优先级逻辑：
+ * 1. 师傅个人定制单价 (WORKER 级别)
+ * 2. 租户标准单价 (TENANT 级别)
+ * 3. 若无匹配规则则返回 0
+ * 
+ * @param input - 计算输入 (品类、数量、师傅 ID)
+ * @returns 包含计算详情 (基础费、单位费、总费用及来源) 的结果
  */
 export async function calculateLaborFee(input: LaborFeeCalculationInput) {
     const session = await auth();
@@ -214,7 +268,7 @@ export async function calculateLaborFee(input: LaborFeeCalculationInput) {
             rate = tenantRateResult;
         }
 
-        // 3. 如果没有配置规则，返回 0
+        // 3. 如果没有配置规则，返回 0 结果对象
         if (!rate) {
             return {
                 success: true,
@@ -227,7 +281,7 @@ export async function calculateLaborFee(input: LaborFeeCalculationInput) {
             };
         }
 
-        // 4. 计算费用
+        // 4. 执行费用计算
         const baseFee = parseFloat(rate.baseFee || '0');
         const unitPrice = parseFloat(rate.unitPrice || '0');
         const unitFee = unitPrice * input.quantity;
@@ -244,7 +298,7 @@ export async function calculateLaborFee(input: LaborFeeCalculationInput) {
                 unitType: rate.unitType,
             },
         };
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('计算工费失败:', error);
         return { success: false, error: '计算工费失败' };
     }

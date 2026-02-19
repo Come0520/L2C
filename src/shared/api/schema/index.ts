@@ -29,3 +29,4 @@ export * from './system-settings';
 export * from './invitations';
 export * from './role-overrides';
 export * from './customer-activities';
+export * from './showroom';

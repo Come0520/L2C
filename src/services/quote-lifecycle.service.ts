@@ -70,14 +70,25 @@ export class QuoteLifecycleService {
         return { success: true, status: 'PENDING_APPROVAL', riskReasons: risk.reasons };
       } else {
         // 没有风险 -> 直接转为待客户确认状态 (PENDING_CUSTOMER)
-        await tx
+        const result = await tx
           .update(quotes)
           .set({
             status: 'PENDING_CUSTOMER',
             approvalRequired: false,
             rejectReason: null,
           })
-          .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
+          .where(
+            and(
+              eq(quotes.id, quoteId),
+              eq(quotes.tenantId, tenantId),
+              // 🔒 安全修复：乐观锁，防止并发状态变更
+              eq(quotes.status, quote.status!)
+            )
+          );
+
+        if (result.count === 0) {
+          throw new Error('操作失败：报价单状态已变更，请刷新后重试');
+        }
 
         return { success: true, status: 'PENDING_CUSTOMER', riskReasons: [] };
       }
@@ -90,11 +101,16 @@ export class QuoteLifecycleService {
     // 🔒 安全修复：校验报价单归属当前租户
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
-      columns: { id: true },
+      columns: { id: true, status: true },
     });
     if (!quote) throw new Error('报价单不存在或无权操作');
 
-    return await db
+    // P1-01: 状态机校验，防止绕过提交/风控流程
+    if (quote.status !== 'PENDING_APPROVAL') {
+      throw new Error(`无法批准状态为 ${quote.status} 的报价单，必须为待审批状态`);
+    }
+
+    const result = await db
       .update(quotes)
       .set({
         status: 'APPROVED',
@@ -103,25 +119,58 @@ export class QuoteLifecycleService {
         approvalRequired: false,
         rejectReason: null,
       })
-      .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
+      .where(
+        and(
+          eq(quotes.id, quoteId),
+          eq(quotes.tenantId, tenantId),
+          // 🔒 安全修复：乐观锁
+          eq(quotes.status, 'PENDING_APPROVAL')
+        )
+      );
+
+    if (result.count === 0) {
+      throw new Error('操作失败：报价单状态已变更或不满足批准条件');
+    }
+
+    return result;
   }
 
   static async reject(quoteId: string, reason: string, tenantId: string) {
     // 🔒 安全修复：校验报价单归属当前租户
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
-      columns: { id: true },
+      columns: { id: true, status: true },
     });
     if (!quote) throw new Error('报价单不存在或无权操作');
 
-    return await db
+    // P1-01: 状态机校验
+    if (quote.status !== 'PENDING_APPROVAL' && quote.status !== 'PENDING_CUSTOMER') {
+      throw new Error(`无法拒绝状态为 ${quote.status} 的报价单`);
+    }
+
+    const result = await db
       .update(quotes)
       .set({
         status: 'REJECTED',
         rejectReason: reason,
         approvalRequired: false,
       })
-      .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
+      .where(
+        and(
+          eq(quotes.id, quoteId),
+          eq(quotes.tenantId, tenantId),
+          // 🔒 安全修复：乐观锁，只允许拒绝审批中或待确认的报价单
+          // 注意：此处直接使用 quote.status 可能存在风险如果查询后状态变了，所以最好显式列出允许的状态
+          // 但由于 reject 允许 PENDING_APPROVAL 或 PENDING_CUSTOMER，我们使用 inArray 若 drizzle 支持，或使用 quote.status
+          eq(quotes.status, quote.status!)
+        )
+      );
+
+    if (result.count === 0) {
+      throw new Error('操作失败：报价单状态已变更，无法拒绝');
+    }
+
+    return result;
   }
 
   /**
@@ -143,15 +192,38 @@ export class QuoteLifecycleService {
         );
       }
 
+      // 🔒 关键安全修复：先更新 Quote 状态以锁定（乐观锁），防止并发重复转单
+      // 必须在创建 Order 之前执行，确保只有一个事务能成功将状态转为 ORDERED
+      const updateResult = await tx
+        .update(quotes)
+        .set({ status: 'ORDERED', lockedAt: new Date() })
+        .where(
+          and(
+            eq(quotes.id, quoteId),
+            eq(quotes.tenantId, tenantId),
+            // 只允许从 PENDING_CUSTOMER 或 APPROVED 转单
+            // 这里我们使用查询时获取的状态，或者更严格地显式指定
+            eq(quotes.status, quote.status!)
+          )
+        );
+
+      if (updateResult.count === 0) {
+        throw new Error('操作失败：报价单状态已变更，无法转订单（可能已被处理）');
+      }
+
       const orderNo = `ORD-${new Date().getTime().toString().slice(-8)}`;
 
-      // Customer check also scoped to tenant ideally, or just rely on ID since we trust quote.customerId
+      // P1-06 安全修复：customer 查询添加租户隔离
       const customer = await tx.query.customers.findFirst({
-        where: eq(customers.id, quote.customerId),
+        where: and(eq(customers.id, quote.customerId), eq(customers.tenantId, tenantId)),
       });
 
+      // 🔒 P1-R4-02 安全修复：地址查询添加租户隔离
       const addressParams = await tx.query.customerAddresses.findFirst({
-        where: eq(customerAddresses.customerId, quote.customerId),
+        where: and(
+          eq(customerAddresses.customerId, quote.customerId),
+          eq(customerAddresses.tenantId, tenantId)
+        ),
         orderBy: [desc(customerAddresses.isDefault), desc(customerAddresses.createdAt)],
       });
       const deliveryAddress = addressParams
@@ -225,10 +297,7 @@ export class QuoteLifecycleService {
         await tx.insert(orderItems).values(orderItemsData);
       }
 
-      await tx
-        .update(quotes)
-        .set({ status: 'ORDERED', lockedAt: new Date() })
-        .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
+      // Quote update moved to top
 
       return newOrder;
     });
@@ -238,13 +307,14 @@ export class QuoteLifecycleService {
    * 过期处理自动化 (Check for Expirations)
    * 自动将超过 validUntil 的报价单标记为 EXPIRED
    */
-  static async checkExpirations() {
+  static async checkExpirations(tenantId: string) {
     const now = new Date();
     const result = await db
       .update(quotes)
       .set({ status: 'EXPIRED' })
       .where(
         and(
+          eq(quotes.tenantId, tenantId),
           eq(quotes.status, 'PENDING_CUSTOMER'), // 已发送给客户的才需要过期
           lt(quotes.validUntil, now)
         )

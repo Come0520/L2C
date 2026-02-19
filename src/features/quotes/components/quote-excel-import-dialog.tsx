@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { batchImportQuoteItems } from '@/features/quotes/actions/import-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import { ExcelImportRow } from '@/features/quotes/types';
 
 interface QuoteExcelImportDialogProps {
     quoteId: string;
@@ -40,10 +41,10 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
     const setIsOpen = setDirectedOpen || setInternalOpen;
 
     const [file, setFile] = useState<File | null>(null);
-    const [previewData, setPreviewData] = useState<any[]>([]);
+    const [previewData, setPreviewData] = useState<ExcelImportRow[]>([]);
     const [stats, setStats] = useState<{ total: number; rooms: number } | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [importResult, setImportResult] = useState<{ successCount: number; errors: any[] } | null>(null);
+    const [importResult, setImportResult] = useState<{ successCount: number; errors: string[] } | null>(null);
 
     const downloadTemplate = () => {
         const ws = XLSX.utils.aoa_to_sheet([
@@ -70,19 +71,21 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+            const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
             // Map and Validate
-            const mappedData: any[] = [];
+            const mappedData: ExcelImportRow[] = [];
             const rooms = new Set<string>();
 
             jsonData.forEach(row => {
-                const newRow: any = {};
+                const newRow: Partial<ExcelImportRow> = {};
                 Object.keys(row).forEach(key => {
                     // Simple fuzzy match for headers if needed, but exact match for now
                     const targetKey = FIELD_MAPPING[key] || FIELD_MAPPING[key.trim()];
                     if (targetKey) {
-                        newRow[targetKey] = row[key];
+                        // Safe assignment with type assertion based on mapping knowledge
+                        // In a real strict environment, we might want runtime validation (zod)
+                        (newRow as Record<string, unknown>)[targetKey] = row[key];
                     }
                 });
 
@@ -90,7 +93,8 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
                 if (!newRow.productName) return; // Skip empty rows
                 if (newRow.roomName) rooms.add(newRow.roomName);
 
-                mappedData.push(newRow);
+                // Ensure required types for preview (optional fields remain optional)
+                mappedData.push(newRow as ExcelImportRow);
             });
 
             setPreviewData(mappedData.slice(0, 5));
@@ -110,15 +114,16 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+                const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
                 // Mapped
-                const items: any[] = jsonData.map(row => {
-                    const newRow: any = {};
+                const items = jsonData.map(row => {
+                    const newRow: Partial<ExcelImportRow> = {};
                     Object.keys(row).forEach(key => {
                         const targetKey = FIELD_MAPPING[key] || FIELD_MAPPING[key.trim()];
-                        if (targetKey) newRow[targetKey] = row[key];
+                        if (targetKey) (newRow as Record<string, unknown>)[targetKey] = row[key];
                     });
+
                     return {
                         roomName: String(newRow.roomName || '未分配').trim(),
                         productName: String(newRow.productName || '').trim(),
@@ -127,6 +132,7 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
                         quantity: Number(newRow.quantity) || 1,
                         unitPrice: Number(newRow.unitPrice) || 0,
                         remark: String(newRow.remark || ''),
+                        category: String(newRow.category || 'OTHER'),
                     };
                 }).filter(i => i.productName); // valid items only
 
@@ -137,8 +143,9 @@ export function QuoteExcelImportDialog({ quoteId, onSuccess, open: directedOpen,
                     toast.success(`成功导入 ${result.successCount} 条明细`);
                     onSuccess?.();
                 }
-            } catch (err: any) {
-                toast.error('导入失败: ' + err.message);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err);
+                toast.error('导入失败: ' + message);
             } finally {
                 setIsUploading(false);
             }

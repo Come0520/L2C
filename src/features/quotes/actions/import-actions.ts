@@ -2,8 +2,10 @@
 
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms, NewQuoteItem } from '@/shared/api/schema/quotes';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
+import Decimal from 'decimal.js';
 
 interface ImportItem {
     roomName: string;
@@ -20,7 +22,6 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
     if (!items || items.length === 0) return { successCount: 0, errors: [] };
 
     // 🔒 安全校验：添加认证和租户隔离
-    const { auth } = await import('@/shared/lib/auth');
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { successCount: 0, errors: ['未授权访问'] };
@@ -30,7 +31,6 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
     try {
         await db.transaction(async (tx) => {
             // 🔒 安全校验：验证报价单属于当前租户
-            const { and } = await import('drizzle-orm');
             const quote = await tx.query.quotes.findFirst({
                 where: and(
                     eq(quotes.id, quoteId),
@@ -58,8 +58,13 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
 
                 if (roomName !== '未分配') {
                     // Check if room exists
+                    // 🔒 P0-03 安全修复：quoteRooms 查询添加租户隔离
                     const existingRoom = await tx.query.quoteRooms.findFirst({
-                        where: (model, { and, eq }) => and(eq(model.quoteId, quoteId), eq(model.name, roomName))
+                        where: (model, { and, eq }) => and(
+                            eq(model.quoteId, quoteId),
+                            eq(model.name, roomName),
+                            eq(model.tenantId, tenantId)
+                        )
                     });
 
                     if (existingRoom) {
@@ -75,8 +80,9 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
                 }
 
                 // 3. Insert Items
-                for (const item of roomItems) {
-                    await tx.insert(quoteItems).values({
+                // 3. Insert Items (Batch)
+                if (roomItems.length > 0) {
+                    const newItems = roomItems.map(item => ({
                         quoteId,
                         tenantId,
                         roomId,
@@ -87,9 +93,12 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
                         unitPrice: String(item.unitPrice || 0),
                         remark: item.remark,
                         category: item.category || 'OTHER',
-                        attributeValue: {},
-                        subtotal: String((item.quantity || 1) * (item.unitPrice || 0))
-                    } as NewQuoteItem);
+                        attributes: {},
+                        // P2-R5-01: Fix subtotal precision with Decimal.js
+                        subtotal: new Decimal(item.quantity || 1).times(item.unitPrice || 0).toFixed(2)
+                    } as NewQuoteItem));
+
+                    await tx.insert(quoteItems).values(newItems);
                 }
             }
         });

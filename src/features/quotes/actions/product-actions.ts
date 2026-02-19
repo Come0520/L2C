@@ -2,9 +2,10 @@
 
 import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema/catalogs';
-import { ilike, or, and, eq } from 'drizzle-orm';
+import { ilike, or, and, eq, inArray } from 'drizzle-orm';
 import type { ProductCategory } from '@/shared/api/schema/types';
 import { matchesPinyin } from '@/features/quotes/utils/pinyin-search';
+import { auth } from '@/shared/lib/auth';
 
 export interface ProductSearchResult {
     id: string;
@@ -33,7 +34,6 @@ export async function searchProducts(
     allowedCategories?: string[]
 ): Promise<ProductSearchResult[]> {
     // 🔒 安全校验：添加认证和租户隔离
-    const { auth } = await import('@/shared/lib/auth');
     const session = await auth();
     if (!session?.user?.tenantId) {
         return []; // 未授权返回空结果
@@ -65,7 +65,6 @@ export async function searchProducts(
     // 品类过滤：优先使用 allowedCategories，否则回退到 category
     if (allowedCategories && allowedCategories.length > 0) {
         // 使用 inArray 进行多品类过滤
-        const { inArray } = await import('drizzle-orm');
         conditions.push(inArray(products.category, allowedCategories as ProductCategory[]));
     } else if (category) {
         conditions.push(eq(products.category, category as ProductCategory));

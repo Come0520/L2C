@@ -60,8 +60,9 @@ export function ApprovalTaskDetails({
             } else {
                 toast.error(result.error || '处理失败');
             }
-        } catch (err: any) {
-            toast.error(err.message || '系统错误');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : '系统错误';
+            toast.error(message);
         } finally {
             setIsSubmitting(false);
         }

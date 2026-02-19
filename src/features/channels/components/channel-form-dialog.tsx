@@ -37,7 +37,7 @@ const formSchema = z.object({
 
     // 基础信息
     name: z.string().min(1, '请输入渠道名称'),
-    code: z.string().min(1, '请输入渠道编号'),
+    channelNo: z.string().min(1, '请输入渠道编号'),
     category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL']).default('OFFLINE'),
     channelType: z.enum(['DECORATION_CO', 'DESIGNER', 'CROSS_INDUSTRY', 'DOUYIN', 'XIAOHONGSHU', 'STORE', 'OTHER']),
     customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
@@ -70,21 +70,21 @@ interface ChannelFormDialogProps {
     channel?: {
         id: string;
         name: string;
-        code: string;
+        channelNo: string;
         level: string | null;
         parentId: string | null;
         categoryId: string | null;
         hierarchyLevel: number;
         contactName: string | null;
         phone: string | null;
-        category?: { id: string; name: string } | null;
+        category?: string | null;
     } | null;
     parentChannel?: {
         id: string;
         name: string;
         hierarchyLevel: number;
         categoryId?: string | null;
-        category?: { name: string } | null;
+        category?: string | null;
         channelType?: string | null;
         customChannelType?: string | null;
     } | null;
@@ -110,13 +110,14 @@ export function ChannelFormDialog({
     const isEdit = !!channel;
 
     const form = useForm<FormData>({
+        // zodResolver 与 react-hook-form 泛型不完全兼容，需保留 as any（已知问题）
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             parentId: parentChannel?.id || channel?.parentId || null,
             hierarchyLevel: parentChannel ? parentChannel.hierarchyLevel + 1 : (channel?.hierarchyLevel || 1),
             categoryId: channel?.categoryId || parentChannel?.categoryId || null,
             name: channel?.name || '',
-            code: channel?.code || (() => {
+            channelNo: channel?.channelNo || (() => {
                 const date = new Date();
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -125,7 +126,7 @@ export function ChannelFormDialog({
                 return `QD${year}${month}${day}${random}`;
             })(),
             // 继承父级 Category，如果有的话
-            category: (channel?.category?.name || (parentChannel?.category?.name) || 'OFFLINE') as 'ONLINE' | 'OFFLINE' | 'REFERRAL',
+            category: (channel?.category || parentChannel?.category || 'OFFLINE') as 'ONLINE' | 'OFFLINE' | 'REFERRAL',
             // 继承父级 channelType (作为默认值)
             channelType: (channel as unknown as { channelType: string })?.channelType as 'DECORATION_CO' || (parentChannel?.channelType as 'DECORATION_CO') || 'DECORATION_CO',
             customChannelType: (channel as unknown as { customChannelType?: string })?.customChannelType || '',
@@ -212,11 +213,11 @@ export function ChannelFormDialog({
 
                                 {/* 渠道编号 */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="code">渠道编号 *</Label>
+                                    <Label htmlFor="channelNo">渠道编号 *</Label>
                                     <div className="flex gap-2">
                                         <Input
-                                            id="code"
-                                            {...form.register('code')}
+                                            id="channelNo"
+                                            {...form.register('channelNo')}
                                             placeholder="如：QD202601001"
                                         />
                                         <Button
@@ -231,14 +232,14 @@ export function ChannelFormDialog({
                                                 const day = String(date.getDate()).padStart(2, '0');
                                                 const random = Math.floor(Math.random() * 9000 + 1000);
                                                 const code = `QD${year}${month}${day}${random}`;
-                                                form.setValue('code', code);
+                                                form.setValue('channelNo', code);
                                             }}
                                         >
                                             <RefreshCcw className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    {form.formState.errors.code && (
-                                        <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
+                                    {form.formState.errors.channelNo && (
+                                        <p className="text-xs text-destructive">{form.formState.errors.channelNo.message}</p>
                                     )}
                                 </div>
                             </div>

@@ -20,14 +20,10 @@ import {
   reorderQuoteItemsSchema,
 } from './schema';
 import { calculateSubtotal, updateQuoteTotal } from './shared-helpers';
-import {
-  CurtainCalculator,
-  WallpaperCalculator,
-  type CurtainFormula,
-  type WallpaperFormula,
-} from '../logic/calculator';
-import { SizeValidator } from '../logic/size-validator';
+import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { AccessoryLinkageService } from '../services/accessory-linkage.service';
+import { AuditService } from '@/shared/lib/audit-service';
+import { SizeValidator } from '@/shared/lib/validators';
 
 // ─── 创建行项目 ─────────────────────────────────
 
@@ -45,7 +41,7 @@ const createQuoteItemActionInternal = createSafeAction(
     if (!quote) throw new Error('报价单不存在或无权操作');
 
     let quantity = data.quantity;
-    let warnings: string[] = [];
+    const warnings: string[] = [];
     let currentUnitPrice = data.unitPrice;
     let currentProductName = data.productName;
     const attributes = { ...((data.attributes as Record<string, unknown>) || {}) };
@@ -82,46 +78,43 @@ const createQuoteItemActionInternal = createSafeAction(
     );
     const { presetLoss } = config;
 
-    // 计算逻辑
-    if (data.category === 'CURTAIN' && data.width && data.height) {
-      const calcParams = {
-        measuredWidth: data.width,
-        measuredHeight: data.height,
-        foldRatio: data.foldRatio || presetLoss.curtain.defaultFoldRatio || 2,
-        fabricWidth: (attributes.fabricWidth as number) || 280,
-        formula: ((attributes.formula as string) || 'FIXED_HEIGHT') as CurtainFormula,
+    // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
+    if (data.width && data.height && (data.category === 'CURTAIN' || data.category === 'WALLPAPER' || data.category === 'WALLCLOTH')) {
+      // Common setup
+      const strategy = StrategyFactory.getStrategy(data.category);
+      const fabricWidthCm = (attributes.fabricWidth as number) || (data.category === 'CURTAIN' ? 280 : 53);
+
+      const calcParams: Record<string, unknown> = {
+        measuredWidth: Number(data.width),
+        measuredHeight: Number(data.height),
+        unitPrice: currentUnitPrice,
+        fabricWidth: fabricWidthCm / 100, // Convert cm to m for Strategy
+        // Curtain specifics
+        foldRatio: Number(data.foldRatio || presetLoss.curtain.defaultFoldRatio || 2),
+        fabricType: attributes.formula || 'FIXED_HEIGHT',
+        headerType: attributes.headerType || 'WRAPPED',
+        openingType: attributes.openingType || 'DOUBLE',
         sideLoss: (attributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
         bottomLoss: (attributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
         headerLoss: (attributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
-      };
-      const result = CurtainCalculator.calculate(calcParams);
-      quantity = result.quantity;
-      if (result.warnings.length) warnings = result.warnings;
-
-      // 存储超高预警标志和替代方案
-      if (result.heightOverflow && result.alternatives) {
-        attributes._heightOverflow = true;
-        attributes._alternatives = result.alternatives;
-      }
-    } else if (
-      (data.category === 'WALLPAPER' || data.category === 'WALLCLOTH') &&
-      data.width &&
-      data.height
-    ) {
-      const calcParams = {
-        measuredWidth: data.width,
-        measuredHeight: data.height,
-        productWidth:
-          (attributes.fabricWidth as number) || (data.category === 'WALLPAPER' ? 53 : 280),
-        rollLength: (attributes.rollLength as number) || 1000,
+        // Wallpaper specifics
+        rollLength: (attributes.rollLength as number) || 10,
         patternRepeat: (attributes.patternRepeat as number) || 0,
-        formula: (data.category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula,
         widthLoss: (attributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
         cutLoss: (attributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss,
+        calcType: data.category // For WallpaperStrategy (WALLPAPER vs WALLCLOTH)
       };
-      const result = WallpaperCalculator.calculate(calcParams);
-      quantity = result.quantity;
-      if (result.warnings.length) warnings = result.warnings;
+
+      const result = strategy.calculate(calcParams);
+      quantity = result.usage;
+
+      // Handle details and warnings
+      if (result.details) {
+        attributes.calcResult = result.details;
+        if (result.details.warning) {
+          warnings.push(result.details.warning);
+        }
+      }
     }
 
     // 尺寸合理性校验
@@ -153,7 +146,7 @@ const createQuoteItemActionInternal = createSafeAction(
       })
       .returning();
 
-    await updateQuoteTotal(data.quoteId);
+    await updateQuoteTotal(data.quoteId, context.session.user.tenantId);
 
     // 自动配件联动
     if (newItem && (data.category === 'CURTAIN' || data.category === 'WALLPAPER')) {
@@ -161,7 +154,7 @@ const createQuoteItemActionInternal = createSafeAction(
         category: data.category,
         width: Number(data.width || 0),
         height: Number(data.height || 0),
-      });
+      }, tenantId);
 
       for (const rec of recommendations) {
         const recPrice = rec.unitPrice ?? 0;
@@ -178,7 +171,14 @@ const createQuoteItemActionInternal = createSafeAction(
           attributes: { _isAutoRecommended: true, remark: rec.remark },
         });
       }
+      // 配件插入后重新计算总额（确保配件金额包含在内）
+      await updateQuoteTotal(data.quoteId, tenantId);
     }
+
+    // 审计日志：记录行项目创建
+    await AuditService.recordFromSession(context.session, 'quoteItems', newItem.id, 'CREATE', {
+      new: { quoteId: data.quoteId, category: data.category, productName: currentProductName, quantity },
+    });
 
     revalidatePath(`/quotes/${data.quoteId}`);
     return newItem;
@@ -214,7 +214,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   let productName = existing.productName;
 
   let quantity = updateData.quantity ?? Number(existing.quantity);
-  let warnings: string[] = [];
+  const warnings: string[] = [];
 
   // 产品自动填充逻辑
   const currentProductId = productId ?? existing.productId;
@@ -276,39 +276,44 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   );
   const { presetLoss } = config;
 
-  // 尺寸变化时触发重新计算
-  if (category === 'CURTAIN' && width && height) {
-    const calcParams = {
-      measuredWidth: width,
-      measuredHeight: height,
-      foldRatio: foldRatio,
-      fabricWidth: (mergedAttributes.fabricWidth as number) || 280,
-      formula: ((mergedAttributes.formula as string) || 'FIXED_HEIGHT') as CurtainFormula,
+  const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
+
+  // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
+  if (width && height && (category === 'CURTAIN' || category === 'WALLPAPER' || category === 'WALLCLOTH')) {
+    const strategy = StrategyFactory.getStrategy(category);
+    const fabricWidthCm = (mergedAttributes.fabricWidth as number) || (category === 'CURTAIN' ? 280 : 53);
+
+    const calcParams: Record<string, unknown> = {
+      measuredWidth: Number(width),
+      measuredHeight: Number(height),
+      unitPrice: Number(finalUnitPrice),
+      fabricWidth: fabricWidthCm / 100, // Convert cm to m
+      // Curtain specifics
+      foldRatio: Number(foldRatio),
+      fabricType: mergedAttributes.formula || 'FIXED_HEIGHT',
+      headerType: mergedAttributes.headerType || 'WRAPPED',
+      openingType: mergedAttributes.openingType || 'DOUBLE',
       sideLoss: (mergedAttributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
       bottomLoss: (mergedAttributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
       headerLoss: (mergedAttributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
-    };
-    const result = CurtainCalculator.calculate(calcParams);
-    quantity = result.quantity;
-    if (result.warnings.length) warnings = result.warnings;
-  } else if ((category === 'WALLPAPER' || category === 'WALLCLOTH') && width && height) {
-    const calcParams = {
-      measuredWidth: width,
-      measuredHeight: height,
-      productWidth:
-        (mergedAttributes.fabricWidth as number) || (category === 'WALLPAPER' ? 53 : 280),
-      rollLength: (mergedAttributes.rollLength as number) || 1000,
+      // Wallpaper specifics
+      rollLength: (mergedAttributes.rollLength as number) || 10,
       patternRepeat: (mergedAttributes.patternRepeat as number) || 0,
-      formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as WallpaperFormula,
       widthLoss: (mergedAttributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
       cutLoss: (mergedAttributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss,
+      calcType: category
     };
-    const result = WallpaperCalculator.calculate(calcParams);
-    quantity = result.quantity;
-    if (result.warnings.length) warnings = result.warnings;
-  }
 
-  const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
+    const result = strategy.calculate(calcParams);
+    quantity = result.usage;
+
+    if (result.details) {
+      (mergedAttributes as Record<string, unknown>).calcResult = result.details;
+      if (result.details.warning) {
+        warnings.push(result.details.warning);
+      }
+    }
+  }
   const fee = updateData.processFee ?? Number(existing.processFee || 0);
   const subtotal = calculateSubtotal(finalUnitPrice, quantity, fee);
 
@@ -338,9 +343,15 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
       subtotal: subtotal.toString(),
       attributes: finalAttributes,
     })
-    .where(eq(quoteItems.id, id));
+    .where(and(eq(quoteItems.id, id), eq(quoteItems.tenantId, userTenantId)));
 
-  await updateQuoteTotal(existing.quoteId);
+  await updateQuoteTotal(existing.quoteId, userTenantId);
+
+  // 审计日志：记录行项目更新
+  await AuditService.recordFromSession(context.session, 'quoteItems', id, 'UPDATE', {
+    old: { unitPrice: existing.unitPrice, quantity: existing.quantity },
+    new: { unitPrice: finalUnitPrice.toString(), quantity: quantity.toString() },
+  });
 
   revalidatePath(`/quotes/${existing.quoteId}`);
   return { success: true };
@@ -357,10 +368,15 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
   });
   if (!existing) return { success: false, error: '行项目不存在或无权操作' };
 
+  // 审计日志：记录行项目删除（删除前记录）
+  await AuditService.recordFromSession(context.session, 'quoteItems', data.id, 'DELETE', {
+    old: { quoteId: existing.quoteId, productName: existing.productName, quantity: existing.quantity },
+  });
+
   await db
     .delete(quoteItems)
     .where(and(eq(quoteItems.id, data.id), eq(quoteItems.tenantId, userTenantId)));
-  await updateQuoteTotal(existing.quoteId);
+  await updateQuoteTotal(existing.quoteId, userTenantId);
 
   revalidatePath(`/quotes/${existing.quoteId}`);
   return { success: true };

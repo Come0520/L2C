@@ -31,15 +31,56 @@ export const SUPPLY_CHAIN_ERRORS = {
 // ============ 采购单状态常量 ============
 export const PO_STATUS = {
     DRAFT: 'DRAFT',
+    PENDING_CONFIRMATION: 'PENDING_CONFIRMATION', // 待确认 (Was PENDING)
+    PENDING_PAYMENT: 'PENDING_PAYMENT',
     IN_PRODUCTION: 'IN_PRODUCTION',
     READY: 'READY',
     SHIPPED: 'SHIPPED',
+    PARTIALLY_RECEIVED: 'PARTIALLY_RECEIVED', // 部分收货
     DELIVERED: 'DELIVERED',
     COMPLETED: 'COMPLETED',
     CANCELLED: 'CANCELLED',
 } as const;
 
 export type POStatus = typeof PO_STATUS[keyof typeof PO_STATUS];
+
+export const PO_STATUS_LABELS: Record<string, string> = {
+    [PO_STATUS.DRAFT]: '草稿',
+    [PO_STATUS.PENDING_CONFIRMATION]: '待确认',
+    [PO_STATUS.PENDING_PAYMENT]: '待付款',
+    [PO_STATUS.IN_PRODUCTION]: '生产中',
+    [PO_STATUS.READY]: '备货完成',
+    [PO_STATUS.SHIPPED]: '已发货',
+    [PO_STATUS.PARTIALLY_RECEIVED]: '部分收货',
+    [PO_STATUS.DELIVERED]: '已送达',
+    [PO_STATUS.COMPLETED]: '已完成',
+    [PO_STATUS.CANCELLED]: '已取消',
+};
+
+/**
+ * 采购单有效状态转换映射
+ * key: 当前状态, value: 允许转换到的目标状态列表
+ */
+export const VALID_PO_TRANSITIONS: Record<string, string[]> = {
+    [PO_STATUS.DRAFT]: [PO_STATUS.PENDING_CONFIRMATION, PO_STATUS.CANCELLED],
+    [PO_STATUS.PENDING_CONFIRMATION]: [PO_STATUS.PENDING_PAYMENT, PO_STATUS.CANCELLED],
+    [PO_STATUS.PENDING_PAYMENT]: [PO_STATUS.IN_PRODUCTION, PO_STATUS.CANCELLED],
+    [PO_STATUS.IN_PRODUCTION]: [PO_STATUS.READY, PO_STATUS.CANCELLED],
+    [PO_STATUS.READY]: [PO_STATUS.SHIPPED, PO_STATUS.PARTIALLY_RECEIVED, PO_STATUS.COMPLETED],
+    [PO_STATUS.SHIPPED]: [PO_STATUS.PARTIALLY_RECEIVED, PO_STATUS.COMPLETED],
+    [PO_STATUS.PARTIALLY_RECEIVED]: [PO_STATUS.PARTIALLY_RECEIVED, PO_STATUS.COMPLETED],
+    [PO_STATUS.DELIVERED]: [PO_STATUS.COMPLETED],
+    [PO_STATUS.COMPLETED]: [],
+    [PO_STATUS.CANCELLED]: [],
+};
+
+/**
+ * 校验采购单状态转换是否合法
+ */
+export function isValidPoTransition(currentStatus: string, targetStatus: string): boolean {
+    const allowed = VALID_PO_TRANSITIONS[currentStatus];
+    return allowed ? allowed.includes(targetStatus) : false;
+}
 
 // ============ 加工单状态常量 ============
 export const WORK_ORDER_STATUS = {
@@ -59,6 +100,7 @@ export const SUPPLY_CHAIN_PATHS = {
     INVENTORY: '/supply-chain/inventory',
     SUPPLIERS: '/supply-chain/suppliers',
     RULES: '/supply-chain/rules',
+    PRODUCT_BUNDLES: '/supply-chain/product-bundles',
 } as const;
 
 // ============ 业务配置常量 ============

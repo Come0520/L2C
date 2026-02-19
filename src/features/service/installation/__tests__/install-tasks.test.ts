@@ -82,9 +82,9 @@ describe('Installation Module Security Tests', () => {
                 installerId,
                 scheduledDate,
                 timeSlot,
+                tenantId,
                 undefined,
-                undefined,
-                tenantId
+                undefined
             );
 
             expect(mockFindMany).toHaveBeenCalled();
@@ -108,9 +108,9 @@ describe('Installation Module Security Tests', () => {
                 'installer-id',
                 new Date('2026-01-22'),
                 '上午',
+                'tenant-id',
                 undefined,
-                undefined,
-                'tenant-id'
+                undefined
             );
 
             expect(result.hasConflict).toBe(true);
@@ -129,9 +129,9 @@ describe('Installation Module Security Tests', () => {
                 'installer-id',
                 new Date('2026-01-22'),
                 '下午', // 不同时段
+                'tenant-id',
                 undefined,
-                undefined,
-                'tenant-id'
+                undefined
             );
 
             expect(result.hasConflict).toBe(true);
@@ -152,9 +152,9 @@ describe('Installation Module Security Tests', () => {
                 'installer-id',
                 new Date('2026-01-22'),
                 '上午',
+                'tenant-id',
                 undefined,
-                undefined,
-                'tenant-id'
+                undefined
             );
 
             expect(result.hasConflict).toBe(false);
@@ -209,6 +209,7 @@ describe('Installation Module Security Tests', () => {
                 'installer-id',
                 new Date('2026-01-22'),
                 '上午', // 应该与 AM 冲突
+                'tenant-id'
             );
 
             expect(result.hasConflict).toBe(true);
@@ -225,6 +226,7 @@ describe('Installation Module Security Tests', () => {
                 'installer-id',
                 new Date('2026-01-22'),
                 '15:00-17:00',
+                'tenant-id'
             );
 
             expect(result.hasConflict).toBe(true);

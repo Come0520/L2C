@@ -15,6 +15,9 @@ import {
     CreditCard,
     BarChart3,
     Award,
+    Activity,
+    PieChart,
+    Layers,
 } from 'lucide-react';
 import type { WidgetType } from '../types';
 
@@ -99,6 +102,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
         permissions: ['MANAGER', 'ADMIN'],
         defaultSize: { w: 2, h: 2 },
     },
+    'executive-summary': {
+        type: 'executive-summary',
+        title: '核心指标',
+        description: '营收/毛利/现金流/预警概览',
+        icon: Activity,
+        iconColor: 'text-indigo-500',
+        permissions: ['MANAGER', 'ADMIN'],
+        defaultSize: { w: 4, h: 1 },
+    },
     'conversion-funnel': {
         type: 'conversion-funnel',
         title: '销售漏斗',
@@ -165,6 +177,33 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
         iconColor: 'text-emerald-500',
         permissions: ['FINANCE', 'ADMIN'],
         defaultSize: { w: 4, h: 2 },
+    },
+    'cash-flow-forecast': {
+        type: 'cash-flow-forecast',
+        title: '现金流预测',
+        description: '未来30天回款预测',
+        icon: TrendingUp,
+        iconColor: 'text-emerald-600',
+        permissions: ['FINANCE', 'MANAGER', 'ADMIN'],
+        defaultSize: { w: 4, h: 2 },
+    },
+    'ar-aging': {
+        type: 'ar-aging',
+        title: '应收账龄',
+        description: '应收账款账龄分布',
+        icon: Layers,
+        iconColor: 'text-orange-500',
+        permissions: ['FINANCE', 'MANAGER', 'ADMIN'],
+        defaultSize: { w: 2, h: 2 },
+    },
+    'enhanced-funnel': {
+        type: 'enhanced-funnel',
+        title: '销售漏斗(增强)',
+        description: '转化率/耗时/环比分析',
+        icon: PieChart,
+        iconColor: 'text-purple-600',
+        permissions: ['MANAGER', 'ADMIN'],
+        defaultSize: { w: 2, h: 2 },
     },
 
     // ===== 通用 =====

@@ -12,12 +12,27 @@ interface LeadRelatedCardsProps {
     tenantId: string;
 }
 
+interface MeasurementTask {
+    id: string;
+    measureNo: string;
+    status: string | null;
+    scheduledAt: Date | null;
+    assignedWorker: { name: string | null } | null;
+}
+
+interface LeadQuote {
+    id: string;
+    quoteNo: string;
+    status: string | null;
+    isActive: boolean | null;
+    version: number | null;
+    finalAmount: string | number | null;
+    creator: { name: string | null } | null;
+}
+
 export async function LeadRelatedCards({ leadId, tenantId }: LeadRelatedCardsProps) {
-    // 使用 try-catch 防止查询失败导致整个页面崩溃
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let measurements: any[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let leadQuotes: any[] = [];
+    let measurements: MeasurementTask[] = [];
+    let leadQuotes: LeadQuote[] = [];
 
     // 1. Fetch Measurements
     try {

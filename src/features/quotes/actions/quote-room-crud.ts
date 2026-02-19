@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
-import { quoteRooms, quoteItems } from '@/shared/api/schema/quotes';
+import { quoteRooms, quoteItems, quotes } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { createQuoteRoomSchema, updateQuoteRoomSchema } from './schema';
@@ -22,8 +22,12 @@ export const createRoomActionInternal = createSafeAction(
     const tenantId = context.session.user.tenantId;
     if (!tenantId) throw new Error('未授权访问：缺少租户信息');
 
-    // 安全检查：验证报价单的租户归属（通过 quoteId 查询）
-    // 此处信任 createSafeAction 的 session 校验
+    // 安全检查：验证报价单的租户归属
+    const existingQuote = await db.query.quotes.findFirst({
+      where: and(eq(quotes.id, data.quoteId), eq(quotes.tenantId, tenantId)),
+      columns: { id: true }
+    });
+    if (!existingQuote) throw new Error('报价单不存在或无权操作');
 
     const [newRoom] = await db
       .insert(quoteRooms)
@@ -92,7 +96,7 @@ export const deleteRoom = createSafeAction(
       .where(and(eq(quoteRooms.id, data.id), eq(quoteRooms.tenantId, userTenantId)));
 
     // 重新计算报价单总额
-    await updateQuoteTotal(existing.quoteId);
+    await updateQuoteTotal(existing.quoteId, userTenantId);
 
     revalidatePath(`/quotes/${existing.quoteId}`);
     return { success: true };

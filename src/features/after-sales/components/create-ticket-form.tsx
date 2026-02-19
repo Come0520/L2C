@@ -57,8 +57,9 @@ export function CreateTicketForm() {
                     description: result.error || result.data?.message,
                 });
             }
-        } catch (err: any) {
-            toast.error('提交过程中发生错误', { description: err.message });
+        } catch (err: unknown) {
+            const error = err as Error;
+            toast.error('提交过程中发生错误', { description: error.message });
         }
     };
 

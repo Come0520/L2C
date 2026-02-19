@@ -14,8 +14,10 @@ import Printer from 'lucide-react/dist/esm/icons/printer';
 import { StatusBadge } from '@/shared/ui/status-badge';
 import Link from 'next/link';
 
+import { PurchaseOrderListItem } from '../types';
+
 interface POTableProps {
-    data: any[];
+    data: PurchaseOrderListItem[];
 }
 
 export function POTable({ data }: POTableProps) {
@@ -46,9 +48,9 @@ export function POTable({ data }: POTableProps) {
                                 <TableCell>{item.supplierName}</TableCell>
                                 <TableCell>{item.totalAmount}</TableCell>
                                 <TableCell>
-                                    <StatusBadge status={item.status} />
+                                    <StatusBadge status={item.status || 'DRAFT'} />
                                 </TableCell>
-                                <TableCell>{item.createdAt}</TableCell>
+                                <TableCell>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" asChild>
                                         <Link href={`/supply-chain/po/${item.id}`}>

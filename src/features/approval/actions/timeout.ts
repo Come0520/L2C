@@ -1,29 +1,24 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { approvalTasks, approvalNodes, approvals, quotes, paymentBills } from '@/shared/api/schema';
-import { eq, and, lt } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { approvalTasks } from '@/shared/api/schema';
+import { lte, and, eq } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
+import { type SystemSession } from '../schema';
 
 /**
  * 处理超时的审批任务
  * Cron Job 定期调用此函数检查并处理超时任务
  */
 export async function processTimeouts() {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        throw new Error('Unauthorized');
-    }
-
+    // Cron Job 系统级调用，处理所有租户的超时任务
     const now = new Date();
 
-    // 查找所有超时的待处理任务
+    // 查找所有超时的待处理任务 (跨租户)
     const overdueTasks = await db.query.approvalTasks.findMany({
         where: and(
-            eq(approvalTasks.tenantId, session.user.tenantId),
             eq(approvalTasks.status, 'PENDING'),
-            lt(approvalTasks.timeoutAt, now)
+            lte(approvalTasks.timeoutAt, now)
         ),
         with: {
             node: true,
@@ -36,115 +31,107 @@ export async function processTimeouts() {
         }
     });
 
-    if (overdueTasks.length === 0) {
-        return { success: true, processed: 0, message: '无超时任务' };
-    }
+    if (overdueTasks.length === 0) return;
 
-    const results = [];
+    logger.info(`[ApprovalTimeout] Found ${overdueTasks.length} overdue tasks.`);
 
     for (const task of overdueTasks) {
         try {
             await processTimeout(task);
-            results.push({ taskId: task.id, success: true });
         } catch (error) {
-            results.push({
-                taskId: task.id,
-                success: false,
-                error: error instanceof Error ? error.message : '未知错误'
-            });
+            logger.error(`[ApprovalTimeout] Failed to process task ${task.id}`, error);
         }
     }
-
-    revalidatePath('/approval');
-
-    return {
-        success: true,
-        processed: results.length,
-        results
-    };
 }
 
-/**
- * 处理单个超时任务
- */
-async function processTimeout(task: any) {
+async function processTimeout(task: {
+    id: string;
+    tenantId: string;
+    approvalId: string;
+    node?: {
+        timeoutAction?: 'REMIND' | 'AUTO_PASS' | 'AUTO_REJECT' | 'ESCALATE' | null;
+    } | null;
+    approval: {
+        entityType: string;
+        entityId: string;
+    };
+    comment?: string | null;
+}) {
     const timeoutAction = task.node?.timeoutAction || 'REMIND';
 
-    return db.transaction(async (tx) => {
-        switch (timeoutAction) {
-            case 'AUTO_APPROVE':
-                // 自动通过
-                await tx.update(approvalTasks)
-                    .set({
-                        status: 'APPROVED',
-                        actionAt: new Date(),
-                        comment: '超时自动通过'
-                    })
-                    .where(eq(approvalTasks.id, task.id));
+    // Check if task is still pending (double check inside loop)
+    // Actually best to do inside transaction or optimistic lock, but here serialized processing is okay-ish for Cron.
+    // We already queried PENDING.
 
-                // TODO: 触发审批流程继续到下一节点
+    return db.transaction(async (tx) => {
+        // P1-1: 修复 TOCTOU 竞态条件
+        // 事务内重新验证任务状态，防止在查询后、进入事务前任务状态已被变更
+        const freshTask = await tx.query.approvalTasks.findFirst({
+            where: and(
+                eq(approvalTasks.id, task.id),
+                eq(approvalTasks.status, 'PENDING')
+            )
+        });
+
+        if (!freshTask) {
+            logger.warn(`[Approval-Timeout] Task ${task.id} already processed or status changed, skipping.`);
+            return;
+        }
+
+        switch (timeoutAction) {
+            case 'AUTO_PASS':
+                // 1. 调用通用审批逻辑 (自动通过)
+                // 动态导入避免循环依赖
+                const { _processApprovalLogic } = await import('./processing');
+
+                // 构造一个模拟 session 用于内部调用 (System User)
+                const systemSession: SystemSession = {
+                    user: { id: 'SYSTEM', tenantId: task.tenantId, name: 'System', role: 'ADMIN' },
+                    expires: new Date(Date.now() + 3600000).toISOString()
+                };
+
+                await _processApprovalLogic(tx, {
+                    taskId: task.id,
+                    action: 'APPROVE',
+                    comment: '超时自动通过'
+                }, systemSession);
                 break;
 
             case 'AUTO_REJECT':
-                // 自动驳回
-                await tx.update(approvalTasks)
-                    .set({
-                        status: 'REJECTED',
-                        actionAt: new Date(),
-                        comment: '超时自动驳回'
-                    })
-                    .where(eq(approvalTasks.id, task.id));
+                // 自动驳回：复用核心逻辑以确保一致性（处理 MAJORITY/ALL 模式及其它副作用）
+                const { _processApprovalLogic: autoLogic } = await import("./processing");
+                const autoSession: SystemSession = {
+                    user: { id: 'SYSTEM', tenantId: task.tenantId, name: 'System', role: 'ADMIN' },
+                    expires: new Date(Date.now() + 3600000).toISOString()
+                };
 
-                // 更新审批实例状态
-                await tx.update(approvals)
-                    .set({
-                        status: 'REJECTED',
-                        completedAt: new Date()
-                    })
-                    .where(eq(approvals.id, task.approvalId));
-
-                // 更新业务实体状态
-                if (task.approval.entityType === 'QUOTE') {
-                    await tx.update(quotes)
-                        .set({ status: 'DRAFT' })
-                        .where(eq(quotes.id, task.approval.entityId));
-                } else if (task.approval.entityType === 'PAYMENT_BILL') {
-                    await tx.update(paymentBills)
-                        .set({ status: 'DRAFT' })
-                        .where(eq(paymentBills.id, task.approval.entityId));
-                }
+                await autoLogic(tx, {
+                    taskId: task.id,
+                    action: 'REJECT',
+                    comment: '超时自动驳回'
+                }, autoSession);
                 break;
 
             case 'ESCALATE':
-                // 自动升级至上级（暂时实现为提醒）
-                // TODO: 实现真正的升级逻辑
-                // 暂时不做操作，仅延长超时时间
-                await tx.update(approvalTasks)
-                    .set({
-                        timeoutAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 延长24小时
-                        comment: task.comment ? `${task.comment}\n超时已升级` : '超时已升级'
-                    })
-                    .where(eq(approvalTasks.id, task.id));
-                break;
-
             case 'REMIND':
             default:
-                // 仅提醒，延长超时时间
+                // 延长超时时间或仅记录
                 await tx.update(approvalTasks)
                     .set({
                         timeoutAt: new Date(Date.now() + 12 * 60 * 60 * 1000), // 延长12小时
-                        comment: task.comment ? `${task.comment}\n超时提醒已发送` : '超时提醒已发送'
+                        comment: task.comment ? `${task.comment}\n超时自动处理: ${timeoutAction}` : `超时自动处理: ${timeoutAction}`
                     })
                     .where(eq(approvalTasks.id, task.id));
 
-                // TODO: 发送通知给审批人
+                logger.info(`[ApprovalTimeout] Task ${task.id} action: ${timeoutAction}`);
                 break;
         }
     });
 }
 
 /**
- * 手动触发超时检查 (用于测试或手动执行)
+ * 手动运行超时检查（通常用于测试）
+ * @returns 扫描并处理后的统计
  */
 export async function checkTimeoutsManually() {
     return processTimeouts();

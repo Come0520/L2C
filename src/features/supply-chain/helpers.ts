@@ -68,22 +68,3 @@ export async function requireManagePermission(session: Session): Promise<{ succe
         return { success: false, error: SUPPLY_CHAIN_ERRORS.NO_MANAGE_PERMISSION };
     }
 }
-
-/**
- * 生成采购单编号
- * @param merged 是否为合并采购单
- * @returns 采购单编号
- */
-export function generatePONo(merged: boolean = false): string {
-    const prefix = merged ? 'PO-MERGED-' : 'PO-';
-    return `${prefix}${Date.now()}`;
-}
-
-/**
- * 解析 Zod 验证错误
- * @param error Zod 错误对象
- * @returns 错误消息字符串
- */
-export function parseZodError(error: { issues: { message: string }[] }): string {
-    return error.issues[0]?.message || SUPPLY_CHAIN_ERRORS.VALIDATION_FAILED;
-}

@@ -140,7 +140,7 @@ export function SplitOrderDialog({
             });
 
             if (result.success) {
-                toast.success(`已生成 ${result.data?.createdPOs?.length || 0} 个采购单`);
+                toast.success(`已生成 ${result.data?.createdPOIds?.length || 0} 个采购单`);
                 onOpenChange(false);
                 router.refresh();
             } else {

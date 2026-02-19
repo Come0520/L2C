@@ -3,11 +3,12 @@
  * 
  * POST /api/miniprogram/auth/decrypt-phone
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { users, tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
 // 获取微信 Access Token
 async function getAccessToken() {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         const { code, openId } = await request.json();
 
         if (!code) {
-            return NextResponse.json({ success: false, error: '缺少 code' }, { status: 400 });
+            return apiError('缺少 code', 400);
         }
 
         // 1. 解密手机号
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         const phoneNumber = phoneInfo.phoneNumber || phoneInfo.purePhoneNumber;
 
         if (!phoneNumber) {
-            return NextResponse.json({ success: false, error: '无法获取手机号' }, { status: 400 });
+            return apiError('无法获取手机号', 400);
         }
 
         console.log('[DecryptPhone] Phone:', phoneNumber, 'OpenId:', openId);
@@ -97,35 +98,31 @@ export async function POST(request: NextRequest) {
 
             const token = await generateToken(user.id, user.tenantId);
 
-            return NextResponse.json({
-                success: true,
-                data: {
-                    token,
-                    tenantStatus: tenant?.status,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        phone: user.phone,
-                        role: user.role,
-                        tenantId: user.tenantId,
-                        tenantName: tenant?.name,
-                        avatarUrl: user.avatarUrl
-                    }
+            return apiSuccess({
+                token,
+                tenantStatus: tenant?.status,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    phone: user.phone,
+                    role: user.role,
+                    tenantId: user.tenantId,
+                    tenantName: tenant?.name,
+                    avatarUrl: user.avatarUrl
                 }
             });
 
         } else {
             // 用户不存在 -> 返回 USER_NOT_FOUND，前端引导注册
             // 携带解析出的手机号，方便填充注册表单
-            return NextResponse.json({
-                success: false,
-                code: 'USER_NOT_FOUND',
-                data: { phone: phoneNumber }
-            });
+            return apiSuccess({
+                status: 'USER_NOT_FOUND',
+                phone: phoneNumber
+            }, '验证成功，请完成注册');
         }
 
     } catch (error: any) {
         console.error('Decrypt Phone Error:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return apiError(error.message, 500);
     }
 }

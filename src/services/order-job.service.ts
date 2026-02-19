@@ -18,7 +18,7 @@ export class OrderJobService {
         // 1. 查找满足 48h 自动恢复条件的订单
         const autoResumeOrders = await db.query.orders.findMany({
             where: and(
-                eq(orders.status, 'PAUSED'),
+                eq(orders.status, 'HALTED'),
                 lte(orders.pausedAt, autoResumeThreshold)
             )
         });
@@ -27,7 +27,7 @@ export class OrderJobService {
 
         for (const order of autoResumeOrders) {
             try {
-                await OrderService.resumeOrder(order.id, order.tenantId);
+                await OrderService.resumeOrder(order.id, order.tenantId, 'system');
                 console.log(`[OrderJob] 订单 ${order.orderNo} 已自动恢复`);
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : String(error);
@@ -40,7 +40,7 @@ export class OrderJobService {
         // 累计天数 = 已有累计天数 + (当前时间 - 叫停时间)
         // 简化逻辑：如果在 PAUSED 状态下，(已有累计天数 + 当前叫停天数) > 7
         const pausedOrders = await db.query.orders.findMany({
-            where: eq(orders.status, 'PAUSED')
+            where: eq(orders.status, 'HALTED')
         });
 
         for (const order of pausedOrders) {
@@ -52,7 +52,7 @@ export class OrderJobService {
             if (totalPauseDays >= 7) {
                 try {
                     console.log(`[OrderJob] 订单 ${order.orderNo} 累计叫停 ${totalPauseDays} 天，执行强制恢复`);
-                    await OrderService.resumeOrder(order.id, order.tenantId);
+                    await OrderService.resumeOrder(order.id, order.tenantId, 'system');
                     // 可以额外发送预警通知
                 } catch (error: unknown) {
                     const message = error instanceof Error ? error.message : String(error);

@@ -13,7 +13,6 @@ import { Button } from '@/shared/ui/button';
 import Eye from 'lucide-react/dist/esm/icons/eye';
 import ClipboardEdit from 'lucide-react/dist/esm/icons/clipboard-edit';
 import Truck from 'lucide-react/dist/esm/icons/truck';
-import Warehouse from 'lucide-react/dist/esm/icons/warehouse';
 
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -78,11 +77,7 @@ const OrderTableRow = React.memo(function OrderTableRow({ order }: OrderTableRow
                             <Truck className="h-4 w-4 text-blue-600" />
                         </Button>
                     )}
-                    {order.status === 'SHIPPED' && (
-                        <Button variant="ghost" size="icon" title="确认到货">
-                            <Warehouse className="h-4 w-4 text-green-600" />
-                        </Button>
-                    )}
+                    {/* SHIPPED 状态已废弃，发货后直接进入 PENDING_INSTALL */}
                 </div>
             </TableCell>
         </TableRow>

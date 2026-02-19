@@ -25,8 +25,10 @@ const PDFDownloadLink = dynamic(
     }
 );
 
+import { QuotePdfData } from '../types';
+
 interface QuotePdfDownloaderProps {
-    quote: any; // Using any to match existing usage, ideally this is typed
+    quote: QuotePdfData;
     mode: 'customer' | 'internal';
     className?: string;
     children?: React.ReactNode;
@@ -39,8 +41,8 @@ export function QuotePdfDownloader({ quote, mode, className, children }: QuotePd
             fileName={`${mode === 'internal' ? '内部' : '客户'}报价单-${quote.quoteNo}.pdf`}
             className={className}
         >
-            {/* @ts-ignore - render props signature mismatch in types */}
-            {({ loading }: any) => {
+            {/* @ts-ignore - known issue with react-pdf types vs react 18/19 */}
+            {({ loading }: { loading: boolean }) => {
                 if (loading) {
                     return (
                         <Button variant="outline" size="sm" disabled>

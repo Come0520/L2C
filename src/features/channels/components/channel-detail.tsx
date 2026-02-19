@@ -9,9 +9,7 @@ import {
     Phone,
     TrendingUp,
     DollarSign,
-    Calendar,
     Users,
-    FileText,
     PieChart,
 } from 'lucide-react';
 import { formatDate } from '@/shared/lib/utils';
@@ -20,7 +18,7 @@ import { formatDate } from '@/shared/lib/utils';
 interface ChannelDetailData {
     id: string;
     name: string;
-    code: string;
+    channelNo: string;
     level: string | null;
     status: string | null;
     contactName: string | null;
@@ -37,14 +35,11 @@ interface ChannelDetailData {
     creditLimit: string | null;
     createdAt: Date | null;
     updatedAt: Date | null;
-    category?: {
-        id: string;
-        name: string;
-    } | null;
+    category?: string | null;
     parent?: {
         id: string;
         name: string;
-        code: string;
+        channelNo: string;
     } | null;
     contacts?: Array<{
         id: string;
@@ -56,7 +51,7 @@ interface ChannelDetailData {
     children?: Array<{
         id: string;
         name: string;
-        code: string;
+        channelNo: string;
     }>;
     assignedManager?: {
         id: string;
@@ -66,7 +61,6 @@ interface ChannelDetailData {
 
 interface ChannelDetailProps {
     channel: ChannelDetailData;
-    tenantId: string;
 }
 
 /**
@@ -186,7 +180,7 @@ export function ChannelDetail({ channel }: ChannelDetailProps) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <div className="text-sm text-muted-foreground">渠道类型</div>
-                                <div className="font-medium">{channel.category?.name || '-'}</div>
+                                <div className="font-medium">{channel.category || '-'}</div>
                             </div>
                             <div>
                                 <div className="text-sm text-muted-foreground">层级</div>

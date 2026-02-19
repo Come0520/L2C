@@ -172,12 +172,10 @@ export class QuoteVersionService {
    * @param quoteId - 报价单 ID
    * @param tenantId - 租户 ID（用于安全验证）
    */
-  static async activate(quoteId: string, tenantId?: string) {
+  static async activate(quoteId: string, tenantId: string) {
     return await db.transaction(async (tx) => {
       const quote = await tx.query.quotes.findFirst({
-        where: tenantId
-          ? and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
-          : eq(quotes.id, quoteId),
+        where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
       });
       if (!quote) throw new Error('报价单不存在或无权操作');
 
@@ -188,9 +186,7 @@ export class QuoteVersionService {
         .update(quotes)
         .set({ isActive: false })
         .where(
-          tenantId
-            ? and(eq(quotes.rootQuoteId, rootQuoteId), eq(quotes.tenantId, tenantId))
-            : eq(quotes.rootQuoteId, rootQuoteId)
+          and(eq(quotes.rootQuoteId, rootQuoteId), eq(quotes.tenantId, tenantId))
         );
 
       // 激活当前版本
@@ -198,9 +194,7 @@ export class QuoteVersionService {
         .update(quotes)
         .set({ isActive: true })
         .where(
-          tenantId
-            ? and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
-            : eq(quotes.id, quoteId)
+          and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
         );
     });
   }

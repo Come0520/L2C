@@ -29,7 +29,7 @@ import { ChannelFormDialog } from './channel-form-dialog';
 interface ChannelNode {
     id: string;
     name: string;
-    code: string;
+    channelNo: string;
     level: string | null;
     status: string | null;
     contactName: string | null;
@@ -39,11 +39,7 @@ interface ChannelNode {
     hierarchyLevel: number;
     parentId: string | null;
     categoryId: string | null;
-    category?: {
-        id: string;
-        name: string;
-        code: string;
-    } | null;
+    category?: string | null;
     channelType: string | null;
     customChannelType: string | null;
     contacts?: Array<{
@@ -98,7 +94,7 @@ export function ChannelTree({ initialData, categoryTypes, tenantId }: ChannelTre
         return nodes.filter(node => {
             const matchSelf =
                 node.name.toLowerCase().includes(query.toLowerCase()) ||
-                node.code.toLowerCase().includes(query.toLowerCase()) ||
+                node.channelNo.toLowerCase().includes(query.toLowerCase()) ||
                 node.contactName?.toLowerCase().includes(query.toLowerCase()) ||
                 node.phone?.includes(query);
 
@@ -284,14 +280,14 @@ function ChannelTreeNode({
                         </span>
                         <div>
                             <div className="font-medium">{channel.name}</div>
-                            <div className="text-xs text-muted-foreground">{channel.code}</div>
+                            <div className="text-xs text-muted-foreground">{channel.channelNo}</div>
                         </div>
                     </div>
 
                     {/* 类型 */}
                     {channel.category && (
                         <Badge variant="outline" className="text-xs">
-                            {channel.category.name}
+                            {channel.category}
                         </Badge>
                     )}
 
@@ -310,10 +306,10 @@ function ChannelTreeNode({
                         <span>{channel.contactName || '-'}</span>
                     </div>
 
-                    {/* 电话 */}
+                    {/* 电话（脱敏展示） */}
                     <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-[120px]">
                         <Phone className="h-3.5 w-3.5" />
-                        <span>{channel.phone || '-'}</span>
+                        <span>{channel.phone ? `${channel.phone.slice(0, 3)}****${channel.phone.slice(-4)}` : '-'}</span>
                     </div>
 
                     {/* 业绩 */}

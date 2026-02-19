@@ -3,9 +3,10 @@
 import { db } from '@/shared/api/db';
 import { afterSalesTickets, customers, orders } from '@/shared/api/schema';
 import { eq, desc, and, count, ilike, or } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Types for filters
 export interface TicketFilters {
@@ -94,6 +95,9 @@ export async function updateTicketStatus(
   const session = await auth();
   if (!session || !session.user?.tenantId) return { success: false, error: 'Unauthorized' };
 
+  // P0-2 Fix: Add permission check
+  await checkPermission(session, PERMISSIONS.AFTER_SALES.MANAGE);
+
   try {
     await db
       .update(afterSalesTickets)
@@ -101,13 +105,8 @@ export async function updateTicketStatus(
         status: status as any, // Schema enum
         resolution: result || undefined,
         updatedAt: new Date(),
-        // handlerId not in schema? let's check.
-        // Schema has assignedTo, createdBy. But maybe handlerId was removed or I missed it.
-        // Checking previous view_file of ticket-actions.ts, it had handlerId: session.user.id
-        // But view_file of schema (after-sales.ts) does NOT have handlerId, only assignedTo.
-        // I should use assignedTo or just ignore if not applicable.
-        // Let's use assignedTo if it means current handler.
-        assignedTo: session.user.id,
+        // P0-1 Fix: Removed unconditional assignedTo override.
+        // Assignment should be handled by a dedicated action or only when claiming the ticket.
       })
       .where(
         and(eq(afterSalesTickets.id, id), eq(afterSalesTickets.tenantId, session.user.tenantId))

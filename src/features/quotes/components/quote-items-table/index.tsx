@@ -24,7 +24,7 @@ import { logger } from '@/shared/lib/logger';
 import { useTableState } from './use-table-state';
 import { useClientCalc } from './use-client-calc';
 import { CategoryView, RoomView } from './views';
-import type { QuoteItem, RoomData, ViewMode } from './types';
+import type { QuoteItem, RoomData, ViewMode, WarningDialogState } from './types';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 
 const QuoteItemAdvancedDrawer = dynamic(
@@ -71,6 +71,7 @@ interface QuoteItemsTableProps {
   allowedCategories?: string[];
   viewMode?: ViewMode;
   activeCategory?: string;
+  onRowClick?: (item: QuoteItem) => void;
 }
 
 export function QuoteItemsTable({
@@ -84,6 +85,7 @@ export function QuoteItemsTable({
   readOnly = false,
   allowedCategories,
   viewMode = 'room',
+  onRowClick,
 }: QuoteItemsTableProps) {
   const isFieldVisible = (field: string) => {
     if (visibleFields && visibleFields.length > 0) {
@@ -293,6 +295,7 @@ export function QuoteItemsTable({
           handleClientCalc={handleClientCalc}
           handleAdvancedEdit={handleAdvancedEdit}
           handleToggleItem={handleToggleItem}
+          onRowClick={onRowClick}
         />
       )}
 
@@ -319,6 +322,7 @@ export function QuoteItemsTable({
           handleDeleteRoom={handleDeleteRoom}
           getRoomSubtotal={getRoomSubtotal}
           allowedCategories={allowedCategories}
+          onRowClick={onRowClick}
         />
       )}
 
@@ -331,7 +335,7 @@ export function QuoteItemsTable({
 
       <Dialog
         open={warningDialog.open}
-        onOpenChange={(open) => setWarningDialog((prev: any) => ({ ...prev, open }))}
+        onOpenChange={(open) => setWarningDialog((prev: WarningDialogState) => ({ ...prev, open }))}
       >
         <DialogContent>
           <DialogHeader>
@@ -347,7 +351,7 @@ export function QuoteItemsTable({
             您可以通过修改"高级配置"调整工艺（如：改用贴布带），或确认此尺寸进行生产（可能需要拼接）。
           </div>
           <DialogFooter>
-            <Button onClick={() => setWarningDialog((prev: any) => ({ ...prev, open: false }))}>
+            <Button onClick={() => setWarningDialog((prev: WarningDialogState) => ({ ...prev, open: false }))}>
               知道了
             </Button>
           </DialogFooter>

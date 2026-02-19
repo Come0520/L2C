@@ -67,10 +67,13 @@ export function AuditLogPanel() {
             });
 
             if (result && 'logs' in result) {
-                setLogs(result.logs as AuditLog[]);
-                // 使用类型断言访问 pagination 属性
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setHasMore((result as any).pagination?.hasMore ?? false);
+                /** getAuditLogsAction 返回的带分页信息的日志结果 */
+                const logsResult = result as {
+                    logs: AuditLog[];
+                    pagination?: { page: number; pageSize: number; total: number; hasMore: boolean };
+                };
+                setLogs(logsResult.logs);
+                setHasMore(logsResult.pagination?.hasMore ?? false);
             }
         });
     }, [page, actionFilter, search]);

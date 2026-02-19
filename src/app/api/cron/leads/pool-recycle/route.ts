@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { executePoolRecycleJob } from '@/features/leads/logic/pool-recycle-job';
 
 /**
@@ -30,11 +31,18 @@ export async function GET(request: Request) {
             );
         }
 
-        if (authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
+        // Secure comparison using timingSafeEqual
+        const [scheme, token] = authHeader?.split(' ') || [];
+
+        if (scheme !== 'Bearer' || !token) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const secretBuffer = Buffer.from(cronSecret);
+        const tokenBuffer = Buffer.from(token);
+
+        if (secretBuffer.length !== tokenBuffer.length || !timingSafeEqual(secretBuffer, tokenBuffer)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const startTime = Date.now();

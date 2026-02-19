@@ -6,9 +6,15 @@ import {
 } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { FinanceService } from '@/services/finance.service';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { createPaymentOrderSchema, verifyPaymentOrderSchema } from './schema';
 import { z } from 'zod';
+import { handleCommissionClawback } from '@/features/channels/logic/commission.service';
+import { Decimal } from 'decimal.js';
+import { AuditService } from '@/shared/services/audit-service';
+import { generateBusinessNo } from '@/shared/lib/generate-no';
+
 
 /**
  * 获取应收对账单列表
@@ -20,6 +26,9 @@ export async function getARStatements() {
     try {
         const session = await auth();
         if (!session?.user?.tenantId) throw new Error('未授权');
+
+        // 权限检查：查看应收数据
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
         // 直接查询 arStatements，不使用 relational query，避免 lateral join 问题
         const result = await db
@@ -63,6 +72,9 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
+    // 权限检查：创建收付款
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+
     const validatedData = createPaymentOrderSchema.parse(data);
     const { items, ...orderData } = validatedData;
 
@@ -90,6 +102,9 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
 export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrderSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+
+    // 权限检查：审批财务
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.APPROVE)) throw new Error('权限不足：需要财务审批权限');
 
     const { id, status, remark } = verifyPaymentOrderSchema.parse(data);
 
@@ -133,6 +148,11 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
             return { success: false, error: '未授权' };
         }
 
+        // 权限检查：创建收付款
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) {
+            return { success: false, error: '权限不足：需要财务创建权限' };
+        }
+
         const tenantId = session.user.tenantId;
         const _userId = session.user.id!;
 
@@ -153,20 +173,20 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
                 return { success: false, error: '原对账单不存在' };
             }
 
-            const receivedAmount = Number(originalStatement.receivedAmount);
-            if (receivedAmount <= 0) {
+            const totalAmount = new Decimal(originalStatement.totalAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const receivedAmount = new Decimal(originalStatement.receivedAmount || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const refundAmount = new Decimal(data.refundAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+
+            if (receivedAmount.lte(0)) {
                 return { success: false, error: '原对账单未收款，无法退款' };
             }
 
-            if (data.refundAmount > receivedAmount) {
-                return { success: false, error: `退款金额不能超过已收金额 ¥${receivedAmount.toLocaleString()}` };
+            if (refundAmount.gt(receivedAmount)) {
+                return { success: false, error: `退款金额不能超过已收金额 ¥${receivedAmount.toFixed(2)}` };
             }
 
             // 2. 生成红字对账单编号
-            const date = new Date();
-            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-            const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const refundNo = `AR-RF-${dateStr}-${random}`;
+            const refundNo = generateBusinessNo('AR-RF');
 
             // 3. 创建红字 AR 对账单（负数金额）
             const [refundStatement] = await tx.insert(arStatements).values({
@@ -178,8 +198,8 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
                 settlementType: originalStatement.settlementType,
 
                 // 负数金额表示红字
-                totalAmount: String(-data.refundAmount),
-                receivedAmount: String(-data.refundAmount), // 已退
+                totalAmount: refundAmount.negated().toFixed(2),
+                receivedAmount: refundAmount.negated().toFixed(2), // 已退
                 pendingAmount: '0',
 
                 status: 'COMPLETED', // 红字单直接完成
@@ -189,27 +209,78 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
             }).returning();
 
             // 4. 更新原对账单已收金额
-            const newReceivedAmount = receivedAmount - data.refundAmount;
-            const newPendingAmount = Number(originalStatement.totalAmount) - newReceivedAmount;
+            const newReceivedAmount = receivedAmount.minus(refundAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const newPendingAmount = totalAmount.minus(newReceivedAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const newStatus = (newReceivedAmount.gte(totalAmount) ? 'PAID' : (newReceivedAmount.gt(0) ? 'PARTIAL' : 'INVOICED')) as "PAID" | "PARTIAL" | "INVOICED";
+
+
+
+            const oldValues = {
+                receivedAmount: originalStatement.receivedAmount,
+                pendingAmount: originalStatement.pendingAmount,
+                status: originalStatement.status
+            };
+
+            const newValues = {
+                receivedAmount: newReceivedAmount.toFixed(2),
+                pendingAmount: newPendingAmount.toFixed(2),
+                status: newStatus
+
+            };
 
             await tx.update(arStatements)
-                .set({
-                    receivedAmount: String(newReceivedAmount),
-                    pendingAmount: String(newPendingAmount),
-                    status: newReceivedAmount >= Number(originalStatement.totalAmount) ? 'PAID' : 'PARTIAL',
-                })
+                .set(newValues)
                 .where(eq(arStatements.id, data.originalStatementId));
+
+            // F-32: 记录原对账单状态变动审计
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id,
+                tableName: 'ar_statements',
+                recordId: originalStatement.id,
+                action: 'UPDATE',
+                oldValues,
+                newValues,
+                details: {
+                    reason: 'REFUND_CLAWBACK',
+                    refundNo,
+                    refundAmount: refundAmount.toFixed(2)
+                }
+            });
+
+            // 记录退款单审计
+            await AuditService.log(tx, {
+                tenantId,
+                userId: session.user.id,
+                tableName: 'ar_statements',
+                recordId: refundStatement.id,
+                action: 'CREATE',
+                newValues: refundStatement,
+                details: {
+                    type: 'REFUND',
+                    originalStatementNo: originalStatement.statementNo
+                }
+            });
+
+            // 5. 触发佣金扣回（如果原对账单有渠道佣金）
+            if (originalStatement.channelId && originalStatement.orderId) {
+                await handleCommissionClawback(
+                    originalStatement.orderId,
+                    data.refundAmount
+                );
+            }
 
             return {
                 success: true,
                 data: {
                     refundStatementId: refundStatement.id,
                     refundNo,
-                    refundAmount: data.refundAmount,
+                    refundAmount: refundAmount.toNumber(),
                     originalStatementNo: originalStatement.statementNo,
                     message: '退款对账单创建成功'
                 }
             };
+
         });
     } catch (error) {
         console.error('创建退款对账单失败:', error);

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-export type MeasureTaskStatus = 'PENDING' | 'DISPATCHING' | 'PENDING_VISIT' | 'PENDING_CONFIRM' | 'COMPLETED' | 'CANCELLED';
+export type MeasureTaskStatus = 'PENDING_APPROVAL' | 'PENDING' | 'DISPATCHING' | 'PENDING_VISIT' | 'PENDING_CONFIRM' | 'COMPLETED' | 'CANCELLED';
 
 export const MEASURE_STATUS_LABELS: Record<MeasureTaskStatus, string> = {
+    PENDING_APPROVAL: 'Pending Approval',
     PENDING: 'Pending',
     DISPATCHING: 'Dispatching',
     PENDING_VISIT: 'Pending Visit',
@@ -13,27 +14,27 @@ export const MEASURE_STATUS_LABELS: Record<MeasureTaskStatus, string> = {
 
 export interface MeasureTask {
     id: string;
-    measureNo: string;
-    tenantId: string;
+    measureNo: string | null;
+    tenantId: string | null;
     orderId?: string;
-    customerId: string;
-    status: MeasureTaskStatus;
-    scheduledAt: Date;
-    address: string;
-    rejectCount?: number;      // 驳回次数
-    rejectReason?: string;     // 最近驳回原因
+    customerId: string | null;
+    status: MeasureTaskStatus | string | null;
+    scheduledAt: string | null;
+    address?: string;
+    rejectCount?: number | null;      // 驳回次数
+    rejectReason?: string | null;     // 最近驳回原因
     customer?: {
-        name: string;
-        phone: string;
-    };
+        name: string | null;
+        phone: string | null;
+    } | null;
     lead?: {
-        community?: string;
-        address?: string;
-    };
+        community: string | null;
+        address: string | null;
+    } | null;
     assignedWorker?: {
         id: string;
-        name: string;
-    };
+        name: string | null;
+    } | null;
 }
 
 export const MeasureResultSchema = z.object({

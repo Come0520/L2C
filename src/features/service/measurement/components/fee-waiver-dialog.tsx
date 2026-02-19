@@ -52,7 +52,7 @@ export function FeeWaiverDialog({ taskId, trigger }: FeeWaiverDialogProps) {
                 setOpen(false);
                 form.reset();
             } else {
-                toast.error('申请提交失败', { description: (result as { error?: string })?.error || '未知错误' });
+                toast.error('申请提交失败', { description: (result && 'error' in result ? result.error : '未知错误') as string });
             }
         });
     }

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb, unique } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
 import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum, purchaseOrderStatusEnum, paymentStatusEnum, supplierTypeEnum } from './enums';
@@ -92,6 +92,8 @@ export const purchaseOrderItems = pgTable('purchase_order_items', {
 
     productName: varchar('product_name', { length: 200 }).notNull(),
     quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
+    // 已收货数量，用于部分收货场景
+    receivedQuantity: decimal('received_quantity', { precision: 10, scale: 2 }).default('0'),
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).default('0'),
 
     width: decimal('width', { precision: 10, scale: 2 }),
@@ -121,7 +123,11 @@ export const splitRouteRules = pgTable('split_route_rules', {
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+    // Round 5 修复：添加缺失索引
+    srrTenantIdx: index('idx_split_route_rules_tenant').on(table.tenantId),
+    srrPriorityIdx: index('idx_split_route_rules_priority').on(table.priority),
+}));
 
 // Product Supplier Associations (N:N)
 export const productSuppliers = pgTable('product_suppliers', {
@@ -143,6 +149,8 @@ export const productSuppliers = pgTable('product_suppliers', {
     psTenantIdx: index('idx_product_suppliers_tenant').on(table.tenantId),
     psProductIdx: index('idx_product_suppliers_product').on(table.productId),
     psSupplierIdx: index('idx_product_suppliers_supplier').on(table.supplierId),
+    // Round 5 修复：添加唯一约束，防止同一产品-供应商重复关联
+    psProductSupplierUnique: unique('uq_product_suppliers_product_supplier').on(table.productId, table.supplierId),
 }));
 
 // Channel Specific Prices (Contracts/Agreements)
@@ -159,6 +167,8 @@ export const channelSpecificPrices = pgTable('channel_specific_prices', {
     cspTenantIdx: index('idx_csp_tenant').on(table.tenantId),
     cspProductIdx: index('idx_csp_product').on(table.productId),
     cspChannelIdx: index('idx_csp_channel').on(table.channelId),
+    // Round 5 修复：添加唯一约束，防止同一产品-渠道重复定价
+    cspProductChannelUnique: unique('uq_csp_product_channel').on(table.productId, table.channelId),
 }));
 
 // Product Bundles (BOM/Bundles)
@@ -184,7 +194,7 @@ export const productBundles = pgTable('product_bundles', {
 export const productBundleItems = pgTable('product_bundle_items', {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    bundleId: uuid('bundle_id').references(() => productBundles.id).notNull(),
+    bundleId: uuid('bundle_id').references(() => productBundles.id, { onDelete: 'cascade' }).notNull(),
     productId: uuid('product_id').notNull(),
 
     quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
@@ -193,6 +203,9 @@ export const productBundleItems = pgTable('product_bundle_items', {
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     pbiBundleIdx: index('idx_bundle_items_bundle').on(table.bundleId),
+    // Round 5 修复：添加缺失索引
+    pbiTenantIdx: index('idx_bundle_items_tenant').on(table.tenantId),
+    pbiProductIdx: index('idx_bundle_items_product').on(table.productId),
 }));
 
 export const productionTasks = pgTable('production_tasks', {
@@ -213,6 +226,8 @@ export const productionTasks = pgTable('production_tasks', {
 }, (table) => ({
     ptTenantIdx: index('idx_production_tasks_tenant').on(table.tenantId),
     ptOrderIdx: index('idx_production_tasks_order').on(table.orderId),
+    // Round 5 修复：添加状态索引，加速按状态筛选
+    ptStatusIdx: index('idx_production_tasks_status').on(table.status),
 }));
 
 // =============================================
@@ -246,6 +261,8 @@ export const productPackages = pgTable('product_packages', {
 // 套餐商品关联表 (Package Products)
 export const packageProducts = pgTable('package_products', {
     id: uuid('id').primaryKey().defaultRandom(),
+    // Round 5 修复：添加缺失的 tenantId 字段，确保多租户隔离
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     packageId: uuid('package_id').references(() => productPackages.id).notNull(),
     productId: uuid('product_id').notNull(),
     isRequired: boolean('is_required').default(false),
@@ -253,6 +270,7 @@ export const packageProducts = pgTable('package_products', {
     maxQuantity: decimal('max_quantity', { precision: 10, scale: 2 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
+    ppTenantIdx: index('idx_package_products_tenant').on(table.tenantId),
     ppPackageIdx: index('idx_package_products_package').on(table.packageId),
     ppProductIdx: index('idx_package_products_product').on(table.productId),
 }));
@@ -304,6 +322,8 @@ export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     filInventoryIdx: index('idx_fabric_logs_inventory').on(table.fabricInventoryId),
+    // Round 5 修复：添加缺失的租户索引
+    filTenantIdx: index('idx_fabric_logs_tenant').on(table.tenantId),
 }));
 
 // =============================================
@@ -341,3 +361,68 @@ export const channelDiscountOverrides = pgTable('channel_discount_overrides', {
     cdoScopeTargetIdx: index('idx_channel_discount_overrides_scope_target').on(table.scope, table.targetId),
 }));
 
+// =============================================
+// 采购单付款记录表 (PO Payments)
+// =============================================
+
+/**
+ * 采购单付款记录
+ * 
+ * 独立存储每一笔付款详情，替代原先将支付信息写入 remark 字段的方式。
+ * 支持多次付款（如分期、部分付款）。
+ */
+export const poPayments = pgTable('po_payments', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
+
+    // 付款方式：CASH / WECHAT / ALIPAY / BANK
+    paymentMethod: varchar('payment_method', { length: 50 }).notNull(),
+    // 付款金额
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    // 付款时间
+    transactionTime: timestamp('transaction_time', { withTimezone: true }).notNull(),
+    // 付款凭证图片 URL
+    voucherUrl: text('voucher_url'),
+    // 备注
+    remark: text('remark'),
+
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    ppTenantIdx: index('idx_po_payments_tenant').on(table.tenantId),
+    ppPoIdx: index('idx_po_payments_po').on(table.poId),
+}));
+
+// =============================================
+// 采购单物流记录表 (PO Shipments)
+// =============================================
+
+/**
+ * 采购单物流/发货记录
+ * 
+ * 独立存储每一次物流信息，替代原先直接设置 purchaseOrders 的物流字段。
+ * 支持多次发货和多次物流追踪。
+ */
+export const poShipments = pgTable('po_shipments', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
+
+    // 物流公司
+    logisticsCompany: varchar('logistics_company', { length: 100 }),
+    // 物流单号
+    logisticsNo: varchar('logistics_no', { length: 100 }),
+    // 物流追踪链接
+    trackingUrl: text('tracking_url'),
+    // 发货时间
+    shippedAt: timestamp('shipped_at', { withTimezone: true }),
+    // 备注
+    remark: text('remark'),
+
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    psTenantIdx: index('idx_po_shipments_tenant').on(table.tenantId),
+    psPoIdx: index('idx_po_shipments_po').on(table.poId),
+}));

@@ -7,6 +7,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 export interface ChannelGradeDiscounts {
     S: number;
@@ -91,14 +92,29 @@ export async function updateChannelGradeDiscounts(discounts: ChannelGradeDiscoun
                 configValue,
                 updatedAt: new Date(),
             })
-            .where(eq(financeConfigs.id, existing.id));
+            .where(and(
+                eq(financeConfigs.id, existing.id),
+                eq(financeConfigs.tenantId, session.user.tenantId)
+            ));
     } else {
         await db.insert(financeConfigs).values({
             tenantId: session.user.tenantId,
             configKey,
             configValue,
+
         });
     }
+
+    // P1 Fix: Audit Log
+    await AuditService.log(db, {
+        tableName: 'finance_configs',
+        recordId: configKey, // Use key as ID for singleton config
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: validated.data,
+        details: { reason: 'Update channel grade discounts' }
+    });
 
     revalidatePath('/settings/channels');
     return { success: true };

@@ -1,16 +1,41 @@
 'use client';
 
-import {
-  CurtainStrategy,
-  type CurtainCalcParams,
-} from '@/features/quotes/calc-strategies/curtain-strategy';
-import { WallpaperCalculator } from '@/features/quotes/logic/calculator';
+import { StrategyFactory } from '@/features/quotes/calc-strategies/strategy-factory';
+
+import type { CalcParams } from '@/features/quotes/calc-strategies/base-strategy';
 import type { QuoteItem, CalcResult } from './types';
 
 type CalcResultType = { quantity: number; calcResult?: CalcResult } | number | null;
 
+interface UnifiedCalcParams extends CalcParams {
+  fabricType?: string;
+  headerType?: string;
+  openingType?: string;
+  sideLoss?: number;
+  bottomLoss?: number;
+  widthLoss?: number;
+  cutLoss?: number;
+  rollLength?: number;
+  calcType?: string;
+  [key: string]: unknown;
+}
+
 export function useClientCalc() {
   const calculate = (item: QuoteItem, field: string, value: number): CalcResultType => {
+    // ... (lines 10-48 remain same logic, just ensure no any used) 
+    // I need to provide the full content for the replaced block to be safe or use small chunks. 
+    // The target here is to replace the calcParams declaration and the imports.
+    // Let's replace the whole file content helper or just the relevant parts.
+    // I'll replace from imports down to calcParams definition.
+
+    // Actually, I can replace the imports first, then the function body part.
+    // Let's try to do it in one go if possible, but the file is small so maybe okay.
+    // Wait, the instruction says "EndLine: 74".
+    // I'll construct the replacement for the whole file or a large chunk.
+
+    // Let's replace the imports and the interface definition and the calcParams variable type.
+
+    // Imports
     const newItem = { ...item, [field]: value };
     const category = newItem.category;
 
@@ -27,57 +52,58 @@ export function useClientCalc() {
     }
 
     const upperCategory = category.toUpperCase();
-    const isCurtainCategory =
-      ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(upperCategory) ||
-      upperCategory.includes('CURTAIN');
-    const isWallCategory = ['WALLPAPER', 'WALLCLOTH'].includes(upperCategory);
 
-    if (isCurtainCategory || isWallCategory) {
+    let strategyCategory = '';
+    if (['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(upperCategory) || upperCategory.includes('CURTAIN')) {
+      strategyCategory = 'CURTAIN';
+    } else if (['WALLPAPER'].includes(upperCategory)) {
+      strategyCategory = 'WALLPAPER';
+    } else if (['WALLCLOTH'].includes(upperCategory)) {
+      strategyCategory = 'WALLCLOTH';
+    }
+
+    if (strategyCategory) {
       const attributes = (newItem.attributes || {}) as Record<string, unknown>;
-      const strategy = new CurtainStrategy();
+      const strategy = StrategyFactory.getStrategy(strategyCategory);
 
-      if (isCurtainCategory) {
-        const params: CurtainCalcParams = {
-          measuredWidth: width,
-          measuredHeight: height,
-          foldRatio: Number(newItem.foldRatio) || 2,
-          fabricWidth: Number(attributes.fabricWidth) || 280,
-          fabricType: (attributes.fabricType as 'FIXED_HEIGHT' | 'FIXED_WIDTH') || 'FIXED_HEIGHT',
-          unitPrice: unitPrice,
-          openingType: (attributes.openingType as 'SINGLE' | 'DOUBLE') || 'DOUBLE',
-          headerType: (attributes.headerType as 'WRAPPED' | 'ATTACHED') || 'WRAPPED',
-          clearance: Number(attributes.clearance) || 0,
-          sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
-          bottomLoss: attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : 10,
-        };
+      // Construct calcParams based on category
+      // Unified params as StrategyFactory expects generic params, but we know the specific keys needed
 
-        const result = strategy.calculate(params);
+      const fabricWidthCm = Number(attributes.fabricWidth) || (strategyCategory === 'CURTAIN' ? 280 : 53);
 
-        if (result && typeof result.usage === 'number' && !isNaN(result.usage)) {
-          return {
+      const calcParams: UnifiedCalcParams = {
+        measuredWidth: width,
+        measuredHeight: height,
+        unitPrice: unitPrice,
+        fabricWidth: fabricWidthCm / 100, // Convert cm to m as practiced in quote-item-crud.ts
+
+        // Curtain specific
+        foldRatio: Number(newItem.foldRatio) || 2,
+        fabricType: (attributes.fabricType as string) || 'FIXED_HEIGHT',
+        headerType: (attributes.headerType as string) || 'WRAPPED',
+        openingType: (attributes.openingType as string) || 'DOUBLE',
+        sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
+        bottomLoss: attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : 10,
+
+        // Wallpaper specific
+        rollLength: Number(attributes.rollLength) || 10, // Default 10m
+        patternRepeat: Number(attributes.patternRepeat) || 0,
+        widthLoss: attributes.widthLoss !== undefined ? Number(attributes.widthLoss) : undefined,
+        cutLoss: attributes.cutLoss !== undefined ? Number(attributes.cutLoss) : undefined,
+
+        calcType: strategyCategory
+      };
+
+      const result = strategy.calculate(calcParams);
+
+      if (result && typeof result.usage === 'number' && !isNaN(result.usage)) {
+        return {
+          quantity: result.usage,
+          calcResult: {
+            ...result.details,
             quantity: result.usage,
-            calcResult: {
-              ...result.details,
-              quantity: result.usage,
-            },
-          };
-        }
-        return null;
-      } else if (isWallCategory) {
-        const result = WallpaperCalculator.calculate({
-          measuredWidth: width,
-          measuredHeight: height,
-          productWidth: Number(attributes.fabricWidth) || (category === 'WALLPAPER' ? 53 : 280),
-          rollLength: Number(attributes.rollLength) || 1000,
-          patternRepeat: Number(attributes.patternRepeat) || 0,
-          formula: (category === 'WALLPAPER' ? 'WALLPAPER' : 'WALLCLOTH') as
-            | 'WALLPAPER'
-            | 'WALLCLOTH',
-        });
-        if (result && typeof result.quantity === 'number' && !isNaN(result.quantity)) {
-          return result.quantity;
-        }
-        return null;
+          },
+        };
       }
       return null;
     }

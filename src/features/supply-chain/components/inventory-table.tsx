@@ -9,19 +9,23 @@ import {
     TableHeader,
     TableRow,
 } from '@/shared/ui/table';
-import { StockAdjustmentDialog } from './stock-adjustment-dialog';
+import { Button } from '@/shared/ui/button';
+import Archive from 'lucide-react/dist/esm/icons/archive';
+import { AdjustInventoryDialog } from './adjust-inventory-dialog';
 import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 
 interface InventoryTableProps {
-    data: any[];
+    data: InventoryItem[];
+}
+
+export interface InventoryItem {
+    sku: string;
+    name: string;
+    stock: number;
 }
 
 interface InventoryTableRowProps {
-    item: {
-        sku: string;
-        name: string;
-        stock: number;
-    };
+    item: InventoryItem;
 }
 
 const InventoryTableRow = React.memo(function InventoryTableRow({ item }: InventoryTableRowProps) {
@@ -31,13 +35,20 @@ const InventoryTableRow = React.memo(function InventoryTableRow({ item }: Invent
             <TableCell>{item.name}</TableCell>
             <TableCell className="text-right">{item.stock}</TableCell>
             <TableCell className="text-right">
-                <StockAdjustmentDialog />
+                <AdjustInventoryDialog
+                    trigger={
+                        <Button variant="outline" size="sm">
+                            <Archive className="mr-2 h-4 w-4" />
+                            库存调整
+                        </Button>
+                    }
+                />
             </TableCell>
         </TableRow>
     );
 });
 
-export function InventoryTable({ data }: { data: any[] }) {
+export function InventoryTable({ data }: { data: InventoryItem[] }) {
     return (
         <div className="rounded-md border">
             <Table>

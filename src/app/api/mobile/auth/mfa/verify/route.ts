@@ -1,17 +1,23 @@
 
 import { NextRequest } from 'next/server';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('auth:mfa:verify');
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { verifyToken, generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
 import { VerificationCodeService } from '@/shared/services/verification-code.service';
+import { withRateLimit, getRateLimitKey } from '@/shared/middleware/rate-limiter';
 
 /**
  * MFA 验证接口
- * POST /api/mobile/auth/mfa/verify
  * 
- * @body { preAuthToken: string, code: string }
- * @returns { success: boolean, data: { accessToken, refreshToken, user } }
+ * @description 验证 preAuthToken 和短信/验证码。验证成功后返回正式的 Access Token 和 Refresh Token。
+ * 已集成速率限制：3 分钟内最多 5 次验证尝试。
+ * 
+ * @param {NextRequest} request - JSON body 需包含 preAuthToken 和 code
+ * @returns {Promise<NextResponse>} 返回认证令牌
  */
-export async function POST(request: NextRequest) {
+async function mfaVerifyHandler(request: NextRequest) {
     try {
         const body = await request.json();
         const { preAuthToken, code } = body;
@@ -53,14 +59,21 @@ export async function POST(request: NextRequest) {
             user: {
                 id: payload.userId,
                 tenantId: payload.tenantId,
-                name: undefined, // Payload allows lightweight user info, or fetch from DB if needed
+                name: undefined,
                 phone: payload.phone,
                 role: payload.role
             }
         }, '验证通过');
 
     } catch (error) {
-        console.error('MFA 验证错误:', error);
+        log.error('MFA 验证错误', { error: error instanceof Error ? error.message : String(error) }, error);
         return apiError('服务器内部错误', 500);
     }
 }
+
+// 应用速率限制：3 分钟内最多 5 次尝试
+export const POST = withRateLimit(
+    mfaVerifyHandler,
+    { windowMs: 3 * 60 * 1000, maxAttempts: 5, message: '验证过于频繁，请 3 分钟后再试' },
+    getRateLimitKey('auth:mfa')
+);

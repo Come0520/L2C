@@ -26,6 +26,13 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { useForm } from 'react-hook-form';
 
+/** 创建角色表单数据类型 */
+interface CreateRoleFormValues {
+  code: string;
+  name: string;
+  description: string;
+}
+
 export function RolesSettingsActions() {
   const [syncing, setSyncing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -36,7 +43,7 @@ export function RolesSettingsActions() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
+  } = useForm<CreateRoleFormValues>({
     defaultValues: {
       code: '',
       name: '',
@@ -60,7 +67,7 @@ export function RolesSettingsActions() {
     }
   };
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: CreateRoleFormValues) => {
     setCreating(true);
     try {
       // uppercase code

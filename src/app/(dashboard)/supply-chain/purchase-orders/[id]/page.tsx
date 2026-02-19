@@ -1,6 +1,6 @@
 
 import { getPoById, updatePoStatus } from '@/features/supply-chain/actions/po-actions';
-import { LogisticsDialog } from '@/features/supply-chain/components/logistics-dialog';
+import { AddLogisticsDialog as LogisticsDialog } from '@/features/supply-chain/components/add-logistics-dialog';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';

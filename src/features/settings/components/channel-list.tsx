@@ -12,9 +12,24 @@ import { Button } from '@/shared/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 
+/** 渠道列表项类型 */
+interface ChannelItem {
+    id: string;
+    name: string;
+    isActive: boolean;
+    channelCategory?: { name: string };
+    categoryName?: string;
+}
+
+/** 渠道分类项类型 */
+interface ChannelCategoryItem {
+    id: string;
+    name: string;
+}
+
 interface ChannelListProps {
-    data: any[];
-    categories?: any[];
+    data: ChannelItem[];
+    categories?: ChannelCategoryItem[];
 }
 
 /**
@@ -44,7 +59,7 @@ export function ChannelList({ data, categories }: ChannelListProps) {
                         data.map((item, index) => (
                             <TableRow key={index}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{item.category}</TableCell>
+                                <TableCell>{item.channelCategory?.name || item.categoryName || '-'}</TableCell>
                                 <TableCell>
                                     <Badge variant={item.isActive ? "default" : "secondary"}>
                                         {item.isActive ? '启用' : '停用'}

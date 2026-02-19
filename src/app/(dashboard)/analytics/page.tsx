@@ -11,15 +11,10 @@ import { StatCard } from "@/features/analytics/components/stat-card";
 import { SalesFunnelChart } from "@/features/analytics/components/sales-funnel-chart";
 import { OrderTrendChart } from "@/features/analytics/components/order-trend-chart";
 import { LeaderboardTable, LeaderboardItem } from "@/features/analytics/components/leaderboard-table";
+import { ARAgingWidget } from "@/features/dashboard/widgets/ar-aging-widget";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
-import Loader2 from "lucide-react/dist/esm/icons/loader-2";
-import DollarSign from "lucide-react/dist/esm/icons/dollar-sign";
-import Users from "lucide-react/dist/esm/icons/users";
-import ShoppingCart from "lucide-react/dist/esm/icons/shopping-cart";
-import Percent from "lucide-react/dist/esm/icons/percent";
-import CreditCard from "lucide-react/dist/esm/icons/credit-card";
-import Wallet from "lucide-react/dist/esm/icons/wallet";
+import { Loader2, DollarSign, Users, ShoppingCart, Percent, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
 
@@ -32,9 +27,12 @@ interface KeyMetrics {
     pendingPayables: string;
 }
 
-interface FunnelData {
-    stage: string;
-    count: number;
+interface FunnelResponse {
+    stages: any[];
+    summary: {
+        overallConversion: string;
+        avgCycleTime: string;
+    };
 }
 
 interface TrendData {
@@ -43,12 +41,10 @@ interface TrendData {
     count: number;
 }
 
-
-
 export default function AnalyticsPage() {
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState<KeyMetrics | null>(null);
-    const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
+    const [funnelData, setFunnelData] = useState<FunnelResponse | null>(null);
     const [trendData, setTrendData] = useState<TrendData[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardItem[]>([]);
 
@@ -133,32 +129,30 @@ export default function AnalyticsPage() {
                 />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title="Pending Receivables"
-                    value={`¥${Number(metrics?.pendingReceivables || 0).toLocaleString()}`}
-                    icon={CreditCard}
-                    description="Uncollected payments"
-                    className="md:col-span-2"
-                />
-                <StatCard
-                    title="Pending Payables"
-                    value={`¥${Number(metrics?.pendingPayables || 0).toLocaleString()}`}
-                    icon={Wallet}
-                    description="Unpaid purchase orders"
-                    className="md:col-span-2"
-                />
-            </div>
-
-            {/* Charts Row */}
+            {/* Charts Row 1: Trend & Funnel */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <OrderTrendChart data={trendData} className="col-span-4" />
-                <SalesFunnelChart data={funnelData} className="col-span-3" />
+                <SalesFunnelChart
+                    data={funnelData?.stages || []}
+                    summary={funnelData?.summary}
+                    className="col-span-3"
+                />
             </div>
 
-            {/* Leaderboard Row */}
-            <div className="grid gap-4 md:grid-cols-1">
-                <LeaderboardTable data={leaderboardData} />
+            {/* Charts Row 2: AR Aging & Leaderboard */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <ARAgingWidget className="col-span-3" />
+                <div className="col-span-4 space-y-4">
+                    {/* We can keep pending payables here as a smaller card if needed, or just leaderboard */}
+                    <StatCard
+                        title="Pending Payables"
+                        value={`¥${Number(metrics?.pendingPayables || 0).toLocaleString()}`}
+                        icon={Wallet}
+                        description="Unpaid purchase orders"
+                        className=""
+                    />
+                    <LeaderboardTable data={leaderboardData} />
+                </div>
             </div>
         </div>
     );

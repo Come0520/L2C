@@ -10,9 +10,24 @@ import { toast } from 'sonner';
 import { updateLogistics } from '@/features/orders/actions/orders';
 import { format } from 'date-fns';
 
+interface LogisticsTrace {
+    time?: string;
+    ftime?: string;
+    content?: string;
+    context?: string;
+}
+
+interface LogisticsData {
+    company?: string;
+    trackingNo?: string;
+    status?: string;
+    traces?: LogisticsTrace[];
+    lastUpdatedAt?: string;
+}
+
 interface LogisticsCardProps {
     orderId: string;
-    logistics: any; // OrderLogisticsData
+    logistics: LogisticsData; // OrderLogisticsData
 }
 
 export function LogisticsCard({ orderId, logistics }: LogisticsCardProps) {
@@ -134,10 +149,7 @@ export function LogisticsCard({ orderId, logistics }: LogisticsCardProps) {
 
                 {/* Timeline */}
                 <div className="relative pl-4 border-l border-border ml-2 space-y-6 py-2">
-                    {(logistics.traces || []).length === 0 && (
-                        <div className="text-xs text-muted-foreground">暂无轨迹信息</div>
-                    )}
-                    {(logistics.traces || []).map((trace: any, idx: number) => (
+                    {(logistics.traces || []).map((trace: LogisticsTrace, idx: number) => (
                         <div key={idx} className="relative">
                             <div className={`absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-background ${idx === 0 ? 'bg-primary' : 'bg-muted'}`} />
                             <div className="text-xs text-muted-foreground mb-0.5">
@@ -150,11 +162,9 @@ export function LogisticsCard({ orderId, logistics }: LogisticsCardProps) {
                     ))}
                 </div>
 
-                {logistics.lastUpdatedAt && (
-                    <div className="text-[10px] text-slate-300 text-right pt-2">
-                        Updated: {format(new Date(logistics.lastUpdatedAt), 'MM-dd HH:mm')}
-                    </div>
-                )}
+                <div className="text-[10px] text-slate-300 text-right pt-2">
+                    Updated: {logistics.lastUpdatedAt ? format(new Date(logistics.lastUpdatedAt), 'MM-dd HH:mm') : '-'}
+                </div>
             </CardContent>
         </Card>
     );

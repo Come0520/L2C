@@ -115,10 +115,9 @@ describe('WallpaperStrategy', () => {
 
             // 计算过程:
             // 用料宽度 = (300 + 20) / 100 = 3.2m
-            // 墙布是按宽度（米）计算用量，不是面积
-            // usage = ceil(3.2 * 10) / 10 = 3.2m
-            expect(result.usage).toBeCloseTo(3.2, 1);
-            expect(result.subtotal).toBeCloseTo(160, 0); // 3.2 × 50
+            // 面积 = 3.2 × 2.8 = 8.96 m²（P1-02 修复后按面积计算）
+            expect(result.usage).toBeCloseTo(8.96, 1);
+            expect(result.subtotal).toBeCloseTo(448, 0); // 8.96 × 50
         });
 
         it('应正确计算多墙段墙布用量', () => {
@@ -138,8 +137,8 @@ describe('WallpaperStrategy', () => {
             const result = strategy.calculate({ ...params, heightLoss: 10 });
 
             // 总宽度 = (300+20) + (400+20) + (250+20) = 1010cm = 10.1m
-            // 墙布按宽度计算，不是面积
-            expect(result.usage).toBeCloseTo(10.1, 1);
+            // 面积 = 10.1 × 2.8 = 28.28 m²（P1-02 修复后按面积计算）
+            expect(result.usage).toBeCloseTo(28.28, 1);
         });
 
         it('应在墙高超过幅宽时发出警告', () => {

@@ -73,7 +73,6 @@ export function ChannelAnalytics() {
                     title="整体 ROI"
                     value={`${avgRoi.toFixed(0)}%`}
                     icon={ArrowUpRight}
-                    trend={{ value: 12, label: '月环比' }} // Mock trend
                     className={cn(avgRoi > 0 ? "border-l-4 border-l-green-500" : "border-l-4 border-l-red-500")}
                 />
             </div>

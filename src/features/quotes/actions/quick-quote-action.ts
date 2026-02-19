@@ -8,7 +8,8 @@
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
-import { eq, type InferSelectModel } from 'drizzle-orm';
+import { StrategyFactory } from '@/features/quotes/calc-strategies';
+import { eq, and, type InferSelectModel } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { createQuickQuoteSchema } from './schema';
@@ -25,7 +26,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
 
   // 1. 验证线索
   const lead = (await db.query.leads.findFirst({
-    where: eq(leads.id, leadId),
+    where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)),
   })) as InferSelectModel<typeof leads> | undefined;
   if (!lead) throw new Error('线索不存在');
 
@@ -48,14 +49,16 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
     );
     customerId = newCustomerResult.customer.id;
 
+    // 🔒 P0-01 安全修复：leads UPDATE 添加租户隔离
     await db
       .update(leads)
       .set({ customerId: newCustomerResult.customer.id })
-      .where(eq(leads.id, leadId));
+      .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)));
   }
 
-  // 3. 创建报价单（编号含随机后缀防碰撞）
-  const quoteNo = `QQ${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  // 3. 创建报价单
+  // P2-03 修复：使用 crypto.randomUUID 降低编号碰撞风险
+  const quoteNo = `QQ${Date.now().toString().slice(-8)}-${crypto.randomUUID().substring(0, 6).toUpperCase()}`;
 
   const [newQuote] = await db
     .insert(quotes)
@@ -75,7 +78,15 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
   // 4. 加载套餐数据
   const allPlans = await fetchQuotePlans(tenantId);
 
-  type MockProduct = { category?: string; name?: string; unitPrice?: number; foldRatio?: number };
+  // P1-04 修复：补充 fabricWidth、extraParams 等字段类型
+  type MockProduct = {
+    category?: string;
+    name?: string;
+    unitPrice?: number;
+    foldRatio?: number;
+    fabricWidth?: number;
+    extraParams?: Record<string, unknown>;
+  };
   type MockPlan = { products?: Record<string, MockProduct> };
 
   const plan = (allPlans as Record<string, MockPlan>)[planType];
@@ -94,6 +105,8 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
       })
       .returning();
 
+    const itemsToInsert: (typeof quoteItems.$inferInsert)[] = [];
+
     for (const [key, product] of Object.entries(plan.products || {})) {
       const p = product;
 
@@ -101,10 +114,27 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
       if (key === 'sheer' && !roomData.hasSheer) continue;
       if (key === 'fabric' && roomData.hasFabric === false) continue;
 
-      const quantity = roomData.width * (p.foldRatio || 2);
-      const subtotal = quantity * (p.unitPrice || 0);
+      // 使用策略工厂进行计算
+      const Calculator = StrategyFactory.getStrategy(p.category ?? 'OTHER');
+      // P2-05 修复：默认幅宽应从配置获取，此处使用常量作为兜底
+      const DEFAULT_FABRIC_WIDTH = 280;
+      const calcResult = Calculator.calculate({
+        measuredWidth: roomData.width,
+        measuredHeight: roomData.height,
+        fabricWidth: p.fabricWidth || DEFAULT_FABRIC_WIDTH,
+        foldRatio: p.foldRatio || 2,
+        measureUnit: 'cm',
+        patternRepeat: 0,
+        ...(p.extraParams || {})
+      });
 
-      await db.insert(quoteItems).values({
+      // P1-04 修复：使用 usage（CalcResult 统一字段名），并修复浮点精度
+      const quantity = (calcResult as { usage?: number; quantity?: number }).usage
+        ?? (calcResult as { usage?: number; quantity?: number }).quantity
+        ?? 0;
+      const subtotal = Math.round(quantity * (p.unitPrice || 0) * 100) / 100;
+
+      itemsToInsert.push({
         quoteId: newQuote.id,
         roomId: room.id,
         tenantId,
@@ -117,10 +147,14 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
         height: roomData.height.toString(),
       });
     }
+
+    if (itemsToInsert.length > 0) {
+      await db.insert(quoteItems).values(itemsToInsert);
+    }
   }
 
   // 6. 更新报价单总额
-  await updateQuoteTotal(newQuote.id);
+  await updateQuoteTotal(newQuote.id, tenantId);
 
   revalidatePath('/quotes');
   return { id: newQuote.id, quoteNo };

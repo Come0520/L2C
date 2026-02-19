@@ -1,133 +1,155 @@
 
-import 'dotenv/config';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { db } from '@/shared/api/db';
-import { haltOrderAction, resumeOrderAction, getHaltedOrders } from '../actions/halt';
-import { orders } from '@/shared/api/schema/orders';
-import { quotes } from '@/shared/api/schema/quotes';
-import { customers } from '@/shared/api/schema/customers';
-import { eq } from 'drizzle-orm';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock next/cache
-vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
-}));
+// Hoisted Mocks
+const { mockOrderService, mockDbQuery, mockSession } = vi.hoisted(() => {
+    return {
+        mockOrderService: {
+            haltOrder: vi.fn(),
+            resumeOrder: vi.fn(),
+        },
+        mockDbQuery: {
+            orders: { findMany: vi.fn() }
+        },
+        mockSession: {
+            user: {
+                id: 'user-123',
+                tenantId: 'tenant-123',
+                name: 'Test User'
+            }
+        }
+    };
+});
+
+// Mock Dependencies
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(async () => {
-        const tenant = await db.query.tenants.findFirst();
-        return {
-            user: {
-                id: 'mock-user-id',
-                tenantId: tenant?.id
-            }
-        };
-    }),
+    auth: vi.fn().mockResolvedValue(mockSession),
+    checkPermission: vi.fn().mockResolvedValue(true),
 }));
 
-describe('Order Halt Logic', () => {
-    let tenantId: string;
-    let userId: string;
-    let customerId: string;
-    let quoteId: string;
+vi.mock('@/services/order.service', () => ({
+    OrderService: mockOrderService
+}));
 
-    beforeAll(async () => {
-        const tenant = await db.query.tenants.findFirst();
-        if (!tenant) throw new Error("No Tenant");
-        tenantId = tenant.id;
+vi.mock('@/shared/api/db', () => ({
+    db: {
+        query: mockDbQuery
+    }
+}));
 
-        const user = await db.query.users.findFirst();
-        if (!user) throw new Error("No User");
-        userId = user.id;
+// Import Actions
+import { haltOrderAction, resumeOrderAction, getHaltedOrders } from '../actions/halt';
 
-        const customer = await db.query.customers.findFirst();
-        if (!customer) throw new Error("No Customer");
-        customerId = customer.id;
-
-        // Create Quote
-        const [quote] = await db.insert(quotes).values({
-            tenantId,
-            quoteNo: `QT-HALT-${Date.now()}`,
-            customerId,
-            version: 1,
-            totalAmount: '1000',
-            createdBy: userId,
-            status: 'ACCEPTED'
-        }).returning();
-        quoteId = quote.id;
+describe('Order Halt Actions', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('should halt and resume order correctly', async () => {
-        // 1. Create Order (SIGNED)
-        const [order] = await db.insert(orders).values({
-            tenantId,
-            orderNo: `ORD-HALT-${Date.now()}`,
-            quoteId,
-            quoteVersionId: quoteId,
-            customerId,
-            salesId: userId,
-            status: 'SIGNED',
-            settlementType: 'PREPAID',
-            createdBy: userId
-        }).returning();
+    const VALID_ORDER_ID = '123e4567-e89b-12d3-a456-426614174000';
 
-        // 2. Halt Order
-        const haltResult = await haltOrderAction({
-            orderId: order.id,
-            reason: 'CUSTOMER_REQUEST',
-            remark: 'Test Halt'
+    describe('haltOrderAction', () => {
+        it('should call OrderService.haltOrder and revalidate path', async () => {
+            mockOrderService.haltOrder.mockResolvedValue({
+                orderNo: 'OD-123',
+                snapshotData: { previousStatus: 'SIGNED' }
+            });
+
+            const result = await haltOrderAction({
+                orderId: VALID_ORDER_ID,
+                reason: 'CUSTOMER_REQUEST',
+                remark: 'Test Halt'
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data?.previousStatus).toBe('SIGNED');
+            expect(mockOrderService.haltOrder).toHaveBeenCalledWith(
+                VALID_ORDER_ID,
+                mockSession.user.tenantId,
+                mockSession.user.id,
+                expect.stringContaining('CUSTOMER_REQUEST')
+            );
         });
 
-        expect(haltResult.success).toBe(true);
-        const haltedOrder = await db.query.orders.findFirst({
-            where: eq(orders.id, order.id)
-        });
-        expect(haltedOrder?.status).toBe('HALTED');
+        it('should return error if OrderService throws', async () => {
+            mockOrderService.haltOrder.mockRejectedValue(new Error('Halt Failed'));
 
-        // 3. Verify in Halted List
-        const listResult = await getHaltedOrders();
-        expect(listResult.success).toBe(true);
-        const inList = listResult.data.find(o => o.id === order.id);
-        expect(inList).toBeDefined();
-        expect(inList?.alertLevel).toBe('NONE'); // Just halted
+            const result = await haltOrderAction({
+                orderId: VALID_ORDER_ID,
+                reason: 'OTHER',
+                remark: 'Error test'
+            });
 
-        // 4. Resume Order
-        const resumeResult = await resumeOrderAction({
-            orderId: order.id,
-            remark: 'Resuming'
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Halt Failed');
         });
-        expect(resumeResult.success).toBe(true);
-
-        const resumedOrder = await db.query.orders.findFirst({
-            where: eq(orders.id, order.id)
-        });
-        expect(resumedOrder?.status).toBe('SIGNED');
     });
 
-    it('should trigger warning if halted for long time', async () => {
-        // 1. Create Order (HALTED manually to simulate time)
-        const eightDaysAgo = new Date();
-        eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+    describe('resumeOrderAction', () => {
+        it('should call OrderService.resumeOrder', async () => {
+            mockOrderService.resumeOrder.mockResolvedValue({
+                orderNo: 'OD-123',
+                status: 'SIGNED'
+            });
 
-        const [order] = await db.insert(orders).values({
-            tenantId,
-            orderNo: `ORD-WARN-${Date.now()}`,
-            quoteId,
-            quoteVersionId: quoteId,
-            customerId,
-            salesId: userId,
-            status: 'HALTED', // Manual
-            pausedAt: eightDaysAgo,
-            settlementType: 'PREPAID',
-            createdBy: userId
-        }).returning();
+            const result = await resumeOrderAction({
+                orderId: VALID_ORDER_ID,
+                remark: 'Resume test'
+            });
 
-        // 2. Check List
-        const listResult = await getHaltedOrders();
-        const inList = listResult.data.find(o => o.id === order.id);
+            expect(result.success).toBe(true);
+            expect(result.data?.newStatus).toBe('SIGNED');
+            expect(mockOrderService.resumeOrder).toHaveBeenCalledWith(
+                VALID_ORDER_ID,
+                mockSession.user.tenantId,
+                mockSession.user.id
+            );
+        });
+    });
 
-        expect(inList).toBeDefined();
-        expect(inList?.alertLevel).toBe('WARNING');
-        expect(inList?.daysHalted).toBeGreaterThanOrEqual(8);
+    describe('getHaltedOrders', () => {
+        it('should return enriched halted orders', async () => {
+            const now = new Date();
+            const eightDaysAgo = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+
+            const mockOrders = [
+                {
+                    id: 'ord-1',
+                    orderNo: 'OD-1',
+                    totalAmount: '1000',
+                    pausedAt: eightDaysAgo,
+                    pauseReason: JSON.stringify({ reason: 'CUSTOMER_REQUEST', remark: 'Long halt' }),
+                    updatedAt: eightDaysAgo,
+                    customer: { name: 'C1', phone: '123' }
+                },
+                {
+                    id: 'ord-2',
+                    orderNo: 'OD-2',
+                    totalAmount: '2000',
+                    pausedAt: now,
+                    pauseReason: JSON.stringify({ reason: 'OTHER' }),
+                    updatedAt: now,
+                    customer: { name: 'C2', phone: '456' }
+                }
+            ];
+
+            mockDbQuery.orders.findMany.mockResolvedValue(mockOrders);
+
+            const result = await getHaltedOrders();
+
+            expect(result.success).toBe(true);
+            expect(result.data).toHaveLength(2);
+
+            // Check enrichment
+            const longHalted = result.data?.find((o: any) => o.id === 'ord-1');
+            expect(longHalted?.daysHalted).toBeGreaterThanOrEqual(8);
+            expect(longHalted?.alertLevel).toBe('WARNING');
+            expect(longHalted?.haltReason).toBe('CUSTOMER_REQUEST');
+
+            const justHalted = result.data?.find((o: any) => o.id === 'ord-2');
+            expect(justHalted?.daysHalted).toBe(0);
+            expect(justHalted?.alertLevel).toBe('NONE');
+        });
     });
 });

@@ -27,6 +27,10 @@ interface TokenCache {
 let officialAccountTokenCache: TokenCache | null = null;
 let miniProgramTokenCache: TokenCache | null = null;
 
+// P1: Promise 级锁定，防止并发请求导致重复获取 Token
+let officialAccountTokenPromise: Promise<string> | null = null;
+let miniProgramTokenPromise: Promise<string> | null = null;
+
 /**
  * 微信服务号模板消息数据结构
  */
@@ -62,8 +66,6 @@ export class WeChatAdapter implements ChannelAdapter {
         const { userId, metadata } = payload;
         const channel = (metadata?.wechatChannel as string) || 'OFFICIAL'; // 默认使用服务号
 
-        console.log(`[WeChat Adapter] Sending via ${channel} to User(${userId})`);
-
         // 获取用户 OpenID
         const openId = await this.getRecipientOpenId(userId);
         if (!openId) {
@@ -92,7 +94,7 @@ export class WeChatAdapter implements ChannelAdapter {
         const appSecret = process.env.WECHAT_OFFICIAL_SECRET;
 
         if (!appId || !appSecret) {
-            console.log('[WeChat Official] WECHAT_OFFICIAL_APPID/SECRET not configured, using mock mode.');
+            // [Development] Mock mode
             return this.mockSendOfficialMessage(openId, payload);
         }
 
@@ -139,7 +141,6 @@ export class WeChatAdapter implements ChannelAdapter {
             const result: WeChatApiResponse = await response.json();
 
             if (result.errcode === 0) {
-                console.log(`[WeChat Official] Message sent successfully. msgid=${result.msgid}`);
                 return true;
             } else {
                 console.error(`[WeChat Official] Send failed: ${result.errcode} - ${result.errmsg}`);
@@ -167,7 +168,7 @@ export class WeChatAdapter implements ChannelAdapter {
         const appSecret = process.env.WECHAT_MINI_SECRET;
 
         if (!appId || !appSecret) {
-            console.log('[WeChat Mini] WECHAT_MINI_APPID/SECRET not configured, using mock mode.');
+            // [Development] Mock mode
             return this.mockSendMiniMessage(openId, payload);
         }
 
@@ -203,7 +204,6 @@ export class WeChatAdapter implements ChannelAdapter {
             const result: WeChatApiResponse = await response.json();
 
             if (result.errcode === 0) {
-                console.log(`[WeChat Mini] Subscription message sent successfully.`);
                 return true;
             } else {
                 console.error(`[WeChat Mini] Send failed: ${result.errcode} - ${result.errmsg}`);
@@ -218,53 +218,70 @@ export class WeChatAdapter implements ChannelAdapter {
         }
     }
 
-    /**
-     * 获取微信服务号 Access Token
-     * 带缓存机制，避免频繁请求
-     */
     private async getOfficialAccountAccessToken(appId: string, appSecret: string): Promise<string> {
-        // 检查缓存
+        // 1. 检查有效缓存
         if (officialAccountTokenCache && officialAccountTokenCache.expiresAt > Date.now()) {
             return officialAccountTokenCache.accessToken;
         }
 
-        // 请求新 Token
-        const url = `${this.WECHAT_API_BASE}/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.access_token) {
-            officialAccountTokenCache = {
-                accessToken: data.access_token,
-                expiresAt: Date.now() + (data.expires_in - 300) * 1000 // 提前 5 分钟过期
-            };
-            return data.access_token;
+        // 2. 检查是否有正在进行的请求（竞态保护）
+        if (officialAccountTokenPromise) {
+            return officialAccountTokenPromise;
         }
 
-        throw new Error(`Failed to get access token: ${data.errcode} - ${data.errmsg}`);
+        // 3. 发起请求并缓存 Promise
+        officialAccountTokenPromise = (async () => {
+            try {
+                const url = `${this.WECHAT_API_BASE}/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.access_token) {
+                    officialAccountTokenCache = {
+                        accessToken: data.access_token,
+                        expiresAt: Date.now() + (data.expires_in - 300) * 1000 // 提前 5 分钟过期
+                    };
+                    return data.access_token;
+                }
+                throw new Error(`WeChat API Error: ${data.errcode} - ${data.errmsg}`);
+            } finally {
+                // 无论成功失败，重置 Promise 锁
+                officialAccountTokenPromise = null;
+            }
+        })();
+
+        return officialAccountTokenPromise;
     }
 
-    /**
-     * 获取微信小程序 Access Token
-     */
     private async getMiniProgramAccessToken(appId: string, appSecret: string): Promise<string> {
         if (miniProgramTokenCache && miniProgramTokenCache.expiresAt > Date.now()) {
             return miniProgramTokenCache.accessToken;
         }
 
-        const url = `${this.WECHAT_API_BASE}/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.access_token) {
-            miniProgramTokenCache = {
-                accessToken: data.access_token,
-                expiresAt: Date.now() + (data.expires_in - 300) * 1000
-            };
-            return data.access_token;
+        if (miniProgramTokenPromise) {
+            return miniProgramTokenPromise;
         }
 
-        throw new Error(`Failed to get mini program access token: ${data.errcode} - ${data.errmsg}`);
+        miniProgramTokenPromise = (async () => {
+            try {
+                const url = `${this.WECHAT_API_BASE}/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.access_token) {
+                    miniProgramTokenCache = {
+                        accessToken: data.access_token,
+                        expiresAt: Date.now() + (data.expires_in - 300) * 1000
+                    };
+                    return data.access_token;
+                }
+                throw new Error(`WeChat API Error: ${data.errcode} - ${data.errmsg}`);
+            } finally {
+                miniProgramTokenPromise = null;
+            }
+        })();
+
+        return miniProgramTokenPromise;
     }
 
     /**
@@ -286,39 +303,16 @@ export class WeChatAdapter implements ChannelAdapter {
     /**
      * Mock 发送服务号消息（用于开发/测试环境）
      */
-    private mockSendOfficialMessage(openId: string, payload: NotificationPayload): boolean {
-        const { title, content, metadata } = payload;
-        console.log('[WeChat Official Mock] Template message:', JSON.stringify({
-            touser: openId,
-            template_id: this.DEFAULT_OFFICIAL_TEMPLATE_ID,
-            data: {
-                first: { value: title },
-                keyword1: { value: content.substring(0, 100) },
-                keyword2: { value: new Date().toLocaleString('zh-CN') },
-                keyword3: { value: (metadata?.businessType as string) || '系统通知' },
-                remark: { value: '点击查看详情' }
-            }
-        }, null, 2));
+    private mockSendOfficialMessage(_openId: string, _payload: NotificationPayload): boolean {
+        // [Development] Mock template message
         return true;
     }
 
     /**
      * Mock 发送小程序消息（用于开发/测试环境）
      */
-    private mockSendMiniMessage(openId: string, payload: NotificationPayload): boolean {
-        const { title, content, metadata } = payload;
-        console.log('[WeChat Mini Mock] Subscription message:', JSON.stringify({
-            touser: openId,
-            template_id: this.DEFAULT_MINI_TEMPLATE_ID,
-            page: metadata?.link || 'pages/index/index',
-            data: {
-                thing1: { value: title.substring(0, 20) },
-                thing2: { value: content.substring(0, 20) },
-                time3: { value: new Date().toISOString().split('T')[0] }
-            }
-        }, null, 2));
+    private mockSendMiniMessage(_openId: string, _payload: NotificationPayload): boolean {
+        // [Development] Mock subscription message
         return true;
     }
 }
-
-export const wechatAdapter = new WeChatAdapter();

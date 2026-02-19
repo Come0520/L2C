@@ -1,3 +1,5 @@
+import Decimal from 'decimal.js';
+
 /**
  * 附件项类型定义
  */
@@ -8,11 +10,12 @@ export interface AttachmentItem {
     inheritParentPrice: boolean;
 }
 
-export const calculateAttachmentAmount = (attachments: AttachmentItem[], parentUnitPrice: number) => {
+export const calculateAttachmentAmount = (attachments: AttachmentItem[], parentUnitPrice: number): number => {
     return attachments.reduce((sum, att) => {
-        const price = att.inheritParentPrice ? parentUnitPrice : (att.unitPrice || 0);
-        return sum + (price * (att.quantity || 0));
-    }, 0);
+        const price = new Decimal(att.inheritParentPrice ? parentUnitPrice : (att.unitPrice || 0));
+        const quantity = new Decimal(att.quantity || 0);
+        return sum.plus(price.times(quantity));
+    }, new Decimal(0)).toNumber();
 };
 
 export const generateWallpaperAttachmentRecommendations = (areaSqm: number, gluePrice: number = 0, primerPrice: number = 0) => {

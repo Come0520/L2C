@@ -19,6 +19,18 @@ export interface RoleDefinition {
  * 系统预设角色配置
  */
 export const ROLES: Record<string, RoleDefinition> = {
+  // ==================== 租户超级管理员 ====================
+  TENANT_ADMIN: {
+    code: 'TENANT_ADMIN',
+    name: '超级管理员',
+    description: '租户超级管理员，拥有全部模块的全部权限',
+    isSystem: true,
+    permissions: [
+      // 全局权限 - 等同于 ADMIN
+      PERMISSIONS.GLOBAL.ADMIN,
+    ],
+  },
+
   // ==================== 管理员 ====================
   ADMIN: {
     code: 'ADMIN',
@@ -254,6 +266,7 @@ export function getRoleDefinition(code: string): RoleDefinition | undefined {
  * 角色代码到中文名称的映射
  */
 export const ROLE_LABELS: Record<string, string> = {
+  TENANT_ADMIN: '超级管理员',
   ADMIN: '管理员',
   MANAGER: '经理',
   SALES: '销售',

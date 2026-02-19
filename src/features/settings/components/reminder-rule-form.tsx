@@ -5,16 +5,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/form';
 
+/** 提醒规则表单初始数据类型 */
+interface ReminderRuleData {
+    id?: string;
+    name: string;
+    triggerType: string;
+    triggerValue: number;
+    notificationChannels: string[];
+}
+
 interface ReminderRuleFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    initialData?: any;
+    initialData?: ReminderRuleData;
     onSuccess: () => void;
 }
 
 export function ReminderRuleForm({ open, onOpenChange, initialData, onSuccess }: ReminderRuleFormProps) {
     const form = useForm();
-     return (
+    return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>

@@ -1,9 +1,21 @@
 import Link from 'next/link';
-import { SystemParamsConfig } from '@/features/settings/components/system-params-config';
-import { CurtainCalcConfig } from '@/features/settings/components/curtain-calc-config';
+import dynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { ChevronRight, LayoutGrid, Settings2 } from 'lucide-react';
+import { Skeleton } from '@/shared/ui/skeleton';
+
+/** 懒加载：系统参数配置组件 */
+const SystemParamsConfig = dynamic(
+    () => import('@/features/settings/components/system-params-config').then(m => m.SystemParamsConfig),
+    { loading: () => <Skeleton className="h-[280px] w-full rounded-lg" /> }
+);
+
+/** 懒加载：窗帘计算参数配置组件 */
+const CurtainCalcConfig = dynamic(
+    () => import('@/features/settings/components/curtain-calc-config').then(m => m.CurtainCalcConfig),
+    { loading: () => <Skeleton className="h-[200px] w-full rounded-lg" /> }
+);
 
 /**
  * 报价设置页面

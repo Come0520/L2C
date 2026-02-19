@@ -1,6 +1,7 @@
 import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and } from 'drizzle-orm';
+import type { ProductCategory } from '@/shared/api/schema/types';
 
 /**
  * 联动规则定义 (Linkage Rule Definition)
@@ -51,7 +52,7 @@ export class AccessoryLinkageService {
         height: number;
         foldRatio?: number;
         quantity?: number;
-    }): Promise<RecommendedAccessory[]> {
+    }, tenantId: string): Promise<RecommendedAccessory[]> {
         const applicableRules = this.RULES.filter(r => r.mainCategory === mainItem.category);
         const recommendations: RecommendedAccessory[] = [];
 
@@ -75,10 +76,12 @@ export class AccessoryLinkageService {
             }
 
             // 尝试在产品库中查找默认配件产品
+            // 🔒 安全修复：添加租户隔离
             const defaultProduct = await db.query.products.findFirst({
                 where: and(
-                    eq(products.category, rule.targetCategory as any),
-                    eq(products.isActive, true)
+                    eq(products.category, rule.targetCategory as ProductCategory),
+                    eq(products.isActive, true),
+                    eq(products.tenantId, tenantId)
                 )
             });
 

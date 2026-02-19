@@ -8,54 +8,38 @@ import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
-import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
+import { authenticateMobile, requireInternal } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
-interface TaskDetailParams {
-    params: Promise<{ id: string }>;
-}
+const log = createLogger('mobile/tasks/[id]');
 
-export async function GET(request: NextRequest, { params }: TaskDetailParams) {
-    // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
-    }
-    const { session } = authResult;
+export async function GET(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    const params = await props.params;
+    const auth = await authenticateMobile(request);
+    if (!auth.success) return auth.response;
 
-    // 2. 权限检查
-    const roleCheck = requireWorker(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
-    }
+    const session = auth.session;
+    const isInternal = requireInternal(session);
+    if (!isInternal.allowed) return isInternal.response;
 
-    const { id: taskId } = await params;
+    const taskId = params.id;
+    let detail: any = null;
+    let taskType = 'measure';
 
     try {
-        // 3. 查找任务（先查测量，再查安装）
-        let taskType: 'measure' | 'install' = 'measure';
-        let detail = null;
-
-        // 尝试查找测量任务
+        // 1. 查找测量任务
         const measureTask = await db.query.measureTasks.findFirst({
             where: and(
                 eq(measureTasks.id, taskId),
-                eq(measureTasks.assignedWorkerId, session.userId)
+                eq(measureTasks.assignedWorkerId, session.userId),
+                eq(measureTasks.tenantId, session.tenantId)
             ),
             with: {
-                customer: {
-                    columns: {
-                        name: true,
-                        phone: true,
-                    },
-                    with: {
-                        addresses: true // 获取地址列表
-                    }
-                },
-                sheets: {
-                    with: {
-                        items: true
-                    }
-                }
+                customer: true,
+                lead: true,
             }
         });
 
@@ -67,7 +51,8 @@ export async function GET(request: NextRequest, { params }: TaskDetailParams) {
             const installTask = await db.query.installTasks.findFirst({
                 where: and(
                     eq(installTasks.id, taskId),
-                    eq(installTasks.installerId, session.userId)
+                    eq(installTasks.installerId, session.userId),
+                    eq(installTasks.tenantId, session.tenantId)
                 ),
                 with: {
                     customer: {
@@ -84,7 +69,8 @@ export async function GET(request: NextRequest, { params }: TaskDetailParams) {
                             orderNo: true,
                         }
                     },
-                    items: true
+                    items: true,
+                    photos: true,
                 }
             });
             if (installTask) {
@@ -104,7 +90,7 @@ export async function GET(request: NextRequest, { params }: TaskDetailParams) {
         });
 
     } catch (error) {
-        console.error('任务详情查询错误:', error);
+        log.error('任务详情查询错误', {}, error);
         return apiError('查询任务详情失败', 500);
     }
 }

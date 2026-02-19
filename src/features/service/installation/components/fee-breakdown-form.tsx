@@ -6,17 +6,21 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { Button } from '@/shared/ui/button';
 
+interface AdditionalFee {
+    type: 'HIGH_ALTITUDE' | 'LONG_DISTANCE' | 'SPECIAL_WALL' | 'OTHER';
+    amount: number;
+    description?: string;
+    quantity?: number;
+}
+
+export interface FeeBreakdown {
+    baseFee: number;
+    additionalFees?: AdditionalFee[];
+}
+
 interface FeeBreakdownFormProps {
-    value?: {
-        baseFee: number;
-        additionalFees?: Array<{
-            type: 'HIGH_ALTITUDE' | 'LONG_DISTANCE' | 'SPECIAL_WALL' | 'OTHER';
-            amount: number;
-            description?: string;
-            quantity?: number;
-        }>;
-    };
-    onChange: (breakdown: any) => void;
+    value?: FeeBreakdown;
+    onChange: (breakdown: FeeBreakdown) => void;
 }
 
 export function FeeBreakdownForm({ value, onChange }: FeeBreakdownFormProps) {
@@ -39,7 +43,7 @@ export function FeeBreakdownForm({ value, onChange }: FeeBreakdownFormProps) {
     };
 
     const handleUpdate = () => {
-        const additionalFees: any[] = [];
+        const additionalFees: AdditionalFee[] = [];
         if (enableHighAltitude) {
             additionalFees.push({
                 type: 'HIGH_ALTITUDE',

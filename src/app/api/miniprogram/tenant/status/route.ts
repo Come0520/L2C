@@ -3,78 +3,65 @@
  * 
  * GET /api/miniprogram/tenant/status
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { tenants, users } from '@/shared/api/schema';
+import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../auth-utils';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
-// 从 Token 获取用户信息
-async function getUserFromToken(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-        return null;
-    }
 
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-
-    try {
-        const { payload } = await jwtVerify(token, secret);
-        return payload as { userId: string; tenantId: string };
-    } catch {
-        return null;
-    }
-}
 
 export async function GET(request: NextRequest) {
     try {
-        const tokenData = await getUserFromToken(request);
+        const tokenData = await getMiniprogramUser(request);
 
         if (!tokenData) {
-            return NextResponse.json(
-                { success: false, error: '未授权' },
-                { status: 401 }
-            );
+            return apiError('未授权', 401);
         }
 
-        // 获取租户信息
+        // 获取租户信息 (仅查询必要字段，防止泄露 settings 等敏感配置)
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, tokenData.tenantId),
+            columns: {
+                id: true,
+                status: true,
+                name: true,
+                code: true,
+                applicantName: true,
+                applicantPhone: true,
+                applicantEmail: true,
+                region: true,
+                businessDescription: true,
+                rejectReason: true,
+                createdAt: true,
+                reviewedAt: true,
+            },
         });
 
         if (!tenant) {
-            return NextResponse.json(
-                { success: false, error: '租户不存在' },
-                { status: 404 }
-            );
+            return apiError('租户不存在', 404);
         }
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                status: tenant.status,
-                tenant: {
-                    id: tenant.id,
-                    name: tenant.name,
-                    code: tenant.code,
-                    applicantName: tenant.applicantName,
-                    applicantPhone: tenant.applicantPhone,
-                    applicantEmail: tenant.applicantEmail,
-                    region: tenant.region,
-                    businessDescription: tenant.businessDescription,
-                    rejectReason: tenant.rejectReason,
-                    createdAt: tenant.createdAt,
-                    reviewedAt: tenant.reviewedAt,
-                },
+        return apiSuccess({
+            status: tenant.status,
+            tenant: {
+                id: tenant.id,
+                name: tenant.name,
+                code: tenant.code,
+                applicantName: tenant.applicantName,
+                applicantPhone: tenant.applicantPhone,
+                applicantEmail: tenant.applicantEmail,
+                region: tenant.region,
+                businessDescription: tenant.businessDescription,
+                rejectReason: tenant.rejectReason,
+                createdAt: tenant.createdAt,
+                reviewedAt: tenant.reviewedAt,
             },
         });
 
     } catch (error) {
         console.error('查询状态错误:', error);
-        return NextResponse.json(
-            { success: false, error: '查询失败' },
-            { status: 500 }
-        );
+        return apiError('查询失败', 500);
     }
 }

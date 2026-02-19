@@ -91,34 +91,40 @@ const initializeDefaultTemplatesActionInternal = createSafeAction(
 
         let createdCount = 0;
 
-        for (const tmpl of templates) {
-            const existing = await db.query.approvalFlows.findFirst({
-                where: and(
-                    eq(approvalFlows.code, tmpl.code),
-                    eq(approvalFlows.tenantId, tenantId)
-                )
-            });
+        await db.transaction(async (tx) => {
+            for (const tmpl of templates) {
+                const existing = await tx.query.approvalFlows.findFirst({
+                    where: and(
+                        eq(approvalFlows.code, tmpl.code),
+                        eq(approvalFlows.tenantId, tenantId)
+                    )
+                });
 
-            if (!existing) {
-                const [newFlow] = await db.insert(approvalFlows).values({
-                    tenantId,
-                    code: tmpl.code,
-                    name: tmpl.name,
-                    description: tmpl.description,
-                    definition: tmpl.definition,
-                    isActive: true
-                }).returning();
+                if (!existing) {
+                    const [newFlow] = await tx.insert(approvalFlows).values({
+                        tenantId,
+                        code: tmpl.code,
+                        name: tmpl.name,
+                        description: tmpl.description,
+                        definition: tmpl.definition,
+                        isActive: true
+                    }).returning();
 
-                await publishApprovalFlow({ flowId: newFlow.id });
-                createdCount++;
+                    await publishApprovalFlow({ flowId: newFlow.id });
+                    createdCount++;
+                }
             }
-        }
+        });
 
         revalidatePath('/settings/approvals');
         return { success: true, message: `已初始化 ${createdCount} 个模板` };
     }
 );
 
+/**
+ * 初始化系统内置审批流程模板
+ * @returns 成功信息
+ */
 export async function initializeDefaultTemplates() {
     return initializeDefaultTemplatesActionInternal({});
 }

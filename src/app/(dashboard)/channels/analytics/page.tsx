@@ -1,9 +1,6 @@
-import { Suspense } from 'react';
-import { auth, checkPermission } from '@/shared/lib/auth';
-import { PERMISSIONS } from '@/shared/config/permissions';
+import { auth } from '@/shared/lib/auth';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/skeleton';
 import {
     getChannelStatsOverview,
     getChannelRanking,
@@ -20,7 +17,11 @@ export const dynamic = 'force-dynamic';
  * 
  * 权限：仅 ADMIN / MANAGER 可访问
  */
-export default async function ChannelAnalyticsPage() {
+export default async function ChannelAnalyticsPage({
+    searchParams,
+}: {
+    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
     const session = await auth();
 
     if (!session?.user?.tenantId) {
@@ -37,6 +38,10 @@ export default async function ChannelAnalyticsPage() {
         );
     }
 
+    // Next.js 16: searchParams is a Promise
+    const resolvedSearchParams = await searchParams;
+    const period = (resolvedSearchParams?.period as 'month' | 'quarter' | 'year' | 'all') || 'month';
+
     // 获取数据
     let overview = {
         activeChannelCount: 0,
@@ -51,7 +56,7 @@ export default async function ChannelAnalyticsPage() {
     try {
         [overview, ranking, trend] = await Promise.all([
             getChannelStatsOverview(),
-            getChannelRanking({ limit: 10, period: 'month' }),
+            getChannelRanking({ limit: 10, period }),
             getChannelTrend({ months: 6 }),
         ]);
     } catch (error) {
@@ -108,7 +113,7 @@ export default async function ChannelAnalyticsPage() {
             </Card>
 
             {/* 渠道排行榜 */}
-            <ChannelRanking data={ranking} />
+            <ChannelRanking data={ranking} currentPeriod={period} />
         </div>
     );
 }

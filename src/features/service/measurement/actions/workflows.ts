@@ -4,9 +4,10 @@ import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { measureSheetSchema, reviewMeasureTaskSchema } from '../schemas';
 import { auth } from '@/shared/lib/auth';
+import { AuditService } from '@/shared/lib/audit-service';
 
 /**
  * 提交测量数据 (创建新的 Measure Sheet 和 Items)
@@ -30,7 +31,7 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
             eq(measureTasks.id, data.taskId),
             eq(measureTasks.tenantId, tenantId)
         ),
-        columns: { id: true, assignedWorkerId: true }
+        columns: { id: true, assignedWorkerId: true, status: true }
     });
 
     if (!task) {
@@ -42,6 +43,14 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
         return { success: false, error: '只有被指派的测量师才能提交测量数据' };
     }
 
+    // 🔒 状态校验 (R2-SEC-01)
+    // 允许提交的状态：PENDING_VISIT (待上门/测量中), PENDING_CONFIRM (驳回修改/补充)
+    // 禁止提交的状态：COMPLETED (已完成), CANCELLED (已取消), PENDING (待分配), DISPATCHING (派单中), PENDING_APPROVAL (待审批)
+    const allowSubmitStatus = ['PENDING_VISIT', 'PENDING_CONFIRM'];
+    if (!allowSubmitStatus.includes(task.status || '')) {
+        return { success: false, error: `当前任务状态(${task.status})不允许提交测量数据` };
+    }
+
     return await db.transaction(async (tx) => {
         // 1. 创建测量单
         const [sheet] = await tx.insert(measureSheets).values({
@@ -51,7 +60,7 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
             variant: data.variant,
             sitePhotos: data.sitePhotos,
             sketchMap: data.sketchMap,
-            status: 'CONFIRMED', // 提交即为确认 (师傅端逻辑)
+            status: 'SUBMITTED', // 提交后为 SUBMITTED，等待审核
         }).returning();
 
         // 2. 创建明细
@@ -75,7 +84,25 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
             .where(eq(measureTasks.id, data.taskId));
 
         return sheet;
-    }).then((res) => {
+    }).then(async (res) => {
+        await AuditService.record(
+            {
+                tenantId: tenantId,
+                userId: userId,
+                tableName: 'measure_sheets',
+                recordId: res.id,
+                action: 'CREATE',
+                newValues: {
+                    taskId: data.taskId,
+                    round: data.round,
+                    variant: data.variant,
+                    status: 'SUBMITTED',
+                    itemCount: data.items.length,
+                }
+            }
+        );
+
+        revalidateTag('measure-task');
         revalidatePath('/service/measurement');
         revalidatePath(`/service/measurement/${data.taskId}`);
         return { success: true, data: res };
@@ -110,7 +137,11 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
         return { success: false, error: '任务不存在或无权访问' };
     }
 
-    // TODO: 添加角色校验，确保只有销售/管理员可以审核
+    // 角色校验：仅允许销售/管理员审核
+    const allowedRoles = ['admin', 'sales', 'store_manager'];
+    if (!session.user.roles?.some(r => allowedRoles.includes(r))) {
+        throw new Error('无权限执行审核操作');
+    }
 
     return await db.transaction(async (tx) => {
         if (action === 'APPROVE') {
@@ -119,7 +150,20 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
                     status: 'COMPLETED',
                     completedAt: new Date(),
                 })
-                .where(eq(measureTasks.id, id));
+                .where(and(
+                    eq(measureTasks.id, id),
+                    eq(measureTasks.tenantId, tenantId)
+                ));
+
+            // P1 修复：联动更新 MeasureSheet 状态为 CONFIRMED
+            await tx.update(measureSheets)
+                .set({ status: 'CONFIRMED', updatedAt: new Date() })
+                .where(and(
+                    eq(measureSheets.taskId, id),
+                    eq(measureSheets.status, 'SUBMITTED'), // 仅确认已提交的
+                    eq(measureSheets.tenantId, tenantId)
+                ));
+
         } else {
             // 驳回逻辑
             await tx.update(measureTasks)
@@ -128,11 +172,37 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
                     rejectCount: sql`${measureTasks.rejectCount} + 1`,
                     rejectReason: reason,
                 })
-                .where(eq(measureTasks.id, id));
+                .where(and(
+                    eq(measureTasks.id, id),
+                    eq(measureTasks.tenantId, tenantId)
+                ));
 
             // 将关联的最新 Measure Sheet 标记为 DRAFT（由师傅重新提交）
+            await tx.update(measureSheets)
+                .set({ status: 'DRAFT', updatedAt: new Date() })
+                .where(and(
+                    eq(measureSheets.taskId, id),
+                    eq(measureSheets.status, 'SUBMITTED'),
+                    eq(measureSheets.tenantId, tenantId)
+                ));
         }
-    }).then(() => {
+        return { success: true };
+    }).then(async () => {
+        await AuditService.recordFromSession(
+            session,
+            'measure_tasks',
+            id,
+            'UPDATE',
+            {
+                changed: {
+                    action: action,
+                    reason: reason,
+                    status: action === 'APPROVE' ? 'COMPLETED' : 'PENDING_VISIT',
+                }
+            }
+        );
+
+        revalidateTag('measure-task');
         revalidatePath('/service/measurement');
         revalidatePath(`/service/measurement/${id}`);
         return { success: true };
@@ -141,6 +211,9 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
 
 /**
  * 生成新的测量方案 (Variant) 或轮次 (Round)
+ * 允许在现有测量基础上创建差异化版本或重新测量
+ * @param taskId - 测量任务 ID
+ * @param type - ROUND(新轮次) 或 VARIANT(新方案)
  */
 export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'VARIANT') {
     // 🔒 安全校验：获取当前用户身份
@@ -156,9 +229,21 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
             eq(measureTasks.id, taskId),
             eq(measureTasks.tenantId, tenantId)
         ),
+        columns: { id: true, assignedWorkerId: true, round: true }
     });
 
     if (!task) throw new Error('任务不存在或无权访问');
+
+    // 🔒 权限校验 (R2-BL-01)
+    // 允许：指派的测量师、管理员、销售、店长
+    const userId = session.user.id;
+    const userRoles = session.user.roles || [];
+    const isAssignedWorker = task.assignedWorkerId === userId;
+    const hasManagePermission = userRoles.some(r => ['admin', 'sales', 'store_manager'].includes(r));
+
+    if (!isAssignedWorker && !hasManagePermission) {
+        throw new Error('无权限创建新版本');
+    }
 
     let newRound = task.round;
     if (type === 'ROUND') {
@@ -188,11 +273,31 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
             // 简单的字符递增逻辑: A -> B, B -> C
             const lastCharCode = lastVariant.charCodeAt(0);
             newVariant = String.fromCharCode(lastCharCode + 1);
+
+            // 🛡️ Variant 溢出保护 (R2-CQ-02)
+            // 如果超出 'Z' (Z 的 charCode 是 90)，暂不支持双字母
+            if (newVariant > 'Z') {
+                throw new Error('版本号超出限制(Z)，无法创建新方案');
+            }
         }
     }
 
+    // 审计日志: 记录新版本生成
+    await AuditService.recordFromSession(
+        session,
+        'measure_tasks',
+        taskId,
+        'UPDATE',
+        {
+            changed: {
+                newRound: newRound,
+                newVariant: newVariant,
+                type: type,
+            }
+        }
+    );
+
+    revalidateTag('measure-task');
     revalidatePath(`/service/measurement/${taskId}`);
     return { success: true, round: newRound, variant: newVariant };
 }
-
-

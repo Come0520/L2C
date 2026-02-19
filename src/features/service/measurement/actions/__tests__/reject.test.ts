@@ -29,10 +29,12 @@ const { mockDbQuery, mockDbUpdate } = vi.hoisted(() => {
 // Mock auth
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
+    checkPermission: vi.fn(),
 }));
 
 vi.mock('@/shared/api/db', () => ({
     db: {
+        insert: vi.fn().mockReturnValue({ values: vi.fn() }),
         transaction: vi.fn(async (cb) => {
             return await cb({
                 query: mockDbQuery,
@@ -58,10 +60,11 @@ describe('Measurement Action: rejectMeasureTask', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
         // Mock 授权会话
-        const { auth } = await import('@/shared/lib/auth');
+        const { auth, checkPermission } = await import('@/shared/lib/auth');
         (auth as ReturnType<typeof vi.fn>).mockResolvedValue({
-            user: { id: 'user-1', tenantId: MOCK_TENANT_ID }
+            user: { id: 'user-1', tenantId: MOCK_TENANT_ID, name: 'Test User' }
         });
+        (checkPermission as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     });
 
     it('should reject a task successfully and reset status to PENDING_VISIT', async () => {

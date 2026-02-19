@@ -5,22 +5,34 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, MoreHorizontal, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import DOMPurify from 'isomorphic-dompurify';
+import { deleteShowroomItem } from '@/features/showroom/actions';
+import { toast } from 'sonner';
+
+// 简单的 HTML 清洗函数
+// 安全的 HTML 清洗函数
+function stripHtml(html: string | null | undefined) {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: [] }).substring(0, 80) + (html.length > 80 ? '...' : '');
+}
 
 interface ShowroomItem {
   id: string;
   title: string;
-  category: 'product' | 'case' | 'knowledge';
-  image: string;
-  price?: string;
-  description?: string;
-  tags?: string[];
-  status: 'published' | 'draft';
+  type: 'PRODUCT' | 'CASE' | 'KNOWLEDGE' | 'TRAINING';
+  images: unknown; // jsonb
+  content?: string | null;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  product?: {
+    unitPrice?: string | null;
+  } | null;
 }
 
 interface ShowroomCardProps {
@@ -28,7 +40,11 @@ interface ShowroomCardProps {
 }
 
 export function ShowroomCard({ item }: ShowroomCardProps) {
-  const isKnowledge = item.category === 'knowledge';
+  const isCompact = item.type === 'KNOWLEDGE' || item.type === 'TRAINING';
+  const images = Array.isArray(item.images) ? item.images as string[] : [];
+  const coverImage = images[0] || 'https://via.placeholder.com/400x300?text=No+Image';
+  const description = stripHtml(item.content);
+  const price = item.product?.unitPrice;
 
   return (
     <motion.div
@@ -37,34 +53,38 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -5 }}
       transition={{ duration: 0.3 }}
+      role="article"
+      aria-label={`${item.type === 'PRODUCT' ? '商品' : '内容'}: ${item.title}`}
       className="group bg-card border-border hover:shadow-primary/5 relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:shadow-xl"
     >
       {/* Image Section */}
-      <div className={`relative overflow-hidden ${isKnowledge ? 'h-32' : 'h-48'} bg-muted`}>
-        <img
-          src={item.image}
+      <div className={`relative overflow-hidden ${isCompact ? 'h-32' : 'h-48'} bg-muted`}>
+        <Image
+          src={coverImage}
           alt={item.title}
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+          fill
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
 
         {/* Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex gap-1">
           <Badge
             variant={
-              item.category === 'product'
+              item.type === 'PRODUCT'
                 ? 'default'
-                : item.category === 'case'
+                : item.type === 'CASE'
                   ? 'secondary'
                   : 'outline'
             }
             className="border-white/20 bg-white/10 text-white shadow-sm backdrop-blur-md"
           >
-            {item.category === 'product' && '商品'}
-            {item.category === 'case' && '案例'}
-            {item.category === 'knowledge' && '知识'}
+            {item.type === 'PRODUCT' && '商品'}
+            {item.type === 'CASE' && '案例'}
+            {item.type === 'TRAINING' && '培训'}
+            {item.type === 'KNOWLEDGE' && '知识'}
           </Badge>
         </div>
 
@@ -76,6 +96,7 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
                 size="icon"
                 variant="secondary"
                 className="h-8 w-8 rounded-full border-none bg-white/20 text-white backdrop-blur-md hover:bg-white/40"
+                aria-label="更多操作"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -84,7 +105,22 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
               <DropdownMenuItem onClick={() => navigator.clipboard.writeText(item.id)}>
                 <Copy className="mr-2 h-4 w-4" /> 复制 ID
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">删除</DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (confirm('确定要删除且归档此内容吗？')) {
+                    try {
+                      await deleteShowroomItem({ id: item.id });
+                      toast.success('已归档');
+                    } catch (_) {
+                      toast.error('操作失败');
+                    }
+                  }
+                }}
+              >
+                删除
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -100,18 +136,18 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
           </div>
 
           {/* Description or Price */}
-          {item.category === 'product' && item.price && (
-            <div className="text-gold-600 font-mono text-lg font-bold">{item.price}</div>
+          {item.type === 'PRODUCT' && price && (
+            <div className="text-gold-600 font-mono text-lg font-bold">¥{price}</div>
           )}
 
-          {item.description && (
-            <p className="text-muted-foreground line-clamp-2 text-sm">{item.description}</p>
+          {description && (
+            <p className="text-muted-foreground line-clamp-2 text-sm">{description}</p>
           )}
 
           {/* Footer / Tags */}
           <div className="text-muted-foreground flex items-center justify-between pt-2 text-xs">
             <div className="flex gap-2">
-              {item.status === 'draft' && (
+              {item.status === 'DRAFT' && (
                 <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-600">
                   草稿
                 </Badge>
@@ -122,6 +158,7 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
               variant="ghost"
               size="sm"
               className="hover:bg-primary/10 hover:text-primary h-7 rounded-full px-2"
+              aria-label="分享"
             >
               <Share2 className="mr-1 h-3 w-3" /> 分享
             </Button>

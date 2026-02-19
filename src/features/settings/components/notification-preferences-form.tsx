@@ -55,13 +55,13 @@ export function NotificationPreferencesForm() {
             try {
                 const result = await getNotificationPreferencesAction();
                 if (result.success) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const responseData = result as any;
-                    if (responseData.data) {
+                    /** createSafeAction 返回的 data 字段包含偏好设置响应 */
+                    const responseData = result as { success: boolean; data?: { data: PreferencesData } };
+                    if (responseData.data?.data) {
                         setPrefsData({
-                            preferences: responseData.data.preferences,
-                            notificationTypes: [...responseData.data.notificationTypes],
-                            channels: [...responseData.data.channels]
+                            preferences: responseData.data.data.preferences,
+                            notificationTypes: [...responseData.data.data.notificationTypes],
+                            channels: [...responseData.data.data.channels]
                         });
                     }
                 }

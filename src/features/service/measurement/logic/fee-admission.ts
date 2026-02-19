@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { receiptBills, orders } from '@/shared/api/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 
 
 /**
@@ -138,7 +138,7 @@ export async function getCustomerTotalPaidAmount(
             eq(receiptBills.tenantId, tenantId),
             eq(receiptBills.customerId, customerId),
             // 只统计已核销或已使用的收款单
-            sql`${receiptBills.status} IN ('VERIFIED', 'PARTIAL_USED', 'FULLY_USED')`
+            inArray(receiptBills.status, ['VERIFIED', 'PARTIAL_USED', 'FULLY_USED'])
         ));
 
     return result[0]?.total || 0;

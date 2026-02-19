@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { auth } from './auth';
 import { type Session } from 'next-auth';
+import { logger } from './logger';
 
 export type ActionState<TOutput> = {
     data?: TOutput;
@@ -21,13 +22,14 @@ export const createSafeAction = <TInput, TOutput>(
 
             const result = schema.safeParse(rawData);
             if (!result.success) {
+                logger.warn('[createSafeAction] Schema validation failed:', result.error);
                 return { error: '输入验证失败', success: false };
             }
 
             const data = await handler(result.data, { session });
             return { data, success: true };
         } catch (error: unknown) {
-            console.error('[Action Error]', error);
+            logger.error('[createSafeAction] Action Error:', error);
             const message = error instanceof Error ? error.message : '操作失败';
             return { error: message, success: false };
         }

@@ -23,7 +23,13 @@ interface PriceAnalysis {
 
 /**
  * 计算产品综合成本
- * 需要认证后才能调用
+ * 
+ * @description 成本构成：采购价 + 物流费 + 加工费 + 损耗(基于采购价和损耗率)。
+ * 支持供应商特定价格查询。包含租户隔离校验。
+ * 
+ * @param productId 产品 ID
+ * @param supplierId (可选) 供应商 ID，用于获取特定采购价
+ * @returns 包含各分项成本及总成本的对象
  */
 export const calculateProductCost = async (productId: string, supplierId?: string): Promise<CostBreakdown> => {
     // 认证检查
@@ -51,7 +57,8 @@ export const calculateProductCost = async (productId: string, supplierId?: strin
         const supplierPrice = await db.query.productSuppliers.findFirst({
             where: and(
                 eq(productSuppliers.productId, productId),
-                eq(productSuppliers.supplierId, supplierId)
+                eq(productSuppliers.supplierId, supplierId),
+                eq(productSuppliers.tenantId, session.user.tenantId)
             ),
         });
         if (supplierPrice?.purchasePrice) {
@@ -87,7 +94,14 @@ export const calculateProductCost = async (productId: string, supplierId?: strin
 };
 
 /**
- * 计算利润分析
+ * 进行产品利润分析
+ * 
+ * @description 基于综合成本和销售价计算毛利及毛利率。
+ * 
+ * @param productId 产品 ID
+ * @param sellingPrice 销售单价
+ * @param supplierId (可选) 供应商 ID
+ * @returns 包含成本拆解及利润指标的分析结果
  */
 export const analyzeProductProfit = async (
     productId: string,
@@ -110,7 +124,15 @@ export const analyzeProductProfit = async (
 };
 
 /**
- * 计算渠道价格
+ * 计算渠道定价
+ * 
+ * @description 提供两种模式：1. 固定价 2. 基于基础价的折扣。
+ * 
+ * @param basePrice 基础价格
+ * @param mode 定价模式 (FIXED | DISCOUNT)
+ * @param fixedPrice 固定定价（FIXED 模式下生效）
+ * @param discountRate 折扣率（DISCOUNT 模式下生效，如 0.85）
+ * @returns 最终计算出的渠道价
  */
 export const calculateChannelPrice = (
     basePrice: number,

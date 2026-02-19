@@ -9,9 +9,10 @@ import {
     ApprovalSettingsConfig,
     NotificationSettingsConfig,
     ReportSettingsConfig,
+    ShowroomSettingsConfig,
 } from './system-settings-index';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { Users, Share2, CreditCard, Ruler, Package, CheckCircle, Bell, BarChart3 } from 'lucide-react';
+import { Users, Share2, CreditCard, Ruler, Package, CheckCircle, Bell, BarChart3, LayoutTemplate } from 'lucide-react';
 
 /**
  * 系统设置主组件
@@ -27,12 +28,13 @@ const SETTING_TABS = [
     { id: 'approval', label: '审批流', icon: CheckCircle, component: ApprovalSettingsConfig },
     { id: 'notification', label: '通知', icon: Bell, component: NotificationSettingsConfig },
     { id: 'report', label: '报表', icon: BarChart3, component: ReportSettingsConfig },
+    { id: 'showroom', label: '云展厅', icon: LayoutTemplate, component: ShowroomSettingsConfig },
 ];
 
 export function SystemSettingsPanel() {
     return (
         <Tabs defaultValue="lead" className="w-full">
-            <TabsList className="grid w-full grid-cols-8 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
                 {SETTING_TABS.map(tab => (
                     <TabsTrigger
                         key={tab.id}

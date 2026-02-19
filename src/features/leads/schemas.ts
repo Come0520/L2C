@@ -36,6 +36,7 @@ export const leadSchema = z.object({
 
 export const updateLeadSchema = leadSchema.partial().extend({
     id: z.string(),
+    version: z.number().optional(),
 });
 
 // ==================== Mutation Schemas ====================
@@ -63,10 +64,13 @@ export const convertLeadSchema = z.object({
     force: z.boolean().optional(),
 });
 
+export const followUpTypeEnum = z.enum(['PHONE_CALL', 'WECHAT_CHAT', 'STORE_VISIT', 'HOME_VISIT', 'QUOTE_SENT', 'SYSTEM', 'OTHER']);
+
 export const addLeadFollowupSchema = z.object({
     leadId: z.string(),
     // Matching leadActivityTypeEnum: PHONE_CALL, WECHAT_CHAT, STORE_VISIT, HOME_VISIT, QUOTE_SENT, SYSTEM
-    type: z.enum(['PHONE_CALL', 'WECHAT_CHAT', 'STORE_VISIT', 'HOME_VISIT', 'QUOTE_SENT', 'SYSTEM', 'OTHER']).default('PHONE_CALL'),
+    // Matching leadActivityTypeEnum: PHONE_CALL, WECHAT_CHAT, STORE_VISIT, HOME_VISIT, QUOTE_SENT, SYSTEM
+    type: followUpTypeEnum.default('PHONE_CALL'),
     content: z.string().min(1, '跟进内容不能为空'),
     nextFollowupAt: z.date().optional(),
     quoteId: z.string().uuid().optional(),
@@ -91,9 +95,9 @@ export const restoreLeadSchema = z.object({
 // ==================== Filter/Query Schemas ====================
 
 export const leadFilterSchema = z.object({
-    page: z.number().default(1),
-    pageSize: z.number().default(10),
-    // Matching leadStatusEnum: PENDING_ASSIGNMENT, PENDING_FOLLOWUP, FOLLOWING_UP, WON, VOID, INVALID
+    page: z.number().min(1).default(1),
+    pageSize: z.number().min(1).max(100).default(10),
+    // Matching leadStatusEnum: PENDING_ASSIGNMENT, PENDING_FOLLOWUP, FOLLOWING_UP, WON, INVALID
     status: z.array(z.string()).optional(),
     intentionLevel: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
     search: z.string().optional(),
@@ -106,7 +110,7 @@ export const leadFilterSchema = z.object({
     }).optional(),
     tags: z.array(z.string()).optional(),
 }).transform((data) => {
-    const validStatuses = ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'VOID', 'INVALID'];
+    const validStatuses = ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'INVALID'];
     return {
         ...data,
         status: data.status?.filter(s => validStatuses.includes(s)),
@@ -115,6 +119,11 @@ export const leadFilterSchema = z.object({
 
 export const getLeadTimelineLogsSchema = z.object({
     leadId: z.string(),
+});
+
+export const analyticsDateRangeSchema = z.object({
+    from: z.date().optional(),
+    to: z.date().optional(),
 });
 
 export type LeadFormValues = z.infer<typeof leadSchema>;

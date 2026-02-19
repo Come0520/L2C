@@ -23,23 +23,8 @@ import { Label } from '@/shared/ui/label';
 import { XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { requestCancelOrder } from '../actions/cancel';
+import { CANCEL_REASONS, CANCELABLE_STATUSES } from '../action-schemas';
 
-/**
- * 撤单原因枚举（客户端定义）
- */
-const CANCEL_REASONS = [
-    '客户主动取消',
-    '客户无法联系',
-    '产品缺货/无法生产',
-    '价格争议',
-    '重复下单',
-    '其他原因',
-] as const;
-
-/**
- * 可撤单的订单状态列表
- */
-const CANCELABLE_STATUSES = ['PENDING_PURCHASE', 'IN_PRODUCTION', 'PENDING_DELIVERY', 'PENDING_INSTALL'];
 
 export interface CancelOrderDialogProps {
     orderId: string;
@@ -63,7 +48,7 @@ export function CancelOrderDialog({
     const [loading, setLoading] = useState(false);
 
     // 检查是否允许撤单
-    const canCancel = CANCELABLE_STATUSES.includes(orderStatus);
+    const canCancel = CANCELABLE_STATUSES.includes(orderStatus as typeof CANCELABLE_STATUSES[number]);
 
     const handleSubmit = async () => {
         if (!reason) {
@@ -88,7 +73,7 @@ export function CancelOrderDialog({
             } else {
                 toast.error(result.error || '撤单申请失败');
             }
-        } catch (error) {
+        } catch {
             toast.error('撤单申请失败');
         } finally {
             setLoading(false);

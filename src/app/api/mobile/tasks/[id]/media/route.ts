@@ -6,6 +6,9 @@
  */
 
 import { NextRequest } from 'next/server';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile:tasks:media');
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks, installPhotos, measureSheets } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -71,6 +74,10 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
         return apiError('缺少必要参数: type 和 url', 400);
     }
 
+    if (!url.startsWith('http')) {
+        return apiError('无效的媒体 URL 格式', 400);
+    }
+
     if (!['photo', 'video', 'audio'].includes(type)) {
         return apiError('无效的媒体类型', 400);
     }
@@ -82,7 +89,8 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
     const measureTask = await db.query.measureTasks.findFirst({
         where: and(
             eq(measureTasks.id, taskId),
-            eq(measureTasks.assignedWorkerId, session.userId)
+            eq(measureTasks.assignedWorkerId, session.userId),
+            eq(measureTasks.tenantId, session.tenantId) // 添加 tenantId 过滤
         ),
         columns: { id: true }
     });
@@ -94,7 +102,8 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
         const installTask = await db.query.installTasks.findFirst({
             where: and(
                 eq(installTasks.id, taskId),
-                eq(installTasks.installerId, session.userId)
+                eq(installTasks.installerId, session.userId),
+                eq(installTasks.tenantId, session.tenantId) // 添加 tenantId 过滤
             ),
             columns: { id: true }
         });
@@ -140,7 +149,10 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
         // 测量任务：更新 measure_sheets 的 site_photos 字段
         // 1. 找到关联的测量单 (通常取最新的一个)
         const sheet = await db.query.measureSheets.findFirst({
-            where: eq(measureSheets.taskId, taskId),
+            where: and(
+                eq(measureSheets.taskId, taskId),
+                eq(measureSheets.tenantId, session.tenantId)
+            ),
             orderBy: [desc(measureSheets.createdAt)]
         });
 
@@ -172,10 +184,13 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
                 sitePhotos: updatedPhotos,
                 updatedAt: now
             })
-            .where(eq(measureSheets.id, sheet.id));
+            .where(and(
+                eq(measureSheets.id, sheet.id),
+                eq(measureSheets.tenantId, session.tenantId)
+            ));
     }
 
-    console.log(`[媒体上传] 任务 ${taskId}, 类型: ${taskType}, ID: ${mediaId}`);
+    log.warn('媒体上传成功', { taskId, taskType, mediaId });
 
     return apiSuccess(
         {

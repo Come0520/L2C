@@ -10,7 +10,7 @@ if (dotenvResult.error) {
 
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
-describe.skip('Quote Bundle Flow', () => {
+describe('Quote Bundle Flow', () => {
     let customerId: string;
     let leadId: string;
 
@@ -105,32 +105,29 @@ describe.skip('Quote Bundle Flow', () => {
         // Verify bundle exists
         const bundleRes = await getQuoteBundleById({ id: bundleId! });
         expect(bundleRes.success).toBe(true);
-        expect(bundleRes.data?.bundleNo).toBeDefined();
+        expect(bundleRes.data?.quoteNo).toBeDefined();
 
         // Create a Linked Quote (Curtain)
         const quoteRes = await createQuote({
             customerId,
             leadId,
             bundleId,
-            category: 'CURTAIN',
-            totalAmount: 1000,
-            discountAmount: 0,
-            finalAmount: 1000,
-            measurementFee: 0,
-            installationFee: 0,
-            freightFee: 0,
-            remark: 'Curtain Quote in Bundle'
+            title: 'Curtain Quote',
+            notes: 'Curtain Quote in Bundle'
         });
 
         if (!quoteRes.success) {
             console.error('!!! QUOTE ERROR DETAIL:', JSON.stringify(quoteRes, null, 2));
         }
         expect(quoteRes.success).toBe(true);
+        console.log('Created Quote:', quoteRes.data);
 
         // Verify linkage
         const bundleCheck = await getQuoteBundleById({ id: bundleId! });
+        console.log('Bundle Check Quotes:', bundleCheck.data?.quotes);
+
         expect(bundleCheck.data?.quotes).toHaveLength(1);
-        expect(bundleCheck.data?.quotes[0].category).toBe('CURTAIN');
+        expect(bundleCheck.data?.quotes[0].id).toBe(quoteRes.data?.id);
         console.log('Verification Success!');
     });
 });

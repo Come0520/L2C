@@ -11,6 +11,8 @@ import { eq, and } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { submitApproval } from "@/features/approval/actions/submission";
 import { checkAndGenerateCommission } from "@/features/channels/logic/commission.service";
+import { generateBusinessNo } from "@/shared/lib/generate-no";
+import { AuditService } from "@/shared/services/audit-service";
 
 export interface CreateReceiptBillData {
     customerId?: string;
@@ -43,19 +45,21 @@ export class ReceiptService {
      */
     static async createReceiptBill(data: CreateReceiptBillData, tenantId: string, userId: string) {
         return await db.transaction(async (tx) => {
-            const receiptNo = `REC-${Date.now()}`;
+            const receiptNo = generateBusinessNo('REC');
 
-            const [receiptBillResult] = await tx.insert(receiptBills).values({
+            const totalAmount = new Decimal(data.totalAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+
+            const [bill] = await tx.insert(receiptBills).values({
                 tenantId,
                 receiptNo,
                 customerId: data.customerId,
                 customerName: data.customerName,
                 customerPhone: data.customerPhone,
-                totalAmount: data.totalAmount,
+                totalAmount: totalAmount.toFixed(2),
                 usedAmount: '0',
-                remainingAmount: data.totalAmount,
+                remainingAmount: totalAmount.toFixed(2),
                 type: data.type,
-                status: 'DRAFT', // Explicitly DRAFT until submitted
+                status: 'PENDING',
                 paymentMethod: data.paymentMethod,
                 accountId: data.accountId,
                 proofUrl: data.proofUrl,
@@ -66,19 +70,32 @@ export class ReceiptService {
 
             if (data.items && data.items.length > 0) {
                 for (const item of data.items) {
+                    const itemAmount = new Decimal(item.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+
                     await tx.insert(receiptBillItems).values({
                         tenantId,
-                        receiptBillId: receiptBillResult.id,
+                        receiptBillId: bill.id,
                         orderId: item.orderId,
-                        orderNo: item.orderNo,
-                        amount: item.amount,
+                        orderNo: item.orderNo || 'UNKNOWN',
+                        amount: itemAmount.toFixed(2),
                         statementId: item.statementId,
                         scheduleId: item.scheduleId,
                     });
                 }
             }
 
-            return receiptBillResult;
+            // 审计日志 (Audit Log)
+            await AuditService.log(tx, {
+                tenantId,
+                userId,
+                tableName: 'receipt_bills',
+                recordId: bill.id,
+                action: 'INSERT',
+                newValues: bill,
+                details: { receiptNo, itemsCount: data.items?.length || 0 }
+            });
+
+            return bill;
         });
     }
 
@@ -110,7 +127,10 @@ export class ReceiptService {
         if (result.success) {
             await db.update(receiptBills)
                 .set({ status: 'PENDING_APPROVAL' })
-                .where(eq(receiptBills.id, id));
+                .where(and(
+                    eq(receiptBills.id, id),
+                    eq(receiptBills.tenantId, tenantId)
+                ));
         }
 
         return result;
@@ -151,10 +171,6 @@ export class ReceiptService {
             });
 
             if (!bill) throw new Error('Receipt Bill not found');
-            if (bill.status !== 'APPROVED') {
-                // Should already be APPROVED by the workflow callback
-                // but we check to be safe if called manually
-            }
 
             // 1. Update status to VERIFIED (Final state in financial sense)
             await tx.update(receiptBills)
@@ -163,35 +179,62 @@ export class ReceiptService {
                     verifiedBy: userId,
                     verifiedAt: new Date(),
                 })
-                .where(eq(receiptBills.id, id));
+                .where(and(
+                    eq(receiptBills.id, id),
+                    eq(receiptBills.tenantId, tenantId)
+                ));
 
             // 2. Update Finance Account Balance
             if (bill.accountId) {
                 const account = await tx.query.financeAccounts.findFirst({
-                    where: eq(financeAccounts.id, bill.accountId),
+                    where: and(
+                        eq(financeAccounts.id, bill.accountId),
+                        eq(financeAccounts.tenantId, tenantId)
+                    ),
                 });
 
                 if (account) {
-                    const amountNum = new Decimal(bill.totalAmount);
-                    const balanceBefore = new Decimal(account.balance);
-                    const balanceAfter = balanceBefore.plus(amountNum);
+                    const amountNum = new Decimal(bill.totalAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+                    const balanceBefore = new Decimal(account.balance || '0').toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+                    const balanceAfter = balanceBefore.plus(amountNum).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
                     await tx.update(financeAccounts)
-                        .set({ balance: balanceAfter.toString() })
-                        .where(eq(financeAccounts.id, account.id));
+                        .set({
+                            balance: balanceAfter.toFixed(2, Decimal.ROUND_HALF_UP),
+                            updatedAt: new Date()
+                        })
+                        .where(and(
+                            eq(financeAccounts.id, account.id),
+                            eq(financeAccounts.tenantId, tenantId),
+                            eq(financeAccounts.balance, balanceBefore.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁
+                        ));
+
 
                     // 3. Create Account Transaction Record
+                    const txNo = generateBusinessNo('TX');
                     await tx.insert(accountTransactions).values({
                         tenantId,
-                        transactionNo: `TX-${Date.now()}`,
+                        transactionNo: txNo,
                         accountId: account.id,
                         transactionType: 'INCOME',
-                        amount: bill.totalAmount,
-                        balanceBefore: balanceBefore.toString(),
-                        balanceAfter: balanceAfter.toString(),
+                        amount: amountNum.toFixed(2),
+                        balanceBefore: balanceBefore.toFixed(2),
+                        balanceAfter: balanceAfter.toFixed(2),
                         relatedType: 'RECEIPT_BILL',
                         relatedId: bill.id,
-                        remark: `Receipt Bill Approved & Verified: ${bill.receiptNo}`,
+                        remark: `收款单过账: ${bill.receiptNo}`,
+                    });
+
+                    // 审计日志 (Audit Log for Account Balance Change)
+                    await AuditService.log(tx, {
+                        tenantId,
+                        userId,
+                        tableName: 'finance_accounts',
+                        recordId: account.id,
+                        action: 'UPDATE',
+                        newValues: { balance: balanceAfter.toFixed(2) },
+                        oldValues: { balance: balanceBefore.toFixed(2) },
+                        details: { relatedId: bill.id, transactionNo: txNo, type: 'RECEIPT_POSTING' }
                     });
                 }
             }
@@ -203,16 +246,15 @@ export class ReceiptService {
                         where: and(
                             eq(arStatements.id, item.statementId!),
                             eq(arStatements.tenantId, tenantId)
-                        ),
-                        with: { channel: true }
+                        )
                     });
 
                     if (statement) {
-                        const receivedBefore = new Decimal(statement.receivedAmount);
+                        const receivedBefore = new Decimal(statement.receivedAmount || '0');
                         const itemAmount = new Decimal(item.amount);
-                        const receivedAfter = receivedBefore.plus(itemAmount);
-                        const total = new Decimal(statement.totalAmount);
-                        const pending = total.minus(receivedAfter);
+                        const receivedAfter = receivedBefore.plus(itemAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+                        const total = new Decimal(statement.totalAmount || '0');
+                        const pending = total.minus(receivedAfter).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
                         let newStatus = statement.status;
                         if (pending.lte(0)) {
@@ -223,22 +265,50 @@ export class ReceiptService {
 
                         await tx.update(arStatements)
                             .set({
-                                receivedAmount: receivedAfter.toString(),
-                                pendingAmount: pending.toString(),
+                                receivedAmount: receivedAfter.toFixed(2, Decimal.ROUND_HALF_UP),
+                                pendingAmount: pending.toFixed(2, Decimal.ROUND_HALF_UP),
                                 status: newStatus,
                                 completedAt: pending.lte(0) ? new Date() : null,
+                                updatedAt: new Date()
                             })
-                            .where(eq(arStatements.id, statement.id));
+                            .where(and(
+                                eq(arStatements.id, statement.id),
+                                eq(arStatements.tenantId, tenantId),
+                                eq(arStatements.receivedAmount, receivedBefore.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁
+                            ));
+
+                        // 审计日志 (AR Statement Update)
+                        await AuditService.log(tx, {
+                            tenantId,
+                            userId,
+                            tableName: 'ar_statements',
+                            recordId: statement.id,
+                            action: 'UPDATE',
+                            oldValues: { status: statement.status, receivedAmount: receivedBefore.toFixed(2), pendingAmount: statement.pendingAmount },
+                            newValues: { status: newStatus, receivedAmount: receivedAfter.toFixed(2), pendingAmount: pending.toFixed(2) },
+                            details: { relatedId: bill.id, type: 'RECEIPT_VERIFICATION' }
+                        });
+
 
                         // 5. 触发渠道佣金结算 (Trigger Commission Calculation)
-                        // 当款项全部结清时触发
                         if (pending.lte(0) && item.orderId) {
-                            // 注意：佣金生成逻辑内部有完善的幂等性检查，可以直接调用
                             await checkAndGenerateCommission(item.orderId, 'PAYMENT_COMPLETED');
                         }
                     }
                 }
             }
+
+            // 6. 后期审计 (Receipt Verified Log)
+            await AuditService.log(tx, {
+                tenantId,
+                userId,
+                tableName: 'receipt_bills',
+                recordId: id,
+                action: 'UPDATE',
+                newValues: { status: 'VERIFIED' },
+                oldValues: { status: bill.status },
+                details: { receiptNo: bill.receiptNo }
+            });
 
             return { success: true };
         });

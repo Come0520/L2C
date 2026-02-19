@@ -29,14 +29,14 @@ export function SLAMonitor() {
         try {
             const res = await runSLACheckAction();
             if (res?.data?.success) {
-                toast.success('SLA Check Completed');
+                toast.success('SLA 检查完成');
                 setLastResult(res.data.data as unknown as SLACheckResult[]);
                 setLastRunAt(new Date());
             } else {
-                toast.error(res?.error || 'SLA Check Failed');
+                toast.error(res?.error || 'SLA 检查失败');
             }
-        } catch (error) {
-            toast.error('An error occurred');
+        } catch (_error) {
+            toast.error('执行过程中发生错误');
         } finally {
             setIsLoading(false);
         }
@@ -49,17 +49,17 @@ export function SLAMonitor() {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg font-medium">SLA Monitor</CardTitle>
+                <CardTitle className="text-lg font-medium">SLA 监控面板</CardTitle>
                 <BellRing className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                    Manually trigger SLA checks for Lead Follow-up and Measure Dispatch.
+                    手动触发 SLA 检查 (包括线索跟进、测量派单及审批超时)。
                 </p>
 
                 <Button onClick={handleRunCheck} disabled={isLoading} variant="outline" className="w-full">
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Run SLA Check Now
+                    立即运行 SLA 检查
                 </Button>
 
                 {lastResult && lastResult.length > 0 ? (
@@ -71,7 +71,7 @@ export function SLAMonitor() {
                                     "font-mono font-bold",
                                     r.found > 0 ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400"
                                 )}>
-                                    Found: {r.found} / Sent: {r.sent}
+                                    发现: {r.found} / 已发送: {r.sent}
                                 </span>
                             </div>
                         ))}
@@ -79,13 +79,13 @@ export function SLAMonitor() {
                 ) : lastResult && (
                     <div className="mt-4 flex items-center justify-center p-3 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-md border border-emerald-100 dark:border-emerald-900">
                         <CheckCircle2 className="mr-2 h-4 w-4" />
-                        All systems nominal
+                        系统运行正常
                     </div>
                 )}
 
                 {lastRunAt && (
                     <p className="text-[10px] text-muted-foreground mt-2 text-right">
-                        Last run: {lastRunAt.toLocaleTimeString()}
+                        上次运行: {lastRunAt.toLocaleTimeString()}
                     </p>
                 )}
             </CardContent>

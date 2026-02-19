@@ -3,9 +3,10 @@
  * Uses Drizzle ORM with Postgres.js
  */
 import { drizzle } from 'drizzle-orm/postgres-js';
+// @ts-ignore
 import postgres from 'postgres';
 import * as schema from './schema';
-import { env } from '@/shared/config/env';
+import { env } from '../config/env';
 
 const connectionString = env.DATABASE_URL;
 

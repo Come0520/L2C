@@ -2,11 +2,10 @@ import { ChannelAdapter, NotificationPayload } from '../types';
 
 export class LarkAdapter implements ChannelAdapter {
     async send(payload: NotificationPayload): Promise<boolean> {
-        console.log(`[Lark Adapter] Sending to User(${payload.userId}): ${payload.title}`);
+        // [Development] Lark notification
 
         const webhookUrl = process.env.FEISHU_WEBHOOK_URL;
         if (!webhookUrl) {
-            console.warn('[Lark Adapter] No webhook configured');
             return false;
         }
 
@@ -32,8 +31,7 @@ export class LarkAdapter implements ChannelAdapter {
 
             if (!response.ok) throw new Error(`Feishu API error: ${response.statusText}`);
             return true;
-        } catch (error) {
-            console.error('[Lark Adapter] Send failed:', error);
+        } catch (_error) {
             return false;
         }
     }

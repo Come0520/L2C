@@ -291,11 +291,15 @@ export async function getPackageProducts(packageId: string) {
  */
 export async function addPackageProduct(packageId: string, input: z.infer<typeof packageProductSchema>) {
     try {
+        const tenantId = await getTenantIdFromSession();
+        if (!tenantId) return { success: false, error: '未授权' };
+
         const validated = packageProductSchema.parse(input);
 
         const [created] = await db
             .insert(packageProducts)
             .values({
+                tenantId,
                 packageId,
                 productId: validated.productId,
                 isRequired: validated.isRequired ?? false,

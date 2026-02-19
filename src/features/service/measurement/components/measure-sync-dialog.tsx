@@ -11,16 +11,18 @@ import {
 import { Button } from '@/shared/ui/button';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
+import { type MeasureTask } from '../types';
+
 interface MeasureSyncDialogProps {
     open: boolean;
     onClose: () => void;
-    tasks: any[];
+    tasks: MeasureTask[];
     onSync: (selectedIds: string[]) => Promise<void>;
 }
 
-export function MeasureSyncDialog({ open, onClose, tasks, onSync }: MeasureSyncDialogProps) {
+export function MeasureSyncDialog({ open, onClose, tasks: _tasks, onSync }: MeasureSyncDialogProps) {
     const [submitting, setSubmitting] = useState(false);
-    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [selectedItemIds, _setSelectedItemIds] = useState<Set<string>>(new Set());
 
     const handleApplySync = async () => {
         setSubmitting(true);

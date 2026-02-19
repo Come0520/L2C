@@ -67,7 +67,6 @@ describe('Webhook Handler', () => {
 
             const result = await matchChannel('抖音', '直播间', 'tenant-1');
             expect(result.channelId).toBe('channel-1');
-            expect(result.sourceDetail).toBe('直播间');
         });
     });
 

@@ -5,6 +5,8 @@ import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { revalidatePath } from 'next/cache';
 import type { QuoteItemAttributes } from '@/shared/api/types/quote-types';
+import { auth } from '@/shared/lib/auth';
+import { and, eq } from 'drizzle-orm';
 
 /**
  * 计算预览参数接口
@@ -23,15 +25,12 @@ interface CalcPreviewParams {
 // 重新计算报价 - 现在实现真实逻辑
 export async function recalculateQuote(quoteId: string) {
     // 🔒 安全校验：添加认证和租户隔离
-    const { auth } = await import('@/shared/lib/auth');
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, message: '未授权访问' };
     }
     const tenantId = session.user.tenantId;
 
-    // 1. Fetch Quote & Items (添加租户隔离)
-    const { and, eq } = await import('drizzle-orm');
     const quote = await db.query.quotes.findFirst({
         where: and(
             eq(quotes.id, quoteId),
@@ -87,7 +86,7 @@ export async function recalculateQuote(quoteId: string) {
                         calcResult: result.details
                     }
                 })
-                .where(eq(quoteItems.id, item.id))
+                .where(and(eq(quoteItems.id, item.id), eq(quoteItems.tenantId, tenantId)))
         );
     }
 
@@ -97,17 +96,30 @@ export async function recalculateQuote(quoteId: string) {
     await db.update(quotes)
         .set({
             totalAmount: totalAmount.toString(),
-            finalAmount: (totalAmount * (Number(quote.discountRate) || 1)).toString(),
+            finalAmount: Math.max(0, totalAmount * (Number(quote.discountRate) || 1) - Number(quote.discountAmount || 0)).toString(),
+            // discountAmount shouldn't be overridden by calculation unless it was percentage based, but here we persist the manual amount?
+            // Wait, existing logic was: `discountAmount: (totalAmount * (1 - rate))` -> this ignores manual discount amount
+            // Implementation plan says: "不再覆写 discountAmount，保留用户手动设置的折减值"
+            // So we REMOVE the discountAmount update line entirely, or keep it if we want to support rate-based calc?
+            // The issue description H-01 says: "discountAmount 被直接覆写... 丢失了用户手动设置的折减值"
+            // So we should NOT update discountAmount here, OR update it only if it's derived?
+            // "Recalculate" usually implies "re-sum items". Discount amount is usually manually set or fixed.
+            // Let's remove discountAmount update to respect manual value.
             updatedAt: new Date()
         })
-        .where(eq(quotes.id, quoteId));
+        .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
     revalidatePath(`/quotes/${quoteId}`);
     return { success: true, message: 'Recalculated successfully' };
 }
 
-// 获取计算结果预览
 export async function getCalcPreview(params: CalcPreviewParams) {
+    // 🔒 安全校验
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        throw new Error('未授权访问');
+    }
+
     const category = params.category || 'CURTAIN';
     const strategy = StrategyFactory.getStrategy(category);
     const result = strategy.calculate(params);

@@ -7,31 +7,31 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { customers } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { eq, and } from 'drizzle-orm';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { createLogger } from '@/shared/lib/logger';
 
 /**
  * 获取推荐码
  */
+
+const log = createLogger('mobile/referral');
 export async function GET(request: NextRequest) {
     // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
-    }
-    const { session } = authResult;
+    const auth = await authenticateMobile(request);
+    if (!auth.success) return auth.response;
+
+    const session = auth.session;
 
     // 2. 权限检查
-    const roleCheck = requireCustomer(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
-    }
+    const isCustomer = requireCustomer(session);
+    if (!isCustomer.allowed) return isCustomer.response;
 
     try {
         // 3. 查找客户
         const customer = await db.query.customers.findFirst({
-            where: eq(customers.phone, session.phone),
+            where: and(eq(customers.phone, session.phone), eq(customers.tenantId, session.tenantId)),
             columns: {
                 id: true,
                 name: true,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('推荐码获取错误:', error);
+        log.error('推荐码获取错误', {}, error);
         return apiError('获取推荐码失败', 500);
     }
 }

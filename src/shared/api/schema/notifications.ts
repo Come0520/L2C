@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb, index, integer, unique } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 
 export const notifications = pgTable('notifications', {
@@ -22,6 +22,8 @@ export const notifications = pgTable('notifications', {
     notifUserIdx: index('idx_notifications_user').on(table.userId),
     notifTenantIdx: index('idx_notifications_tenant').on(table.tenantId),
     notifCreatedIdx: index('idx_notifications_created').on(table.createdAt),
+    // P1 优化: 常用查询复合索引
+    notifCompositeIdx: index('idx_notifications_tenant_user_read').on(table.tenantId, table.userId, table.isRead),
 }));
 
 export const notificationPreferences = pgTable('notification_preferences', {
@@ -35,6 +37,8 @@ export const notificationPreferences = pgTable('notification_preferences', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     prefUserIdx: index('idx_notif_prefs_user').on(table.userId),
+    // P1 修复: 唯一约束防止重复配置，增加 tenantId 以确保多租户隔离鲁棒性
+    prefUnique: unique('unq_notif_prefs_user_type').on(table.tenantId, table.userId, table.notificationType),
 }));
 
 // ==================== 通知模板配置表 ====================
@@ -101,8 +105,8 @@ export const notificationQueue = pgTable('notification_queue', {
     priority: varchar('priority', { length: 20 }).default('NORMAL'),
 
     // 重试
-    retryCount: varchar('retry_count', { length: 10 }).default('0'),
-    maxRetries: varchar('max_retries', { length: 10 }).default('3'),
+    retryCount: integer('retry_count').default(0),
+    maxRetries: integer('max_retries').default(3),
     lastError: text('last_error'),
 
     // 时间

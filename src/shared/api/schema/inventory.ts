@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, uuid, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, uuid, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { products } from './catalogs';
 import { tenants, users } from './infrastructure';
 
@@ -33,6 +33,8 @@ export const inventory = pgTable('inventory', {
     inventoryTenantIdx: index('idx_inventory_tenant').on(table.tenantId),
     inventoryWarehouseIdx: index('idx_inventory_warehouse').on(table.warehouseId),
     inventoryProductIdx: index('idx_inventory_product').on(table.productId),
+    // 仓库+商品 唯一约束，用于支持原子性 UPSERT
+    inventoryWarehouseProductUq: uniqueIndex('uq_inventory_warehouse_product').on(table.warehouseId, table.productId),
 }));
 
 // 库存流水表 (Inventory Logs - Transaction History)

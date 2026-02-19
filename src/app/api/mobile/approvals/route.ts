@@ -9,7 +9,10 @@ import { approvalTasks } from '@/shared/api/schema';
 import { eq, and, desc, or } from 'drizzle-orm';
 import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/approvals');
 export async function GET(request: NextRequest) {
     // 1. 认证
     const authResult = await authenticateMobile(request);
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest) {
         return apiPaginated(items, page, pageSize, total);
 
     } catch (error) {
-        console.error('审批列表查询错误:', error);
+        log.error('审批列表查询错误', {}, error);
         return apiError('查询审批列表失败', 500);
     }
 }

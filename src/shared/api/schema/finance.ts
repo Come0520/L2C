@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index, uniqueIndex, date } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, decimal, boolean, index, uniqueIndex, date, integer } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, paymentSchedules } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
@@ -135,6 +135,27 @@ export const arStatements = pgTable('ar_statements', {
     orderIdx: index('idx_ar_statements_order').on(table.orderId),
     customerIdx: index('idx_ar_statements_customer').on(table.customerId),
     statusIdx: index('idx_ar_statements_status').on(table.status),
+}));
+
+// 收款计划节点表 (Payment Plan Nodes)
+export const paymentPlanNodes = pgTable('payment_plan_nodes', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    arStatementId: uuid('ar_statement_id').references(() => arStatements.id).notNull(),
+
+    nodeIndex: integer('node_index').notNull(), // 1, 2, 3...
+    nodeName: varchar('node_name', { length: 100 }).notNull(), // 定金, 尾款...
+    percentage: decimal('percentage', { precision: 5, scale: 2 }).notNull(), // 30.00
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    dueDate: date('due_date'),
+
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'), // PENDING/PAID/OVERDUE
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_payment_plan_nodes_tenant').on(table.tenantId),
+    arIdx: index('idx_payment_plan_nodes_ar').on(table.arStatementId),
 }));
 
 // 收款单 (Receipt Bills) - 新版本，支持复杂审批

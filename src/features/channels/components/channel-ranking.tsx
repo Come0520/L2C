@@ -3,8 +3,14 @@
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/shared/ui/select';
+import {
     TrendingUp,
-    TrendingDown,
     ChevronDown,
     ChevronRight,
     Building2,
@@ -12,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ChannelStats } from '../actions/channel-stats';
 
 /**
@@ -20,6 +27,7 @@ import type { ChannelStats } from '../actions/channel-stats';
 interface ChannelRankingProps {
     data: ChannelStats[];
     loading?: boolean;
+    currentPeriod?: 'month' | 'quarter' | 'year' | 'all';
 }
 
 /**
@@ -45,8 +53,10 @@ const levelColors: Record<string, string> = {
 /**
  * 渠道排行榜
  */
-export function ChannelRanking({ data, loading }: ChannelRankingProps) {
+export function ChannelRanking({ data, loading, currentPeriod = 'month' }: ChannelRankingProps) {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     const toggleExpand = (id: string) => {
         setExpandedIds(prev => {
@@ -58,6 +68,12 @@ export function ChannelRanking({ data, loading }: ChannelRankingProps) {
             }
             return next;
         });
+    };
+
+    const handlePeriodChange = (value: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('period', value);
+        router.push(`?${params.toString()}`);
     };
 
     if (loading) {
@@ -79,11 +95,22 @@ export function ChannelRanking({ data, loading }: ChannelRankingProps) {
 
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between py-4">
                 <CardTitle className="text-base flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-primary" />
                     渠道排行榜
                 </CardTitle>
+                <Select value={currentPeriod} onValueChange={handlePeriodChange}>
+                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                        <SelectValue placeholder="周期" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="month" className="text-xs">本月</SelectItem>
+                        <SelectItem value="quarter" className="text-xs">本季度</SelectItem>
+                        <SelectItem value="year" className="text-xs">本年</SelectItem>
+                        <SelectItem value="all" className="text-xs">全部</SelectItem>
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent>
                 {data.length === 0 ? (
@@ -97,8 +124,8 @@ export function ChannelRanking({ data, loading }: ChannelRankingProps) {
                                 key={channel.channelId}
                                 channel={channel}
                                 rank={index + 1}
-                                isExpanded={expandedIds.has(channel.channelId)}
-                                onToggle={() => toggleExpand(channel.channelId)}
+                                expandedIds={expandedIds}
+                                onToggleExpand={toggleExpand}
                             />
                         ))}
                     </div>
@@ -114,18 +141,22 @@ export function ChannelRanking({ data, loading }: ChannelRankingProps) {
 interface ChannelRankingItemProps {
     channel: ChannelStats;
     rank: number;
-    isExpanded: boolean;
-    onToggle: () => void;
+    /** 当前展开的渠道 ID 集合（由顶层组件管理） */
+    expandedIds: Set<string>;
+    /** 展开/折叠回调（由顶层组件管理） */
+    onToggleExpand: (id: string) => void;
     isChild?: boolean;
 }
 
 function ChannelRankingItem({
     channel,
     rank,
-    isExpanded,
-    onToggle,
+    expandedIds,
+    onToggleExpand,
     isChild = false
 }: ChannelRankingItemProps) {
+    const isExpanded = expandedIds.has(channel.channelId);
+    const onToggle = () => onToggleExpand(channel.channelId);
     const hasChildren = channel.children && channel.children.length > 0;
 
     return (
@@ -215,8 +246,8 @@ function ChannelRankingItem({
                             key={child.channelId}
                             channel={child}
                             rank={index + 1}
-                            isExpanded={false}
-                            onToggle={() => { }}
+                            expandedIds={expandedIds}
+                            onToggleExpand={onToggleExpand}
                             isChild
                         />
                     ))}

@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createLeadSchema, updateLeadSchema, LeadFormValues } from '../schemas';
+import { createLeadSchema, LeadFormValues } from '../schemas';
 
 interface ConflictData {
     type: 'PHONE' | 'ADDRESS';
@@ -30,25 +30,23 @@ import { toast } from 'sonner';
 
 interface LeadFormProps {
     onSuccess?: () => void;
-    userId: string;
-    tenantId: string;
     initialData?: Record<string, unknown>;
     channels?: Array<{ id: string; name: string; type?: string }>;
     isEdit?: boolean;
+    tenantId: string;
 }
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmartDuplicateCheck } from './SmartDuplicateCheck';
 
-export function LeadForm({ initialData, isEdit = false, onSuccess, userId, tenantId }: LeadFormProps) {
+export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: LeadFormProps) {
     const router = useRouter();
     const [conflictData, setConflictData] = useState<ConflictData | null>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
     const form = useForm<LeadFormValues>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(isEdit ? updateLeadSchema : createLeadSchema) as any,
+        resolver: zodResolver(createLeadSchema),
         defaultValues: {
             customerName: (initialData?.customerName as string) || '',
             customerPhone: (initialData?.customerPhone as string) || '',
@@ -69,10 +67,12 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, userId, tenan
         try {
             if (isEdit) {
                 if (!initialData?.id || typeof initialData.id !== 'string') return;
-                const success = await updateLead({ ...values, id: initialData.id });
-                if (success) {
+                const res = await updateLead({ ...values, id: initialData.id });
+                if (res.success) {
                     toast.success('线索更新成功');
                     onSuccess?.();
+                } else {
+                    toast.error(res.error || '更新失败');
                 }
             } else {
                 const res = await createLead(values);
@@ -197,10 +197,10 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, userId, tenan
                                     <FormLabel>来源渠道</FormLabel>
                                     <FormControl>
                                         <ChannelPicker
-                                            tenantId={tenantId}
                                             value={field.value || ''}
                                             onChange={field.onChange}
                                             placeholder="选择渠道"
+                                            tenantId={tenantId}
                                         />
                                     </FormControl>
                                     <FormMessage />

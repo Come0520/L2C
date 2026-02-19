@@ -41,7 +41,10 @@ describe('Installation Logic Unit Tests', () => {
             const result = await checkSchedulingConflict(
                 installerId,
                 new Date('2026-05-20'),
-                '14:00-16:00'
+                '14:00-16:00',
+                undefined,
+                undefined,
+                'test-tenant-id'
             );
 
             expect(result.hasConflict).toBe(true);
@@ -54,7 +57,10 @@ describe('Installation Logic Unit Tests', () => {
             const result = await checkSchedulingConflict(
                 installerId,
                 new Date('2026-05-20'),
-                '14:00-16:00'
+                '14:00-16:00',
+                undefined,
+                undefined,
+                'test-tenant-id'
             );
 
             expect(result.hasConflict).toBe(false);
@@ -68,7 +74,7 @@ describe('Installation Logic Unit Tests', () => {
                 { id: 'po-2', poNo: 'PO2', status: 'DRAFT' } // Not ready
             ]);
 
-            const result = await checkLogisticsReady(orderId);
+            const result = await checkLogisticsReady(orderId, 'test-tenant-id');
             expect(result.ready).toBe(false);
             expect(result.message).toContain('PO2');
         });
@@ -79,7 +85,7 @@ describe('Installation Logic Unit Tests', () => {
                 { id: 'po-2', poNo: 'PO2', status: 'ARRIVED' }
             ]);
 
-            const result = await checkLogisticsReady(orderId);
+            const result = await checkLogisticsReady(orderId, 'test-tenant-id');
             expect(result.ready).toBe(true);
         });
     });

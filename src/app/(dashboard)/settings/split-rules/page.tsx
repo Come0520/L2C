@@ -1,7 +1,14 @@
+import dynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { SplitRulesConfig } from '@/features/settings/components/split-rules-config';
 import { Scissors } from 'lucide-react';
+import { Skeleton } from '@/shared/ui/skeleton';
+
+/** 懒加载：拆单规则配置组件 */
+const SplitRulesConfig = dynamic(
+    () => import('@/features/settings/components/split-rules-config').then(m => m.SplitRulesConfig),
+    { loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
+);
 
 /**
  * 采购拆单规则设置页面

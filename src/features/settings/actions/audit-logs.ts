@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { auditLogs, users } from '@/shared/api/schema';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { eq, desc, and, gte, lte, like, or } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, like, or, count } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
@@ -22,6 +22,13 @@ const getAuditLogsSchema = z.object({
     endDate: z.string().optional(),
     search: z.string().optional(),
 });
+
+/**
+ * 转义 LIKE 查询中的通配符
+ */
+function escapeLikePattern(value: string): string {
+    return value.replace(/[%_\\]/g, '\\$&');
+}
 
 const getAuditLogsActionInternal = createSafeAction(getAuditLogsSchema, async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
@@ -49,10 +56,11 @@ const getAuditLogsActionInternal = createSafeAction(getAuditLogsSchema, async (p
         conditions.push(lte(auditLogs.createdAt, new Date(endDate)));
     }
     if (search) {
+        const safeSearch = escapeLikePattern(search);
         conditions.push(
             or(
-                like(auditLogs.tableName, `%${search}%`),
-                like(auditLogs.recordId, `%${search}%`)
+                like(auditLogs.tableName, `%${safeSearch}%`),
+                like(auditLogs.recordId, `%${safeSearch}%`)
             )!
         );
     }
@@ -77,11 +85,17 @@ const getAuditLogsActionInternal = createSafeAction(getAuditLogsSchema, async (p
         .limit(pageSize)
         .offset(offset);
 
-    const total = logs.length < pageSize && page === 1 ? logs.length : pageSize * page + 1;
+    // 获取真实总数
+    const [{ count: totalCount }] = await db
+        .select({ count: count() })
+        .from(auditLogs)
+        .where(and(...conditions));
+
+    const total = Number(totalCount);
 
     return {
         logs,
-        pagination: { page, pageSize, total, hasMore: logs.length === pageSize }
+        pagination: { page, pageSize, total, hasMore: offset + logs.length < total }
     };
 });
 

@@ -3,12 +3,15 @@
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
 import { users } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { ActionState, createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { notificationService } from '@/features/notifications/service';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+
+import { AuditService } from '@/shared/lib/audit-service';
 
 // 输入校验 Schema
 const RejectMeasureTaskSchema = z.object({
@@ -48,52 +51,117 @@ const rejectMeasureTaskActionInternal = createSafeAction(
                 return { success: false, error: '任务已取消，无法驳回' };
             }
 
-            // TODO: 添加角色校验，确保只有销售/管理员可以驳回
+            // 权限校验
+            try {
+                await checkPermission(session, PERMISSIONS.MEASURE.MANAGE);
+            } catch (_error) {
+                return { success: false, error: '无权限驳回任务' };
+            }
 
             const newRejectCount = (task.rejectCount || 0) + 1;
 
+            // 多级驳回逻辑 (RC-04)
+            // 使用字面量类型确保与 drizzle enum 兼容
+            type MeasureTaskStatus = 'PENDING_APPROVAL' | 'PENDING' | 'DISPATCHING' | 'PENDING_VISIT' | 'PENDING_CONFIRM' | 'COMPLETED' | 'CANCELLED';
+            let newStatus: MeasureTaskStatus = 'PENDING_VISIT'; // 默认：数据有误，驳回至待上门（重测）
+            let shouldClearWorker = false;
+
+            if (task.status === 'PENDING_CONFIRM') {
+                newStatus = 'PENDING_VISIT'; // 销售/客户驳回测量数据 -> 重新测量
+            } else if (task.status === 'PENDING_VISIT' || task.status === 'DISPATCHING') {
+                // 待上门/派单中被驳回 -> 重新分配
+                newStatus = 'PENDING';
+                shouldClearWorker = true;
+            }
+
+            // 驳回历史记录 (RC-03)
+            const historyItem = {
+                reason: reason,
+                createdAt: new Date().toISOString(),
+                rejectedBy: session.user.id,
+                rejectedByName: session.user.name
+            };
+
+            // 使用 sql 更新 JSONB 数组
+            const newHistory = sql`
+                COALESCE(${measureTasks.rejectHistory}, '[]'::jsonb) || ${JSON.stringify(historyItem)}::jsonb
+            `;
+
             await tx.update(measureTasks)
                 .set({
-                    status: 'PENDING_VISIT',
+                    status: newStatus,
                     rejectCount: newRejectCount,
                     rejectReason: reason,
+                    rejectHistory: newHistory,
                     updatedAt: new Date(),
+                    assignedWorkerId: shouldClearWorker ? null : undefined, // 如果退回待分配，清空工人
                 })
-                .where(eq(measureTasks.id, taskId));
+                .where(and(
+                    eq(measureTasks.id, taskId),
+                    eq(measureTasks.tenantId, tenantId)
+                ));
 
-            // 驳回预警机制
+            // 驳回预警机制 (RC-03: 四级预警)
+            // >= 3: 通知店长
+            // >= 4: 通知店长 + 区域经理 (假设有 AREA_MANAGER 角色)
             let warningMessage = null;
+
             if (newRejectCount >= 3) {
                 try {
-                    const storeManagers = await tx.query.users.findMany({
+                    const notifyRoles = ['STORE_MANAGER'];
+                    if (newRejectCount >= 4) {
+                        notifyRoles.push('AREA_MANAGER');
+                    }
+
+                    const managers = await tx.query.users.findMany({
                         where: and(
-                            eq(users.tenantId, tenantId), // 使用验证后的 tenantId
-                            eq(users.role, 'STORE_MANAGER')
+                            eq(users.tenantId, tenantId),
+                            inArray(users.role, notifyRoles)
                         ),
                     });
 
-                    for (const manager of storeManagers) {
+                    for (const manager of managers) {
                         await notificationService.send({
                             tenantId,
                             userId: manager.id,
-                            title: '测量任务驳回预警',
-                            content: `测量任务 ${task.measureNo} 已被驳回 ${newRejectCount} 次，驳回原因：${reason}。请关注。`,
+                            title: newRejectCount >= 4 ? '【严重】测量任务多次驳回预警' : '测量任务驳回预警',
+                            content: `测量任务 ${task.measureNo} 已被驳回 ${newRejectCount} 次，请立即介入处理。驳回原因：${reason}`,
                             type: 'ALERT',
                             link: `/service/measurement/${taskId}`,
                         });
                     }
-                    warningMessage = `任务累计驳回 ${newRejectCount} 次，已通知店长介入。`;
+
+                    warningMessage = `任务累计驳回 ${newRejectCount} 次，已通知${newRejectCount >= 4 ? '区域经理' : '店长'}介入。`;
                 } catch (notifyError) {
-                    console.error('[驳回预警] 通知店长失败:', notifyError);
+                    console.error('[驳回预警] 通知管理层失败:', notifyError);
                 }
             }
 
             revalidatePath('/service/measurement');
             revalidatePath(`/service/measurement/${taskId}`);
 
+
+
+            // 审计日志: 记录任务驳回
+            await AuditService.record(
+                {
+                    tenantId: tenantId,
+                    userId: session.user.id,
+                    tableName: 'measure_tasks',
+                    recordId: taskId,
+                    action: 'UPDATE',
+                    changedFields: {
+                        status: newStatus,
+                        rejectCount: newRejectCount,
+                        rejectReason: reason,
+                        assignedWorkerId: shouldClearWorker ? null : undefined,
+                    }
+                }
+            );
+
             return {
                 success: true,
-                data: { taskId, rejectCount: newRejectCount, status: 'PENDING_VISIT' },
+                data: { taskId, rejectCount: newRejectCount, status: newStatus },
                 message: warningMessage || '任务已驳回，等待重新测量'
             };
         });

@@ -1,5 +1,12 @@
+import dynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
-import { NotificationPreferencesForm } from '@/features/settings/components/notification-preferences-form';
+import { Skeleton } from '@/shared/ui/skeleton';
+
+/** 懒加载：通知偏好设置表单 */
+const NotificationPreferencesForm = dynamic(
+    () => import('@/features/settings/components/notification-preferences-form').then(m => m.NotificationPreferencesForm),
+    { loading: () => <Skeleton className="h-[400px] w-full rounded-lg" /> }
+);
 
 /**
  * 通知设置页面

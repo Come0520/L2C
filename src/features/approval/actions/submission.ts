@@ -1,17 +1,20 @@
+'use server';
+
 import { db } from '@/shared/api/db';
-import { approvalFlows, approvalNodes, approvals, approvalTasks, quotes, paymentBills, receiptBills, measureTasks } from '@/shared/api/schema';
+import { approvalFlows, approvalNodes, approvals, approvalTasks, users } from '@/shared/api/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { ApprovalDelegationService } from "@/services/approval-delegation.service";
 import { getSetting } from "@/features/settings/actions/system-settings-actions";
 import { addDays } from 'date-fns';
+import { findApproversByRole } from './utils';
+import { logger } from '@/shared/lib/logger';
 
 // Helper type for Transaction
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 interface Condition {
-    // ... unchanged
     field: string;
     operator: string;
     value: string | number | boolean | string[];
@@ -19,6 +22,10 @@ interface Condition {
 
 /**
  * 评估节点条件是否匹配
+ *
+ * @param conditions - 条件表达式数组
+ * @param payload - 包含业务数据的对象
+ * @returns 是否所有条件都满足
  */
 function evaluateConditions(conditions: Condition[], payload: Record<string, unknown>): boolean {
     if (!conditions || !Array.isArray(conditions) || conditions.length === 0) return true;
@@ -28,8 +35,8 @@ function evaluateConditions(conditions: Condition[], payload: Record<string, unk
         if (value === undefined) return false; // 字段缺失则不匹配
 
         switch (cond.operator) {
-            case 'eq': return value == cond.value;
-            case 'ne': return value != cond.value;
+            case 'eq': return value === cond.value;
+            case 'ne': return value !== cond.value;
             case 'gt': return Number(value) > Number(cond.value);
             case 'lt': return Number(value) < Number(cond.value);
             case 'in': return Array.isArray(cond.value) && cond.value.includes(value as string);
@@ -39,9 +46,20 @@ function evaluateConditions(conditions: Condition[], payload: Record<string, unk
 }
 
 /**
- * 提交审批
- * @param payload 
- * @param externalTx 外部事务上下文 (可选)
+ * 提交审批申请
+ *
+ * 根据流程编码查找租户内活跃的流程定义，
+ * 按金额和自定义条件过滤节点，创建审批实例及初始审批任务，
+ * 并将业务实体（如报价单）状态更新为“待审批”。
+ *
+ * @param payload - 提交参数
+ * @param payload.flowCode - 流程定义编码
+ * @param payload.entityType - 业务实体类型（QUOTE, ORDER 等）
+ * @param payload.entityId - 业务实体唯一标识
+ * @param payload.amount - 用于条件过滤的业务金额
+ * @param payload.comment - 备注说明
+ * @param externalTx - 外部事务上下文（用于组合调用）
+ * @returns 包含成功标识、实例 ID 和待处理任务 ID 的结果
  */
 export async function submitApproval(payload: {
     tenantId?: string;
@@ -79,24 +97,18 @@ export async function submitApproval(payload: {
             orderBy: [asc(approvalNodes.sortOrder)]
         });
 
-        // 3. Filter nodes based on conditions (Amount, etc)
-        const activeNodes = allNodes.filter((node: typeof allNodes[0]) => {
-            // Amount Check
+        // 3. Filter nodes based on conditions
+        const activeNodes = allNodes.filter((node) => {
             const amountNum = payload.amount ? parseFloat(payload.amount.toString()) : 0;
             const min = node.minAmount ? parseFloat(node.minAmount.toString()) : 0;
             const max = node.maxAmount ? parseFloat(node.maxAmount.toString()) : Infinity;
-
             const amountMatch = amountNum >= min && amountNum <= max;
             if (!amountMatch) return false;
-
-            // Custom Conditions Check
             return evaluateConditions(node.conditions as unknown as Condition[], payload);
         });
 
         const firstNode = activeNodes[0];
-
         if (!firstNode) {
-            // No matching nodes - possibly auto-approve but for now we follow strict rules
             throw new Error(`未找到匹配的审批节点，请检查金额或条件配置`);
         }
 
@@ -113,47 +125,50 @@ export async function submitApproval(payload: {
         }).returning();
 
         // 5. Create First Node Tasks
-        // Find approvers for the first node
         let approverIds: string[] = [];
         if (firstNode.approverUserId) {
             approverIds = [firstNode.approverUserId];
-        } else {
-            // Placeholder for role-based approver resolution
-            // approverIds = await resolveRoleApprovers(firstNode.approverRole, tenantId);
+        } else if (firstNode.approverRole) {
+            const allTenantUsers = await tx.query.users.findMany({
+                where: and(
+                    eq(users.tenantId, tenantId),
+                    eq(users.isActive, true)
+                )
+            });
+            approverIds = findApproversByRole(allTenantUsers, firstNode.approverRole!);
+            if (approverIds.length === 0) {
+                throw new Error(`未找到角色 [${firstNode.approverRole}] 对应的有效审批人`);
+            }
         }
 
-        // Read Timeout Setting
-        const timeoutDays = await getSetting('APPROVAL_TIMEOUT_DAYS') as number || 3;
-        const timeoutAt = addDays(new Date(), timeoutDays);
+        let timeoutAt: Date;
+        if (firstNode.timeoutHours) {
+            const { addHours } = await import("date-fns");
+            timeoutAt = addHours(new Date(), firstNode.timeoutHours);
+        } else {
+            const timeoutDays = (await getSetting('APPROVAL_TIMEOUT_DAYS')) as number || 3;
+            timeoutAt = addDays(new Date(), timeoutDays);
+        }
 
+        const pendingTaskIds: string[] = [];
         for (const userId of approverIds) {
-            // Check for Delegation
-            const actualApproverId = await ApprovalDelegationService.getEffectiveApprover(userId, flow.id);
-
-            await tx.insert(approvalTasks).values({
+            const actualApproverId = await ApprovalDelegationService.getEffectiveApprover(userId, flow.id, tenantId);
+            const [newTask] = await tx.insert(approvalTasks).values({
                 tenantId,
                 approvalId: approval.id,
                 nodeId: firstNode.id,
                 approverId: actualApproverId,
                 status: 'PENDING',
                 timeoutAt
-            });
+            }).returning();
+            pendingTaskIds.push(newTask.id);
         }
 
         // 6. Update Business Entity Status
-        await updateEntityStatus(tx, payload.entityType, payload.entityId, 'PENDING_APPROVAL', tenantId);
+        const { revertEntityStatus } = await import("./utils");
+        await revertEntityStatus(tx, payload.entityType, payload.entityId, tenantId, 'PENDING_APPROVAL');
 
-        // 7. Trigger Notifications
-        const { ApprovalNotificationService } = await import("../services/approval-notification.service");
-        const tasks = await tx.query.approvalTasks.findMany({
-            where: eq(approvalTasks.approvalId, approval.id)
-        });
-        for (const t of tasks) {
-            ApprovalNotificationService.notifyNewTask(t.id).catch(console.error);
-        }
-
-        revalidatePath('/approval');
-        return { success: true, approvalId: approval.id, message: '审批提交成功' };
+        return { success: true, approvalId: approval.id, pendingTaskIds };
     };
 
     if (externalTx) {
@@ -161,42 +176,23 @@ export async function submitApproval(payload: {
     } else {
         return await db.transaction(async (tx) => {
             try {
-                return await run(tx);
+                const result = await run(tx);
+                // 事务外异步发送通知
+                if (result.success && result.pendingTaskIds) {
+                    import('../services/approval-notification.service').then(({ ApprovalNotificationService }) => {
+                        result.pendingTaskIds.forEach(id => {
+                            ApprovalNotificationService.notifyNewTask(id, tenantId).catch(err =>
+                                logger.error(`[Approval-Notify] Failed to notify task ${id}`, err)
+                            );
+                        });
+                    });
+                }
+                revalidatePath('/approval');
+                return { success: true, approvalId: result.approvalId, message: '审批提交成功' };
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
                 return { success: false, error: message };
             }
         });
-    }
-}
-
-async function updateEntityStatus(tx: Transaction, type: string, id: string, status: string, tenantId: string) {
-    const { orderChanges, orders } = await import('@/shared/api/schema');
-
-    switch (type) {
-        case 'QUOTE':
-            await tx.update(quotes).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)));
-            break;
-        case 'ORDER':
-            await tx.update(orders).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)));
-            break;
-        case 'ORDER_CHANGE':
-            await tx.update(orderChanges)
-                .set({ status: status as 'PENDING_APPROVAL', updatedAt: new Date() })
-                .where(and(eq(orderChanges.id, id), eq(orderChanges.tenantId, tenantId)));
-            break;
-        case 'MEASURE_TASK':
-            await tx.update(measureTasks).set({ status: status as 'PENDING_APPROVAL' }).where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, tenantId)));
-            break;
-        case 'PAYMENT_BILL': {
-            const billStatus = status === 'PENDING_APPROVAL' ? 'PENDING' : status;
-            await tx.update(paymentBills).set({ status: billStatus }).where(and(eq(paymentBills.id, id), eq(paymentBills.tenantId, tenantId)));
-            break;
-        }
-        case 'RECEIPT_BILL': {
-            const billStatus = status === 'PENDING_APPROVAL' ? 'PENDING' : status;
-            await tx.update(receiptBills).set({ status: billStatus }).where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, tenantId)));
-            break;
-        }
     }
 }

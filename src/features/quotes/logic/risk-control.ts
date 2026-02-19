@@ -1,5 +1,6 @@
 import { QuoteItem } from '@/shared/api/schema/quotes';
 import { TenantSettings } from '@/shared/types/tenant-settings';
+import Decimal from 'decimal.js';
 
 export interface RiskCheckResult {
     isRisk: boolean;
@@ -32,11 +33,13 @@ export function checkDiscountRisk(
     const minProfitMargin = settings.quoteConfig?.minProfitMargin ?? 0.15;
 
     // 1. Calculate Total Cost
-    const totalCost = items.reduce((sum, item) => {
-        const quantity = Number(item.quantity) || 0;
-        const costPrice = Number(item.costPrice) || 0;
-        return sum + (quantity * costPrice);
-    }, 0);
+    // P1-R5-02: Fix precision issues with Decimal.js
+    const totalCostDec = items.reduce((sum, item) => {
+        const quantity = new Decimal(item.quantity || 0);
+        const costPrice = new Decimal(item.costPrice || 0);
+        return sum.plus(quantity.times(costPrice));
+    }, new Decimal(0));
+    const totalCost = totalCostDec.toNumber();
 
     // 2. Check Negative Margin (Hard Stop)
     if (finalAmount < totalCost) {
@@ -48,7 +51,7 @@ export function checkDiscountRisk(
     // 3. Check Discount Rate
     // Avoid division by zero
     if (originalAmount > 0) {
-        const currentDiscount = finalAmount / originalAmount;
+        const currentDiscount = new Decimal(finalAmount).div(originalAmount).toNumber();
         if (currentDiscount < minDiscountRate) {
             result.isRisk = true;
             result.reason.push(`当前折扣 (${(currentDiscount * 10).toFixed(2)}折) 低于最低折扣限制 (${(minDiscountRate * 10).toFixed(2)}折)。`);
@@ -58,8 +61,8 @@ export function checkDiscountRisk(
     // 4. Check Profit Margin
     // Margin = (Final - Cost) / Final
     if (finalAmount > 0) {
-        const profit = finalAmount - totalCost;
-        const margin = profit / finalAmount;
+        const profit = new Decimal(finalAmount).minus(totalCost);
+        const margin = profit.div(finalAmount).toNumber();
 
         if (margin < minProfitMargin) {
             result.isRisk = true;

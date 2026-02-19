@@ -12,31 +12,7 @@ import { Loader2, ArrowRightLeft, ArrowRight } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { toast } from 'sonner';
 
-interface VersionQuoteItem {
-    id: string;
-    productName: string;
-    category?: string;
-    unitPrice: string | number;
-    quantity: string | number;
-    subtotal: string | number;
-    remark?: string;
-    _roomName?: string;
-}
-
-interface VersionQuoteRoom {
-    name: string;
-    items: VersionQuoteItem[];
-}
-
-interface VersionQuote {
-    id: string;
-    version: number;
-    totalAmount: string | number;
-    discountAmount: string | number;
-    finalAmount: string | number;
-    items?: VersionQuoteItem[];
-    rooms?: VersionQuoteRoom[];
-}
+import { VersionQuote, VersionQuoteItem, VersionQuoteRoom } from '../types';
 
 interface QuoteVersionCompareProps {
     currentQuote: VersionQuote;

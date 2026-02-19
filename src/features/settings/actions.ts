@@ -1,65 +1,18 @@
 'use server';
 
-import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-
-const mockActionSchema = z.object({
-    id: z.string().optional(),
-    data: z.any().optional()
-});
-
-const updateUserSettingsAction = createSafeAction(mockActionSchema, async (data) => {
-    revalidatePath('/settings');
-    return { success: true, message: "Settings updated in recovery mode" };
-});
-
-export async function updateUserSettings(data: z.infer<typeof mockActionSchema>) {
-    return updateUserSettingsAction(data);
-}
-
-const createUserAction = createSafeAction(mockActionSchema, async (data) => {
-    revalidatePath('/settings/users');
-    return { success: true, message: "User created in recovery mode" };
-});
-
-// export async function createUser(data: z.infer<typeof mockActionSchema>) {
-//     return createUserAction(data);
-// }
-
-// const updateUserAction = createSafeAction(mockActionSchema, async (data) => {
-//     revalidatePath('/settings/users');
-//     return { success: true, message: "User updated in recovery mode" };
-// });
-
-// export async function updateUser(data: z.infer<typeof mockActionSchema>) {
-//     return updateUserAction(data);
-// }
-
-// const deleteUserAction = createSafeAction(mockActionSchema, async (data) => {
-//     revalidatePath('/settings/users');
-//     return { success: true, message: "User deleted in recovery mode" };
-// });
-
-// export async function deleteUser(data: z.infer<typeof mockActionSchema>) {
-//     return deleteUserAction(data);
-// }
-
-const updateTenantProfileAction = createSafeAction(mockActionSchema, async (data) => {
-    revalidatePath('/settings/general');
-    return { success: true, message: "Tenant profile updated in recovery mode" };
-});
-
-export async function updateTenantProfile(data: z.infer<typeof mockActionSchema>) {
-    return updateTenantProfileAction(data);
-}
-
-// --- 渠道管理 Actions ---
-
 import { db } from '@/shared/api/db';
 import { marketChannels } from '@/shared/api/schema';
 import { eq, asc, and } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { createSafeAction } from '@/shared/lib/server-action';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
+
+// ============================================================
+// 渠道管理 Actions
+// ============================================================
 
 /**
  * 获取所有渠道
@@ -92,12 +45,10 @@ export async function getChannelCategories() {
     if (!session?.user?.tenantId) return { success: false, error: '未授权', data: [] };
 
     try {
-        // 获取顶级渠道（parentId 为空的）
         const categories = await db.query.marketChannels.findMany({
             where: eq(marketChannels.tenantId, session.user.tenantId),
             orderBy: [asc(marketChannels.name)],
         });
-        // 过滤出顶级分类
         const topLevelCategories = categories.filter(c => !c.parentId);
         return { success: true, data: topLevelCategories };
     } catch (_error) {
@@ -121,14 +72,34 @@ const createChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
     const session = ctx.session;
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
+    // 权限检查
     try {
-        await db.insert(marketChannels).values({
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
+    }
+
+    try {
+        const result = await db.insert(marketChannels).values({
             tenantId: session.user.tenantId,
             name: data.name,
             code: data.code || data.name.toLowerCase().replace(/\s+/g, '_'),
             parentId: data.parentId,
             isActive: data.isActive,
-        });
+        }).returning();
+
+        // 记录审计日志
+        // 记录审计日志
+        if (result[0]) {
+            await AuditService.log(db, {
+                tableName: 'market_channels',
+                recordId: result[0].id,
+                action: 'CREATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: result[0],
+            });
+        }
 
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道创建成功' };
@@ -148,6 +119,13 @@ export async function createChannel(data: z.infer<typeof channelSchema>) {
 const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) => {
     const session = ctx.session;
     if (!session?.user?.tenantId || !data.id) return { success: false, error: '未授权或缺少 ID' };
+
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
+    }
 
     try {
         // 安全检查：验证渠道属于当前租户
@@ -174,6 +152,19 @@ const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
                 eq(marketChannels.tenantId, session.user.tenantId)
             ));
 
+        // 记录审计日志
+        // 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'market_channels',
+            recordId: data.id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: existingChannel,
+            newValues: { ...existingChannel, ...data },
+            changedFields: data,
+        });
+
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道更新成功' };
     } catch (_error) {
@@ -193,6 +184,13 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
     const session = ctx.session;
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
+    // 权限检查
+    try {
+        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch {
+        return { success: false, error: '无权限执行此操作' };
+    }
+
     try {
         // 安全检查：验证渠道属于当前租户
         const existingChannel = await db.query.marketChannels.findFirst({
@@ -205,11 +203,30 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
             return { success: false, error: '渠道不存在或无权操作' };
         }
 
+        // 检查是否存在子渠道 (R3-11)
+        const childChannel = await db.query.marketChannels.findFirst({
+            where: eq(marketChannels.parentId, data.id),
+        });
+        if (childChannel) {
+            return { success: false, error: '该渠道下存在子渠道，无法删除' };
+        }
+
         await db.delete(marketChannels)
             .where(and(
                 eq(marketChannels.id, data.id),
                 eq(marketChannels.tenantId, session.user.tenantId)
             ));
+
+        // 记录审计日志
+        // 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'market_channels',
+            recordId: data.id,
+            action: 'DELETE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: existingChannel,
+        });
 
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道删除成功' };

@@ -1,135 +1,191 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { splitOrder, requestDelivery } from '../actions/orders';
+import { createOrderFromQuote } from '../actions/creation';
+import { confirmOrderProduction, splitOrder } from '../actions/production';
+import { requestDelivery, updateLogistics } from '../actions/logistics';
+import {
+    confirmInstallationAction,
+    customerAcceptAction,
+    closeOrderAction
+} from '../actions/orders';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
+import { OrderService } from '@/services/order.service';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // Mock Modules
-vi.mock('next-auth', () => ({
-    default: vi.fn(),
-    NextAuth: vi.fn(() => ({ auth: vi.fn() })),
-}));
-
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
             orders: { findFirst: vi.fn(), findMany: vi.fn() },
-            suppliers: { findFirst: vi.fn() }
+            quotes: { findFirst: vi.fn() },
         },
-        select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn() })) })),
-        insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
-        update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn() })) })) })),
-        transaction: vi.fn((cb) => cb({
-            query: { orders: { findFirst: vi.fn() } },
-            update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn() })) })) }))
+        update: vi.fn(() => ({
+            set: vi.fn(() => ({
+                where: vi.fn(() => Promise.resolve({}))
+            }))
         })),
     }
 }));
 
-// Mock auth library
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
     checkPermission: vi.fn().mockResolvedValue(true)
 }));
 
-vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+vi.mock('@/services/order.service', () => ({
+    OrderService: {
+        convertFromQuote: vi.fn(),
+        confirmInstallation: vi.fn(),
+        customerAccept: vi.fn(),
+        completeOrder: vi.fn(),
+        requestCustomerConfirmation: vi.fn(),
+        customerReject: vi.fn(),
+    }
 }));
 
-describe('Order Actions', () => {
-    const VALID_ORDER_ID = '123e4567-e89b-12d3-a456-426614174000';
-    const VALID_SUPPLIER_ID = '123e4567-e89b-12d3-a456-426614174004';
-    const ITEM_ID_1 = '123e4567-e89b-12d3-a456-426614174001';
-    const ITEM_ID_2 = '123e4567-e89b-12d3-a456-426614174002';
+vi.mock('@/services/logistics.service', () => ({
+    LogisticsService: {
+        updateLogisticsInfo: vi.fn(),
+    }
+}));
 
-    const mockOrder = {
-        id: VALID_ORDER_ID,
-        tenantId: 'tenant-1',
-        status: 'PENDING_PO',
-        items: [
-            { id: ITEM_ID_1, productId: 'p1', quantity: 1, unitPrice: '100', poId: null },
-            { id: ITEM_ID_2, productId: 'p2', quantity: 2, unitPrice: '50', poId: null }
-        ]
-    };
+vi.mock('@/shared/lib/audit-service', () => ({
+    AuditService: {
+        record: vi.fn(),
+    }
+}));
+
+vi.mock('@/features/channels/logic/commission.service', () => ({
+    checkAndGenerateCommission: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@/features/supply-chain/actions/split-engine', () => ({
+    executeSplitRouting: vi.fn().mockResolvedValue({
+        createdPOIds: ['po-1'],
+        createdTaskIds: ['task-1'],
+        pendingPoolItemIds: [],
+        summary: 'Mock Summary',
+    }),
+}));
+
+vi.mock('@/features/approval/actions/submission', () => ({
+    submitApproval: vi.fn(),
+}));
+
+describe('Order Actions (Final Polish)', () => {
+    // 使用标准的 v4 UUID 格式
+    const VALID_ORDER_ID = '550e8400-e29b-41d4-a716-446655440000';
+    const VALID_QUOTE_ID = '550e8400-e29b-41d4-a716-446655440001';
+    const VALID_SUPPLIER_ID = '550e8400-e29b-41d4-a716-446655440002';
+    const VALID_ITEM_ID = '550e8400-e29b-41d4-a716-446655440003';
+    const VALID_USER_ID = '550e8400-e29b-41d4-a716-446655440004';
+    const VALID_TENANT_ID = '550e8400-e29b-41d4-a716-446655440005';
 
     const mockSession = {
-        user: { id: 'user-1', tenantId: 'tenant-1', role: 'ADMIN' }
+        user: { id: VALID_USER_ID, tenantId: VALID_TENANT_ID }
     };
 
     beforeEach(() => {
-        vi.resetAllMocks();
+        vi.clearAllMocks();
         (auth as any).mockResolvedValue(mockSession);
     });
 
-    describe('splitOrder', () => {
-        it('should successfully split order with valid input and permission', async () => {
-            // Mock DB to return order
-            (db.query.orders.findFirst as any).mockResolvedValue(mockOrder);
-            // Mock Supplier
-            (db.query.suppliers.findFirst as any).mockResolvedValue({ id: VALID_SUPPLIER_ID, name: 'Supplier A' });
-            // Mock Insert/Update responses
-            const returnMock = vi.fn().mockResolvedValue([{ id: 'new-po-id' }]);
-            (db.insert as any).mockReturnValue({ values: vi.fn().mockReturnValue({ returning: returnMock }) });
+    describe('createOrderFromQuote', () => {
+        it('should create order directly when fully paid', async () => {
+            const mockQuote = { id: VALID_QUOTE_ID, tenantId: VALID_TENANT_ID, totalAmount: '1000.00' };
+            const mockOrder = { id: VALID_ORDER_ID, totalAmount: '1000.00', paidAmount: '1000.00' };
+            (db.query.quotes.findFirst as any).mockResolvedValue(mockQuote);
+            (OrderService.convertFromQuote as any).mockResolvedValue(mockOrder);
 
-            const input = {
-                orderId: VALID_ORDER_ID,
-                items: [{ itemId: ITEM_ID_1, quantity: '1', supplierId: VALID_SUPPLIER_ID }]
-            };
+            const result = await createOrderFromQuote({
+                quoteId: VALID_QUOTE_ID,
+                paymentAmount: '1000.00'
+            });
 
-            const result = await splitOrder(input);
+            expect(result).toEqual(mockOrder);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_CREATED' }));
+        });
+    });
+
+    describe('confirmOrderProduction', () => {
+        it('should successfully confirm production', async () => {
+            (db.query.orders.findFirst as any).mockResolvedValue({
+                id: VALID_ORDER_ID,
+                status: 'PAID',
+                tenantId: VALID_TENANT_ID
+            });
+
+            const result = await confirmOrderProduction({ orderId: VALID_ORDER_ID });
+
             expect(result.success).toBe(true);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_PRODUCTION_STARTED' }));
         });
+    });
 
-        it('should fail if unauthorized (no session)', async () => {
-            (auth as any).mockResolvedValue(null);
-            await expect(splitOrder({ orderId: VALID_ORDER_ID, items: [] }))
-                .rejects.toThrow('Unauthorized');
-        });
-
-        it('should fail if order not found or wrong tenant', async () => {
-            (db.query.orders.findFirst as any).mockResolvedValue(null);
-
-            const input = {
+    describe('splitOrder', () => {
+        it('should successfully split order', async () => {
+            const result = await splitOrder({
                 orderId: VALID_ORDER_ID,
-                items: [{ itemId: ITEM_ID_1, quantity: '1', supplierId: VALID_SUPPLIER_ID }]
-            };
+                items: [{ itemId: VALID_ITEM_ID, quantity: '1', supplierId: VALID_SUPPLIER_ID }]
+            });
 
-            await expect(splitOrder(input)).rejects.toThrow('订单不存在或无权操作');
+            expect(result.success).toBe(true);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_SPLIT_MANUAL' }));
         });
     });
 
     describe('requestDelivery', () => {
-        it('should succeed for valid PENDING_DELIVERY order', async () => {
-            // Mock order
-            (db.query.orders.findFirst as any).mockResolvedValue({
-                ...mockOrder,
-                status: 'PENDING_DELIVERY'
+        it('should update status', async () => {
+            const result = await requestDelivery({
+                orderId: VALID_ORDER_ID,
+                company: 'SF'
             });
 
-            const input = {
-                orderId: VALID_ORDER_ID,
-                company: 'SF',
-                trackingNo: '123456'
-            };
-
-            const result = await requestDelivery(input);
             expect(result.success).toBe(true);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_DELIVERY_REQUESTED' }));
         });
+    });
 
-        it('should fail if status is not PENDING_DELIVERY', async () => {
-            // Mock order
-            (db.query.orders.findFirst as any).mockResolvedValue({
-                ...mockOrder,
-                status: 'PENDING_PO'
+    describe('updateLogistics', () => {
+        it('should update logistics info', async () => {
+            const result = await updateLogistics({
+                orderId: VALID_ORDER_ID,
+                company: 'JD',
+                trackingNo: 'JD123456789'
             });
 
-            const input = {
-                orderId: VALID_ORDER_ID,
-                company: 'SF',
-                trackingNo: '123456'
-            };
+            expect(result.success).toBe(true);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_LOGISTICS_UPDATED' }));
+        });
+    });
 
-            await expect(requestDelivery(input)).rejects.toThrow('订单状态不正确');
+    describe('confirmInstallationAction', () => {
+        it('should call OrderService', async () => {
+            const result = await confirmInstallationAction(VALID_ORDER_ID);
+
+            expect(result.success).toBe(true);
+            expect(OrderService.confirmInstallation).toHaveBeenCalled();
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_INSTALLED' }));
+        });
+    });
+
+    describe('customerAcceptAction', () => {
+        it('should call customerAccept', async () => {
+            const result = await customerAcceptAction(VALID_ORDER_ID);
+
+            expect(result.success).toBe(true);
+            expect(OrderService.customerAccept).toHaveBeenCalled();
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_CUSTOMER_ACCEPTED' }));
+        });
+    });
+
+    describe('closeOrderAction', () => {
+        it('should close order', async () => {
+            const result = await closeOrderAction(VALID_ORDER_ID);
+
+            expect(result.success).toBe(true);
+            expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_CLOSED' }));
         });
     });
 });

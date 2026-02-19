@@ -13,18 +13,7 @@ import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { CustomersToolbar } from '@/features/customers/components/customers-toolbar';
 
-interface Customer {
-    id: string;
-    customerNo: string | null;
-    name: string;
-    phone: string | null;
-    level: string | null;
-    type: string | null;
-    totalAmount: string | number | null;
-    totalOrders: number | null;
-    assignedSales?: { name: string | null } | null;
-    lastOrderAt: Date | null | string;
-}
+import { CustomerListItem } from '@/features/customers/types';
 
 export const revalidate = 60; // Revalidate every minute
 
@@ -44,7 +33,7 @@ export default async function CustomersPage({
   const page = Number(resolvedParams.page) || 1;
   const query = typeof resolvedParams.search === 'string' ? resolvedParams.search : undefined;
 
-  let data: Customer[] = [];
+  let data: CustomerListItem[] = [];
   let pagination = { page: 1, pageSize: 10, total: 0, totalPages: 0 };
 
   try {
@@ -78,7 +67,6 @@ export default async function CustomersPage({
         </div>
         <div className="flex items-center gap-2 glass-layout-card p-2 rounded-xl border border-white/10 shadow-sm">
           <CreateCustomerDialog
-            userId={userId}
             tenantId={tenantId}
             trigger={
               <Button className="h-9">

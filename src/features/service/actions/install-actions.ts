@@ -1,10 +1,9 @@
-'use server';
-
 import { db } from '@/shared/api/db';
 import { installTasks, installItems, users } from '@/shared/api/schema';
 import { eq, and, desc, like, inArray } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Helper: Get Session
 async function getSession() {
@@ -15,67 +14,38 @@ async function getSession() {
     return session;
 }
 
-export async function getInstallTasks(params?: {
-    status?: string;
-    search?: string;
-}) {
+export async function getInstallTasks(filters?: { status?: string; search?: string }) {
     try {
         const session = await getSession();
-        const conditions = [eq(installTasks.tenantId, session.user.tenantId)];
-
-        if (params?.status && params.status !== 'ALL') {
-            // Ensure status matches the enum type or treat as string if DB driver allows
-            conditions.push(eq(installTasks.status, params.status as 'PENDING_DISPATCH' | 'PENDING_ACCEPT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'));
-        }
-
-        if (params?.search) {
-            // Search by customer or task no
-            conditions.push(
-                like(installTasks.taskNo, `%${params.search}%`)
-                // or like(installTasks.customerName, ...) - Drizzle OR syntax needed if multiple
-            );
-        }
+        const { status, search } = filters || {};
 
         const list = await db.query.installTasks.findMany({
-            where: and(...conditions),
-            orderBy: [desc(installTasks.createdAt)],
+            where: and(
+                eq(installTasks.tenantId, session.user.tenantId),
+                search ? like(installTasks.taskNo, `%${search}%`) : undefined,
+                status && status !== 'ALL' ? eq(installTasks.status, status as any) : undefined
+            ),
             with: {
-                installer: { columns: { name: true, phone: true } },
-                // customer: { columns: { name: true } } // customerName is denormalized in task? Yes.
-            }
+                installer: true,
+                items: true
+            },
+            orderBy: [desc(installTasks.createdAt)]
         });
-
         return { success: true, data: list };
-
     } catch (e) {
-        return { success: false, error: 'Fetch failed' };
-    }
-}
-
-export async function getInstallTaskDetail(id: string) {
-    try {
-        const session = await getSession();
-        const task = await db.query.installTasks.findFirst({
-            where: and(eq(installTasks.id, id), eq(installTasks.tenantId, session.user.tenantId)),
-            with: {
-                items: true,
-                installer: { columns: { name: true, phone: true } }
-            }
-        });
-
-        if (!task) return { success: false, error: 'Not found' };
-        return { success: true, data: task };
-    } catch (e) {
-        return { success: false, error: 'Fetch Detail Error' };
+        return { success: false, data: [] };
     }
 }
 
 export async function getInstallers() {
     try {
         const session = await getSession();
-        // Ideally filter by role. For MVP, fetch all users.
+        // P0-4 Fix: Filter by role WORKER/INSTALLER
         const list = await db.query.users.findMany({
-            where: eq(users.tenantId, session.user.tenantId),
+            where: and(
+                eq(users.tenantId, session.user.tenantId),
+                inArray(users.role, ['WORKER', 'INSTALLER']) // Assuming roles
+            ),
             columns: { id: true, name: true, role: true }
         });
         return { success: true, data: list };
@@ -92,6 +62,9 @@ export async function dispatchInstallTask(data: {
 }) {
     try {
         const session = await getSession();
+        // P0-3 Fix: Add permission check
+        await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+
         const { taskId, installerId, scheduledDate, scheduledTimeSlot } = data;
 
         await db.update(installTasks)

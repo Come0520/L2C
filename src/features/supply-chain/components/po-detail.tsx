@@ -24,9 +24,10 @@ import FileText from 'lucide-react/dist/esm/icons/file-text';
 import ImageIcon from 'lucide-react/dist/esm/icons/image';
 import { AddLogisticsDialog } from './add-logistics-dialog';
 import { format } from 'date-fns';
+import { PurchaseOrderDetail, PurchaseOrderAuditLog, PurchaseOrderItem } from '../types';
 
 interface PODetailProps {
-    data: any;
+    data: PurchaseOrderDetail;
     onUpdateStatus?: (poId: string, newStatus: string) => void;
 }
 
@@ -283,7 +284,7 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.items?.map((item: any) => (
+                            {data.items?.map((item: PurchaseOrderItem) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.productName}</TableCell>
                                     <TableCell>{item.productSku || '-'}</TableCell>
@@ -309,7 +310,7 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
                     <Card>
                         <CardContent className="pt-6">
                             <div className="space-y-4">
-                                {data.auditLogs?.map((log: any, index: number) => (
+                                {data.auditLogs?.map((log: PurchaseOrderAuditLog, index: number) => (
                                     <div key={index} className="flex gap-4">
                                         <div className="flex flex-col items-center">
                                             <div className="w-2 h-2 rounded-full bg-primary" />

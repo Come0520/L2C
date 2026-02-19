@@ -105,3 +105,34 @@ export function truncate(text: string, length: number): string {
     if (text.length <= length) return text;
     return text.slice(0, length) + '...';
 }
+
+/**
+ * 转义 SQL LIKE 查询中的通配符 % 和 _
+ */
+export function escapeSqlLike(str: string): string {
+    if (!str) return str;
+    return str.replace(/[%_]/g, '\\$&');
+}
+
+// [Fix 4.2] 输入清理工具
+/**
+ * 递归去除对象字符串值的前后空格
+ */
+export function trimInput<T>(data: T): T {
+    if (typeof data === 'string') {
+        return data.trim() as unknown as T;
+    }
+    if (Array.isArray(data)) {
+        return data.map((item) => trimInput(item)) as unknown as T;
+    }
+    if (data !== null && typeof data === 'object') {
+        // Handle Date objects, check for isValid
+        if (data instanceof Date) return data;
+
+        return Object.entries(data).reduce((acc, [key, value]) => {
+            acc[key as keyof T] = trimInput(value);
+            return acc;
+        }, {} as T);
+    }
+    return data;
+}

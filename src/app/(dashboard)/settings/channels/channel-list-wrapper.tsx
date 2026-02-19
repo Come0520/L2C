@@ -1,17 +1,10 @@
 'use client';
 
 import { ChannelList } from "@/features/settings/components/channel-list";
-import { marketChannels } from "@/shared/api/schema";
+// We are using 'channels' schema now, data comes from getChannels query.
+// It has 'channelCategory' relation.
 
-type MarketChannel = typeof marketChannels.$inferSelect;
-type MarketChannelCategory = typeof marketChannels.$inferSelect;
-
-// 扩展类型，包含categoryName字段
-interface ChannelWithCategory extends MarketChannel {
-    categoryName?: string;
-}
-
-export function ChannelListWrapper({ initialData, categories }: { initialData: ChannelWithCategory[], categories: MarketChannelCategory[] }) {
+export function ChannelListWrapper({ initialData, categories }: { initialData: any[], categories: any[] }) {
     return (
         <ChannelList
             data={initialData}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QuoteService } from '@/services/quote.service';
 import { headers } from 'next/headers';
+import { QuoteService } from '@/services/quote.service';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * 定时任务：批量处理过期报价
@@ -16,17 +17,34 @@ export async function POST(_req: NextRequest) {
         const authHeader = headersList.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
 
-        // 简单的安全检查
-        // 如果配置了 CRON_SECRET，则必须匹配
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        // 安全修复：强制要求配置 CRON_SECRET
+        if (!cronSecret) {
+            console.error('[Quotes Expire] CRON_SECRET 未配置，拒绝请求');
+            return NextResponse.json(
+                { error: 'Server configuration error: CRON_SECRET not set' },
+                { status: 500 }
+            );
+        }
+
+        const [scheme, token] = authHeader?.split(' ') || [];
+
+        if (scheme !== 'Bearer' || !token) {
+            return NextResponse.json(
+                { error: 'Unauthorized', message: 'Missing or invalid authorization header' },
+                { status: 401 }
+            );
+        }
+
+        // 使用 timingSafeEqual 防止时序攻击
+        const secretBuffer = Buffer.from(cronSecret);
+        const tokenBuffer = Buffer.from(token);
+
+        if (secretBuffer.length !== tokenBuffer.length || !timingSafeEqual(secretBuffer, tokenBuffer)) {
             return NextResponse.json(
                 { error: 'Unauthorized', message: 'Invalid cron secret' },
                 { status: 401 }
             );
         }
-
-        // 也允许本地开发环境直接通过 (可选)
-        // if (process.env.NODE_ENV === 'development') { ... }
 
         const result = await QuoteService.expireAllOverdueQuotes();
 
@@ -42,8 +60,7 @@ export async function POST(_req: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: 'Internal Server Error',
-                details: error instanceof Error ? error.message : String(error)
+                error: 'Internal Server Error'
             },
             { status: 500 }
         );

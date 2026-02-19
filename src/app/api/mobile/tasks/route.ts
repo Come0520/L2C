@@ -1,11 +1,14 @@
 
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
 
+
+const log = createLogger('mobile/tasks');
 export async function GET(request: NextRequest) {
     try {
         // 1. 认证
@@ -25,9 +28,12 @@ export async function GET(request: NextRequest) {
 
         const workerId = session.userId;
 
-        // Fetch Measure Tasks
+        // Fetch Measure Tasks (With Tenant Isolation)
         const mTasks = await db.query.measureTasks.findMany({
-            where: eq(measureTasks.assignedWorkerId, workerId),
+            where: and(
+                eq(measureTasks.assignedWorkerId, workerId),
+                eq(measureTasks.tenantId, session.tenantId)
+            ),
             orderBy: [desc(measureTasks.scheduledAt)],
             with: {
                 customer: { columns: { name: true, phone: true } },
@@ -35,9 +41,12 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Fetch Install Tasks
+        // Fetch Install Tasks (With Tenant Isolation)
         const iTasks = await db.query.installTasks.findMany({
-            where: eq(installTasks.installerId, workerId),
+            where: and(
+                eq(installTasks.installerId, workerId),
+                eq(installTasks.tenantId, session.tenantId)
+            ),
             orderBy: [desc(installTasks.scheduledDate)],
             with: {
                 customer: { columns: { name: true, phone: true } }
@@ -73,7 +82,7 @@ export async function GET(request: NextRequest) {
         return apiSuccess(combined);
 
     } catch (error) {
-        console.error('Mobile Task List Error:', error);
+        log.error('Mobile Task List Error', {}, error);
         return apiError('Internal Server Error', 500);
     }
 }

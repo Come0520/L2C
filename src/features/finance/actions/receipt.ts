@@ -7,6 +7,8 @@ import { ReceiptService, CreateReceiptBillData } from '@/services/receipt.servic
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
+import { AuditService } from '@/shared/services/audit-service';
+
 
 
 /**
@@ -54,9 +56,30 @@ export async function voidReceiptBill(id: string) {
     // 权限检查：需要财务管理权限
     await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
 
+    const bill = await db.query.receiptBills.findFirst({
+        where: and(eq(receiptBills.id, id), eq(receiptBills.tenantId, session.user.tenantId))
+    });
+    if (!bill) throw new Error('收款单不存在');
+    if (!['DRAFT', 'PENDING_APPROVAL'].includes(bill.status)) {
+        throw new Error('当前状态不可撤回');
+    }
+
     await db.update(receiptBills)
-        .set({ status: 'DRAFT' }) // Actually we usually have a VOID status, but let's keep it simple
+        .set({ status: 'VOIDED', updatedAt: new Date() })
         .where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, session.user.tenantId)));
+
+    // F-32: 记录作废审计
+    await AuditService.log(db, {
+        tenantId: session.user.tenantId,
+        userId: session.user.id!,
+        tableName: 'receipt_bills',
+        recordId: id,
+        action: 'UPDATE',
+        oldValues: { status: bill.status },
+        newValues: { status: 'VOIDED' },
+        details: { reason: 'USER_VOID' }
+    });
+
 
     revalidatePath('/finance/receipt');
     return { success: true };

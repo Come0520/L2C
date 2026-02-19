@@ -1,30 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { invitations, users } from '@/shared/api/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { getMiniprogramUser } from '../../auth-utils';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 
-// 从 Token 获取用户信息
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.slice(7);
-  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload as { userId: string; tenantId: string };
-  } catch {
-    return null;
-  }
-}
+
 
 export async function GET(request: NextRequest) {
   try {
-    const tokenData = await getUserFromToken(request);
+    const tokenData = await getMiniprogramUser(request);
     if (!tokenData) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { tenantId } = tokenData;
@@ -85,13 +72,10 @@ export async function GET(request: NextRequest) {
       return timeB - timeA;
     });
 
-    return NextResponse.json({
-      success: true,
-      data: list,
-    });
+    return apiSuccess(list);
   } catch (error) {
     console.error('获取邀请列表失败:', error);
-    return NextResponse.json({ success: false, error: '获取失败' }, { status: 500 });
+    return apiError('获取失败', 500);
   }
 }
 

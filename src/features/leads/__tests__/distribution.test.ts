@@ -74,10 +74,19 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('@/features/settings/actions/system-settings-actions', () => ({
     getSetting: vi.fn(),
+    getSettingInternal: vi.fn(),
+}));
+
+// Mock AuditService 以避免实际调用
+vi.mock('@/shared/services/audit-service', () => ({
+    AuditService: {
+        log: vi.fn().mockResolvedValue(undefined),
+        logBatch: vi.fn().mockResolvedValue(undefined),
+    },
 }));
 
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { getSetting } from '@/features/settings/actions/system-settings-actions';
+import { getSettingInternal } from '@/features/settings/actions/system-settings-actions';
 
 describe('Distribution Engine', () => {
     const tenantId = 'test-tenant-id';
@@ -85,7 +94,7 @@ describe('Distribution Engine', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (auth as any).mockResolvedValue({ user: { id: 'admin', tenantId } });
-        (getSetting as any).mockResolvedValue('ROUND_ROBIN');
+        (getSettingInternal as any).mockResolvedValue('ROUND_ROBIN');
     });
 
     describe('configureDistributionStrategy', () => {
@@ -119,7 +128,7 @@ describe('Distribution Engine', () => {
                 query: { users: { findMany: vi.fn() } },
             };
             mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
-            (getSetting as any).mockResolvedValue('MANUAL');
+            (getSettingInternal as any).mockResolvedValue('MANUAL');
 
             const result = await distributeToNextSales(tenantId);
             expect(result.strategy).toBe('MANUAL');
@@ -128,27 +137,40 @@ describe('Distribution Engine', () => {
 
         it('should distribute using ROUND_ROBIN', async () => {
             // Mock transaction select result (tenant)
-            const mockTx = {
-                select: vi.fn().mockReturnValue({
-                    from: vi.fn().mockReturnValue({
-                        where: vi.fn().mockReturnValue({
-                            for: vi.fn().mockResolvedValue([{ settings: { distribution: { strategy: 'ROUND_ROBIN', nextSalesIndex: 0 } } }]),
-                        })
+            // select 被调用两次：
+            // 1) tenant 配置查询（带 .for('update')）
+            // 2) sales users 查询（返回数组）
+            const selectMock = vi.fn();
+            // 第一次 select: tenant 查询
+            selectMock.mockReturnValueOnce({
+                from: vi.fn().mockReturnValue({
+                    where: vi.fn().mockReturnValue({
+                        for: vi.fn().mockResolvedValue([{ settings: { distribution: { strategy: 'ROUND_ROBIN', nextSalesIndex: 0 } } }]),
                     })
-                }),
+                })
+            });
+            // 第二次 select: sales users 查询
+            selectMock.mockReturnValueOnce({
+                from: vi.fn().mockReturnValue({
+                    where: vi.fn().mockResolvedValue([{ id: 'sales1', name: 'Sales One' }, { id: 'sales2', name: 'Sales Two' }])
+                })
+            });
+            const mockTx = {
+                select: selectMock,
                 query: {
-                    users: {
-                        findMany: vi.fn().mockResolvedValue([{ id: 'sales1', name: 'Sales One' }, { id: 'sales2', name: 'Sales Two' }])
-                    }
+                    tenants: { findFirst: vi.fn() },
                 },
                 update: vi.fn().mockReturnValue({
                     set: vi.fn().mockReturnValue({
                         where: vi.fn().mockResolvedValue({}),
                     }),
                 }),
+                insert: vi.fn().mockReturnValue({
+                    values: vi.fn().mockResolvedValue({})
+                }),
             };
             mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
-            (getSetting as any).mockResolvedValue('ROUND_ROBIN');
+            (getSettingInternal as any).mockResolvedValue('ROUND_ROBIN');
 
             const result = await distributeToNextSales(tenantId);
 

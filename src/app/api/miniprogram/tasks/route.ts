@@ -8,37 +8,20 @@
  * - type: 'measure' | 'install' | 'all' (默认 'all')
  * - status: 任务状态过滤
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { db } from '@/shared/api/db';
-import { measureTasks, installTasks, customers, leads } from '@/shared/api/schema';
-import { eq, and, or, desc, inArray } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { measureTasks, installTasks, customers } from '@/shared/api/schema';
+import { eq, and, or, desc } from 'drizzle-orm';
+import { getMiniprogramUser } from '../auth-utils';
 
-/**
- * 从 JWT Token 中解析用户信息
- */
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return {
-      id: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-    };
-  } catch {
-    return null;
-  }
-}
+
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -46,8 +29,8 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status');
 
     const result: {
-      measureTasks: any[];
-      installTasks: any[];
+      measureTasks: Record<string, unknown>[];
+      installTasks: Record<string, unknown>[];
     } = {
       measureTasks: [],
       installTasks: [],
@@ -76,12 +59,12 @@ export async function GET(request: NextRequest) {
             eq(measureTasks.tenantId, user.tenantId),
             eq(measureTasks.assignedWorkerId, user.id),
             statusFilter
-              ? eq(measureTasks.status, statusFilter as any)
+              ? eq(measureTasks.status, statusFilter as 'PENDING' | 'PENDING_VISIT' | 'PENDING_CONFIRM')
               : or(
-                  eq(measureTasks.status, 'PENDING'),
-                  eq(measureTasks.status, 'PENDING_VISIT'),
-                  eq(measureTasks.status, 'PENDING_CONFIRM')
-                )
+                eq(measureTasks.status, 'PENDING'),
+                eq(measureTasks.status, 'PENDING_VISIT'),
+                eq(measureTasks.status, 'PENDING_CONFIRM')
+              )
           )
         )
         .orderBy(desc(measureTasks.scheduledAt));
@@ -113,12 +96,12 @@ export async function GET(request: NextRequest) {
             eq(installTasks.tenantId, user.tenantId),
             eq(installTasks.installerId, user.id),
             statusFilter
-              ? eq(installTasks.status, statusFilter as any)
+              ? eq(installTasks.status, statusFilter as 'PENDING_DISPATCH' | 'PENDING_VISIT' | 'PENDING_CONFIRM')
               : or(
-                  eq(installTasks.status, 'PENDING_DISPATCH'),
-                  eq(installTasks.status, 'PENDING_VISIT'),
-                  eq(installTasks.status, 'PENDING_CONFIRM')
-                )
+                eq(installTasks.status, 'PENDING_DISPATCH'),
+                eq(installTasks.status, 'PENDING_VISIT'),
+                eq(installTasks.status, 'PENDING_CONFIRM')
+              )
           )
         )
         .orderBy(desc(installTasks.scheduledDate));
@@ -126,12 +109,9 @@ export async function GET(request: NextRequest) {
       result.installTasks = await installQuery;
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return apiSuccess(result);
   } catch (error) {
     console.error('获取任务列表失败:', error);
-    return NextResponse.json({ success: false, error: '获取任务列表失败' }, { status: 500 });
+    return apiError('获取任务列表失败', 500);
   }
 }

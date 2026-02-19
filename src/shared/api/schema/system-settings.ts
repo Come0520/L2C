@@ -90,8 +90,10 @@ export const DEFAULT_SYSTEM_SETTINGS = [
     // === 数据报表设置 (REPORT) ===
     { category: 'REPORT', key: 'DASHBOARD_UPDATE_FREQUENCY', value: 'DAILY', valueType: 'ENUM', description: '仪表盘更新频率' },
     { category: 'REPORT', key: 'ENABLE_MANUAL_REFRESH', value: 'true', valueType: 'BOOLEAN', description: '支持手动刷新' },
+    // === 云展厅设置 (SHOWROOM) ===
+    { category: 'SHOWROOM', key: 'ENABLE_SHOWROOM_WRITE_FOR_ALL', value: 'true', valueType: 'BOOLEAN', description: '允许所有员工修改展厅素材（关闭后仅管理员可修改）' },
 ] as const;
 
 // 导出配置类型
-export type SystemSettingCategory = 'LEAD' | 'CHANNEL' | 'PAYMENT' | 'MEASURE' | 'ORDER' | 'APPROVAL' | 'NOTIFICATION' | 'REPORT';
+export type SystemSettingCategory = 'LEAD' | 'CHANNEL' | 'PAYMENT' | 'MEASURE' | 'ORDER' | 'APPROVAL' | 'NOTIFICATION' | 'REPORT' | 'SHOWROOM';
 export type SystemSettingValueType = 'BOOLEAN' | 'INTEGER' | 'DECIMAL' | 'ENUM' | 'JSON';

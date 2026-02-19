@@ -10,6 +10,9 @@ import { approvalTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile/approvals/[id]/approve');
 
 interface ApproveParams {
     params: Promise<{ id: string }>;
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest, { params }: ApproveParams) {
             })
             .where(eq(approvalTasks.id, taskId));
 
-        console.log(`[审批通过] 任务 ${taskId}, 审批人: ${session.userId}`);
+        log.info(`审批通过: 任务 ${taskId}, 审批人: ${session.userId}`);
 
         return apiSuccess(
             {
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest, { params }: ApproveParams) {
         );
 
     } catch (error) {
-        console.error('审批操作错误:', error);
+        log.error('审批操作错误', {}, error);
         return apiError('审批操作失败', 500);
     }
 }

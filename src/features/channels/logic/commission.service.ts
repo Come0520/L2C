@@ -4,118 +4,128 @@ import { orders } from '@/shared/api/schema/orders';
 import { leads } from '@/shared/api/schema/leads';
 import { products } from '@/shared/api/schema/catalogs';
 import { financeConfigs } from '@/shared/api/schema/finance';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, ne, inArray } from 'drizzle-orm';
+import { Decimal } from 'decimal.js';
 
 export type CommissionTriggerMode = 'ORDER_CREATED' | 'ORDER_COMPLETED' | 'PAYMENT_COMPLETED';
 
+interface TieredRate {
+    minAmount: number;
+    maxAmount?: number;
+    rate: number;
+}
+
+export interface BasePriceDetail {
+    product: string | null;
+    retail: number;
+    base: number;
+    discount: number;
+    cost: number;
+    qty: number;
+    profit: number;
+}
+
+export interface CommissionFormula {
+    base?: number;
+    rate?: number;
+    mode?: string;
+    calc?: string;
+    details?: BasePriceDetail[];
+    totalProfit?: number;
+}
+
+export interface ChannelCommissionParams {
+    cooperationMode?: string | null;
+    commissionType?: string | null;
+    tieredRates?: unknown;
+    commissionRate?: string | number | null;
+    level?: string | null;
+}
+
+export interface CommissionResult {
+    amount: Decimal;
+    rate: Decimal; // effective decimal rate
+    type: 'COMMISSION' | 'BASE_PRICE';
+    formula: CommissionFormula;
+    remark: string;
+}
+
 /**
- * 检查并生成渠道佣金
- * 核心入口函数
+ * 核心佣金计算逻辑 (纯计算，不涉及数据库写操作)
+ * 可用于自动触发或手动创建
  */
-export async function checkAndGenerateCommission(
-    orderId: string,
-    triggerEvent: CommissionTriggerMode
-) {
-    console.log(`[Commission] Checking for order ${orderId} on event ${triggerEvent}`);
+export async function calculateOrderCommission(
+    order: {
+        totalAmount: string | number | null;
+        items: { productId: string | null; unitPrice: string | number | null; quantity: string | number | null; productName?: string | null }[];
+        tenantId: string;
+        channelCooperationMode?: string | null;
+    },
+    channel: ChannelCommissionParams
+): Promise<CommissionResult | null> {
+    const calculationBase = new Decimal(order.totalAmount || 0);
 
-    // 1. 获取订单及关联信息
-    const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-            // 优先使用订单上的渠道信息，如果为空则尝试回溯线索（兼容旧数据）
-            items: true,
-        }
-    });
-
-    if (!order) {
-        console.error(`[Commission] Order ${orderId} not found`);
-        return;
-    }
-
-    // 2. 确定渠道信息
-    let channelId = order.channelId;
-
-    // 如果订单没存 channelId，尝试从关联线索获取 (兼容逻辑)
-    if (!channelId && order.leadId) {
-        const lead = await db.query.leads.findFirst({
-            where: eq(leads.id, order.leadId),
-            columns: { channelId: true }
-        });
-        channelId = lead?.channelId || null;
-    }
-
-    if (!channelId) {
-        console.log(`[Commission] No channel associated with order ${orderId}`);
-        return;
-    }
-
-    const channel = await db.query.channels.findFirst({
-        where: eq(channels.id, channelId)
-    });
-
-    if (!channel) {
-        console.error(`[Commission] Channel ${channelId} not found`);
-        return;
-    }
-
-    // 3. 检查触发模式
-    // 从渠道配置读取触发模式，默认 PAYMENT_COMPLETED
-    const requiredTrigger = channel.commissionTriggerMode || 'PAYMENT_COMPLETED';
-
-    if (triggerEvent !== requiredTrigger) {
-        console.log(`[Commission] Trigger mismatch. Required: ${requiredTrigger}, Current: ${triggerEvent}`);
-        return;
-    }
-
-    // 4. 检查幂等性 (防止重复生成)
-    const existing = await db.query.channelCommissions.findFirst({
-        where: and(
-            eq(channelCommissions.orderId, orderId),
-            eq(channelCommissions.status, 'PENDING') // 或者是已结算等，只要有记录就不应重复生成?
-            // 注意：如果之前是 VOID，是否允许重新生成？通常允许。这里只查有效记录。
-        )
-    });
-
-    if (existing) {
-        console.log(`[Commission] Commission already exists for order ${orderId}`);
-        return;
-    }
-
-    // 5. 计算佣金
-    const _orderAmount = Number(order.paidAmount || order.totalAmount || 0); // 按照实收或应收？需求说是"实际成交金额"，通常指 totalAmount(最终价)，只有全额付款才触发
-    // 如果是 PAYMENT_COMPLETED，通常意味着 paidAmount >= totalAmount
-    // 我们用 totalAmount 作为计算基数 (客户应付的最终金额)
-    const calculationBase = Number(order.totalAmount || 0);
-
-    let commissionAmount = 0;
-    let commissionRate = 0;
+    let commissionAmount = new Decimal(0);
+    let commissionRate = new Decimal(0);
+    let effectiveRateDecimal = new Decimal(0);
     let logicDescription = '';
-    const formula: { base?: number; rate?: number; mode?: string; calc?: string; items?: unknown[]; details?: unknown[]; total?: number } = {};
+
+    const formula: CommissionFormula = {};
 
     const mode = order.channelCooperationMode || channel.cooperationMode || 'COMMISSION';
 
     if (mode === 'COMMISSION') {
         // --- 返佣模式 ---
-        // 简单版：固定比例
-        commissionRate = Number(channel.commissionRate || 0); // 10.00 表示 10% ? Schema comment says "10.00 for 10%"
-        // 但代码通常存的是 10，计算时除以 100
+        if (channel.commissionType === 'TIERED' && channel.tieredRates) {
+            // 阶梯费率计算
+            let rates: TieredRate[] = [];
+            if (typeof channel.tieredRates === 'string') {
+                try { rates = JSON.parse(channel.tieredRates); } catch (e) { console.error('Failed to parse tieredRates', e); }
+            } else {
+                rates = channel.tieredRates as unknown as TieredRate[];
+            }
 
-        // 需求文档: "commissionRate: decimal(5,2) ... e.g. 10.00 for 10%"
-        const ratePercent = commissionRate;
-        commissionAmount = calculationBase * (ratePercent / 100);
+            if (Array.isArray(rates)) {
+                // 查找匹配的阶梯
+                const matched = rates.find(r => {
+                    const min = new Decimal(r.minAmount || 0);
+                    const max = r.maxAmount !== undefined && r.maxAmount !== null ? new Decimal(r.maxAmount) : new Decimal(Infinity);
+                    return calculationBase.greaterThanOrEqualTo(min) && calculationBase.lessThan(max);
+                });
 
-        logicDescription = `返佣模式 (费率 ${ratePercent}%)`;
-        formula.base = calculationBase;
-        formula.rate = ratePercent;
+                if (matched) {
+                    commissionRate = new Decimal(matched.rate || 0);
+                    logicDescription = `阶梯返佣 (金额 ${calculationBase.toNumber()} 命中区间 [${matched.minAmount}, ${matched.maxAmount ?? '∞'}), 费率 ${commissionRate}%)`;
+                } else {
+                    commissionRate = new Decimal(channel.commissionRate || 0);
+                    logicDescription = `阶梯返佣 (金额 ${calculationBase.toNumber()} 未命中任何区间，使用基础费率 ${commissionRate}%)`;
+                }
+            } else {
+                commissionRate = new Decimal(channel.commissionRate || 0);
+                logicDescription = `阶梯返佣 (配置无效，使用基础费率 ${commissionRate}%)`;
+            }
+
+        } else {
+            // 固定比例
+            commissionRate = new Decimal(channel.commissionRate || 0);
+            logicDescription = `固定返佣 (费率 ${commissionRate}%)`;
+        }
+
+        // R4-11 Fix: Smart Commission Rate Detection
+        const rawRateVal = commissionRate.toNumber();
+        const rateIsDecimal = rawRateVal <= 1 && rawRateVal > 0;
+        effectiveRateDecimal = rateIsDecimal ? commissionRate : commissionRate.div(100);
+
+        commissionAmount = calculationBase.mul(effectiveRateDecimal);
+
+        formula.base = calculationBase.toNumber();
+        formula.rate = rawRateVal;
         formula.mode = 'COMMISSION';
-        formula.calc = `${calculationBase} * ${ratePercent}% = ${commissionAmount}`;
+        formula.calc = `${calculationBase} * ${rateIsDecimal ? (rawRateVal * 100) + '%' : rawRateVal + '%'} = ${commissionAmount.toFixed(2)}`;
 
     } else if (mode === 'BASE_PRICE') {
         // --- 底价供货模式 ---
-        // 佣金 = Σ(商品对客价 - 商品渠道底价 * 等级折扣率) * 数量
-        // 折扣率来自全局配置 (financeConfigs.CHANNEL_GRADE_DISCOUNTS)
-
-        let totalProfit = 0;
+        let totalProfit = new Decimal(0);
         const details = [];
 
         // 获取全局等级折扣配置
@@ -135,81 +145,176 @@ export async function checkAndGenerateCommission(
             }
         }
 
-        // 根据渠道等级获取折扣率
         const channelLevel = channel.level || 'C';
-        const discountRate = gradeDiscounts[channelLevel] ?? 1.00;
+        const discountRateVal = gradeDiscounts[channelLevel] ?? 1.00;
+        const discountRate = new Decimal(discountRateVal);
 
-        for (const item of order.items) {
-            if (!item.productId) continue;
-            const product = await db.query.products.findFirst({
-                where: eq(products.id, item.productId),
-                columns: { channelPrice: true, channelPriceMode: true }
-            });
+        const productIds = order.items
+            .map(item => item.productId)
+            .filter((id): id is string => !!id);
 
-            if (product) {
-                const retailPrice = Number(item.unitPrice || 0); // 订单中的单价(对客价)
-                const basePrice = Number(product.channelPrice || 0);
+        if (productIds.length > 0) {
+            // Define local type for product query result since schema types are not available to TSC here
+            type ProductData = { id: string; channelPrice: string | null; channelPriceMode: string | null; name: string | null };
 
-                // 计算单项利润: (销售价 - 底价 * 折扣) * 数量
-                const costPrice = basePrice * discountRate;
-                const profitPerUnit = retailPrice - costPrice;
-                const itemProfit = profitPerUnit * Number(item.quantity || 0);
+            const productsList = await db.query.products.findMany({
+                where: inArray(products.id, productIds),
+                columns: { id: true, channelPrice: true, channelPriceMode: true, name: true }
+            }) as unknown as ProductData[];
 
-                totalProfit += itemProfit;
+            const productMap = new Map(productsList.map(p => [p.id, p]));
 
-                details.push({
-                    product: item.productName,
-                    retail: retailPrice,
-                    base: basePrice,
-                    discount: discountRate,
-                    cost: costPrice,
-                    qty: item.quantity,
-                    profit: itemProfit
-                });
+            for (const item of order.items) {
+                if (!item.productId) continue;
+                const product = productMap.get(item.productId);
+
+                if (product) {
+                    const retailPrice = new Decimal(item.unitPrice || 0);
+                    const basePrice = new Decimal(product.channelPrice || 0);
+                    const quantity = new Decimal(item.quantity || 0);
+
+                    const costPrice = basePrice.mul(discountRate);
+                    const profitPerUnit = retailPrice.minus(costPrice);
+                    const itemProfit = profitPerUnit.mul(quantity);
+
+                    totalProfit = totalProfit.plus(itemProfit);
+
+                    details.push({
+                        product: item.productName || product.name,
+                        retail: retailPrice.toNumber(),
+                        base: basePrice.toNumber(),
+                        discount: discountRateVal,
+                        cost: costPrice.toNumber(),
+                        qty: quantity.toNumber(),
+                        profit: itemProfit.toNumber()
+                    });
+                }
             }
         }
 
         commissionAmount = totalProfit;
-        logicDescription = `底价供货模式 (折扣率 ${discountRate})`;
+        logicDescription = `底价供货模式 (折扣率 ${discountRateVal})`;
         formula.details = details;
         formula.mode = 'BASE_PRICE';
-        formula.total = totalProfit;
+        formula.totalProfit = totalProfit.toNumber();
     }
 
-    if (commissionAmount <= 0) {
-        console.log(`[Commission] Calculated amount is <= 0, skipping creation.`);
-        // 也可以生成一个 0 元记录用于追踪
+    if (commissionAmount.lessThanOrEqualTo(0)) {
+        return null;
+    }
+
+    return {
+        amount: commissionAmount,
+        rate: effectiveRateDecimal,
+        type: mode as 'COMMISSION' | 'BASE_PRICE',
+        formula,
+        remark: logicDescription
+    };
+}
+
+/**
+ * 检查并生成渠道佣金
+ * 核心入口函数
+ */
+export async function checkAndGenerateCommission(
+    orderId: string,
+    triggerEvent: CommissionTriggerMode
+) {
+    // 1. 获取订单及关联信息
+    const order = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+        with: {
+            // 优先使用订单上的渠道信息，如果为空则尝试回溯线索（兼容旧数据）
+            items: true,
+        }
+    });
+
+    if (!order) {
+        console.error(`[Commission] Order ${orderId} not found`);
         return;
     }
 
-    // 6. 创建佣金记录
-    await db.transaction(async (tx) => {
-        await tx.insert(channelCommissions).values({
-            tenantId: order.tenantId,
-            channelId: channel.id,
-            orderId: orderId,
-            leadId: order.leadId,
-            commissionType: mode,
-            orderAmount: calculationBase.toString(),
-            commissionRate: commissionRate.toString(), // 存百分比数值
-            amount: commissionAmount.toFixed(2),
-            status: 'PENDING',
-            formula: formula,
-            remark: logicDescription,
-            createdBy: order.updatedBy || order.createdBy // 系统触发，但这字段通常是 user ID。可以留空或用 system user ID 如果有
-        });
+    // 2. 确定渠道信息
+    let channelId = order.channelId;
 
-        // 7. 更新渠道统计 (Total Deal Amount)
-        // 累加本次订单金额到渠道总额
-        await tx.update(channels)
-            .set({
-                totalDealAmount: sql`${channels.totalDealAmount} + ${calculationBase}`,
-                updatedAt: new Date()
-            })
-            .where(eq(channels.id, channel.id));
+    if (!channelId && order.leadId) {
+        const lead = await db.query.leads.findFirst({
+            where: eq(leads.id, order.leadId),
+            columns: { channelId: true }
+        });
+        channelId = lead?.channelId || null;
+    }
+
+    if (!channelId) {
+        return;
+    }
+
+    const channel = await db.query.channels.findFirst({
+        where: and(eq(channels.id, channelId), eq(channels.tenantId, order.tenantId))
     });
 
-    console.log(`[Commission] Created commission record: ${commissionAmount} for channel ${channel.name}`);
+    if (!channel) {
+        console.error(`[Commission] Channel ${channelId} not found`);
+        return;
+    }
+
+    // 3. 检查触发模式
+    const requiredTrigger = channel.commissionTriggerMode || 'PAYMENT_COMPLETED';
+
+    if (triggerEvent !== requiredTrigger) {
+        return;
+    }
+
+    // 5. 计算佣金 (提取到独立函数)
+    const result = await calculateOrderCommission(order, channel);
+
+    if (!result) {
+        return;
+    }
+
+    // 6. 写入数据库 (事务保障)
+    await db.transaction(async (tx) => {
+        const existingInTx = await tx.query.channelCommissions.findFirst({
+            where: and(
+                eq(channelCommissions.orderId, orderId),
+                eq(channelCommissions.tenantId, order.tenantId),
+                ne(channelCommissions.status, 'VOID')
+            )
+        });
+
+        if (existingInTx) {
+            console.warn(`[Commission] Commission already exists for order ${orderId} (Race condition intercepted)`);
+            return;
+        }
+
+        const calculationBase = new Decimal(order.totalAmount || 0);
+
+        await tx.insert(channelCommissions).values({
+            tenantId: order.tenantId,
+            channelId: channelId,
+            leadId: order.leadId || undefined,
+            orderId: orderId,
+            commissionType: result.type,
+            orderAmount: calculationBase.toFixed(2),
+            commissionRate: (result.type === 'COMMISSION' ? result.rate : new Decimal(0)).toFixed(4),
+            amount: result.amount.toFixed(2),
+            status: 'PENDING',
+            formula: result.formula,
+            remark: result.remark,
+            createdBy: order.createdBy,
+        }).returning();
+
+        // 更新渠道统计
+        await tx.update(channels)
+            .set({
+                totalDealAmount: sql`${channels.totalDealAmount} + ${calculationBase.toFixed(2)}`,
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(channels.id, channelId),
+                eq(channels.tenantId, order.tenantId)
+            ));
+    });
 }
 
 /**
@@ -219,72 +324,81 @@ export async function checkAndGenerateCommission(
  * @param refundAmount - 退款金额 (绝对值)
  */
 export async function handleCommissionClawback(orderId: string, refundAmount: number) {
-    console.log(`[Commission] Handling clawback for order ${orderId}, amount: ${refundAmount}`);
+    // 0. 获取订单以确定 tenantId
+    const order = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+        columns: { tenantId: true }
+    });
 
+    if (!order) return;
+
+    // 1. 获取该订单关联的所有有效佣金记录
     const commissions = await db.query.channelCommissions.findMany({
         where: and(
             eq(channelCommissions.orderId, orderId),
-            // status != VOID ? 
+            eq(channelCommissions.tenantId, order.tenantId),
+            ne(channelCommissions.status, 'VOID')
         )
     });
 
     if (!commissions.length) {
-        console.log(`[Commission] No commission found for order ${orderId} to clawback.`);
         return;
     }
 
+    // P0 Fix: Use Decimal for refund calculations
+    const refundAmountDecimal = new Decimal(refundAmount);
+
+    // 2. 遍历处理每条佣金
     for (const comm of commissions) {
         if (comm.status === 'PENDING') {
             // Case 1: 待结算 -> 直接作废
-            // 如果是全额退款？通常认为如果退款发生，PENDING 的佣金应该重新计算或作废。
-            // 简单处理：直接 VOID。如果是部分退款，逻辑可能复杂，这里假设任何退款都导致重新审核或作废。
-            // 需求文档说 "待结算 -> 标记为 VOID" (全额退款)。
-            // 部分退款 -> "按比例重新计算...". 
-            // 鉴于 PENDING 状态，我们可以直接更新金额。但为了审计痕迹，VOID 重新生成也许更好。
-            // 这里遵循简单原则：直接 VOID。
             await db.update(channelCommissions)
-                .set({ status: 'VOID', remark: `Order refunded: ${refundAmount}` })
-                .where(eq(channelCommissions.id, comm.id));
+                .set({
+                    status: 'VOID',
+                    remark: `Order refunded: ${refundAmountDecimal.toFixed(2)} (Original Amount: ${comm.amount})`
+                })
+                .where(and(
+                    eq(channelCommissions.id, comm.id),
+                    eq(channelCommissions.tenantId, comm.tenantId) // R4-06 Fix: Add tenantId
+                ));
 
-            console.log(`[Commission] Voided pending commission ${comm.id}`);
-        } else if (comm.status === 'SETTLED' || comm.status === 'PAID') {
-            // Case 2: 已结算/支付 -> 生成负向调整
-            // 计算需扣回金额
-            // 原佣金 = amount
-            // 退款比例 = refundAmount / orderAmount
-            // 扣回佣金 = 原佣金 * 退款比例
+        } else if (['SETTLED', 'PAID'].includes(comm.status || '')) {
+            // Case 2: 已结算/支付 -> 生成负向调整记录
 
-            const originalOrderAmount = Number(comm.orderAmount || 0);
-            if (originalOrderAmount <= 0) continue;
+            const originalOrderAmount = new Decimal(comm.orderAmount || 0);
+            if (originalOrderAmount.lessThanOrEqualTo(0)) continue;
 
-            const ratio = refundAmount / originalOrderAmount;
-            const clawbackAmount = Number(comm.amount) * ratio;
+            const ratio = refundAmountDecimal.div(originalOrderAmount);
+            const originalCommission = new Decimal(comm.amount || 0);
+            const clawbackAmount = originalCommission.mul(ratio);
 
-            if (clawbackAmount <= 0) continue;
+            if (clawbackAmount.lessThanOrEqualTo(0)) continue;
 
             await db.transaction(async (tx) => {
+                // 插入调整记录
                 await tx.insert(commissionAdjustments).values({
                     tenantId: comm.tenantId,
                     channelId: comm.channelId,
                     originalCommissionId: comm.id,
-                    adjustmentType: refundAmount >= originalOrderAmount ? 'FULL_REFUND' : 'PARTIAL_REFUND',
-                    adjustmentAmount: (-clawbackAmount).toFixed(2), // 负数
-                    reason: `Order Refund: ${refundAmount}`,
+                    adjustmentType: refundAmountDecimal.greaterThanOrEqualTo(originalOrderAmount) ? 'FULL_REFUND' : 'PARTIAL_REFUND',
+                    adjustmentAmount: clawbackAmount.negated().toFixed(2), // 负数
+                    reason: `Order Refund: ${refundAmountDecimal.toFixed(2)}`,
                     orderId: orderId,
-                    refundAmount: refundAmount.toString(),
-                    createdBy: comm.createdBy // No user context here easily available, reuse creator or null
+                    refundAmount: refundAmountDecimal.toString(),
+                    createdBy: comm.createdBy // 复用原创建者或系统 ID
                 });
 
                 // 更新渠道统计 (Total Deal Amount - 扣减)
                 await tx.update(channels)
                     .set({
-                        totalDealAmount: sql`${channels.totalDealAmount} - ${refundAmount}`,
+                        totalDealAmount: sql`${channels.totalDealAmount} - ${refundAmountDecimal.toFixed(2)}`,
                         updatedAt: new Date()
                     })
-                    .where(eq(channels.id, comm.channelId));
+                    .where(and(
+                        eq(channels.id, comm.channelId),
+                        eq(channels.tenantId, comm.tenantId) // R4-07 Fix: Add tenantId
+                    ));
             });
-
-            console.log(`[Commission] Created adjustment for commission ${comm.id}: -${clawbackAmount}`);
         }
     }
 }

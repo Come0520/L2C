@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { apiSuccess } from '@/shared/lib/api-response';
 
 /**
  * 小程序配置 API
@@ -149,34 +149,31 @@ export async function GET() {
     { value: 'COMPLETED', label: '已完工' },
   ];
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      // 微信模板消息
-      templates: {
-        tenantApproved: process.env.WECHAT_TEMPLATE_TENANT_APPROVED || '',
-        tenantRejected: process.env.WECHAT_TEMPLATE_TENANT_REJECTED || '',
-        orderStatus: process.env.WECHAT_TEMPLATE_ORDER_STATUS || '',
-        taskAssign: process.env.WECHAT_TEMPLATE_TASK_ASSIGN || '',
-      },
-      // 房间类型配置
-      roomTypes,
-      defaultRooms,
-      // ========== 枚举选项（解决硬编码） ==========
-      enums: {
-        roles,
-        intentionLevels,
-        leadStatuses,
-        activityTypes,
-        quoteStatuses,
-        orderStatuses,
-        taskStatuses,
-        serviceTypes,
-        afterSalesStatuses,
-        inviteStatuses,
-        paymentMethods,
-        decorationProgress,
-      },
+  return apiSuccess({
+    // 微信模板消息
+    templates: {
+      tenantApproved: process.env.WECHAT_TEMPLATE_TENANT_APPROVED || '',
+      tenantRejected: process.env.WECHAT_TEMPLATE_TENANT_REJECTED || '',
+      orderStatus: process.env.WECHAT_TEMPLATE_ORDER_STATUS || '',
+      taskAssign: process.env.WECHAT_TEMPLATE_TASK_ASSIGN || '',
+    },
+    // 房间类型配置
+    roomTypes,
+    defaultRooms,
+    // ========== 枚举选项（解决硬编码） ==========
+    enums: {
+      roles,
+      intentionLevels,
+      leadStatuses,
+      activityTypes,
+      quoteStatuses,
+      orderStatuses,
+      taskStatuses,
+      serviceTypes,
+      afterSalesStatuses,
+      inviteStatuses,
+      paymentMethods,
+      decorationProgress,
     },
   });
 }

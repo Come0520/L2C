@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { useDebounce } from '@/shared/hooks/use-debounce'; // Assuming this hook exists, created earlier
 import { format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 interface Option {
     id: string;
@@ -51,7 +52,7 @@ export function MeasurementToolbar({ workerOptions, salesOptions, channelOptions
         router.push(`?${params.toString()}`);
     };
 
-    const handleDateRangeChange = (range: any) => {
+    const handleDateRangeChange = (range: DateRange | undefined) => {
         const params = new URLSearchParams(searchParams.toString());
         if (range?.from) {
             params.set('dateFrom', format(range.from, 'yyyy-MM-dd'));

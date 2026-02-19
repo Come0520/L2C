@@ -2,7 +2,10 @@ import { db } from "@/shared/api/db";
 import { quotes, quoteItems, quoteRooms } from "@/shared/api/schema/quotes";
 import { measureSheets, measureItems } from "@/shared/api/schema/service";
 import { tenants } from "@/shared/api/schema/infrastructure";
-import { eq, and, desc, sql, ne, InferSelectModel } from 'drizzle-orm';
+import { eq, and, ne, InferSelectModel, lt, inArray } from 'drizzle-orm';
+import { checkDiscountRisk } from '@/features/quotes/logic/risk-control';
+import { updateQuoteTotal } from '@/features/quotes/actions/shared-helpers';
+import Decimal from 'decimal.js';
 
 type MeasureItem = InferSelectModel<typeof measureItems>;
 type QuoteItemWithMatched = InferSelectModel<typeof quoteItems> & { _matched?: boolean };
@@ -55,14 +58,15 @@ export class QuoteService {
                     .where(and(
                         eq(quotes.rootQuoteId, quote.rootQuoteId),
                         eq(quotes.isActive, true),
-                        ne(quotes.id, quoteId)
+                        ne(quotes.id, quoteId),
+                        eq(quotes.tenantId, tenantId)
                     ));
             }
 
             // 3. Activate target version
             const [activated] = await tx.update(quotes)
                 .set({ isActive: true, updatedAt: new Date() })
-                .where(eq(quotes.id, quoteId))
+                .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)))
                 .returning();
 
             return activated;
@@ -71,11 +75,11 @@ export class QuoteService {
     /**
      * Create a new version of an existing quote.
      */
-    static async createNextVersion(quoteId: string, userId: string) {
+    static async createNextVersion(quoteId: string, userId: string, tenantId: string) {
         return await db.transaction(async (tx) => {
             // 1. Fetch original quote with all its parts
             const originalQuote = await tx.query.quotes.findFirst({
-                where: eq(quotes.id, quoteId),
+                where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
                 with: {
                     rooms: true,
                     items: true
@@ -89,7 +93,7 @@ export class QuoteService {
             // 2. Deactivate all existing versions in this chain
             await tx.update(quotes)
                 .set({ isActive: false })
-                .where(eq(quotes.rootQuoteId, rootQuoteId));
+                .where(and(eq(quotes.rootQuoteId, rootQuoteId), eq(quotes.tenantId, tenantId)));
 
             const newVersion = (originalQuote.version || 1) + 1;
             const baseQuoteNo = originalQuote.quoteNo.replace(/-V\d+$/, '');
@@ -107,6 +111,7 @@ export class QuoteService {
                 status: 'DRAFT' as const,
                 parentQuoteId: originalQuote.id,
                 rootQuoteId: rootQuoteId,
+                bundleId: originalQuote.bundleId,
                 isActive: true,
                 createdBy: userId,
                 createdAt: new Date(),
@@ -176,12 +181,13 @@ export class QuoteService {
      * @param quoteId - 源报价单 ID
      * @param userId - 创建者用户 ID
      * @param targetCustomerId - 可选，目标客户 ID（用于为不同客户复制报价）
+     * @param tenantId - 租户 ID
      */
-    static async copyQuote(quoteId: string, userId: string, targetCustomerId?: string) {
+    static async copyQuote(quoteId: string, userId: string, tenantId: string, targetCustomerId?: string) {
         return await db.transaction(async (tx) => {
             // 1. 获取原始报价单及其所有部件
             const originalQuote = await tx.query.quotes.findFirst({
-                where: eq(quotes.id, quoteId),
+                where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
                 with: {
                     rooms: true,
                     items: true
@@ -276,9 +282,9 @@ export class QuoteService {
     /**
      * Get all versions of a quote family.
      */
-    static async getQuoteHistory(rootQuoteId: string) {
+    static async getQuoteHistory(rootQuoteId: string, tenantId: string) {
         return await db.query.quotes.findMany({
-            where: eq(quotes.rootQuoteId, rootQuoteId),
+            where: and(eq(quotes.rootQuoteId, rootQuoteId), eq(quotes.tenantId, tenantId)),
             orderBy: (q, { desc }) => [desc(q.version)],
             with: {
                 creator: true
@@ -287,11 +293,13 @@ export class QuoteService {
     }
 
     /**
+    /**
      * Preview measurement data import to calculate diffs.
+     * 🔒 Tenant Isolation: Added tenantId check
      */
-    static async previewMeasurementImport(quoteId: string, measureTaskId: string): Promise<ImportPreviewResult> {
+    static async previewMeasurementImport(quoteId: string, measureTaskId: string, tenantId: string): Promise<ImportPreviewResult> {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId),
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
             with: {
                 rooms: {
                     with: {
@@ -302,7 +310,7 @@ export class QuoteService {
             }
         });
 
-        if (!quote) throw new Error('Quote not found');
+        if (!quote) throw new Error('Quote not found or access denied');
 
         // Get the latest completed sheet/variant
         // In real app, we might let user select specific sheet, here we pick first/latest
@@ -399,14 +407,15 @@ export class QuoteService {
 
     /**
      * Execute selected import actions.
+     * 🔒 Tenant Isolation: Added tenantId check
      */
-    static async executeMeasurementImport(quoteId: string, actions: ImportAction[]) {
+    static async executeMeasurementImport(quoteId: string, actions: ImportAction[], tenantId: string) {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId),
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
             with: { rooms: true }
         });
 
-        if (!quote) throw new Error('Quote not found');
+        if (!quote) throw new Error('Quote not found or access denied');
 
         const results = [];
 
@@ -475,18 +484,22 @@ export class QuoteService {
             }
             else if (action.type === 'UPDATE_ITEM') {
                 const mItem = action.measureItem as MeasureItem;
-                // Update specific fields (dimensions)
+                // 🔒 P0-02 安全修复：UPDATE_ITEM 添加租户隔离
                 await db.update(quoteItems)
                     .set({
                         width: mItem.width?.toString(),
                         height: mItem.height?.toString(),
                     })
-                    .where(eq(quoteItems.id, action.data.id as string));
+                    .where(and(
+                        eq(quoteItems.id, action.data.id as string),
+                        eq(quoteItems.tenantId, tenantId)
+                    ));
                 results.push({ type: 'UPDATE_ITEM', id: action.data.id as string });
             }
         }
 
-        await this.updateQuoteTotal(quoteId);
+        // P2-R4-01: 使用 shared-helpers 的公共版本（含 Decimal.js 精度 + 折扣逻辑）
+        await updateQuoteTotal(quoteId, tenantId);
         return { success: true, count: results.length };
     }
 
@@ -528,28 +541,20 @@ export class QuoteService {
         return typeMap[windowType] || 'CURTAIN_FABRIC';
     }
 
-    private static async updateQuoteTotal(quoteId: string) {
-        const items = await db.query.quoteItems.findMany({
-            where: eq(quoteItems.quoteId, quoteId)
-        });
-
-        const total = items.reduce((acc, item) => acc + Number(item.subtotal || 0), 0);
-
-        await db.update(quotes)
-            .set({
-                totalAmount: total.toFixed(2),
-                finalAmount: total.toFixed(2),
-                updatedAt: new Date()
-            })
-            .where(eq(quotes.id, quoteId));
-    }
+    // P2-R4-01: 已移除废弃的私有 updateQuoteTotal 方法
+    // 原因：使用原生 Number 累加存在精度问题，且未应用折扣逻辑
+    // 替代：P1-R4-03 已在 refreshExpiredQuotePrices 事务内使用 Decimal.js 内联计算
+    // 其他调用点应使用 shared-helpers.ts 中的公共 updateQuoteTotal
 
     /**
      * Calculate risk for a quote based on tenant settings.
      */
-    static async calculateQuoteRisk(quoteId: string) {
+    /**
+     * Calculate risk for a quote based on tenant settings.
+     */
+    static async calculateQuoteRisk(quoteId: string, tenantId: string) {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId),
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
             with: { items: true }
         });
 
@@ -560,8 +565,6 @@ export class QuoteService {
         });
 
         const settings = (tenant?.settings || {}) as TenantSettings;
-
-        const { checkDiscountRisk } = await import('../features/quotes/logic/risk-control');
 
         const result = checkDiscountRisk(
             quote.items,
@@ -574,13 +577,16 @@ export class QuoteService {
         await db.update(quotes).set({
             approvalRequired: result.isRisk,
             minProfitMargin: (settings.quoteConfig?.minProfitMargin || 0.15).toString()
-        }).where(eq(quotes.id, quoteId));
+        }).where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
         return result;
     }
 
-    static async submitQuote(quoteId: string) {
-        const risk = await this.calculateQuoteRisk(quoteId);
+    /**
+     * @deprecated Use QuoteLifecycleService.submit instead
+     */
+    static async submitQuote(quoteId: string, tenantId: string) {
+        const risk = await this.calculateQuoteRisk(quoteId, tenantId);
 
         if (risk.hardStop) {
             throw new Error("Quote cannot be submitted due to serious risk: " + risk.reason.join(", "));
@@ -591,7 +597,7 @@ export class QuoteService {
         await db.update(quotes).set({
             status,
             lockedAt: new Date()
-        }).where(eq(quotes.id, quoteId));
+        }).where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
         return { status, risk };
     }
@@ -601,11 +607,12 @@ export class QuoteService {
      * 用于单个报价访问时的实时检查
      * 
      * @param quoteId - 报价ID
+     * @param tenantId - 租户ID
      * @returns 是否已过期
      */
-    static async checkAndExpireQuote(quoteId: string): Promise<{ expired: boolean; expiredAt?: Date }> {
+    static async checkAndExpireQuote(quoteId: string, tenantId: string): Promise<{ expired: boolean; expiredAt?: Date }> {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId)
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
         });
 
         if (!quote) throw new Error('Quote not found');
@@ -627,7 +634,7 @@ export class QuoteService {
                     status: 'EXPIRED',
                     updatedAt: now
                 })
-                .where(eq(quotes.id, quoteId));
+                .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
             return { expired: true, expiredAt: now };
         }
@@ -643,7 +650,8 @@ export class QuoteService {
      * @returns 处理结果统计
      */
     static async expireAllOverdueQuotes(tenantId?: string): Promise<{ processed: number; expired: number }> {
-        const { lt, inArray } = await import('drizzle-orm');
+        // const { lt, inArray } = await import('drizzle-orm'); // Removed dynamic import
+
 
         const now = new Date();
 
@@ -685,11 +693,13 @@ export class QuoteService {
      * 当客户重新确认过期报价时，刷新所有商品价格为最新价格
      * 
      * @param quoteId - 报价ID
+     * @param tenantId - 租户ID
      * @param newValidDays - 新的有效期天数（默认7天）
      * @returns 刷新后的报价
      */
     static async refreshExpiredQuotePrices(
         quoteId: string,
+        tenantId: string,
         newValidDays: number = 7
     ): Promise<{
         success: boolean;
@@ -698,9 +708,11 @@ export class QuoteService {
         newValidUntil: Date;
     }> {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId),
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
             with: { items: true }
         });
+
+
 
         if (!quote) throw new Error('Quote not found');
 
@@ -709,61 +721,84 @@ export class QuoteService {
             throw new Error('只有已过期或草稿状态的报价可以刷新价格');
         }
 
-        const { products } = await import('@/shared/api/schema/catalogs');
+        const { products: productsSchema } = await import('@/shared/api/schema/catalogs'); // Renamed to avoid confusion
 
+        const itemIds = quote.items
+            .filter(item => item.productId)
+            .map(item => item.productId as string);
+
+        if (itemIds.length === 0) {
+            return { success: true, updatedItems: 0, priceChanges: [], newValidUntil: new Date() };
+        }
+
+        // P1-02 优化：批量查询商品价格，避免 N+1 查询
+        const productsList = await db.query.products.findMany({
+            where: and(inArray(productsSchema.id, itemIds), eq(productsSchema.tenantId, tenantId)),
+            columns: { id: true, retailPrice: true }
+        });
+
+        const productPriceMap = new Map(productsList.map(p => [p.id, Number(p.retailPrice)]));
         const priceChanges: { itemId: string; oldPrice: number; newPrice: number }[] = [];
         let updatedItems = 0;
 
-        // 获取所有商品的最新价格并更新
-        for (const item of quote.items) {
-            if (!item.productId) continue;
+        // 🔒 P1-R4-03 修复：所有操作在同一事务内执行，确保原子性
+        await db.transaction(async (tx) => {
+            for (const item of quote.items) {
+                if (!item.productId) continue;
 
-            // 获取商品最新价格
-            const product = await db.query.products.findFirst({
-                where: eq(products.id, item.productId),
-                columns: { retailPrice: true }
-            });
+                const newPrice = productPriceMap.get(item.productId);
+                if (newPrice === undefined) continue;
 
-            if (!product) continue;
+                const oldPrice = Number(item.unitPrice);
 
-            const oldPrice = Number(item.unitPrice);
-            const newPrice = Number(product.retailPrice);
+                // 如果价格有变化，更新报价项
+                if (Math.abs(oldPrice - newPrice) > 0.01) {
+                    // P1-05 修复：使用整数运算避免浮点精度问题
+                    const newSubtotal = Math.round(newPrice * Number(item.quantity) * 100) / 100;
 
-            // 如果价格有变化，更新报价项
-            if (Math.abs(oldPrice - newPrice) > 0.01) {
-                const newSubtotal = newPrice * Number(item.quantity);
+                    await tx.update(quoteItems)
+                        .set({
+                            unitPrice: newPrice.toFixed(2),
+                            subtotal: newSubtotal.toFixed(2),
+                            updatedAt: new Date()
+                        })
+                        .where(and(eq(quoteItems.id, item.id), eq(quoteItems.tenantId, tenantId)));
 
-                await db.update(quoteItems)
-                    .set({
-                        unitPrice: newPrice.toFixed(2),
-                        subtotal: newSubtotal.toFixed(2),
-                        updatedAt: new Date()
-                    })
-                    .where(eq(quoteItems.id, item.id));
-
-                priceChanges.push({
-                    itemId: item.id,
-                    oldPrice,
-                    newPrice
-                });
-                updatedItems++;
+                    priceChanges.push({
+                        itemId: item.id,
+                        oldPrice,
+                        newPrice
+                    });
+                    updatedItems++;
+                }
             }
-        }
 
-        // 计算新的有效期
+            // ✅ 移入事务：重新计算总额
+            const updatedItemsList = await tx.query.quoteItems.findMany({
+                where: and(eq(quoteItems.quoteId, quoteId), eq(quoteItems.tenantId, tenantId)),
+            });
+            const totalDec = updatedItemsList.reduce(
+                (acc, item) => acc.plus(new Decimal(item.subtotal || 0)),
+                new Decimal(0)
+            );
+
+            // ✅ 移入事务：计算新的有效期并更新状态
+            const newValidUntil = new Date();
+            newValidUntil.setDate(newValidUntil.getDate() + newValidDays);
+
+            await tx.update(quotes)
+                .set({
+                    totalAmount: totalDec.toFixed(2),
+                    finalAmount: totalDec.toFixed(2),
+                    status: 'DRAFT',
+                    validUntil: newValidUntil,
+                    updatedAt: new Date()
+                })
+                .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
+        });
+
         const newValidUntil = new Date();
         newValidUntil.setDate(newValidUntil.getDate() + newValidDays);
-
-        // 更新报价总金额和状态
-        await this.updateQuoteTotal(quoteId);
-
-        await db.update(quotes)
-            .set({
-                status: 'DRAFT', // 重新变为草稿状态
-                validUntil: newValidUntil,
-                updatedAt: new Date()
-            })
-            .where(eq(quotes.id, quoteId));
 
         return {
             success: true,
@@ -777,16 +812,17 @@ export class QuoteService {
      * 获取报价过期状态信息 (Get Quote Expiration Info)
      * 
      * @param quoteId - 报价ID
+     * @param tenantId - 租户ID
      * @returns 过期状态详情
      */
-    static async getExpirationInfo(quoteId: string): Promise<{
+    static async getExpirationInfo(quoteId: string, tenantId: string): Promise<{
         isExpired: boolean;
         validUntil: Date | null;
         daysUntilExpiry: number | null;
         status: string;
     }> {
         const quote = await db.query.quotes.findFirst({
-            where: eq(quotes.id, quoteId),
+            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
             columns: {
                 status: true,
                 validUntil: true

@@ -6,15 +6,23 @@ import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { generateAccessToken, generateRefreshToken, generatePreAuthToken } from '@/shared/lib/jwt';
 import { VerificationCodeService } from '@/shared/services/verification-code.service';
 import { compare } from 'bcryptjs';
+import { withRateLimit, getRateLimitKey } from '@/shared/middleware/rate-limiter';
+import { NextRequest } from 'next/server';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('auth:login');
 
 /**
  * 移动端登录接口
- * POST /api/mobile/auth/login
  * 
- * @body { phone: string, password: string }
- * @returns { success: boolean, data: { accessToken, refreshToken, user } }
+ * @description 处理移动端用户的手机号密码登录。支持多种角色映射。
+ * 如果租户开启了 MFA 且用户角色在 MFA 范围内，将返回 preAuthToken。
+ * 已集成速率限制：5 分钟内最多 10 次尝试。
+ * 
+ * @param {NextRequest} request - Next.js 请求对象，JSON body 需包含 phone 和 password
+ * @returns {Promise<NextResponse>} 返回登录结果或 MFA 要求
  */
-export async function POST(request: Request) {
+async function loginHandler(request: NextRequest) {
     try {
         const body = await request.json();
         const { phone, password } = body;
@@ -47,8 +55,6 @@ export async function POST(request: Request) {
         let mobileRole = 'WORKER'; // Default fallback
         const dbRole = user.role || '';
 
-        // Simple mapping based on known enums
-        // 'ADMIN', 'SALES', 'MANAGER', 'WORKER', 'FINANCE', 'SUPPLY'
         switch (dbRole) {
             case 'ADMIN':
             case 'MANAGER':
@@ -67,10 +73,7 @@ export async function POST(request: Request) {
                 mobileRole = 'WORKER';
         }
 
-        // ... existing user check ...
-
-        // 7. MFA Check
-        // Fetch tenant settings
+        // MFA Check
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, user.tenantId),
             columns: {
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
             }
         });
 
-        const settings = tenant?.settings as any; // Cast generic jsonb
+        const settings = tenant?.settings as { mfa?: { enabled: boolean; roles: string[] } } | null;
         const mfaConfig = settings?.mfa;
 
         let mfaRequired = false;
@@ -87,11 +90,9 @@ export async function POST(request: Request) {
         }
 
         if (mfaRequired) {
-            // Generate SMS Code
             const userPhone = user.phone || phone;
             await VerificationCodeService.generateAndSend(user.id, userPhone, 'LOGIN_MFA');
 
-            // Generate Pre-Auth Token
             const preAuthToken = await generatePreAuthToken(
                 user.id,
                 user.tenantId,
@@ -102,12 +103,11 @@ export async function POST(request: Request) {
             return apiSuccess({
                 mfaRequired: true,
                 preAuthToken,
-                maskPhone: userPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') // Simple mask
+                maskPhone: userPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
             });
         }
 
-        // 生成 JWT Token (Normal Flow)
-        const userPhone = user.phone || phone; // 使用登录时的手机号作为备用
+        const userPhone = user.phone || phone;
         const accessToken = await generateAccessToken(user.id, user.tenantId, userPhone, mobileRole);
         const refreshToken = await generateRefreshToken(user.id, user.tenantId, userPhone, mobileRole);
 
@@ -115,20 +115,27 @@ export async function POST(request: Request) {
             mfaRequired: false,
             accessToken,
             refreshToken,
-            expiresIn: 86400, // 24小时（秒）
+            expiresIn: 86400,
             user: {
                 id: user.id,
                 name: user.name,
                 phone: user.phone,
                 avatar: user.avatarUrl,
                 tenantId: user.tenantId,
-                role: mobileRole // Return mapped role to client
+                role: mobileRole
             }
         });
 
     } catch (error) {
-        console.error('移动端登录错误:', error);
+        log.error('移动端登录错误', { error: error instanceof Error ? error.message : String(error) }, error);
         return apiError('服务器内部错误', 500);
     }
 }
+
+// 应用速率限制：5 分钟内最多 10 次尝试
+export const POST = withRateLimit(
+    loginHandler,
+    { windowMs: 5 * 60 * 1000, maxAttempts: 10, message: '登录过于频繁，请 5 分钟后再试' },
+    getRateLimitKey('auth:login')
+);
 

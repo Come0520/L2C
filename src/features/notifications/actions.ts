@@ -6,6 +6,8 @@ import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { Notification } from './types';
+import { notificationPreferences } from '@/shared/api/schema';
+import { slaChecker } from './sla-checker';
 
 const getNotificationsSchema = z.object({
     page: z.number().default(1),
@@ -94,7 +96,7 @@ export async function getNotifications(params: z.infer<typeof getNotificationsSc
     return getNotificationsActionInternal(params);
 }
 
-const getUnreadCountActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
+const getUnreadCountActionInternal = createSafeAction(z.object({}), async (_params, { session }) => {
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
 
@@ -124,6 +126,7 @@ const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (param
         .set({ isRead: true, readAt: new Date() })
         .where(and(
             eq(notifications.userId, userId),
+            eq(notifications.tenantId, session.user.tenantId),
             inArray(notifications.id, ids)
         ));
 
@@ -134,13 +137,14 @@ export async function markAsRead(params: z.infer<typeof markAsReadSchema>) {
     return markAsReadActionInternal(params);
 }
 
-const markAllAsReadActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
+const markAllAsReadActionInternal = createSafeAction(z.object({}), async (_params, { session }) => {
     const userId = session.user.id;
 
     await db.update(notifications)
         .set({ isRead: true, readAt: new Date() })
         .where(and(
             eq(notifications.userId, userId),
+            eq(notifications.tenantId, session.user.tenantId),
             eq(notifications.isRead, false)
         ));
 
@@ -151,7 +155,7 @@ export async function markAllAsRead() {
     return markAllAsReadActionInternal({});
 }
 
-import { slaChecker } from './sla-checker';
+
 
 const runSLACheckActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
     const role = session.user.role;
@@ -171,7 +175,7 @@ export async function runSLACheck() {
 // [Notify-04] 通知偏好设置 Actions
 // ============================================
 
-import { notificationPreferences } from '@/shared/api/schema';
+
 
 /**
  * 通知类型定义
@@ -209,7 +213,10 @@ const getNotificationPreferencesActionInternal = createSafeAction(
         const userId = session.user.id;
 
         const prefs = await db.query.notificationPreferences.findMany({
-            where: eq(notificationPreferences.userId, userId)
+            where: and(
+                eq(notificationPreferences.userId, userId),
+                eq(notificationPreferences.tenantId, session.user.tenantId)
+            )
         });
 
         // 构建完整的偏好映射（包含未设置的类型，默认使用 IN_APP）
@@ -257,6 +264,7 @@ const updateNotificationPreferenceActionInternal = createSafeAction(
         const existing = await db.query.notificationPreferences.findFirst({
             where: and(
                 eq(notificationPreferences.userId, userId),
+                eq(notificationPreferences.tenantId, tenantId),
                 eq(notificationPreferences.notificationType, data.notificationType)
             )
         });
@@ -303,36 +311,32 @@ const batchUpdateNotificationPreferencesActionInternal = createSafeAction(
         const userId = session.user.id;
         const tenantId = session.user.tenantId;
 
-        // 批量更新所有偏好
-        for (const [notificationType, channels] of Object.entries(data.preferences)) {
-            // 确保 IN_APP 始终开启
-            const finalChannels = channels.includes('IN_APP')
-                ? channels
-                : ['IN_APP', ...channels];
+        // P1 优化：使用 onConflictDoUpdate 批量 upsert，消除 N+1 查询
+        await db.transaction(async (tx) => {
+            const upsertPromises = Object.entries(data.preferences).map(([notificationType, channels]) => {
+                // 确保 IN_APP 始终开启
+                const finalChannels = channels.includes('IN_APP')
+                    ? channels
+                    : ['IN_APP', ...channels];
 
-            const existing = await db.query.notificationPreferences.findFirst({
-                where: and(
-                    eq(notificationPreferences.userId, userId),
-                    eq(notificationPreferences.notificationType, notificationType)
-                )
+                return tx.insert(notificationPreferences)
+                    .values({
+                        tenantId: tenantId,
+                        userId: userId,
+                        notificationType: notificationType,
+                        channels: finalChannels
+                    })
+                    .onConflictDoUpdate({
+                        target: [notificationPreferences.tenantId, notificationPreferences.userId, notificationPreferences.notificationType],
+                        set: {
+                            channels: finalChannels,
+                            updatedAt: new Date()
+                        }
+                    });
             });
 
-            if (existing) {
-                await db.update(notificationPreferences)
-                    .set({
-                        channels: finalChannels,
-                        updatedAt: new Date()
-                    })
-                    .where(eq(notificationPreferences.id, existing.id));
-            } else {
-                await db.insert(notificationPreferences).values({
-                    tenantId: tenantId,
-                    userId: userId,
-                    notificationType: notificationType,
-                    channels: finalChannels
-                });
-            }
-        }
+            await Promise.all(upsertPromises);
+        });
 
         return { success: true };
     }
@@ -347,3 +351,4 @@ export { getNotifications as getNotificationsAction };
 export { markAsRead as markAsReadAction };
 export { markAllAsRead as markAllAsReadAction };
 export { updateNotificationPreference as updateNotificationPreferenceAction };
+export { getUnreadCount as getUnreadCountAction };

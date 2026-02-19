@@ -1,77 +1,208 @@
 'use server';
 
+import { z } from 'zod';
+import { requireAuth, requirePOManagePermission, requireViewPermission } from '../helpers';
+import { SUPPLY_CHAIN_PATHS, isValidPoTransition } from '../constants';
+import { db } from '@/shared/api/db';
+import { purchaseOrders, poShipments } from '@/shared/api/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
+import { AuditService } from '@/shared/lib/audit-service';
+
 /**
- * 发货管理 Actions - 占位实现
- * 
- * 安全说明: 这些函数目前是占位实现，仅返回成功状态。
- * 在正式实现前已添加认证检查以防止未授权调用。
- * 
- * TODO: 待 shipments schema 定义后完善实际逻辑
+ * 发货管理 Actions
+ *
+ * Round 5 迁移：使用独立的 poShipments 表存储发货/物流记录，
+ * 替代原先直接修改 purchaseOrders 表物流字段的方式。
+ * 支持多次发货和多次物流追踪。
  */
 
-import { auth, checkPermission } from '@/shared/lib/auth';
-import { PERMISSIONS } from '@/shared/config/permissions';
+const createShipmentSchema = z.object({
+    /** 关联采购单 ID */
+    poId: z.string().uuid('请选择有效的采购单'),
+    /** 物流公司 */
+    logisticsCompany: z.string().max(100).optional(),
+    /** 物流单号 */
+    logisticsNo: z.string().max(100).optional(),
+    /** 物流追踪链接 */
+    trackingUrl: z.string().url().optional(),
+    /** 发货时间 */
+    shippedAt: z.string().refine((val) => !isNaN(Date.parse(val)), "无效的日期").optional(),
+    /** 备注 */
+    remark: z.string().max(500).optional(),
+});
 
-interface ShipmentData {
-    referenceId?: string;
-    carrier?: string;
-    trackingNo?: string;
-    items?: { productId: string; quantity: number }[];
+/**
+ * 创建发货记录
+ *
+ * @description 在独立的 poShipments 表中插入物流记录，并更新采购单状态为 SHIPPED。仅允许处于有效转换状态的采购单执行发货。
+ * @param input 符合 createShipmentSchema 的发货数据
+ * @returns {Promise<{success: boolean, data?: {id: string}, error?: string, message?: string}>}
+ */
+export async function createShipment(input: z.infer<typeof createShipmentSchema>) {
+    const authResult = await requireAuth();
+    if (!authResult.success) return { success: false, error: authResult.error };
+    const session = authResult.session;
+
+    const permResult = await requirePOManagePermission(session);
+    if (!permResult.success) return { success: false, error: permResult.error };
+
+    const validated = createShipmentSchema.safeParse(input);
+    if (!validated.success) {
+        return { success: false, error: validated.error.issues[0].message };
+    }
+    const data = validated.data;
+
+    return await db.transaction(async (tx) => {
+        // 1. 验证采购单存在且属于当前租户
+        const po = await tx.query.purchaseOrders.findFirst({
+            where: and(
+                eq(purchaseOrders.id, data.poId),
+                eq(purchaseOrders.tenantId, session.user.tenantId)
+            ),
+            columns: { id: true, status: true },
+        });
+
+        if (!po) return { success: false, error: '采购单不存在' };
+
+        // 2. 使用状态转换矩阵校验是否允许发货
+        if (!isValidPoTransition(po.status!, 'SHIPPED')) {
+            return { success: false, error: `当前状态「${po.status}」不允许发货` };
+        }
+
+        // 3. 插入物流记录到独立表
+        const [shipment] = await tx.insert(poShipments).values({
+            tenantId: session.user.tenantId,
+            poId: data.poId,
+            logisticsCompany: data.logisticsCompany,
+            logisticsNo: data.logisticsNo,
+            trackingUrl: data.trackingUrl,
+            shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
+            remark: data.remark,
+            createdBy: session.user.id,
+        }).returning();
+
+        // 4. 更新采购单状态为 SHIPPED
+        await tx.update(purchaseOrders)
+            .set({
+                status: 'SHIPPED',
+                shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(purchaseOrders.id, data.poId),
+                eq(purchaseOrders.tenantId, session.user.tenantId)
+            ));
+
+        // 5. 记录审计日志
+        await AuditService.recordFromSession(session, 'poShipments', shipment.id, 'CREATE', {
+            new: {
+                poId: data.poId,
+                logisticsCompany: data.logisticsCompany,
+                logisticsNo: data.logisticsNo,
+                status: 'SHIPPED'
+            }
+        }, tx);
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+        return { success: true, data: { id: shipment.id }, message: '发货信息已录入' };
+    });
 }
 
 /**
- * 创建发货单（占位）
+ * 更新发货记录
+ *
+ * @description 通过 shipmentId 更新特定的物流记录，包含租户隔离校验和审计日志。
+ * @param shipmentId 物流记录 ID
+ * @param input 待更新的物流数据
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function createShipment(_data: ShipmentData) {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: '未授权' };
-    }
+export async function updateShipment(shipmentId: string, input: z.infer<typeof updateShipmentSchema>) {
+    const authResult = await requireAuth();
+    if (!authResult.success) return { success: false, error: authResult.error };
+    const session = authResult.session;
 
-    try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-    } catch {
-        return { success: false, error: '无发货管理权限' };
-    }
+    const permResult = await requirePOManagePermission(session);
+    if (!permResult.success) return { success: false, error: permResult.error };
 
-    // TODO: 实际创建逻辑
-    return { success: true, message: '功能开发中' };
+    const validated = updateShipmentSchema.safeParse(input);
+    if (!validated.success) {
+        return { success: false, error: validated.error.issues[0].message };
+    }
+    const data = validated.data;
+
+    // 验证记录存在且属于当前租户
+    const existing = await db.query.poShipments.findFirst({
+        where: and(
+            eq(poShipments.id, shipmentId),
+            eq(poShipments.tenantId, session.user.tenantId)
+        ),
+    });
+
+    if (!existing) return { success: false, error: '物流记录不存在' };
+
+    await db.update(poShipments)
+        .set({
+            logisticsCompany: data.logisticsCompany,
+            logisticsNo: data.logisticsNo,
+            trackingUrl: data.trackingUrl,
+            remark: data.remark,
+        })
+        .where(and(
+            eq(poShipments.id, shipmentId),
+            eq(poShipments.tenantId, session.user.tenantId)
+        ));
+
+    // 记录审计日志
+    await AuditService.recordFromSession(session, 'poShipments', shipmentId, 'UPDATE', {
+        old: {
+            logisticsCompany: existing.logisticsCompany,
+            logisticsNo: existing.logisticsNo
+        },
+        new: data
+    });
+
+    revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    return { success: true };
 }
 
 /**
- * 更新发货单（占位）
+ * 获取采购单的发货记录列表
+ *
+ * @description 从独立的 poShipments 表查询某采购单的所有物流记录，按创建时间倒序排列。
+ * @param params 包含 poId 的检索参数
+ * @returns {Promise<{success: boolean, data: ShipmentRecord[], error?: string}>}
  */
-export async function updateShipment(_id: string, _data: Partial<ShipmentData>) {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: '未授权' };
-    }
+export async function getShipments(params: { poId: string }) {
+    const authResult = await requireAuth();
+    if (!authResult.success) return { success: false, error: authResult.error, data: [] };
+    const session = authResult.session;
 
-    try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-    } catch {
-        return { success: false, error: '无发货管理权限' };
-    }
+    const permResult = await requireViewPermission(session);
+    if (!permResult.success) return { success: false, error: permResult.error, data: [] };
 
-    // TODO: 实际更新逻辑
-    return { success: true, message: '功能开发中' };
-}
+    const { poId } = params;
+    if (!poId) return { success: true, data: [] };
 
-/**
- * 获取发货单列表（占位）
- */
-export async function getShipments(_params: { referenceId: string }) {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: '未授权', data: [] };
-    }
+    // 先验证采购单属于当前租户
+    const po = await db.query.purchaseOrders.findFirst({
+        where: and(
+            eq(purchaseOrders.id, poId),
+            eq(purchaseOrders.tenantId, session.user.tenantId)
+        ),
+        columns: { id: true },
+    });
 
-    try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
-    } catch {
-        return { success: false, error: '无发货查看权限', data: [] };
-    }
+    if (!po) return { success: true, data: [] };
 
-    // TODO: 实际查询逻辑，待 shipments schema 定义后实现
-    return { success: true, data: [] };
+    // 从独立表查询物流记录
+    const shipments = await db.query.poShipments.findMany({
+        where: and(
+            eq(poShipments.poId, poId),
+            eq(poShipments.tenantId, session.user.tenantId)
+        ),
+        orderBy: [desc(poShipments.createdAt)],
+    });
+
+    return { success: true, data: shipments };
 }

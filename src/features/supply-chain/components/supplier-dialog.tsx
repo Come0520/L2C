@@ -10,7 +10,7 @@ import {
     DialogTrigger,
 } from '@/shared/ui/dialog';
 import { SupplierForm, SupplierFormValues } from './supplier-form';
-import { createSupplier, updateSupplier } from '../actions/mutations'; // Ensure these are exported from somewhere
+import { createSupplier, updateSupplier } from '../actions/supplier-actions';
 import { toast } from 'sonner';
 
 interface SupplierDialogProps {

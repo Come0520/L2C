@@ -169,6 +169,14 @@ describe('Quote Lifecycle E2E Integration', () => {
       expect(result.status).toBe('PENDING_APPROVAL');
       expect(result.riskReasons).toContain('Gross profit too low');
 
+      // Simulate state change to PENDING_APPROVAL for reject action
+      (db.query.quotes.findFirst as Mock).mockResolvedValue({
+        id: mockQuoteId,
+        status: 'PENDING_APPROVAL',
+        finalAmount: '1000',
+        items: [{ id: 'item-1', quantity: 1, unitPrice: 1000, subtotal: 1000 }],
+      });
+
       // STEP 2: Reject Quote
       await QuoteLifecycleService.reject(mockQuoteId, 'Price too low', mockTenantId);
 

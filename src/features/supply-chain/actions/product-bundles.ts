@@ -1,10 +1,6 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-// I need to confirm imports for productBundles and productBundleItems. 
-// They are in supply-chain.ts, so unlikely grouped in index unless exported.
-// shared/api/schema/index.ts usually exports * from modules.
-// Let's assume shared/api/schema exports them.
 import { productBundles, productBundleItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
@@ -12,6 +8,9 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { createProductBundleSchema, updateProductBundleSchema } from '../schemas';
+import { z } from 'zod';
+import { SUPPLY_CHAIN_PATHS } from "../constants";
+import { AuditService } from '@/shared/lib/audit-service';
 
 const createProductBundleActionInternal = createSafeAction(createProductBundleSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -24,7 +23,7 @@ const createProductBundleActionInternal = createSafeAction(createProductBundleSc
     });
 
     if (existing) {
-        throw new Error('Bundle SKU already exists');
+        throw new Error('套件 SKU 已存在');
     }
 
     return await db.transaction(async (tx) => {
@@ -49,11 +48,27 @@ const createProductBundleActionInternal = createSafeAction(createProductBundleSc
             );
         }
 
-        revalidatePath('/supply-chain/products');
+        // 记录审计日志
+        await AuditService.recordFromSession(session, 'productBundles', bundle.id, 'CREATE', {
+            new: {
+                bundleSku: data.bundleSku,
+                name: data.name,
+                itemCount: data.items?.length || 0
+            }
+        }, tx);
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.PRODUCT_BUNDLES);
         return { id: bundle.id };
     });
 });
 
+/**
+ * 创建新的产品套件 (Product Bundle)
+ * 
+ * @description 开启事务同时创建套件主表和关联的产品明细子表，包含 SKU 唯一性校验和审计日志记录。
+ * @param params 符合 createProductBundleSchema 的输入数据
+ * @returns {Promise<ActionState<{id: string}>>} 创建成功后返回套件 ID
+ */
 export async function createProductBundle(params: Parameters<typeof createProductBundleActionInternal>[0]) {
     return createProductBundleActionInternal(params);
 }
@@ -77,7 +92,9 @@ const updateProductBundleActionInternal = createSafeAction(updateProductBundleSc
             ))
             .returning();
 
-        if (!bundle) throw new Error('Bundle not found');
+        if (!bundle) {
+            throw new Error('套件不存在');
+        }
 
         if (items) {
             await tx.delete(productBundleItems)
@@ -96,33 +113,65 @@ const updateProductBundleActionInternal = createSafeAction(updateProductBundleSc
             }
         }
 
-        revalidatePath('/supply-chain/products');
+        // 记录审计日志
+        await AuditService.recordFromSession(session, 'productBundles', id, 'UPDATE', {
+            new: updates,
+            itemsUpdated: !!items
+        }, tx);
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.PRODUCT_BUNDLES);
         return { id: bundle.id };
     });
 });
 
+/**
+ * 更新现有的产品套件
+ * 
+ * @description 支持更新套件基础信息及重新同步产品明细清单。采用先删后增的方式更新子表。
+ * @param params 符合 updateProductBundleSchema 的输入数据，包含套件 ID
+ * @returns {Promise<ActionState<{id: string}>>} 更新成功后返回套件 ID
+ */
 export async function updateProductBundle(params: Parameters<typeof updateProductBundleActionInternal>[0]) {
     return updateProductBundleActionInternal(params);
 }
 
-const deleteProductBundleActionInternal = createSafeAction(updateProductBundleSchema.pick({ id: true }), async ({ id }, { session }) => {
+const deleteProductBundleSchema = z.object({
+    id: z.string()
+});
+
+const deleteProductBundleActionInternal = createSafeAction(deleteProductBundleSchema, async ({ id }, { session }) => {
+    // [CQ-02] fix: 使用独立的 delete schema
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     await db.transaction(async (tx) => {
+        // [CQ-03] fix: 子表删除添加租户隔离 (防御性编程)
         await tx.delete(productBundleItems)
-            .where(eq(productBundleItems.bundleId, id));
+            .where(and(
+                eq(productBundleItems.bundleId, id),
+                eq(productBundleItems.tenantId, session.user.tenantId)
+            ));
 
         await tx.delete(productBundles)
             .where(and(
                 eq(productBundles.id, id),
                 eq(productBundles.tenantId, session.user.tenantId)
             ));
+
+        // 记录审计日志
+        await AuditService.recordFromSession(session, 'productBundles', id, 'DELETE', undefined, tx);
     });
 
-    revalidatePath('/supply-chain/products');
+    revalidatePath(SUPPLY_CHAIN_PATHS.PRODUCT_BUNDLES);
     return { success: true };
 });
 
-export async function deleteProductBundle(params: { id: string }) {
+/**
+ * 删除产品套件
+ * 
+ * @description 级联删除套件及其所有产品明细，包含租户隔离校验。
+ * @param params 包含待删除套件 ID 的对象
+ * @returns {Promise<ActionState<{success: true}>>}
+ */
+export async function deleteProductBundle(params: z.infer<typeof deleteProductBundleSchema>) {
     return deleteProductBundleActionInternal(params);
 }

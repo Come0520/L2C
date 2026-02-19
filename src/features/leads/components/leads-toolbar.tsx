@@ -8,10 +8,10 @@ import { useDebounce } from '@/shared/hooks/use-debounce';
 
 interface LeadsToolbarProps {
     tenantId: string;
-    channels?: any[]; // Keep flexible if we want to pass channel options directly to filter eventually
+    salesList?: Array<{ id: string; name: string }>;
 }
 
-export function LeadsToolbar({ tenantId }: LeadsToolbarProps) {
+export function LeadsToolbar({ tenantId, salesList }: LeadsToolbarProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -48,7 +48,7 @@ export function LeadsToolbar({ tenantId }: LeadsToolbarProps) {
             }}
             onRefresh={handleRefresh}
         >
-            <LeadsAdvancedFilter tenantId={tenantId} />
+            <LeadsAdvancedFilter tenantId={tenantId} salesList={salesList} />
         </DataTableToolbar>
     );
 }

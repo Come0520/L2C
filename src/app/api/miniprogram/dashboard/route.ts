@@ -3,42 +3,21 @@
  *
  * GET /api/miniprogram/dashboard
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { db } from '@/shared/api/db';
 import { quotes, customers, salesTargets } from '@/shared/api/schema';
 import { eq, and, count, sql } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
-
-// Helper: Get User Info from Token
-async function getUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  try {
-    const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-
-    // Fetch full user to get role
-    const user = await db.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, payload.userId as string),
-      columns: { id: true, role: true, tenantId: true },
-    });
-    return user;
-  } catch {
-    return null;
-  }
-}
+import { getMiniprogramUser } from '../auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUser(request);
+    const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
-      console.log('Dashboard: User not authorized or no tenantId');
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
+      return apiError('未授权', 401);
     }
-    console.log('Dashboard: User authorized', user.role, user.id);
 
-    const data: any = {
+    const data: Record<string, unknown> = {
       role: user.role,
       stats: [],
       todos: [],
@@ -218,21 +197,13 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    return NextResponse.json({ success: true, data });
+    return apiSuccess(data);
   } catch (error) {
     console.error('Dashboard Error Stack:', error);
     if (error instanceof Error) {
       console.error('Dashboard Error Message:', error.message);
       console.error('Dashboard Error Name:', error.name);
     }
-    return NextResponse.json(
-      {
-        success: false,
-        error: '获取数据失败',
-        details: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return apiError('获取数据失败', 500);
   }
 }

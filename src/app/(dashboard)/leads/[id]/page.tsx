@@ -45,15 +45,15 @@ export default async function LeadDetailPage({
 
     let lead, channels;
     try {
-        const [leadResult, channelsData] = await Promise.all([
+        const [leadData, channelsData] = await Promise.all([
             getLeadById({ id: resolvedParams.id }),
             getChannels(),
         ]);
 
-        if (!leadResult.success || !leadResult.data) {
+        if (!leadData) {
             notFound();
         }
-        lead = leadResult.data;
+        lead = leadData;
         channels = channelsData;
     } catch (error: unknown) {
         console.error(`[${new Date().toISOString()}] Error fetching lead detail:`, error);
@@ -83,7 +83,7 @@ export default async function LeadDetailPage({
                         <EditLeadDialog
                             lead={lead}
                             channels={channels}
-                            userId={userId}
+                            tenantId={tenantId}
                             trigger={
                                 <Button variant="outline" size="sm">
                                     <Edit className="h-4 w-4 mr-2" />
@@ -106,7 +106,7 @@ export default async function LeadDetailPage({
                                 快速报价
                             </Link>
                         </NoiseButton>
-                        {lead.status !== 'WON' && lead.status !== 'VOID' && (
+                        {lead.status !== 'WON' && lead.status !== 'INVALID' && (
                             <VoidLeadDialog
                                 leadId={lead.id}
                                 userId={userId}

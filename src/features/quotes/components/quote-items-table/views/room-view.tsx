@@ -36,6 +36,7 @@ interface RoomViewProps extends ColumnVisibility {
   handleDeleteRoom: (id: string) => Promise<void>;
   getRoomSubtotal: (roomId: string) => number;
   allowedCategories?: string[];
+  onRowClick?: (item: QuoteItem) => void;
 }
 
 export function RoomView({
@@ -69,6 +70,7 @@ export function RoomView({
   handleDeleteRoom,
   getRoomSubtotal,
   allowedCategories,
+  onRowClick,
 }: RoomViewProps) {
   const columnCount =
     2 +
@@ -110,6 +112,7 @@ export function RoomView({
           handleAdvancedEdit={handleAdvancedEdit}
           onToggleExpand={() => handleToggleItem(item.id)}
           renderChildren={renderRows}
+          onRowClick={onRowClick}
         />
       );
     });

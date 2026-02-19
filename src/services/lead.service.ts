@@ -1,10 +1,13 @@
 import { db } from "@/shared/api/db";
 import { leads, channels, leadActivities, leadStatusHistory, customers } from "@/shared/api/schema";
-import { eq, and, sql, notInArray, desc } from "drizzle-orm";
+import { eq, and, desc, sql, or, ilike, count, isNull, notInArray } from 'drizzle-orm';
 import { CustomerService } from "./customer.service";
 import { randomBytes } from 'crypto';
 import { format } from 'date-fns';
-import { getSetting } from "@/features/settings/actions/system-settings-actions";
+import { calculateLeadScore } from "@/features/leads/logic/scoring";
+import { getSettingInternal } from "@/features/settings/actions/system-settings-actions";
+import { distributeToNextSales } from '@/features/leads/logic/distribution-engine';
+import { escapeSqlLike } from "@/shared/lib/utils";
 
 export class LeadService {
 
@@ -14,8 +17,8 @@ export class LeadService {
      */
     private static async generateLeadNo() {
         const prefix = `LD${format(new Date(), 'yyyyMMdd')}`;
-        const random = randomBytes(3).toString('hex').toUpperCase();
-        return `${prefix}${random}`;
+        const random = randomBytes(3).toString('hex').toUpperCase(); // 6 chars
+        return `${prefix}${random}`; // TOTAL 8+6=14 chars
     }
 
     /**
@@ -24,95 +27,100 @@ export class LeadService {
      * @param tenantId Tenant ID
      * @param userId Creator User ID
      */
-    static async createLead(data: Omit<typeof leads.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'tenantId' | 'leadNo' | 'createdBy' | 'assignedSalesId' | 'assignedAt' | 'status'>, tenantId: string, userId: string): Promise<{
+    static async createLead(data: Omit<typeof leads.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'tenantId' | 'leadNo' | 'createdBy' | 'assignedAt' | 'status'>, tenantId: string, userId: string): Promise<{
         isDuplicate: boolean;
         duplicateReason?: 'PHONE' | 'ADDRESS';
         lead: typeof leads.$inferSelect;
     }> {
+        // Calculate initial score
+        const score = calculateLeadScore(data).toString();
 
-        // 读取消重配置（使用统一的键名 LEAD_DUPLICATE_STRATEGY）
-        const deduplicationSetting = await getSetting('LEAD_DUPLICATE_STRATEGY', tenantId) as string;
-        // 消重策略：NONE=不校验, AUTO_LINK=自动关联(复用为查重), REJECT=拒绝
-        if (deduplicationSetting !== 'NONE') {
-            const activeLead = await db.query.leads.findFirst({
-                where: and(
-                    eq(leads.customerPhone, data.customerPhone),
-                    eq(leads.tenantId, tenantId),
-                    notInArray(leads.status, ['WON', 'VOID'])
-                )
-            });
-
-            if (activeLead) {
-                return { isDuplicate: true, duplicateReason: 'PHONE', lead: activeLead };
-            }
-            // 地址查重：检查是否启用了第二键查重
-            const enableSecondKeyCheck = await getSetting('ENABLE_SECOND_KEY_DUPLICATE_CHECK', tenantId) as boolean;
-            if (enableSecondKeyCheck && data.community && data.address) {
-                const existingAddress = await db.query.leads.findFirst({
+        // 使用单一事务包裹整个流程
+        return await db.transaction(async (tx) => {
+            // 读取消重配置（使用统一的键名 LEAD_DUPLICATE_STRATEGY）
+            const deduplicationSetting = await getSettingInternal('LEAD_DUPLICATE_STRATEGY', tenantId) as string;
+            // 消重策略：NONE=不校验, AUTO_LINK=自动关联(复用为查重), REJECT=拒绝
+            if (deduplicationSetting !== 'NONE') {
+                const activeLead = await tx.query.leads.findFirst({
                     where: and(
-                        eq(leads.community, data.community),
-                        eq(leads.address, data.address),
+                        eq(leads.customerPhone, data.customerPhone),
                         eq(leads.tenantId, tenantId),
-                        notInArray(leads.status, ['WON', 'VOID'])
+                        notInArray(leads.status, ['WON', 'INVALID'])
                     )
                 });
-                if (existingAddress) {
-                    return { isDuplicate: true, duplicateReason: 'ADDRESS', lead: existingAddress };
+
+                if (activeLead) {
+                    return { isDuplicate: true, duplicateReason: 'PHONE' as const, lead: activeLead };
                 }
-            }
-        }
-
-        // 3. Auto-link to existing customer
-        let customerId = data.customerId;
-        if (!customerId && data.customerPhone) {
-            const existingCustomer = await CustomerService.findByPhone(data.customerPhone, tenantId);
-            if (existingCustomer) {
-                customerId = existingCustomer.id;
-            }
-        }
-
-        // 5. 自动分配策略 (Round Robin / Load Balance)
-        // 尝试获取分配建议
-        let assignedSalesId = null;
-        let initialStatus: typeof leads.$inferInsert['status'] = 'PENDING_ASSIGNMENT';
-
-        // 如果没有指定销售，且未成交，尝试自动分配
-        if (!assignedSalesId && initialStatus === 'PENDING_ASSIGNMENT') {
-            try {
-                // 读取自动分配配置（使用统一的键名 LEAD_AUTO_ASSIGN_RULE）
-                const assignRule = await getSetting('LEAD_AUTO_ASSIGN_RULE', tenantId) as string;
-
-                if (assignRule !== 'MANUAL') {
-                    // 动态导入以避免循环依赖
-                    const { distributeToNextSales } = await import('@/features/leads/logic/distribution-engine');
-                    const distribution = await distributeToNextSales(tenantId);
-
-                    if (distribution.salesId) {
-                        assignedSalesId = distribution.salesId;
-                        initialStatus = 'PENDING_FOLLOWUP';
+                // 地址查重：检查是否启用了第二键查重
+                const enableSecondKeyCheck = await getSettingInternal('ENABLE_SECOND_KEY_DUPLICATE_CHECK', tenantId) as boolean;
+                if (enableSecondKeyCheck && data.community && data.address) {
+                    const existingAddress = await tx.query.leads.findFirst({
+                        where: and(
+                            eq(leads.community, data.community),
+                            eq(leads.address, data.address),
+                            eq(leads.tenantId, tenantId),
+                            notInArray(leads.status, ['WON', 'INVALID'])
+                        )
+                    });
+                    if (existingAddress) {
+                        return { isDuplicate: true, duplicateReason: 'ADDRESS' as const, lead: existingAddress };
                     }
                 }
-            } catch (error) {
-                console.error('Auto-distribution failed:', error);
-                // 降级处理：保持未分配
             }
-        }
 
-        // 6. Generate Lead No
-        const leadNo = await this.generateLeadNo();
+            // 3. Auto-link to existing customer
+            let customerId = data.customerId;
+            if (!customerId && data.customerPhone) {
+                // 注意：CustomerService.findByPhone 可能需要支持 tx 参数，暂时假设可以单独查询
+                const existingCustomer = await CustomerService.findByPhone(data.customerPhone, tenantId);
+                if (existingCustomer) {
+                    customerId = existingCustomer.id;
+                }
+            }
 
-        // 7. Create Lead
-        // Wrap in transaction for stats consistency
-        const newLead = await db.transaction(async (tx) => {
+            // 5. 自动分配策略 (Round Robin / Load Balance)
+            // 尝试获取分配建议
+            let assignedSalesId = null;
+            let initialStatus: typeof leads.$inferInsert['status'] = 'PENDING_ASSIGNMENT';
+
+            // 如果没有指定销售，且未成交，尝试自动分配
+            if (!data.assignedSalesId && initialStatus === 'PENDING_ASSIGNMENT') {
+                try {
+                    // 读取自动分配配置（使用统一的键名 LEAD_AUTO_ASSIGN_RULE）
+                    const assignRule = await getSettingInternal('LEAD_AUTO_ASSIGN_RULE', tenantId) as string;
+
+                    if (assignRule !== 'MANUAL') {
+                        // 动态导入以避免循环依赖
+                        // 传入当前的事务上下文 tx
+                        const distribution = await distributeToNextSales(tenantId, tx);
+
+                        if (distribution.salesId) {
+                            assignedSalesId = distribution.salesId;
+                            initialStatus = 'PENDING_FOLLOWUP';
+                        }
+                    }
+                } catch (error) {
+
+                    console.error('Auto-distribution failed:', error);
+                    // 降级处理：保持未分配
+                }
+            }
+
+            // 6. Generate Lead No
+            const leadNo = await this.generateLeadNo();
+
+            // 7. Create Lead
             const [lead] = await tx.insert(leads).values({
                 ...data,
                 leadNo,
+                score,
                 customerId: customerId,
                 tenantId: tenantId,
                 createdBy: userId,
                 status: initialStatus,
-                assignedSalesId: assignedSalesId,
-                assignedAt: assignedSalesId ? new Date() : null,
+                assignedSalesId: assignedSalesId || data.assignedSalesId, // 优先使用自动分配结果，其次是传入的
+                assignedAt: (assignedSalesId || data.assignedSalesId) ? new Date() : null,
             }).returning();
 
             // 8. Update Channel Statistics
@@ -122,10 +130,10 @@ export class LeadService {
                     .where(and(eq(channels.id, data.channelId), eq(channels.tenantId, tenantId)));
             }
 
-            return lead;
-        });
+            // 如果初始分配了销售，需要记录状态变更历史? 暂不，这里是创建。
 
-        return { isDuplicate: false, lead: newLead };
+            return { isDuplicate: false, lead };
+        });
     }
 
     /**
@@ -148,23 +156,78 @@ export class LeadService {
     /**
      * Update lead information using partial data.
      */
-    static async updateLead(id: string, data: Partial<typeof leads.$inferInsert>, tenantId: string) {
+    static async updateLead(id: string, data: Partial<typeof leads.$inferInsert>, tenantId: string, operatorId?: string, version?: number) {
         // Ensure the lead exists and belongs to the tenant
         const existingLead = await db.query.leads.findFirst({
             where: and(eq(leads.id, id), eq(leads.tenantId, tenantId)),
-            columns: { id: true }
+            columns: {
+                id: true,
+                status: true,
+                // Scoring related fields
+                intentionLevel: true,
+                customerPhone: true,
+                customerWechat: true,
+                community: true,
+                address: true,
+                houseType: true,
+                estimatedAmount: true,
+                channelId: true,
+                sourceChannelId: true,
+            }
         });
 
         if (!existingLead) {
             throw new Error('Lead not found or access denied');
         }
 
-        const [updated] = await db.update(leads)
-            .set(data)
-            .where(eq(leads.id, id))
-            .returning();
+        // Calculate new score if relevant fields are updated
+        let newScore = undefined;
+        // Check if any scoring field is present in data
+        const scoringFields = ['intentionLevel', 'customerPhone', 'customerWechat', 'community', 'address', 'houseType', 'estimatedAmount', 'channelId', 'sourceChannelId'];
+        const shouldRecalculate = scoringFields.some(field => field in data);
 
-        return updated;
+        if (shouldRecalculate) {
+            // Merge existing data with updates
+            const merged = { ...existingLead, ...data };
+            newScore = calculateLeadScore(merged).toString();
+        }
+
+        return await db.transaction(async (tx) => {
+            const updatePayload = {
+                ...data,
+                ...(newScore ? { score: newScore } : {}),
+                version: sql`${leads.version} + 1`,
+            };
+
+            const whereCondition = and(
+                eq(leads.id, id),
+                eq(leads.tenantId, tenantId),
+                version !== undefined ? eq(leads.version, version) : undefined
+            );
+
+            const [updated] = await tx.update(leads)
+                .set(updatePayload)
+                .where(whereCondition)
+                .returning();
+
+            if (!updated && version !== undefined) {
+                throw new Error('Concurrent modification detected. Please refresh and try again.');
+            }
+
+            // 如果状态发生变更，且提供了操作人ID，则记录历史
+            if (data.status && data.status !== existingLead.status && operatorId) {
+                await tx.insert(leadStatusHistory).values({
+                    tenantId,
+                    leadId: id,
+                    oldStatus: existingLead.status || 'PENDING_ASSIGNMENT',
+                    newStatus: data.status,
+                    changedBy: operatorId,
+                    reason: 'Lead Update', // 可以考虑让调用方传入 reason
+                });
+            }
+
+            return updated;
+        });
     }
 
     /**
@@ -172,9 +235,10 @@ export class LeadService {
      */
     static async assignLead(id: string, salesId: string, tenantId: string, userId: string) {
         return await db.transaction(async (tx) => {
-            const lead = await tx.query.leads.findFirst({
-                where: and(eq(leads.id, id), eq(leads.tenantId, tenantId))
-            });
+            const [lead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
+                .for('update');
+
             if (!lead) throw new Error('Lead not found or access denied');
 
             const [updated] = await tx.update(leads)
@@ -202,90 +266,88 @@ export class LeadService {
     /**
      * Add a followup activity to a lead.
      */
-    static async addActivity(
-        leadId: string,
-        data: {
-            type: string;
-            content: string;
-            nextFollowupAt?: Date;
-            quoteId?: string;
-            purchaseIntention?: "HIGH" | "MEDIUM" | "LOW";
-            customerLevel?: string;
-        },
-        tenantId: string,
-        userId: string
-    ) {
-        await db.transaction(async (tx) => {
-            const lead = await tx.query.leads.findFirst({
-                where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId))
-            });
-            if (!lead) throw new Error('Lead not found or access denied');
+    static async addActivity(leadId: string, data: {
+        type: typeof leadActivities.$inferInsert.activityType;
+        content: string;
+        nextFollowupAt?: Date;
+        quoteId?: string;
+        purchaseIntention?: typeof leadActivities.$inferInsert.purchaseIntention;
+        customerLevel?: string;
+    }, tenantId: string, userId: string): Promise<string> {
+        return await db.transaction(async (tx) => {
+            // 1. Verify lead existence and access
+            const [lead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .for('update');
+            if (!lead) throw new Error('Lead not found');
 
-            const activityType: "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT" | "SYSTEM" =
-                data.type === 'OTHER' ? 'SYSTEM' : (data.type as "PHONE_CALL" | "WECHAT_CHAT" | "STORE_VISIT" | "HOME_VISIT" | "QUOTE_SENT");
-
-            await tx.insert(leadActivities).values({
+            // 2. Insert Activity
+            const [activity] = await tx.insert(leadActivities).values({
                 tenantId,
                 leadId,
-                activityType,
+                activityType: data.type,
                 content: data.content,
-                nextFollowupDate: data.nextFollowupAt,
+                quoteId: data.quoteId,
+                purchaseIntention: data.purchaseIntention,
+                customerLevel: data.customerLevel,
                 createdBy: userId,
-                quoteId: data.quoteId || null,
-                purchaseIntention: data.purchaseIntention || null,
-                customerLevel: data.customerLevel || null,
-            });
+                createdAt: new Date(),
+            }).returning({ id: leadActivities.id });
 
-            let newStatus = lead.status;
-            if (lead.status === 'PENDING_FOLLOWUP' || lead.status === 'PENDING_ASSIGNMENT') {
-                newStatus = 'FOLLOWING_UP';
-            }
+            // 3. Update Lead (lastActivityAt, nextFollowupAt, status -> FOLLOWING_UP if pending)
+            const updateData: Partial<typeof leads.$inferInsert> = {
+                lastActivityAt: new Date(),
+                nextFollowupAt: data.nextFollowupAt || null, // Clear if not provided? Or keep? Usually update.
+            };
 
-            // Update Lead status and intention
-            await tx.update(leads)
-                .set({
-                    status: newStatus,
-                    lastActivityAt: new Date(),
-                    nextFollowupAt: data.nextFollowupAt,
-                    intentionLevel: data.purchaseIntention || lead.intentionLevel,
-                })
-                .where(eq(leads.id, leadId));
-
-            if (newStatus !== lead.status) {
+            if (lead.status === 'PENDING_FOLLOWUP') {
+                updateData.status = 'FOLLOWING_UP';
+                // Add status history
                 await tx.insert(leadStatusHistory).values({
-                    tenantId: lead.tenantId,
-                    leadId: leadId,
-                    oldStatus: lead.status || 'PENDING_ASSIGNMENT',
-                    newStatus: newStatus || 'PENDING_ASSIGNMENT',
+                    tenantId,
+                    leadId,
+                    oldStatus: 'PENDING_FOLLOWUP',
+                    newStatus: 'FOLLOWING_UP',
                     changedBy: userId,
-                    reason: 'Follow-up Added',
+                    reason: '自动状态变更：添加跟进记录',
                 });
             }
+
+            await tx.update(leads)
+                .set(updateData)
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)));
+
+            return activity.id;
         });
     }
 
     /**
      * Void a lead (Mark as lost/void).
      */
-    static async voidLead(id: string, reason: string, tenantId: string, userId: string) {
+    static async voidLead(leadId: string, reason: string, tenantId: string, userId: string): Promise<void> {
         await db.transaction(async (tx) => {
-            const lead = await tx.query.leads.findFirst({
-                where: and(eq(leads.id, id), eq(leads.tenantId, tenantId))
-            });
-            if (!lead) throw new Error('Lead not found or access denied');
+            const [lead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .for('update');
+
+            if (!lead) throw new Error('Lead not found');
+            if (lead.status === 'WON') throw new Error('Cannot void a WON lead');
+            if (lead.status === 'INVALID') return; // Already voided
+
+            const oldStatus = lead.status;
 
             await tx.update(leads)
                 .set({
-                    status: 'VOID',
+                    status: 'INVALID',
                     lostReason: reason,
                 })
-                .where(eq(leads.id, id));
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)));
 
             await tx.insert(leadStatusHistory).values({
-                tenantId: lead.tenantId,
-                leadId: id,
-                oldStatus: lead.status || 'PENDING_ASSIGNMENT',
-                newStatus: 'VOID',
+                tenantId,
+                leadId,
+                oldStatus,
+                newStatus: 'INVALID',
                 changedBy: userId,
                 reason,
             });
@@ -304,14 +366,17 @@ export class LeadService {
         return await db.transaction(async (tx) => {
             let finalCustomerId = targetCustomerId;
 
-            const lead = await tx.query.leads.findFirst({
-                where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId))
-            });
+            const [lead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .for('update');
+
             if (!lead) throw new Error('Lead not found or access denied');
 
             // If no customer ID provided, create new customer from lead info
             if (!finalCustomerId) {
-                const customerNo = `C${format(new Date(), 'yyyyMMdd')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+                // 2. Generate Customer Number (C20231027001)
+                // Use randomBytes + hex to avoid collision better than Math.random()
+                const customerNo = `C${format(new Date(), 'yyyyMMdd')}${randomBytes(3).toString('hex').toUpperCase()}`;
 
                 const [newCustomer] = await tx.insert(customers).values({
                     tenantId,
@@ -338,7 +403,7 @@ export class LeadService {
                 const estimatedAmountNum = parseFloat(lead.estimatedAmount || '0') || 0;
                 await tx.update(channels)
                     .set({
-                        totalDealAmount: sql`COALESCE(${channels.totalDealAmount}, '0')::decimal + ${estimatedAmountNum}::decimal`
+                        totalDealAmount: sql`COALESCE(${channels.totalDealAmount}, '0'):: decimal + ${estimatedAmountNum}:: decimal`
                     })
                     .where(and(eq(channels.id, lead.channelId), eq(channels.tenantId, tenantId)));
             }
@@ -386,9 +451,10 @@ export class LeadService {
      */
     static async releaseToPool(leadId: string, tenantId: string, userId: string) {
         await db.transaction(async (tx) => {
-            const lead = await tx.query.leads.findFirst({
-                where: and(eq(leads.id, leadId), eq(leads.tenantId, tenantId))
-            });
+            const [lead] = await tx.select().from(leads)
+                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .for('update');
+
             if (!lead) throw new Error('Lead not found or access denied');
 
             await tx.update(leads)
@@ -413,7 +479,7 @@ export class LeadService {
      * Claim a lead from the public pool.
      */
     static async claimFromPool(leadId: string, tenantId: string, userId: string) {
-        await db.transaction(async (tx) => {
+        return await db.transaction(async (tx) => {
             // FOR UPDATE lock to prevent race conditions
             const [lead] = await tx.select().from(leads)
                 .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
@@ -425,13 +491,14 @@ export class LeadService {
                 throw new Error('Lead already assigned');
             }
 
-            await tx.update(leads)
+            const [updatedLead] = await tx.update(leads)
                 .set({
                     assignedSalesId: userId,
                     assignedAt: new Date(),
                     status: 'PENDING_FOLLOWUP',
                 })
-                .where(eq(leads.id, leadId));
+                .where(eq(leads.id, leadId))
+                .returning();
 
             await tx.insert(leadStatusHistory).values({
                 tenantId: lead.tenantId,
@@ -441,6 +508,70 @@ export class LeadService {
                 changedBy: userId,
                 reason: 'Claimed from Pool',
             });
+
+            return updatedLead;
         });
+    }
+
+    /**
+     * Get mobile lead list with pagination and keyword search for a specific user (or pool).
+     */
+    static async getMobileLeads(
+        tenantId: string,
+        userId: string,
+        type: 'mine' | 'pool',
+        page: number = 1,
+        pageSize: number = 20,
+        keyword?: string | null
+    ) {
+        const baseConditions = [eq(leads.tenantId, tenantId)];
+
+        if (type === 'mine') {
+            baseConditions.push(eq(leads.assignedSalesId, userId));
+        } else if (type === 'pool') {
+            baseConditions.push(isNull(leads.assignedSalesId));
+        }
+
+        if (keyword) {
+            const escapedKeyword = escapeSqlLike(keyword);
+            const searchFilter = or(
+                ilike(leads.customerName, `%${escapedKeyword}%`),
+                ilike(leads.customerPhone, `%${escapedKeyword}%`),
+                ilike(leads.leadNo, `%${escapedKeyword}%`),
+                ilike(leads.community, `%${escapedKeyword}%`)
+            );
+            if (searchFilter) {
+                baseConditions.push(searchFilter);
+            }
+        }
+
+        const leadList = await db.query.leads.findMany({
+            where: and(...baseConditions),
+            orderBy: [desc(leads.updatedAt)],
+            limit: pageSize,
+            offset: (page - 1) * pageSize,
+            columns: {
+                id: true,
+                leadNo: true,
+                customerName: true,
+                customerPhone: true,
+                address: true,
+                status: true,
+                intentionLevel: true,
+                lastActivityAt: true,
+                nextFollowupAt: true,
+                decorationProgress: true,
+                createdAt: true,
+            }
+        });
+
+        const [totalResult] = await db
+            .select({ total: count() })
+            .from(leads)
+            .where(and(...baseConditions));
+
+        const total = totalResult?.total || 0;
+
+        return { items: leadList, total };
     }
 }

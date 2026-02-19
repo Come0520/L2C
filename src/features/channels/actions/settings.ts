@@ -5,6 +5,7 @@ import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm'
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
 import type { AttributionModel } from './schema';
 
 
@@ -67,6 +68,7 @@ export async function updateAttributionSettingsAction(
         });
 
         const currentSettings = (currentTenant?.settings as Record<string, unknown>) || {};
+        const model = currentSettings?.channelAttributionModel as AttributionModel; // Reuse for diff check
 
         // 合并新设置
         const newSettings = {
@@ -78,6 +80,20 @@ export async function updateAttributionSettingsAction(
         await db.update(tenants)
             .set({ settings: newSettings, updatedAt: new Date() })
             .where(eq(tenants.id, session.user.tenantId));
+
+        // P1 Fix: Audit Log
+        if (data.attributionModel !== model) {
+            await AuditService.log(db, {
+                tableName: 'tenants',
+                recordId: session.user.tenantId,
+                action: 'UPDATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: { channelAttributionModel: data.attributionModel },
+                oldValues: { channelAttributionModel: model },
+                details: { reason: 'Update attribution settings' }
+            });
+        }
 
         return { success: true, data: { success: true } };
     } catch (error) {

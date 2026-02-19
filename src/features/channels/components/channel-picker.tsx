@@ -31,7 +31,7 @@ interface ChannelPickerProps {
 interface ChannelNode {
     id: string;
     name: string;
-    code: string;
+    channelNo: string;
     level: string | null;
     hierarchyLevel: number;
     children?: ChannelNode[];
@@ -73,7 +73,7 @@ export function ChannelPicker({ value, onChange, placeholder = "选择渠道..."
         if (!search) return flattenChannels;
         return flattenChannels.filter(c =>
             c.name.toLowerCase().includes(search.toLowerCase()) ||
-            c.code.toLowerCase().includes(search.toLowerCase())
+            c.channelNo.toLowerCase().includes(search.toLowerCase())
         );
     }, [flattenChannels, search]);
 
@@ -137,7 +137,7 @@ export function ChannelPicker({ value, onChange, placeholder = "选择渠道..."
                                             <span className="font-medium">{channel.name}</span>
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                 <Hash className="h-3 w-3" />
-                                                {channel.code}
+                                                {channel.channelNo}
                                             </div>
                                         </div>
                                     </div>

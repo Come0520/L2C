@@ -1,34 +1,13 @@
 
-import { getPoById, updatePoStatus } from '@/features/supply-chain/actions/po-actions';
+import { getPoById } from '@/features/supply-chain/actions/po-actions';
 import { AddLogisticsDialog as LogisticsDialog } from '@/features/supply-chain/components/add-logistics-dialog';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader, CardContent } from '@/shared/ui/card';
-import { Badge } from '@/shared/ui/badge';
-import { ArrowLeft, Play, PackageCheck, CheckCircle, Truck } from 'lucide-react';
+import { ArrowLeft, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
-import { purchaseOrderItems } from '@/shared/api/schema';
-// import { POQuoteDialog } from '@/features/supply-chain/components/po-quote-dialog';
-// import { FileText, ExternalLink } from 'lucide-react';
-
-type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
-// type PoQuoteStatus = typeof poQuoteStatusEnum.enumValues[number];
-
-// Status Badge Component
-function PoStatusBadge({ status }: { status: string }) {
-    const map: Record<string, { label: string; className: string }> = {
-        'DRAFT': { label: '草稿', className: 'bg-gray-100 text-gray-700' },
-        'IN_PRODUCTION': { label: '生产中', className: 'bg-blue-100 text-blue-700' },
-        'READY': { label: '备货完成', className: 'bg-indigo-100 text-indigo-700' },
-        'SHIPPED': { label: '已发货', className: 'bg-purple-100 text-purple-700' },
-        'DELIVERED': { label: '已到货', className: 'bg-orange-100 text-orange-700' },
-        'COMPLETED': { label: '已完成', className: 'bg-green-100 text-green-700' },
-        'CANCELLED': { label: '已取消', className: 'bg-red-100 text-red-700' },
-    };
-    const config = map[status] || { label: status, className: 'bg-gray-100' };
-    return <Badge className={config.className}>{config.label}</Badge>;
-}
+import { PoStatusActions } from '@/features/supply-chain/components/po-status-actions';
 
 export default async function PoDetailPage({
     params,
@@ -43,12 +22,7 @@ export default async function PoDetailPage({
         notFound();
     }
 
-    // Status check
-    const isDraft = po.status === 'DRAFT';
-    const isInProduction = po.status === 'IN_PRODUCTION';
     const isReady = po.status === 'READY';
-    const isShipped = po.status === 'SHIPPED';
-    const isDelivered = po.status === 'DELIVERED';
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -63,7 +37,7 @@ export default async function PoDetailPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold tracking-tight">{po.poNo}</h1>
-                            <PoStatusBadge status={po.status || 'DRAFT'} />
+                            <PoStatusActions poId={po.id} initialStatus={po.status || 'DRAFT'} />
                         </div>
                         <p className="text-muted-foreground text-sm">
                             供应商: {po.supplierName} · 关联订单: {po.order?.orderNo || '-'}
@@ -73,71 +47,17 @@ export default async function PoDetailPage({
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                    {isDraft && (
-                        <form action={async () => {
-                            'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'IN_PRODUCTION' });
-                            if (!res.success) throw new Error(res.error);
-                        }}>
-                            <Button type="submit" className="bg-blue-600">
-                                <Play className="h-4 w-4 mr-2" />
-                                确认下单
-                            </Button>
-                        </form>
-                    )}
-
-                    {isInProduction && (
-                        <form action={async () => {
-                            'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'READY' });
-                            if (!res.success) throw new Error(res.error);
-                        }}>
-                            <Button type="submit" className="bg-indigo-600">
-                                <PackageCheck className="h-4 w-4 mr-2" />
-                                备货完成
-                            </Button>
-                        </form>
-                    )}
-
                     {isReady && (
                         <LogisticsDialog
                             poId={po.id}
                             trigger={
-                                <Button className="bg-purple-600">
+                                <Button className="bg-purple-600 hover:bg-purple-700">
                                     <Truck className="h-4 w-4 mr-2" />
                                     发货登记
                                 </Button>
                             }
                         />
                     )}
-
-                    {isShipped && (
-                        <form action={async () => {
-                            'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'DELIVERED' });
-                            if (!res.success) throw new Error(res.error);
-                        }}>
-                            <Button type="submit" className="bg-orange-600">
-                                <PackageCheck className="h-4 w-4 mr-2" />
-                                确认到货
-                            </Button>
-                        </form>
-                    )}
-
-                    {isDelivered && (
-                        <form action={async () => {
-                            'use server';
-                            const res = await updatePoStatus({ poId: id, status: 'COMPLETED' });
-                            if (!res.success) throw new Error(res.error);
-                        }}>
-                            <Button type="submit" className="bg-green-600">
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                完成采购
-                            </Button>
-                        </form>
-                    )}
-
-                    {/* Quote Action disabled */}
                 </div>
             </div>
 
@@ -204,8 +124,6 @@ export default async function PoDetailPage({
 
                 {/* Right: Info */}
                 <div className="space-y-6">
-                    {/* Quote Info Card disabled */}
-
                     <Card>
                         <CardHeader title="基础信息" />
                         <CardContent className="space-y-4">

@@ -5,7 +5,7 @@ import { suppliers, purchaseOrders, afterSalesTickets, liabilityNotices } from '
 import { eq, desc, and, sql, count, gte, lte, inArray } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { generateDocNo } from '@/shared/lib/utils';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
@@ -182,6 +182,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
     });
 
     revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+    revalidateTag(`supplier-rating-${id}`);
     return { id: supplier.id };
 });
 
@@ -311,10 +312,23 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
  * 1. 交期准时率 (40%): 实际到货日期 vs 预期交期。
  * 2. 质量合格率 (60%): 交付总量 vs 售后责任判定 (CONFIRMED) 次数。
  * 3. 综合评分: 加权总分及星级/等级标签。
+ * 使用 unstable_cache 缓存 300 秒。
  * @param params 供应商 ID 及可选时间范围
  */
 export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>) {
-    return getSupplierRatingActionInternal(params);
+    const session = await auth();
+    if (!session?.user?.id) throw new Error('未授权');
+
+    const { supplierId, startDate = '', endDate = '' } = params;
+
+    return unstable_cache(
+        async () => getSupplierRatingActionInternal(params, { session }),
+        [`supplier-rating-${supplierId}-${startDate}-${endDate}`],
+        {
+            revalidate: 300,
+            tags: [`supplier-rating-${supplierId}`]
+        }
+    )();
 }
 
 const getSupplierRankingsSchema = z.object({});

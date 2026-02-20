@@ -95,8 +95,14 @@ export function TodoTab() {
         });
     };
 
+    interface ActionResponse {
+        success: boolean;
+        error?: string;
+        data?: unknown;
+    }
+
     /** 执行操作后刷新列表 */
-    const handleAction = async (actionFn: () => Promise<{ success: boolean; error?: string; data?: any } | any>, itemId: string) => {
+    const handleAction = async (actionFn: () => Promise<ActionResponse>, itemId: string) => {
         setActionLoading(itemId);
         try {
             const res = await actionFn();

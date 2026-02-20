@@ -71,7 +71,10 @@ export async function GET(request: NextRequest) {
     return apiSuccess(data);
   } catch (error) {
     console.error('Get Customers Error:', error);
-    return apiError('获取客户列表失败', 500);
+    return apiError(
+      process.env.NODE_ENV === 'development' ? `获取客户列表失败: ${error instanceof Error ? error.message : String(error)}` : '获取客户列表失败',
+      500
+    );
   }
 }
 

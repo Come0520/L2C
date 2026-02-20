@@ -93,4 +93,3 @@ export function UserPreferenceSettings({ initialQuoteMode }: UserPreferenceSetti
         </div>
     );
 }
-

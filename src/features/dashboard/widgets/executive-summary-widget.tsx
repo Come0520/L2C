@@ -150,7 +150,15 @@ export function ExecutiveSummaryWidget({ className, startDate, endDate }: Dashbo
     );
 }
 
-function SummaryCard({ title, value, trend, icon: Icon, trendLabel }: any) {
+interface SummaryCardProps {
+    title: string;
+    value: string;
+    trend: number;
+    icon: React.ComponentType<{ className?: string }>;
+    trendLabel: string;
+}
+
+function SummaryCard({ title, value, trend, icon: Icon, trendLabel }: SummaryCardProps) {
     const isPositive = trend > 0;
     const TrendIcon = isPositive ? TrendingUp : TrendingDown;
     const trendColor = isPositive ? "text-green-500" : "text-red-500";

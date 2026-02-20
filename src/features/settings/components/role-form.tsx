@@ -1,16 +1,13 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { Button } from '@/shared/ui/button';
-import { Form } from '@/shared/ui/form';
 
 /** 角色表单初始数据类型 */
 interface RoleFormData {
     id?: string;
     code: string;
     name: string;
-    description?: string;
+    description?: string | null;
 }
 
 interface RoleFormProps {
@@ -20,8 +17,7 @@ interface RoleFormProps {
     onSuccess: () => void;
 }
 
-export function RoleForm({ open, onOpenChange, initialData, onSuccess }: RoleFormProps) {
-    const form = useForm();
+export function RoleForm({ open, onOpenChange, initialData }: RoleFormProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>

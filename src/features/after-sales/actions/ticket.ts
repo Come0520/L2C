@@ -2,7 +2,7 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { eq, desc, and, ilike } from 'drizzle-orm';
 import { afterSalesTickets, orders } from '@/shared/api/schema';
@@ -123,6 +123,7 @@ const createAfterSalesTicketAction = createSafeAction(createTicketSchema, async 
         });
 
         revalidatePath('/after-sales');
+        revalidateTag('after-sales-analytics');
         return { success: true, data: newTicket, message: "售后工单创建成功" };
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "服务器内部错误";
@@ -242,6 +243,7 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
 
     revalidatePath(`/after-sales/${data.ticketId}`);
     revalidatePath('/after-sales');
+    revalidateTag('after-sales-analytics');
     return { success: true, message: '状态更新成功' };
 });
 

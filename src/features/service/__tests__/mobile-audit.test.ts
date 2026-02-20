@@ -25,7 +25,7 @@ vi.mock('@/shared/api/db', () => ({
         update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{}]) })) })),
         select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ count: 3 }]) })) })),
         insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(() => [{}]) })) })),
-        transaction: vi.fn((cb: Function) => cb({
+        transaction: vi.fn((cb: (...args: any[]) => any) => cb({
             update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{}]) })) })),
             insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(() => [{}]) })) })),
             query: {
@@ -49,7 +49,7 @@ vi.mock('@/shared/middleware/mobile-auth', () => ({
 
 // ===== Mock：速率限制器 =====
 vi.mock('@/shared/middleware/rate-limiter', () => ({
-    withRateLimit: (handler: Function) => handler,
+    withRateLimit: (handler: (...args: any[]) => any) => handler,
     getRateLimitKey: () => () => 'key'
 }));
 

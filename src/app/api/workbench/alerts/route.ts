@@ -16,6 +16,18 @@ export async function GET() {
             );
         }
 
+        // 角色权限校验：仅 ADMIN, MANAGER, FINANCE 可访问全局报警
+        const allowedRoles = ['ADMIN', 'MANAGER', 'FINANCE'];
+        const userRoles = session.user.roles || [];
+        const hasPermission = userRoles.some(role => allowedRoles.includes(role)) || allowedRoles.includes(session.user.role || '');
+
+        if (!hasPermission) {
+            return NextResponse.json(
+                { error: '权限不足' },
+                { status: 403 }
+            );
+        }
+
         const alerts = await WorkbenchService.getAlerts(
             session.user.tenantId
         );

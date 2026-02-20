@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { BusinessRulesConfig } from '@/features/settings/components/business-rules-config';
 import { getMyQuoteConfig } from '@/features/quotes/actions/config-actions';
 import { getApprovalFlows } from '@/features/approval/actions/queries';
-import { ApprovalSettingsContent } from '@/features/approval/components/approval-settings-content';
+import { ApprovalSettingsContent, ApprovalFlow } from '@/features/approval/components/approval-settings-content';
 
 export default async function ApprovalsSettingsPage() {
 
@@ -23,7 +23,7 @@ export default async function ApprovalsSettingsPage() {
                         <TabsTrigger value="rules">业务规则</TabsTrigger>
                     </TabsList>
                     <TabsContent value="flows" className="space-y-4 mt-6">
-                        <ApprovalSettingsContent initialFlows={flows as any} />
+                        <ApprovalSettingsContent initialFlows={flows as unknown as ApprovalFlow[]} />
                     </TabsContent>
                     <TabsContent value="rules" className="space-y-4 mt-6">
                         <BusinessRulesConfig

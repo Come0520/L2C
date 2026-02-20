@@ -3,7 +3,11 @@ import { leads } from "@/shared/api/schema/leads";
 import { orders } from "@/shared/api/schema/orders";
 import { purchaseOrders, productionTasks } from "@/shared/api/schema/supply-chain";
 import { afterSalesTickets } from "@/shared/api/schema/after-sales";
-import { eq, and, count, lt, sql, inArray } from "drizzle-orm";
+import { eq, and, lt, inArray } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { createLogger } from "@/shared/lib/logger";
+
+const logger = createLogger('WorkbenchService');
 
 // ============ 待办事项类型定义 ============
 
@@ -116,291 +120,242 @@ export class WorkbenchService {
 
     /**
      * 获取当前用户的全部待办事项（含计数和详情数据）
-     * @param tenantId 租户 ID
-     * @param userId 当前用户 ID
-     * @param userRoles 用户角色数组（管理员可看全部，销售只看分配给自己的）
+     * L5 优化：增加数据缓存，有效期 1 分钟
      */
     static async getUnifiedTodos(
         tenantId: string,
         userId: string,
         userRoles: string[] = []
     ): Promise<TodosResponse> {
-        const isAdmin = userRoles.some(r =>
-            ['ADMIN', 'SUPER_ADMIN', 'OWNER'].includes(r)
-        );
+        logger.info('获取统一待办事项', { tenantId, userId });
+        return unstable_cache(
+            async () => {
+                const isAdmin = userRoles.some(r =>
+                    ['ADMIN', 'SUPER_ADMIN', 'OWNER'].includes(r)
+                );
 
-        // 并行查询所有分类
-        const [
-            pendingLeads,
-            draftOrders,
-            draftPOs,
-            pendingPrd,
-            pendingAS,
-        ] = await Promise.all([
-            // 1. 待跟进线索（分配给当前用户或全部）
-            db.query.leads.findMany({
-                where: and(
-                    eq(leads.tenantId, tenantId),
-                    ...(isAdmin ? [] : [eq(leads.assignedSalesId, userId)]),
-                    eq(leads.status, 'PENDING_FOLLOWUP')
-                ),
-                columns: {
-                    id: true,
-                    leadNo: true,
-                    customerName: true,
-                    customerPhone: true,
-                    intentionLevel: true,
-                    status: true,
-                    createdAt: true,
-                    lastActivityAt: true,
-                },
-                limit: 50,
-            }),
+                // 并行查询所有分类
+                const [
+                    pendingLeads,
+                    draftOrders,
+                    draftPOs,
+                    pendingPrd,
+                    pendingAS,
+                ] = await Promise.all([
+                    // 1. 待跟进线索
+                    db.query.leads.findMany({
+                        where: and(
+                            eq(leads.tenantId, tenantId),
+                            ...(isAdmin ? [] : [eq(leads.assignedSalesId, userId)]),
+                            eq(leads.status, 'PENDING_FOLLOWUP')
+                        ),
+                        columns: {
+                            id: true,
+                            leadNo: true,
+                            customerName: true,
+                            customerPhone: true,
+                            intentionLevel: true,
+                            status: true,
+                            createdAt: true,
+                            lastActivityAt: true,
+                        },
+                        limit: 50,
+                    }),
 
-            // 2. 未锁定订单
-            db.query.orders.findMany({
-                where: and(
-                    eq(orders.tenantId, tenantId),
-                    ...(isAdmin ? [] : [eq(orders.salesId, userId)]),
-                    eq(orders.isLocked, false)
-                ),
-                columns: {
-                    id: true,
-                    orderNo: true,
-                    customerName: true,
-                    totalAmount: true,
-                    status: true,
-                    isLocked: true,
-                    createdAt: true,
-                },
-                limit: 50,
-            }),
+                    // 2. 未锁定订单
+                    db.query.orders.findMany({
+                        where: and(
+                            eq(orders.tenantId, tenantId),
+                            ...(isAdmin ? [] : [eq(orders.salesId, userId)]),
+                            eq(orders.isLocked, false)
+                        ),
+                        columns: {
+                            id: true,
+                            orderNo: true,
+                            customerName: true,
+                            totalAmount: true,
+                            status: true,
+                            isLocked: true,
+                            createdAt: true,
+                        },
+                        limit: 50,
+                    }),
 
-            // 3. 草稿采购单
-            db.query.purchaseOrders.findMany({
-                where: and(
-                    eq(purchaseOrders.tenantId, tenantId),
-                    eq(purchaseOrders.status, 'DRAFT')
-                ),
-                columns: {
-                    id: true,
-                    poNo: true,
-                    supplierName: true,
-                    totalAmount: true,
-                    status: true,
-                    createdAt: true,
-                },
-                limit: 50,
-            }),
+                    // 3. 草稿采购单
+                    db.query.purchaseOrders.findMany({
+                        where: and(
+                            eq(purchaseOrders.tenantId, tenantId),
+                            eq(purchaseOrders.status, 'DRAFT')
+                        ),
+                        columns: {
+                            id: true,
+                            poNo: true,
+                            supplierName: true,
+                            totalAmount: true,
+                            status: true,
+                            createdAt: true,
+                        },
+                        limit: 50,
+                    }),
 
-            // 4. 待处理生产任务
-            db.query.productionTasks.findMany({
-                where: and(
-                    eq(productionTasks.tenantId, tenantId),
-                    eq(productionTasks.status, 'PENDING')
-                ),
-                columns: {
-                    id: true,
-                    taskNo: true,
-                    workshop: true,
-                    status: true,
-                    createdAt: true,
-                },
-                limit: 50,
-            }),
+                    // 4. 待处理生产任务
+                    db.query.productionTasks.findMany({
+                        where: and(
+                            eq(productionTasks.tenantId, tenantId),
+                            eq(productionTasks.status, 'PENDING')
+                        ),
+                        columns: {
+                            id: true,
+                            taskNo: true,
+                            workshop: true,
+                            status: true,
+                            createdAt: true,
+                        },
+                        limit: 50,
+                    }),
 
-            // 5. 待处理售后工单
-            db.query.afterSalesTickets.findMany({
-                where: and(
-                    eq(afterSalesTickets.tenantId, tenantId),
-                    eq(afterSalesTickets.status, 'PENDING')
-                ),
-                columns: {
-                    id: true,
-                    ticketNo: true,
-                    type: true,
-                    priority: true,
-                    status: true,
-                    description: true,
-                    createdAt: true,
-                },
-                limit: 50,
-            }),
-        ]);
+                    // 5. 待处理售后工单
+                    db.query.afterSalesTickets.findMany({
+                        where: and(
+                            eq(afterSalesTickets.tenantId, tenantId),
+                            eq(afterSalesTickets.status, 'PENDING')
+                        ),
+                        columns: {
+                            id: true,
+                            ticketNo: true,
+                            type: true,
+                            priority: true,
+                            status: true,
+                            description: true,
+                            createdAt: true,
+                        },
+                        limit: 50,
+                    }),
+                ]);
 
-        // 构建分类元数据
-        const categories: TodoCategoryMeta[] = [
-            {
-                category: 'LEAD',
-                label: '待跟进线索',
-                count: pendingLeads.length,
-                icon: 'Users',
-                color: 'blue',
+                // 构建分类元数据
+                const categories: TodoCategoryMeta[] = [
+                    { category: 'LEAD', label: '待跟进线索', count: pendingLeads.length, icon: 'Users', color: 'blue' },
+                    { category: 'ORDER', label: '待处理订单', count: draftOrders.length, icon: 'ShoppingCart', color: 'amber' },
+                    { category: 'PO', label: '草稿采购单', count: draftPOs.length, icon: 'Clipboard', color: 'purple' },
+                    { category: 'PRODUCTION', label: '待处理生产', count: pendingPrd.length, icon: 'Factory', color: 'cyan' },
+                    { category: 'AFTER_SALES', label: '售后工单', count: pendingAS.length, icon: 'Wrench', color: 'emerald' },
+                ];
+
+                return {
+                    categories,
+                    leads: pendingLeads as LeadTodoItem[],
+                    orders: draftOrders as OrderTodoItem[],
+                    purchaseOrders: draftPOs as POTodoItem[],
+                    productionTasks: pendingPrd as ProductionTodoItem[],
+                    afterSales: pendingAS as AfterSalesTodItem[],
+                };
             },
-            {
-                category: 'ORDER',
-                label: '待处理订单',
-                count: draftOrders.length,
-                icon: 'ShoppingCart',
-                color: 'amber',
-            },
-            {
-                category: 'PO',
-                label: '草稿采购单',
-                count: draftPOs.length,
-                icon: 'Clipboard',
-                color: 'purple',
-            },
-            {
-                category: 'PRODUCTION',
-                label: '待处理生产',
-                count: pendingPrd.length,
-                icon: 'Factory',
-                color: 'cyan',
-            },
-            {
-                category: 'AFTER_SALES',
-                label: '售后工单',
-                count: pendingAS.length,
-                icon: 'Wrench',
-                color: 'emerald',
-            },
-        ];
-
-        return {
-            categories,
-            leads: pendingLeads as LeadTodoItem[],
-            orders: draftOrders as OrderTodoItem[],
-            purchaseOrders: draftPOs as POTodoItem[],
-            productionTasks: pendingPrd as ProductionTodoItem[],
-            afterSales: pendingAS as AfterSalesTodItem[],
-        };
+            [`todos-${tenantId}-${userId}`],
+            { revalidate: 60, tags: [`todos:${tenantId}`, `todos:${userId}`] }
+        )();
     }
 
     /**
      * 获取报警数据
      * 聚合各模块的超时、逾期等报警信息
+     * L5 优化：并行化查询，增加缓存
      */
     static async getAlerts(tenantId: string): Promise<AlertsResponse> {
-        const now = new Date();
-        const items: AlertItem[] = [];
+        logger.info('获取工作台报警信息', { tenantId });
+        return unstable_cache(
+            async () => {
+                const now = new Date();
+                const items: AlertItem[] = [];
 
-        // 1. 线索跟进超时 — 超过 48 小时未跟进的线索
-        const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-        const overdueLeads = await db.query.leads.findMany({
-            where: and(
-                eq(leads.tenantId, tenantId),
-                eq(leads.status, 'PENDING_FOLLOWUP'),
-                lt(leads.createdAt, twoDaysAgo)
-            ),
-            columns: {
-                id: true,
-                leadNo: true,
-                customerName: true,
-                createdAt: true,
-            },
-            limit: 20,
-        });
+                // 1. 线索跟进超时 — 超过 48 小时未跟进的线索
+                const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
-        overdueLeads.forEach(l => {
-            items.push({
-                id: `alert-lead-${l.id}`,
-                category: 'LEAD_OVERDUE',
-                severity: 'warning',
-                title: `线索 ${l.leadNo} 跟进超时`,
-                description: `客户 ${l.customerName} 的线索超过 48 小时未跟进`,
-                relatedId: l.id,
-                relatedType: 'LEAD',
-                createdAt: l.createdAt,
-            });
-        });
+                const [overdueLeads, slaOverdueTickets, delayedPOs] = await Promise.all([
+                    db.query.leads.findMany({
+                        where: and(eq(leads.tenantId, tenantId), eq(leads.status, 'PENDING_FOLLOWUP'), lt(leads.createdAt, twoDaysAgo)),
+                        columns: { id: true, leadNo: true, customerName: true, createdAt: true },
+                        limit: 20,
+                    }),
+                    db.query.afterSalesTickets.findMany({
+                        where: and(eq(afterSalesTickets.tenantId, tenantId), eq(afterSalesTickets.status, 'PENDING'), lt(afterSalesTickets.slaResponseDeadline, now)),
+                        columns: { id: true, ticketNo: true, type: true, slaResponseDeadline: true, createdAt: true },
+                        limit: 20,
+                    }),
+                    db.query.purchaseOrders.findMany({
+                        where: and(eq(purchaseOrders.tenantId, tenantId), inArray(purchaseOrders.status, ['IN_PRODUCTION', 'READY', 'SHIPPED', 'PENDING_PAYMENT']), lt(purchaseOrders.expectedDate, now)),
+                        columns: { id: true, poNo: true, supplierName: true, expectedDate: true, createdAt: true },
+                        limit: 20,
+                    })
+                ]);
 
-        // 2. 售后 SLA 超时
-        const slaOverdueTickets = await db.query.afterSalesTickets.findMany({
-            where: and(
-                eq(afterSalesTickets.tenantId, tenantId),
-                eq(afterSalesTickets.status, 'PENDING'),
-                lt(afterSalesTickets.slaResponseDeadline, now)
-            ),
-            columns: {
-                id: true,
-                ticketNo: true,
-                type: true,
-                slaResponseDeadline: true,
-                createdAt: true,
-            },
-            limit: 20,
-        });
-
-        slaOverdueTickets.forEach(t => {
-            items.push({
-                id: `alert-sla-${t.id}`,
-                category: 'SLA_OVERDUE',
-                severity: 'error',
-                title: `售后工单 ${t.ticketNo} SLA 超时`,
-                description: `工单类型: ${t.type}，已超过 SLA 响应期限`,
-                relatedId: t.id,
-                relatedType: 'AFTER_SALES',
-                createdAt: t.createdAt,
-            });
-        });
-
-        // 3. 采购单交货延迟
-        const delayedPOs = await db.query.purchaseOrders.findMany({
-            where: and(
-                eq(purchaseOrders.tenantId, tenantId),
-                inArray(purchaseOrders.status, ['IN_PRODUCTION', 'READY', 'SHIPPED', 'PENDING_PAYMENT']),
-                lt(purchaseOrders.expectedDate, now)
-            ),
-            columns: {
-                id: true,
-                poNo: true,
-                supplierName: true,
-                expectedDate: true,
-                createdAt: true,
-            },
-            limit: 20,
-        });
-
-        delayedPOs.forEach(po => {
-            items.push({
-                id: `alert-delivery-${po.id}`,
-                category: 'DELIVERY_DELAY',
-                severity: 'warning',
-                title: `采购单 ${po.poNo} 交货延迟`,
-                description: `供应商: ${po.supplierName || '未知'}，已超过预计交货时间`,
-                relatedId: po.id,
-                relatedType: 'PO',
-                createdAt: po.createdAt,
-            });
-        });
-
-        // 构建分类聚合
-        const categoryMap = new Map<AlertCategory, AlertCategoryMeta>();
-
-        items.forEach(item => {
-            const existing = categoryMap.get(item.category);
-            if (existing) {
-                existing.count++;
-            } else {
-                const labelMap: Record<AlertCategory, string> = {
-                    LEAD_OVERDUE: '线索跟进超时',
-                    SLA_OVERDUE: 'SLA 响应超时',
-                    DELIVERY_DELAY: '交货延迟',
-                    PAYMENT_OVERDUE: '付款逾期',
-                };
-                categoryMap.set(item.category, {
-                    category: item.category,
-                    label: labelMap[item.category],
-                    count: 1,
-                    severity: item.severity,
+                overdueLeads.forEach(l => {
+                    items.push({
+                        id: `alert-lead-${l.id}`,
+                        category: 'LEAD_OVERDUE',
+                        severity: 'warning',
+                        title: `线索 ${l.leadNo} 跟进超时`,
+                        description: `客户 ${l.customerName} 的线索超过 48 小时未跟进`,
+                        relatedId: l.id,
+                        relatedType: 'LEAD',
+                        createdAt: l.createdAt,
+                    });
                 });
-            }
-        });
 
-        return {
-            categories: Array.from(categoryMap.values()),
-            items,
-        };
+                slaOverdueTickets.forEach(t => {
+                    items.push({
+                        id: `alert-sla-${t.id}`,
+                        category: 'SLA_OVERDUE',
+                        severity: 'error',
+                        title: `售后工单 ${t.ticketNo} SLA 超时`,
+                        description: `工单类型: ${t.type}，已超过 SLA 响应期限`,
+                        relatedId: t.id,
+                        relatedType: 'AFTER_SALES',
+                        createdAt: t.createdAt,
+                    });
+                });
+
+                delayedPOs.forEach(po => {
+                    items.push({
+                        id: `alert-delivery-${po.id}`,
+                        category: 'DELIVERY_DELAY',
+                        severity: 'warning',
+                        title: `采购单 ${po.poNo} 交货延迟`,
+                        description: `供应商: ${po.supplierName || '未知'}，已超过预计交货时间`,
+                        relatedId: po.id,
+                        relatedType: 'PO',
+                        createdAt: po.createdAt,
+                    });
+                });
+
+                const categoryMap = new Map<AlertCategory, AlertCategoryMeta>();
+                items.forEach(item => {
+                    const existing = categoryMap.get(item.category);
+                    if (existing) {
+                        existing.count++;
+                    } else {
+                        const labelMap: Record<AlertCategory, string> = {
+                            LEAD_OVERDUE: '线索跟进超时',
+                            SLA_OVERDUE: 'SLA 响应超时',
+                            DELIVERY_DELAY: '交货延迟',
+                            PAYMENT_OVERDUE: '付款逾期',
+                        };
+                        categoryMap.set(item.category, {
+                            category: item.category,
+                            label: labelMap[item.category],
+                            count: 1,
+                            severity: item.severity,
+                        });
+                    }
+                });
+
+                return {
+                    categories: Array.from(categoryMap.values()),
+                    items,
+                };
+            },
+            [`alerts-${tenantId}`],
+            { revalidate: 60, tags: [`alerts:${tenantId}`] }
+        )();
     }
 }

@@ -10,10 +10,12 @@ import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
+import { dashboardCache } from '@/shared/lib/cache-utils';
+import { withTiming } from '@/shared/middleware/api-timing';
 
 
 const log = createLogger('mobile/dashboard/summary');
-export async function GET(request: NextRequest) {
+export const GET = withTiming(async (request: NextRequest) => {
     // 1. 认证
     const authResult = await authenticateMobile(request);
     if (!authResult.success) {
@@ -29,6 +31,15 @@ export async function GET(request: NextRequest) {
 
     try {
         const tenantId = session.tenantId;
+        const userId = session.userId;
+        const cacheKey = `dashboard:summary:${tenantId}:${userId}`;
+
+        // 尝试从缓存获取
+        const cachedData = dashboardCache.get(cacheKey);
+        if (cachedData) {
+            return apiSuccess(cachedData);
+        }
+
         const now = new Date();
 
         // 今日范围
@@ -106,7 +117,7 @@ export async function GET(request: NextRequest) {
         const todayLeadCount = Number(todayLeads[0]?.count || 0);
         const yesterdayLeadCount = Number(yesterdayLeads[0]?.count || 0);
 
-        return apiSuccess({
+        const result = {
             orders: {
                 today: todayOrderCount,
                 yesterday: yesterdayOrderCount,
@@ -129,10 +140,15 @@ export async function GET(request: NextRequest) {
                 trend: todayLeadCount >= yesterdayLeadCount ? 'up' : 'down',
             },
             generatedAt: now.toISOString(),
-        });
+        };
+
+        // 存入缓存 (5分钟)
+        dashboardCache.set(cacheKey, result);
+
+        return apiSuccess(result);
 
     } catch (error) {
         log.error('仪表盘数据查询错误', {}, error);
         return apiError('查询仪表盘数据失败', 500);
     }
-}
+});

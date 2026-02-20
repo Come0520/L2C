@@ -8,7 +8,7 @@ import { ApprovalFlowDesigner } from '@/features/approval/components/approval-fl
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
-interface ApprovalFlow {
+export interface ApprovalFlow {
     id: string;
     name: string;
     code: string;

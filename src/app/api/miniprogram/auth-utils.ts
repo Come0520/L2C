@@ -26,8 +26,18 @@ export async function getMiniprogramUser(request: NextRequest): Promise<AuthUser
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) return null;
 
+    const token = authHeader.slice(7);
+
+    // 开发环境 Mock 登录支持
+    if (process.env.NODE_ENV === 'development' && token.startsWith('dev-mock-token-')) {
+        return {
+            id: '00aa5bea-a8d9-41e6-a8e3-7ae72d998b64', // Real User ID (Worker)
+            tenantId: 'e772e5f7-95fe-4b27-9949-fc69de11d647', // Real Tenant ID
+            role: 'admin', // Force admin for testing
+        };
+    }
+
     try {
-        const token = authHeader.slice(7);
         const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
         const { payload } = await jwtVerify(token, secret);
 

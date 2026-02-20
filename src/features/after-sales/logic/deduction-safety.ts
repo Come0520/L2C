@@ -72,32 +72,25 @@ export async function getDeductionLedger(
 
     const tenantId = session.user.tenantId;
 
-    // 查询该责任方的所有定责单
-    const notices = await db.query.liabilityNotices.findMany({
-        where: and(
+    // P1 FIX (AS-10): 使用聚合查询替换内存循环，解决 N+1 潜在风险
+    const [summary] = await db
+        .select({
+            totalDeducted: sql<string>`SUM(CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' THEN ${liabilityNotices.amount} ELSE 0 END)`,
+            totalSettled: sql<string>`SUM(CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' AND ${liabilityNotices.financeStatus} = 'SYNCED' THEN ${liabilityNotices.amount} ELSE 0 END)`,
+        })
+        .from(liabilityNotices)
+        .where(and(
             eq(liabilityNotices.tenantId, tenantId),
             eq(liabilityNotices.liablePartyType, partyType),
             eq(liabilityNotices.liablePartyId, partyId)
-        ),
-    });
+        ));
 
-    if (notices.length === 0) {
+    if (!summary || (!summary.totalDeducted && !summary.totalSettled)) {
         return null;
     }
 
-    // 统计累计扣款和已结算
-    let totalDeducted = 0;
-    let totalSettled = 0;
-
-    for (const notice of notices) {
-        const amount = Number(notice.amount || 0);
-        if (notice.status === 'CONFIRMED') {
-            totalDeducted += amount;
-            if (notice.financeStatus === 'SYNCED') {
-                totalSettled += amount;
-            }
-        }
-    }
+    const totalDeducted = parseFloat(summary.totalDeducted || '0');
+    const totalSettled = parseFloat(summary.totalSettled || '0');
 
     const pendingAmount = totalDeducted - totalSettled;
 
@@ -277,10 +270,122 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
         .where(eq(liabilityNotices.tenantId, tenantId))
         .groupBy(liabilityNotices.liablePartyType, liabilityNotices.liablePartyId);
 
-    return Promise.all(result
-        .filter(r => r.partyId && r.partyType)
-        .map(async r => {
-            const ledger = await getDeductionLedger(r.partyType as LiablePartyType, r.partyId!);
-            return ledger!;
-        }));
+    // 2. 批量拉取责任方名称和相关限额数据
+    const ledgers: DeductionLedger[] = [];
+
+    // 按类型分组以方便批量查询
+    const partyGroups: Record<string, string[]> = {};
+    result.forEach(r => {
+        if (r.partyType && r.partyId) {
+            if (!partyGroups[r.partyType]) partyGroups[r.partyType] = [];
+            partyGroups[r.partyType].push(r.partyId);
+        }
+    });
+
+    // 批量拉取名称映射
+    const nameMap: Record<string, string> = {};
+
+    // 工厂 (供应商)
+    if (partyGroups['FACTORY']?.length) {
+        const factoryData = await db.query.suppliers.findMany({
+            where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['FACTORY']}`),
+            columns: { id: true, name: true }
+        });
+        factoryData.forEach(d => nameMap[`FACTORY:${d.id}`] = d.name);
+    }
+
+    // 安装工 & 测量员 (用户)
+    const userIds = [...(partyGroups['INSTALLER'] || []), ...(partyGroups['MEASURER'] || [])];
+    if (userIds.length) {
+        const userData = await db.query.users.findMany({
+            where: and(eq(users.tenantId, tenantId), sql`${users.id} IN ${userIds}`),
+            columns: { id: true, name: true }
+        });
+        userData.forEach(d => {
+            if (partyGroups['INSTALLER']?.includes(d.id)) nameMap[`INSTALLER:${d.id}`] = d.name;
+            if (partyGroups['MEASURER']?.includes(d.id)) nameMap[`MEASURER:${d.id}`] = d.name;
+        });
+    }
+
+    // 物流
+    if (partyGroups['LOGISTICS']?.length) {
+        const logisticsData = await db.query.suppliers.findMany({
+            where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['LOGISTICS']}`),
+            columns: { id: true, name: true }
+        });
+        logisticsData.forEach(d => nameMap[`LOGISTICS:${d.id}`] = d.name);
+    }
+
+    // 客户
+    if (partyGroups['CUSTOMER']?.length) {
+        const customerData = await db.query.customers.findMany({
+            where: and(eq(customers.tenantId, tenantId), sql`${customers.id} IN ${partyGroups['CUSTOMER']}`),
+            columns: { id: true, name: true }
+        });
+        customerData.forEach(d => nameMap[`CUSTOMER:${d.id}`] = d.name);
+    }
+
+    // 3. 批量拉取供应商采购历史 (用于动态限额)
+    const poHistoryMap: Record<string, number> = {};
+    if (partyGroups['FACTORY']?.length) {
+        const poSummaries = await db
+            .select({
+                supplierId: purchaseOrders.supplierId,
+                total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`)
+            })
+            .from(purchaseOrders)
+            .where(and(
+                eq(purchaseOrders.tenantId, tenantId),
+                sql`${purchaseOrders.supplierId} IN ${partyGroups['FACTORY']}`,
+                sql`${purchaseOrders.status} != 'CANCELED'`
+            ))
+            .groupBy(purchaseOrders.supplierId);
+
+        poSummaries.forEach(s => {
+            if (s.supplierId) poHistoryMap[s.supplierId] = Number(s.total || 0);
+        });
+    }
+
+    // 4. 组装最终结果
+    for (const r of result) {
+        if (!r.partyType || !r.partyId) continue;
+
+        const totalDeducted = parseFloat(r.totalDeducted || '0');
+        const totalSettled = parseFloat(r.totalSettled || '0');
+        const pendingAmount = totalDeducted - totalSettled;
+        const partyKey = `${r.partyType}:${r.partyId}`;
+
+        let maxAllowed = DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION;
+        if (r.partyType === 'FACTORY') {
+            const history = poHistoryMap[r.partyId] || 0;
+            maxAllowed = Math.max(DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION, history * DEDUCTION_SAFETY_CONFIG.SUPPLIER_MAX_RATIO);
+        } else if (r.partyType === 'INSTALLER') {
+            maxAllowed = DEDUCTION_SAFETY_CONFIG.INSTALLER_MAX_DEDUCTION;
+        } else if (r.partyType === 'MEASURER') {
+            maxAllowed = DEDUCTION_SAFETY_CONFIG.MEASURER_MAX_DEDUCTION;
+        } else if (r.partyType === 'LOGISTICS') {
+            maxAllowed = DEDUCTION_SAFETY_CONFIG.LOGISTICS_MAX_DEDUCTION;
+        } else if (r.partyType === 'CUSTOMER' || r.partyType === 'COMPANY') {
+            maxAllowed = 9999999;
+        }
+
+        const usedRatio = maxAllowed > 0 ? pendingAmount / maxAllowed : 0;
+        let status: DeductionLedger['status'] = 'NORMAL';
+        if (usedRatio >= 1) status = 'BLOCKED' as const;
+        else if (usedRatio >= DEDUCTION_SAFETY_CONFIG.WARNING_THRESHOLD) status = 'WARNING' as const;
+
+        ledgers.push({
+            partyType: r.partyType as LiablePartyType,
+            partyId: r.partyId,
+            partyName: nameMap[partyKey] || (r.partyType === 'COMPANY' ? '公司内部' : '未知责任方'),
+            totalDeducted,
+            totalSettled,
+            pendingAmount,
+            maxAllowed,
+            usedRatio,
+            status,
+        });
+    }
+
+    return ledgers;
 }

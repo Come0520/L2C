@@ -1,9 +1,19 @@
 'use server';
 
-import { auth } from '@/shared/lib/auth';
+
 import { db } from '@/shared/api/db';
 import { leads, orders, measureTasks, arStatements, installTasks } from '@/shared/api/schema';
-import { eq, and, or, count } from 'drizzle-orm';
+import { eq, and, count, sum, inArray } from 'drizzle-orm';
+import { createSafeAction } from '@/shared/lib/server-action';
+import { z } from 'zod';
+import { createLogger } from '@/shared/lib/logger';
+
+const logger = createLogger('DashboardStatsAction');
+
+export { getDashboardConfigAction, saveDashboardConfigAction, resetDashboardConfigAction } from './actions/config';
+
+// 定义角色枚举以供校验
+const roleSchema = z.enum(['ADMIN', 'MANAGER', 'SALES', 'WORKER', 'FINANCE', 'SUPPLY', 'GUEST']);
 
 export type DashboardStats = {
     role: string;
@@ -17,278 +27,78 @@ export type DashboardStats = {
     }[];
 };
 
-export async function getDashboardStats(): Promise<DashboardStats> {
-    const session = await auth();
-    if (!session?.user) {
-        return { role: 'GUEST', cards: [] };
-    }
+/**
+ * 获取仪表盘统计数据
+ * L3 安全增强：加入 Zod 校验与角色白名单
+ */
+export const getDashboardStats = createSafeAction(
+    z.object({}),
+    async (_, { session }): Promise<DashboardStats> => {
+        const { role, id: userId, tenantId } = session.user;
 
-    const { role, id: userId, tenantId } = session.user;
+        // 安全校验：由于 session.user.role 是 string | undefined，需要确保其在合法枚举内
+        const validatedRole = roleSchema.safeParse(role);
+        const currentRole = validatedRole.success ? validatedRole.data : 'GUEST';
 
-    // Default stats structure
-    const stats: DashboardStats = {
-        role: role || 'USER',
-        cards: []
-    };
+        const stats: DashboardStats = {
+            role: currentRole,
+            cards: []
+        };
 
-    try {
-        if (role === 'ADMIN' || role === 'MANAGER') {
-            // --- ADMIN / MANAGER VIEW ---
+        try {
+            if (currentRole === 'ADMIN' || currentRole === 'MANAGER') {
+                const [leadRes, orderRes, measureRes, arRes, installRes] = await Promise.all([
+                    db.select({ value: count() }).from(leads).where(eq(leads.tenantId, tenantId)),
+                    db.select({ value: count() }).from(orders).where(and(eq(orders.tenantId, tenantId), inArray(orders.status, ['SIGNED', 'PAID']))),
+                    db.select({ value: count() }).from(measureTasks).where(and(eq(measureTasks.tenantId, tenantId), eq(measureTasks.status, 'PENDING'))),
+                    db.select({ sum: sum(arStatements.amount) }).from(arStatements).where(and(eq(arStatements.tenantId, tenantId), eq(arStatements.status, 'PARTIAL'))),
+                    db.select({ value: count() }).from(installTasks).where(and(eq(installTasks.tenantId, tenantId), eq(installTasks.status, 'PENDING_DISPATCH')))
+                ]);
 
-            // 1. Total Revenue (Paid Orders) - simplified for demo
-            // In real world, sum payments. Here we count orders or sum amounts.
-            // Let's count Active Leads
-            const [leadCount] = await db
-                .select({ value: count() })
-                .from(leads)
-                .where(eq(leads.tenantId, tenantId));
+                stats.cards = [
+                    { title: '全量线索', value: leadRes[0]?.value || 0, subValue: '所有时间', icon: 'users', color: 'blue' },
+                    { title: '进行中订单', value: orderRes[0]?.value || 0, subValue: '当前活跃', icon: 'clipboard', color: 'emerald' },
+                    { title: '待派测量', value: measureRes[0]?.value || 0, subValue: '待处理', icon: 'activity', color: 'amber' },
+                    { title: '待收款金额', value: `¥${Number(arRes[0]?.sum || 0).toLocaleString()}`, subValue: '未结算', icon: 'credit-card', color: 'rose' },
+                    { title: '待派安装', value: installRes[0]?.value || 0, subValue: '待排期', icon: 'wrench', color: 'purple' },
+                ];
+            } else if (currentRole === 'SALES') {
+                const [myLeadRes, myOrderRes] = await Promise.all([
+                    db.select({ value: count() }).from(leads).where(and(eq(leads.tenantId, tenantId), eq(leads.assignedSalesId, userId))),
+                    db.select({ value: count() }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.salesId, userId)))
+                ]);
 
-            stats.cards.push({
-                title: 'Total Leads',
-                value: leadCount?.value || 0,
-                subValue: 'All time',
-                icon: 'users',
-                color: 'blue',
-                link: '/leads'
-            });
+                stats.cards = [
+                    { title: '我的线索', value: myLeadRes[0]?.value || 0, icon: 'users', color: 'blue', link: '/leads' },
+                    { title: '我的订单', value: myOrderRes[0]?.value || 0, icon: 'clipboard', color: 'emerald', link: '/orders' },
+                    { title: '本月业绩', value: '¥0', icon: 'dollar', color: 'amber' }
+                ];
+            } else if (currentRole === 'WORKER') {
+                const [myMeasureRes, myInstallRes] = await Promise.all([
+                    db.select({ value: count() }).from(measureTasks).where(and(eq(measureTasks.tenantId, tenantId), eq(measureTasks.status, 'PENDING'))),
+                    db.select({ value: count() }).from(installTasks).where(and(eq(installTasks.tenantId, tenantId), eq(installTasks.status, 'PENDING_DISPATCH')))
+                ]);
 
-            // 2. Active Orders (Not Completed/Cancelled)
-            const [activeOrderCount] = await db
-                .select({ value: count() })
-                .from(orders)
-                .where(and(
-                    eq(orders.tenantId, tenantId),
-                    or(
-                        eq(orders.status, 'IN_PRODUCTION'),
-                        eq(orders.status, 'PENDING_DELIVERY'),
-                        eq(orders.status, 'PENDING_INSTALL')
-                    )
-                ));
+                stats.cards = [
+                    { title: '待处理测量', value: myMeasureRes[0]?.value || 0, icon: 'activity', color: 'blue', link: '/service/measurement' },
+                    { title: '待处理安装', value: myInstallRes[0]?.value || 0, icon: 'wrench', color: 'cyan', link: '/service/installation' }
+                ];
+            }
 
-            stats.cards.push({
-                title: 'Active Orders',
-                value: activeOrderCount?.value || 0,
-                subValue: 'In Production/Delivery/Install',
-                icon: 'credit-card',
-                color: 'emerald',
-                link: '/orders'
-            });
-
-            // 3. Pending Measurements
-            const [pendingMeasureCount] = await db
-                .select({ value: count() })
-                .from(measureTasks)
-                .where(and(
-                    eq(measureTasks.tenantId, tenantId),
-                    eq(measureTasks.status, 'PENDING_VISIT')
-                ));
-
-            stats.cards.push({
-                title: 'Pending Measure',
-                value: pendingMeasureCount?.value || 0,
-                subValue: 'Waiting for dispatch',
-                icon: 'clipboard',
-                color: 'amber',
-                link: '/service/measurement' // Assuming route
-            });
-
-            // 4. Pending Finance (AR)
-            const [pendingAR] = await db
-                .select({ value: count() })
-                .from(arStatements)
-                .where(and(
-                    eq(arStatements.tenantId, tenantId),
-                    or(
-                        eq(arStatements.status, 'PENDING_RECON'),
-                        eq(arStatements.status, 'PARTIAL')
-                    )
-                ));
-
-            stats.cards.push({
-                title: 'Pending AR',
-                value: pendingAR?.value || 0,
-                subValue: 'To be collected',
-                icon: 'dollar',
-                color: 'rose',
-                link: '/finance/ar'
-            });
-
-        } else if (role === 'SALES') {
-            // --- SALES VIEW ---
-
-            // 1. My Follow-up Leads
-            const [myLeads] = await db
-                .select({ value: count() })
-                .from(leads)
-                .where(and(
-                    eq(leads.tenantId, tenantId),
-                    eq(leads.assignedSalesId, userId),
-                    or(
-                        eq(leads.status, 'PENDING_FOLLOWUP'),
-                        eq(leads.status, 'FOLLOWING_UP')
-                    )
-                ));
-
-            stats.cards.push({
-                title: 'Leads to Follow',
-                value: myLeads?.value || 0,
-                icon: 'users',
-                color: 'blue',
-                link: '/leads?scope=mine'
-            });
-
-            // 2. My Orders Pending Payment
-            const [unpaidOrders] = await db
-                .select({ value: count() })
-                .from(orders)
-                .where(and(
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.salesId, userId),
-                    eq(orders.status, 'SIGNED') // Signed but maybe not paid/processed fully
-                ));
-
-            stats.cards.push({
-                title: 'Pending Payment',
-                value: unpaidOrders?.value || 0,
-                icon: 'credit-card',
-                color: 'rose',
-                link: '/orders?status=SIGNED'
-            });
-
-        } else if (role === 'WORKER') { // Assuming Measurer/Installer shares WORKER role or specific
-            // --- WORKER VIEW (Measurer/Installer) ---
-
-            // 1. My Measure Tasks
-            const [myMeasure] = await db
-                .select({ value: count() })
-                .from(measureTasks)
-                .where(and(
-                    eq(measureTasks.tenantId, tenantId),
-                    eq(measureTasks.assignedWorkerId, userId),
-                    eq(measureTasks.status, 'PENDING_VISIT')
-                ));
-
-            stats.cards.push({
-                title: 'Measure Tasks',
-                value: myMeasure?.value || 0,
-                subValue: 'Pending Visit',
-                icon: 'clipboard',
-                color: 'amber',
-                link: '/service/measurement'
-            });
-
-            // 2. My Install Tasks
-            const [myInstall] = await db
-                .select({ value: count() })
-                .from(installTasks)
-                .where(and(
-                    eq(installTasks.tenantId, tenantId),
-                    eq(installTasks.installerId, userId),
-                    eq(installTasks.status, 'PENDING_DISPATCH')
-                ));
-
-            stats.cards.push({
-                title: 'Install Tasks',
-                value: myInstall?.value || 0,
-                icon: 'wrench',
-                color: 'cyan',
-                link: '/service/installation'
-            });
+            // 默认显示
+            if (stats.cards.length === 0) {
+                stats.cards.push({
+                    title: '欢迎回来',
+                    value: session.user.name || '用户',
+                    icon: 'users',
+                    color: 'blue'
+                });
+            }
+        } catch (error) {
+            logger.error('获取仪表盘统计失败', {}, error);
+            throw new Error('获取统计数据失败');
         }
-    } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        // Fallback or empty stats
+
+        return stats;
     }
-
-    // If no specific role stats matched or empty, return basic system stats or empty
-    if (stats.cards.length === 0) {
-        stats.cards.push({
-            title: 'Welcome',
-            value: 'Hello',
-            subValue: session.user.name || 'User',
-            icon: 'activity',
-            color: 'purple'
-        });
-    }
-
-    return stats;
-}
-
-// ============ 用户仪表盘配置 ============
-
-import { users } from '@/shared/api/schema';
-
-// 从 types.ts 导入并重新导出类型
-export type { WidgetType, WidgetConfig, UserDashboardConfig } from './types';
-import type { UserDashboardConfig } from './types';
-
-/**
- * 获取用户仪表盘配置
- */
-export async function getUserDashboardConfig(): Promise<UserDashboardConfig | null> {
-    const session = await auth();
-    if (!session?.user?.id) return null;
-
-    try {
-        const user = await db.query.users.findFirst({
-            where: eq(users.id, session.user.id),
-            columns: { dashboardConfig: true }
-        });
-
-        if (user?.dashboardConfig && typeof user.dashboardConfig === 'object') {
-            return user.dashboardConfig as UserDashboardConfig;
-        }
-        return null;
-    } catch (error) {
-        console.error('获取仪表盘配置失败:', error);
-        return null;
-    }
-}
-
-/**
- * 保存用户仪表盘配置
- */
-export async function saveUserDashboardConfig(config: UserDashboardConfig): Promise<{ success: boolean; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: '未登录' };
-    }
-
-    try {
-        await db.update(users)
-            .set({
-                dashboardConfig: config,
-                updatedAt: new Date()
-            })
-            .where(eq(users.id, session.user.id));
-
-        return { success: true };
-    } catch (error) {
-        console.error('保存仪表盘配置失败:', error);
-        return { success: false, error: '保存失败' };
-    }
-}
-
-/**
- * 重置用户仪表盘配置为默认
- */
-export async function resetDashboardConfig(): Promise<{ success: boolean; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: '未登录' };
-    }
-
-    try {
-        await db.update(users)
-            .set({
-                dashboardConfig: {},
-                updatedAt: new Date()
-            })
-            .where(eq(users.id, session.user.id));
-
-        return { success: true };
-    } catch (error) {
-        console.error('重置仪表盘配置失败:', error);
-        return { success: false, error: '重置失败' };
-    }
-}
+);

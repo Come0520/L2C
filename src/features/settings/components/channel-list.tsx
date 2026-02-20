@@ -13,7 +13,7 @@ import { Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 
 /** 渠道列表项类型 */
-interface ChannelItem {
+export interface ChannelItem {
     id: string;
     name: string;
     isActive: boolean;
@@ -22,7 +22,7 @@ interface ChannelItem {
 }
 
 /** 渠道分类项类型 */
-interface ChannelCategoryItem {
+export interface ChannelCategoryItem {
     id: string;
     name: string;
 }
@@ -36,7 +36,7 @@ interface ChannelListProps {
  * 渠道列表组件
  * 展示渠道配置数据表格
  */
-export function ChannelList({ data, categories }: ChannelListProps) {
+export function ChannelList({ data, categories: _categories }: ChannelListProps) {
     return (
         <div className="rounded-md border">
             <Table>

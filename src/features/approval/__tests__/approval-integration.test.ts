@@ -4,7 +4,7 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 // Force set env for test before other imports
-process.env.DATABASE_URL = 'postgresql://l2c_test_user:l2c_test_password@localhost:5434/l2c_test';
+process.env.DATABASE_URL = 'postgresql://l2c_user:password@127.0.0.1:5435/l2c_dev';
 
 import { auth } from '@/shared/lib/auth';
 // Mock auth module

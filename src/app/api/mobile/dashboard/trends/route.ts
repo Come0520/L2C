@@ -6,10 +6,12 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
+import { dashboardCache } from '@/shared/lib/cache-utils';
+import { withTiming } from '@/shared/middleware/api-timing';
 
 
 const log = createLogger('mobile/dashboard/trends');
-export async function GET(request: NextRequest) {
+export const GET = withTiming(async (request: NextRequest) => {
     const auth = await authenticateMobile(request);
     if (!auth.success) return auth.response;
 
@@ -18,6 +20,14 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d'; // 7d, 30d, 90d
+
+    const cacheKey = `dashboard:trends:${auth.session.tenantId}:${auth.session.userId}:${range}`;
+
+    // 尝试从缓存获取
+    const cachedData = dashboardCache.get(cacheKey);
+    if (cachedData) {
+        return apiSuccess(cachedData);
+    }
 
     let days = 30;
     if (range === '7d') days = 7;
@@ -44,9 +54,12 @@ export async function GET(request: NextRequest) {
             .orderBy(sql`to_char(${orders.createdAt}, 'YYYY-MM-DD')`);
 
         // 补全日期（可选，前端处理也可以，这里简化直接返回有数据的日期）
+        // 存入缓存
+        dashboardCache.set(cacheKey, data);
+
         return apiSuccess(data);
     } catch (error) {
         log.error('[Mobile API][dashboard] 趋势查询错误', {}, error);
         return apiError('获取趋势数据失败', 500);
     }
-}
+});

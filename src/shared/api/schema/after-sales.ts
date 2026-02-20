@@ -53,6 +53,7 @@ export const afterSalesTickets = pgTable('after_sales_tickets', {
     ticketNoIdx: index('idx_as_ticket_no').on(table.ticketNo),
     statusIdx: index('idx_as_status').on(table.status),
     assignedToIdx: index('idx_as_assigned_to').on(table.assignedTo),
+    tenantTypeStatusIdx: index('idx_as_tenant_type_status').on(table.tenantId, table.type, table.status),
 }));
 
 /**
@@ -108,5 +109,7 @@ export const liabilityNotices = pgTable('liability_notices', {
     tenantIdx: index('idx_ln_tenant').on(table.tenantId),
     afterSalesIdx: index('idx_ln_after_sales').on(table.afterSalesId),
     noticeNoIdx: index('idx_ln_notice_no').on(table.noticeNo),
+    tenantPartyStatusIdx: index('idx_ln_tenant_party_status').on(table.tenantId, table.liablePartyType, table.liablePartyId, table.status),
+    tenantStatusConfirmedIdx: index('idx_ln_tenant_status_confirmed').on(table.tenantId, table.status, table.confirmedAt),
 }));
 

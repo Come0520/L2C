@@ -94,18 +94,21 @@ export function ConfirmReceiptDialog({
 
     useEffect(() => {
         if (open) {
-            setLoadingWarehouses(true);
-            getWarehouses()
-                .then(res => {
+            const loadData = async () => {
+                setLoadingWarehouses(true);
+                try {
+                    const res = await getWarehouses();
                     if (res.success && res.data) {
                         setWarehouses(res.data);
-                        // Default to first warehouse if available
                         if (res.data.length > 0) {
                             setValue('warehouseId', res.data[0].id);
                         }
                     }
-                })
-                .finally(() => setLoadingWarehouses(false));
+                } finally {
+                    setLoadingWarehouses(false);
+                }
+            };
+            loadData();
 
             reset({
                 poId: po.id,
@@ -138,7 +141,7 @@ export function ConfirmReceiptDialog({
             toast.success('收货已确认，库存已更新');
             onOpenChange(false);
             router.refresh();
-        } catch (error) {
+        } catch {
             toast.error('请求失败');
         }
     };

@@ -65,7 +65,9 @@ vi.mock('@/shared/lib/logger', () => ({
 import {
     getNotifications,
     markAsRead,
+    markAllAsRead,
     updateNotificationPreference,
+    getNotificationPreferencesAction,
     batchUpdateNotificationPreferences,
     runSLACheck
 } from '../actions';
@@ -175,12 +177,36 @@ describe('Notification Server Actions', () => {
                 const txMock = {
                     insert: vi.fn(() => hoisted.createDrizzleMock([])),
                 };
-                return await (cb as Function)(txMock);
+                return await (cb as (...args: any[]) => any)(txMock);
             });
 
             const result = await batchUpdateNotificationPreferences(input);
             expect(result.success).toBe(true);
             expect(db.transaction).toHaveBeenCalled();
+        });
+    });
+
+    describe('markAllAsRead', () => {
+        it('should update all unread notifications for the user', async () => {
+            const result = await markAllAsRead();
+
+            expect(result.success).toBe(true);
+            expect(db.update).toHaveBeenCalled();
+        });
+    });
+
+    describe('getNotificationPreferencesAction', () => {
+        it('should fetch and merge preferences with defaults', async () => {
+            (db.query.notificationPreferences.findMany as any).mockResolvedValue([
+                { notificationType: 'SYSTEM', channels: ['SMS', 'LARK'] }
+            ]);
+
+            const result = await getNotificationPreferencesAction();
+
+            expect(result.success).toBe(true);
+            expect(result.data?.data?.preferences.SYSTEM).toContain('SMS');
+            expect(result.data?.data?.preferences.SYSTEM).toContain('IN_APP'); // Auto-merged
+            expect(result.data?.data?.preferences.ORDER_STATUS).toEqual(['IN_APP']); // Default
         });
     });
 

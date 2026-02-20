@@ -223,7 +223,14 @@ const getNotificationPreferencesActionInternal = createSafeAction(
         const prefsMap: Record<string, string[]> = {};
         for (const type of NOTIFICATION_TYPES) {
             const existing = prefs.find(p => p.notificationType === type);
-            prefsMap[type] = existing?.channels || ['IN_APP'];
+            let channels = existing?.channels || ['IN_APP'];
+
+            // 确保 IN_APP 始终在列表中
+            if (!channels.includes('IN_APP')) {
+                channels = ['IN_APP', ...channels];
+            }
+
+            prefsMap[type] = channels;
         }
 
         return {

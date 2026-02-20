@@ -11,34 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 
-// 可用的 Widget 类型定义
-export type WidgetType =
-    | 'kpi-sales'
-    | 'kpi-leads'
-    | 'kpi-orders'
-    | 'kpi-conversion'
-    | 'ar-ap-summary'
-    | 'delivery-efficiency'
-    | 'customer-source'
-    | 'sales-funnel'
-    | 'order-trend'
-    | 'leaderboard';
-
-export interface WidgetConfig {
-    id: string;
-    type: WidgetType;
-    title: string;
-    x: number;      // 列位置 (0-based)
-    y: number;      // 行位置 (0-based)
-    w: number;      // 占用列数
-    h: number;      // 占用行数
-    visible: boolean;
-}
-
-export interface DashboardLayoutConfig {
-    columns: number;      // 网格列数
-    widgets: WidgetConfig[];
-}
+import { WidgetConfig, UserDashboardConfig as DashboardLayoutConfig } from '../types';
 
 interface ConfigurableDashboardProps {
     config: DashboardLayoutConfig;
@@ -233,17 +206,4 @@ export function ConfigurableDashboard({
     );
 }
 
-// 默认布局配置
-export const DEFAULT_DASHBOARD_CONFIG: DashboardLayoutConfig = {
-    columns: 4,
-    widgets: [
-        { id: 'kpi-1', type: 'kpi-sales', title: '本月签约', x: 0, y: 0, w: 1, h: 1, visible: true },
-        { id: 'kpi-2', type: 'kpi-leads', title: '待跟进线索', x: 1, y: 0, w: 1, h: 1, visible: true },
-        { id: 'kpi-3', type: 'kpi-orders', title: '进行中订单', x: 2, y: 0, w: 1, h: 1, visible: true },
-        { id: 'kpi-4', type: 'kpi-conversion', title: '转化率', x: 3, y: 0, w: 1, h: 1, visible: true },
-        { id: 'ar-ap', type: 'ar-ap-summary', title: '财务收支概览', x: 0, y: 1, w: 2, h: 1, visible: true },
-        { id: 'delivery', type: 'delivery-efficiency', title: '交付效率', x: 2, y: 1, w: 2, h: 1, visible: true },
-        { id: 'source', type: 'customer-source', title: '客户来源分布', x: 0, y: 2, w: 2, h: 2, visible: true },
-        { id: 'funnel', type: 'sales-funnel', title: '销售漏斗', x: 2, y: 2, w: 2, h: 2, visible: true },
-    ]
-};
+

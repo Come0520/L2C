@@ -15,8 +15,16 @@ import { LiabilityNoticeDialog } from './liability-notice-dialog'; // Fixed impo
 import { format } from 'date-fns';
 import { Badge } from '@/shared/ui/badge';
 import { Loader2 } from 'lucide-react';
-import { TraceabilityView } from './traceability-view';
-import { SLAStatus } from './sla-status';
+import dynamic from 'next/dynamic';
+
+// P1 FIX (AS-12): 针对详情页非核心组件进行懒加载优化
+const TraceabilityView = dynamic(() => import('./traceability-view').then(mod => mod.TraceabilityView), {
+    loading: () => <div className="h-40 animate-pulse bg-muted rounded-md" />
+});
+
+const SLAStatus = dynamic(() => import('./sla-status').then(mod => mod.SLAStatus), {
+    loading: () => <div className="h-20 animate-pulse bg-muted rounded-md" />
+});
 
 
 interface AfterSalesDetailProps {

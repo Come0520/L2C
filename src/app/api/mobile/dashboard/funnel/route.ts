@@ -6,10 +6,12 @@ import { and, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
+import { dashboardCache } from '@/shared/lib/cache-utils';
+import { withTiming } from '@/shared/middleware/api-timing';
 
 
 const log = createLogger('mobile/dashboard/funnel');
-export async function GET(request: NextRequest) {
+export const GET = withTiming(async (request: NextRequest) => {
     const auth = await authenticateMobile(request);
     if (!auth.success) return auth.response;
 
@@ -18,6 +20,14 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';
+
+    const cacheKey = `dashboard:funnel:${auth.session.tenantId}:${auth.session.userId}:${range}`;
+
+    // 尝试从缓存获取
+    const cachedData = dashboardCache.get(cacheKey);
+    if (cachedData) {
+        return apiSuccess(cachedData);
+    }
 
     let days = 30;
     if (range === '7d') days = 7;
@@ -66,9 +76,12 @@ export async function GET(request: NextRequest) {
             sales: paidOrdersCount[0]?.count ?? 0,
         };
 
+        // 存入缓存
+        dashboardCache.set(cacheKey, funnelData);
+
         return apiSuccess(funnelData);
     } catch (error) {
         log.error('[Mobile API][dashboard] 漏斗查询错误', {}, error);
         return apiError('获取销售漏斗数据失败', 500);
     }
-}
+});

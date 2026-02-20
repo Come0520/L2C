@@ -32,6 +32,7 @@ export type WidgetType =
 export interface WidgetConfig {
     id: string;
     type: WidgetType;
+    title: string; // Widget 显示标题
     x: number;
     y: number;
     w: number;

@@ -11,9 +11,9 @@ import {
     warehouses,
     poPayments
 } from "@/shared/api/schema";
-import { eq, and, desc, sql, inArray, notInArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { auth, checkPermission } from "@/shared/lib/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { PERMISSIONS } from "@/shared/config/permissions";
 import { SUPPLY_CHAIN_PATHS, VALID_PO_TRANSITIONS, isValidPoTransition } from "../constants";
 import { type POStatus } from "../constants";
@@ -235,7 +235,7 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
             eq(purchaseOrders.id, poId),
             eq(purchaseOrders.tenantId, session.user.tenantId)
         ),
-        columns: { status: true }
+        columns: { status: true, supplierId: true }
     });
     if (!currentPO) return { success: false, error: '采购单不存在' };
 
@@ -263,6 +263,9 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
     });
 
     revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    if (currentPO?.supplierId) {
+        revalidateTag(`supplier-rating-${currentPO.supplierId}`);
+    }
     return { success: true };
 }
 
@@ -764,6 +767,7 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
         }
 
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+        revalidateTag(`supplier-rating-${po.supplierId}`);
         return { success: true, data: { status: newStatus, allFullyReceived } };
     });
 });
@@ -813,9 +817,33 @@ export async function exportPoPdf({ poId }: { poId: string }) {
 }
 
 /**
+ * 获取采购仪表盘统计指标 (内部实现)
+ */
+async function getCachedDashboardMetrics(tenantId: string) {
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    const [results] = await db.select({
+        pending: sql<number>`count(*) FILTER (WHERE status = 'PENDING_CONFIRMATION')`,
+        inTransit: sql<number>`count(*) FILTER (WHERE status = 'SHIPPED')`,
+        completed: sql<number>`count(*) FILTER (WHERE status = 'COMPLETED')`,
+        delayed: sql<number>`count(*) FILTER (WHERE status NOT IN ('COMPLETED', 'CANCELLED', 'DELIVERED') AND expected_date < ${nowIso})`
+    })
+        .from(purchaseOrders)
+        .where(eq(purchaseOrders.tenantId, tenantId));
+
+    return {
+        pending: Number(results.pending || 0),
+        inTransit: Number(results.inTransit || 0),
+        delayed: Number(results.delayed || 0),
+        completed: Number(results.completed || 0)
+    };
+}
+
+/**
  * 获取采购仪表盘统计指标
  * 
- * @description 统计待确认、运输中、已延期及已完成的采购单数量。
+ * @description 统计待确认、运输中、已延期及已完成的采购单数量。使用 unstable_cache 缓存 60 秒。
  * @returns {Promise<ProcurementMetrics>}
  */
 export async function getProcurementDashboardMetrics() {
@@ -823,55 +851,20 @@ export async function getProcurementDashboardMetrics() {
     if (!session?.user?.id) return { success: false, error: '未授权', data: null };
 
     const tenantId = session.user.tenantId;
-    const now = new Date();
 
     try {
-        // 1. Pending POs: 状态为 PENDING (待确认) 或 CONFIRMED (已确认/待生产) 或 PENDING_PAYMENT (待付款)
-        // 这里根据业务定义，"Pending" 通常指进行中但未发货的状态，或者严格指 "PENDING" 状态。
-        // 为了仪表盘更有意义，我们暂时定义为：DRAFT, PENDING, CONFIRMED, PENDING_PAYMENT, IN_PRODUCTION, READY
-        // 或者简单点，只统计 "待处理" (PENDING)
-        // 让我们先统计 strict 'PENDING'，如果觉得数据太少再调整。
-        const [pendingCount] = await db.select({ count: sql<number>`count(*)` })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.tenantId, tenantId),
-                eq(purchaseOrders.status, 'PENDING_CONFIRMATION')
-            ));
-
-        // 2. In Transit: 状态为 SHIPPED
-        const [inTransitCount] = await db.select({ count: sql<number>`count(*)` })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.tenantId, tenantId),
-                eq(purchaseOrders.status, 'SHIPPED')
-            ));
-
-        // 3. Delayed: 未完成/未取消 且 超过预期交货如期
-        // 排除状态: COMPLETED, CANCELLED, DELIVERED (已送达不算延期，除非送达时间晚于预期，但这里通常指当前延期未到的)
-        const [delayedCount] = await db.select({ count: sql<number>`count(*)` })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.tenantId, tenantId),
-                notInArray(purchaseOrders.status, ['COMPLETED', 'CANCELLED', 'DELIVERED']),
-                sql`${purchaseOrders.expectedDate} < ${now.toISOString()}`
-            ));
-
-        // 4. Completed: 状态为 COMPLETED
-        const [completedCount] = await db.select({ count: sql<number>`count(*)` })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.tenantId, tenantId),
-                eq(purchaseOrders.status, 'COMPLETED')
-            ));
+        const data = await unstable_cache(
+            async () => getCachedDashboardMetrics(tenantId),
+            [`procurement-dashboard-metrics-${tenantId}`],
+            {
+                revalidate: 60,
+                tags: [`procurement-metrics-${tenantId}`]
+            }
+        )();
 
         return {
             success: true,
-            data: {
-                pending: Number(pendingCount.count),
-                inTransit: Number(inTransitCount.count),
-                delayed: Number(delayedCount.count),
-                completed: Number(completedCount.count)
-            }
+            data
         };
     } catch (error) {
         console.error('Failed to fetch dashboard metrics:', error);

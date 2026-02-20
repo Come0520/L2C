@@ -23,12 +23,29 @@
 #### 关联 Actions
 - `tenant-info.ts` — 租户信息 CRUD、Logo 上传、认证申请
 - `preference-actions.ts` — 用户偏好读写
+- `profile-actions.ts` — 个人信息修改 (头像、姓名、手机号、密码)
 
 #### 关联组件
 - `tenant-info-form.tsx` — 租户信息表单
 - `verification-form.tsx` — 企业认证申请表单
 - `user-preference-settings.tsx` — 偏好设置面板
+- `user-profile-form.tsx` — 个人信息修改表单
 - `theme-settings.tsx` / `theme-preview.tsx` — 主题配置与预览
+
+---
+
+### 2.1.1 个人中心 (User Profile) [NEW]
+
+| 编号 | 功能 | 说明 | 权限要求 |
+|------|------|------|----------|
+| Profile-01 | 基本信息修改 | 修改姓名、头像、手机号 | 仅限本人 |
+| Profile-02 | 安全设置 | 修改登录密码 | 仅限本人 (需验证旧密码) |
+
+**验证规则:**
+- 姓名: 必填, 2-20字符
+- 手机号: 选填, 需符合手机号格式, 全局唯一 (除自身外)
+- 密码: 至少8位, 包含字母和数字
+
 
 ---
 

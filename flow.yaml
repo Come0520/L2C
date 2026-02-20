@@ -164,7 +164,7 @@ stages:
                   # 9. 健康检查（最多等 2 分钟）
                   HEALTHY=false
                   for i in $(seq 1 24); do
-                    if curl -sf http://localhost:80/api/health > /dev/null 2>&1; then
+                    if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                       echo "✅ 健康检查通过 (第 ${i} 次尝试)"
                       HEALTHY=true
                       break
@@ -185,7 +185,7 @@ stages:
                       docker compose -f docker-compose.prod.yml down || true
                       docker compose -f docker-compose.prod.yml up -d --build --force-recreate
                       sleep 30
-                      if curl -sf http://localhost:80/api/health > /dev/null 2>&1; then
+                      if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                         echo "回滚后健康检查通过"
                       else
                         echo "回滚后仍不健康，需手动干预"

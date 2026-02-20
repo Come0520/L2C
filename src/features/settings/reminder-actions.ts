@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
 import { reminderRuleSchema } from './schema';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 获取提醒规则列表
@@ -112,7 +113,7 @@ export async function createReminderRule(data: z.infer<typeof reminderRuleSchema
     revalidatePath('/settings/notifications');
     return result;
   } catch (error: unknown) {
-    console.error('Create reminder rule failed:', error);
+    logger.error('Create reminder rule failed:', error);
     return { success: false, message: (error as Error).message || '创建失败' };
   }
 }
@@ -164,7 +165,7 @@ export async function updateReminderRule(
     revalidatePath('/settings/notifications');
     return result;
   } catch (error) {
-    console.error('Update reminder rule failed:', error);
+    logger.error('Update reminder rule failed:', error);
     return { success: false, message: '更新失败' };
   }
 }
@@ -208,7 +209,7 @@ export async function deleteReminderRule(id: string) {
     revalidatePath('/settings/notifications');
     return result;
   } catch (error) {
-    console.error('Delete reminder rule failed:', error);
+    logger.error('Delete reminder rule failed:', error);
     return { success: false, message: '删除失败' };
   }
 }

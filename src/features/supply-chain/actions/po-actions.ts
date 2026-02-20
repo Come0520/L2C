@@ -634,7 +634,7 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
                 eq(purchaseOrders.id, data.poId),
                 eq(purchaseOrders.tenantId, session.user.tenantId)
             ),
-            columns: { id: true, status: true, type: true, poNo: true },
+            columns: { id: true, status: true, type: true, poNo: true, supplierId: true },
             with: { items: true },
         });
 

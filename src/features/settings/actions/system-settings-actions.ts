@@ -11,6 +11,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { logger } from '@/shared/lib/logger';
 import { parseSettingValue, validateValueType } from './setting-utils';
 
 /**
@@ -70,7 +71,7 @@ export async function getSettingsByCategory(category: string) {
 
     return result;
   } catch (error) {
-    console.error(`获取分类 ${category} 的配置失败:`, error);
+    logger.error(`获取分类 ${category} 的配置失败:`, error);
     return {};
   }
 }
@@ -96,7 +97,7 @@ export async function getSettingInternal(key: string, tenantId: string): Promise
 
     throw new Error(`配置项 ${key} 不存在`);
   } catch (error) {
-    console.error(`获取配置项 ${key} 失败:`, error);
+    logger.error(`获取配置项 ${key} 失败:`, error);
     const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find((s) => s.key === key);
     if (defaultSetting) {
       return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
@@ -251,7 +252,7 @@ export async function initTenantSettings(tenantId: string) {
 
     return { success: true, message: '配置初始化完成' };
   } catch (error) {
-    console.error('initTenantSettings error:', error);
+    logger.error('initTenantSettings error:', error);
     return { success: false, error: '配置初始化失败' };
   }
 }

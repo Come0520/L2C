@@ -19,12 +19,12 @@ interface RoleItem {
     code: string;
 }
 
-interface RoleListProps {
-    data: RoleItem[];
-    onEdit?: (role: RoleItem) => void;
+interface RoleListProps<T extends RoleItem> {
+    data: T[];
+    onEdit?: (role: T) => void;
 }
 
-export function RoleList({ data, onEdit }: RoleListProps) {
+export function RoleList<T extends RoleItem>({ data, onEdit }: RoleListProps<T>) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -52,7 +52,7 @@ export function RoleList({ data, onEdit }: RoleListProps) {
                                     <Badge variant="outline">Custom</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon">
+                                    <Button variant="ghost" size="icon" onClick={() => onEdit?.(item)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
                                     <Button variant="ghost" size="icon" className="text-destructive">

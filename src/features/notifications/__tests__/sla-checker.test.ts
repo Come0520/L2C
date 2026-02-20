@@ -4,23 +4,35 @@ import { db } from '@/shared/api/db';
 import { notificationService } from '../service';
 
 // Mock Dependencies
+const hoisted = vi.hoisted(() => ({
+    processApproval: vi.fn().mockResolvedValue({ success: true })
+}));
+
+vi.mock('../approval/actions/processing', () => ({
+    processApproval: hoisted.processApproval,
+}));
+
 vi.mock('@/shared/api/db', () => {
-    const mockReturnSelf = vi.fn().mockReturnThis();
+    const mockChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockReturnThis(),
+        then: vi.fn(function (resolve) { resolve([{}]); return this; }),
+    };
     return {
         db: {
             query: {
-                tenants: { findMany: vi.fn() },
+                tenants: { findMany: vi.fn(() => { console.log('MOCK tenants.findMany called'); return Promise.resolve([]); }) },
                 leads: { findMany: vi.fn() },
                 measureTasks: { findMany: vi.fn() },
-                approvalTasks: { findMany: vi.fn(), findFirst: vi.fn() },
+                approvalTasks: {
+                    findMany: vi.fn(() => { console.log('MOCK approvalTasks.findMany called'); return Promise.resolve([]); }),
+                    findFirst: vi.fn(() => { console.log('MOCK approvalTasks.findFirst called'); return Promise.resolve(null); })
+                },
                 notifications: { findMany: vi.fn() },
                 users: { findMany: vi.fn() },
             },
-            update: vi.fn(() => ({
-                set: mockReturnSelf,
-                where: mockReturnSelf,
-                execute: vi.fn().mockResolvedValue({}),
-            })),
+            update: vi.fn(() => mockChain),
             insert: vi.fn(() => ({
                 values: vi.fn(() => ({
                     execute: vi.fn().mockResolvedValue({}),
@@ -36,9 +48,9 @@ vi.mock('../service', () => ({
     },
 }));
 
-vi.mock('../approval/actions/processing', () => ({
-    processApproval: vi.fn().mockResolvedValue({ success: true }),
-}));
+import { logger } from '@/shared/lib/logger';
+// spyOn will be set up in beforeEach
+
 
 describe('SLAChecker', () => {
     const mockTenantId = 'tenant-1';
@@ -47,6 +59,9 @@ describe('SLAChecker', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         vi.clearAllMocks();
+        vi.spyOn(logger, 'info').mockImplementation((...args) => console.log('[SPY INFO]', ...args));
+        vi.spyOn(logger, 'warn').mockImplementation((...args) => console.log('[SPY WARN]', ...args));
+        vi.spyOn(logger, 'error').mockImplementation((...args) => console.log('[SPY ERROR]', ...args));
         (db.query.tenants.findMany as any).mockResolvedValue(mockActiveTenants);
     });
 
@@ -151,6 +166,55 @@ describe('SLAChecker', () => {
             expect(notificationService.send).toHaveBeenCalledWith(expect.objectContaining({
                 title: '审批暂停已超时',
             }));
+        });
+
+        it('should auto approve pending tasks after 7 days (Rule B)', async () => {
+            console.log('--- RULE B TEST EXECUTION START ---');
+            const now = new Date('2024-01-10T10:00:00Z');
+            vi.setSystemTime(now);
+
+            const mockPendingTask = {
+                id: 'task-p2',
+                tenantId: mockTenantId,
+                status: 'PENDING',
+                createdAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000),
+            };
+
+            (db.query.approvalTasks.findMany as any)
+                .mockResolvedValueOnce([]) // Rule A
+                .mockResolvedValueOnce([mockPendingTask]); // Rule B
+
+            (db.query.approvalTasks.findFirst as any).mockResolvedValue(mockPendingTask);
+
+            await slaChecker.checkApprovalSLA();
+
+            expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Proceeding to auto-approve'));
+            expect(hoisted.processApproval).toHaveBeenCalledWith(expect.objectContaining({
+                taskId: 'task-p2',
+                action: 'APPROVE'
+            }));
+        });
+    });
+
+    describe('checkMeasureTaskDispatchSLA deduplication', () => {
+        it('should not notify if manager already notified for the same task', async () => {
+            const now = new Date('2024-01-02T10:00:00Z');
+            vi.setSystemTime(now);
+
+            const mockTask = { id: 'task-1', measureNo: 'M001', tenantId: mockTenantId, createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) };
+            const mockManager = { id: 'mgr-1', tenantId: mockTenantId, role: 'MANAGER' };
+
+            (db.query.measureTasks.findMany as any).mockResolvedValue([mockTask]);
+            (db.query.users.findMany as any).mockResolvedValue([mockManager]);
+            (db.query.notifications.findMany as any).mockResolvedValue([{
+                userId: 'mgr-1',
+                title: '测量待派单超时警告',
+                metadata: { taskId: 'task-1', type: 'sla_measure_dispatch' }
+            }]);
+
+            await slaChecker.checkMeasureTaskDispatchSLA();
+
+            expect(notificationService.send).not.toHaveBeenCalled();
         });
     });
 });

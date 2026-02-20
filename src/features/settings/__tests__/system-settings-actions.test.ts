@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { type systemSettings } from '@/shared/api/schema/system-settings';
+
+type SystemSetting = typeof systemSettings.$inferSelect;
 
 // 使用 vi.hoisted 提升 mock 定义
 const mocks = vi.hoisted(() => ({
@@ -139,9 +142,9 @@ describe('SystemSettingsActions - Task 1: 纯函数单元测试', () => {
     // === getSettingsByCategory 测试 ===
     describe('getSettingsByCategory', () => {
         it('应返回按 key 分组的配置', async () => {
-            (db.query.systemSettings.findMany as any).mockResolvedValue([
-                { key: 'ENABLE_LEAD_AUTO_RECYCLE', value: 'true', valueType: 'BOOLEAN' },
-                { key: 'LEAD_DAILY_CLAIM_LIMIT', value: '10', valueType: 'INTEGER' },
+            vi.mocked(db.query.systemSettings.findMany).mockResolvedValue([
+                { key: 'ENABLE_LEAD_AUTO_RECYCLE', value: 'true', valueType: 'BOOLEAN' } as SystemSetting,
+                { key: 'LEAD_DAILY_CLAIM_LIMIT', value: '10', valueType: 'INTEGER' } as SystemSetting,
             ]);
             const result = await getSettingsByCategory('LEAD');
             expect(result).toEqual({
@@ -159,17 +162,17 @@ describe('SystemSettingsActions - Task 1: 纯函数单元测试', () => {
     // === getSettingInternal 测试 ===
     describe('getSettingInternal', () => {
         it('应返回已存在的配置值', async () => {
-            (db.query.systemSettings.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.systemSettings.findFirst).mockResolvedValue({
                 key: 'ENABLE_LEAD_AUTO_RECYCLE',
                 value: 'true',
                 valueType: 'BOOLEAN',
-            });
+            } as SystemSetting);
             const result = await getSettingInternal('ENABLE_LEAD_AUTO_RECYCLE', mockTenantId);
             expect(result).toBe(true);
         });
 
         it('配置不存在时应回退到默认值', async () => {
-            (db.query.systemSettings.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.systemSettings.findFirst).mockResolvedValue(null);
             const result = await getSettingInternal('ENABLE_LEAD_AUTO_RECYCLE', mockTenantId);
             // 假设默认值是 'true'
             expect(result).toBe(true);
@@ -187,7 +190,7 @@ describe('SystemSettingsActions - Task 1: 纯函数单元测试', () => {
     // === initTenantSettings 测试 ===
     describe('initTenantSettings', () => {
         it('已有配置时应跳过初始化', async () => {
-            (db.query.systemSettings.findFirst as any).mockResolvedValue({ id: 'existing' });
+            vi.mocked(db.query.systemSettings.findFirst).mockResolvedValue({ id: 'existing' } as unknown as SystemSetting);
             const result = await initTenantSettings(mockTenantId);
             expect(result?.success).toBe(true);
             expect(result?.message).toBe('配置初始化完成');
@@ -197,10 +200,10 @@ describe('SystemSettingsActions - Task 1: 纯函数单元测试', () => {
     // === getAllSettings 测试 ===
     describe('getAllSettings', () => {
         it('应按分类分组返回配置', async () => {
-            (db.query.systemSettings.findMany as any).mockResolvedValue([
-                { category: 'LEAD', key: 'K1', value: 'true', valueType: 'BOOLEAN' },
-                { category: 'LEAD', key: 'K2', value: '10', valueType: 'INTEGER' },
-                { category: 'ORDER', key: 'K3', value: 'false', valueType: 'BOOLEAN' },
+            vi.mocked(db.query.systemSettings.findMany).mockResolvedValue([
+                { category: 'LEAD', key: 'K1', value: 'true', valueType: 'BOOLEAN' } as SystemSetting,
+                { category: 'LEAD', key: 'K2', value: '10', valueType: 'INTEGER' } as SystemSetting,
+                { category: 'ORDER', key: 'K3', value: 'false', valueType: 'BOOLEAN' } as SystemSetting,
             ]);
             const result = await getAllSettings();
             expect(result).toEqual({

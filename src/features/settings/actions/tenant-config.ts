@@ -161,7 +161,6 @@ export async function updateARPaymentConfig(config: ARPaymentConfig) {
             .where(eq(tenants.id, session.user.tenantId));
 
         // 记录审计日志
-        // 记录审计日志
         await AuditService.log(tx, {
             tableName: 'tenants',
             recordId: session.user.tenantId,
@@ -217,7 +216,6 @@ export async function updateAPPaymentConfig(config: APPaymentConfig) {
             .where(eq(tenants.id, session.user.tenantId));
 
         // 记录审计日志
-        // 记录审计日志
         await AuditService.log(tx, {
             tableName: 'tenants',
             recordId: session.user.tenantId,
@@ -272,7 +270,6 @@ export async function updateWorkflowModeConfig(config: WorkflowModeConfig) {
             })
             .where(eq(tenants.id, session.user.tenantId));
 
-        // 记录审计日志
         // 记录审计日志
         await AuditService.log(tx, {
             tableName: 'tenants',

@@ -6,6 +6,11 @@ const mocks = vi.hoisted(() => ({
     auth: vi.fn(),
     revalidatePath: vi.fn(),
     logAudit: vi.fn(),
+    logger: {
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+    },
     dbFindFirst: vi.fn(),
     dbUpdate: vi.fn(),
     // Drizzle ORM mocks
@@ -16,7 +21,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/shared/lib/auth', () => ({
     auth: mocks.auth,
 }));
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock('@/shared/lib/logger', () => ({
+    logger: mocks.logger,
+}));
+vi.mock('next/cache', () => ({
+    revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
+    unstable_cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn
+}));
 vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { log: mocks.logAudit },
 }));
@@ -28,8 +40,8 @@ vi.mock('drizzle-orm', () => ({
 
 // Mock createSafeAction
 vi.mock('@/shared/lib/server-action', () => ({
-    createSafeAction: (schema: any, handler: any) => {
-        return async (data: any) => {
+    createSafeAction: (schema: z.ZodTypeAny, handler: (data: unknown, ctx: unknown) => unknown) => {
+        return async (data: unknown) => {
             const parsed = schema.safeParse(data);
             if (!parsed.success) {
                 return { success: false, error: 'Validation Error' };
@@ -105,14 +117,12 @@ describe('PreferenceActions', () => {
         });
 
         it('DB 查询异常时应返回默认值并记录错误', async () => {
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
             mocks.dbFindFirst.mockRejectedValue(new Error('DB Error'));
 
             const result = await getUserPreferences();
 
             expect(result).toEqual({ quoteMode: 'PRODUCT_FIRST' });
-            expect(consoleSpy).toHaveBeenCalled();
-            consoleSpy.mockRestore();
+            expect(mocks.logger.error).toHaveBeenCalled();
         });
     });
 
@@ -160,12 +170,11 @@ describe('PreferenceActions', () => {
         it('更新失败时应返回错误信息', async () => {
             mocks.dbFindFirst.mockRejectedValue(new Error('Update failed'));
 
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
             const result = await updateUserPreferences({ quoteMode: 'SPACE_FIRST' });
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('失败');
-            consoleSpy.mockRestore();
+            expect(mocks.logger.error).toHaveBeenCalled();
         });
     });
 });

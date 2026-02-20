@@ -40,7 +40,7 @@ export function PendingMeasureWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     待派测量
                 </CardTitle>
                 <ClipboardCheck className="h-4 w-4 text-amber-500" />
@@ -83,7 +83,7 @@ export function PendingInstallWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     待派安装
                 </CardTitle>
                 <Wrench className="h-4 w-4 text-cyan-500" />
@@ -124,7 +124,7 @@ export function TodayScheduleWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     今日排班
                 </CardTitle>
                 <Calendar className="h-4 w-4 text-blue-500" />
@@ -167,13 +167,13 @@ export function ARSummaryWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     待收款
                 </CardTitle>
                 <CreditCard className="h-4 w-4 text-rose-500" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-xl sm:text-2xl font-bold text-foreground">
                     ¥{data!.amount.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -212,13 +212,13 @@ export function APSummaryWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     待付款
                 </CardTitle>
                 <Truck className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-xl sm:text-2xl font-bold text-foreground">
                     ¥{data!.amount.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -255,7 +255,7 @@ export function CashFlowWidget() {
     return (
         <Card className="glass-liquid border-white/10 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     现金流
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-emerald-500" />

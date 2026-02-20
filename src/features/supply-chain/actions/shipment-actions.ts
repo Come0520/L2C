@@ -25,9 +25,20 @@ const createShipmentSchema = z.object({
     /** 物流单号 */
     logisticsNo: z.string().max(100).optional(),
     /** 物流追踪链接 */
-    trackingUrl: z.string().url().optional(),
+    trackingUrl: z.string().url().optional().or(z.literal('')),
     /** 发货时间 */
     shippedAt: z.string().refine((val) => !isNaN(Date.parse(val)), "无效的日期").optional(),
+    /** 备注 */
+    remark: z.string().max(500).optional(),
+});
+
+const updateShipmentSchema = z.object({
+    /** 物流公司 */
+    logisticsCompany: z.string().max(100).optional(),
+    /** 物流单号 */
+    logisticsNo: z.string().max(100).optional(),
+    /** 物流追踪链接 */
+    trackingUrl: z.string().url().optional().or(z.literal('')),
     /** 备注 */
     remark: z.string().max(500).optional(),
 });

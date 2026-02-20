@@ -29,18 +29,30 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('@/shared/api/db', () => ({
     db: {
-        insert: vi.fn().mockReturnValue({
-            values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: '123e4567-e89b-12d3-a456-426614174003', poNo: 'PO-TEST-001' }])
-            })
-        }),
-        update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
+        insert: vi.fn().mockImplementation(() => ({
+            values: vi.fn().mockImplementation(() => ({
+                returning: vi.fn().mockResolvedValue([{ id: 'new-po-id', woNo: 'WO-TEST-001' }])
+            }))
+        })),
+        update: vi.fn().mockImplementation(() => ({
+            set: vi.fn().mockImplementation(() => ({
+                where: vi.fn().mockImplementation(() => ({
                     returning: vi.fn().mockResolvedValue([{ id: '123e4567-e89b-12d3-a456-426614174003', status: 'UPDATED' }])
-                })
-            })
-        }),
+                }))
+            }))
+        })),
+        // Mocking select with chainable methods
+        select: vi.fn().mockImplementation(() => ({
+            from: vi.fn().mockImplementation(() => ({
+                leftJoin: vi.fn().mockImplementation(function () { return this; }),
+                where: vi.fn().mockImplementation(function () { return this; }),
+                orderBy: vi.fn().mockImplementation(function () { return this; }),
+                limit: vi.fn().mockImplementation(function () { return this; }),
+                offset: vi.fn().mockImplementation(function () { return this; }),
+                // Make it thenable to support await
+                then: (resolve: any) => resolve([{ id: '123e4567-e89b-12d3-a456-426614174003', status: 'PENDING', total: 1 }]),
+            }))
+        })),
         query: {
             processingOrders: {
                 findFirst: vi.fn(),
@@ -51,22 +63,24 @@ vi.mock('@/shared/api/db', () => ({
             }
         },
         transaction: vi.fn().mockImplementation(async (callback) => {
-            // Simple mock for transaction, actually running callback
-            // But simpler for unit test to just mock insert/update directly if transaction logic is complex.
-            // actions often use db directly unless complex.
-            // Looking at processing-actions.ts, create uses transaction.
-            // So we must mock transaction.
             const tx = {
-                insert: vi.fn().mockReturnValue({
-                    values: vi.fn().mockReturnValue({
-                        returning: vi.fn().mockResolvedValue([{ id: 'new-po-id', poNo: 'PO-TEST-001' }])
-                    })
-                }),
-                update: vi.fn().mockReturnValue({
-                    set: vi.fn().mockReturnValue({
+                insert: vi.fn().mockImplementation(() => ({
+                    values: vi.fn().mockImplementation(() => ({
+                        returning: vi.fn().mockResolvedValue([{ id: 'new-po-id', woNo: 'WO-TEST-001' }])
+                    }))
+                })),
+                update: vi.fn().mockImplementation(() => ({
+                    set: vi.fn().mockImplementation(() => ({
                         where: vi.fn().mockResolvedValue([{ id: 'new-po-id' }])
-                    })
-                })
+                    }))
+                }),),
+                select: vi.fn().mockImplementation(() => ({
+                    from: vi.fn().mockImplementation(() => ({
+                        where: vi.fn().mockImplementation(() => ({
+                            limit: vi.fn().mockResolvedValue([{ id: '123e4567-e89b-12d3-a456-426614174001' }])
+                        }))
+                    }))
+                }))
             };
             return await callback(tx);
         })
@@ -78,7 +92,7 @@ vi.mock('@/shared/lib/utils', async (importOriginal) => {
     return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(actual as any),
-        generateDocNo: vi.fn().mockResolvedValue('PO-TEST-001'),
+        generateDocNo: vi.fn().mockReturnValue('WO-TEST-001'),
     };
 });
 
@@ -96,50 +110,37 @@ describe('Processing Actions', () => {
     describe('createProcessingOrder', () => {
         it('should create a processing order successfully', async () => {
             const input = {
-                id: '123e4567-e89b-12d3-a456-426614174001',
-                data: {
-                    processorId: '123e4567-e89b-12d3-a456-426614174002',
-                    items: [
-                        { productName: 'Item A', quantity: '10', sku: 'SKU-A', unitFee: '5.00' }
-                    ],
-                    estimatedFee: '50.00',
-                    remark: 'Test Remark'
-                }
+                orderId: '123e4567-e89b-12d3-a456-426614174001',
+                poId: '123e4567-e89b-12d3-a456-426614174002',
+                supplierId: '123e4567-e89b-12d3-a456-426614174003',
+                items: [
+                    { orderItemId: '123e4567-e89b-12d3-a456-426614174004' }
+                ],
+                remark: 'Test Remark'
             };
 
-            const result = await createProcessingOrder(undefined, input); // Adjusted arguments if needed. Action def is (data) or (_data)
+            const result = await createProcessingOrder(input);
 
+            if (!result.success) {
+                console.error('createProcessingOrder failed:', result.error);
+            }
             expect(result.success).toBe(true);
-            // expect(result.message).toContain('Processing order created'); // Stub currently returns "功能开发中"
         });
     });
 
     describe('updateProcessingOrder', () => {
         it('should update processing order successfully', async () => {
-            const input = {
-                id: '123e4567-e89b-12d3-a456-426614174003',
-                data: {
-                    status: 'MATERIAL_SHIPPED',
-                    remark: 'Sent material'
-                }
+            const id = '123e4567-e89b-12d3-a456-426614174003';
+            const data = {
+                remark: 'Updated remark'
             };
 
-            const result = await updateProcessingOrder(undefined, input);
+            const result = await updateProcessingOrder(id, data);
 
+            if (!result.success) {
+                console.error('updateProcessingOrder failed:', result.error);
+            }
             expect(result.success).toBe(true);
         });
     });
-
-    // describe('getProcessingOrder', () => {
-    //     it('should get processing order successfully', async () => {
-    //         const input = {
-    //             id: '123e4567-e89b-12d3-a456-426614174003'
-    //         };
-    //
-    //         // Stub getProcessingOrderById is complex with joins, need correct DB mock
-    //         // Currently skipping get test as mock is partial
-    //         // const result = await getProcessingOrder(input);
-    //         // expect(result.success).toBe(true);
-    //     });
-    // });
 });

@@ -36,7 +36,7 @@ description: Use when you need to evaluate the development completeness and matu
 | **L2** | 🟠 可用期 (Functional) | 2-4 | 核心 CRUD 功能可用，但缺少边界处理、安全机制、测试 |
 | **L3** | 🟡 完善期 (Robust) | 4-6 | 功能完整，有输入校验、错误处理、基本安全措施，但测试和文档不完整 |
 | **L4** | 🟢 生产就绪 (Production-Ready) | 6-8 | 全面的安全、测试、文档、日志、监控，可直接上线 |
-| **L5** | 🔵 持续优化 (Optimized) | 8-10 | 性能调优、高级分析、自动化运维、持续改进闭环 |
+| **L5** | 🔵 持续优化 (Optimized) | **每项 ≥ 9** | 所有 8 个维度得分均 ≥ 9，代表全方位卓越：性能调优、高级分析、自动化运维、持续改进闭环 |
 
 ### 等级判定规则
 
@@ -46,6 +46,7 @@ description: Use when you need to evaluate the development completeness and matu
 - 任何维度得分 ≤ 2 → 最高判定为 L2
 - 安全维度 (D6) 得分 ≤ 4 → 最高判定为 L3
 - 测试维度 (D3) 得分 ≤ 3 → 最高判定为 L3
+- **任何维度得分 < 9 → 最高判定为 L4**（L5 要求所有维度均达到 9 分以上）
 
 ---
 

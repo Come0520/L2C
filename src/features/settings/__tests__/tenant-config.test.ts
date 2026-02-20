@@ -132,7 +132,8 @@ describe('TenantConfig Actions - Task 3: Zod 校验测试', () => {
 
         it('非法枚举值应校验失败', async () => {
             const result = await updateAPPaymentConfig({
-                prepaidBonusType: 'INVALID' as any,
+                // @ts-expect-error 测试非法输入
+                prepaidBonusType: 'INVALID',
                 prepaidBonusRatio: 0.15,
             });
             expect(result.success).toBe(false);

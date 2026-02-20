@@ -10,21 +10,16 @@ import { AuditService } from '@/shared/services/audit-service';
 import { getDefaultDashboardConfig } from '../utils';
 import { createLogger } from '@/shared/lib/logger';
 
+import { revalidateTag } from 'next/cache';
+import { WorkbenchService } from '@/services/workbench.service';
+
 const logger = createLogger('DashboardConfigAction');
 
-const widgetTypeSchema = z.enum([
-    'sales-target', 'sales-leads', 'sales-conversion', 'sales-avg-order',
-    'team-sales', 'team-target', 'team-leaderboard', 'conversion-funnel',
-    'pending-measure', 'pending-install', 'today-schedule', 'ar-summary',
-    'ap-summary', 'cash-flow', 'pending-approval', 'sales-trend',
-    'channel-performance', 'executive-summary', 'cash-flow-forecast',
-    'ar-aging', 'enhanced-funnel'
-]);
-
+// 仪表盘配置校验 Schema
 const widgetConfigSchema = z.object({
     id: z.string(),
-    type: widgetTypeSchema,
-    title: z.string().optional(),
+    type: z.string(), // 应与 WidgetType 对应
+    title: z.string(),
     x: z.number(),
     y: z.number(),
     w: z.number(),
@@ -33,33 +28,22 @@ const widgetConfigSchema = z.object({
 });
 
 const dashboardConfigSchema = z.object({
-    version: z.number().default(1),
-    columns: z.number().min(1).max(12).default(4),
+    version: z.number(),
+    columns: z.number(),
     widgets: z.array(widgetConfigSchema),
 });
+
 
 /**
  * 获取用户的仪表盘配置
  */
 export async function getDashboardConfigAction(): Promise<UserDashboardConfig> {
     const session = await auth();
-    const defaultData = getDefaultDashboardConfig(session?.user?.role || '');
-    if (!session?.user?.id) return defaultData;
-
-    try {
-        const user = await db.query.users.findFirst({
-            where: eq(users.id, session.user.id),
-            columns: { dashboardConfig: true }
-        });
-
-        if (user?.dashboardConfig && typeof user.dashboardConfig === 'object') {
-            return user.dashboardConfig as unknown as UserDashboardConfig;
-        }
-    } catch (error) {
-        logger.error('获取仪表盘配置失败', {}, error);
+    if (!session?.user?.id) {
+        return getDefaultDashboardConfig(session?.user?.role || '');
     }
 
-    return defaultData;
+    return WorkbenchService.getDashboardConfig(session.user.id, session.user.role || '');
 }
 
 /**
@@ -80,12 +64,7 @@ export const saveDashboardConfigAction = createSafeAction(
                 });
 
                 // 2. 更新配置
-                await tx.update(users)
-                    .set({
-                        dashboardConfig: data as Record<string, unknown>,
-                        updatedAt: new Date()
-                    })
-                    .where(eq(users.id, userId));
+                await WorkbenchService.updateDashboardConfig(userId, data);
 
                 // 3. 记录审计日志
                 await AuditService.log(tx, {
@@ -100,6 +79,8 @@ export const saveDashboardConfigAction = createSafeAction(
                 });
             });
 
+            // 4. 失效缓存
+            revalidateTag(`dashboard-config:${userId}`);
             return { success: true };
         } catch (error) {
             logger.error('保存仪表盘配置失败', { userId, tenantId }, error);
@@ -120,12 +101,7 @@ export const resetDashboardConfigAction = createSafeAction(
         try {
             await db.transaction(async (tx) => {
                 const config = getDefaultDashboardConfig(session.user.role || '');
-                await tx.update(users)
-                    .set({
-                        dashboardConfig: config as Record<string, unknown>,
-                        updatedAt: new Date()
-                    })
-                    .where(eq(users.id, userId));
+                await WorkbenchService.updateDashboardConfig(userId, config);
 
                 await AuditService.log(tx, {
                     tableName: 'users',
@@ -137,6 +113,8 @@ export const resetDashboardConfigAction = createSafeAction(
                 });
             });
 
+            // 失效缓存
+            revalidateTag(`dashboard-config:${userId}`);
             return { success: true };
         } catch (error) {
             logger.error('重置仪表盘配置失败', { userId, tenantId }, error);
@@ -144,3 +122,4 @@ export const resetDashboardConfigAction = createSafeAction(
         }
     }
 );
+

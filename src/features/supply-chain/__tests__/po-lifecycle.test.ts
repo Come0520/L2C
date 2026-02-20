@@ -10,6 +10,7 @@ import { auth } from '@/shared/lib/auth';
 // Mock Modules
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
@@ -126,18 +127,40 @@ describe('PO Lifecycle', () => {
     it('should update PO status', async () => {
         const poId = 'po-123';
 
-        const result = await updatePoStatus({ poId, status: 'ORDERED' });
+        // Mock PO lookup for status machine
+        const mockFindFirst = db.query.purchaseOrders.findFirst as unknown as import('vitest').Mock;
+        mockFindFirst.mockResolvedValueOnce({
+            id: poId,
+            status: 'DRAFT',
+            supplierId: 'sup-1',
+            tenantId: 'test-tenant-id'
+        });
 
+        // DRAFT -> PENDING_CONFIRMATION is valid
+        const result = await updatePoStatus({ poId, status: 'PENDING_CONFIRMATION' });
+
+        if (!result.success) {
+            console.error('updatePoStatus failed:', result.error);
+        }
         expect(result.success).toBe(true);
         expect(db.update).toHaveBeenCalled();
     });
 
-    it('should fail if invalid status', async () => {
+    it('should fail if invalid status transition', async () => {
         const poId = 'po-123';
 
-        const result = await updatePoStatus({ poId, status: 'INVALID_STATUS' });
+        // Mock PO lookup
+        const mockFindFirst = db.query.purchaseOrders.findFirst as unknown as import('vitest').Mock;
+        mockFindFirst.mockResolvedValueOnce({
+            id: poId,
+            status: 'DRAFT',
+            tenantId: 'test-tenant-id'
+        });
+
+        // DRAFT -> COMPLETED is NOT valid
+        const result = await updatePoStatus({ poId, status: 'COMPLETED' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toMatch(/无效状态/);
+        expect(result.error).toMatch(/状态不允许/);
     });
 });

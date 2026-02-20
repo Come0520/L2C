@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`After-Sales Analytics Actions > should return correct report structure and data (snapshot) 1`] = `
+{
+  "liabilityByParty": [
+    {
+      "count": 5,
+      "partyType": "FACTORY",
+      "partyTypeLabel": "工厂",
+      "totalAmount": 5000,
+    },
+    {
+      "count": 2,
+      "partyType": "INSTALLER",
+      "partyTypeLabel": "安装工",
+      "totalAmount": 200,
+    },
+  ],
+  "summary": {
+    "totalLiabilityAmount": 5200,
+    "totalLiabilityCount": 7,
+  },
+  "ticketsByStatus": [
+    {
+      "count": 8,
+      "status": "PROCESSING",
+    },
+    {
+      "count": 4,
+      "status": "CLOSED",
+    },
+  ],
+  "ticketsByType": [
+    {
+      "count": 10,
+      "type": "REPAIR",
+    },
+    {
+      "count": 2,
+      "type": "RETURN",
+    },
+  ],
+}
+`;

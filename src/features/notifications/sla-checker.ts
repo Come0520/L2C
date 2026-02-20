@@ -217,6 +217,7 @@ export const slaChecker = {
      * 规则 B (强制决策): 状态=PENDING 且超时 -> 自动 APPROVE 
      */
     async checkApprovalSLA() {
+        logger.info('[SLAChecker] Starting checkApprovalSLA');
         const activeTenants = await db.query.tenants.findMany({
             where: eq(tenants.isActive, true)
         });
@@ -233,6 +234,8 @@ export const slaChecker = {
 
             const resumeThreshold = new Date(now - resumeHours * 60 * 60 * 1000);
             const approveThreshold = new Date(now - approveDays * 24 * 60 * 60 * 1000);
+
+            logger.info(`[SLAChecker] Tenant: ${tenant.name} (${tenant.id}), approveDays: ${approveDays}, threshold: ${approveThreshold.toISOString()}`);
 
             // --- Rule A: Auto Timeout for Paused Tasks ---
             const pausedTasks = await db.query.approvalTasks.findMany({
@@ -279,9 +282,11 @@ export const slaChecker = {
                     lt(approvalTasks.createdAt, approveThreshold)
                 )
             });
+            logger.info(`[SLAChecker] Found ${longPendingTasks.length} long pending tasks for Rule B`);
             totalFound += longPendingTasks.length;
 
             for (const task of longPendingTasks) {
+                console.log('LOOP ENTERED, TASK ID:', task.id);
                 logger.info(`[SLAChecker] Auto-approving task ${task.id} for tenant ${tenant.name} due to ${approveDays}-day SLA`);
 
                 try {
@@ -289,11 +294,14 @@ export const slaChecker = {
                     const currentTask = await db.query.approvalTasks.findFirst({
                         where: eq(approvalTasks.id, task.id)
                     });
+                    console.log('FIND FIRST RESULT:', currentTask?.id, currentTask?.status);
 
                     if (!currentTask || currentTask.status !== 'PENDING') {
-                        logger.warn(`[SLAChecker] Task ${task.id} status changed, skipping auto-approval.`);
+                        logger.warn(`[SLAChecker] Task ${task.id} status changed, skipping auto-approval. Status: ${currentTask?.status}`);
                         continue;
                     }
+                    console.log('PROCEEDING TO AUTO-APPROVE');
+                    logger.info(`[SLAChecker] Proceeding to auto-approve task ${task.id}`);
 
                     const { processApproval } = await import('../approval/actions/processing');
                     await processApproval({

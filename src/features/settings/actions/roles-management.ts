@@ -9,6 +9,7 @@ import { eq, and, desc, asc, sql } from 'drizzle-orm';
 
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 import { createRoleSchema, updateRoleSchema } from '../schema';
 
 /**
@@ -125,7 +126,7 @@ export async function syncSystemRoles() {
       details: results,
     };
   } catch (error) {
-    console.error('同步系统角色失败:', error);
+    logger.error('同步系统角色失败:', error);
     return { success: false, message: '同步失败，请查看日志' };
   }
 }
@@ -203,7 +204,6 @@ export async function createRole(data: {
         .returning({ id: roles.id });
 
       // 记录创建日志
-      // 记录创建日志
       await AuditService.log(tx, {
         tableName: 'roles',
         recordId: newRole.id,
@@ -223,7 +223,7 @@ export async function createRole(data: {
     revalidatePath('/settings/roles');
     return { success: true, message: '角色创建成功' };
   } catch (error) {
-    console.error('创建角色失败:', error);
+    logger.error('创建角色失败:', error);
     return { success: false, message: (error as Error).message || '创建失败' };
   }
 }
@@ -301,7 +301,6 @@ export async function updateRole(
     await db.update(roles).set(updateData).where(eq(roles.id, id));
 
     // 记录更新日志
-    // 记录更新日志
     await AuditService.log(db, {
       tableName: 'roles',
       recordId: id,
@@ -320,7 +319,7 @@ export async function updateRole(
     revalidatePath('/settings/roles');
     return { success: true, message: '角色更新成功' };
   } catch (error) {
-    console.error('更新角色失败:', error);
+    logger.error('更新角色失败:', error);
     return { success: false, message: '更新失败' };
   }
 }
@@ -373,7 +372,6 @@ export async function deleteRole(id: string) {
       await tx.delete(roles).where(eq(roles.id, id));
 
       // 记录删除日志
-      // 记录删除日志
       await AuditService.log(tx, {
         tableName: 'roles',
         recordId: id,
@@ -387,7 +385,7 @@ export async function deleteRole(id: string) {
     revalidatePath('/settings/roles');
     return { success: true, message: '角色已删除' };
   } catch (error) {
-    console.error('删除角色失败:', error);
+    logger.error('删除角色失败:', error);
     return { success: false, message: (error as Error).message || '删除失败' };
   }
 }

@@ -16,9 +16,10 @@ import { Badge } from '@/shared/ui/badge';
 export interface ChannelItem {
     id: string;
     name: string;
-    isActive: boolean;
-    channelCategory?: { name: string };
-    categoryName?: string;
+    isActive?: boolean;
+    status?: string | null;
+    channelCategory?: { name: string } | null;
+    categoryName?: string | null;
 }
 
 /** 渠道分类项类型 */
@@ -27,8 +28,8 @@ export interface ChannelCategoryItem {
     name: string;
 }
 
-interface ChannelListProps {
-    data: ChannelItem[];
+interface ChannelListProps<T extends ChannelItem> {
+    data: T[];
     categories?: ChannelCategoryItem[];
 }
 
@@ -36,7 +37,7 @@ interface ChannelListProps {
  * 渠道列表组件
  * 展示渠道配置数据表格
  */
-export function ChannelList({ data, categories: _categories }: ChannelListProps) {
+export function ChannelList<T extends ChannelItem>({ data, categories: _categories }: ChannelListProps<T>) {
     return (
         <div className="rounded-md border">
             <Table>
@@ -61,8 +62,8 @@ export function ChannelList({ data, categories: _categories }: ChannelListProps)
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.channelCategory?.name || item.categoryName || '-'}</TableCell>
                                 <TableCell>
-                                    <Badge variant={item.isActive ? "default" : "secondary"}>
-                                        {item.isActive ? '启用' : '停用'}
+                                    <Badge variant={(item.isActive ?? item.status === 'ACTIVE') ? "default" : "secondary"}>
+                                        {(item.isActive ?? item.status === 'ACTIVE') ? '启用' : '停用'}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">

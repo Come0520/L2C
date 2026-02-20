@@ -8,34 +8,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { flattenApprovalGraph } from '../lib/graph-utils';
 import { revalidatePath } from 'next/cache';
 import type { ApprovalNode, ApprovalEdge } from '../schema';
-
-const flowNodeSchema = z.object({
-    id: z.string(),
-    type: z.string(),
-    data: z.record(z.string(), z.unknown()),
-    position: z.object({ x: z.number(), y: z.number() }),
-});
-
-const flowEdgeSchema = z.object({
-    id: z.string(),
-    source: z.string(),
-    target: z.string(),
-    type: z.string().optional(),
-});
-
-const saveFlowDefinitionSchema = z.object({
-    flowId: z.string(),
-    definition: z.object({
-        nodes: z.array(flowNodeSchema),
-        edges: z.array(flowEdgeSchema),
-    }),
-});
-
-const createFlowSchema = z.object({
-    name: z.string().min(1),
-    code: z.string().min(1),
-    description: z.string().optional(),
-});
+import { createFlowSchema, saveFlowDefinitionSchema, publishFlowSchema } from '../schema';
 
 const createApprovalFlowActionInternal = createSafeAction(
     createFlowSchema,
@@ -100,10 +73,6 @@ const saveFlowDefinitionActionInternal = createSafeAction(
 export async function saveFlowDefinition(params: z.infer<typeof saveFlowDefinitionSchema>) {
     return saveFlowDefinitionActionInternal(params);
 }
-
-const publishFlowSchema = z.object({
-    flowId: z.string(),
-});
 
 const publishApprovalFlowActionInternal = createSafeAction(
     publishFlowSchema,

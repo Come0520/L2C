@@ -1,6 +1,6 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createAfterSalesTicket, updateTicketStatus, getAfterSalesTickets } from '../actions/ticket';
+import { createAfterSalesTicket, updateTicketStatus, getAfterSalesTickets, getTicketDetail } from '../actions/ticket';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
@@ -103,9 +103,34 @@ describe('After-Sales Ticket Actions', () => {
             const result = await createAfterSalesTicket(input);
 
             expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(true);
             expect(AuditService.recordFromSession).toHaveBeenCalled();
             expect(revalidatePath).toHaveBeenCalledWith('/after-sales');
             expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics');
+        });
+
+        it('should fail if related order not found', async () => {
+            // Mock order not found in transaction
+            (db.transaction as any).mockImplementation(async (cb: any) => {
+                const tx = {
+                    query: {
+                        orders: { findFirst: vi.fn().mockResolvedValue(null) }
+                    }
+                };
+                return cb(tx);
+            });
+
+            const result = await createAfterSalesTicket({
+                orderId: VALID_ORDER_ID,
+                customerId: 'customer-1',
+                type: 'REPAIR' as const,
+                description: 'Test',
+                priority: 'MEDIUM' as const,
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.message).toContain('不存在');
         });
 
         it('should fail if unauthorized', async () => {
@@ -120,6 +145,33 @@ describe('After-Sales Ticket Actions', () => {
             });
 
             expect(result.success).toBe(false);
+        });
+    });
+
+    describe('getTicketDetail', () => {
+        it('should return ticket detail and perform masking', async () => {
+            (db.query.afterSalesTickets.findFirst as any).mockResolvedValue({
+                id: VALID_TICKET_ID,
+                ticketNo: 'AS001',
+                tenantId: VALID_TENANT_ID,
+                customer: { phone: '13812345678', phoneSecondary: null }
+            });
+
+            const result = await getTicketDetail(VALID_TICKET_ID);
+
+            expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(true);
+            expect(result.data?.data.ticketNo).toBe('AS001');
+        });
+
+        it('should return failure if ticket not found', async () => {
+            (db.query.afterSalesTickets.findFirst as any).mockResolvedValue(null);
+
+            const result = await getTicketDetail(VALID_TICKET_ID);
+
+            expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.message).toBe('工单不存在');
         });
     });
 
@@ -139,8 +191,22 @@ describe('After-Sales Ticket Actions', () => {
             const result = await updateTicketStatus(input);
 
             expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(true);
             expect(db.update).toHaveBeenCalled();
             expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics');
+        });
+
+        it('should fail if ticket not found', async () => {
+            (db.query.afterSalesTickets.findFirst as any).mockResolvedValue(null);
+
+            const result = await updateTicketStatus({
+                ticketId: VALID_TICKET_ID,
+                status: 'INVESTIGATING' as const
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.message).toContain('不存在');
         });
 
         it('should fail for invalid status transition', async () => {
@@ -156,9 +222,9 @@ describe('After-Sales Ticket Actions', () => {
             });
 
             const result = await updateTicketStatus(input);
-            console.log('Test Update Result:', result);
-            expect(result.success).toBe(false);
-            expect(result.message).toContain('无法从');
+            expect(result.success).toBe(true);
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.message).toContain('无法从');
         });
     });
 
@@ -172,6 +238,17 @@ describe('After-Sales Ticket Actions', () => {
 
             expect(result.success).toBe(true);
             expect(Array.isArray(result.data)).toBe(true);
+        });
+
+        it('should handle search filters', async () => {
+            (db.query.afterSalesTickets.findMany as any).mockResolvedValue([]);
+
+            const result = await getAfterSalesTickets({ search: 'AS001', status: 'PENDING' });
+
+            expect(result.success).toBe(true);
+            expect(db.query.afterSalesTickets.findMany).toHaveBeenCalledWith(expect.objectContaining({
+                where: expect.anything()
+            }));
         });
     });
 });

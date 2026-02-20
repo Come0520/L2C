@@ -67,21 +67,21 @@ export function CashFlowForecastWidget({ className }: CashFlowForecastWidgetProp
 
     return (
         <Card className={cn("flex flex-col", className)}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
                 <div>
-                    <CardTitle>现金流预测 (30天)</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <CardTitle className="text-base sm:text-lg">现金流预测 (30天)</CardTitle>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                         基于待回款计划及近期回款预测
                     </p>
                 </div>
-                <div className="flex gap-4 text-sm">
-                    <div className="flex flex-col items-end">
+                <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
+                    <div className="flex flex-col items-start sm:items-end">
                         <span className="text-muted-foreground">预计回款</span>
                         <span className="font-bold text-green-600">
                             ¥{parseFloat(data.summary.totalForecastAmount || '0').toLocaleString()}
                         </span>
                     </div>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-start sm:items-end">
                         <span className="text-muted-foreground">已逾期</span>
                         <span className="font-bold text-red-500">
                             ¥{parseFloat(data.summary.totalOverdueAmount || '0').toLocaleString()}

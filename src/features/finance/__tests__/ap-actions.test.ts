@@ -7,6 +7,17 @@ import { financeAccounts } from '@/shared/api/schema';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
 
+// Helper to mock chained DB calls
+const createChainedMock = (returnValue: any = []) => {
+    const mock: any = {};
+    mock.set = vi.fn().mockReturnValue(mock);
+    mock.where = vi.fn().mockReturnValue(mock);
+    mock.values = vi.fn().mockReturnValue(mock);
+    mock.returning = vi.fn().mockResolvedValue(returnValue);
+    mock.then = (onFulfilled: any) => Promise.resolve(returnValue).then(onFulfilled);
+    return mock;
+};
+
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
     db: {
@@ -19,7 +30,11 @@ vi.mock('@/shared/api/db', () => ({
         },
         transaction: vi.fn(),
         update: vi.fn(),
-        select: vi.fn(),
+        select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([]),
+            }),
+        }),
     },
 }));
 
@@ -126,6 +141,8 @@ describe('AP Actions', () => {
             };
 
             (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
+            (db.insert as ReturnType<typeof vi.fn>).mockReturnValue(createChainedMock([{ id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' }]));
+            (db.update as ReturnType<typeof vi.fn>).mockReturnValue(createChainedMock());
             (FinanceApprovalLogic.isFlowActive as ReturnType<typeof vi.fn>).mockResolvedValue(true);
             (submitApproval as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
@@ -150,28 +167,21 @@ describe('AP Actions', () => {
             const mockAccount = { id: mockAccountId, balance: '1000' };
 
             // Mock builder to handle chained calls and returning()
-            const createQueryBuilder = (result: unknown) => {
-                const builder: Record<string, unknown> = {};
-                builder.where = vi.fn().mockReturnValue(builder);
-                builder.set = vi.fn().mockReturnValue(builder);
-                builder.returning = vi.fn().mockResolvedValue(result);
-                builder.then = (resolve: (v: unknown) => void) => resolve(result);
-                return builder;
-            };
 
             const mockTx = {
                 query: {
-                    paymentBills: { findFirst: vi.fn().mockResolvedValue(mockBill) },
+                    paymentBills: { findFirst: vi.fn().mockResolvedValue({ ...mockBill, items: [] }) },
                     financeAccounts: { findFirst: vi.fn().mockResolvedValue(mockAccount) },
                     apSupplierStatements: { findFirst: vi.fn() },
                     apLaborStatements: { findFirst: vi.fn() },
                 },
-                update: vi.fn((_table: unknown) => {
-                    return createQueryBuilder([{ id: mockBillId, status: 'VERIFIED' }]);
+                update: vi.fn((table: any) => {
+                    if (table === financeAccounts) {
+                        return createChainedMock([mockAccount]);
+                    }
+                    return createChainedMock([{ ...mockBill, status: 'PAID' }]);
                 }),
-                insert: vi.fn().mockReturnValue({
-                    values: vi.fn().mockResolvedValue([])
-                })
+                insert: vi.fn().mockReturnValue(createChainedMock([]))
             };
 
             (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
@@ -194,15 +204,6 @@ describe('AP Actions', () => {
             };
             const mockAccount = { id: mockAccountId, balance: '1000' };
 
-            const createQueryBuilder = (result: unknown) => {
-                const builder: Record<string, unknown> = {};
-                builder.where = vi.fn().mockReturnValue(builder);
-                builder.set = vi.fn().mockReturnValue(builder);
-                builder.returning = vi.fn().mockResolvedValue(result);
-                builder.then = (resolve: (v: unknown) => void) => resolve(result);
-                return builder;
-            };
-
             const mockTx = {
                 query: {
                     paymentBills: { findFirst: vi.fn().mockResolvedValue(mockBill) },
@@ -210,12 +211,8 @@ describe('AP Actions', () => {
                     apSupplierStatements: { findFirst: vi.fn() },
                     apLaborStatements: { findFirst: vi.fn() },
                 },
-                update: vi.fn((_table: unknown) => {
-                    return createQueryBuilder([{ id: mockBillId, status: 'PAID' }]);
-                }),
-                insert: vi.fn().mockReturnValue({
-                    values: vi.fn().mockResolvedValue([])
-                })
+                update: vi.fn().mockReturnValue(createChainedMock([mockBill])),
+                insert: vi.fn().mockReturnValue(createChainedMock([]))
             };
 
             (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));

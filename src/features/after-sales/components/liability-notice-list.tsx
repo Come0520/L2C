@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/shared/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { LiabilityDrawer } from './liability-drawer';
 
 interface LiabilityNoticeListProps {
     notices: LiabilityNotice[];
@@ -24,8 +25,11 @@ interface LiabilityNoticeListProps {
 export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
 
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
+    const [selectedNotice, setSelectedNotice] = useState<LiabilityNotice | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const handleConfirm = async (id: string) => {
+    const handleConfirm = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation(); // 阻止触发行的点击事件
         setConfirmingId(id);
         const result = await confirmLiabilityNotice({ noticeId: id });
         setConfirmingId(null);
@@ -35,6 +39,11 @@ export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
         } else {
             toast.error('确认失败', { description: result.error || result.data?.message });
         }
+    };
+
+    const handleRowClick = (notice: LiabilityNotice) => {
+        setSelectedNotice(notice);
+        setDrawerOpen(true);
     };
 
     return (
@@ -60,7 +69,11 @@ export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
                         </TableRow>
                     ) : (
                         notices.map((notice) => (
-                            <TableRow key={notice.id}>
+                            <TableRow
+                                key={notice.id}
+                                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => handleRowClick(notice)}
+                            >
                                 <TableCell className="font-medium">{notice.noticeNo}</TableCell>
                                 <TableCell>{notice.liablePartyType}</TableCell>
                                 <TableCell>¥{Number(notice.amount).toFixed(2)}</TableCell>
@@ -78,7 +91,7 @@ export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
                                     {notice.status !== 'CONFIRMED' && (
                                         <Button
                                             size="sm"
-                                            onClick={() => handleConfirm(notice.id)}
+                                            onClick={(e) => handleConfirm(e, notice.id)}
                                             disabled={confirmingId === notice.id}
                                         >
                                             {confirmingId === notice.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -91,6 +104,11 @@ export function LiabilityNoticeList({ notices }: LiabilityNoticeListProps) {
                     )}
                 </TableBody>
             </Table>
+            <LiabilityDrawer
+                notice={selectedNotice}
+                open={drawerOpen}
+                onOpenChange={setDrawerOpen}
+            />
         </div>
     );
 }

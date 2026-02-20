@@ -16,6 +16,8 @@ import { format } from 'date-fns';
 import { Badge } from '@/shared/ui/badge';
 import { Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { ResolutionTimeline } from './resolution-timeline';
+import { AddResolutionDialog } from './add-resolution-dialog';
 
 // P1 FIX (AS-12): 针对详情页非核心组件进行懒加载优化
 const TraceabilityView = dynamic(() => import('./traceability-view').then(mod => mod.TraceabilityView), {
@@ -66,7 +68,11 @@ export function AfterSalesDetail({ ticketId }: AfterSalesDetailProps) {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {/* Actions can go here, e.g., Update Status, etc. */}
+                    <AddResolutionDialog
+                        ticketId={ticket.id}
+                        currentStatus={ticket.status}
+                        onSuccess={refetch}
+                    />
                 </div>
             </div>
 
@@ -145,20 +151,7 @@ export function AfterSalesDetail({ ticketId }: AfterSalesDetailProps) {
                             <CardTitle>进度概览</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {/* Simple Status Steps */}
-                                {['PENDING', 'INVESTIGATING', 'PROCESSING', 'CLOSED'].map((step, i) => {
-                                    const currentIdx = ['PENDING', 'INVESTIGATING', 'PROCESSING', 'CLOSED'].indexOf(ticket.status);
-                                    const stepIdx = i;
-                                    const isCompleted = stepIdx <= currentIdx;
-                                    return (
-                                        <div key={step} className="flex items-center gap-2">
-                                            <div className={`w-3 h-3 rounded-full ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
-                                            <span className={isCompleted ? 'text-foreground' : 'text-muted-foreground'}>{step}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                            <ResolutionTimeline ticketId={ticket.id} />
                         </CardContent>
                     </Card>
 

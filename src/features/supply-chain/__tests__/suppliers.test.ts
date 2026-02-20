@@ -7,6 +7,7 @@ import { createSupplier, updateSupplier, getSuppliers } from '../actions/supplie
 // Mock Modules
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/auth', () => {

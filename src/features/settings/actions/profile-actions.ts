@@ -8,6 +8,7 @@ import { eq, ne, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { compare, hash } from 'bcryptjs';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 更新个人信息 Schema
@@ -89,7 +90,7 @@ export const updateProfile = createSafeAction(
 
             return { success: true, message: '个人信息已更新' };
         } catch (error) {
-            console.error('更新个人信息失败:', error);
+            logger.error('更新个人信息失败:', error);
             return { success: false, error: '更新失败，请稍后重试' };
         }
     }
@@ -167,7 +168,7 @@ export const changePassword = createSafeAction(
 
             return { success: true, message: '密码已成功修改' };
         } catch (error) {
-            console.error('修改密码失败:', error);
+            logger.error('修改密码失败:', error);
             return { success: false, error: '修改密码失败，请稍后重试' };
         }
     }

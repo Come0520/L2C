@@ -62,6 +62,9 @@ describe('Finance Note Actions - Credit & Debit', () => {
                 })
             });
 
+            console.log("===> createCreditNote function:", createCreditNote.toString().slice(0, 100));
+            console.log("===> is mock function:", vi.isMockFunction(createCreditNote));
+
             const result: any = await createCreditNote({
                 customerId: 'f47ac10b-58cc-4372-a567-0e02b2c3d403',
                 customerName: 'Test Customer',
@@ -70,11 +73,8 @@ describe('Finance Note Actions - Credit & Debit', () => {
                 reason: 'Test Reason'
             });
 
-            console.log("===> createCreditNote RESULT:", result);
-
-            const data = result?.data || result;
-            expect(data.success).toBe(true);
-            expect(data.data?.id).toBe('mock-credit-note-id');
+            expect(result.success).toBe(true);
+            expect(result.data?.id).toBe('mock-credit-note-id');
             expect(db.insert).toHaveBeenCalled();
         });
 
@@ -122,9 +122,8 @@ describe('Finance Note Actions - Credit & Debit', () => {
                 reason: 'Test Deduction'
             });
 
-            const data = result.data || result;
-            expect(data.success).toBe(true);
-            expect(data.data?.id).toBe('mock-debit-note-id');
+            expect(result.success).toBe(true);
+            expect(result.data?.id).toBe('mock-debit-note-id');
             expect(db.insert).toHaveBeenCalled();
         });
 

@@ -31,12 +31,34 @@
 | REJECTED | 已驳回 (终态) |
 
 ## 目录结构
-- `components/`: UI 组件，包括列表、详情、对话框等。
-- `logic/`: 核心业务逻辑（状态机、扣款安全、成本核算）。
-- `actions.ts`: Server Actions 处理前端请求。
+- `actions/`: Server Actions 处理前端请求。
+  - `ticket.ts`: 工单管理（增删改查、流程控制）。
+  - `liability.ts`: 定责单管理。
+  - `analytics.ts`: 统计分析。
+- `components/`: UI 组件。
+  - `after-sales-list.tsx`: 售后列表容器。
+  - `after-sales-detail.tsx`: 售后详情容器。
+  - `ticket-list-table.tsx`: 工单数据表格。
+  - `filters-bar.tsx`: 列表筛选栏。
+  - `advanced-filters-dialog.tsx`: 高级筛选对话框。
+  - `resolution-timeline.tsx`: 售后处理时间轴。
+  - `liability-notice-list.tsx`: 定责单列表。
+  - `liability-drawer.tsx`: 定责单详情抽屉。
+- `logic/`: 核心业务逻辑。
+  - `state-machine.ts`: 工单状态流转控制。
+  - `deduction-safety.ts`: 扣款安全控制。
+  - `virtual-cost-accounting.ts`: 虚拟成本核算。
+- `__tests__/`: 自动化测试用例。
 - `utils.ts`: 通用工具函数。
-- `__tests__/`: 单元测试。
+- `types.ts`: 数据类型定义。
 
 ## 测试标准
-- 核心逻辑 (`logic/`) 必须保证 100% 单元测试覆盖。
-- 关键 Action 必须包含多场景（常规、边界值、异常路径）测试。
+- **核心逻辑 (`logic/`)**: 必须保证 100% 单元测试覆盖。
+- **Server Actions**: 关键流程（创建、状态变更、定责）必须包含多场景（常规、边界值、异常路径）集成测试。
+- **快照测试**: 分析报表等复杂数据结构需进行快照测试。
+
+## L5 成熟度升级记录
+- [x] **性能优化**: 引入 `unstable_cache` 优化统计查询；添加复合索引提升检索效率。
+- [x] **安全性**: 强化 Server Actions 的租户隔离与权限校验；实现关键操作的完全审计。
+- [x] **可维护性**: 完成 UI 组件原子化重构；补全缺失的业务闭环 Action（结案、换货）。
+- [x] **测试覆盖**: 集成测试用例 > 30 个，核心覆盖率 > 80%。

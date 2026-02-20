@@ -9,6 +9,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 // ============================================================
 // 渠道管理 Actions
@@ -32,7 +33,7 @@ export async function getChannels() {
         });
         return { success: true, data: channels };
     } catch (_error) {
-        console.error('获取渠道列表失败:', _error);
+        logger.error('获取渠道列表失败:', _error);
         return { success: false, error: '获取渠道列表失败', data: [] };
     }
 }
@@ -52,7 +53,7 @@ export async function getChannelCategories() {
         const topLevelCategories = categories.filter(c => !c.parentId);
         return { success: true, data: topLevelCategories };
     } catch (_error) {
-        console.error('获取渠道分类失败:', _error);
+        logger.error('获取渠道分类失败:', _error);
         return { success: false, error: '获取渠道分类失败', data: [] };
     }
 }
@@ -89,7 +90,6 @@ const createChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
         }).returning();
 
         // 记录审计日志
-        // 记录审计日志
         if (result[0]) {
             await AuditService.log(db, {
                 tableName: 'market_channels',
@@ -104,7 +104,7 @@ const createChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道创建成功' };
     } catch (_error) {
-        console.error('创建渠道失败:', _error);
+        logger.error('创建渠道失败:', _error);
         return { success: false, error: '创建渠道失败' };
     }
 });
@@ -153,7 +153,6 @@ const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
             ));
 
         // 记录审计日志
-        // 记录审计日志
         await AuditService.log(db, {
             tableName: 'market_channels',
             recordId: data.id,
@@ -168,7 +167,7 @@ const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道更新成功' };
     } catch (_error) {
-        console.error('更新渠道失败:', _error);
+        logger.error('更新渠道失败:', _error);
         return { success: false, error: '更新渠道失败' };
     }
 });
@@ -218,7 +217,6 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
             ));
 
         // 记录审计日志
-        // 记录审计日志
         await AuditService.log(db, {
             tableName: 'market_channels',
             recordId: data.id,
@@ -231,7 +229,7 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
         revalidatePath('/settings/channels');
         return { success: true, message: '渠道删除成功' };
     } catch (_error) {
-        console.error('删除渠道失败:', _error);
+        logger.error('删除渠道失败:', _error);
         return { success: false, error: '删除渠道失败' };
     }
 });

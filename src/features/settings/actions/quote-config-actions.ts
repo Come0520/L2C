@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { DEFAULT_QUOTE_MODE_CONFIG, type QuoteModeConfig } from '../lib/quote-mode-constants';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 
 // 注意：use server 文件只能导出 async 函数
@@ -52,7 +53,7 @@ export async function getQuoteModeConfig(): Promise<{ data?: QuoteModeConfig; er
 
         return { data: quoteModeConfig ?? DEFAULT_QUOTE_MODE_CONFIG };
     } catch (error) {
-        console.error('[getQuoteModeConfig] Error:', error);
+        logger.error('[getQuoteModeConfig] Error:', error);
         return { error: '获取配置失败' };
     }
 }
@@ -111,7 +112,6 @@ export async function saveQuoteModeConfig(
                 .where(eq(tenants.id, tenantId));
 
             // 记录审计日志
-            // 记录审计日志
             await AuditService.log(tx, {
                 tableName: 'tenants',
                 recordId: tenantId,
@@ -127,7 +127,7 @@ export async function saveQuoteModeConfig(
         return { success: true };
 
     } catch (error) {
-        console.error('[saveQuoteModeConfig] Error:', error);
+        logger.error('[saveQuoteModeConfig] Error:', error);
         return { success: false, error: '保存配置失败' };
     }
 }

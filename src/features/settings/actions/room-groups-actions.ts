@@ -54,7 +54,6 @@ export async function updateRoomGroups(groups: RoomGroup[]): Promise<void> {
     await QuoteConfigService.updateRoomGroups(session.user.tenantId, validated.data);
 
     // 记录审计日志
-    // 记录审计日志
     await AuditService.log(db, {
         tableName: 'tenants',
         recordId: session.user.tenantId,

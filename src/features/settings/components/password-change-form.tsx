@@ -47,6 +47,40 @@ export function PasswordChangeForm() {
         },
     });
 
+    const newPassword = form.watch('newPassword');
+
+    const calculateStrength = (password: string) => {
+        if (!password) return 0;
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+        return score;
+    };
+
+    const strength = calculateStrength(newPassword);
+
+    const getStrengthColor = (score: number) => {
+        switch (score) {
+            case 1: return 'bg-red-500';
+            case 2: return 'bg-orange-500';
+            case 3: return 'bg-yellow-500';
+            case 4: return 'bg-green-500';
+            default: return 'bg-gray-200';
+        }
+    };
+
+    const getStrengthText = (score: number) => {
+        switch (score) {
+            case 1: return '弱';
+            case 2: return '中';
+            case 3: return '好';
+            case 4: return '极强';
+            default: return '';
+        }
+    };
+
     function onSubmit(data: PasswordFormValues) {
         startTransition(async () => {
             const result = await changePassword(data);
@@ -85,6 +119,22 @@ export function PasswordChangeForm() {
                             <FormControl>
                                 <Input type="password" placeholder="请输入新密码" {...field} />
                             </FormControl>
+                            {newPassword && (
+                                <div className="mt-2 space-y-2">
+                                    <div className="flex gap-1 h-1.5">
+                                        {[1, 2, 3, 4].map((i) => (
+                                            <div
+                                                key={i}
+                                                className={`flex-1 rounded-full transition-colors duration-300 ${i <= strength ? getStrengthColor(strength) : 'bg-gray-200'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className={`text-xs font-medium ${strength > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                        密码强度: {getStrengthText(strength) || '未知'}
+                                    </p>
+                                </div>
+                            )}
                             <FormDescription>
                                 密码长度至少8位，且必须包含字母和数字。
                             </FormDescription>
@@ -107,10 +157,11 @@ export function PasswordChangeForm() {
                     )}
                 />
 
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
                     {isPending ? '提交中...' : '修改密码'}
                 </Button>
             </form>
         </Form>
     );
 }
+

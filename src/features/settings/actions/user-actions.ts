@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { updateUserManagementSchema } from '../schema';
 import { ROLE_LABELS } from '@/shared/config/roles';
+import { logger } from '@/shared/lib/logger';
 
 export { ROLE_LABELS };
 
@@ -192,7 +193,7 @@ export async function updateUser(
     revalidatePath('/settings/users');
     return { success: true };
   } catch (error) {
-    console.error('更新用户失败:', error);
+    logger.error('更新用户失败:', error);
     return { success: false, error: '更新失败' };
   }
 }
@@ -254,7 +255,6 @@ export async function toggleUserActive(userId: string) {
         .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
 
       // 记录状态变更日志
-      // 记录状态变更日志
       await AuditService.log(tx, {
         tableName: 'users',
         recordId: userId,
@@ -274,7 +274,7 @@ export async function toggleUserActive(userId: string) {
       message: newActive ? '已启用该用户' : '已禁用该用户',
     };
   } catch (error) {
-    console.error('切换用户状态失败:', error);
+    logger.error('切换用户状态失败:', error);
     return { success: false, error: '操作失败' };
   }
 }
@@ -327,7 +327,6 @@ export async function deleteUser(userId: string) {
         .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
 
       // 记录软删除日志
-      // 记录软删除日志
       await AuditService.log(tx, {
         tableName: 'users',
         recordId: userId,
@@ -342,7 +341,7 @@ export async function deleteUser(userId: string) {
     revalidatePath('/settings/users');
     return { success: true, message: '已删除（禁用）该用户' };
   } catch (error) {
-    console.error('删除用户失败:', error);
+    logger.error('删除用户失败:', error);
     return { success: false, error: '删除失败' };
   }
 }

@@ -21,6 +21,7 @@ import { Transaction } from "@/shared/api/db";
 import { revertEntityStatus, completeEntityStatus, findApproversByRole } from "./utils";
 import { logger } from "@/shared/lib/logger";
 import { SYSTEM_USER_ID } from "../constants";
+import { AuditService } from "@/shared/services/audit-service";
 
 const MAX_AUTO_APPROVE_DEPTH = 10;
 
@@ -91,6 +92,15 @@ export async function _processApprovalLogic(
         })
         .where(eq(approvalTasks.id, payload.taskId));
 
+    await AuditService.log(tx, {
+        tableName: 'approval_tasks',
+        recordId: task.id,
+        action: payload.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+        userId: !isSystemCall ? session.user.id : undefined,
+        tenantId: session.user.tenantId,
+        details: { comment: payload.comment }
+    });
+
     // 3. Handle Logic
     if (payload.action === 'REJECT') {
         let shouldRejectWholeFlow = true;
@@ -118,6 +128,15 @@ export async function _processApprovalLogic(
                     completedAt: new Date(),
                 })
                 .where(eq(approvals.id, task.approvalId));
+
+            await AuditService.log(tx, {
+                tableName: 'approvals',
+                recordId: task.approvalId,
+                action: 'FLOW_REJECTED',
+                userId: !isSystemCall ? session.user.id : undefined,
+                tenantId: session.user.tenantId,
+                details: { taskId: task.id, comment: payload.comment }
+            });
 
             // Business Callback (Unified)
             await revertEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId, 'REJECTED');
@@ -249,6 +268,15 @@ export async function _processApprovalLogic(
                     })
                     .where(eq(approvals.id, task.approvalId));
 
+                await AuditService.log(tx, {
+                    tableName: 'approvals',
+                    recordId: task.approvalId,
+                    action: 'FLOW_APPROVED',
+                    userId: !isSystemCall ? session.user.id : undefined,
+                    tenantId: session.user.tenantId,
+                    details: { taskId: task.id }
+                });
+
                 // Business Callback
                 await completeEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId);
             }
@@ -375,6 +403,15 @@ export async function addApprover(payload: {
             parentTaskId: task.id,
             comment: payload.comment ? `[来自加签] ${payload.comment}` : '[加签申请]'
         }).returning();
+
+        await AuditService.log(tx, {
+            tableName: 'approval_tasks',
+            recordId: task.id,
+            action: 'ADD_APPROVER',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            details: { targetUserId: payload.targetUserId, comment: payload.comment, newTaskCreated: newTask.id }
+        });
 
         // 加签通知 (事务后)
         import("../services/approval-notification.service").then(({ ApprovalNotificationService }) => {

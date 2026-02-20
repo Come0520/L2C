@@ -1,23 +1,29 @@
-/**
- * @vitest-environment node
- */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { InferSelectModel } from 'drizzle-orm';
 
 // Force set env for test before other imports
 process.env.DATABASE_URL = 'postgresql://l2c_user:password@127.0.0.1:5435/l2c_dev';
+process.env.AUTH_SECRET = 'test_secret_for_integration_tests';
 
 import { auth } from '@/shared/lib/auth';
+import { db } from '@/shared/api/db';
+import * as schema from '@/shared/api/schema';
+import * as processingActions from '../actions/processing';
+
 // Mock auth module
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
     checkPermission: vi.fn().mockResolvedValue(true),
 }));
 
-describe('Approval Integration Tests', () => {
-    let db: any;
-    let schema: any;
-    let processingActions: any;
+type Tenant = InferSelectModel<typeof schema.tenants>;
+type User = InferSelectModel<typeof schema.users>;
+type ApprovalFlow = InferSelectModel<typeof schema.approvalFlows>;
+type ApprovalNode = InferSelectModel<typeof schema.approvalNodes>;
+type Approval = InferSelectModel<typeof schema.approvals>;
+type ApprovalTask = InferSelectModel<typeof schema.approvalTasks>;
 
+describe('Approval Integration Tests', () => {
     let tenantId: string;
     let userId: string;
     let adminId: string;
@@ -27,17 +33,11 @@ describe('Approval Integration Tests', () => {
     let nodeId: string;
 
     beforeAll(async () => {
-        // Dynamic imports
-        const dbModule = await import('@/shared/api/db');
-        db = dbModule.db;
-        schema = await import('@/shared/api/schema');
-        processingActions = await import('../actions/processing');
-
         // 1. Create Tenant
         const [tenant] = await db.insert(schema.tenants).values({
             name: 'Test Tenant ' + Date.now(),
             code: 'TEST_INT_' + Date.now(),
-        }).returning();
+        }).returning() as Tenant[];
         tenantId = tenant.id;
 
         // 2. Create Users
@@ -47,7 +47,7 @@ describe('Approval Integration Tests', () => {
             name: 'Test Requester',
             role: 'USER',
             passwordHash: 'hash'
-        }).returning();
+        }).returning() as User[];
         userId = user.id;
 
         const [admin] = await db.insert(schema.users).values({
@@ -56,7 +56,7 @@ describe('Approval Integration Tests', () => {
             name: 'Test Admin',
             role: 'ADMIN',
             passwordHash: 'hash'
-        }).returning();
+        }).returning() as User[];
         adminId = admin.id;
 
         // 3. Create Flow
@@ -65,7 +65,7 @@ describe('Approval Integration Tests', () => {
             code: 'TEST_FLOW_' + Date.now(),
             name: 'Test Flow',
             isActive: true
-        }).returning();
+        }).returning() as ApprovalFlow[];
         flowId = flow.id;
 
         // 4. Create Node
@@ -75,13 +75,12 @@ describe('Approval Integration Tests', () => {
             name: 'Step 1',
             approverType: 'USER',
             approverUserId: userId,
-            approverMode: 'ALL', // Corrected from matcherType
+            approverMode: 'ALL',
             sortOrder: 1,
-        }).returning();
+        }).returning() as ApprovalNode[];
         nodeId = node.id;
 
         // 5. Create Approval Instance
-        // Note: entityId is random UUID here, assuming no FK constraint on polymorphic entityId for 'TEST' type
         const entityId = '123e4567-e89b-12d3-a456-426614174005';
         const [approval] = await db.insert(schema.approvals).values({
             tenantId,
@@ -91,7 +90,7 @@ describe('Approval Integration Tests', () => {
             status: 'PENDING',
             currentNodeId: nodeId,
             requesterId: userId
-        }).returning();
+        }).returning() as Approval[];
         approvalId = approval.id;
 
         // 6. Create Task
@@ -101,44 +100,31 @@ describe('Approval Integration Tests', () => {
             nodeId: nodeId,
             approverId: userId,
             status: 'PENDING',
-        }).returning();
+        }).returning() as ApprovalTask[];
         taskId = task.id;
 
     }, 30000);
 
     afterAll(async () => {
-        // Cleanup if possible, or rely on test DB reset
-        // For local dev with persistent DB, cleanup is good practice
-        if (db && tenantId) {
-            // Deleting tenant cascades usually? If not, delete manually order matters.
-            // We skip detailed cleanup for now as it's a test env usually reset/dockerized.
-        }
+        // Cleanup could be added here
     });
 
     it('should allow adding an approver (addApprover)', async () => {
-        (auth as any).mockResolvedValue({
-            user: { id: userId, tenantId, name: 'Test Requester' },
-        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' } as any);
 
         const res = await processingActions.addApprover({
             taskId: taskId,
-            targetUserId: adminId, // Adding admin as approver
+            targetUserId: adminId,
             comment: 'Help me approve'
         });
 
-        // Depending on implementation, this returns the new task or success status
         expect(res).toBeDefined();
-        if (res.success !== undefined) {
-            // If it returns StandardResponse
-            // verifying success might depend on logic (e.g. is user allowed to add approver?)
-            // Assuming user can add.
-        }
     });
 
     it('should process approval (processApproval)', async () => {
-        (auth as any).mockResolvedValue({
-            user: { id: userId, tenantId, name: 'Test Requester' },
-        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' } as any);
 
         const res = await processingActions.processApproval({
             taskId: taskId,
@@ -149,8 +135,11 @@ describe('Approval Integration Tests', () => {
         expect(res.success).toBe(true);
 
         const task = await db.query.approvalTasks.findFirst({
-            where: (t: any, { eq }: any) => eq(t.id, taskId)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            where: (t: ApprovalTask, { eq }: any) => eq(t.id, taskId)
         });
-        expect(task.status).toBe('APPROVED');
+        expect(task?.status).toBe('APPROVED');
     });
 });
+
+

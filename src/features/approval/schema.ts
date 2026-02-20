@@ -163,3 +163,46 @@ export const processApprovalSchema = z.object({
     /** 审批意见评论 */
     comment: z.string().optional(),
 });
+
+// ==================== Zod Schemas for Flow ====================
+export const flowNodeSchema = z.object({
+    id: z.string(),
+    type: z.string(),
+    data: z.record(z.string(), z.unknown()),
+    position: z.object({ x: z.number(), y: z.number() }),
+});
+
+export const flowEdgeSchema = z.object({
+    id: z.string(),
+    source: z.string(),
+    target: z.string(),
+    type: z.string().optional(),
+});
+
+export const createFlowSchema = z.object({
+    name: z.string().min(1),
+    code: z.string().min(1),
+    description: z.string().optional(),
+});
+
+export const saveFlowDefinitionSchema = z.object({
+    flowId: z.string(),
+    definition: z.object({
+        nodes: z.array(flowNodeSchema),
+        edges: z.array(flowEdgeSchema),
+    }),
+});
+
+export const publishFlowSchema = z.object({
+    flowId: z.string(),
+});
+
+// ==================== Zod Schemas for Queries ====================
+export const emptySchema = z.object({});
+
+export const getApprovalDetailsSchema = z.object({
+    id: z.string().uuid(),
+});
+
+// ==================== Zod Schemas for Templates ====================
+export const initializeTemplatesSchema = z.object({});

@@ -36,10 +36,6 @@ export function ConfigurableDashboard({
     const [dropTarget, setDropTarget] = useState<{ x: number; y: number } | null>(null);
     const gridRef = useRef<HTMLDivElement>(null);
 
-    // 计算网格区域
-    const getGridArea = (widget: WidgetConfig) => {
-        return `${widget.y + 1} / ${widget.x + 1} / ${widget.y + widget.h + 1} / ${widget.x + widget.w + 1}`;
-    };
 
     // 处理拖拽开始
     const handleDragStart = useCallback((e: React.DragEvent, widgetId: string) => {
@@ -147,11 +143,14 @@ export function ConfigurableDashboard({
             <div
                 ref={gridRef}
                 className={cn(
-                    "grid gap-4 transition-all",
+                    "grid gap-4 transition-all w-full",
+                    // 移动端强制单列，大屏幕根据配置
+                    "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
                     isEditing && "bg-muted/20 rounded-lg p-2 border-2 border-dashed border-muted-foreground/20"
                 )}
                 style={{
-                    gridTemplateColumns: `repeat(${config.columns}, minmax(0, 1fr))`,
+                    // 在大屏幕上根据配置覆盖默认 grid-cols
+                    gridTemplateColumns: `repeat(auto-fit, minmax(300px, 1fr))`,
                     gridAutoRows: 'minmax(100px, auto)',
                 }}
                 onDragOver={handleDragOver}
@@ -173,11 +172,15 @@ export function ConfigurableDashboard({
                     <div
                         key={widget.id}
                         className={cn(
-                            "relative group transition-all",
+                            "relative group transition-all min-w-0 w-full",
                             isEditing && "cursor-move",
                             draggingId === widget.id && "opacity-50"
                         )}
-                        style={{ gridArea: getGridArea(widget) }}
+                        style={{
+                            // 仅在非编辑模式或大屏幕下应用精确坐标，移动端自动流式布局
+                            gridColumn: `span ${widget.w}`,
+                            gridRow: `span ${widget.h}`
+                        }}
                         draggable={isEditing}
                         onDragStart={(e) => handleDragStart(e, widget.id)}
                         onDragEnd={handleDragEnd}
@@ -185,13 +188,22 @@ export function ConfigurableDashboard({
                         {/* 编辑模式控制栏 */}
                         {isEditing && (
                             <div className="absolute top-2 right-2 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="bg-background/80 backdrop-blur-sm rounded-md p-1 flex items-center gap-1 shadow-sm">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                                <div
+                                    className="bg-background/80 backdrop-blur-sm rounded-md p-1 flex items-center gap-1 shadow-sm"
+                                    title="按住拖拽调整位置"
+                                >
+                                    <GripVertical
+                                        className="h-4 w-4 text-muted-foreground cursor-grab"
+                                        aria-label="拖拽调整位置"
+                                        role="button"
+                                        tabIndex={0}
+                                    />
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         className="h-6 w-6"
                                         onClick={() => removeWidget(widget.id)}
+                                        aria-label={`移除 ${widget.title} 组件`}
                                     >
                                         <X className="h-3 w-3" />
                                     </Button>

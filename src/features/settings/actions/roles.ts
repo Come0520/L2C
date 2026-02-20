@@ -5,6 +5,7 @@ import { db } from '@/shared/api/db';
 import { roles } from '@/shared/api/schema';
 import { eq, asc } from 'drizzle-orm';
 import { ROLES } from '@/shared/config/roles';
+import { logger } from '@/shared/lib/logger';
 
 
 export type RoleOption = {
@@ -30,7 +31,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
 
     if (dbRoles.length === 0) {
       // Auto-initialize default roles for the tenant
-      console.log(`Initializing default roles for tenant: ${session.user.tenantId}`);
+      logger.info(`Initializing default roles for tenant: ${session.user.tenantId}`);
 
       const newRoles = Object.values(ROLES).map((role) => ({
         tenantId: session.user.tenantId,
@@ -65,7 +66,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
       isSystem: r.isSystem || false,
     }));
   } catch (error) {
-    console.warn('获取可用角色失败:', error);
+    logger.warn('获取可用角色失败:', error);
     return [];
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import useSWR from "swr";
+import { fetcher } from "@/shared/lib/fetcher";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -53,34 +54,12 @@ const COLOR_MAP: Record<string, string> = {
 
 /**
  * 待办事项 Tab 内容组件
- * 从 API 获取真实数据，使用可折叠列表展示，支持内联操作
+ * 使用 SWR 获取实时数据，支持乐观更新
  */
 export function TodoTab() {
-    const [data, setData] = useState<TodosResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, error, isLoading, mutate } = useSWR<TodosResponse>("/api/workbench/todos", fetcher);
     const [expandedCategories, setExpandedCategories] = useState<Set<TodoCategory>>(new Set());
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-    /** 获取待办数据 */
-    const fetchTodos = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetch("/api/workbench/todos");
-            if (!response.ok) throw new Error("获取待办事项失败");
-            const result: TodosResponse = await response.json();
-            setData(result);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "未知错误");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchTodos();
-    }, [fetchTodos]);
 
     /** 切换分类展开/收起 */
     const toggleCategory = (category: TodoCategory) => {
@@ -101,26 +80,52 @@ export function TodoTab() {
         data?: unknown;
     }
 
-    /** 执行操作后刷新列表 */
-    const handleAction = async (actionFn: () => Promise<ActionResponse>, itemId: string) => {
-        setActionLoading(itemId);
+    /** 执行操作后刷新列表（支持乐观更新） */
+    const handleAction = async (
+        actionFn: () => Promise<ActionResponse>,
+        itemId: string,
+        category: TodoCategory | null = null
+    ) => {
+        // 如果提供了 category，则进行乐观更新
+        if (category && data) {
+            const optimisticData: TodosResponse = {
+                ...data,
+                categories: data.categories.map(c => {
+                    if (c.category === category) {
+                        return { ...c, count: Math.max(0, c.count - 1) };
+                    }
+                    return c;
+                }),
+            };
+
+            // 针对具体列表进行局部移除（乐观更新）
+            if (category === 'LEAD') {
+                optimisticData.leads = data.leads.filter(item => item.id !== itemId);
+            } else if (category === 'ORDER') {
+                optimisticData.orders = data.orders.filter(item => item.id !== itemId);
+            }
+
+            mutate(optimisticData, false); // 发送乐观更新，不立即重新拉取
+        } else {
+            setActionLoading(itemId);
+        }
+
         try {
             const res = await actionFn();
-            // 如果返回了标准化响应格式且 success 为 false，则抛出错误
             if (res && typeof res === 'object' && 'success' in res && res.success === false) {
                 throw new Error(res.error || "操作失败");
             }
             toast.success("操作成功");
-            await fetchTodos();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "操作失败");
         } finally {
             setActionLoading(null);
+            mutate(); // 无论成功失败，最终进行一次真实数据校验同步
         }
     };
 
     // 加载状态
-    if (loading && !data) {
+    if (isLoading && !data) {
         return (
             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -134,8 +139,8 @@ export function TodoTab() {
         return (
             <Card className="glass-liquid border-white/10">
                 <CardContent className="py-12 text-center">
-                    <p className="text-destructive mb-4">{error}</p>
-                    <Button variant="outline" onClick={fetchTodos}>
+                    <p className="text-destructive mb-4">{error.message || "获取待办事项失败"}</p>
+                    <Button variant="outline" onClick={() => mutate()}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         重试
                     </Button>
@@ -255,7 +260,7 @@ function TodoCategoryTable({
     category: TodoCategory;
     data: TodosResponse;
     actionLoading: string | null;
-    onAction: (fn: () => Promise<unknown>, id: string) => void;
+    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
 }) {
     switch (category) {
         case "LEAD":
@@ -282,7 +287,7 @@ function LeadTable({
 }: {
     items: LeadTodoItem[];
     actionLoading: string | null;
-    onAction: (fn: () => Promise<unknown>, id: string) => void;
+    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -328,7 +333,8 @@ function LeadTable({
                                                     type: 'PHONE_CALL',
                                                     content: '已在工作台跟进',
                                                 }),
-                                                item.id
+                                                item.id,
+                                                'LEAD'
                                             )
                                         }
                                     >
@@ -346,7 +352,8 @@ function LeadTable({
                                         onClick={() =>
                                             onAction(
                                                 () => convertLead({ leadId: item.id }),
-                                                `convert-${item.id}`
+                                                item.id,
+                                                'LEAD'
                                             )
                                         }
                                     >
@@ -372,7 +379,7 @@ function OrderTable({
 }: {
     items: OrderTodoItem[];
     actionLoading: string | null;
-    onAction: (fn: () => Promise<unknown>, id: string) => void;
+    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -415,7 +422,8 @@ function OrderTable({
                                                 id: item.id,
                                                 status: 'CONFIRMED',
                                             }),
-                                            `lock-${item.id}`
+                                            item.id,
+                                            'ORDER'
                                         )
                                     }
                                 >

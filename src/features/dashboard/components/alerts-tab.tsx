@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
+import { fetcher } from "@/shared/lib/fetcher";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -61,38 +63,8 @@ const CATEGORY_ICON: Record<AlertCategory, React.ComponentType<{ className?: str
  * 从 API 获取真实报警数据，使用可折叠列表展示
  */
 export function AlertsTab() {
-    const [data, setData] = useState<AlertsResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, error, isLoading, mutate } = useSWR<AlertsResponse>("/api/workbench/alerts", fetcher);
     const [expandedCategories, setExpandedCategories] = useState<Set<AlertCategory>>(new Set());
-
-    /** 获取报警数据 */
-    const fetchAlerts = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetch("/api/workbench/alerts");
-            if (!response.ok) throw new Error("获取报警信息失败");
-            const result: AlertsResponse = await response.json();
-            setData(result);
-
-            // 自动展开有报警的分类
-            const nonEmpty = new Set<AlertCategory>(
-                result.categories
-                    .filter(c => c.count > 0)
-                    .map(c => c.category)
-            );
-            setExpandedCategories(nonEmpty);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "未知错误");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchAlerts();
-    }, [fetchAlerts]);
 
     /** 切换分类展开/收起 */
     const toggleCategory = (category: AlertCategory) => {
@@ -108,7 +80,7 @@ export function AlertsTab() {
     };
 
     // 加载状态
-    if (loading && !data) {
+    if (isLoading && !data) {
         return (
             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -122,8 +94,8 @@ export function AlertsTab() {
         return (
             <Card className="glass-liquid border-white/10">
                 <CardContent className="py-12 text-center">
-                    <p className="text-destructive mb-4">{error}</p>
-                    <Button variant="outline" onClick={fetchAlerts}>
+                    <p className="text-destructive mb-4">{error.message || "获取报警信息失败"}</p>
+                    <Button variant="outline" onClick={() => mutate()}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         重试
                     </Button>
@@ -149,11 +121,11 @@ export function AlertsTab() {
                 <Button
                     variant="ghost"
                     size="sm"
-                    onClick={fetchAlerts}
-                    disabled={loading}
+                    onClick={() => mutate()}
+                    disabled={isLoading}
                     className="text-xs"
                 >
-                    <RefreshCw className={cn("h-3 w-3 mr-1", loading && "animate-spin")} />
+                    <RefreshCw className={cn("h-3 w-3 mr-1", isLoading && "animate-spin")} />
                     刷新
                 </Button>
             </div>

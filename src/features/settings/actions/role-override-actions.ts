@@ -10,6 +10,7 @@ import { getRoleLabel } from '@/shared/config/roles';
 import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 角色权限覆盖的 Server Actions
@@ -224,7 +225,6 @@ export async function saveRoleOverride(
           .where(eq(roleOverrides.id, existing.id));
 
         // 记录更新日志
-        // 记录更新日志
         await AuditService.log(tx, {
           tableName: 'role_overrides',
           recordId: existing.id,
@@ -249,7 +249,6 @@ export async function saveRoleOverride(
         }).returning({ id: roleOverrides.id });
 
         // 记录创建日志
-        // 记录创建日志
         await AuditService.log(tx, {
           tableName: 'role_overrides',
           recordId: newOverride.id,
@@ -268,7 +267,7 @@ export async function saveRoleOverride(
       message: `角色 ${roleExists.name} 的权限配置已保存`,
     };
   } catch (error) {
-    console.error('保存角色覆盖失败:', error);
+    logger.error('保存角色覆盖失败:', error);
     return { success: false, message: '保存失败，请稍后重试' };
   }
 }
@@ -308,7 +307,6 @@ export async function resetRoleOverride(
           .where(and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)));
 
         // 记录日志
-        // 记录日志
         await AuditService.log(tx, {
           tableName: 'role_overrides',
           recordId: existing.id,
@@ -332,7 +330,7 @@ export async function resetRoleOverride(
       message: `角色 ${roleLabel} 已重置为系统默认`,
     };
   } catch (error) {
-    console.error('重置角色覆盖失败:', error);
+    logger.error('重置角色覆盖失败:', error);
     return { success: false, message: '重置失败，请稍后重试' };
   }
 }
@@ -432,7 +430,7 @@ export async function saveAllRoleOverrides(
     revalidatePath('/settings/roles');
     return { success: true, message: '所有角色权限配置已保存' };
   } catch (error) {
-    console.error('批量保存角色覆盖失败:', error);
+    logger.error('批量保存角色覆盖失败:', error);
     return { success: false, message: (error as Error).message || '保存失败，请稍后重试' };
   }
 }

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 租户基本信息管理 Server Actions
@@ -88,7 +89,7 @@ export async function getTenantInfo(): Promise<{ success: true; data: TenantInfo
             },
         };
     } catch {
-        console.error('获取租户信息失败:');
+        logger.error('获取租户信息失败:');
         return { success: false, error: '获取租户信息失败' };
     }
 }
@@ -186,7 +187,7 @@ export async function updateTenantInfo(data: {
         revalidatePath('/settings/general');
         return { success: true };
     } catch (error) {
-        console.error('更新租户信息失败:', error);
+        logger.error('更新租户信息失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '更新失败，请稍后重试' };
     }
 }
@@ -271,7 +272,7 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
         revalidatePath('/settings/general');
         return { success: true, logoUrl };
     } catch (error) {
-        console.error('上传 Logo 失败:', error);
+        logger.error('上传 Logo 失败:', error);
         return { success: false, error: '上传失败，请稍后重试' };
     }
 }
@@ -335,7 +336,7 @@ export async function getVerificationStatus(): Promise<{
             },
         };
     } catch {
-        console.error('获取认证状态失败:');
+        logger.error('获取认证状态失败:');
         return { success: false, error: '获取认证状态失败' };
     }
 }
@@ -417,7 +418,7 @@ export async function submitVerification(data: {
         revalidatePath('/settings/verification');
         return { success: true };
     } catch (error) {
-        console.error('提交认证申请失败:', error);
+        logger.error('提交认证申请失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '提交失败，请稍后重试' };
     }
 }
@@ -483,7 +484,7 @@ export async function uploadBusinessLicense(formData: FormData): Promise<{
 
         return { success: true, licenseUrl };
     } catch (error) {
-        console.error('上传营业执照失败:', error);
+        logger.error('上传营业执照失败:', error);
         return { success: false, error: '上传失败，请稍后重试' };
     }
 }

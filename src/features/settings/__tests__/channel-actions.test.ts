@@ -63,7 +63,7 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
         vi.resetAllMocks();
 
         // Setup default behaviors
-        vi.mocked(authLib.auth).mockResolvedValue(mockSession as any);
+        vi.mocked(authLib.auth).mockResolvedValue(mockSession as authLib.Session);
         vi.mocked(authLib.checkPermission).mockResolvedValue(true);
 
         // Setup DB defaults
@@ -73,7 +73,8 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
         // Setup Insert default
         const returnMock = vi.fn().mockResolvedValue([{ id: 'new-id' }]);
         const valuesMock = vi.fn().mockReturnValue({ returning: returnMock });
-        vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
+        // @ts-ignore - Drizzle insert chain is complex to mock fully
+        vi.mocked(db.insert).mockReturnValue({ values: valuesMock });
     });
 
     describe('getChannelCategories', () => {
@@ -82,7 +83,7 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
                 { id: 'cat1', name: 'Category 1', parentId: null },
                 { id: 'cat2', name: 'Category 2', parentId: 'cat1' },
             ];
-            vi.mocked(db.query.marketChannels.findMany).mockResolvedValue(mockCategories as any);
+            vi.mocked(db.query.marketChannels.findMany).mockResolvedValue(mockCategories as unknown as Array<{ id: string; name: string; parentId: string | null }>);
 
             const result = await getChannelCategories();
 
@@ -98,7 +99,7 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
                 { id: 'c1', name: 'Channel 1', tenantId: mockTenantId },
                 { id: 'c2', name: 'Channel 2', tenantId: mockTenantId },
             ];
-            vi.mocked(db.query.marketChannels.findMany).mockResolvedValue(mockChannels as any);
+            vi.mocked(db.query.marketChannels.findMany).mockResolvedValue(mockChannels as unknown as Array<{ id: string; name: string; tenantId: string }>);
 
             const result = await getChannels();
 
@@ -147,8 +148,8 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
             // 1. Existing channel check -> returns channel
             // 2. Child channel check -> returns child
             vi.mocked(db.query.marketChannels.findFirst)
-                .mockResolvedValueOnce({ id: channelId, tenantId: mockTenantId } as any)
-                .mockResolvedValueOnce({ id: 'child-1', parentId: channelId } as any);
+                .mockResolvedValueOnce({ id: channelId, tenantId: mockTenantId } as unknown as { id: string; tenantId: string })
+                .mockResolvedValueOnce({ id: 'child-1', parentId: channelId } as unknown as { id: string; parentId: string });
 
             const result = await deleteChannel({ id: channelId });
 
@@ -163,7 +164,7 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
             // 1. Existing channel check -> returns channel
             // 2. Child channel check -> returns null
             vi.mocked(db.query.marketChannels.findFirst)
-                .mockResolvedValueOnce({ id: channelId, tenantId: mockTenantId } as any)
+                .mockResolvedValueOnce({ id: channelId, tenantId: mockTenantId } as unknown as { id: string; tenantId: string })
                 .mockResolvedValueOnce(null);
 
             const result = await deleteChannel({ id: channelId });

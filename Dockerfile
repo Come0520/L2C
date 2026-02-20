@@ -96,4 +96,4 @@ COPY src/shared/api/schema.ts ./src/shared/api/schema.ts
 COPY src/shared/api/schema/ ./src/shared/api/schema/
 COPY tsconfig.json ./
 
-CMD ["npx", "drizzle-kit", "push", "--force"]
+CMD ["sh", "-c", "yes '' | npx drizzle-kit push --force 2>&1"]

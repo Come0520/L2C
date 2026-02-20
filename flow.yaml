@@ -152,13 +152,24 @@ stages:
                   # 6. 加载版本信息
                   if [ -f .build-args ]; then source .build-args; export GIT_COMMIT_SHA BUILD_TIME; fi
 
-                  # 7. 数据库迁移已由 docker-compose.prod.yml 中的 db-migrate 服务自动执行
-                  # 无需在宿主机安装 Node.js（CentOS 7 GLIBC 不兼容）
-                  echo "=== 数据库迁移将由容器自动执行 ==="
-
-                  # 8. 重建并启动容器
+                  # 7. 停止旧容器
                   docker compose -f docker-compose.prod.yml down || true
-                  docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+
+                  # 8. 构建所有镜像
+                  echo "=== 构建 Docker 镜像 ==="
+                  docker compose -f docker-compose.prod.yml build
+
+                  # 9. 先单独前台运行 db-migrate（带 120 秒超时，日志可见）
+                  echo "=== 执行数据库迁移（容器内，超时 120 秒）==="
+                  timeout 120 docker compose -f docker-compose.prod.yml run --rm db-migrate || {
+                    echo "❌ 数据库迁移失败或超时！查看日志："
+                    docker compose -f docker-compose.prod.yml logs db-migrate
+                    exit 1
+                  }
+                  echo "✅ 数据库迁移完成"
+
+                  # 10. 启动应用和 Nginx（不再需要 db-migrate 依赖）
+                  docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx
                   echo "容器已启动，等待健康检查..."
 
                   # 9. 健康检查（最多等 2 分钟）

@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { workerSkills, quoteItems, quotes, installTasks, measureTasks } from '@/shared/api/schema';
+import { workerSkills, quoteItems } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { eq, and, inArray } from 'drizzle-orm';
 
@@ -84,7 +84,8 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
             const matchingSkills = await db.query.workerSkills.findMany({
                 where: and(
                     eq(workerSkills.tenantId, session.user.tenantId),
-                    eq(workerSkills.skillType, `INSTALL_${category}` as any)
+                    // @ts-expect-error - dynamic type definition
+                    eq(workerSkills.skillType, `INSTALL_${category}`)
                 ),
             });
 
@@ -104,6 +105,30 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
     }
 }
 
+import { unstable_cache } from 'next/cache';
+
+const getCachedAvailableWorkers = unstable_cache(
+    async (tenantId: string, skillType: string) => {
+        const skills = await db.query.workerSkills.findMany({
+            where: and(
+                eq(workerSkills.tenantId, tenantId),
+                // @ts-expect-error - enum assignment
+                eq(workerSkills.skillType, skillType)
+            ),
+            with: {
+                worker: true,
+            },
+        });
+
+        return skills.map(s => ({
+            id: s.workerId,
+            name: s.worker?.name || null,
+        }));
+    },
+    ['available-workers-by-skill'],
+    { tags: ['worker-skills'] }
+);
+
 /**
  * 获取可接单的师傅列表（按技能筛选）
  */
@@ -118,21 +143,7 @@ export async function getAvailableWorkers(skillType: string): Promise<{
     }
 
     try {
-        const skills = await db.query.workerSkills.findMany({
-            where: and(
-                eq(workerSkills.tenantId, session.user.tenantId),
-                eq(workerSkills.skillType, skillType as any)
-            ),
-            with: {
-                worker: true,
-            },
-        });
-
-        const workers = skills.map(s => ({
-            id: s.workerId,
-            name: s.worker?.name || null,
-        }));
-
+        const workers = await getCachedAvailableWorkers(session.user.tenantId, skillType);
         return { success: true, data: workers };
     } catch (error) {
         console.error('获取师傅列表失败:', error);

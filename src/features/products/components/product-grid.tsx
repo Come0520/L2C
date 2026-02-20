@@ -1,10 +1,9 @@
+import { Product } from '../types';
 import { ProductCard } from './product-card';
 
 interface ProductGridProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEdit: (product: any) => void;
+  data: Product[];
+  onEdit: (product: Product) => void;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   onDelete: (id: string) => void;
 }

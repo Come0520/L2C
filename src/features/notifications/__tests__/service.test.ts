@@ -44,7 +44,7 @@ describe('NotificationService', () => {
     const mockPayload = {
         tenantId: 't1',
         userId: 'u1',
-        type: 'SYSTEM' as any,
+        type: 'SYSTEM' as const,
         title: 'Test Title',
         content: 'Test Content',
     };
@@ -68,7 +68,7 @@ describe('NotificationService', () => {
         });
 
         it('should fetch preferences if forceChannels not provided', async () => {
-            (db.query.notificationPreferences.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.notificationPreferences.findFirst).mockResolvedValue({
                 channels: ['LARK']
             });
 
@@ -79,7 +79,7 @@ describe('NotificationService', () => {
         });
 
         it('should default to IN_APP if no preferences found', async () => {
-            (db.query.notificationPreferences.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.notificationPreferences.findFirst).mockResolvedValue(null);
 
             await notificationService.send(mockPayload);
 
@@ -89,7 +89,7 @@ describe('NotificationService', () => {
         it('should handle partial failures using Promise.allSettled', async () => {
             mocks.smsSend.mockRejectedValueOnce(new Error('SMS Failed'));
 
-            (db.query.notificationPreferences.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.notificationPreferences.findFirst).mockResolvedValue({
                 channels: ['IN_APP', 'SMS']
             });
 
@@ -103,7 +103,7 @@ describe('NotificationService', () => {
             mocks.smsSend.mockRejectedValue(new Error('SMS Failed'));
 
             // IN_APP fails
-            (db.insert as any).mockImplementationOnce(() => ({
+            vi.mocked(db.insert).mockImplementationOnce(() => ({
                 values: vi.fn(() => ({
                     execute: vi.fn().mockRejectedValue(new Error('DB Failed'))
                 }))

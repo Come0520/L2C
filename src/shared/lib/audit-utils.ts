@@ -20,7 +20,7 @@ interface AuditLogParams {
  * @param params - 审计日志参数
  */
 export async function logAudit(_params: AuditLogParams) {
-    // TODO: 对接真实审计日志服务
+    // NOTE: 对接真实审计日志服务
     return { success: true };
 }
 

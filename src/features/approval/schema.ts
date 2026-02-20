@@ -85,24 +85,66 @@ export interface ApprovalInstance {
     tenantId: string;
     /** 关联流程定义 ID */
     flowId: string | null;
-    /** 模块名称（如 QUOTE, ORDER） */
-    module: string;
+    /** 业务实体类型编码 */
+    entityType: string;
     /** 业务实体 ID */
     entityId: string;
     /** 实例状态: PENDING, APPROVED, REJECTED 等 */
-    status: string | null;
-    /** 当前执行步骤序号 */
-    currentStep: number | null;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | null;
     /** 发起人 ID */
-    applicantId: string | null;
+    requesterId: string;
+    /** 申请说明 */
+    comment?: string | null;
     /** 发起时间 */
-    appliedAt: Date | null;
+    createdAt: Date;
+    /** 更新时间 */
+    updatedAt: Date;
     /** 完成时间 */
-    completedAt: Date | null;
-    /** 最终截止时间 */
-    deadlineAt: Date | null;
-    /** 最近一次提醒时间 */
-    remindedAt: Date | null;
+    completedAt?: Date | null;
+
+    // Relations (Partial/Optional)
+    flow?: {
+        name: string;
+        code: string;
+    } | null;
+    requester?: {
+        name: string | null;
+        email: string | null;
+    } | null;
+}
+
+/**
+ * 审批任务接口（待处理项）
+ */
+export interface ApprovalTask {
+    /** 任务唯一标识 */
+    id: string;
+    /** 租户 ID */
+    tenantId: string;
+    /** 关联审批实例 ID */
+    approvalId: string;
+    /** 关联流程节点 ID */
+    nodeId: string | null;
+    /** 对应审批人 ID */
+    approverId: string | null;
+    /** 任务状态: PENDING, APPROVED, REJECTED */
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
+    /** 审批意见 */
+    comment?: string | null;
+    /** 是否动力/加签任务 */
+    isDynamic: boolean | null;
+    /** 执行操作时间 */
+    actionAt?: Date | null;
+    /** 超时时间 */
+    timeoutAt?: Date | null;
+    /** 创建时间 */
+    createdAt: Date;
+
+    // Relations
+    approval: ApprovalInstance;
+    node: {
+        name: string;
+    };
 }
 
 /**
@@ -199,6 +241,11 @@ export const publishFlowSchema = z.object({
 
 // ==================== Zod Schemas for Queries ====================
 export const emptySchema = z.object({});
+
+export const paginationSchema = z.object({
+    page: z.number().int().min(1).optional().default(1),
+    pageSize: z.number().int().min(1).max(100).optional().default(10),
+});
 
 export const getApprovalDetailsSchema = z.object({
     id: z.string().uuid(),

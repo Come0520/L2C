@@ -39,6 +39,13 @@ interface NotificationResult {
     };
 }
 
+/**
+ * 获取通知列表（纯函数版本，不依赖 Session 上下文）
+ *
+ * @param session - 会话用户信息（包含 userId 和 tenantId）
+ * @param params - 分页与过滤参数
+ * @returns 通知列表及分页元数据
+ */
 export async function getNotificationsPure(session: SessionUser, params: GetNotificationsParams): Promise<NotificationResult> {
     const { page, limit, onlyUnread } = params;
     const tenantId = session.tenantId;
@@ -92,6 +99,14 @@ const getNotificationsActionInternal = createSafeAction(getNotificationsSchema, 
     };
 });
 
+/**
+ * 获取当前用户的通知列表（Server Action 入口）
+ *
+ * 通过 `createSafeAction` 封装，自动校验参数并注入 Session。
+ *
+ * @param params - 分页参数（page, limit, onlyUnread）
+ * @returns 包含通知数据和分页信息的安全操作结果
+ */
 export async function getNotifications(params: z.infer<typeof getNotificationsSchema>) {
     return getNotificationsActionInternal(params);
 }
@@ -112,6 +127,11 @@ const getUnreadCountActionInternal = createSafeAction(z.object({}), async (_para
     return { success: true, data: { count } };
 });
 
+/**
+ * 获取当前用户的未读通知数量
+ *
+ * @returns `{ count: number }` 未读通知计数
+ */
 export async function getUnreadCount() {
     return getUnreadCountActionInternal({});
 }
@@ -133,6 +153,12 @@ const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (param
     return { success: true };
 });
 
+/**
+ * 批量标记通知为已读
+ *
+ * @param params - 包含待标记的通知 ID 数组
+ * @returns 操作结果
+ */
 export async function markAsRead(params: z.infer<typeof markAsReadSchema>) {
     return markAsReadActionInternal(params);
 }
@@ -151,6 +177,11 @@ const markAllAsReadActionInternal = createSafeAction(z.object({}), async (_param
     return { success: true };
 });
 
+/**
+ * 标记当前用户的所有未读通知为已读
+ *
+ * @returns 操作结果
+ */
 export async function markAllAsRead() {
     return markAllAsReadActionInternal({});
 }
@@ -167,6 +198,14 @@ const runSLACheckActionInternal = createSafeAction(z.object({}), async (params, 
     return { success: true, data: results };
 });
 
+/**
+ * 手动触发 SLA 规则检查（仅 ADMIN/MANAGER 可调用）
+ *
+ * 执行所有 SLA 检查器规则并返回检查结果。
+ *
+ * @returns SLA 检查结果数组
+ * @throws 非管理员调用时抛出未授权错误
+ */
 export async function runSLACheck() {
     return runSLACheckActionInternal({});
 }

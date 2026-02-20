@@ -9,6 +9,10 @@ import { createQuoteItem } from '../actions/mutations';
 import { QuoteConfig } from '@/services/quote-config.service';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
+import { createQuoteItemSchema } from '../actions/schema';
+
+type QuoteItemFormValues = z.infer<typeof createQuoteItemSchema>;
 
 interface CurtainFabricQuoteDialogProps {
     open: boolean;
@@ -27,7 +31,7 @@ export function CurtainFabricQuoteDialog({
 }: CurtainFabricQuoteDialogProps) {
     const router = useRouter();
 
-    const handleSubmit = async (data: any) => {
+    const handleSubmit = async (data: QuoteItemFormValues) => {
         try {
             await createQuoteItem(data);
             toast.success('添加成功');

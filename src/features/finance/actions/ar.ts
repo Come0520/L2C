@@ -17,10 +17,15 @@ import { generateBusinessNo } from '@/shared/lib/generate-no';
 
 
 /**
- * 获取应收对账单列表
+ * 获取应收对账单列表 (Get Accounts Receivable Statements)
+ * 
+ * 获取当前租户下所有的应收对账单，按创建时间倒序排列。
  * 
  * 注：使用标准 select 查询替代 relational query API，
  * 以避免 Drizzle ORM 0.45.x lateral join 兼容性问题
+ * 
+ * @returns {Promise<Array<typeof arStatements.$inferSelect>>} 应收对账单列表
+ * @throws {Error} 未授权或权限不足时抛出错误
  */
 export async function getARStatements() {
     try {
@@ -45,7 +50,13 @@ export async function getARStatements() {
 }
 
 /**
- * 获取单条应收对账单详情
+ * 获取单条应收对账单详情 (Get Accounts Receivable Statement Details)
+ * 
+ * 根据对账单 ID 查询详细信息，包含关联的订单、客户、渠道及佣金记录。
+ * 
+ * @param {string} id - 对账单的一级主键 ID
+ * @returns {Promise<ARStatementWithRelations | null>} 对账单详细信息（包含关系数据），未找到则返回 null
+ * @throws {Error} 未授权时抛出错误
  */
 export async function getARStatement(id: string) {
     const session = await auth();
@@ -66,7 +77,14 @@ export async function getARStatement(id: string) {
 }
 
 /**
- * 创建收款单
+ * 创建收款单 (Create Payment Order)
+ * 
+ * 财务人员根据客户的付款凭证创建收款单，并可关联相应的明细项。
+ * 委托 `FinanceService.createPaymentOrder` 核心方法完成业务操作。
+ * 
+ * @param {z.infer<typeof createPaymentOrderSchema>} data - 收款单的有效数据
+ * @returns {Promise<any>} 返回服务层创建收款单的结果
+ * @throws {Error} 未授权或缺少财务创建权限时抛出错误
  */
 export async function createPaymentOrder(data: z.infer<typeof createPaymentOrderSchema>) {
     const session = await auth();
@@ -99,6 +117,16 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     return await FinanceService.createPaymentOrder(serviceData, session.user.tenantId, session.user.id!);
 }
 
+/**
+ * 审核收款单 (Verify Payment Order)
+ * 
+ * 财务人员对已创建的收款单进行审核确认（通过或驳回）。
+ * 委托 `FinanceService.verifyPaymentOrder` 核心方法处理底层事务状态扭转。
+ * 
+ * @param {z.infer<typeof verifyPaymentOrderSchema>} data - 审核数据，包含收款单 ID、审核状态（VERIFIED | REJECTED）和可选备注
+ * @returns {Promise<any>} 返回服务层审核结果
+ * @throws {Error} 未授权或缺少财务审批权限时抛出错误
+ */
 export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrderSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');

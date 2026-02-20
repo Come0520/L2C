@@ -5,6 +5,7 @@ import { channels, channelContacts } from '@/shared/api/schema/channels';
 import { eq, and, desc, or, ilike, isNull } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { unstable_cache } from 'next/cache';
 
 /**
  * 获取渠道列表（支持分页、搜索、类型过滤、层级过滤）
@@ -95,9 +96,59 @@ export async function getChannels(params: {
 }
 
 /**
+ * 构建渠道树形结构的缓存版本（按 tenantId 缓存）
+ *
+ * @description 使用 unstable_cache 缓存，tag: channel-tree-{tenantId}
+ * 渠道树结构在短时间内变动极低，适合较长周期缓存。
+ * 修改/创建/删除渠道时，通过 revalidateTag 失效。
+ */
+const getCachedChannelTree = (tenantId: string) =>
+    unstable_cache(
+        async () => {
+            const allChannels = await db.query.channels.findMany({
+                where: eq(channels.tenantId, tenantId),
+                orderBy: [desc(channels.createdAt)],
+                with: {
+                    contacts: true,
+                    channelCategory: true,
+                    assignedManager: true,
+                }
+            });
+
+            // 构建树形结构
+            type ChannelWithChildren = typeof allChannels[0] & { children?: ChannelWithChildren[] };
+
+            const channelMap = new Map<string, ChannelWithChildren>();
+            const rootChannels: ChannelWithChildren[] = [];
+
+            // 第一遍：创建所有节点的映射
+            for (const channel of allChannels) {
+                channelMap.set(channel.id, { ...channel, children: [] });
+            }
+
+            // 第二遍：构建树形关系
+            for (const channel of allChannels) {
+                const node = channelMap.get(channel.id)!;
+                if (channel.parentId && channelMap.has(channel.parentId)) {
+                    const parent = channelMap.get(channel.parentId)!;
+                    parent.children = parent.children || [];
+                    parent.children.push(node);
+                } else {
+                    rootChannels.push(node);
+                }
+            }
+
+            return rootChannels;
+        },
+        [`channel-tree-${tenantId}`],
+        { tags: [`channel-tree`, `channel-tree-${tenantId}`] }
+    );
+
+/**
  * 获取渠道树形结构（用于树形展示）
- * 
+ *
  * 安全检查：自动从 session 获取 tenantId
+ * 已使用 unstable_cache 缓存，tag: channel-tree / channel-tree-{tenantId}
  */
 export async function getChannelTree() {
     const session = await auth();
@@ -106,43 +157,7 @@ export async function getChannelTree() {
     // P2 Fix: Add Permission Check
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
-    const tenantId = session.user.tenantId;
-
-    // 获取所有渠道
-    const allChannels = await db.query.channels.findMany({
-        where: eq(channels.tenantId, tenantId),
-        orderBy: [desc(channels.createdAt)],
-        with: {
-            contacts: true,
-            channelCategory: true,
-            assignedManager: true,
-        }
-    });
-
-    // 构建树形结构
-    type ChannelWithChildren = typeof allChannels[0] & { children?: ChannelWithChildren[] };
-
-    const channelMap = new Map<string, ChannelWithChildren>();
-    const rootChannels: ChannelWithChildren[] = [];
-
-    // 第一遍：创建所有节点的映射
-    for (const channel of allChannels) {
-        channelMap.set(channel.id, { ...channel, children: [] });
-    }
-
-    // 第二遍：构建树形关系
-    for (const channel of allChannels) {
-        const node = channelMap.get(channel.id)!;
-        if (channel.parentId && channelMap.has(channel.parentId)) {
-            const parent = channelMap.get(channel.parentId)!;
-            parent.children = parent.children || [];
-            parent.children.push(node);
-        } else {
-            rootChannels.push(node);
-        }
-    }
-
-    return rootChannels;
+    return getCachedChannelTree(session.user.tenantId)();
 }
 
 /**

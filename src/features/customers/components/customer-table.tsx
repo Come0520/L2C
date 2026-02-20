@@ -15,11 +15,12 @@ import { Button } from '@/shared/ui/button';
 import { formatDate } from '@/shared/lib/utils';
 import Link from 'next/link';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
-import User from 'lucide-react/dist/esm/icons/user';
 import { MaskedPhone } from '@/shared/components/masked-phone';
 import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 
 import { CustomerListItem } from '@/features/customers/types';
+
+import { EmptyUI } from '@/shared/ui/empty-ui';
 
 interface CustomerTableProps {
     data: CustomerListItem[];
@@ -34,10 +35,9 @@ interface CustomerTableProps {
 export const CustomerTable = React.memo(function CustomerTable({ data, currentUser }: CustomerTableProps) {
     if (data.length === 0) {
         return (
-            <div className="glass-empty-state py-12 text-muted-foreground">
-                <User className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p>暂无客户数据</p>
-            </div>
+            <EmptyUI
+                message="暂无符合条件的客户数据，请调整筛选条件或新建客户。"
+            />
         );
     }
 

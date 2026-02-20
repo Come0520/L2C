@@ -8,6 +8,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 import { getDefaultDashboardConfig } from '../utils';
+import { UserDashboardConfig } from '../types';
 import { createLogger } from '@/shared/lib/logger';
 
 import { revalidateTag } from 'next/cache';
@@ -64,7 +65,7 @@ export const saveDashboardConfigAction = createSafeAction(
                 });
 
                 // 2. 更新配置
-                await WorkbenchService.updateDashboardConfig(userId, data);
+                await WorkbenchService.updateDashboardConfig(userId, data as UserDashboardConfig);
 
                 // 3. 记录审计日志
                 await AuditService.log(tx, {
@@ -80,7 +81,7 @@ export const saveDashboardConfigAction = createSafeAction(
             });
 
             // 4. 失效缓存
-            revalidateTag(`dashboard-config:${userId}`);
+            revalidateTag(`dashboard-config:${userId}`, 'default');
             return { success: true };
         } catch (error) {
             logger.error('保存仪表盘配置失败', { userId, tenantId }, error);
@@ -114,7 +115,7 @@ export const resetDashboardConfigAction = createSafeAction(
             });
 
             // 失效缓存
-            revalidateTag(`dashboard-config:${userId}`);
+            revalidateTag(`dashboard-config:${userId}`, 'default');
             return { success: true };
         } catch (error) {
             logger.error('重置仪表盘配置失败', { userId, tenantId }, error);

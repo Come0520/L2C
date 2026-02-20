@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { TrendingUp, Users, DollarSign, ArrowRight, Loader2, Wallet } from 'lucide-react';
 import Link from 'next/link';
-import { getChannelStatsOverview, type ChannelStatsOverview } from '@/features/channels/actions/channel-stats';
+import useSWR from 'swr';
+import { fetcher } from '@/shared/lib/fetcher';
+import { createLogger } from "@/shared/lib/logger";
+
+const logger = createLogger('ChannelWidgets');
 
 function formatAmount(amount: number): string {
     if (amount >= 10000) {
@@ -14,28 +18,20 @@ function formatAmount(amount: number): string {
 }
 
 export function ChannelPerformanceWidget() {
-    const [data, setData] = useState<ChannelStatsOverview | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let mounted = true;
-        async function loadData() {
-            try {
-                const stats = await getChannelStatsOverview();
-                if (mounted) {
-                    setData(stats);
-                }
-            } catch (error) {
-                console.error('Failed to load channel stats', error);
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
+    const { data: swrData, isLoading } = useSWR(
+        '/api/workbench/channel-stats',
+        fetcher,
+        {
+            refreshInterval: 600000, // 10分钟刷新一次
+            revalidateOnFocus: false,
+            onError: (err) => {
+                logger.error('Failed to load channel stats via SWR', {}, err);
             }
         }
-        loadData();
-        return () => { mounted = false; };
-    }, []);
+    );
+
+    const data = swrData?.success ? swrData.data : null;
+    const loading = isLoading;
 
     if (loading) {
         return (

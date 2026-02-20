@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
             return apiError('Quote must be confirmed first', 400);
         }
 
-        // TODO: Check if order already exists for this quote? (Optional but good practice)
+        // NOTE: Check if order already exists for this quote? (Optional but good practice)
 
         // 2. Create Order
         const orderNo = await generateOrderNo(user.tenantId);

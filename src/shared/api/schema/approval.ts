@@ -104,6 +104,8 @@ export const approvals = pgTable('approvals', {
     apprEntityIdx: index('idx_approvals_entity').on(table.entityId),
     apprRequesterIdx: index('idx_approvals_requester').on(table.requesterId),
     apprStatusIdx: index('idx_approvals_status').on(table.status),
+    // Performance optimization: Composite index for request history queries
+    apprTenantRequesterIdx: index('idx_approvals_tenant_requester').on(table.tenantId, table.requesterId),
 }));
 
 // 审批任务 (待办项)
@@ -131,4 +133,6 @@ export const approvalTasks = pgTable('approval_tasks', {
     taskApproverIdx: index('idx_approval_tasks_approver').on(table.approverId),
     taskApprovalIdx: index('idx_approval_tasks_approval').on(table.approvalId),
     taskTimeoutIdx: index('idx_approval_tasks_timeout').on(table.timeoutAt), // Index for timeout queries
+    // Performance optimization: Composite index for task queries (Pending/Processed)
+    taskTenantApproverStatusIdx: index('idx_approval_tasks_tenant_approver_status').on(table.tenantId, table.approverId, table.status),
 }));

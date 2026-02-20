@@ -65,7 +65,7 @@ export async function dispatchMeasureTask(input: unknown) {
         }
     );
 
-    revalidateTag('measure-task');
+    revalidateTag('measure-task', 'default');
     revalidatePath('/service/measurement');
     return { success: true };
 }
@@ -99,7 +99,7 @@ export async function acceptMeasureTask(id: string) {
             eq(measureTasks.tenantId, session.user.tenantId)
         ));
 
-    revalidateTag('measure-task');
+    revalidateTag('measure-task', 'default');
     revalidatePath('/service/measurement');
     return { success: true };
 }
@@ -225,7 +225,7 @@ export async function splitMeasureTask(input: unknown) {
             );
         });
 
-        revalidateTag('measure-task');
+        revalidateTag('measure-task', 'default');
         revalidatePath('/service/measurement');
         return { success: true };
     } catch (error) {
@@ -282,7 +282,7 @@ export async function requestFeeWaiver(input: unknown) {
         }
     );
 
-    revalidateTag('measure-task');
+    revalidateTag('measure-task', 'default');
     revalidatePath('/service/measurement');
     return { success: true };
 }

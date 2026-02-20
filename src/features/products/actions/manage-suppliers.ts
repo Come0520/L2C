@@ -84,7 +84,7 @@ const addProductSupplierActionInternal = createSafeAction(addProductSupplierSche
     });
 
     if (existing) {
-        return { error: '该供应商已关联此产品' };
+        throw new Error('该供应商已关联此产品');
     }
 
     // If new one is default, unset other defaults
@@ -130,7 +130,7 @@ const updateProductSupplierActionInternal = createSafeAction(updateProductSuppli
         )
     });
 
-    if (!current) return { error: '关联记录不存在或无权访问' };
+    if (!current) throw new Error('关联记录不存在或无权访问');
 
     // Handle default toggle logic
     if (data.isDefault) {
@@ -302,7 +302,7 @@ const autoSwitchDefaultSupplierActionInternal = createSafeAction(autoSwitchDefau
         );
 
     if (supplierList.length === 0) {
-        return { error: '该产品没有关联供应商' };
+        throw new Error('该产品没有关联供应商');
     }
 
     let bestSupplier;

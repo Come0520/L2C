@@ -8,13 +8,13 @@ import { submitApproval } from '@/features/approval/actions/submission';
 import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
 
 // Helper to mock chained DB calls
-const createChainedMock = (returnValue: any = []) => {
-    const mock: any = {};
+const createChainedMock = (returnValue: unknown = []) => {
+    const mock: Record<string, unknown> = {};
     mock.set = vi.fn().mockReturnValue(mock);
     mock.where = vi.fn().mockReturnValue(mock);
     mock.values = vi.fn().mockReturnValue(mock);
     mock.returning = vi.fn().mockResolvedValue(returnValue);
-    mock.then = (onFulfilled: any) => Promise.resolve(returnValue).then(onFulfilled);
+    mock.then = (onFulfilled: (val: unknown) => unknown) => Promise.resolve(returnValue).then(onFulfilled);
     return mock;
 };
 
@@ -175,7 +175,7 @@ describe('AP Actions', () => {
                     apSupplierStatements: { findFirst: vi.fn() },
                     apLaborStatements: { findFirst: vi.fn() },
                 },
-                update: vi.fn((table: any) => {
+                update: vi.fn((table: unknown) => {
                     if (table === financeAccounts) {
                         return createChainedMock([mockAccount]);
                     }

@@ -61,7 +61,7 @@ async function completeHandler(request: NextRequest, { params }: { params: Promi
         const body = await request.json();
         const result = CompleteSchema.safeParse(body);
         if (!result.success) {
-            return apiError('输入校验失败: ' + result.error.errors.map(e => e.message).join(', '), 400);
+            return apiError('输入校验失败: ' + result.error.issues.map(e => e.message).join(', '), 400);
         }
         validatedData = result.data;
     } catch {

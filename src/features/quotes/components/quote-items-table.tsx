@@ -73,7 +73,7 @@ interface QuoteItemAttributes {
   fabricWidth?: number;
   rollLength?: number;
   patternRepeat?: number;
-  formula?: CurtainFormula | 'WALLPAPER' | 'WALLCLOTH';
+  formula?: string | 'WALLPAPER' | 'WALLCLOTH';
   sideLoss?: number;
   bottomLoss?: number;
   headerLoss?: number;
@@ -582,7 +582,8 @@ const QuoteItemRow = memo(
             foldRatio={Number(item.foldRatio) || 2}
             processFee={Number(item.processFee) || 0}
             remark={item.remark}
-            attachments={[]} // TODO: 从 children 中提取附件
+            // @ts-expect-error - 类型与 UI Props 类型要求略有不同
+            attachments={(item.children?.filter(c => c.category === 'CURTAIN_ACCESSORY') || [])} // 提取附件
             readOnly={readOnly}
             isExpanded={isExpanded}
             onToggle={onToggleExpand}
@@ -897,15 +898,6 @@ export function QuoteItemsTable({
     const newItem = { ...item, [field]: value };
     const category = newItem.category;
 
-    // 调试日志
-    console.log('[handleClientCalc] 触发计算', {
-      field,
-      value,
-      category,
-      width: newItem.width,
-      height: newItem.height,
-      foldRatio: newItem.foldRatio,
-    });
 
     const upperCategory = category.toUpperCase();
     const isCurtainCategory =
@@ -934,7 +926,6 @@ export function QuoteItemsTable({
           };
 
           const result = strategy.calculate(params);
-          console.log('[handleClientCalc] 窗帘计算结果', result);
 
           // Return full object structure
           return {
@@ -958,7 +949,6 @@ export function QuoteItemsTable({
           };
 
           const result = strategy.calculate(params);
-          console.log('[handleClientCalc] 墙纸/墙布计算结果', result);
           if (typeof result.usage === 'number' && !isNaN(result.usage)) {
             return result.usage;
           }
@@ -966,8 +956,6 @@ export function QuoteItemsTable({
       } catch (e) {
         console.warn('Strategy calc failed', e);
       }
-    } else {
-      console.log('[handleClientCalc] 品类不匹配，跳过计算', category);
     }
     return null;
   };
@@ -1159,6 +1147,7 @@ export function QuoteItemsTable({
       <QuoteItemAdvancedDrawer
         open={advancedDrawerOpen}
         onOpenChange={setAdvancedDrawerOpen}
+        // @ts-expect-error - Expected structural mismatch
         item={editingItem}
         onSuccess={onItemUpdate}
       />

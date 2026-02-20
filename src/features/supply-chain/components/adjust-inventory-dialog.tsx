@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useTransition } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -42,10 +42,11 @@ interface Props {
 
 export function AdjustInventoryDialog({ trigger }: Props) {
     const [open, setOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
     // const { toast } = useToast(); // Removed
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema) as any,
+        resolver: zodResolver(formSchema) as unknown as Resolver<z.infer<typeof formSchema>>,
         defaultValues: {
             warehouseId: '',
             productId: '',
@@ -57,18 +58,21 @@ export function AdjustInventoryDialog({ trigger }: Props) {
     const { isSubmitting } = form.formState;
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        try {
-            const result = await adjustInventory(values);
-            if (result.success) {
-                toast.success('库存调整成功');
-                setOpen(false);
-                form.reset();
-            } else {
-                toast.error('调整失败', { description: result.error });
+        startTransition(async () => {
+            try {
+                const result = await adjustInventory(values);
+                if (result.success) {
+                    toast.success('库存调整成功');
+                    setOpen(false);
+                    form.reset();
+                } else {
+                    toast.error('调整失败', { description: result.error });
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : '未知系统错误';
+                toast.error('系统错误', { description: message });
             }
-        } catch (error) {
-            toast.error('系统错误', { description: String(error) });
-        }
+        });
     }
 
     return (
@@ -81,70 +85,71 @@ export function AdjustInventoryDialog({ trigger }: Props) {
                         直接调整指定仓库和产品的库存数量。正数增加，负数减少。
                     </DialogDescription>
                 </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Form {...form}>
+                        <form id="adjust-inventory-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="warehouseId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>仓库 ID</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="输入仓库UUID" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="productId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>产品 ID</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="输入产品UUID" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="quantity"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>调整数量 (+/-)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} value={String(field.value ?? '')} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="reason"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>原因备注</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="warehouseId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>仓库 ID</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="输入仓库UUID" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="productId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>产品 ID</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="输入产品UUID" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="quantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>调整数量 (+/-)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="reason"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>原因备注</FormLabel>
-                                    <FormControl>
-                                        <Input {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <DialogFooter>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                提交调整
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isPending || isSubmitting}>
+                                    {(isPending || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    提交调整
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </div>
             </DialogContent>
         </Dialog>
     );

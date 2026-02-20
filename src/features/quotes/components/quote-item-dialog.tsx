@@ -23,6 +23,10 @@ import {
 import { HeightOverflowDialog } from './height-overflow-dialog';
 import type { AlternativeSolution } from '../calc-strategies/types';
 import { CurtainFabricQuoteForm } from './curtain-fabric-quote-form';
+import { z } from 'zod';
+import { createQuoteItemSchema } from '../actions/schema';
+
+type QuoteItemFormValues = z.infer<typeof createQuoteItemSchema>;
 
 /**
  * 产品接口类型 (Product Interface)
@@ -219,8 +223,7 @@ export function QuoteItemDialog({
       await createQuoteItem({
         quoteId,
         roomId: roomId || undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        category: category as any,
+        category: category as QuoteItemFormValues['category'],
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         unitPrice: Number(selectedProduct.retailPrice || selectedProduct.unitPrice || 0),

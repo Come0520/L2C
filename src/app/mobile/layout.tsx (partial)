@@ -1,0 +1,7 @@
+'use client';
+
+/**
+ * 底部导航项
+ */
+import { Home, User, ClipboardCheck } from "lucide-react";
+// ... (rest of the file remains same, just update navItems)

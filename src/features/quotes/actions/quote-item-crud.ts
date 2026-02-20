@@ -27,6 +27,13 @@ import { SizeValidator } from '@/shared/lib/validators';
 
 // ─── 创建行项目 ─────────────────────────────────
 
+/**
+ * 内部服务器操作：创建报价单行项目
+ * @param data 行项目请求参数，包括所属报价单、产品、尺寸等
+ * @param context 执行上下文，包含用户会话信息
+ * @returns 创建的行项目记录（可能包含警告信息和计算详细数据）
+ * @throws 缺少租户或无权操作时抛出错误
+ */
 const createQuoteItemActionInternal = createSafeAction(
   createQuoteItemSchema,
   async (data, context) => {
@@ -111,8 +118,8 @@ const createQuoteItemActionInternal = createSafeAction(
       // Handle details and warnings
       if (result.details) {
         attributes.calcResult = result.details;
-        if (result.details.warning) {
-          warnings.push(result.details.warning);
+        if (result.details?.warning) {
+          warnings.push(String(result.details.warning));
         }
       }
     }
@@ -185,12 +192,23 @@ const createQuoteItemActionInternal = createSafeAction(
   }
 );
 
+/**
+ * 客户端可调用的无上下文包装方法：创建报价单行项目
+ * @param params 行项目请求参数
+ * @returns 包装了响应的行项目实例
+ */
 export async function createQuoteItem(params: z.infer<typeof createQuoteItemSchema>) {
   return createQuoteItemActionInternal(params);
 }
 
 // ─── 更新行项目 ─────────────────────────────────
 
+/**
+ * 更新报价单行项目，重新执行计算逻辑并自动维护关联属性
+ * @param data 包含要更新属性的对象（含行项目ID）
+ * @param context 执行上下文，用于安全检查和审计日志
+ * @returns 包含成功状态的响应
+ */
 export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data, context) => {
   const userTenantId = context.session.user.tenantId;
   if (!userTenantId) throw new Error('未授权访问：缺少租户信息');
@@ -309,8 +327,8 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 
     if (result.details) {
       (mergedAttributes as Record<string, unknown>).calcResult = result.details;
-      if (result.details.warning) {
-        warnings.push(result.details.warning);
+      if (result.details?.warning) {
+        warnings.push(String(result.details.warning));
       }
     }
   }
@@ -359,6 +377,12 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 
 // ─── 删除行项目 ─────────────────────────────────
 
+/**
+ * 软删除指定的报价单行项目，并更新所属报价单的总金额
+ * @param data 包含行项目ID的对象
+ * @param context 执行上下文，用于安全检查和审计日志
+ * @returns 包含成功状态的响应
+ */
 export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (data, context) => {
   const userTenantId = context.session.user.tenantId;
 
@@ -384,6 +408,12 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
 
 // ─── 排序行项目 ─────────────────────────────────
 
+/**
+ * 批量更新行项目的显示顺位信息
+ * @param data 包含报价单ID及需重新排序的行项目ID和新排序号的列表
+ * @param context 执行上下文，用于安全检查
+ * @returns 包含成功状态的响应
+ */
 export const reorderQuoteItems = createSafeAction(
   reorderQuoteItemsSchema,
   async (data, context) => {

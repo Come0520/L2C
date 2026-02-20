@@ -59,13 +59,13 @@ const validConfig = {
 describe('Dashboard Config Actions 集成测试', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue(mockSession);
+        vi.mocked(auth).mockResolvedValue(mockSession as never);
     });
 
     describe('getDashboardConfigAction', () => {
         it('应该调用 WorkbenchService 获取配置', async () => {
             const mockConfig = { ...validConfig };
-            (WorkbenchService.getDashboardConfig as any).mockResolvedValue(mockConfig);
+            vi.mocked(WorkbenchService.getDashboardConfig).mockResolvedValue(mockConfig as never);
 
             const result = await getDashboardConfigAction();
 
@@ -76,9 +76,9 @@ describe('Dashboard Config Actions 集成测试', () => {
 
     describe('saveDashboardConfigAction', () => {
         it('应该保存配置并清除缓存', async () => {
-            (WorkbenchService.updateDashboardConfig as any).mockResolvedValue(undefined);
+            vi.mocked(WorkbenchService.updateDashboardConfig).mockResolvedValue(undefined);
 
-            const result = await saveDashboardConfigAction(validConfig, { session: mockSession } as any);
+            const result = await saveDashboardConfigAction(validConfig);
 
             expect(result.success).toBe(true);
             expect(WorkbenchService.updateDashboardConfig).toHaveBeenCalledWith('u1', expect.anything());
@@ -86,9 +86,9 @@ describe('Dashboard Config Actions 集成测试', () => {
         });
 
         it('保存失败时应返回错误响应', async () => {
-            (WorkbenchService.updateDashboardConfig as any).mockRejectedValue(new Error('SAVE_FAILED'));
+            vi.mocked(WorkbenchService.updateDashboardConfig).mockRejectedValue(new Error('SAVE_FAILED'));
 
-            const result = await saveDashboardConfigAction(validConfig, { session: mockSession } as any);
+            const result = await saveDashboardConfigAction(validConfig);
             expect(result.success).toBe(false);
             expect(result.error).toBe('保存失败');
         });
@@ -96,18 +96,18 @@ describe('Dashboard Config Actions 集成测试', () => {
 
     describe('resetDashboardConfigAction', () => {
         it('应该重置配置并清除缓存', async () => {
-            (WorkbenchService.updateDashboardConfig as any).mockResolvedValue(undefined);
+            vi.mocked(WorkbenchService.updateDashboardConfig).mockResolvedValue(undefined);
 
-            const result = await resetDashboardConfigAction({}, { session: mockSession } as any);
+            const result = await resetDashboardConfigAction({});
 
             expect(result.success).toBe(true);
             expect(revalidateTag).toHaveBeenCalledWith('dashboard-config:u1');
         });
 
         it('重置失败时应返回错误响应', async () => {
-            (WorkbenchService.updateDashboardConfig as any).mockRejectedValue(new Error('RESET_FAILED'));
+            vi.mocked(WorkbenchService.updateDashboardConfig).mockRejectedValue(new Error('RESET_FAILED'));
 
-            const result = await resetDashboardConfigAction({}, { session: mockSession } as any);
+            const result = await resetDashboardConfigAction({});
             expect(result.success).toBe(false);
             expect(result.error).toBe('重置失败');
         });

@@ -2,16 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { splitRuleSchema, type SplitRuleInput } from '../actions/rules.schema';
-import { createSplitRule, updateSplitRule, deleteSplitRule } from '../actions/rules';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { MoreHorizontal, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
-import { Textarea } from '@/shared/ui/textarea';
-import { Switch } from '@/shared/ui/switch';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/shared/ui/card';
 import {
     Table,
     TableBody,
@@ -21,13 +24,20 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/shared/ui/dialog';
 import {
     Select,
@@ -36,120 +46,129 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import { toast } from 'sonner';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Pencil from 'lucide-react/dist/esm/icons/pencil';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-
-import { SplitRule } from '../types';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Textarea } from '@/shared/ui/textarea';
+import { Switch } from '@/shared/ui/switch';
+import { Badge } from '@/shared/ui/badge';
+import { SplitRuleWithRelations } from '../types';
+import { splitRuleSchema, SplitRuleInput } from '../actions/rules.schema';
+import { createSplitRule, updateSplitRule, deleteSplitRule } from '../actions/rules';
+import { EmptyUI } from '@/shared/ui/empty-ui';
 
 interface SplitRuleManagerProps {
-    initialRules: SplitRule[];
+    rules: SplitRuleWithRelations[];
     suppliers: { id: string; name: string; supplierNo: string }[];
 }
 
-export function SplitRuleManager({ initialRules, suppliers }: SplitRuleManagerProps) {
-    const [rules, setRules] = useState<SplitRule[]>(initialRules);
+export function SplitRuleManager({ rules, suppliers }: SplitRuleManagerProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingRule, setEditingRule] = useState<SplitRule | null>(null);
-    const router = useRouter();
+    const [selectedRule, setSelectedRule] = useState<SplitRuleWithRelations | null>(null);
+
+    const handleAdd = () => {
+        setSelectedRule(null);
+        setIsDialogOpen(true);
+    };
+
+    const handleEdit = (rule: SplitRuleWithRelations) => {
+        setSelectedRule(rule);
+        setIsDialogOpen(true);
+    };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('确定要删除这条规则吗？')) return;
+        if (!confirm('确定要删除此规则吗？')) return;
+
         try {
-            await deleteSplitRule(id);
-            toast.success('规则已删除');
-            router.refresh();
-            // Optimistic update
-            setRules(rules.filter(r => r.id !== id));
-        } catch (error: any) {
-            toast.error(error.message || '删除失败');
+            const res = await deleteSplitRule(id);
+            if (res.success) {
+                toast.success('删除成功');
+            }
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : '操作失败';
+            toast.error(message);
         }
     };
 
-    const handleEdit = (rule: SplitRule) => {
-        setEditingRule(rule);
-        setIsDialogOpen(true);
-    };
-
-    const handleCreate = () => {
-        setEditingRule(null);
-        setIsDialogOpen(true);
-    };
-
-    const onDialogClose = (open: boolean) => {
-        setIsDialogOpen(open);
-        if (!open) setEditingRule(null);
-    };
-
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <div>
-                    <CardTitle>拆单规则配置</CardTitle>
-                    <CardDescription>定义订单自动拆分和分配的规则</CardDescription>
+                    <CardTitle>智能拆单规则</CardTitle>
+                    <CardDescription>管理订单自动拆分和路由到供应商的逻辑</CardDescription>
                 </div>
-                <Button onClick={handleCreate}>
+                <Button onClick={handleAdd} size="sm">
                     <Plus className="mr-2 h-4 w-4" />
-                    添加规则
+                    新建规则
                 </Button>
             </CardHeader>
             <CardContent>
-                <div className="rounded-md border">
+                {rules.length === 0 ? (
+                    <EmptyUI
+                        message="暂无拆单规则，创建一个规则来开始自动分配订单"
+                    />
+                ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80px]">优先级</TableHead>
-                                <TableHead>规则名称</TableHead>
+                                <TableHead>名称</TableHead>
+                                <TableHead>优先级</TableHead>
                                 <TableHead>目标类型</TableHead>
                                 <TableHead>目标供应商</TableHead>
                                 <TableHead>状态</TableHead>
-                                <TableHead className="text-right">操作</TableHead>
+                                <TableHead className="w-[80px]">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rules.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        暂无规则
+                            {rules.sort((a, b) => (b.priority || 0) - (a.priority || 0)).map((rule) => (
+                                <TableRow key={rule.id}>
+                                    <TableCell className="font-medium">{rule.name}</TableCell>
+                                    <TableCell>{rule.priority}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">
+                                            {rule.targetType === 'PURCHASE_ORDER' ? '采购单' : '加工任务'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{rule.supplier?.name || '-'}</TableCell>
+                                    <TableCell>
+                                        {rule.isActive ? (
+                                            <Badge className="bg-green-500">启用中</Badge>
+                                        ) : (
+                                            <Badge variant="secondary">已禁用</Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>操作</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handleEdit(rule)}>
+                                                    <Edit className="mr-2 h-4 w-4" /> 编辑
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDelete(rule.id)}
+                                                    className="text-red-600"
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" /> 删除
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ) : (
-                                rules.map((rule) => (
-                                    <TableRow key={rule.id}>
-                                        <TableCell>{rule.priority}</TableCell>
-                                        <TableCell className="font-medium">{rule.name}</TableCell>
-                                        <TableCell>{rule.targetType}</TableCell>
-                                        <TableCell>
-                                            {suppliers.find(s => s.id === rule.targetSupplierId)?.name || '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${rule.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {rule.isActive ? '启用' : '禁用'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(rule.id)}>
-                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
+                            ))}
                         </TableBody>
                     </Table>
-                </div>
+                )}
             </CardContent>
 
             <RuleDialog
                 open={isDialogOpen}
-                onOpenChange={onDialogClose}
-                item={editingRule || undefined}
+                onOpenChange={setIsDialogOpen}
+                item={selectedRule}
                 suppliers={suppliers}
             />
         </Card>
@@ -159,17 +178,15 @@ export function SplitRuleManager({ initialRules, suppliers }: SplitRuleManagerPr
 interface RuleDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    // item is likely a full record from DB, so it should have id and other fields
-    // Assuming SplitRuleInput matches the DB columns mostly, but we need ID
-    item?: SplitRule | null;
+    item: SplitRuleWithRelations | null;
     suppliers: { id: string; name: string; supplierNo: string }[];
 }
 
 function RuleDialog({ open, onOpenChange, item, suppliers }: RuleDialogProps) {
     const router = useRouter();
-    const isEditing = !!item?.id; // Check for ID to confirm editing mode
+    const isEditing = !!item?.id;
 
-    const form = useForm<SplitRuleInput>({
+    const form = useForm<z.infer<typeof splitRuleSchema>>({
         resolver: zodResolver(splitRuleSchema),
         defaultValues: {
             name: '',
@@ -181,121 +198,136 @@ function RuleDialog({ open, onOpenChange, item, suppliers }: RuleDialogProps) {
         },
         values: item ? {
             name: item.name || '',
-            priority: item.priority || 0,
+            priority: Number(item.priority) || 0,
             conditions: item.conditions ? (typeof item.conditions === 'string' ? item.conditions : JSON.stringify(item.conditions)) : '[]',
-            targetType: (item.targetType as any) || 'PURCHASE_ORDER',
+            targetType: item.targetType === 'SERVICE_TASK' ? 'SERVICE_TASK' : 'PURCHASE_ORDER',
             targetSupplierId: item.targetSupplierId,
             isActive: item.isActive ?? true,
         } : undefined,
     });
 
     const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = form;
+    /* eslint-disable-next-line */
     const targetType = watch('targetType');
 
-    const onSubmit: SubmitHandler<SplitRuleInput> = async (data) => {
+    const onSubmit = async (data: z.infer<typeof splitRuleSchema>) => {
         try {
             // Validate JSON
             try {
                 JSON.parse(data.conditions);
-            } catch (e) {
+            } catch (_e) {
                 form.setError('conditions', { message: '无效的 JSON 格式' });
                 return;
             }
 
-            if (isEditing && item?.id) {
-                await updateSplitRule(item.id, data);
-                toast.success('规则已更新');
+            if (isEditing && item) {
+                const res = await updateSplitRule(item.id, data);
+                if (res.success) {
+                    toast.success('规则已更新');
+                    onOpenChange(false);
+                    router.refresh();
+                }
             } else {
-                await createSplitRule(data);
-                toast.success('规则已创建');
+                const res = await createSplitRule(data);
+                if (res.success) {
+                    toast.success('规则已创建');
+                    onOpenChange(false);
+                    router.refresh();
+                }
             }
-            router.refresh();
-            onOpenChange(false);
-            if (!isEditing) form.reset();
-        } catch (error: any) {
-            toast.error(error.message || '操作失败');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : '保存失败';
+            toast.error(message);
         }
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle>{isEditing ? '编辑规则' : '添加规则'}</DialogTitle>
-                    <DialogDescription>
-                        配置自动拆单和分配规则。条件字段需为有效的 JSON 数组。
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <DialogHeader>
+                        <DialogTitle>{isEditing ? '编辑规则' : '新建规则'}</DialogTitle>
+                        <DialogDescription>
+                            设置拆单条件和路由的目标供应商。
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">规则名称</Label>
-                            <Input id="name" {...register('name')} placeholder="例如：面料自动分配" />
-                            {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+                            <Input
+                                id="name"
+                                {...register('name')}
+                                placeholder="如：默认采购路由"
+                            />
+                            {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="priority">优先级</Label>
+                                <Input
+                                    id="priority"
+                                    type="number"
+                                    {...register('priority', { valueAsNumber: true })}
+                                />
+                                <p className="text-[10px] text-muted-foreground">数字越大优先级越高</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="targetType">目标类型</Label>
+                                <Select
+                                    onValueChange={(val) => setValue('targetType', val as SplitRuleInput['targetType'])}
+                                    defaultValue={targetType}
+                                    value={watch('targetType')}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="选择目标" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PURCHASE_ORDER">采购单</SelectItem>
+                                        <SelectItem value="SERVICE_TASK">加工任务</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
-                            <Label htmlFor="priority">优先级 (越大越优先)</Label>
-                            <Input id="priority" type="number" {...register('priority')} />
-                            {errors.priority && <p className="text-sm text-red-500">{errors.priority.message}</p>}
+                            <Label htmlFor="targetSupplierId">路由到供应商</Label>
+                            <Select
+                                onValueChange={(val) => setValue('targetSupplierId', val)}
+                                defaultValue={watch('targetSupplierId') || undefined}
+                                value={watch('targetSupplierId') || undefined}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="选择供应商" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {suppliers.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
-                    </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="targetType">目标类型</Label>
-                        <Select
-                            onValueChange={(val: any) => setValue('targetType', val)}
-                            defaultValue={targetType}
-                            value={watch('targetType')}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="选择类型" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="PURCHASE_ORDER">采购单 (PURCHASE_ORDER)</SelectItem>
-                                <SelectItem value="SERVICE_TASK">服务任务 (SERVICE_TASK)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {errors.targetType && <p className="text-sm text-red-500">{errors.targetType.message}</p>}
-                    </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="conditions">过滤条件 (JSON)</Label>
+                            <Textarea
+                                id="conditions"
+                                {...register('conditions')}
+                                className="font-mono text-xs min-h-[100px]"
+                                placeholder='[{"field": "category", "operator": "eq", "value": "CLOTHING"}]'
+                            />
+                            {errors.conditions && <p className="text-xs text-red-500">{errors.conditions.message}</p>}
+                        </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="targetSupplierId">目标供应商 (可选)</Label>
-                        <Select
-                            onValueChange={(val) => setValue('targetSupplierId', val === 'none' ? null : val)}
-                            value={watch('targetSupplierId') || 'none'}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="选择供应商" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">无 (动态分配)</SelectItem>
-                                {suppliers.map((s) => (
-                                    <SelectItem key={s.id} value={s.id}>
-                                        {s.name} ({s.supplierNo})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="conditions">规则条件 (JSON)</Label>
-                        <Textarea
-                            id="conditions"
-                            {...register('conditions')}
-                            placeholder='[{"field": "category", "operator": "eq", "value": "FABRIC"}]'
-                            className="font-mono h-32"
-                        />
-                        {errors.conditions && <p className="text-sm text-red-500">{errors.conditions.message}</p>}
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Switch
-                            id="isActive"
-                            checked={watch('isActive')}
-                            onCheckedChange={(checked) => setValue('isActive', checked)}
-                        />
-                        <Label htmlFor="isActive">启用此规则</Label>
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="isActive"
+                                checked={watch('isActive')}
+                                onCheckedChange={(checked) => setValue('isActive', checked)}
+                            />
+                            <Label htmlFor="isActive">启用此规则</Label>
+                        </div>
                     </div>
 
                     <DialogFooter>
@@ -303,8 +335,7 @@ function RuleDialog({ open, onOpenChange, item, suppliers }: RuleDialogProps) {
                             取消
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            保存
+                            {isSubmitting ? '保存中...' : '提交保存'}
                         </Button>
                     </DialogFooter>
                 </form>

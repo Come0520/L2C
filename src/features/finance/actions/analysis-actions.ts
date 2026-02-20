@@ -52,7 +52,11 @@ const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, asy
 
     // 2. 库存成本估算 (Inventory Cost Estimation)
     // 策略：通过库存流水关联订单，并按当前采购价估算（若流水中无历史成本记录）
-    // TODO: [F-13] 长期方案：在 inventory_logs 写入时固化出库成本
+    /**
+     * @note 业务演进说明 [F-13]
+     * 长期高阶方案建议在 `inventory_logs` 写入阶段直接固化当时的实际出库成本，
+     * 以防止物资采购单价波动导致历史利润测算不精确。当前版本采用产品基准价估算。
+     */
     const inventoryCostResult = await db
         .select({
             totalCost: sql<string>`sum(ABS(${inventoryLogs.quantity}) * ${products.purchasePrice})`

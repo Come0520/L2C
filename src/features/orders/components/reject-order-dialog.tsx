@@ -37,11 +37,11 @@ export function RejectOrderDialog({ orderId, trigger }: RejectOrderDialogProps) 
 
         setIsSubmitting(true);
         try {
-            await customerRejectAction(orderId, reason);
+            await customerRejectAction({ orderId, reason });
             toast.success('已驳回验收');
             setOpen(false);
             router.refresh();
-        } catch (error) {
+        } catch (_error) {
             toast.error('操作失败');
         } finally {
             setIsSubmitting(false);

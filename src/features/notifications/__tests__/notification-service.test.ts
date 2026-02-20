@@ -13,8 +13,28 @@ const hoisted = vi.hoisted(() => {
         logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
     };
 
-    const createDrizzleMock = (resolvedValue: any = []) => {
-        const chain: any = {
+    /** Drizzle 链式查询 Mock 接口 */
+    interface DrizzleChainMock {
+        select: ReturnType<typeof vi.fn>;
+        from: ReturnType<typeof vi.fn>;
+        where: ReturnType<typeof vi.fn>;
+        orderBy: ReturnType<typeof vi.fn>;
+        limit: ReturnType<typeof vi.fn>;
+        offset: ReturnType<typeof vi.fn>;
+        for: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        set: ReturnType<typeof vi.fn>;
+        insert: ReturnType<typeof vi.fn>;
+        values: ReturnType<typeof vi.fn>;
+        returning: ReturnType<typeof vi.fn>;
+        onConflictDoUpdate: ReturnType<typeof vi.fn>;
+        execute: ReturnType<typeof vi.fn>;
+        then: (onFulfilled?: ((val: unknown) => unknown) | undefined) => Promise<unknown>;
+        catch: (onRejected?: ((err: unknown) => unknown) | undefined) => Promise<unknown>;
+    }
+
+    const createDrizzleMock = (resolvedValue: unknown = []): DrizzleChainMock => {
+        const chain: DrizzleChainMock = {
             select: vi.fn(() => chain),
             from: vi.fn(() => chain),
             where: vi.fn(() => chain),
@@ -29,8 +49,8 @@ const hoisted = vi.hoisted(() => {
             returning: vi.fn(() => chain),
             onConflictDoUpdate: vi.fn(() => chain),
             execute: vi.fn().mockResolvedValue(resolvedValue),
-            then: (onFulfilled?: any) => Promise.resolve(resolvedValue).then(onFulfilled),
-            catch: (onRejected?: any) => Promise.resolve(resolvedValue).catch(onRejected),
+            then: (onFulfilled?) => Promise.resolve(resolvedValue).then(onFulfilled),
+            catch: (onRejected?) => Promise.resolve(resolvedValue).catch(onRejected),
         };
         return chain;
     };
@@ -40,13 +60,13 @@ const hoisted = vi.hoisted(() => {
 
 // Mock 适配器
 vi.mock('../adapters/sms-adapter', () => ({
-    SmsAdapter: class { send = (args: any) => hoisted.mocks.smsSend(args) }
+    SmsAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.smsSend(args) }
 }));
 vi.mock('../adapters/lark-adapter', () => ({
-    LarkAdapter: class { send = (args: any) => hoisted.mocks.larkSend(args) }
+    LarkAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.larkSend(args) }
 }));
 vi.mock('../adapters/wechat-adapter', () => ({
-    WeChatAdapter: class { send = (args: any) => hoisted.mocks.wechatSend(args) }
+    WeChatAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.wechatSend(args) }
 }));
 vi.mock('@/shared/lib/auth', () => ({ auth: hoisted.mocks.auth }));
 vi.mock('@/shared/lib/logger', () => ({ logger: hoisted.mocks.logger }));
@@ -102,7 +122,7 @@ describe('NotificationService Full Test Suite', () => {
 
     describe('sendNotificationByTemplate', () => {
         it('should create queue items and notifications for IN_APP', async () => {
-            (db.query.notificationTemplates.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.notificationTemplates.findFirst).mockResolvedValue({
                 id: 'tmpl1',
                 code: 'T1',
                 titleTemplate: 'T',
@@ -112,7 +132,7 @@ describe('NotificationService Full Test Suite', () => {
                 isActive: true
             });
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
                 const txMock = hoisted.createDrizzleMock([{ id: 'q1' }]);
                 return await cb(txMock);
             });
@@ -128,7 +148,7 @@ describe('NotificationService Full Test Suite', () => {
         });
 
         it('should return error if template not found', async () => {
-            (db.query.notificationTemplates.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.notificationTemplates.findFirst).mockResolvedValue(null);
             const result = await sendNotificationByTemplate({
                 templateCode: 'MISSING',
                 userId: 'u1',
@@ -145,7 +165,7 @@ describe('NotificationService Full Test Suite', () => {
                 { id: '1', channel: 'SMS', userId: 'u1', title: 'T', content: 'C', priority: 'URGENT' }
             ];
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
                 const txMock = hoisted.createDrizzleMock(mockItems);
                 return await cb(txMock);
             });
@@ -164,7 +184,7 @@ describe('NotificationService Full Test Suite', () => {
                 { id: '2', channel: 'SMS', userId: 'u1', title: 'T', content: 'C', priority: 'NORMAL', retryCount: 0 }
             ];
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
                 const txMock = hoisted.createDrizzleMock(mockItems);
                 return await cb(txMock);
             });
@@ -184,7 +204,7 @@ describe('NotificationService Full Test Suite', () => {
                 { id: '4', channel: 'LARK', userId: 'u1', title: 'T', content: 'C' }
             ];
 
-            vi.mocked(db.transaction).mockImplementation(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
                 // Return items sequentially on first calls
                 const txMock = hoisted.createDrizzleMock(mockItems);
                 return await cb(txMock);
@@ -202,7 +222,7 @@ describe('NotificationService Full Test Suite', () => {
                 { id: '5', channel: 'SMS', userId: 'u1', title: 'T', content: 'C', retryCount: 2 }
             ];
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
                 const txMock = hoisted.createDrizzleMock(mockItems);
                 return await cb(txMock);
             });
@@ -218,7 +238,7 @@ describe('NotificationService Full Test Suite', () => {
 
     describe('getActiveAnnouncements', () => {
         it('should filter by role', async () => {
-            (db.query.systemAnnouncements.findMany as any).mockResolvedValue([{ id: 'ann1' }]);
+            vi.mocked(db.query.systemAnnouncements.findMany).mockResolvedValue([{ id: 'ann1' }] as never);
             const results = await getActiveAnnouncements('ADMIN');
             expect(results).toHaveLength(1);
         });
@@ -295,11 +315,11 @@ describe('NotificationService Full Test Suite', () => {
 
             it('sendNotificationByTemplate should use default format if no channels provided', async () => {
                 hoisted.mocks.auth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1' } });
-                vi.mocked(db.query.notificationTemplates.findFirst as any).mockResolvedValue({
+                vi.mocked(db.query.notificationTemplates.findFirst).mockResolvedValue({
                     code: 'T', titleTemplate: 'T', contentTemplate: 'C', channels: []
                 });
                 // Mock getSetting
-                vi.mocked(db.query.systemSettings.findFirst as any).mockResolvedValue({ value: ['IN_APP'] });
+                vi.mocked(db.query.systemSettings.findFirst).mockResolvedValue({ value: ['IN_APP'] } as never);
 
                 vi.mocked(db.transaction).mockResolvedValue([]);
 
@@ -309,7 +329,7 @@ describe('NotificationService Full Test Suite', () => {
 
             it('createAnnouncement should handle validation failure', async () => {
                 hoisted.mocks.hasPermission.mockResolvedValue(true);
-                const result = await createAnnouncement({ title: '' } as any); // empty title
+                const result = await createAnnouncement({ title: '', content: '', startAt: new Date() });
                 expect(result.success).toBe(false);
             });
 

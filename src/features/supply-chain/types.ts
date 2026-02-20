@@ -95,8 +95,17 @@ export interface PurchaseOrderListItem extends PurchaseOrder {
 /**
  * Split Rule with relational data
  */
+export type SplitConditionOp = 'eq' | 'neq' | 'gt' | 'lt' | 'in' | 'contains';
+
+export interface SplitCondition {
+    field: string;
+    operator: SplitConditionOp;
+    value: string | number | string[] | number[];
+}
+
 export interface SplitRuleWithRelations extends SplitRule {
     supplier?: Supplier | null;
+    conditions: SplitCondition[] | null;
 }
 
 /**
@@ -144,6 +153,13 @@ export interface ProcessorFormData {
         type: string;
     }>;
 }
+
+/**
+ * Initial data structure for ProcessorDialog
+ */
+export type ProcessorInitialData = Partial<ProcessorFormData> & {
+    id?: string;
+};
 
 /**
  * Shipment tracking data structure

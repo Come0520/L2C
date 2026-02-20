@@ -46,9 +46,9 @@ export function ResolutionTimeline({ ticketId }: ResolutionTimelineProps) {
                                         <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                                             {log.action === 'CREATE' ? '创建工单' :
                                                 log.action === 'UPDATE' ? '更新状态' : log.action}
-                                            {log.changedFields?.status && (
+                                            {!!(log.changedFields as Record<string, unknown>)?.status && (
                                                 <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
-                                                    {log.changedFields.status}
+                                                    {String((log.changedFields as Record<string, unknown>).status)}
                                                 </span>
                                             )}
                                         </h4>
@@ -57,9 +57,9 @@ export function ResolutionTimeline({ ticketId }: ResolutionTimelineProps) {
                                         </time>
                                     </div>
                                     <div className="text-sm text-slate-600 space-y-2">
-                                        {log.newValues?.resolution && (
+                                        {!!(log.newValues as Record<string, unknown>)?.resolution && (
                                             <p className="bg-slate-50 p-2 rounded-md border border-slate-100 italic">
-                                                "{log.newValues.resolution}"
+                                                "{String((log.newValues as Record<string, unknown>).resolution)}"
                                             </p>
                                         )}
                                         <div className="flex items-center gap-1.5 text-xs text-slate-500">

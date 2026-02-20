@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { ConfigurableDashboard, WidgetConfig, DashboardLayoutConfig, DEFAULT_DASHBOARD_CONFIG } from './configurable-dashboard';
-import { getDashboardConfig, saveDashboardConfigAction, resetDashboardConfig } from '../actions/config';
+import { ConfigurableDashboard } from './configurable-dashboard';
+import { getDashboardConfigAction, saveDashboardConfigAction, resetDashboardConfigAction } from '../actions/config';
+import { WidgetConfig, UserDashboardConfig as DashboardLayoutConfig } from '../types';
+import { getDefaultDashboardConfig } from '../utils';
 import { Button } from '@/shared/ui/button';
 import { Settings, RotateCcw, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,7 +50,7 @@ export function DashboardPageClient({
     sourceData = [],
     funnelData = [],
 }: DashboardPageClientProps) {
-    const [config, setConfig] = useState<DashboardLayoutConfig>(initialConfig || DEFAULT_DASHBOARD_CONFIG);
+    const [config, setConfig] = useState<DashboardLayoutConfig>(initialConfig || getDefaultDashboardConfig(''));
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -73,15 +75,15 @@ export function DashboardPageClient({
 
     // 重置配置
     const handleReset = async () => {
-        await resetDashboardConfig();
-        setConfig(DEFAULT_DASHBOARD_CONFIG);
+        await resetDashboardConfigAction({});
+        setConfig(getDefaultDashboardConfig(''));
         toast.success('已重置为默认布局');
     };
 
     // 取消编辑
     const handleCancel = async () => {
         // 重新加载配置
-        const savedConfig = await getDashboardConfig();
+        const savedConfig = await getDashboardConfigAction();
         setConfig(savedConfig);
         setIsEditing(false);
     };

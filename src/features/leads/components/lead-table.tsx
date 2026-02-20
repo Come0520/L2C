@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback } from 'react';
-import { PackageOpen } from 'lucide-react';
+import React, { useCallback, useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -23,15 +23,17 @@ import { zhCN } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getLeads } from '@/features/leads/actions/queries';
-import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
-import Phone from 'lucide-react/dist/esm/icons/phone';
-import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
-import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
-import Eye from 'lucide-react/dist/esm/icons/eye';
+import {
+    MoreHorizontal,
+    Phone,
+    MessageSquare,
+    FileText,
+    Calendar,
+    UserPlus,
+    XCircle,
+    RotateCcw,
+    Eye
+} from 'lucide-react';
 import { z } from 'zod';
 import { followUpTypeEnum } from '../schemas';
 import { AssignLeadDialog } from './dialogs/assign-lead-dialog';
@@ -42,17 +44,29 @@ import { restoreLeadAction } from '../actions/restore';
 import { useTransition, useState, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
+import { EmptyUI } from '@/shared/ui/empty-ui';
+import { cn } from '@/shared/lib/utils';
 
 // 从查询推断类型
 type LeadData = Awaited<ReturnType<typeof getLeads>>['data'][number];
 
+/**
+ * 线索表格组件属性
+ */
 interface LeadTableProps {
+    /** 线索数据列表 */
     data: LeadData[];
+    /** 当前页码 */
     page: number;
+    /** 每页条数 */
     pageSize: number;
+    /** 总条数 */
     total: number;
+    /** 用户角色 */
     userRole?: string;
+    /** 当前用户 ID */
     userId: string;
+    /** 重载数据回调 */
     onReload?: () => void;
 }
 
@@ -80,7 +94,9 @@ const SYSTEM_TAGS: Record<string, { label: string; className: string }> = {
     'MEASURED': { label: '已测量', className: 'bg-orange-100 text-orange-700' },
 };
 
-// 根据状态获取可用操作
+/**
+ * 根据状态和权限获取可用操作
+ */
 function getActionsForStatus(status: string, isManager: boolean) {
     const actions: Array<{ key: string; label: string; icon: React.ReactNode; variant?: 'destructive' }> = [];
 
@@ -126,23 +142,23 @@ interface LeadTableRowProps {
     className?: string;
 }
 
-const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) {
-    const { lead, isManager, handleAction, style, className } = props;
+/**
+ * 单行渲染组件
+ */
+const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleAction, style, className }: LeadTableRowProps) {
     const statusConfig = STATUS_MAP[lead.status || ''] || { label: lead.status || '未知', variant: 'secondary' as const };
     const intentionConfig = lead.intentionLevel ? INTENTION_MAP[lead.intentionLevel] : null;
     const actions = getActionsForStatus(lead.status || '', isManager);
     const tags = lead.tags || [];
 
     return (
-        <TableRow style={style} className={className}>
-            {/* 线索编号 */}
+        <TableRow style={style} className={cn("hover:bg-muted/30 transition-colors", className)}>
             <TableCell className="font-medium">
                 <Link href={`/leads/${lead.id}`} className="hover:underline text-primary">
                     {lead.leadNo}
                 </Link>
             </TableCell>
 
-            {/* 客户信息 */}
             <TableCell>
                 <div className="flex flex-col">
                     <span className="font-medium">{lead.customerName}</span>
@@ -153,10 +169,9 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
                 </div>
             </TableCell>
 
-            {/* 意向等级 */}
             <TableCell>
                 {intentionConfig ? (
-                    <Badge variant="outline" className={intentionConfig.className}>
+                    <Badge variant="outline" className={cn("font-medium", intentionConfig.className)}>
                         {intentionConfig.label}
                     </Badge>
                 ) : (
@@ -164,14 +179,12 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
                 )}
             </TableCell>
 
-            {/* 状态 */}
             <TableCell>
-                <Badge variant={statusConfig.variant}>
+                <Badge variant={statusConfig.variant} className="font-normal">
                     {statusConfig.label}
                 </Badge>
             </TableCell>
 
-            {/* 标签 */}
             <TableCell>
                 <div className="flex flex-wrap gap-1">
                     {tags.length > 0 ? (
@@ -181,7 +194,7 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
                                 <Badge
                                     key={tag}
                                     variant="outline"
-                                    className={`text-xs ${systemTag?.className || ''}`}
+                                    className={cn("text-[10px] h-5 px-1.5 font-normal", systemTag?.className)}
                                 >
                                     {systemTag?.label || tag}
                                 </Badge>
@@ -191,29 +204,26 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
                         <span className="text-muted-foreground">-</span>
                     )}
                     {tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
                             +{tags.length - 3}
                         </Badge>
                     )}
                 </div>
             </TableCell>
 
-            {/* 来源 */}
-            <TableCell>
+            <TableCell className="truncate max-w-[100px]">
                 {lead.sourceChannel?.name || '-'}
             </TableCell>
 
-            {/* 跟进销售 */}
             <TableCell>
                 {lead.assignedSales?.name || (
-                    <span className="text-muted-foreground italic">未分配</span>
+                    <span className="text-muted-foreground italic text-xs">未分配</span>
                 )}
             </TableCell>
 
-            {/* 最后活动 */}
             <TableCell>
                 {lead.lastActivityAt ? (
-                    <span className="text-sm" title={new Date(lead.lastActivityAt).toLocaleString()}>
+                    <span className="text-xs text-muted-foreground" title={new Date(lead.lastActivityAt).toLocaleString()}>
                         {formatDistanceToNow(new Date(lead.lastActivityAt), {
                             addSuffix: true,
                             locale: zhCN
@@ -224,21 +234,23 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
                 )}
             </TableCell>
 
-            {/* 操作 */}
             <TableCell className="text-right">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                             <span className="sr-only">操作菜单</span>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-[160px]">
                         {actions.map((action) => (
                             <DropdownMenuItem
                                 key={action.key}
                                 onClick={() => handleAction(action.key, lead.id)}
-                                className={action.variant === 'destructive' ? 'text-destructive' : ''}
+                                className={cn(
+                                    "cursor-pointer",
+                                    action.variant === 'destructive' && 'text-destructive focus:text-destructive'
+                                )}
                             >
                                 {action.icon}
                                 {action.label}
@@ -251,6 +263,10 @@ const LeadTableRow = React.memo(function LeadTableRow(props: LeadTableRowProps) 
     );
 });
 
+/**
+ * 线索管理表格组件
+ * 实现了虚拟滚动和交互动作
+ */
 export const LeadTable = React.memo(function LeadTable({
     data,
     page,
@@ -261,17 +277,18 @@ export const LeadTable = React.memo(function LeadTable({
     onReload
 }: LeadTableProps) {
     const router = useRouter();
-    const isManager = ['ADMIN', 'MANAGER', 'BOSS'].includes(userRole);
+    const isManager = useMemo(() => ['ADMIN', 'MANAGER', 'BOSS'].includes(userRole), [userRole]);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [followupDialogOpen, setFollowupDialogOpen] = useState(false);
     const [voidDialogOpen, setVoidDialogOpen] = useState(false);
     const [followupType, setFollowupType] = useState<z.infer<typeof followUpTypeEnum> | undefined>(undefined);
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
     const [currentAssignedId, setCurrentAssignedId] = useState<string | null>(null);
-    const [, startTransition] = useTransition();
+    const [isPending, startTransition] = useTransition();
 
-    // 处理操作点击
-    // 处理操作点击
+    /**
+     * 处理线索相关的业务动作
+     */
     const handleAction = useCallback((action: string, leadId: string) => {
         const lead = data.find(l => l.id === leadId);
         if (!lead) return;
@@ -344,12 +361,22 @@ export const LeadTable = React.memo(function LeadTable({
     const rowVirtualizer = useVirtualizer({
         count: data.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 64, // 估算每行高度
+        estimateSize: () => 64,
         overscan: 5,
     });
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
+            {/* 全局加载遮罩 */}
+            {isPending && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-[2px] transition-all duration-200">
+                    <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span className="text-sm font-medium">加载中...</span>
+                    </div>
+                </div>
+            )}
+
             <div
                 ref={parentRef}
                 className="rounded-md border overflow-auto"
@@ -377,19 +404,14 @@ export const LeadTable = React.memo(function LeadTable({
                         }}
                     >
                         {data.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={9} className="h-[400px] text-center">
-                                    <div className="flex flex-col items-center justify-center py-12">
-                                        <div className="bg-muted/30 p-6 rounded-full mb-4">
-                                            <PackageOpen className="w-12 h-12 text-muted-foreground opacity-20" />
-                                        </div>
-                                        <h3 className="text-xl font-bold tracking-tight">未找到线索</h3>
-                                        <p className="text-muted-foreground mt-2 mb-6 max-w-sm mx-auto">
-                                            当前的筛选列表中没有数据。这可能是因为尚未录入线索，或者当前的搜索/筛选条件过于严格。
-                                        </p>
-                                        <div className="flex gap-3">
+                            <TableRow className="border-none hover:bg-transparent">
+                                <TableCell colSpan={9} className="h-[500px] flex items-center justify-center">
+                                    <div className="flex flex-col items-center">
+                                        <EmptyUI message="暂无符合条件的线索数据" />
+                                        <div className="mt-4">
                                             <Button
                                                 variant="outline"
+                                                size="sm"
                                                 onClick={() => router.push('/leads')}
                                             >
                                                 重置筛选条件
@@ -426,29 +448,30 @@ export const LeadTable = React.memo(function LeadTable({
             </div>
 
             {/* 分页控件 */}
-            <div className="flex items-center justify-between py-4">
+            <div className="flex items-center justify-between py-2 px-1">
                 <div className="text-sm text-muted-foreground">
-                    共 {total} 条，第 {page} 页
+                    共 <span className="font-medium text-foreground">{total}</span> 条，第 <span className="font-medium text-foreground">{page}</span> 页
                 </div>
                 <div className="flex gap-2">
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        disabled={page <= 1}
+                        disabled={page <= 1 || isPending}
                         onClick={() => router.push(`?page=${page - 1}`)}
                     >
                         上一页
                     </Button>
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        disabled={page * pageSize >= total}
+                        disabled={page * pageSize >= total || isPending}
                         onClick={() => router.push(`?page=${page + 1}`)}
                     >
                         下一页
                     </Button>
                 </div>
             </div>
+
             {selectedLeadId && (
                 <>
                     <AssignLeadDialog

@@ -20,6 +20,12 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 
 // ─── 提交报价单 ─────────────────────────────────
 
+/**
+ * 提交报价单进行审批或转换流程
+ * 仅具有编辑权限的用户可执行
+ * @param data 包含报价单 ID 的对象
+ * @param context 执行上下文
+ */
 export const submitQuote = createSafeAction(
   z.object({
     id: z.string().uuid(),
@@ -49,6 +55,12 @@ export const submitQuote = createSafeAction(
 
 // ─── 拒绝报价单 ─────────────────────────────────
 
+/**
+ * 拒绝当前报价单，需提供拒绝原因
+ * 仅具有编辑权限的用户可执行
+ * @param data 包含报价单 ID 和拒绝原因的对象
+ * @param context 执行上下文
+ */
 export const rejectQuote = createSafeAction(
   z.object({
     id: z.string().uuid(),
@@ -77,6 +89,12 @@ export const rejectQuote = createSafeAction(
 
 // ─── 锁定报价单 ─────────────────────────────────
 
+/**
+ * 锁定报价单以防止进一步编辑，通常用于待审批或最终确定前
+ * 仅具有编辑权限的用户可执行
+ * @param data 包含报价单 ID 的对象
+ * @param context 执行上下文
+ */
 export const lockQuote = createSafeAction(
   z.object({
     id: z.string().uuid(),
@@ -121,6 +139,12 @@ export const lockQuote = createSafeAction(
 
 // ─── 解锁报价单 ─────────────────────────────────
 
+/**
+ * 解锁先前锁定的报价单，恢复编辑能力
+ * 仅报价单的原始锁定者可执行
+ * @param data 包含报价单 ID 的对象
+ * @param context 执行上下文
+ */
 export const unlockQuote = createSafeAction(
   z.object({
     id: z.string().uuid(),
@@ -158,6 +182,12 @@ export const unlockQuote = createSafeAction(
 
 // ─── 审批报价单 ─────────────────────────────────
 
+/**
+ * 审批通过折扣超限的报价单
+ * 仅具有审批权限的用户可执行
+ * @param data 包含报价单 ID 的对象
+ * @param context 执行上下文
+ */
 export const approveQuote = createSafeAction(
   z.object({
     id: z.string().uuid(),
@@ -189,6 +219,12 @@ export const approveQuote = createSafeAction(
 
 // ─── 拒绝折扣变更 ───────────────────────────────
 
+/**
+ * 拒绝对报价单进行的过高折扣，恢复原价或要求重新修改
+ * 仅具有审批权限的用户可执行
+ * @param data 包含报价单 ID 和拒绝原因的对象
+ * @param context 执行上下文
+ */
 export const rejectQuoteDiscount = createSafeAction(
   rejectQuoteDiscountSchema,
   async (data, context) => {
@@ -214,6 +250,12 @@ export const rejectQuoteDiscount = createSafeAction(
 
 // ─── 转订单 ─────────────────────────────────────
 
+/**
+ * 将批准的报价单转换为正式订单
+ * 仅具有下订单权限的用户可执行
+ * @param data 包含报价单 ID 的对象
+ * @param context 执行上下文
+ */
 export const convertQuoteToOrder = createSafeAction(
   z.object({
     quoteId: z.string().uuid(),
@@ -244,6 +286,12 @@ export const convertQuoteToOrder = createSafeAction(
 
 // ─── 创建新版本 ─────────────────────────────────
 
+/**
+ * 根据现有报价单创建一个新版本作为迭代基础
+ * @param data 包含源报价单 ID 的对象
+ * @param context 执行上下文
+ * @returns 新版本报价单
+ */
 export const createNextVersion = createSafeAction(
   z.object({ quoteId: z.string().uuid() }),
   async (data, context) => {

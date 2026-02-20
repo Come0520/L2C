@@ -117,7 +117,8 @@ export function TicketList({
     const handleUpdate = async () => {
         if (!selectedTicket) return;
         setIsUpdating(true);
-        const res = await updateTicketStatus(selectedTicket.id, status as any, result);
+        // @ts-expect-error - Dropdown menu mapping
+        const res = await updateTicketStatus(selectedTicket.id, status, result);
         setIsUpdating(false);
         if (res.success) {
             toast.success('更新成功');

@@ -59,7 +59,7 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
                 if (Array.isArray(params.status) && params.status.length > 0) {
                     conditions.push(inArray(orders.status, params.status as (typeof orders.status._.data)[]));
                 } else if (typeof params.status === 'string' && params.status !== 'ALL') {
-                    conditions.push(eq(orders.status, params.status));
+                    conditions.push(eq(orders.status, params.status as (typeof orders.status._.data)));
                 }
             }
 
@@ -114,7 +114,6 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
     const result = await getCachedOrders();
 
     return {
-        success: true,
         data: result.data,
         total: result.total,
         totalPages: result.totalPages
@@ -137,9 +136,9 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
         },
     });
 
-    if (!order) return { success: false, error: 'Order not found' };
+    if (!order) throw new Error('Order not found');
 
-    return { success: true, data: order };
+    return order;
 });
 
 /**

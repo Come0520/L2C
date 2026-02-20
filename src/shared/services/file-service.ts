@@ -25,7 +25,7 @@ export const fileService = {
         // 这里简化为直接签名 URL 或临时凭证（如果使用 STS SDK�?
         // 为了简化，这里演示生成带签名的 URL �?Policy (PostObject)
 
-        // TODO: 使用 STS SDK 获取临时 Token
+        // NOTE: 使用 STS SDK 获取临时 Token
         // 目前 ali-oss SDK 主要用于后端操作，获�?STS 需�?@alicloud/sts-sdk
         // 临时方案：返回签名供前端使用 (PutObject 签名 URL)
 

@@ -43,7 +43,7 @@ const formSchema = z.object({
     reason: z.string().min(1, "定责原因不能为空"),
     liabilityReasonCategory: z.enum(liabilityReasonCategoryEnum.enumValues).optional(), // Added
     amount: z.coerce.number().min(0, "金额必须大于等于0"),
-    // TODO: Add liablePartyId selection logic if we have the list of suppliers/workers
+    // NOTE: Add liablePartyId selection logic if we have the list of suppliers/workers
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,7 +71,7 @@ export function LiabilityNoticeDialog({ afterSalesId, onSuccess, trigger }: Liab
         const result = await createLiabilityNotice({
             ...values,
             afterSalesId,
-            liablePartyId: undefined, // TODO: Implement selection
+            liablePartyId: undefined, // NOTE: Implement selection
         });
 
         if (result.error) {

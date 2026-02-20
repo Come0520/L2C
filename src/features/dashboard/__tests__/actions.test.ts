@@ -32,32 +32,32 @@ const mockSession = {
 describe('Dashboard Actions 集成测试', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue(mockSession);
+        vi.mocked(auth).mockResolvedValue(mockSession as never);
     });
 
     describe('getDashboardStats', () => {
         it('管理员应能获取全量统计数据', async () => {
             const result = await getDashboardStats({});
             expect(result.success).toBe(true);
-            const data: any = result.data;
+            const data = result.data as { role: string; cards: { title: string }[] };
             expect(data.role).toBe('ADMIN');
             expect(data.cards.length).toBeGreaterThan(0);
         });
 
         it('销售角色应获取个人统计数据', async () => {
             const salesSession = { ...mockSession, user: { ...mockSession.user, role: 'SALES' } };
-            (auth as any).mockResolvedValue(salesSession);
+            vi.mocked(auth).mockResolvedValue(salesSession as never);
 
             const result = await getDashboardStats({});
 
             expect(result.success).toBe(true);
-            const data: any = result.data;
+            const data = result.data as { role: string; cards: { title: string }[] };
             expect(data.role).toBe('SALES');
-            expect(data.cards.find((c: any) => c.title === '我的线索')).toBeDefined();
+            expect(data.cards.find((c) => c.title === '我的线索')).toBeDefined();
         });
 
         it('数据库异常时应返回错误响应', async () => {
-            (db.select as any).mockImplementationOnce(() => {
+            vi.mocked(db.select as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
                 throw new Error('DB_DOWN');
             });
 

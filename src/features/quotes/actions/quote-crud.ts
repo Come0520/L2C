@@ -20,6 +20,13 @@ import { updateBundleTotal } from './shared-helpers';
 
 // ─── 创建报价套餐 ───────────────────────────────
 
+/**
+ * 内部服务器操作：创建报价套餐
+ * @param data 套餐请求参数
+ * @param context 执行上下文，包含用户会话信息
+ * @returns 创建的套餐实例
+ * @throws 缺少租户信息时抛出错误
+ */
 export const createQuoteBundleActionInternal = createSafeAction(
   createQuoteBundleSchema,
   async (data, context) => {
@@ -55,12 +62,24 @@ export const createQuoteBundleActionInternal = createSafeAction(
   }
 );
 
+/**
+ * 客户端可调用的无上下文包装方法：创建报价套餐
+ * @param params 套餐请求参数
+ * @returns 包装了响应的套餐实例
+ */
 export async function createQuoteBundle(params: z.infer<typeof createQuoteBundleSchema>) {
   return createQuoteBundleActionInternal(params);
 }
 
 // ─── 创建报价单 ─────────────────────────────────
 
+/**
+ * 内部服务器操作：创建报价单
+ * @param data 报价单请求参数
+ * @param context 执行上下文，包含用户会话信息
+ * @returns 创建的报价单实例（自动设为根版本并可选择关联套餐）
+ * @throws 缺少租户信息时抛出错误
+ */
 const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
   const tenantId = context.session.user.tenantId;
   if (!tenantId) throw new Error('未授权访问：缺少租户信息');
@@ -102,12 +121,23 @@ const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (dat
   return newQuote;
 });
 
+/**
+ * 客户端可调用的无上下文包装方法：创建报价单
+ * @param params 报价单请求参数
+ * @returns 包装了响应的报价单实例
+ */
 export async function createQuote(params: z.infer<typeof createQuoteSchema>) {
   return createQuoteActionInternal(params);
 }
 
 // ─── 更新报价单 ─────────────────────────────────
 
+/**
+ * 更新报价单，包含自动重新计算折扣和最终金额的校验逻辑
+ * @param data 包含要更新属性的对象（含报价单ID）
+ * @param context 执行上下文，用于安全检查和审计日志
+ * @returns 包含成功状态的响应
+ */
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
   const { id, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
@@ -163,6 +193,12 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
 // ─── 复制报价单 ─────────────────────────────────
 
+/**
+ * 复制当前选定的报价单并可选择分配给新客户
+ * @param data 包含源报价单ID和可选的目标客户ID
+ * @param context 执行上下文，提供身份验证信息
+ * @returns 新建的副件报价单记录
+ */
 export const copyQuote = createSafeAction(
   z.object({
     quoteId: z.string().uuid(),

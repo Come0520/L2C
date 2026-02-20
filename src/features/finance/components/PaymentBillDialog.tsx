@@ -48,10 +48,20 @@ interface PaymentBillDialogProps {
     supplierName?: string; // used for both supplier and worker name display
     supplierId?: string; // or workerId
     amount?: string | number;
-     
-    initialStatement?: any; // 保持向后兼容，后续可定义具体类型
+
+    initialStatement?: object | null; // 保持向后兼容，后续可定义具体类型
 }
 
+/**
+ * 付款单弹窗组件 (Payment Bill Dialog)
+ * 
+ * 为供应商和劳务安装工提供统一的付款登记入口，允许手动填报或通过具体的应对账单代入预设数据。
+ * 支持多种付款方式选填、上传支付凭证和选择出账账户。
+ * 表单校验基于统一的 `createPaymentBillSchema` 进行约束，并在提交成功后刷新账单状态。
+ * 
+ * @param {PaymentBillDialogProps} props - 弹窗显隐控制与前置透传业务状态参数
+ * @returns {JSX.Element} 付款单填写交互弹窗
+ */
 export function PaymentBillDialog({
     open: controlledOpen,
     onOpenChange: setControlledOpen,
@@ -69,8 +79,8 @@ export function PaymentBillDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-     
-    const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
+
+    const [accounts, setAccounts] = useState<{ id: string; accountName: string; balance: string | number;[key: string]: unknown }[]>([]);
 
     useEffect(() => {
         if (open) {
@@ -216,8 +226,8 @@ export function PaymentBillDialog({
                                             </FormControl>
                                             <SelectContent>
                                                 {accounts.map(acc => (
-                                                    <SelectItem key={acc.id} value={acc.id}>
-                                                        {acc.accountName} (余额: ¥{parseFloat(acc.balance).toLocaleString()})
+                                                    <SelectItem key={acc.id} value={acc.id.toString()}>
+                                                        {acc.accountName} (余额: ¥{parseFloat(acc.balance.toString()).toLocaleString()})
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

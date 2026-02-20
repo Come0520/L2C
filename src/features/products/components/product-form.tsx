@@ -34,7 +34,7 @@ import { toast } from 'sonner';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
 
 
-type ProductFormValues = z.infer<typeof createProductSchema> & { id?: string };
+export type ProductFormValues = z.infer<typeof createProductSchema> & { id?: string };
 
 interface ProductFormProps {
     initialData?: Partial<ProductFormValues> & { specs?: Record<string, unknown> };
@@ -46,9 +46,12 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
     const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
     const [fetchingSuppliers, setFetchingSuppliers] = useState(false);
 
-    const form = useForm<ProductFormValues>({
+    const form = useForm<ProductFormValues, unknown, ProductFormValues>({
+        // zodResolver 接受 union schema（createProductSchema | updateProductSchema）时
+        // 第三泛型无法自动收窄，使用 as 断言确保 Control 类型一致
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as any,
+        // @ts-expect-error - React Hook Form / Zod mismatch
+        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema),
         defaultValues: initialData ? {
             ...initialData,
             attributes: initialData.specs || {},
@@ -101,7 +104,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
         fetchSuppliers();
     }, [fetchSuppliers]);
 
-    const [attributeSchema, setAttributeSchema] = useState<{
+    interface AttributeField {
         key: string;
         label: string;
         type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'SELECT';
@@ -109,17 +112,17 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
         options?: string[];
         unit?: string;
         placeholder?: string;
-    }[]>([]);
+    }
+
+    const [attributeSchema, setAttributeSchema] = useState<AttributeField[]>([]);
 
     // 使用 useCallback 稳定 fetchTemplate 引用
     const fetchTemplate = useCallback(async () => {
         if (!category) return;
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await import('../actions').then(mod => mod.getAttributeTemplate({ category: category as any }));
+            const result = await import('../actions').then(mod => mod.getAttributeTemplate({ category }));
             if (result.data?.templateSchema && Array.isArray(result.data.templateSchema)) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setAttributeSchema(result.data.templateSchema as any[]);
+                setAttributeSchema(result.data.templateSchema as AttributeField[]);
             } else {
                 setAttributeSchema([]);
             }

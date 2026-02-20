@@ -5,11 +5,17 @@ import { Button } from '@/shared/ui/button';
 import Search from 'lucide-react/dist/esm/icons/search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 
+export interface CustomerFilterValues {
+    search?: string;
+    type?: string;
+    level?: string;
+}
+
 interface CustomerFiltersProps {
     search?: string;
     type?: string;
     level?: string;
-    onSearch: (values: any) => void;
+    onSearch: (values: CustomerFilterValues) => void;
 }
 
 export function CustomerFilters({ search, type, level, onSearch }: CustomerFiltersProps) {

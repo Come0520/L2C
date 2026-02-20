@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/shared/ui/button';
 import { Edit, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
+import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -17,6 +18,7 @@ import {
 } from '@/shared/ui/alert-dialog';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
 import { ROLE_LABELS } from '@/features/settings/actions/user-actions';
+import { toast } from 'sonner';
 
 interface UserListProps {
   data: UserInfo[];
@@ -49,12 +51,17 @@ export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListPro
     try {
       if (confirmDialog.type === 'toggle') {
         await onToggleActive?.(confirmDialog.user.id);
+        toast.success(confirmDialog.user.isActive ? '账号已禁用' : '账号已启用');
       } else {
         await onDelete?.(confirmDialog.user.id);
+        toast.success('用户已删除');
       }
+      setConfirmDialog({ open: false, type: 'toggle', user: null });
+    } catch (error) {
+      toast.error('操作失败，请重试');
+      console.error('UserList detail action failed:', error);
     } finally {
       setLoading(false);
-      setConfirmDialog({ open: false, type: 'toggle', user: null });
     }
   };
 
@@ -78,11 +85,7 @@ export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListPro
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  暂无用户
-                </TableCell>
-              </TableRow>
+              <EmptyTableRow colSpan={5} message="暂无用户" />
             ) : (
               data.map((item) => (
                 <TableRow key={item.id} className={!item.isActive ? 'opacity-50' : ''}>

@@ -137,20 +137,16 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
 
                 const res = await importLeads(mappedData);
 
-                if (res.success && res.data) {
-                    const result = res.data;
-                    setImportResult(result);
+                const result = res;
+                setImportResult(result);
 
-                    if (result.successCount > 0) {
-                        toast.success(`成功导入 ${result.successCount} 条线索`);
-                        onSuccess?.();
-                    }
+                if (result.successCount > 0) {
+                    toast.success(`成功导入 ${result.successCount} 条线索`);
+                    onSuccess?.();
+                }
 
-                    if (result.errors.length > 0) {
-                        toast.warning(`${result.errors.length} 条数据导入失败，请查看详情`);
-                    }
-                } else {
-                    toast.error(res.error || '导入失败');
+                if (result.errors.length > 0) {
+                    toast.warning(`${result.errors.length} 条数据导入失败，请查看详情`);
                 }
 
             } catch (err) {

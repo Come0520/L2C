@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, uuid, boolean, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, uuid, boolean, pgEnum, index, uniqueIndex, decimal } from 'drizzle-orm/pg-core';
 import { products } from './catalogs';
 import { tenants, users } from './infrastructure';
 
@@ -50,6 +50,7 @@ export const inventoryLogs = pgTable('inventory_logs', {
     referenceType: text('reference_type'), // PO, ORDER, RETURN, ADJUST
     referenceId: uuid('reference_id'), // 关联单据 ID
     operatorId: uuid('operator_id').references(() => users.id),
+    costPrice: decimal('cost_price', { precision: 12, scale: 2 }), // 固化成本价 (Solidified cost price)
     description: text('description'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({

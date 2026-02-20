@@ -29,6 +29,7 @@ const APPROVER_ROLES = [
 export function OrderSettingsConfig() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const form = useForm<OrderSettingsFormData>({
         defaultValues: {
@@ -38,24 +39,32 @@ export function OrderSettingsConfig() {
     });
 
     useEffect(() => {
+        let isMounted = true;
         async function loadSettings() {
             try {
+                setError(null);
                 const settings = await getSettingsByCategory('ORDER');
-                if (settings && Object.keys(settings).length > 0) {
+                if (settings && Object.keys(settings).length > 0 && isMounted) {
                     form.reset(settings as unknown as OrderSettingsFormData);
                 }
-            } catch (error) {
-                console.error('加载订单设置失败:', error);
+            } catch (err) {
+                if (isMounted) {
+                    console.error('加载订单设置失败:', err);
+                    setError(err instanceof Error ? err.message : '获取配置失败');
+                    toast.error('加载订单设置失败');
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         }
         loadSettings();
+        return () => { isMounted = false; };
     }, [form]);
 
     const onSubmit = async (data: OrderSettingsFormData) => {
         try {
-            setIsSaving(true);
             setIsSaving(true);
             await batchUpdateSettings(data as unknown as Record<string, unknown>);
             toast.success('订单设置已保存');
@@ -68,9 +77,30 @@ export function OrderSettingsConfig() {
 
     if (isLoading) {
         return (
-            <Card>
-                <CardContent className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin" />
+            <div className="space-y-6 animate-pulse">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="h-5 w-32 bg-muted rounded"></div>
+                        <div className="h-3 w-48 bg-muted rounded mt-2"></div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="h-16 w-full bg-muted rounded-lg"></div>
+                        <div className="h-16 w-full bg-muted rounded-lg"></div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card className="border-destructive/50">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center text-destructive">
+                    <p className="text-sm font-medium mb-2">配置加载失败</p>
+                    <p className="text-xs text-muted-foreground mb-4">{error}</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                        刷新重试
+                    </Button>
                 </CardContent>
             </Card>
         );

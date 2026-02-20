@@ -71,7 +71,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
 
     const handleRequestConfirmation = async () => {
         try {
-            await requestCustomerConfirmationAction(order.id);
+            await requestCustomerConfirmationAction({ orderId: order.id });
             toast.success('已通知客户验收');
             router.refresh();
         } catch { toast.error('操作失败'); }

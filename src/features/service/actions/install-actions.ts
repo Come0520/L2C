@@ -1,8 +1,8 @@
 import { db } from '@/shared/api/db';
-import { installTasks, installItems, users } from '@/shared/api/schema';
+import { installTasks, users } from '@/shared/api/schema';
 import { eq, and, desc, like, inArray } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_cache } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Helper: Get Session
@@ -23,7 +23,8 @@ export async function getInstallTasks(filters?: { status?: string; search?: stri
             where: and(
                 eq(installTasks.tenantId, session.user.tenantId),
                 search ? like(installTasks.taskNo, `%${search}%`) : undefined,
-                status && status !== 'ALL' ? eq(installTasks.status, status as any) : undefined
+                // @ts-expect-error - 枚举类型可能比 DB 类型严格
+                status && status !== 'ALL' ? eq(installTasks.status, status) : undefined
             ),
             with: {
                 installer: true,
@@ -32,22 +33,29 @@ export async function getInstallTasks(filters?: { status?: string; search?: stri
             orderBy: [desc(installTasks.createdAt)]
         });
         return { success: true, data: list };
-    } catch (e) {
+    } catch {
         return { success: false, data: [] };
     }
 }
 
-export async function getInstallers() {
-    try {
-        const session = await getSession();
-        // P0-4 Fix: Filter by role WORKER/INSTALLER
-        const list = await db.query.users.findMany({
+const getCachedInstallers = unstable_cache(
+    async (tenantId: string) => {
+        return await db.query.users.findMany({
             where: and(
-                eq(users.tenantId, session.user.tenantId),
-                inArray(users.role, ['WORKER', 'INSTALLER']) // Assuming roles
+                eq(users.tenantId, tenantId),
+                inArray(users.role, ['WORKER', 'INSTALLER'])
             ),
             columns: { id: true, name: true, role: true }
         });
+    },
+    ['installers-list'],
+    { tags: ['users', 'installers'] }
+);
+
+export async function getInstallers() {
+    try {
+        const session = await getSession();
+        const list = await getCachedInstallers(session.user.tenantId);
         return { success: true, data: list };
     } catch {
         return { success: false, data: [] };
@@ -83,7 +91,7 @@ export async function dispatchInstallTask(data: {
         revalidatePath(`/projects/${taskId}`);
         return { success: true };
 
-    } catch (e) {
+    } catch {
         return { success: false, error: 'Dispatch Failed' };
     }
 }

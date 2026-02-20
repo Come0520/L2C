@@ -20,7 +20,9 @@ import {
 export interface RoomData {
     id: string;
     name: string;
-    [key: string]: any;
+    itemCount?: number;
+    subtotal?: number;
+    [key: string]: unknown;
 }
 
 export interface QuoteRoomAccordionProps {

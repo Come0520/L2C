@@ -88,6 +88,8 @@ digraph process {
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 
+**Important Rule for Subagents**: All subagents MUST be instructed to prefix their responses with an identity tag (e.g., `[Implementer Subagent]`, `[Spec Reviewer Subagent]`). This is critical when communicating in UIs like Antigravity where the subagent name might not be otherwise visible.
+
 ## Example Workflow
 
 ```
@@ -108,13 +110,13 @@ You: "User level (~/.config/superpowers/hooks/)"
 
 Implementer: "Got it. Implementing now..."
 [Later] Implementer:
-  - Implemented install-hook command
+  - [Implementer] Implemented install-hook command
   - Added tests, 5/5 passing
   - Self-review: Found I missed --force flag, added it
   - Committed
 
 [Dispatch spec compliance reviewer]
-Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
+Spec reviewer: [Spec Reviewer] ✅ Spec compliant - all requirements met, nothing extra
 
 [Get git SHAs, dispatch code quality reviewer]
 Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.

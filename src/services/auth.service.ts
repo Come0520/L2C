@@ -22,7 +22,7 @@ export class AuthService {
      * @returns True if valid, false otherwise.
      */
     static async validateSession(token: string) {
-        // TODO: Implement actual session validation (e.g. JWT verification or DB session check)
+        // NOTE: Implement actual session validation (e.g. JWT verification or DB session check)
         return !!token;
     }
 

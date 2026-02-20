@@ -1,4 +1,4 @@
-import { describe, test, vi, beforeEach } from 'vitest';
+import { describe, test, vi, beforeEach, Mock } from 'vitest';
 
 // Hoist mocks to avoid DB connection issues
 const { mockDb } = vi.hoisted(() => {
@@ -50,7 +50,7 @@ describe('Quote Lifecycle Workflow', () => {
     });
 
     test('submit should trigger risk check', async () => {
-        (db.query.quotes.findFirst as any).mockResolvedValue({
+        (db.query.quotes.findFirst as Mock).mockResolvedValue({
             id: 'q1',
             status: 'DRAFT',
             totalAmount: '1000',
@@ -59,7 +59,7 @@ describe('Quote Lifecycle Workflow', () => {
         });
 
         // Mock Permission/Risk Check
-        (checkDiscountRisk as any).mockReturnValue({
+        (checkDiscountRisk as Mock).mockReturnValue({
             isRisk: true,
             hardStop: false,
             reason: ['Discount too high']

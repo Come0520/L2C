@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
     insert: vi.fn(),
     update: vi.fn(),
     set: vi.fn(),
-    mockRedis: { incr: vi.fn(), get: vi.fn() } as any,
+    mockRedis: { incr: vi.fn(), get: vi.fn() } as unknown,
 }));
 
 mocks.insert.mockReturnValue({ values: vi.fn(() => ({ returning: mocks.returning })) });
@@ -46,9 +46,10 @@ vi.mock('@/shared/middleware/rate-limit', () => ({ checkRateLimit: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: vi.fn() }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
+import type { Session } from 'next-auth';
 const UUID_SHARE = '33333333-3333-4333-8333-333333333333';
 const UUID_ITEM = '44444444-4444-4444-8444-444444444444';
-const mockSession = { user: { id: 'u1', tenantId: 't1' } } as any;
+const mockSession = { user: { id: 'u1', tenantId: 't1' } } as unknown as Session;
 
 describe('createShareLink() Action', () => {
     beforeEach(() => {
@@ -73,8 +74,8 @@ describe('getShareContent() Action', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.mockRedis = { incr: vi.fn(), get: vi.fn() }; // Restore redis
-        vi.mocked(headers).mockResolvedValue(new Map([['x-forwarded-for', '1.2.3.4']]) as any);
-        vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as any);
+        vi.mocked(headers).mockResolvedValue(new Map([['x-forwarded-for', '1.2.3.4']]) as unknown as Headers);
+        vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 10, remaining: 9, reset: 0 });
         vi.spyOn(Math, 'random').mockReturnValue(0.5);
     });
 
@@ -139,7 +140,7 @@ describe('getShareContent() Action', () => {
     });
 
     it('当处理频率过快时应触发限流错误', async () => {
-        vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false } as any);
+        vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 10, remaining: 0, reset: 0 });
 
         await expect(getShareContent(UUID_SHARE)).rejects.toThrow(ShowroomErrors.SHARE_RATE_LIMIT.message);
     });

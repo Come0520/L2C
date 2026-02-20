@@ -93,13 +93,13 @@ describe('Distribution Engine', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue({ user: { id: 'admin', tenantId } });
-        (getSettingInternal as any).mockResolvedValue('ROUND_ROBIN');
+        vi.mocked(auth).mockResolvedValue({ user: { id: 'admin', tenantId } } as never);
+        vi.mocked(getSettingInternal).mockResolvedValue('ROUND_ROBIN');
     });
 
     describe('configureDistributionStrategy', () => {
         it('should require authentication', async () => {
-            (auth as any).mockResolvedValue(null);
+            vi.mocked(auth).mockResolvedValue(null);
             await expect(configureDistributionStrategy('MANUAL')).rejects.toThrow('Unauthorized');
         });
 
@@ -128,7 +128,7 @@ describe('Distribution Engine', () => {
                 query: { users: { findMany: vi.fn() } },
             };
             mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
-            (getSettingInternal as any).mockResolvedValue('MANUAL');
+            vi.mocked(getSettingInternal).mockResolvedValue('MANUAL');
 
             const result = await distributeToNextSales(tenantId);
             expect(result.strategy).toBe('MANUAL');
@@ -170,7 +170,7 @@ describe('Distribution Engine', () => {
                 }),
             };
             mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
-            (getSettingInternal as any).mockResolvedValue('ROUND_ROBIN');
+            vi.mocked(getSettingInternal).mockResolvedValue('ROUND_ROBIN');
 
             const result = await distributeToNextSales(tenantId);
 

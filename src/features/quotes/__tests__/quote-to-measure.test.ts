@@ -32,10 +32,9 @@ vi.mock('@/shared/utils/doc-no', () => ({
     generateDocNo: vi.fn().mockResolvedValue('MS-001'),
 }));
 
-// TODO: 模块 '../../actions/measure-actions' 不存在，需要先实现
-// import { createMeasureFromQuote } from '../../actions/measure-actions';
+import { createMeasureFromQuote } from '../actions/measure-integration';
 
-describe.skip('createMeasureFromQuote - 跳过：模块未实现', () => {
+describe('createMeasureFromQuote - 验证报价转量尺', () => {
     const VALID_QUOTE_ID = 'quote-123';
     const VALID_LEAD_ID = 'lead-123';
     const VALID_CUSTOMER_ID = 'cust-123';
@@ -51,7 +50,11 @@ describe.skip('createMeasureFromQuote - 跳过：模块未实现', () => {
 
     it('应验证报价单是否存在', async () => {
         mockDbQueryStrings.findFirst.mockResolvedValue(null);
-        const result = await createMeasureFromQuote({ quoteId: VALID_QUOTE_ID });
+        const result = await createMeasureFromQuote({
+            quoteId: VALID_QUOTE_ID,
+            customerId: VALID_CUSTOMER_ID,
+            leadId: VALID_LEAD_ID
+        });
         expect(result.success).toBe(false);
         expect(result.message).toContain('不存在');
     });
@@ -62,8 +65,11 @@ describe.skip('createMeasureFromQuote - 跳过：模块未实现', () => {
             leadId: VALID_LEAD_ID,
             customerId: VALID_CUSTOMER_ID,
         });
-
-        const result = await createMeasureFromQuote({ quoteId: VALID_QUOTE_ID });
+        const result = await createMeasureFromQuote({
+            quoteId: VALID_QUOTE_ID,
+            customerId: VALID_CUSTOMER_ID,
+            leadId: VALID_LEAD_ID
+        });
 
         expect(result.success).toBe(true);
         expect(mockDbInsert).toHaveBeenCalled();

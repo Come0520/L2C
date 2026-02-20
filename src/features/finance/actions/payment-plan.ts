@@ -114,6 +114,18 @@ const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema
     };
 });
 
+/**
+ * 创建/更新收款计划 (Create Payment Plan)
+ * 
+ * 为指定的 AR 对账单创建或覆写多期收款计划节点。
+ * 使用强一致性事务，首先清除旧计划，再按比例和顺序分配金额。
+ * 针对最后一期自动抹平尾差金额。
+ * 并记录创建收款计划的审计日志 (F-18/F-32)。
+ * 
+ * @param {z.infer<typeof createPaymentPlanSchema>} params - 包含对账单ID及收款节点数组定义
+ * @returns {Promise<any>} 返回新创建的计划节点数据
+ * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
+ */
 export async function createPaymentPlan(params: z.infer<typeof createPaymentPlanSchema>) {
     return createPaymentPlanActionInternal(params);
 }
@@ -157,6 +169,16 @@ const getPaymentDueRemindersActionInternal = createSafeAction(getDueRemindersSch
 
 });
 
+/**
+ * 获取收款逾期提醒 (Get Payment Due Reminders)
+ * 
+ * 查询未来 N 天内（默认7天）有账期待收且对应 AR 状态未结清（pendingAmount > 0）的款项提醒。
+ * 用于驱动销售和财务人员的催款和回款跟踪动作。
+ * 
+ * @param {z.infer<typeof getDueRemindersSchema>} params - 包含提前天数
+ * @returns {Promise<any>} 返回预期内的催款汇总数据和明细清单（最多20条）
+ * @throws {Error} 未授权时返回错误对象
+ */
 export async function getPaymentDueReminders(params: z.infer<typeof getDueRemindersSchema>) {
     return getPaymentDueRemindersActionInternal(params);
 }
@@ -231,6 +253,17 @@ const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteO
     });
 });
 
+/**
+ * 提交坏账核销申请 (Submit Bad Debt Write Off)
+ * 
+ * 针对逾期久远且确实无法收回的烂账，财务人员可在此发起坏账核销流程。
+ * 核销申请的金额不得大于该对账单的剩余待收金额。
+ * 会生成对应的坏账申请审批记录，并留下首道流转审计日志 (`BAD_DEBT_SUBMIT`)。
+ * 
+ * @param {z.infer<typeof submitBadDebtWriteOffSchema>} params - 包含对账单ID、申请核销金额、原因和凭证链接
+ * @returns {Promise<any>} 返回包含申请详细的数据和审批流转成功状态
+ * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
+ */
 export async function submitBadDebtWriteOff(params: z.infer<typeof submitBadDebtWriteOffSchema>) {
     return submitBadDebtWriteOffActionInternal(params);
 }
@@ -316,6 +349,18 @@ const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtAppr
     });
 });
 
+/**
+ * 审批坏账核销申请 (Process Bad Debt Approval)
+ * 
+ * 对应收坏账的申请进行最终的核准审批。
+ * 当审批通过时，扣减应收账单的待收金额，如果由于该笔坏账抹平了待收差额，
+ * 则账单状态将直接转变为 `BAD_DEBT` (坏账完结) 或 `PARTIAL` (部分收款后转坏账)。
+ * 并在底层记录流转操作和详细金额变动的审计日志。
+ * 
+ * @param {z.infer<typeof processBadDebtApprovalSchema>} params - 包含对账单ID、审批通过状态、核准核销金额及可选备注
+ * @returns {Promise<any>} 返回审批动作的生效数据和成功状态
+ * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
+ */
 export async function processBadDebtApproval(params: z.infer<typeof processBadDebtApprovalSchema>) {
     return processBadDebtApprovalActionInternal(params);
 }

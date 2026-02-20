@@ -190,7 +190,7 @@ export function QuoteItemExpandRow({
             editedAttrs.groundClearance !== undefined
               ? Number(editedAttrs.groundClearance)
               : undefined,
-        },
+        } as Record<string, any>,
       });
       toast.success('配置已保存');
       onSave?.();

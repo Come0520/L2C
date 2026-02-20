@@ -24,7 +24,7 @@ describe('Leads Queries', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue({
+        vi.mocked(auth).mockResolvedValue({
             user: { id: 'user-1', tenantId: tenantId }
         });
     });
@@ -43,7 +43,7 @@ describe('Leads Queries', () => {
             const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
             const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
 
-            (db.select as any).mockImplementation(mockSelect);
+            vi.mocked(db.select).mockImplementation(mockSelect);
 
             const result = await getLeadFunnelStats();
 
@@ -52,7 +52,7 @@ describe('Leads Queries', () => {
         });
 
         it('should throw error if user is not authenticated', async () => {
-            (auth as any).mockResolvedValue(null);
+            vi.mocked(auth).mockResolvedValue(null);
             await expect(getLeadFunnelStats()).rejects.toThrow('Unauthorized');
         });
     });

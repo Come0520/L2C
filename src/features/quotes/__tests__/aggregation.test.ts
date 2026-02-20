@@ -3,7 +3,7 @@
  * @vitest-environment node
  */
 import dotenv from 'dotenv';
-const dotenvResult = dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env' });
 
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
@@ -42,7 +42,7 @@ describe.skip('Quote Bundle Aggregation', () => {
             // Setup Auth Mock Return
             vi.mocked(auth).mockResolvedValue({
                 user: { id: userId, tenantId: tenantId, role: 'USER' }
-            } as any);
+            } as unknown as Awaited<ReturnType<typeof auth>>);
 
             // Get Customer
             const customer = await db.query.customers.findFirst({
@@ -175,7 +175,6 @@ vi.mock('next/cache', () => ({
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { createQuoteBundle, getQuoteBundleById, createQuote, createQuoteItem } from '../actions';
-import { getImportableMeasureTasks } from '../actions/measurement-actions';
 
 describe('Quote Bundle Aggregation', () => {
     let customerId: string;
@@ -187,9 +186,9 @@ describe('Quote Bundle Aggregation', () => {
         // Setup default mocks
         vi.mocked(auth).mockResolvedValue({
             user: { id: USER_ID, tenantId: TENANT_ID, role: 'USER' }
-        } as any);
+        } as unknown as Awaited<ReturnType<typeof auth>>);
 
-        vi.mocked(db.query.users.findFirst).mockResolvedValue({ id: USER_ID, tenantId: TENANT_ID } as any);
+        vi.mocked(db.query.users.findFirst).mockResolvedValue({ id: USER_ID, tenantId: TENANT_ID } as unknown as NonNullable<Awaited<ReturnType<typeof db.query.users.findFirst>>>);
 
         customerId = 'cust-123';
         leadId = 'lead-123';
@@ -219,7 +218,6 @@ describe('Quote Bundle Aggregation', () => {
         });
 
         if (!quote1.success || !quote1.data) {
-            console.error('Create Quote 1 Failed:', quote1);
             throw new Error(`Create Quote 1 Failed: ${quote1.error}`);
         }
 
@@ -234,13 +232,11 @@ describe('Quote Bundle Aggregation', () => {
         });
 
         if (!item1.success) {
-            console.error('Create Item 1 Failed:', item1);
             throw new Error(`Create Item 1 Failed: ${item1.error}`);
         }
 
         // Verify Bundle Total = 1000
         let b = await getQuoteBundleById({ id: bundleId });
-        console.log('Bundle Check 1:', b);
         expect(Number(b.data.totalAmount)).toBe(1000);
         expect(Number(b.data.finalAmount)).toBe(1000);
 
@@ -253,7 +249,6 @@ describe('Quote Bundle Aggregation', () => {
         });
 
         if (!quote2.success || !quote2.data) {
-            console.error('Create Quote 2 Failed:', quote2);
             throw new Error(`Create Quote 2 Failed: ${quote2.error}`);
         }
 

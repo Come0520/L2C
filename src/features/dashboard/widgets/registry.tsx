@@ -35,7 +35,7 @@ export interface WidgetMeta {
     defaultSize: { w: number; h: number };
 }
 
-export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
+export const WIDGET_REGISTRY: Partial<Record<WidgetType, WidgetMeta>> = {
     // ===== 销售专属 =====
     'sales-target': {
         type: 'sales-target',
@@ -237,10 +237,47 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
 };
 
 /**
+ * Widget 组件映射表 - 使用 React.lazy 实现懒加载
+ */
+export const WIDGET_COMPONENTS: Partial<Record<WidgetType, React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>>> = {
+    // 销售专属
+    'sales-target': React.lazy(() => import('./sales-widgets').then(m => ({ default: m.SalesTargetWidget }))),
+    'sales-leads': React.lazy(() => import('./sales-widgets').then(m => ({ default: m.SalesLeadsWidget }))),
+    'sales-conversion': React.lazy(() => import('./sales-widgets').then(m => ({ default: m.SalesConversionWidget }))),
+    'sales-avg-order': React.lazy(() => import('./sales-widgets').then(m => ({ default: m.SalesAvgOrderWidget }))),
+
+    // 管理层
+    'team-sales': React.lazy(() => import('./manager-widgets').then(m => ({ default: m.TeamSalesWidget }))),
+    'team-target': React.lazy(() => import('./manager-widgets').then(m => ({ default: m.TeamTargetWidget }))),
+    'team-leaderboard': React.lazy(() => import('./manager-widgets').then(m => ({ default: m.TeamLeaderboardWidget }))),
+    'executive-summary': React.lazy(() => import('./executive-summary-widget').then(m => ({ default: m.ExecutiveSummaryWidget }))),
+    'conversion-funnel': React.lazy(() => import('./service-widgets').then(m => ({ default: m.ConversionFunnelWidget }))),
+    'enhanced-funnel': React.lazy(() => import('./enhanced-funnel-widget').then(m => ({ default: m.EnhancedFunnelWidget }))),
+
+    // 派单员
+    'pending-measure': React.lazy(() => import('./service-widgets').then(m => ({ default: m.PendingMeasureWidget }))),
+    'pending-install': React.lazy(() => import('./service-widgets').then(m => ({ default: m.PendingInstallWidget }))),
+    'today-schedule': React.lazy(() => import('./service-widgets').then(m => ({ default: m.TodayScheduleWidget }))),
+
+    // 财务
+    'ar-summary': React.lazy(() => import('./service-widgets').then(m => ({ default: m.ARSummaryWidget }))),
+    'ar-aging': React.lazy(() => import('./ar-aging-widget').then(m => ({ default: m.ARAgingWidget }))),
+    'ap-summary': React.lazy(() => import('./service-widgets').then(m => ({ default: m.APSummaryWidget }))),
+    'cash-flow': React.lazy(() => import('./service-widgets').then(m => ({ default: m.CashFlowWidget }))),
+    'cash-flow-forecast': React.lazy(() => import('./cash-flow-forecast-widget').then(m => ({ default: m.CashFlowForecastWidget }))),
+
+    // 通用
+    'pending-approval': React.lazy(() => import('./manager-widgets').then(m => ({ default: m.PendingApprovalWidget }))),
+    'sales-trend': React.lazy(() => import('./manager-widgets').then(m => ({ default: m.SalesTrendWidget }))),
+    'channel-performance': React.lazy(() => import('./channel-widgets').then(m => ({ default: m.ChannelPerformanceWidget }))),
+};
+
+/**
  * 根据用户角色过滤可用的 Widget
  */
 export function getAvailableWidgets(role: string): WidgetMeta[] {
-    return Object.values(WIDGET_REGISTRY).filter(
+    const widgets = Object.values(WIDGET_REGISTRY).filter((widget): widget is WidgetMeta => widget !== undefined);
+    return widgets.filter(
         widget => widget.permissions.includes(role) || widget.permissions.includes('ALL')
     );
 }

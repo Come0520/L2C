@@ -16,13 +16,20 @@ import { productCategoryEnum } from '@/shared/api/schema';
 const attributeFieldSchema = z.object({
     key: z.string().min(1, 'Key is required').regex(/^[a-zA-Z0-9_]+$/, 'Key must be alphanumeric'),
     label: z.string().min(1, 'Label is required'),
-    type: z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'SELECT']),
+    type: z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'SELECT', 'DATE', 'TEXTAREA', 'COLOR', 'IMAGE', 'RANGE']),
     required: z.boolean().default(false),
-    options: z.array(z.string()).optional(), // Only for SELECT
+    options: z.array(z.string()).optional(),
     unit: z.string().optional(),
     placeholder: z.string().optional(),
-    // 报价单快速录入时显示此字段
     showInQuote: z.boolean().default(false),
+    // 扩展字段
+    min: z.number().optional(),
+    max: z.number().optional(),
+    step: z.number().optional(),
+    maxLength: z.number().optional(),
+    rows: z.number().optional(),
+    description: z.string().optional(),
+    defaultValue: z.any().optional(),
 });
 
 const templateSchemaZod = z.object({

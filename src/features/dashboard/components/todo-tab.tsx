@@ -1,5 +1,5 @@
 "use client";
-
+import React, { useState } from 'react';
 import useSWR from "swr";
 import { fetcher } from "@/shared/lib/fetcher";
 import { Card, CardContent } from "@/shared/ui/card";
@@ -74,15 +74,9 @@ export function TodoTab() {
         });
     };
 
-    interface ActionResponse {
-        success: boolean;
-        error?: string;
-        data?: unknown;
-    }
-
     /** 执行操作后刷新列表（支持乐观更新） */
     const handleAction = async (
-        actionFn: () => Promise<ActionResponse>,
+        actionFn: () => Promise<unknown>,
         itemId: string,
         category: TodoCategory | null = null
     ) => {
@@ -113,7 +107,7 @@ export function TodoTab() {
         try {
             const res = await actionFn();
             if (res && typeof res === 'object' && 'success' in res && res.success === false) {
-                throw new Error(res.error || "操作失败");
+                throw new Error((res as any).error || "操作失败");
             }
             toast.success("操作成功");
         } catch (err: unknown) {
@@ -166,11 +160,11 @@ export function TodoTab() {
                 <Button
                     variant="ghost"
                     size="sm"
-                    onClick={fetchTodos}
-                    disabled={loading}
+                    onClick={() => mutate()}
+                    disabled={isLoading}
                     className="text-xs"
                 >
-                    <RefreshCw className={cn("h-3 w-3 mr-1", loading && "animate-spin")} />
+                    <RefreshCw className={cn("h-3 w-3 mr-1", isLoading && "animate-spin")} />
                     刷新
                 </Button>
             </div>
@@ -251,7 +245,7 @@ export function TodoTab() {
 
 // ============ 分类表格路由 ============
 
-function TodoCategoryTable({
+const TodoCategoryTable = React.memo(function TodoCategoryTable({
     category,
     data,
     actionLoading,
@@ -260,7 +254,7 @@ function TodoCategoryTable({
     category: TodoCategory;
     data: TodosResponse;
     actionLoading: string | null;
-    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
+    onAction: (fn: () => Promise<unknown>, id: string, category: TodoCategory) => void;
 }) {
     switch (category) {
         case "LEAD":
@@ -276,18 +270,18 @@ function TodoCategoryTable({
         default:
             return null;
     }
-}
+});
 
 // ============ 线索待办表格 ============
 
-function LeadTable({
+const LeadTable = React.memo(function LeadTable({
     items,
     actionLoading,
     onAction,
 }: {
     items: LeadTodoItem[];
     actionLoading: string | null;
-    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
+    onAction: (fn: () => Promise<unknown>, id: string, category: TodoCategory) => void;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -368,18 +362,18 @@ function LeadTable({
             </table>
         </div>
     );
-}
+});
 
 // ============ 订单待办表格 ============
 
-function OrderTable({
+const OrderTable = React.memo(function OrderTable({
     items,
     actionLoading,
     onAction,
 }: {
     items: OrderTodoItem[];
     actionLoading: string | null;
-    onAction: (fn: () => Promise<any>, id: string, category: TodoCategory) => void;
+    onAction: (fn: () => Promise<unknown>, id: string, category: TodoCategory) => void;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -440,7 +434,7 @@ function OrderTable({
             </table>
         </div>
     );
-}
+});
 
 // ============ 采购单表格 ============
 

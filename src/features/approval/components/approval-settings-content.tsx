@@ -52,7 +52,7 @@ export function ApprovalSettingsContent({ initialFlows }: ApprovalSettingsConten
                 <div className="flex-1 mt-4">
                     <ApprovalFlowDesigner
                         flowId={selectedFlow.id}
-                        initialData={selectedFlow.definition as any}
+                        initialData={selectedFlow.definition as { nodes: import('@xyflow/react').Node[]; edges: import('@xyflow/react').Edge[] }}
                     />
                 </div>
             </div>

@@ -50,7 +50,7 @@ export function SmartWorkerSelector({ value, onSelect, scheduledDate: _scheduled
                     const workerList = result.data.map(user => ({
                         id: user.id,
                         name: user.name,
-                        workload: 0,  // TODO: 后续可从 API 获取实际工作负载
+                        workload: 0,  // NOTE: 后续可从 API 获取实际工作负载
                     }));
                     setWorkers(workerList);
                 } else {

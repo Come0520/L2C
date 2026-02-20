@@ -17,7 +17,7 @@ export default async function QuoteBundleDetailPage({
     ]);
     const [result, plans] = await Promise.all([
         getQuoteBundleById({ id }),
-        session?.user?.tenantId ? fetchQuotePlans(session.user.tenantId) : Promise.resolve({})
+        session?.user?.tenantId ? fetchQuotePlans(session.user.tenantId) : Promise.resolve([] as any[])
     ]);
 
     if (!result.success || !result.data) {

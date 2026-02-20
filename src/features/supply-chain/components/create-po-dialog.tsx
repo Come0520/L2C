@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getProducts } from '@/features/products/actions/queries'; // Import getProducts
-
+import { z } from 'zod';
+import { getProducts } from '@/features/products/actions/queries';
+import type { Product } from '@/features/products/types';
 import { toast } from 'sonner';
 import {
     Dialog,
@@ -50,7 +51,7 @@ import { Check, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useRouter } from 'next/navigation';
 
-import { CreatePOFormData, createPOSchema } from '@/features/supply-chain/schemas';
+import { createPOSchema } from '@/features/supply-chain/schemas';
 import { createPurchaseOrder } from '@/features/supply-chain/actions/po-actions';
 
 // Removed duplicate type CreatePOFormData definition if it existed or ensuring usage of imported one.
@@ -64,8 +65,7 @@ import { createPurchaseOrder } from '@/features/supply-chain/actions/po-actions'
 
 
 
-// Infer Product type from the getProducts action return type
-type Product = Extract<Awaited<ReturnType<typeof getProducts>>, { success: true }>['data']['data'][number];
+// Product type is imported from schema
 
 
 
@@ -75,9 +75,10 @@ interface CreatePODialogProps {
 
 export function CreatePODialog({ suppliers }: CreatePODialogProps) {
     const [open, setOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
-    const form = useForm<CreatePOFormData>({
+    const form = useForm<z.input<typeof createPOSchema>>({
         resolver: zodResolver(createPOSchema),
         defaultValues: {
             supplierId: '',
@@ -92,20 +93,24 @@ export function CreatePODialog({ suppliers }: CreatePODialogProps) {
         name: 'items',
     });
 
-    const onSubmit: SubmitHandler<CreatePOFormData> = async (data) => {
-        try {
-            const result = await createPurchaseOrder(data);
-            if (!result.success) {
-                toast.error(result.error || '验证失败');
-                return;
+    const onSubmit: SubmitHandler<z.input<typeof createPOSchema>> = (data) => {
+        startTransition(async () => {
+            try {
+                const parsedData = createPOSchema.parse(data);
+                const result = await createPurchaseOrder(parsedData);
+                if (!result.success) {
+                    toast.error('创建失败', { description: result.error || '验证失败' });
+                    return;
+                }
+                toast.success('采购单创建成功');
+                setOpen(false);
+                form.reset();
+                router.refresh();
+            } catch (error) {
+                const message = error instanceof Error ? error.message : '未知系统错误';
+                toast.error('创建失败', { description: message });
             }
-            toast.success('采购单创建成功');
-            setOpen(false);
-            form.reset();
-            router.refresh();
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : '创建失败');
-        }
+        });
     };
 
     const totalAmount = watch('items').reduce((sum, item) => {
@@ -210,7 +215,7 @@ export function CreatePODialog({ suppliers }: CreatePODialogProps) {
                                                 />
                                             </TableCell>
                                             <TableCell className="p-2 text-right font-medium">
-                                                ¥{((watch(`items.${index}.quantity`) || 0) * (watch(`items.${index}.unitCost`) || 0)).toFixed(2)}
+                                                ¥{(Number(watch(`items.${index}.quantity`) || 0) * Number(watch(`items.${index}.unitCost`) || 0)).toFixed(2)}
                                             </TableCell>
                                             <TableCell className="p-2">
                                                 <Button
@@ -236,8 +241,8 @@ export function CreatePODialog({ suppliers }: CreatePODialogProps) {
                         </div>
                         <div className="flex space-x-2">
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>取消</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Button type="submit" disabled={isPending || isSubmitting}>
+                                {(isPending || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 创建采购单
                             </Button>
                         </div>
@@ -265,7 +270,7 @@ function ProductSelect({ value, onSelect }: { value: string, onSelect: (product:
             try {
                 const res = await getProducts({ page: 1, pageSize: 20, search: search, isActive: true });
                 if (res?.data) {
-                    setProducts(res.data);
+                    setProducts(res.data as unknown as Product[]);
                 }
             } catch (err) {
                 console.error(err);
@@ -278,7 +283,7 @@ function ProductSelect({ value, onSelect }: { value: string, onSelect: (product:
         return () => clearTimeout(timer);
     }, [open, search]);
 
-    const selectedProduct = products.find(p => p.id === value) || (value ? { name: '已选择产品', id: value, sku: 'unknown' } : null); // Simple fallback display
+    const selectedProduct = products.find(p => p.id === value) || (value ? { name: '已选择产品', id: value, sku: 'unknown', purchasePrice: "0", productType: 'FINISHED', defaultSupplierId: null } as Product : null);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>

@@ -145,7 +145,7 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
                                         </div>
                                         <div className="space-y-2">
                                             <Label>默认方案</Label>
-                                            <Select value={defaultPlan} onValueChange={(v: any) => setDefaultPlan(v)}>
+                                            <Select value={defaultPlan} onValueChange={(v: 'ECONOMIC' | 'COMFORT' | 'LUXURY') => setDefaultPlan(v)}>
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>

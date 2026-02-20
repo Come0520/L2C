@@ -24,9 +24,11 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { Badge } from '@/shared/ui/badge';
 
+import { Product } from '../types';
+
 interface ProductTableProps {
-    data: any[];
-    onEdit: (product: any) => void;
+    data: Product[];
+    onEdit: (product: Product) => void;
     onToggleStatus: (id: string, currentStatus: boolean) => void;
     onDelete: (id: string) => void;
 }
@@ -43,8 +45,8 @@ const getCategoryLabel = (category: string) => {
 };
 
 interface ProductTableRowProps {
-    item: any;
-    onEdit: (product: any) => void;
+    item: Product;
+    onEdit: (product: Product) => void;
     onToggleStatus: (id: string, currentStatus: boolean) => void;
     onDelete: (id: string) => void;
 }
@@ -79,7 +81,7 @@ const ProductTableRow = React.memo(function ProductTableRow({ item, onEdit, onTo
                         <DropdownMenuItem onClick={() => onEdit(item)}>
                             <Edit className="mr-2 h-4 w-4" /> 编辑
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onToggleStatus(item.id, item.isActive)}>
+                        <DropdownMenuItem onClick={() => onToggleStatus(item.id, !!item.isActive)}>
                             {item.isActive ? (
                                 <><PowerOff className="mr-2 h-4 w-4" /> 下架</>
                             ) : (

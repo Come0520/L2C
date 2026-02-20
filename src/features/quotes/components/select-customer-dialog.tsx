@@ -84,7 +84,6 @@ export function SelectCustomerDialog({
                     <CustomerCombobox
                         value={selectedCustomerId}
                         onChange={handleCustomerChange}
-                        userId={userId}
                         tenantId={tenantId}
                     />
                 </div>

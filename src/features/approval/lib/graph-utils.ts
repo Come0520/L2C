@@ -28,14 +28,20 @@ interface NodeData {
 }
 
 /**
- * Convert Visual Graph (Nodes + Edges) into a linear sequence of Approval Nodes.
- * Note: This simplified version flattens the graph. 
- * Complex parallel branches might share sortOrder or need advanced logic.
+ * 将可视化审批图（节点和边）展平为线性执行的审批节点序列。
  * 
- * Strategy:
- * 1. Find Start Node.
- * 2. Traverse edges.
- * 3. Handle Condition Nodes by attaching conditions to subsequent Approver Nodes.
+ * 转换策略：
+ * 1. 查找起点节点 (Start Node)
+ * 2. 通过 BFS (广度优先搜索) 遍历图的边
+ * 3. 处理条件节点 (Condition Node)，将条件附加到链路后续的审批节点上
+ * 4. 按层级生成线性 sortOrder，确保基础的拓扑执行顺序
+ * 
+ * *注意：此为简化版本，适用于典型的线性或简单分支审批流，复杂并发分支可能需要高级调度引擎。*
+ * 
+ * @param nodes - ReactFlow 格式的节点数组
+ * @param edges - ReactFlow 格式的边数组
+ * @returns 扁平化、包含执行顺序和规则条件的审批节点数组
+ * @throws 当检测到异常循环或超长链路（>500次迭代）时抛出错误
  */
 export function flattenApprovalGraph(nodes: ApprovalNode[], edges: ApprovalEdge[]): FlatNode[] {
     const nodeData = (n: ApprovalNode): NodeData => (n.data || {}) as NodeData;

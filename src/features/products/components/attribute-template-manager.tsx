@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { upsertAttributeTemplate, getAttributeTemplate } from '../actions/templates';
@@ -41,6 +41,7 @@ const attributeFieldSchema = z.object({
     options: z.array(z.string()).optional(), // For SELECT type
     unit: z.string().optional(), // For NUMBER/RANGE types
     placeholder: z.string().optional(),
+    showInQuote: z.boolean().default(false), // Added missing field
     // [Product-01] 新增数值类型配置
     min: z.number().optional(), // For NUMBER/RANGE
     max: z.number().optional(), // For NUMBER/RANGE
@@ -62,13 +63,11 @@ const templateFormSchema = z.object({
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
 export function AttributeTemplateManager() {
-    const [selectedCategory, setSelectedCategory] = useState<string>('CURTAIN_FABRIC');
+    const [selectedCategory, setSelectedCategory] = useState<TemplateFormValues['category']>('CURTAIN_FABRIC');
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<TemplateFormValues>({
-        // 注意: zod 4 与 @hookform/resolvers 存在类型不兼容问题，运行时正常
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(templateFormSchema) as any,
+        resolver: zodResolver(templateFormSchema) as unknown as Resolver<TemplateFormValues>,
         defaultValues: {
             category: 'CURTAIN_FABRIC' as const,
             templateSchema: [],
@@ -85,13 +84,13 @@ export function AttributeTemplateManager() {
         const loadTemplate = async () => {
             setIsLoading(true);
             try {
-                const result = await getAttributeTemplate({ category: selectedCategory as any });
+                const result = await getAttributeTemplate({ category: selectedCategory });
                 if (result.error) {
                     toast.error(result.error);
                 } else if (result.data) {
                     // Force reset with new data
                     form.reset({
-                        category: selectedCategory as any,
+                        category: selectedCategory,
                         // Ensure templateSchema is an array. If DB has null/empty, default to []
                         templateSchema: Array.isArray(result.data.templateSchema) ? result.data.templateSchema : [],
                     });
@@ -109,8 +108,7 @@ export function AttributeTemplateManager() {
     const onSubmit = async (values: TemplateFormValues) => {
         setIsLoading(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await upsertAttributeTemplate(values as any);
+            const result = await upsertAttributeTemplate(values);
             if (result.error) {
                 toast.error(result.error);
             } else {
@@ -131,7 +129,7 @@ export function AttributeTemplateManager() {
                 <div className="w-[200px]">
                     <Select
                         value={selectedCategory}
-                        onValueChange={setSelectedCategory}
+                        onValueChange={(val) => setSelectedCategory(val as TemplateFormValues['category'])}
                         disabled={isLoading}
                     >
                         <SelectTrigger>
@@ -380,7 +378,7 @@ export function AttributeTemplateManager() {
                             type="button"
                             variant="outline"
                             className="w-full border-dashed"
-                            onClick={() => append({ key: '', label: '', type: 'STRING', required: false })}
+                            onClick={() => append({ key: '', label: '', type: 'STRING', required: false, showInQuote: false })}
                         >
                             <Plus className="mr-2 h-4 w-4" /> 添加属性字段
                         </Button>

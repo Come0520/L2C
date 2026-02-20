@@ -54,6 +54,7 @@ export const customerSchema = z.object({
  */
 export const editableCustomerSchema = z.object({
     id: z.string().min(1),
+    version: z.number().int().optional(),
     data: customerSchema.omit({
         lifecycleStage: true,
         pipelineStatus: true,
@@ -62,6 +63,7 @@ export const editableCustomerSchema = z.object({
 
 export const updateCustomerSchema = z.object({
     id: z.string().min(1),
+    version: z.number().int().optional(),
     data: customerSchema.partial(), // Keep for compatibility if needed, but optimally should use editableCustomerSchema
 });
 
@@ -120,6 +122,7 @@ export const getCustomerByIdSchema = z.string().min(1);
  */
 export const mergeCustomersSchema = z.object({
     targetCustomerId: z.string().min(1),
+    targetCustomerVersion: z.number().int().optional(),
     sourceCustomerIds: z.array(z.string().min(1)).min(1),
     fieldPriority: z.enum(['PRIMARY', 'LATEST']).default('PRIMARY'),
 });

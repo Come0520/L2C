@@ -53,13 +53,13 @@ describe('Mobile API', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (authenticateMobile as any).mockResolvedValue({ success: true, session: mockSession });
-        (requireSales as any).mockReturnValue({ allowed: true });
+        vi.mocked(authenticateMobile).mockResolvedValue({ success: true, session: mockSession } as never);
+        vi.mocked(requireSales).mockReturnValue({ allowed: true } as never);
     });
 
     describe('GET /leads', () => {
         it('should return paginated list', async () => {
-            (LeadService.getMobileLeads as any).mockResolvedValue({ items: [], total: 0 });
+            vi.mocked(LeadService.getMobileLeads).mockResolvedValue({ items: [], total: 0 } as never);
             const req = new NextRequest('http://api/leads?type=pool');
             const res = await getList(req);
             expect(res.status).toBe(200);
@@ -70,7 +70,7 @@ describe('Mobile API', () => {
     describe('POST /leads', () => {
         it('should create lead', async () => {
             const mockLead = { id: 'l1', leadNo: 'L001' };
-            (LeadService.createLead as any).mockResolvedValue({ isDuplicate: false, lead: mockLead });
+            vi.mocked(LeadService.createLead).mockResolvedValue({ isDuplicate: false, lead: mockLead } as never);
 
             const req = new NextRequest('http://api/leads', {
                 method: 'POST',
@@ -96,7 +96,7 @@ describe('Mobile API', () => {
         it('should block unauthorized update', async () => {
             // 使用标准 UUID v4 格式（第3段首字符为1-8，第4段首字符为8-b）
             const mockLeadId = 'a0000000-0000-4000-a000-000000000001';
-            (LeadService.getLead as any).mockResolvedValue({ assignedSalesId: 'other-user' });
+            vi.mocked(LeadService.getLead).mockResolvedValue({ assignedSalesId: 'other-user' } as never);
             const req = new NextRequest(`http://api/leads/${mockLeadId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },

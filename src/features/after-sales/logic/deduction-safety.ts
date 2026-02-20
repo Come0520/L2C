@@ -302,8 +302,8 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
             columns: { id: true, name: true }
         });
         userData.forEach(d => {
-            if (partyGroups['INSTALLER']?.includes(d.id)) nameMap[`INSTALLER:${d.id}`] = d.name;
-            if (partyGroups['MEASURER']?.includes(d.id)) nameMap[`MEASURER:${d.id}`] = d.name;
+            if (partyGroups['INSTALLER']?.includes(d.id)) nameMap[`INSTALLER:${d.id}`] = d.name ?? '未知';
+            if (partyGroups['MEASURER']?.includes(d.id)) nameMap[`MEASURER:${d.id}`] = d.name ?? '未知';
         });
     }
 
@@ -313,7 +313,7 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
             where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['LOGISTICS']}`),
             columns: { id: true, name: true }
         });
-        logisticsData.forEach(d => nameMap[`LOGISTICS:${d.id}`] = d.name);
+        logisticsData.forEach(d => nameMap[`LOGISTICS:${d.id}`] = d.name ?? '未知');
     }
 
     // 客户
@@ -322,7 +322,7 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
             where: and(eq(customers.tenantId, tenantId), sql`${customers.id} IN ${partyGroups['CUSTOMER']}`),
             columns: { id: true, name: true }
         });
-        customerData.forEach(d => nameMap[`CUSTOMER:${d.id}`] = d.name);
+        customerData.forEach(d => nameMap[`CUSTOMER:${d.id}`] = d.name ?? '未知');
     }
 
     // 3. 批量拉取供应商采购历史 (用于动态限额)
@@ -355,7 +355,7 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
         const pendingAmount = totalDeducted - totalSettled;
         const partyKey = `${r.partyType}:${r.partyId}`;
 
-        let maxAllowed = DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION;
+        let maxAllowed: number = DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION;
         if (r.partyType === 'FACTORY') {
             const history = poHistoryMap[r.partyId] || 0;
             maxAllowed = Math.max(DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION, history * DEDUCTION_SAFETY_CONFIG.SUPPLIER_MAX_RATIO);

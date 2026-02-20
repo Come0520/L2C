@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { ProductForm } from './product-form';
-import { Product } from '..';
+import { ProductForm, ProductFormValues } from './product-form';
+import { Product } from '../types';
 import { createProduct, updateProduct } from '../actions';
 import { toast } from 'sonner';
 
@@ -22,7 +22,7 @@ export function ProductFormDialog({
 }: ProductFormDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (values: any) => {
+    const handleSubmit = async (values: ProductFormValues) => {
         setIsLoading(true);
         try {
             if (initialData?.id) {
@@ -65,7 +65,7 @@ export function ProductFormDialog({
                     </DialogTitle>
                 </DialogHeader>
                 <ProductForm
-                    initialData={initialData as any}
+                    initialData={initialData as unknown as ProductFormValues}
                     onSubmit={handleSubmit}
                     isLoading={isLoading}
                 />

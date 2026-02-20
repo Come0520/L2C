@@ -25,10 +25,10 @@ import {
 import { Settings, Plus, RotateCcw, Save, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-    getUserDashboardConfig,
-    saveUserDashboardConfig,
-    resetDashboardConfig,
-} from '../actions';
+    getDashboardConfigAction,
+    saveDashboardConfigAction,
+    resetDashboardConfigAction,
+} from '../actions/config';
 import type { UserDashboardConfig, WidgetConfig, WidgetType } from '../types';
 import { getDefaultDashboardConfig } from '../utils';
 import { WIDGET_REGISTRY, getAvailableWidgets } from '../widgets/registry';
@@ -60,7 +60,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
     useEffect(() => {
         async function loadConfig() {
             try {
-                const savedConfig = await getUserDashboardConfig();
+                const savedConfig = await getDashboardConfigAction();
                 if (savedConfig && savedConfig.widgets?.length > 0) {
                     setConfig(savedConfig);
                 } else {
@@ -136,9 +136,11 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
         if (!config) return;
 
         const meta = WIDGET_REGISTRY[type];
+        if (!meta) return;
         const newWidget: WidgetConfig = {
             id: `w-${Date.now()}`,
             type,
+            title: meta.title || 'Widget',
             x: 0,
             y: Infinity, // 放到最底部
             w: meta.defaultSize.w,
@@ -167,7 +169,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
 
         setSaving(true);
         try {
-            const result = await saveUserDashboardConfig(config);
+            const result = await saveDashboardConfigAction(config);
             if (result.success) {
                 toast.success('仪表盘配置已保存');
                 setIsEditing(false);
@@ -187,7 +189,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
     const handleReset = useCallback(async () => {
         setSaving(true);
         try {
-            await resetDashboardConfig();
+            await resetDashboardConfigAction({});
             const defaultConfig = getDefaultDashboardConfig(userRole);
             setConfig(defaultConfig);
             toast.success('已恢复默认配置');

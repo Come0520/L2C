@@ -51,17 +51,17 @@ export async function notifyApplicant(
     params: NotificationParams,
     tx?: Transaction
 ) {
-    const { title, content, type } = params;
+    const { title, content } = params;
     const dbClient = tx || db;
 
-    if (!instance.applicantId) return;
+    if (!instance.requesterId) return;
 
     await dbClient.insert(notifications).values({
         tenantId: instance.tenantId,
-        userId: instance.applicantId,
+        userId: instance.requesterId,
         title,
         content,
-        type: type as any,
+        type: 'SYSTEM' as const,
         isRead: false,
         channel: 'IN_APP',
         metadata: { instanceId: instance.id },
@@ -86,41 +86,42 @@ export async function revertEntityStatus(
     switch (entityType) {
         case 'QUOTE':
             await tx.update(quotes)
-                .set({ status: targetStatus as any })
+                // @ts-expect-error — 横切状态回退：targetStatus 由调用方动态传入，无法匹配单一 schema 枚举
+                .set({ status: targetStatus })
                 .where(and(eq(quotes.id, entityId), eq(quotes.tenantId, tenantId)));
             break;
         case 'ORDER':
             await tx.update(orders)
-                .set({ status: targetStatus as any })
+                .set({ status: targetStatus as typeof orders.$inferInsert.status })
                 .where(and(eq(orders.id, entityId), eq(orders.tenantId, tenantId)));
             break;
         case 'PAYMENT_BILL':
             await tx.update(paymentBills)
-                .set({ status: targetStatus as any })
+                .set({ status: targetStatus as typeof paymentBills.$inferInsert.status })
                 .where(and(eq(paymentBills.id, entityId), eq(paymentBills.tenantId, tenantId)));
             break;
         case 'RECEIPT_BILL':
             await tx.update(receiptBills)
-                .set({ status: targetStatus as any })
+                .set({ status: targetStatus as typeof receiptBills.$inferInsert.status })
                 .where(and(eq(receiptBills.id, entityId), eq(receiptBills.tenantId, tenantId)));
             break;
         case 'MEASURE_TASK':
             // MEASURE_TASK 不支持 DRAFT 状态，映射到 PENDING
             const measureStatus = targetStatus === 'DRAFT' ? 'PENDING' : targetStatus;
             await tx.update(measureTasks)
-                .set({ status: measureStatus as unknown as any })
+                .set({ status: measureStatus as typeof measureTasks.$inferInsert.status })
                 .where(and(eq(measureTasks.id, entityId), eq(measureTasks.tenantId, tenantId)));
             break;
         case 'ORDER_CHANGE':
             await tx.update(orderChanges)
-                .set({ status: targetStatus as any })
+                .set({ status: targetStatus as typeof orderChanges.$inferInsert.status })
                 .where(and(eq(orderChanges.id, entityId), eq(orderChanges.tenantId, tenantId)));
             break;
         case 'LEAD_RESTORE':
             // 若审批被拒绝，回滚至 INVALID；若仅是提交审批（PENDING_APPROVAL），则更新为该状态
             const leadStatus = targetStatus === 'REJECTED' ? 'INVALID' : targetStatus;
             await tx.update(leads)
-                .set({ status: leadStatus as unknown as any })
+                .set({ status: leadStatus as typeof leads.$inferInsert.status })
                 .where(and(eq(leads.id, entityId), eq(leads.tenantId, tenantId)));
             break;
         case 'ORDER_CANCEL':
@@ -149,32 +150,32 @@ export async function completeEntityStatus(
     switch (entityType) {
         case 'QUOTE':
             await tx.update(quotes)
-                .set({ status: 'APPROVED' as any })
+                .set({ status: 'APPROVED' as typeof quotes.$inferInsert.status })
                 .where(and(eq(quotes.id, entityId), eq(quotes.tenantId, tenantId)));
             break;
         case 'ORDER':
             await tx.update(orders)
-                .set({ status: 'APPROVED' as any })
+                .set({ status: 'APPROVED' as typeof orders.$inferInsert.status })
                 .where(and(eq(orders.id, entityId), eq(orders.tenantId, tenantId)));
             break;
         case 'PAYMENT_BILL':
             await tx.update(paymentBills)
-                .set({ status: 'APPROVED' as any })
+                .set({ status: 'APPROVED' as typeof paymentBills.$inferInsert.status })
                 .where(and(eq(paymentBills.id, entityId), eq(paymentBills.tenantId, tenantId)));
             break;
         case 'RECEIPT_BILL':
             await tx.update(receiptBills)
-                .set({ status: 'APPROVED' as any })
+                .set({ status: 'APPROVED' as typeof receiptBills.$inferInsert.status })
                 .where(and(eq(receiptBills.id, entityId), eq(receiptBills.tenantId, tenantId)));
             break;
         case 'MEASURE_TASK':
             await tx.update(measureTasks)
-                .set({ status: 'COMPLETED' as unknown as any })
+                .set({ status: 'COMPLETED' as typeof measureTasks.$inferInsert.status })
                 .where(and(eq(measureTasks.id, entityId), eq(measureTasks.tenantId, tenantId)));
             break;
         case 'ORDER_CHANGE':
             await tx.update(orderChanges)
-                .set({ status: 'APPROVED' as any })
+                .set({ status: 'APPROVED' as typeof orderChanges.$inferInsert.status })
                 .where(and(eq(orderChanges.id, entityId), eq(orderChanges.tenantId, tenantId)));
             break;
         case 'LEAD_RESTORE':
@@ -193,7 +194,8 @@ export async function completeEntityStatus(
             // 更新线索状态
             await tx.update(leads)
                 .set({
-                    status: restoreStatus as unknown as any,
+                    // @ts-expect-error — LEAD_RESTORE 恢复到历史状态，枚举不精确匹配
+                    status: restoreStatus,
                     updatedAt: new Date()
                 })
                 .where(and(eq(leads.id, entityId), eq(leads.tenantId, tenantId)));

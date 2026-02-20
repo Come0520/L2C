@@ -34,7 +34,7 @@ interface CustomerFormProps {
     initialData?: Partial<CustomerDetail>;
 }
 
-type FormValues = z.infer<typeof customerSchema>;
+type FormValues = z.input<typeof customerSchema>;
 
 /**
  * 客户表单组件
@@ -50,8 +50,7 @@ export function CustomerForm({ onSuccess, tenantId, initialData }: CustomerFormP
     const isEdit = !!initialData;
 
     const form = useForm<FormValues>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(customerSchema) as any,
+        resolver: zodResolver(customerSchema),
         defaultValues: {
             name: initialData?.name || '',
             phone: initialData?.phone || '',
@@ -271,6 +270,6 @@ export function CustomerForm({ onSuccess, tenantId, initialData }: CustomerFormP
                     </Button>
                 </div>
             </form>
-        </Form>
+        </Form >
     );
 }

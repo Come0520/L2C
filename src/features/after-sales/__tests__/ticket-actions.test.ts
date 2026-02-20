@@ -106,7 +106,7 @@ describe('After-Sales Ticket Actions', () => {
             expect(result.data?.success).toBe(true);
             expect(AuditService.recordFromSession).toHaveBeenCalled();
             expect(revalidatePath).toHaveBeenCalledWith('/after-sales');
-            expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics');
+            expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics', 'default');
         });
 
         it('should fail if related order not found', async () => {
@@ -193,7 +193,7 @@ describe('After-Sales Ticket Actions', () => {
             expect(result.success).toBe(true);
             expect(result.data?.success).toBe(true);
             expect(db.update).toHaveBeenCalled();
-            expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics');
+            expect(revalidateTag).toHaveBeenCalledWith('after-sales-analytics', 'default');
         });
 
         it('should fail if ticket not found', async () => {

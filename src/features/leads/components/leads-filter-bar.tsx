@@ -2,6 +2,7 @@
 
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTransition } from 'react';
 
 const LEAD_STATUS_TABS = [
     { value: 'ALL', label: '全部线索' },
@@ -18,6 +19,8 @@ const LEAD_STATUS_TABS = [
 export function LeadsFilterBar() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const [, startTransition] = useTransition();
+
     const currentStatus = searchParams.get('status') ||
         (searchParams.get('salesFilter') === 'MINE' ? 'MY_FOLLOWING' : 'ALL');
 
@@ -35,7 +38,9 @@ export function LeadsFilterBar() {
             params.delete('salesFilter');
         }
         params.set('page', '1'); // 重置到第1页
-        router.push(`?${params.toString()}`);
+        startTransition(() => {
+            router.push(`?${params.toString()}`);
+        });
     };
 
     return (

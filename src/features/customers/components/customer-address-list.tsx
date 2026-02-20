@@ -22,9 +22,10 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 
+import { CustomerAddress } from '@/features/customers/types';
+
 interface AddressListProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    addresses: any[]; // 地址列表类型后续可精确定义
+    addresses: CustomerAddress[];
     customerId: string;
     tenantId: string;
 }

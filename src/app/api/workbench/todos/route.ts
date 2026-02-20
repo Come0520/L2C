@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/shared/lib/auth';
 import { WorkbenchService } from '@/services/workbench.service';
+import { createLogger } from '@/shared/lib/logger';
+
+const logger = createLogger('WorkbenchTodosAPI');
 
 /**
  * GET /api/workbench/todos
@@ -24,7 +27,7 @@ export async function GET() {
 
         return NextResponse.json(todos);
     } catch (error) {
-        console.error('[工作台待办] 获取失败:', error);
+        logger.error('获取待办事项失败', {}, error);
         return NextResponse.json(
             { error: '获取待办事项失败' },
             { status: 500 }

@@ -22,7 +22,7 @@ interface UnifiedCalcParams extends CalcParams {
 
 export function useClientCalc() {
   const calculate = (item: QuoteItem, field: string, value: number): CalcResultType => {
-    // ... (lines 10-48 remain same logic, just ensure no any used) 
+    // ... (lines 10-48 remain same logic, just ensure no any types used) 
     // I need to provide the full content for the replaced block to be safe or use small chunks. 
     // The target here is to replace the calcParams declaration and the imports.
     // Let's replace the whole file content helper or just the relevant parts.

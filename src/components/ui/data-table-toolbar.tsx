@@ -8,11 +8,14 @@ import Search from 'lucide-react/dist/esm/icons/search';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
 
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+
 interface DataTableToolbarProps {
     searchProps?: {
         value: string;
         onChange: (value: string) => void;
         placeholder?: string;
+        isPending?: boolean;
     };
     children?: React.ReactNode; // 插槽：用于放置 FilterSelector, ViewOptions 等
     actions?: React.ReactNode; // 插槽：用于放置右侧操作按钮
@@ -38,7 +41,11 @@ export function DataTableToolbar({
             <div className="flex flex-1 items-center gap-2 min-w-[200px]">
                 {searchProps && (
                     <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        {searchProps.isPending ? (
+                            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                        ) : (
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        )}
                         <Input
                             placeholder={searchProps.placeholder ?? "搜索..."}
                             value={searchProps.value}

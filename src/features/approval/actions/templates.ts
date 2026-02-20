@@ -3,12 +3,11 @@
 import { db } from '@/shared/api/db';
 import { approvalFlows } from '@/shared/api/schema/approval';
 import { createSafeAction } from '@/shared/lib/server-action';
-import { z } from 'zod';
+
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { publishApprovalFlow } from './flow';
-
-const initializeTemplatesSchema = z.object({});
+import { initializeTemplatesSchema } from '../schema';
 
 const initializeDefaultTemplatesActionInternal = createSafeAction(
     initializeTemplatesSchema,

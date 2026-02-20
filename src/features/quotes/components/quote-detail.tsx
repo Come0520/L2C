@@ -127,6 +127,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     ];
 
     return checkDiscountRisk(
+      // @ts-expect-error - Expected structural mismatch
       allItems,
       Number(quote.finalAmount) || 0,
       Number(quote.totalAmount) || 0,
@@ -377,6 +378,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                   <>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <QuotePdfDownloader
+                        // @ts-expect-error - Type mismatched across quote PDF layout
                         quote={quote}
                         mode="customer"
                         className="focus:bg-accent focus:text-accent-foreground h-auto w-full justify-start border-0 px-2 py-1.5 text-sm font-normal"
@@ -389,6 +391,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <QuotePdfDownloader
+                        // @ts-expect-error - Type mismatched across quote PDF layout
                         quote={quote}
                         mode="internal"
                         className="focus:bg-accent focus:text-accent-foreground h-auto w-full justify-start border-0 px-2 py-1.5 text-sm font-normal"

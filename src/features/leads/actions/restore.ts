@@ -34,6 +34,7 @@ export async function restoreLeadAction(
 
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
+    console.log('Restoring lead with input:', input);
     const { id, reason } = restoreLeadSchema.parse(input);
 
     try {

@@ -7,7 +7,7 @@ export interface QuoteItemDraft {
     roomName: string;
     width: number;
     height: number;
-    attributes: Record<string, any>;
+    attributes: Record<string, unknown>;
     remark?: string;
 }
 
@@ -24,7 +24,7 @@ export const DEFAULT_MAPPING_CONFIG = {
  * @returns A partial quote item ready for product selection
  */
 export function mapMeasureItemToQuoteItem(measureItem: MeasureItem): QuoteItemDraft {
-    const attributes: Record<string, any> = {
+    const attributes: Record<string, unknown> = {
         windowType: measureItem.windowType,
         installType: measureItem.installType || DEFAULT_MAPPING_CONFIG.DEFAULT_INSTALL_TYPE,
         wallMaterial: measureItem.wallMaterial,

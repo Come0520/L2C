@@ -12,17 +12,20 @@ import { logger } from '@/shared/lib/logger';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 
 /**
+ * Get a paginated list of customers
  * 获取客户列表
  * 
- * 安全检查：自动从 session 获取 tenantId 实现租户隔离
+ * Security check: Automatically gets tenantId from session for tenant isolation (安全检查：自动从 session 获取 tenantId 实现租户隔离)
  */
 export async function getCustomers(params: z.input<typeof getCustomersSchema>): Promise<{ data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } }> {
     const session = await auth();
     if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
     const tenantId = session.user.tenantId;
-    const { page, pageSize, search, type, level, assignedSalesId, lifecycleStage, pipelineStatus } = getCustomersSchema.parse(params);
-    const offset = (page - 1) * pageSize;
+    const parsedArgs = getCustomersSchema.parse(params);
+    const { page, search, type, level, assignedSalesId, lifecycleStage, pipelineStatus } = parsedArgs;
+    const safePageSize = Math.min(parsedArgs.pageSize, 100);
+    const offset = (page - 1) * safePageSize;
 
     // 首先添加租户隔离条件
     // [Fix 1.1] 过滤已合并和已删除的客户
@@ -82,7 +85,7 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>): 
                 assignedSales: true,
             },
             orderBy: [desc(customers.createdAt)],
-            limit: pageSize,
+            limit: safePageSize,
             offset: offset,
         });
     } catch (error) {
@@ -91,7 +94,7 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>): 
         data = await db.query.customers.findMany({
             where: whereClause,
             orderBy: [desc(customers.createdAt)],
-            limit: pageSize,
+            limit: safePageSize,
             offset: offset,
         });
     }
@@ -108,17 +111,18 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>): 
         data,
         pagination: {
             page,
-            pageSize,
+            pageSize: safePageSize,
             total,
-            totalPages: Math.ceil(total / pageSize),
+            totalPages: Math.ceil(total / safePageSize),
         },
     } as { data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } };
 }
 
 /**
+ * Get customer details
  * 获取客户详情
  * 
- * 安全检查：自动从 session 获取 tenantId 实现租户隔离
+ * Security check: Automatically gets tenantId from session for tenant isolation (安全检查：自动从 session 获取 tenantId 实现租户隔离)
  */
 export async function getCustomerDetail(id: string): Promise<CustomerDetail | undefined> {
     const session = await auth();
@@ -195,6 +199,9 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
         return { error: '客户不存在' };
     }
 
+    // Typecast to avoid missing property errors when fallback query runs
+    const customerWithRelations = customer as typeof customer & { assignedSales?: { name: string } | null; referrer?: { name: string } | null };
+
     const orderStats = await db
         .select({
             orderCount: count(orders.id),
@@ -240,10 +247,10 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
             name: customer.name,
             phone: customer.phone,
             type: customer.type,
-            level: customer.level,
-            assignedSalesName: customer.assignedSales?.name,
-            referrerName: customer.referrer?.name,
-            createdAt: customer.createdAt,
+            level: customerWithRelations.level,
+            assignedSalesName: customerWithRelations.assignedSales?.name,
+            referrerName: customerWithRelations.referrer?.name,
+            createdAt: customerWithRelations.createdAt,
         },
         stats: {
             totalAmount,
@@ -270,8 +277,10 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
 });
 
 /**
+ * Get customer profile
  * 获取客户画像
- * 聚合客户基本信息、订单统计和 RFM 分析数据
+ * Aggregates basic customer info, order stats, and RFM analytical data. 
+ * (聚合客户基本信息、订单统计和 RFM 分析数据)
  */
 export async function getCustomerProfile(params: z.infer<typeof getCustomerProfileSchema>) {
     return getCustomerProfileActionInternal(params);
@@ -333,8 +342,10 @@ const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, 
 });
 
 /**
+ * Get customer referral chain
  * 获取客户转介绍链
- * 构建包含推荐人、直接下级和二级下级的树状结构
+ * Builds a tree structure containing referrer, immediate downstream, and secondary downstream.
+ * (构建包含推荐人、直接下级和二级下级的树状结构)
  */
 export async function getReferralChain(params: z.infer<typeof getReferralChainSchema>) {
     return getReferralChainActionInternal(params);

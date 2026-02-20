@@ -79,6 +79,11 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
             });
         }
 
+        const product = await tx.query.products.findFirst({
+            where: and(eq(products.id, data.productId), eq(products.tenantId, session.user.tenantId)),
+            columns: { purchasePrice: true }
+        });
+
         await tx.insert(inventoryLogs).values({
             tenantId: session.user.tenantId,
             warehouseId: data.warehouseId,
@@ -86,6 +91,7 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
             type: 'ADJUST',
             quantity: data.quantity,
             balanceAfter: newQty,
+            costPrice: product?.purchasePrice || '0', // 记录当前成本
             reason: data.reason || 'Manual Adjustment',
             operatorId: session.user.id,
             description: `手动调整: ${data.quantity > 0 ? '+' : ''}${data.quantity}`,
@@ -160,6 +166,11 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                 .set({ quantity: newSourceQty, updatedAt: new Date() })
                 .where(eq(inventory.id, sourceStock.id));
 
+            const product = await tx.query.products.findFirst({
+                where: and(eq(products.id, item.productId), eq(products.tenantId, session.user.tenantId)),
+                columns: { purchasePrice: true }
+            });
+
             await tx.insert(inventoryLogs).values({
                 tenantId: session.user.tenantId,
                 warehouseId: data.fromWarehouseId,
@@ -167,6 +178,7 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                 type: 'TRANSFER',
                 quantity: -item.quantity,
                 balanceAfter: newSourceQty,
+                costPrice: product?.purchasePrice || '0',
                 reason: data.reason,
                 description: `调拨出库 -> Warehouse ${data.toWarehouseId}`,
                 operatorId: session.user.id,
@@ -202,6 +214,7 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                 type: 'TRANSFER',
                 quantity: item.quantity,
                 balanceAfter: newTargetQty,
+                costPrice: product?.purchasePrice || '0',
                 reason: data.reason,
                 description: `调拨入库 <- Warehouse ${data.fromWarehouseId}`,
                 operatorId: session.user.id,

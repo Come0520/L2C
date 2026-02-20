@@ -8,7 +8,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 import { getRoleLabel } from '@/shared/config/roles';
 import { eq, and, asc } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
 import { logger } from '@/shared/lib/logger';
 
@@ -41,7 +41,67 @@ export interface PermissionMatrixData {
 // ==================== 查询操作 ====================
 
 /**
+ * 获取权限矩阵数据（内部缓存 wrapper）
+ *
+ * @description 使用 unstable_cache 按 tenantId 缓存，tag: permission-matrix / permission-matrix-{tenantId}
+ * 权限配置站再登录后几乎不变，适合较长周期缓存。
+ * 修改权限时通过 revalidateTag 失效。
+ */
+const getCachedPermissionMatrix = (tenantId: string) =>
+  unstable_cache(
+    async () => {
+      // 获取所有角色的覆盖配置
+      const overrides = await RolePermissionService.getTenantRoleOverrides(tenantId);
+
+      // 获取系统中定义的所有角色（包括自定义）
+      const dbRoles = await db.query.roles.findMany({
+        where: eq(roles.tenantId, tenantId),
+        orderBy: asc(roles.code),
+      });
+
+      const rolesData: RoleOverrideData[] = [];
+
+      for (const roleDef of dbRoles) {
+        const code = roleDef.code;
+        const override = overrides[code] || { added: [], removed: [] };
+
+        const basePermissions = (roleDef.permissions as string[]) || [];
+
+        const effective = new Set(basePermissions);
+        override.added.forEach((p) => effective.add(p));
+        override.removed.forEach((p) => effective.delete(p));
+
+        rolesData.push({
+          roleCode: code,
+          roleName: roleDef.name,
+          roleDescription: roleDef.description || '',
+          basePermissions: basePermissions,
+          addedPermissions: override.added,
+          removedPermissions: override.removed,
+          effectivePermissions: Array.from(effective),
+        });
+      }
+
+      const permissionGroups = PERMISSION_GROUPS.map((group) => ({
+        key: group.key,
+        label: group.label,
+        description: group.description,
+        permissions: Object.entries(group.permissions).map(([, code]) => ({
+          code: code as string,
+          label: PERMISSION_LABELS[code as string] || (code as string),
+        })),
+      }));
+
+      return { roles: rolesData, permissionGroups };
+    },
+    [`permission-matrix-${tenantId}`],
+    { tags: ['permission-matrix', `permission-matrix-${tenantId}`] }
+  );
+
+/**
  * 获取权限矩阵数据（用于 UI 展示）
+ *
+ * @description 已使用 unstable_cache 缓存，tag: permission-matrix / permission-matrix-{tenantId}
  */
 export async function getPermissionMatrix(): Promise<PermissionMatrixData> {
   const session = await auth();
@@ -49,74 +109,7 @@ export async function getPermissionMatrix(): Promise<PermissionMatrixData> {
     throw new Error('未授权访问');
   }
 
-  const tenantId = session.user.tenantId;
-
-  // 获取所有角色的覆盖配置
-  const overrides = await RolePermissionService.getTenantRoleOverrides(tenantId);
-
-  // 获取系统中定义的所有角色（包括自定义）
-  const dbRoles = await db.query.roles.findMany({
-    where: eq(roles.tenantId, tenantId),
-    orderBy: asc(roles.code),
-  });
-
-  // 构建角色数据
-  const rolesData: RoleOverrideData[] = [];
-
-  // 如果数据库没有角色，可能还没有同步，使用空数组
-  // UI 层应该提示用户同步
-  for (const roleDef of dbRoles) {
-    const code = roleDef.code;
-    const override = overrides[code] || { added: [], removed: [] };
-    // getEffectivePermissions logic might need update if it solely relies on config
-    // But RolePermissionService likely relies on config for base permissions.
-    // We need to ensure we pass basePermissions correctly if RolePermissionService doesn't know about custom roles.
-
-    // For custom roles, basePermissions are stored in DB.
-    // For system roles, we can still refer to config if we want, OR trust DB if we synced it.
-    // Let's trust DB 'permissions' field which should be synced.
-
-    // We need to fetch effective permissions.
-    // RolePermissionService.getEffectivePermissions might rely on ROLES config.
-    // Let's check RolePermissionService later. For now, we manually calculate or assume service is updated?
-    // Actually, let's implement effective permission calculation here or ensure service uses DB.
-
-    // TEMPORARY: Use service but it might fail for custom roles if service looks at ROLES config.
-    // Let's assume we update RolePermissionService separately or logic is generic.
-    // Actually, roleOverrides action uses RolePermissionService.
-
-    // Let's recalculate effective permissions here to be safe:
-    // dynamic roles base permissions are in roleDef.permissions
-    const basePermissions = (roleDef.permissions as string[]) || [];
-
-    // effective = base + added - removed
-    const effective = new Set(basePermissions);
-    override.added.forEach((p) => effective.add(p));
-    override.removed.forEach((p) => effective.delete(p));
-
-    rolesData.push({
-      roleCode: code,
-      roleName: roleDef.name,
-      roleDescription: roleDef.description || '',
-      basePermissions: basePermissions,
-      addedPermissions: override.added,
-      removedPermissions: override.removed,
-      effectivePermissions: Array.from(effective),
-    });
-  }
-
-  // 构建权限分组数据
-  const permissionGroups = PERMISSION_GROUPS.map((group) => ({
-    key: group.key,
-    label: group.label,
-    description: group.description,
-    permissions: Object.entries(group.permissions).map(([, code]) => ({
-      code: code as string,
-      label: PERMISSION_LABELS[code as string] || (code as string),
-    })),
-  }));
-
-  return { roles: rolesData, permissionGroups };
+  return getCachedPermissionMatrix(session.user.tenantId)();
 }
 
 /**
@@ -260,6 +253,8 @@ export async function saveRoleOverride(
       }
     });
 
+    revalidateTag('permission-matrix', 'default');
+    revalidateTag(`permission-matrix-${tenantId}`, 'default');
     revalidatePath('/settings/roles');
 
     return {
@@ -322,6 +317,8 @@ export async function resetRoleOverride(
       }
     });
 
+    revalidateTag('permission-matrix', 'default');
+    revalidateTag(`permission-matrix-${tenantId}`, 'default');
     revalidatePath('/settings/roles');
 
     const roleLabel = getRoleLabel(roleCode);

@@ -1,60 +1,23 @@
-import { auth } from '@/shared/lib/auth';
-import { db } from '@/shared/api/db';
-import { approvalTasks } from '@/shared/api/schema';
-import { eq, and, desc, ne } from 'drizzle-orm';
 import { ApprovalTaskList } from '@/features/approval/components/approval-task-list';
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
 import { Suspense } from 'react';
+import { getPendingApprovals, getProcessedApprovals } from '@/features/approval/actions/queries';
+import { type ApprovalTask } from '@/features/approval/schema';
 
-export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-    const session = await auth();
-    if (!session?.user?.id) return <div>Unauthorized</div>;
-
-    const tenantId = session.user.tenantId;
-    const userId = session.user.id;
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string }> }) {
     const params = await searchParams;
     const tab = params.tab || 'pending';
+    const page = Number(params.page) || 1;
 
-    let tasks = [];
-
+    let result;
     if (tab === 'pending') {
-        tasks = await db.query.approvalTasks.findMany({
-            where: and(
-                eq(approvalTasks.tenantId, tenantId),
-                eq(approvalTasks.approverId, userId),
-                eq(approvalTasks.status, 'PENDING')
-            ),
-            with: {
-                approval: {
-                    with: {
-                        flow: true,
-                        requester: true
-                    }
-                },
-                node: true
-            },
-            orderBy: [desc(approvalTasks.createdAt)]
-        });
+        result = await getPendingApprovals({ page });
     } else {
-        tasks = await db.query.approvalTasks.findMany({
-            where: and(
-                eq(approvalTasks.tenantId, tenantId),
-                eq(approvalTasks.approverId, userId),
-                ne(approvalTasks.status, 'PENDING')
-            ),
-            with: {
-                approval: {
-                    with: {
-                        flow: true,
-                        requester: true
-                    }
-                },
-                node: true
-            },
-            orderBy: [desc(approvalTasks.actionAt)],
-            limit: 50
-        });
+        result = await getProcessedApprovals({ page });
     }
+
+    const tasks = (result.success ? result.data?.tasks ?? [] : []) as unknown as ApprovalTask[];
+    const pagination = result.success ? result.data?.pagination : undefined;
 
     return (
         <div className="flex h-full flex-col gap-4 p-4">
@@ -76,6 +39,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                         <ApprovalTaskList
                             tasks={tasks}
                             isPending={tab === 'pending'}
+                            pagination={pagination}
                         />
                     </Suspense>
                 </div>

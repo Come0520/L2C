@@ -16,14 +16,15 @@ import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import { ProductsToolbar } from '@/features/products/components/products-toolbar';
 import { PackageManager } from '@/features/products/components/package-manager';
 import { AttributeTemplateManager } from '@/features/products/components/attribute-template-manager';
+import { Product } from '@/features/products/types';
 
 export default function ProductsPage() {
-  const [data, setData] = useState<unknown[]>([]);
+  const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('ALL');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<unknown>(null);
+  const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [activeTab, setActiveTab] = useState('products');
 
   const fetchData = useCallback(async () => {
@@ -39,7 +40,7 @@ export default function ProductsPage() {
         toast.error(result.error);
         return;
       }
-      setData(result.data?.data || []);
+      setData((result.data?.data as unknown as Product[]) || []);
     } catch (err) {
       console.error(err);
       toast.error('获取产品列表失败');
@@ -57,7 +58,7 @@ export default function ProductsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (product: unknown) => {
+  const handleEdit = (product: Partial<Product>) => {
     setEditingProduct(product);
     setIsDialogOpen(true);
   };
@@ -103,56 +104,56 @@ export default function ProductsPage() {
         onChange={setActiveTab}
       >
         {activeTab === 'products' && (
-        <div data-tab-value="products" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
-          <div className="flex flex-col items-start gap-6 md:flex-row">
-            {/* Sidebar Filters */}
-            <div className="w-full shrink-0 md:w-64">
-              <ProductFilter category={category} onCategoryChange={setCategory} />
-            </div>
+          <div data-tab-value="products" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+            <div className="flex flex-col items-start gap-6 md:flex-row">
+              {/* Sidebar Filters */}
+              <div className="w-full shrink-0 md:w-64">
+                <ProductFilter category={category} onCategoryChange={setCategory} />
+              </div>
 
-            {/* Main Content */}
-            <div className="w-full flex-1 space-y-6">
-              <ProductsToolbar
-                search={query}
-                onSearchChange={setQuery}
-                onRefresh={fetchData}
-                onAdd={handleAdd}
-                onImportSuccess={fetchData}
-                loading={loading}
-                className="border-none shadow-none p-0 bg-transparent"
-              />
+              {/* Main Content */}
+              <div className="w-full flex-1 space-y-6">
+                <ProductsToolbar
+                  search={query}
+                  onSearchChange={setQuery}
+                  onRefresh={fetchData}
+                  onAdd={handleAdd}
+                  onImportSuccess={fetchData}
+                  loading={loading}
+                  className="border-none shadow-none p-0 bg-transparent"
+                />
 
 
-              {/* Product Grid */}
-              <div className="min-h-[500px]">
-                {loading ? (
-                  <div className="flex h-64 items-center justify-center">
-                    <RefreshCw className="text-primary h-8 w-8 animate-spin" />
-                  </div>
-                ) : (
-                  <ProductGrid
-                    data={data}
-                    onEdit={handleEdit}
-                    onToggleStatus={handleToggleStatus}
-                    onDelete={handleDelete}
-                  />
-                )}
+                {/* Product Grid */}
+                <div className="min-h-[500px]">
+                  {loading ? (
+                    <div className="flex h-64 items-center justify-center">
+                      <RefreshCw className="text-primary h-8 w-8 animate-spin" />
+                    </div>
+                  ) : (
+                    <ProductGrid
+                      data={data}
+                      onEdit={handleEdit}
+                      onToggleStatus={handleToggleStatus}
+                      onDelete={handleDelete}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
         )}
 
         {activeTab === 'packages' && (
-        <div data-tab-value="packages" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
-          <PackageManager />
-        </div>
+          <div data-tab-value="packages" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+            <PackageManager />
+          </div>
         )}
 
         {activeTab === 'templates' && (
-        <div data-tab-value="templates" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
-          <AttributeTemplateManager />
-        </div>
+          <div data-tab-value="templates" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+            <AttributeTemplateManager />
+          </div>
         )}
       </AnimatedTabs>
 

@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import {
-    getDashboardStats,
-    getProfitMarginAnalysis,
-    getCashFlowForecast,
-    getDeliveryEfficiency
-} from "@/features/analytics/actions";
 import { toast } from "sonner";
 import { Loader2, TrendingUp, TrendingDown, AlertCircle, Wallet, DollarSign, Percent } from "lucide-react";
 import { cn } from "@/shared/utils";
+import { createLogger } from "@/shared/lib/logger";
+import useSWR from 'swr';
+import { fetcher } from '@/shared/lib/fetcher';
+
+const logger = createLogger('ExecutiveSummaryWidget');
 
 interface DashboardWidgetProps {
     className?: string;
@@ -19,69 +18,25 @@ interface DashboardWidgetProps {
 }
 
 export function ExecutiveSummaryWidget({ className, startDate, endDate }: DashboardWidgetProps) {
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<{
-        revenue: { total: number; trend: number };
-        margin: { current: number; trend: number };
-        cashFlow: { expected: number; collectionRate: number };
-        alerts: { total: number; breakdown: { overdue: number; approval: number; complaint: number } };
-    } | null>(null);
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate.toISOString());
+    if (endDate) query.append('endDate', endDate.toISOString());
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const start = startDate?.toISOString();
-                const end = endDate?.toISOString();
-
-                // 并行请求数据
-                const [statsRes, marginRes, cashFlowRes, efficiencyRes] = await Promise.all([
-                    getDashboardStats({ startDate: start, endDate: end }),
-                    getProfitMarginAnalysis({ groupBy: 'category', startDate: start, endDate: end }),
-                    getCashFlowForecast({ forecastDays: 30 }),
-                    getDeliveryEfficiency({ startDate: start, endDate: end }) // 用于预警计数示例
-                ]);
-
-                // 处理营收数据
-                const revenue = statsRes?.data?.success ? {
-                    total: parseFloat(statsRes.data.data.totalSales || '0'),
-                    trend: 12.3 // 示例环比，后续需对接真实环比接口
-                } : { total: 0, trend: 0 };
-
-                // 处理毛利率
-                const margin = marginRes?.data?.success ? {
-                    current: parseFloat(marginRes.data.data.grossMargin || '0'),
-                    trend: -1.2 // 示例环比
-                } : { current: 0, trend: 0 };
-
-                // 处理现金流
-                const cashFlow = cashFlowRes?.data?.success ? {
-                    expected: parseFloat(cashFlowRes.data.data.summary.totalForecastAmount || '0'),
-                    collectionRate: 100 // 现金流 Action 暂无 collectionRate，设为默认值
-                } : { expected: 0, collectionRate: 0 };
-
-                // 处理预警 (示例逻辑，实际需对接 workbench 或具体业务接口)
-                const alerts = {
-                    total: efficiencyRes?.data?.success ? efficiencyRes.data.data.overdueTaskCount : 0,
-                    breakdown: {
-                        overdue: efficiencyRes?.data?.success ? efficiencyRes.data.data.overdueTaskCount : 0,
-                        approval: 5,
-                        complaint: 4
-                    }
-                };
-
-                setData({ revenue, margin, cashFlow, alerts });
-
-            } catch (error) {
-                console.error("Failed to load executive summary", error);
+    const { data: swrData, isLoading } = useSWR(
+        `/api/workbench/executive-summary?${query.toString()}`,
+        fetcher,
+        {
+            refreshInterval: 300000,
+            revalidateOnFocus: false,
+            onError: (err) => {
+                logger.error("Failed to load executive summary via SWR", {}, err);
                 toast.error("加载核心指标失败");
-            } finally {
-                setLoading(false);
             }
-        };
+        }
+    );
 
-        loadData();
-    }, [startDate, endDate]);
+    const data = swrData?.success ? swrData.data : null;
+    const loading = isLoading;
 
     if (loading) {
         return (

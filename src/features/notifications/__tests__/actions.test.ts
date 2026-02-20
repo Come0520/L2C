@@ -7,8 +7,28 @@ const hoisted = vi.hoisted(() => {
         slacheck: vi.fn(),
     };
 
-    const createDrizzleMock = (resolvedValue: any = []) => {
-        const chain: any = {
+    /** Drizzle 链式查询 Mock 接口 */
+    interface DrizzleChainMock {
+        select: ReturnType<typeof vi.fn>;
+        from: ReturnType<typeof vi.fn>;
+        where: ReturnType<typeof vi.fn>;
+        orderBy: ReturnType<typeof vi.fn>;
+        limit: ReturnType<typeof vi.fn>;
+        offset: ReturnType<typeof vi.fn>;
+        for: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        set: ReturnType<typeof vi.fn>;
+        insert: ReturnType<typeof vi.fn>;
+        values: ReturnType<typeof vi.fn>;
+        returning: ReturnType<typeof vi.fn>;
+        onConflictDoUpdate: ReturnType<typeof vi.fn>;
+        execute: ReturnType<typeof vi.fn>;
+        then: (onFulfilled?: ((val: unknown) => unknown) | undefined) => Promise<unknown>;
+        catch: (onRejected?: ((err: unknown) => unknown) | undefined) => Promise<unknown>;
+    }
+
+    const createDrizzleMock = (resolvedValue: unknown = []): DrizzleChainMock => {
+        const chain: DrizzleChainMock = {
             select: vi.fn(() => chain),
             from: vi.fn(() => chain),
             where: vi.fn(() => chain),
@@ -21,10 +41,10 @@ const hoisted = vi.hoisted(() => {
             insert: vi.fn(() => chain),
             values: vi.fn(() => chain),
             returning: vi.fn(() => chain),
-            onConflictDoUpdate: vi.fn(() => chain), // Batch update uses this
+            onConflictDoUpdate: vi.fn(() => chain),
             execute: vi.fn().mockResolvedValue(resolvedValue),
-            then: (onFulfilled?: any) => Promise.resolve(resolvedValue).then(onFulfilled),
-            catch: (onRejected?: any) => Promise.resolve(resolvedValue).catch(onRejected),
+            then: (onFulfilled?) => Promise.resolve(resolvedValue).then(onFulfilled),
+            catch: (onRejected?) => Promise.resolve(resolvedValue).catch(onRejected),
         };
         return chain;
     };
@@ -86,7 +106,7 @@ describe('Notification Server Actions', () => {
     describe('getNotifications', () => {
         it('should fetch notifications with pagination', async () => {
             const mockData = [{ id: 'n1', title: 'Test' }];
-            (db.query.notifications.findMany as any).mockResolvedValue(mockData);
+            vi.mocked(db.query.notifications.findMany).mockResolvedValue(mockData as never);
 
             // Simulate count query response (already set in default mock but explicit here)
             vi.mocked(db.select).mockReturnValue(hoisted.createDrizzleMock([{ count: 100 }]));
@@ -101,7 +121,7 @@ describe('Notification Server Actions', () => {
         });
 
         it('should return empty list on error', async () => {
-            (db.query.notifications.findMany as any).mockRejectedValue(new Error('DB Error'));
+            vi.mocked(db.query.notifications.findMany).mockRejectedValue(new Error('DB Error'));
 
             const result = await getNotifications({ page: 1, limit: 10, onlyUnread: false });
 
@@ -129,7 +149,7 @@ describe('Notification Server Actions', () => {
 
     describe('updateNotificationPreference', () => {
         it('should update existing preference', async () => {
-            (db.query.notificationPreferences.findFirst as any).mockResolvedValue({ id: 'p1' });
+            vi.mocked(db.query.notificationPreferences.findFirst).mockResolvedValue({ id: 'p1' } as never);
 
             const result = await updateNotificationPreference({
                 notificationType: 'SYSTEM',
@@ -144,7 +164,7 @@ describe('Notification Server Actions', () => {
         });
 
         it('should create new preference if not exists', async () => {
-            (db.query.notificationPreferences.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.notificationPreferences.findFirst).mockResolvedValue(null);
 
             const result = await updateNotificationPreference({
                 notificationType: 'SYSTEM',
@@ -177,7 +197,7 @@ describe('Notification Server Actions', () => {
                 const txMock = {
                     insert: vi.fn(() => hoisted.createDrizzleMock([])),
                 };
-                return await (cb as (...args: any[]) => any)(txMock);
+                return await (cb as (tx: typeof txMock) => Promise<unknown>)(txMock);
             });
 
             const result = await batchUpdateNotificationPreferences(input);
@@ -197,9 +217,9 @@ describe('Notification Server Actions', () => {
 
     describe('getNotificationPreferencesAction', () => {
         it('should fetch and merge preferences with defaults', async () => {
-            (db.query.notificationPreferences.findMany as any).mockResolvedValue([
+            vi.mocked(db.query.notificationPreferences.findMany).mockResolvedValue([
                 { notificationType: 'SYSTEM', channels: ['SMS', 'LARK'] }
-            ]);
+            ] as never);
 
             const result = await getNotificationPreferencesAction();
 

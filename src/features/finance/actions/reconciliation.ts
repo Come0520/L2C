@@ -16,7 +16,12 @@ import { AuditService } from '@/shared/services/audit-service';
 // 注意：'use server' 文件不能重新导出，需要直接从 schema.ts 导入
 
 /**
- * 获取对账单列表
+ * 获取对账单列表 (Get Reconciliations)
+ * 
+ * 获取当前租户下所有的对账单，按创建时间倒序排列。
+ * 
+ * @returns {Promise<Array<typeof reconciliations.$inferSelect>>} 对账单列表
+ * @throws {Error} 未授权或权限不足时抛出错误
  */
 export async function getReconciliations() {
     const session = await auth();
@@ -41,7 +46,13 @@ export async function getReconciliations() {
 }
 
 /**
- * 获取单条对账单详情
+ * 获取单条对账单详情 (Get Reconciliation Details)
+ * 
+ * 根据对账单 ID 查询详细信息，包含关联的明细记录。
+ * 
+ * @param {string} id - 对账单的一级主键 ID
+ * @returns {Promise<ReconciliationWithRelations | null>} 对账单详细信息（包含关系数据），未找到则返回 null
+ * @throws {Error} 未授权或权限不足时抛出错误
  */
 export async function getReconciliation(id: string) {
     const session = await auth();
@@ -155,6 +166,16 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
     };
 });
 
+/**
+ * 生成汇总对账单 (Generate Aggregated Statement)
+ * 
+ * 根据选定的时间范围和客户列表，汇总并生成一张总的对账数据分析表。
+ * 返回各客户的汇总维度，包括总金额、已收金额、待收金额和订单数量。
+ * 
+ * @param {z.infer<typeof aggregateStatementsSchema>} params - 包含时间范围、可选的客户ID列表及标题
+ * @returns {Promise<any>} 返回包含汇总信息的数据包
+ * @throws {Error} 未授权或缺少对账权限时抛出错误
+ */
 export async function generateAggregatedStatement(params: z.infer<typeof aggregateStatementsSchema>) {
     // 权限检查：对账
     const session = await auth();
@@ -228,6 +249,16 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
     };
 });
 
+/**
+ * 生成周期对账单 (Generate Period Statements)
+ * 
+ * 根据设定的周期（周、双周、月），从基准时间点倒推，找出期间内所有状态为 PENDING_RECON 或未定义状态的 AR 账单，并进行整理。
+ * 主要用于财务人员定期进行的针对特定周期的自动查账任务。
+ * 
+ * @param {z.infer<typeof generatePeriodStatementsSchema>} params - 包含周期类型（WEEKLY | BIWEEKLY | MONTHLY）及基准时间
+ * @returns {Promise<any>} 返回特定周期的待对账单据列表及汇总信息
+ * @throws {Error} 未授权或缺少对账权限时抛出错误
+ */
 export async function generatePeriodStatements(params: z.infer<typeof generatePeriodStatementsSchema>) {
     // 权限检查：对账
     const session = await auth();
@@ -430,6 +461,17 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
     });
 });
 
+/**
+ * 批量核销 (Batch Write-Off)
+ * 
+ * 利用指定的收款单 (Receipt Bill) 批量核销多张应收单 (AR Statements)。
+ * 可自动按顺序分配金额，或者根据用户指定的自定义金额分配执行。
+ * 支持部分核销或完全结清。包含严格的状态前置校验及完整的审计日志记录。
+ * 
+ * @param {z.infer<typeof batchWriteOffSchema>} params - 包含收款单ID、账单ID列表及可选的自定义金额分配
+ * @returns {Promise<any>} 返回实际执行的核销详情与成功状态
+ * @throws {Error} 未授权或缺少对账权限时抛出错误
+ */
 export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>) {
     // 权限检查：对账
     const session = await auth();
@@ -512,6 +554,16 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
     };
 });
 
+/**
+ * 跨期对账处理 (Cross Period Reconciliation)
+ * 
+ * 分析原账期中仍处于 PENDING_RECON 或 PARTIAL （未结清）状态的账单，
+ * 将其统计并跨期带入下个核算周期中。
+ * 
+ * @param {z.infer<typeof crossPeriodReconciliationSchema>} params - 跨期的原账期和新账期时间范围
+ * @returns {Promise<any>} 返回跨期对账记录摘要和未结清明细分析
+ * @throws {Error} 未授权或缺少对账权限时抛出错误
+ */
 export async function crossPeriodReconciliation(params: z.infer<typeof crossPeriodReconciliationSchema>) {
     // 权限检查：对账
     const session = await auth();

@@ -49,7 +49,7 @@ export function PackageManager() {
         try {
             const result = await getPackages();
             if (result.success) {
-                setPackages((result.data || []) as any);
+                setPackages((result.data || []) as ProductPackage[]);
             } else {
                 toast.error(result.error || '获取套餐列表失败');
             }
@@ -227,7 +227,8 @@ export function PackageManager() {
             <PackageFormDialog
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
-                editingData={(editingPackage as any) || undefined}
+                // @ts-expect-error - Package inferred types slightly differ
+                editingData={editingPackage || undefined}
                 onSuccess={loadPackages}
             />
         </div>

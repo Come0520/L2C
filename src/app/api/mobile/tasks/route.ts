@@ -118,7 +118,7 @@ export const GET = withTiming(async (request: NextRequest) => {
             fetchPromises.push(Promise.resolve([]));
         }
 
-        const [mTasks, iTasks] = await Promise.all(fetchPromises) as [
+        const [mTasks, iTasks] = (await Promise.all(fetchPromises)) as unknown as [
             Array<{
                 id: string;
                 measureNo: string;

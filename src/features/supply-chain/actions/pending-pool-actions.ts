@@ -419,8 +419,7 @@ export async function submitForApproval(
         for (const id of draftPoIds) {
             await AuditService.recordFromSession(session, 'purchaseOrders', id, 'UPDATE', {
                 old: { status: PO_STATUS.DRAFT },
-                new: { status: PO_STATUS.PENDING_CONFIRMATION },
-                action: 'SUBMIT_FOR_APPROVAL'
+                new: { status: PO_STATUS.PENDING_CONFIRMATION, action: 'SUBMIT_FOR_APPROVAL' },
             }, tx);
         }
 

@@ -51,7 +51,7 @@ describe('calculateScore 评分算法单元测试', () => {
             productId: 'uuid',
             tags: ['tag1', 'tag2'],
             // 假设未来加了新维度
-        } as any)).toBe(100);
+        } as Parameters<typeof calculateScore>[0])).toBe(100);
     });
 
     it('类型敏感：productId 为空字符串时不应作为关联商品加分（依赖逻辑实现，当前逻辑仅判断是否存在）', () => {
@@ -60,6 +60,9 @@ describe('calculateScore 评分算法单元测试', () => {
     });
 
     it('逻辑鲁棒性：非法或空数组不应加分', () => {
-        expect(calculateScore({ images: [] as any, tags: [] as any })).toBe(20);
+        expect(calculateScore({
+            // @ts-expect-error test illegal empty array value types
+            images: [], tags: []
+        })).toBe(20);
     });
 });

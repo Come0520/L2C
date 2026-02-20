@@ -78,8 +78,9 @@ vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
 }));
 
+import type { Session } from 'next-auth';
 const UUID_1 = mocks.UUID_1;
-const mockSession = { user: { id: 'u1', tenantId: 't1' } } as any;
+const mockSession = { user: { id: 'u1', tenantId: 't1' } } as unknown as Session;
 
 describe('getShowroomItems() Action', () => {
     beforeEach(() => {

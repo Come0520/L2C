@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { getARAgingAnalysis } from "@/features/analytics/actions";
+import { createLogger } from "@/shared/lib/logger";
+
+const logger = createLogger('ArAgingWidget');
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/shared/utils";
+import useSWR from 'swr';
+import { fetcher } from '@/shared/lib/fetcher';
 import {
     Bar,
     BarChart,
@@ -36,28 +40,24 @@ interface ARAgingData {
     };
 }
 
+
+
 export function ARAgingWidget({ className }: ARAgingWidgetProps) {
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<ARAgingData | null>(null);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const res = await getARAgingAnalysis({});
-                if (res?.data?.success) {
-                    setData(res.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to load AR aging analysis", error);
+    const { data: swrData, isLoading } = useSWR<{ success: boolean; data: ARAgingData }>(
+        '/api/workbench/ar-aging',
+        fetcher,
+        {
+            refreshInterval: 300000, // 5分钟刷新一次
+            revalidateOnFocus: false,
+            onError: (err) => {
+                logger.error("Failed to load AR aging analysis via SWR", {}, err);
                 toast.error("加载应收账款分析失败");
-            } finally {
-                setLoading(false);
             }
-        };
+        }
+    );
 
-        loadData();
-    }, []);
+    const data = swrData?.success ? swrData.data : null;
+    const loading = isLoading;
 
     if (loading) {
         return (
@@ -107,7 +107,7 @@ export function ARAgingWidget({ className }: ARAgingWidgetProps) {
                             cursor={{ fill: 'transparent' }}
                             content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
-                                    const item = payload[0].payload;
+                                    const item = payload[0].payload as { range: string; amount: number; count: number };
                                     return (
                                         <div className="rounded-lg border bg-background p-2 shadow-sm text-xs">
                                             <div className="font-bold mb-1">{item.range}</div>
@@ -126,7 +126,7 @@ export function ARAgingWidget({ className }: ARAgingWidgetProps) {
                             }}
                         />
                         <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                            {data.agingBuckets.map((entry, index) => (
+                            {data.agingBuckets.map((entry: { range: string }, index: number) => (
                                 <Cell
                                     key={`cell-${index}`}
                                     fill={AGING_COLORS[entry.range as keyof typeof AGING_COLORS] || '#94a3b8'}
@@ -138,7 +138,7 @@ export function ARAgingWidget({ className }: ARAgingWidgetProps) {
 
                 {/* Legend/Summary */}
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    {data.agingBuckets.map((bucket) => (
+                    {data.agingBuckets.map((bucket: { range: string; amount: string }) => (
                         <div key={bucket.range} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                             <div className="flex items-center gap-2">
                                 <div

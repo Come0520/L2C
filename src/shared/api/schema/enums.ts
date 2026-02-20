@@ -149,6 +149,10 @@ export const leadStatusEnum = pgEnum('lead_status', [
   'INVALID',
   'WON',
   'PENDING_APPROVAL',
+  'MEASUREMENT_SCHEDULED', // 已约量尺
+  'QUOTED', // 已报价
+  'LOST', // 战败/流失
+  'PENDING_REVIEW', // 待复核
 ]);
 
 export const intentionLevelEnum = pgEnum('intention_level', ['HIGH', 'MEDIUM', 'LOW']);

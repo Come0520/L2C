@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { suppliers, purchaseOrders, afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
 import { eq, desc, and, sql, count, gte, lte, inArray } from 'drizzle-orm';
-import { checkPermission } from '@/shared/lib/auth';
+import { checkPermission, auth } from '@/shared/lib/auth';
 import { generateDocNo } from '@/shared/lib/utils';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
@@ -182,7 +182,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
     });
 
     revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
-    revalidateTag(`supplier-rating-${id}`);
+    revalidateTag(`supplier-rating-${id}`, 'default');
     return { id: supplier.id };
 });
 
@@ -322,7 +322,7 @@ export async function getSupplierRating(params: z.infer<typeof getSupplierRating
     const { supplierId, startDate = '', endDate = '' } = params;
 
     return unstable_cache(
-        async () => getSupplierRatingActionInternal(params, { session }),
+        async () => getSupplierRatingActionInternal(params),
         [`supplier-rating-${supplierId}-${startDate}-${endDate}`],
         {
             revalidate: 300,

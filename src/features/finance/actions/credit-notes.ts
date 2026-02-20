@@ -38,7 +38,15 @@ const createCreditNoteSchema = z.object({
 });
 
 /**
- * 创建贷项通知单
+ * 创建贷项通知单 (Create Credit Note)
+ * 
+ * 当向客户提供退款、折让或其他应收调整时，财务人员可创建贷项通知单。
+ * 通知单创建后默认为 `PENDING` 待审批状态。
+ * 底层会记录创建操作的审计日志。
+ * 
+ * @param {z.infer<typeof createCreditNoteSchema>} input - 包含客户信息、关联订单/账单、类型、金额及防篡改原因
+ * @returns {Promise<any>} 返回新创建的贷项通知单及状态信息
+ * @throws {Error} 如果当前用户无权限或写入数据库失败
  */
 export async function createCreditNote(input: z.infer<typeof createCreditNoteSchema>) {
     try {
@@ -101,7 +109,19 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
 }
 
 /**
- * 审批贷项通知单
+ * 审批贷项通知单 (Approve Credit Note)
+ * 
+ * 财务人员审查待处理的贷项通知单：
+ * - 审批通过 (`APPROVED`): 并行更新关联的 AR 对账单的待收金额（扣减）和已收金额（增加）。
+ * - 审批拒绝 (`REJECTED`): 不产生资金变动，仅补充拒绝缘由。
+ * 包含四眼原则验证，禁止审批者审批自己的单据。
+ * 记录相关金额应用日志及操作流转日志。
+ * 
+ * @param {string} id - 贷项通知单ID
+ * @param {boolean} approved - 是否通过审批
+ * @param {string} [rejectReason] - 可选的拒绝原因，在 `approved=false` 时必填或自动补充为空
+ * @returns {Promise<any>} 返回审批动作的生效数据和成功状态
+ * @throws {Error} 若四眼原则冲突、单据非 `PENDING` 状态等情况将抛出错误
  */
 export async function approveCreditNote(id: string, approved: boolean, rejectReason?: string) {
     try {
@@ -228,7 +248,15 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
 }
 
 /**
- * 获取贷项通知单列表
+ * 获取贷项通知单列表 (Get Credit Notes)
+ * 
+ * 分页查询当前租户下所有的贷项通知单记录（含草稿、已审、退回等状态），按时间倒序。
+ * 用于财务对账单列表视图展现。
+ * 
+ * @param {number} [page=1] - 当前页码
+ * @param {number} [pageSize=20] - 每页条数
+ * @returns {Promise<any>} 返回贷项通知单分页数据集合
+ * @throws {Error} 未授权或无视图权限时报错
  */
 export async function getCreditNotes(page = 1, pageSize = 20) {
     const session = await auth();
@@ -256,7 +284,13 @@ export async function getCreditNotes(page = 1, pageSize = 20) {
 }
 
 /**
- * 获取贷项通知单详情
+ * 获取贷项通知单详情 (Get Credit Note details)
+ * 
+ * 基于主键ID查询单条通知单明细，通常用于全屏展示、审批面板弹出等需要完整核对数据的场景。
+ * 
+ * @param {string} id - 贷项通知单的唯一 ID
+ * @returns {Promise<any>} 返回贷项通知单详细模型
+ * @throws {Error} 如果查询失败或记录不存在
  */
 export async function getCreditNote(id: string) {
     const session = await auth();

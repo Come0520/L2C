@@ -38,7 +38,7 @@ describe('Webhook Handler', () => {
         });
 
         it('should return true if token matches tenant settings', async () => {
-            (db.query.tenants.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
                 settings: { webhookAccessToken: 'valid-token' }
             });
 
@@ -47,7 +47,7 @@ describe('Webhook Handler', () => {
         });
 
         it('should return false if token mismatch', async () => {
-            (db.query.tenants.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
                 settings: { webhookAccessToken: 'valid-token' }
             });
 
@@ -63,7 +63,7 @@ describe('Webhook Handler', () => {
         });
 
         it('should match precise channel name', async () => {
-            (db.query.channels.findFirst as any).mockResolvedValueOnce({ id: 'channel-1' });
+            vi.mocked(db.query.channels.findFirst).mockResolvedValueOnce({ id: 'channel-1' } as never);
 
             const result = await matchChannel('抖音', '直播间', 'tenant-1');
             expect(result.channelId).toBe('channel-1');
@@ -79,12 +79,12 @@ describe('Webhook Handler', () => {
         };
 
         it('should return 400 if missing required fields', async () => {
-            const result = await handleWebhookRequest({} as any, 'tenant-1', 'user-1');
+            const result = await handleWebhookRequest({} as never, 'tenant-1', 'user-1');
             expect(result.code).toBe(400);
         });
 
         it('should return 200 (idempotent) if external_id exists', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue({
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue({
                 id: 'lead-1',
                 leadNo: 'LD001',
                 status: 'PENDING_ASSIGNMENT'
@@ -97,8 +97,8 @@ describe('Webhook Handler', () => {
         });
 
         it('should create lead if new', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue(null); // No idempotent match
-            (LeadService.createLead as any).mockResolvedValue({
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(undefined as never); // No idempotent match
+            vi.mocked(LeadService.createLead).mockResolvedValue({
                 success: true,
                 isDuplicate: false,
                 lead: {
@@ -123,8 +123,8 @@ describe('Webhook Handler', () => {
         });
 
         it('should return 409 if duplicate phone/address detected', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue(null);
-            (LeadService.createLead as any).mockResolvedValue({
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(undefined as never);
+            vi.mocked(LeadService.createLead).mockResolvedValue({
                 isDuplicate: true,
                 lead: { id: 'existing', leadNo: 'LD-EXIST' }
             });

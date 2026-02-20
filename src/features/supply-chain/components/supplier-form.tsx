@@ -35,7 +35,7 @@ interface SupplierFormProps {
     initialData?: {
         [K in keyof SupplierFormValues]: SupplierFormValues[K] | null;
     };
-    onSubmit: (values: SupplierFormValues) => Promise<void>;
+    onSubmit: (values: SupplierFormValues) => Promise<void> | void;
     isLoading?: boolean;
 }
 

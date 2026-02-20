@@ -65,7 +65,7 @@ describe('QuoteService.refreshExpiredQuotePrices', () => {
         ]);
 
         // Mock updateQuoteTotal to do nothing (as it might query DB again)
-        const updateTotalSpy = vi.spyOn(QuoteService, 'updateQuoteTotal').mockResolvedValue(undefined as any);
+        vi.spyOn(QuoteService, 'updateQuoteTotal').mockResolvedValue(undefined);
 
         // 3. Call Method
         const result = await QuoteService.refreshExpiredQuotePrices(mockQuoteId, mockTenantId);

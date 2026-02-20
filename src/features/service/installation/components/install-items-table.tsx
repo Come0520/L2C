@@ -6,7 +6,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Badge } from '@/shared/ui/badge';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { updateInstallItemStatus } from '../actions';
+import { updateInstallItemStatusAction } from '../actions';
 import { toast } from 'sonner';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
@@ -40,7 +40,7 @@ export function InstallItemsTable({ items, allowEdit }: InstallItemsTableProps) 
 
         setUpdatingIds(prev => new Set(prev).add(item.id));
         try {
-            const result = await updateInstallItemStatus({
+            const result = await updateInstallItemStatusAction({
                 itemId: item.id,
                 isInstalled,
                 issueCategory: item.issueCategory || 'NONE',
@@ -66,7 +66,7 @@ export function InstallItemsTable({ items, allowEdit }: InstallItemsTableProps) 
 
         setUpdatingIds(prev => new Set(prev).add(item.id));
         try {
-            const result = await updateInstallItemStatus({
+            const result = await updateInstallItemStatusAction({
                 itemId: item.id,
                 isInstalled: item.isInstalled,
                 issueCategory: issue,

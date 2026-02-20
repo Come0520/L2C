@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -104,20 +104,8 @@ export interface ProductPackage {
     endDate?: string | Date | null;
 }
 
-interface PackageData {
-    id?: string;
-    packageNo: string;
-    packageName: string;
-    packageType: 'QUANTITY' | 'COMBO' | 'CATEGORY' | 'TIME_LIMITED';
-    packagePrice: number;
-    originalPrice?: number;
-    description?: string;
-    overflowMode: 'FIXED_PRICE' | 'IGNORE' | 'ORIGINAL' | 'DISCOUNT' | null;
-    overflowPrice?: number;
-    overflowDiscountRate?: number;
-    startDate?: string | Date;
-    endDate?: string | Date;
-    [key: string]: any;
+interface PackageData extends ProductPackage {
+    [key: string]: unknown;
 }
 
 interface PackageFormDialogProps {
@@ -142,7 +130,7 @@ export function PackageFormDialog({
 
 
     const form = useForm<z.infer<typeof packageFormSchema>>({
-        resolver: zodResolver(packageFormSchema) as any,
+        resolver: zodResolver(packageFormSchema) as unknown as Resolver<z.infer<typeof packageFormSchema>>,
         defaultValues: {
             packageNo: '',
             packageName: '',
@@ -197,7 +185,7 @@ export function PackageFormDialog({
         try {
             const result = await getPackageProducts(packageId);
             if (result.success && result.data) {
-                setPackageProductsList(result.data as any);
+                setPackageProductsList(result.data as unknown as PackageProductItem[]);
             }
         } catch (error) {
             console.error('Failed to load package products', error);

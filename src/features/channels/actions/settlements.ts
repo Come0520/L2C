@@ -139,10 +139,9 @@ export async function createSettlement(params: {
                 revalidatePath('/finance/settlements');
                 return settlement;
             });
-        } catch (error: unknown) {
+        } catch (error) {
             // Check for unique constraint violation code (Postgres: 23505)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((error as any)?.code === '23505' && retryCount < MAX_RETRIES) {
+            if (error instanceof Error && (error as { code?: string }).code === '23505' && retryCount < MAX_RETRIES) {
                 console.warn(`Settlement No collision detected, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
                 retryCount++;
                 continue;

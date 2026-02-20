@@ -35,8 +35,8 @@ export async function confirmOrderProduction(input: ConfirmProductionInput) {
 
         if (!order) throw new Error('Order not found');
 
-        // P2 Fix: Allow MONTHLY orders to start production without full payment
-        const isMonthly = order.settlementType === 'MONTHLY';
+        // P2 Fix: Allow CREDIT orders to start production without full payment
+        const isMonthly = order.settlementType === 'CREDIT';
         if (order.status !== 'PAID' && !isMonthly) {
             throw new Error('Order must be PAID to start production');
         }

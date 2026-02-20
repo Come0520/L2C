@@ -30,7 +30,7 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
     };
 
     const form = useForm<ChannelInput>({
-        // zodResolver 与 react-hook-form 泛型不完全兼容，需保留 as any（已知问题）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
         resolver: zodResolver(channelSchema) as any,
         defaultValues: {
             category: initialData?.category || 'OFFLINE',

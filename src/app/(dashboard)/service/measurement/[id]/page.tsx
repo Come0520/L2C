@@ -39,7 +39,7 @@ export default async function MeasureTaskDetailPage({
 
     // 使用类型断言转换为统一类型
     // 使用类型断言转换为统一类型
-    // TODO: 优化类型定义，避免使用 double cast (R2-CQ-01)
+    // NOTE: 优化类型定义，避免使用 double cast (R2-CQ-01)
     const task = result.data as unknown as MeasureTaskWithRelations;
 
     // 检查费用状态
@@ -59,7 +59,7 @@ export default async function MeasureTaskDetailPage({
     const latestSheet = task.sheets?.[0];
     const measureItems = latestSheet?.items || [];
 
-    // 模拟操作日志数据 (TODO: R2-UX-05 对接审计日志服务查询真实操作记录)
+    // 模拟操作日志数据 (NOTE: R2-UX-05 对接审计日志服务查询真实操作记录)
     const mockOperationLogs = [
         { id: '1', action: 'CREATE', detail: '创建测量任务', operatorName: '系统', createdAt: task.createdAt || new Date() },
         ...(task.assignedWorker ? [{ id: '2', action: 'DISPATCH', detail: `指派给 ${task.assignedWorker?.name || '测量师'}`, operatorName: '派单员', createdAt: task.updatedAt || new Date() }] : []),

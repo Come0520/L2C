@@ -28,9 +28,17 @@ interface MeasureDataImportDialogProps {
     onSuccess?: () => void;
 }
 
+interface MeasureTaskPreview {
+    id: string;
+    measureNo: string;
+    scheduledAt?: string | Date | null;
+    round: number;
+    [key: string]: unknown;
+}
+
 export function MeasureDataImportDialog({ open, onOpenChange, quoteId, onSuccess }: MeasureDataImportDialogProps) {
     const [step, setStep] = useState<'SELECT' | 'PREVIEW'>('SELECT');
-    const [tasks, setTasks] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<MeasureTaskPreview[]>([]);
     const [selectedTask, setSelectedTask] = useState<string | null>(null);
 
     // Preview State

@@ -286,7 +286,7 @@ export const slaChecker = {
             totalFound += longPendingTasks.length;
 
             for (const task of longPendingTasks) {
-                console.log('LOOP ENTERED, TASK ID:', task.id);
+                logger.info(`[SLAChecker] Processing auto-approval for task ${task.id}`);
                 logger.info(`[SLAChecker] Auto-approving task ${task.id} for tenant ${tenant.name} due to ${approveDays}-day SLA`);
 
                 try {
@@ -294,13 +294,13 @@ export const slaChecker = {
                     const currentTask = await db.query.approvalTasks.findFirst({
                         where: eq(approvalTasks.id, task.id)
                     });
-                    console.log('FIND FIRST RESULT:', currentTask?.id, currentTask?.status);
+                    logger.info(`[SLAChecker] Task ${currentTask?.id} current status: ${currentTask?.status}`);
 
                     if (!currentTask || currentTask.status !== 'PENDING') {
                         logger.warn(`[SLAChecker] Task ${task.id} status changed, skipping auto-approval. Status: ${currentTask?.status}`);
                         continue;
                     }
-                    console.log('PROCEEDING TO AUTO-APPROVE');
+                    logger.info('[SLAChecker] Proceeding to auto-approve');
                     logger.info(`[SLAChecker] Proceeding to auto-approve task ${task.id}`);
 
                     const { processApproval } = await import('../approval/actions/processing');

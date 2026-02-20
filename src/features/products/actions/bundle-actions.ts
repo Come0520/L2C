@@ -11,7 +11,7 @@ import { productBundles, productBundleItems } from '@/shared/api/schema/supply-c
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 
 // 辅助函数：获取 tenantId
@@ -48,19 +48,35 @@ const bundleItemSchema = z.object({
 // =============================================
 
 /**
+ * 获取组合商品列表（内部缓存 wrapper）
+ *
+ * @description 使用 unstable_cache 按 tenantId 缓存，tag: packages / packages-{tenantId}
+ * 套餐列表数据稳定，适合缓存。修改时通过 revalidateTag 失效。
+ */
+const getCachedBundles = (tenantId: string) =>
+    unstable_cache(
+        async () => {
+            return db
+                .select()
+                .from(productBundles)
+                .where(eq(productBundles.tenantId, tenantId))
+                .orderBy(desc(productBundles.createdAt));
+        },
+        [`packages-${tenantId}`],
+        { tags: ['packages', `packages-${tenantId}`] }
+    );
+
+/**
  * 获取组合商品列表
+ *
+ * @description 已使用 unstable_cache 缓存，tag: packages / packages-{tenantId}
  */
 export async function getBundles() {
     try {
         const tenantId = await getTenantIdFromSession();
         if (!tenantId) return { success: false, error: '未授权' };
 
-        const data = await db
-            .select()
-            .from(productBundles)
-            .where(eq(productBundles.tenantId, tenantId))
-            .orderBy(desc(productBundles.createdAt));
-
+        const data = await getCachedBundles(tenantId)();
         return { success: true, data };
     } catch (error) {
         console.error('获取组合商品列表失败:', error);
@@ -136,6 +152,8 @@ export async function createBundle(input: z.infer<typeof createBundleSchema>) {
             })
             .returning();
 
+        revalidateTag('packages', 'default');
+        revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true, data: created };
     } catch (error) {
@@ -170,6 +188,8 @@ export async function updateBundle(id: string, input: z.infer<typeof updateBundl
             ))
             .returning();
 
+        revalidateTag('packages', 'default');
+        revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true, data: updated };
     } catch (error) {
@@ -202,6 +222,8 @@ export async function deleteBundle(id: string) {
                 eq(productBundles.tenantId, tenantId)
             ));
 
+        revalidateTag('packages', 'default');
+        revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true };
     } catch (error) {
@@ -298,3 +320,4 @@ export async function calculateBundleCost(bundleId: string) {
         return { success: false, error: '计算组合商品成本失败' };
     }
 }
+

@@ -11,7 +11,9 @@ export const leads = pgTable('leads', {
     tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
     leadNo: varchar('lead_no', { length: 50 }).unique().notNull(),
 
-    // Customer Info
+    // ==========================================
+    // 客户基础信息结构 (Customer Info)
+    // ==========================================
     customerName: varchar('customer_name', { length: 50 }).notNull(),
     customerPhone: varchar('customer_phone', { length: 20 }).notNull(),
     customerWechat: varchar('customer_wechat', { length: 50 }),
@@ -19,11 +21,15 @@ export const leads = pgTable('leads', {
     community: varchar('community', { length: 100 }),
     houseType: varchar('house_type', { length: 50 }),
 
-    // Business Info
+    // ==========================================
+    // 业务阶段与意向评级 (Business Info)
+    // ==========================================
     status: leadStatusEnum('status').default('PENDING_ASSIGNMENT'),
     intentionLevel: intentionLevelEnum('intention_level'),
 
-    // Channel Source
+    // ==========================================
+    // 流量与获客渠道追踪 (Channel Source Tracking)
+    // ==========================================
     channelId: uuid('channel_id').references(() => channels.id), // Direct channel link
     channelContactId: uuid('channel_contact_id').references(() => channelContacts.id), // Specific person
     sourceChannelId: uuid('source_channel_id').references(() => marketChannels.id), // e.g. Category (Legacy/Category)
@@ -40,10 +46,21 @@ export const leads = pgTable('leads', {
     lostReason: text('lost_reason'),
     score: decimal('score', { precision: 5, scale: 2 }).default('0'), // Lead quality score (0-100)
 
-    // Webhook / 外部系统集成
+    // ==========================================
+    // 批量导入追踪字段 (Import Tracking)
+    // ==========================================
+    importBatchId: varchar('import_batch_id', { length: 100 }),
+    rawData: jsonb('raw_data'),
+
+
+    // ==========================================
+    // Webhook 与外部系统集成 (External System Integration)
+    // ==========================================
     externalId: varchar('external_id', { length: 100 }), // 外部系统线索ID，用于幂等性校验
 
-    // Assignment & Timeline
+    // ==========================================
+    // 分配机制与生命周期事件线 (Assignment & Timeline)
+    // ==========================================
     assignedSalesId: uuid('assigned_sales_id').references(() => users.id),
     assignedAt: timestamp('assigned_at', { withTimezone: true }),
 

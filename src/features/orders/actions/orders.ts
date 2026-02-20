@@ -210,7 +210,7 @@ export async function requestCustomerConfirmationAction(input: z.infer<typeof re
   const validated = requestCustomerConfirmationSchema.parse(input);
 
   try {
-    await OrderService.requestCustomerConfirmation(validated.orderId, tenantId);
+    await OrderService.requestCustomerConfirmation(validated.orderId, tenantId, user.id);
 
     await AuditService.record({
       tenantId,

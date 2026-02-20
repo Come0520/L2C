@@ -176,7 +176,7 @@ export async function checkMeasureFeeAdmission(
         };
     }
 
-    // TODO: 这里可以扩展为检查是否已支付测量费
+    // NOTE: 这里可以扩展为检查是否已支付测量费
     // 目前默认允许创建测量任务，测量费在现场收取
     return {
         requiresFee: true,

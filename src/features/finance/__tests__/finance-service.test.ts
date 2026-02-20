@@ -42,7 +42,7 @@ describe('FinanceService', () => {
             const result = await FinanceService.generateReceivables('order-1', '1000', 'tenant-1', [0.6, 0.4]);
 
             expect(db.insert).toHaveBeenCalledWith(paymentSchedules);
-            const insertCall = (db.insert(paymentSchedules).values as any).mock.calls[0][0];
+            const insertCall = vi.mocked(db.insert(paymentSchedules).values).mock.calls[0][0];
             expect(insertCall).toHaveLength(2);
             expect(insertCall[0].amount).toBe('600');
             expect(insertCall[1].amount).toBe('400');
@@ -54,7 +54,7 @@ describe('FinanceService', () => {
             // Note: generateReceivables uses toDecimalPlaces(2)
             await FinanceService.generateReceivables('order-1', '100', 'tenant-1', [0.3333, 0.3333, 0.3334]);
 
-            const insertCall = (db.insert(paymentSchedules).values as any).mock.calls[0][0];
+            const insertCall = vi.mocked(db.insert(paymentSchedules).values).mock.calls[0][0];
             expect(insertCall).toHaveLength(3);
 
             // Decimal('100').times(0.3333).toDecimalPlaces(2) -> 33.33
@@ -93,7 +93,7 @@ describe('FinanceService', () => {
                     }),
                 }),
             };
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             const data = {
                 customerName: 'Test',
@@ -105,7 +105,7 @@ describe('FinanceService', () => {
                 items: [],
             };
 
-            await FinanceService.createPaymentOrder(data as any, 'tenant-1', 'user-1');
+            await FinanceService.createPaymentOrder(data as never, 'tenant-1', 'user-1');
             expect(mockTx.insert).toHaveBeenCalled();
         });
 
@@ -122,7 +122,7 @@ describe('FinanceService', () => {
                     },
                 },
             };
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             const data = {
                 customerName: 'Test Item',
@@ -134,7 +134,7 @@ describe('FinanceService', () => {
                 items: [{ orderId: 'ord-1', amount: 1000 }],
             };
 
-            await FinanceService.createPaymentOrder(data as any, 'tenant-1', 'user-1');
+            await FinanceService.createPaymentOrder(data as never, 'tenant-1', 'user-1');
             // insert 应被调用两次：一次 paymentOrders，一次 paymentOrderItems
             expect(mockTx.insert).toHaveBeenCalledTimes(2);
         });
@@ -159,7 +159,7 @@ describe('FinanceService', () => {
             });
             const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
 
-            const tx: any = {
+            const tx = {
                 query: {
                     paymentOrders: {
                         findFirst: vi.fn().mockResolvedValue({
@@ -206,15 +206,15 @@ describe('FinanceService', () => {
                 }),
                 insert: insertMock,
                 // 用于辅助断言：寻找特定表的 values 调用数据
-                _getValues: (table: any) => {
+                _getValues: (table: unknown) => {
                     const insertCallIndex = insertMock.mock.calls.findIndex(c => c[0] === table);
                     if (insertCallIndex === -1) return null;
                     return valuesMock.mock.calls[insertCallIndex][0];
                 },
-                _getUpdate: (table: any) => {
-                    const updateCallIndex = tx.update.mock.calls.findIndex((c: any) => c[0] === table);
+                _getUpdate: (table: unknown) => {
+                    const updateCallIndex = vi.mocked(tx.update).mock.calls.findIndex(c => c[0] === table);
                     if (updateCallIndex === -1) return null;
-                    return (tx.update(table).set as any).mock.calls[updateCallIndex][0];
+                    return vi.mocked(tx.update(table as never).set).mock.calls[updateCallIndex][0];
                 }
             };
             return tx;
@@ -222,7 +222,7 @@ describe('FinanceService', () => {
 
         it('REBATE 模式：应按订单金额 * 费率计算佣金', async () => {
             const mockTx = createMockTx();
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             const result = await FinanceService.verifyPaymentOrder('order-pay-1', 'VERIFIED', 'tenant-1', 'user-1');
 
@@ -234,7 +234,7 @@ describe('FinanceService', () => {
 
         it('REJECTED 状态：不应触发佣金计算', async () => {
             const mockTx = createMockTx();
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             const result = await FinanceService.verifyPaymentOrder('order-pay-1', 'REJECTED', 'tenant-1', 'user-1');
 
@@ -245,7 +245,7 @@ describe('FinanceService', () => {
 
         it('无渠道 (channelId=null)：不应生成佣金记录', async () => {
             const mockTx = createMockTx();
-            (mockTx.query.arStatements.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.arStatements.findFirst).mockResolvedValue({
                 id: 'stmt-1',
                 orderId: 'ord-1',
                 totalAmount: '10000',
@@ -255,7 +255,7 @@ describe('FinanceService', () => {
                 channelId: null,
                 channel: null,
             });
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             const result = await FinanceService.verifyPaymentOrder('order-pay-1', 'VERIFIED', 'tenant-1', 'user-1');
 
@@ -265,13 +265,13 @@ describe('FinanceService', () => {
 
         it('PARTIAL 状态：部分收款应更新 receivedAmount 并保持 PARTIAL 状态', async () => {
             const mockTx = createMockTx();
-            (mockTx.query.paymentOrders.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.paymentOrders.findFirst).mockResolvedValue({
                 id: 'order-pay-partial',
                 status: 'PENDING', // 必须为 PENDING 才能通过校验
                 totalAmount: '10000',
                 items: [{ orderId: 'ord-1', amount: '5000' }],
             });
-            (mockTx.query.arStatements.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.arStatements.findFirst).mockResolvedValue({
                 id: 'stmt-1',
                 orderId: 'ord-1',
                 totalAmount: '10000',
@@ -280,7 +280,7 @@ describe('FinanceService', () => {
                 status: 'PENDING',
             });
 
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             await FinanceService.verifyPaymentOrder('order-pay-partial', 'VERIFIED', 'tenant-1', 'user-1');
 
@@ -292,13 +292,13 @@ describe('FinanceService', () => {
 
         it('小额差异处理：如果余款在允许范围内，状态应设为 PAID', async () => {
             const mockTx = createMockTx();
-            (mockTx.query.paymentOrders.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.paymentOrders.findFirst).mockResolvedValue({
                 id: 'order-pay-diff',
                 status: 'PENDING',
                 totalAmount: '0',
                 items: [{ orderId: 'ord-1', amount: '0' }],
             });
-            (mockTx.query.arStatements.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.arStatements.findFirst).mockResolvedValue({
                 id: 'stmt-1',
                 totalAmount: '10000',
                 receivedAmount: '9999',
@@ -306,13 +306,13 @@ describe('FinanceService', () => {
                 status: 'PARTIAL',
             });
 
-            (getFinanceConfigCached as any).mockResolvedValue({
+            vi.mocked(getFinanceConfigCached).mockResolvedValue({
                 allow_difference: true,
                 max_difference_amount: 5,
-            });
-            (isWithinAllowedDifference as any).mockReturnValue(true);
+            } as never);
+            vi.mocked(isWithinAllowedDifference).mockReturnValue(true);
 
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             await FinanceService.verifyPaymentOrder('order-pay-diff', 'VERIFIED', 'tenant-1', 'user-1');
 
@@ -323,7 +323,7 @@ describe('FinanceService', () => {
 
         it('BASE_PRICE 模式：应按 (成交价 - 结算底价) * 费率计算佣金', async () => {
             const mockTx = createMockTx();
-            (mockTx.query.arStatements.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.arStatements.findFirst).mockResolvedValue({
                 id: 'stmt-base',
                 orderId: 'ord-1',
                 totalAmount: '10000',
@@ -337,10 +337,10 @@ describe('FinanceService', () => {
                     commissionRate: '0.1',
                 },
             });
-            (mockTx.query.orderItems.findMany as any).mockResolvedValue([{ productId: 'p1', quantity: 1 }]);
-            (mockTx.query.products.findMany as any).mockResolvedValue([{ id: 'p1', floorPrice: '6000' }]);
+            vi.mocked(mockTx.query.orderItems.findMany).mockResolvedValue([{ productId: 'p1', quantity: 1 }] as never);
+            vi.mocked(mockTx.query.products.findMany).mockResolvedValue([{ id: 'p1', floorPrice: '6000' }] as never);
 
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             await FinanceService.verifyPaymentOrder('order-pay-1', 'VERIFIED', 'tenant-1', 'user-1');
 
@@ -351,7 +351,7 @@ describe('FinanceService', () => {
 
         it('BASE_PRICE 模式：利润为负时不应生成佣金', async () => {
             const mockTx = createMockTx();
-            (mockTx.query.arStatements.findFirst as any).mockResolvedValue({
+            vi.mocked(mockTx.query.arStatements.findFirst).mockResolvedValue({
                 id: 'stmt-negative',
                 totalAmount: '5000',
                 receivedAmount: '0',
@@ -360,10 +360,10 @@ describe('FinanceService', () => {
                 channelId: 'ch-1',
                 channel: { cooperationMode: 'BASE_PRICE', commissionRate: '0.1' },
             });
-            (mockTx.query.orderItems.findMany as any).mockResolvedValue([{ productId: 'p1', quantity: 1 }]);
-            (mockTx.query.products.findMany as any).mockResolvedValue([{ id: 'p1', floorPrice: '6000' }]);
+            vi.mocked(mockTx.query.orderItems.findMany).mockResolvedValue([{ productId: 'p1', quantity: 1 }] as never);
+            vi.mocked(mockTx.query.products.findMany).mockResolvedValue([{ id: 'p1', floorPrice: '6000' }] as never);
 
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
             await FinanceService.verifyPaymentOrder('order-pay-1', 'VERIFIED', 'tenant-1', 'user-1');
 

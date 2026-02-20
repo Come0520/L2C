@@ -16,22 +16,33 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { ReceiptBillDialog } from './receipt-bill-dialog';
 
+import { ARStatementWithRelations } from '../types';
+
 interface ARStatementTableProps {
-    data: any[];
+    data: ARStatementWithRelations[];
 }
 
+/**
+ * 应收账单核心数据表格 (AR Statement Table)
+ * 
+ * 展示客户应收账款（AR）对账单的集合视图，呈现账单的核销状态、待收金额和已收汇总。
+ * 允许用户新建收款单或对有余欠的单据直接发起收款登记。
+ * 
+ * @param {ARStatementTableProps} props - 表格需要渲染的 AR 数据源
+ * @returns {JSX.Element} 应收对账单表格的 React 组件
+ */
 export function ARStatementTable({ data }: ARStatementTableProps) {
-    console.log('🖼️ ARStatementTable rendering, data length:', data?.length);
-    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-    const [selectedStatement, setSelectedStatement] = useState<any>(null);
 
-    const handleCreateReceipt = (statement: any) => {
+    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+    const [selectedStatement, setSelectedStatement] = useState<ARStatementWithRelations | null>(null);
+
+    const handleCreateReceipt = (statement: ARStatementWithRelations | null) => {
         setSelectedStatement(statement);
         setIsReceiptDialogOpen(true);
     };
 
     const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
-        const variants: Record<string, any> = {
+        const variants: Record<string, "success" | "info" | "warning" | "error" | "secondary" | "default"> = {
             PENDING_RECON: 'warning',
             RECONCILED: 'info',
             PARTIAL: 'warning',
@@ -106,7 +117,7 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
                                             {getStatusLabel(item.status)}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{format(new Date(item.createdAt), 'yyyy-MM-dd')}</TableCell>
+                                    <TableCell>{item.createdAt ? format(new Date(item.createdAt), 'yyyy-MM-dd') : '-'}</TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Button variant="ghost" size="icon" title="查看详情" asChild>
                                             <Link href={`/finance/ar/${item.id}`}>

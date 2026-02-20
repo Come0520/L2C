@@ -14,7 +14,14 @@ import {
 // 'use server' 文件不支持导出类型
 
 /**
- * 获取财务配置（带缓存）
+ * 获取财务配置（带缓存） (Get Finance Config with Cache)
+ * 
+ * 获取指定租户的财务系统配置，默认使用内存级 TTL 缓存来降低对数据库的频繁读取。
+ * 支持灵活的配置 JSON 序列化和反序列化容错。
+ * 并与默认配置项自动合并，保证所有配置的安全性可用。
+ * 
+ * @param {string} tenantId - 租户的唯一标识ID
+ * @returns {Promise<FinanceConfig>} 返回合并后的该租户专属财务配置模型
  */
 export async function getFinanceConfigCached(tenantId: string): Promise<FinanceConfig> {
     // 检查缓存
@@ -34,12 +41,12 @@ export async function getFinanceConfigCached(tenantId: string): Promise<FinanceC
         try {
             const value = JSON.parse(c.configValue);
             if (c.configKey in result) {
-                (result as any)[c.configKey] = value;
+                Object.assign(result, { [c.configKey]: value });
             }
         } catch {
             // 非 JSON 值直接赋值
             if (c.configKey in result) {
-                (result as any)[c.configKey] = c.configValue;
+                Object.assign(result, { [c.configKey]: c.configValue });
             }
         }
     }

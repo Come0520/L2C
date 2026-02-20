@@ -13,7 +13,7 @@ import { channelDiscountOverrides } from '@/shared/api/schema/supply-chain';
 import { tenants } from '@/shared/api/schema/infrastructure';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 
 // =============================================
@@ -66,34 +66,48 @@ async function getTenantIdFromSession(): Promise<string> {
 // =============================================
 
 /**
- * 获取全局渠道折扣配置
+ * 获取全局渠道折扣配置（内部缓存 wrapper）
+ *
+ * @description 使用 unstable_cache 按 tenantId 缓存，tag: global-discount / global-discount-{tenantId}
+ * 全局折扣是计算报价的基础读取，变动周期长，适合缓存。
+ * 修改配置时通过 revalidateTag('global-discount') 失效。
  */
-export async function getGlobalDiscountConfig() {
-    try {
-        const tenantId = await getTenantIdFromSession();
+const getCachedGlobalDiscountConfig = (tenantId: string) =>
+    unstable_cache(
+        async () => {
+            const tenant = await db.query.tenants.findFirst({
+                where: eq(tenants.id, tenantId),
+            });
 
-        const tenant = await db.query.tenants.findFirst({
-            where: eq(tenants.id, tenantId),
-        });
+            if (!tenant) {
+                throw new Error('租户不存在');
+            }
 
-        if (!tenant) {
-            throw new Error('租户不存在');
-        }
+            const settings = tenant.settings as Record<string, unknown> || {};
+            const discountConfig = settings.channelDiscounts as Record<string, unknown> || {};
 
-        // 从 settings JSONB 中获取折扣配置
-        const settings = tenant.settings as Record<string, unknown> || {};
-        const discountConfig = settings.channelDiscounts as Record<string, unknown> || {};
-
-        return {
-            data: {
+            return {
                 sLevel: Number(discountConfig.sLevel) || 95,
                 aLevel: Number(discountConfig.aLevel) || 98,
                 bLevel: Number(discountConfig.bLevel) || 100,
                 cLevel: Number(discountConfig.cLevel) || 102,
                 packageNoDiscount: Boolean(discountConfig.packageNoDiscount),
                 bundleSeparateDiscount: Boolean(discountConfig.bundleSeparateDiscount),
-            }
-        };
+            };
+        },
+        [`global-discount-${tenantId}`],
+        { tags: ['global-discount', `global-discount-${tenantId}`] }
+    );
+
+/**
+ * 获取全局渠道折扣配置
+ *
+ * @description 已使用 unstable_cache 缓存，tag: global-discount / global-discount-{tenantId}
+ */
+export async function getGlobalDiscountConfig() {
+    try {
+        const tenantId = await getTenantIdFromSession();
+        return { data: await getCachedGlobalDiscountConfig(tenantId)() };
     } catch (error) {
         return { error: error instanceof Error ? error.message : '获取配置失败' };
     }
@@ -129,6 +143,9 @@ export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDis
             })
             .where(eq(tenants.id, tenantId));
 
+        // 失效全局折扣缓存
+        revalidateTag('global-discount', 'default');
+        revalidateTag(`global-discount-${tenantId}`, 'default');
         revalidatePath('/settings/products');
         return { success: true };
     } catch (error) {

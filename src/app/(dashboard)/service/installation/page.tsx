@@ -18,20 +18,16 @@ export default async function InstallationPage({
     const status = typeof params.status === 'string' ? params.status : undefined;
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1;
 
-    // 并行获取数据和统计信息
-    const [result, statsResult] = await Promise.all([
-        getInstallTasks({
-            search,
-            status: status === 'ALL' ? undefined : status,
-            page,
-            pageSize: 20
-        }),
-        getInstallationStats()
-    ]);
+    // 获取安装任务列表
+    const result = await getInstallTasks({
+        search,
+        status: status === 'ALL' ? undefined : status,
+        page,
+        pageSize: 20
+    });
 
     const tasks = result.success ? (result.data || []) : [];
     const pagination = result.success ? result.pagination : undefined;
-    const stats = statsResult.success ? statsResult.data : [];
 
     return (
         <div className="h-full flex flex-col gap-6 p-6">
@@ -52,8 +48,7 @@ export default async function InstallationPage({
                 <CreateInstallTaskDialog />
             </div>
 
-            {/* 统计概览区域 */}
-            <InstallationStats stats={stats as any} />
+
 
             {/* 主内容区域 - 玻璃态容器 */}
             <div className="flex-1 flex flex-col min-h-0 glass-liquid-ultra rounded-3xl border border-white/10 p-4 gap-4">
@@ -72,8 +67,7 @@ export default async function InstallationPage({
     );
 }
 
-import { InstallationStats } from '@/features/service/installation/components/installation-stats';
-import { getInstallationStats } from '@/features/service/installation/actions';
+// InstallationStats 统计组件已移除（getInstallationStats 已废弃）
 
 function TableSkeleton() {
     return (

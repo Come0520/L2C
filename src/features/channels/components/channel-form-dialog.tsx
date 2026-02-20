@@ -78,6 +78,12 @@ interface ChannelFormDialogProps {
         contactName: string | null;
         phone: string | null;
         category?: string | null;
+        channelType?: string | null;
+        customChannelType?: string | null;
+        commissionRate?: number | null;
+        commissionType?: string | null;
+        cooperationMode?: string | null;
+        settlementType?: string | null;
     } | null;
     parentChannel?: {
         id: string;
@@ -110,7 +116,7 @@ export function ChannelFormDialog({
     const isEdit = !!channel;
 
     const form = useForm<FormData>({
-        // zodResolver 与 react-hook-form 泛型不完全兼容，需保留 as any（已知问题）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             parentId: parentChannel?.id || channel?.parentId || null,
@@ -128,15 +134,15 @@ export function ChannelFormDialog({
             // 继承父级 Category，如果有的话
             category: (channel?.category || parentChannel?.category || 'OFFLINE') as 'ONLINE' | 'OFFLINE' | 'REFERRAL',
             // 继承父级 channelType (作为默认值)
-            channelType: (channel as unknown as { channelType: string })?.channelType as 'DECORATION_CO' || (parentChannel?.channelType as 'DECORATION_CO') || 'DECORATION_CO',
-            customChannelType: (channel as unknown as { customChannelType?: string })?.customChannelType || '',
+            channelType: (channel?.channelType as 'DECORATION_CO') || (parentChannel?.channelType as 'DECORATION_CO') || 'DECORATION_CO',
+            customChannelType: channel?.customChannelType || '',
             level: (channel?.level as 'S' | 'A' | 'B' | 'C') || 'C',
             contactName: channel?.contactName || '',
             phone: channel?.phone || '',
-            commissionRate: parseFloat((channel as unknown as { commissionRate: string })?.commissionRate || '10'),
-            commissionType: (channel as unknown as { commissionType: string })?.commissionType as 'FIXED' | 'TIERED' || 'FIXED',
-            cooperationMode: (channel as unknown as { cooperationMode: string })?.cooperationMode as 'BASE_PRICE' | 'COMMISSION' || 'COMMISSION',
-            settlementType: (channel as unknown as { settlementType: string })?.settlementType as 'PREPAY' | 'MONTHLY' || 'PREPAY',
+            commissionRate: parseFloat(channel?.commissionRate ? channel.commissionRate.toString() : '10'),
+            commissionType: (channel?.commissionType as 'FIXED' | 'TIERED') || 'FIXED',
+            cooperationMode: (channel?.cooperationMode as 'BASE_PRICE' | 'COMMISSION') || 'COMMISSION',
+            settlementType: (channel?.settlementType as 'PREPAY' | 'MONTHLY') || 'PREPAY',
         },
     });
 
@@ -144,10 +150,10 @@ export function ChannelFormDialog({
         startTransition(async () => {
             try {
                 if (isEdit && channel) {
-                    await updateChannel(channel.id, data as unknown as ChannelInput);
+                    await updateChannel(channel.id, data as ChannelInput);
                     toast.success('渠道更新成功');
                 } else {
-                    await createChannel(data as unknown as ChannelInput);
+                    await createChannel(data as ChannelInput);
                     toast.success('渠道创建成功');
                 }
                 onSuccess();

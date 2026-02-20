@@ -31,6 +31,7 @@ import { generateDocNo } from '@/shared/lib/utils';
 import { PO_STATUS } from '../constants';
 import { AuditService } from '@/shared/lib/audit-service';
 import type { Session } from 'next-auth';
+import type { SplitCondition } from '../types';
 
 // ============ 类型定义 ============
 
@@ -330,7 +331,7 @@ async function resolveBySupplierType(
 interface SplitRuleRow {
     id: string;
     priority: number | null;
-    conditions: unknown; // JSONB
+    conditions: SplitCondition[] | null;
     targetType: string;
     targetSupplierId: string | null;
 }
@@ -374,18 +375,18 @@ function matchConditionRules(
 /**
  * 评估条件组（AND 逻辑）
  */
-function evaluateConditions(item: EnrichedOrderItem, conditions: unknown): boolean {
+function evaluateConditions(item: EnrichedOrderItem, conditions: SplitCondition[] | null): boolean {
     if (!Array.isArray(conditions) || conditions.length === 0) {
         return false;
     }
 
-    return conditions.every((cond: { field?: string; op?: string; value?: string }) => {
-        if (!cond.field || !cond.op) return false;
+    return conditions.every((cond: SplitCondition) => {
+        if (!cond.field || !cond.operator) return false;
 
         const fieldValue = getFieldValue(item, cond.field);
         if (fieldValue === undefined) return false;
 
-        switch (cond.op) {
+        switch (cond.operator) {
             case 'eq':
                 return fieldValue === cond.value;
             case 'neq':
@@ -393,6 +394,11 @@ function evaluateConditions(item: EnrichedOrderItem, conditions: unknown): boole
             case 'contains':
                 return typeof fieldValue === 'string' && typeof cond.value === 'string'
                     && fieldValue.toLowerCase().includes(cond.value.toLowerCase());
+            case 'in':
+                if (Array.isArray(cond.value)) {
+                    return cond.value.includes(fieldValue as never);
+                }
+                return false;
             default:
                 return false;
         }

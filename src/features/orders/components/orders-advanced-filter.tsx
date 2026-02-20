@@ -44,8 +44,12 @@ export function OrderAdvancedFilter({
         onFiltersChange(newFilters);
     };
 
-    const handleDateRangeChange = (range: { from: Date; to: Date } | undefined) => {
-        onFiltersChange({ ...filters, dateRange: range });
+    const handleDateRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
+        if (range?.from && range?.to) {
+            onFiltersChange({ ...filters, dateRange: { from: range.from, to: range.to } });
+        } else {
+            onFiltersChange({ ...filters, dateRange: undefined });
+        }
     };
 
     const handleClear = () => {

@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Upload } from 'lucide-react';
-import { updateInstallChecklist } from '@/features/service/installation/actions';
+import { updateInstallChecklistAction } from '@/features/service/installation/actions';
 import { toast } from 'sonner';
 
 interface InstallChecklistProps {
@@ -52,7 +52,7 @@ export function InstallChecklist({ taskId, initialStatus }: InstallChecklistProp
 
     const handleSave = () => {
         startTransition(async () => {
-            const result = await updateInstallChecklist({
+            const result = await updateInstallChecklistAction({
                 taskId,
                 items
             });
@@ -68,7 +68,7 @@ export function InstallChecklist({ taskId, initialStatus }: InstallChecklistProp
     // Real implementation needs file input and OSS upload.
     const handlePhotoUpload = async (_id: string, _file: File) => {
         // Mock upload for now or implement real OSS logic
-        // TODO: Implement Real OSS Upload
+        // NOTE: Implement Real OSS Upload
         toast.info("上传功能集成中...");
     };
 

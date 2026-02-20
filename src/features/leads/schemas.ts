@@ -35,7 +35,7 @@ export const leadSchema = z.object({
 
 
 export const updateLeadSchema = leadSchema.partial().extend({
-    id: z.string(),
+    id: z.string().uuid(),
     version: z.number().optional(),
 });
 
@@ -49,25 +49,27 @@ export const createCustomerSchema = z.object({
 });
 
 export const assignLeadSchema = z.object({
-    id: z.string(),
+    id: z.string().uuid(),
     salesId: z.string().min(1, '请选择销售人员'),
+    version: z.number().optional(),
 });
 
 export const bulkAssignSchema = z.object({
-    ids: z.array(z.string()).min(1, '请至少选择一个线索'),
+    ids: z.array(z.string().uuid()).min(1, '请至少选择一个线索'),
     salesId: z.string().min(1, '请选择销售人员'),
 });
 
 export const convertLeadSchema = z.object({
-    leadId: z.string(),
-    customerId: z.string().optional(),
+    leadId: z.string().uuid(),
+    customerId: z.string().uuid().optional(),
     force: z.boolean().optional(),
+    version: z.number().optional(),
 });
 
 export const followUpTypeEnum = z.enum(['PHONE_CALL', 'WECHAT_CHAT', 'STORE_VISIT', 'HOME_VISIT', 'QUOTE_SENT', 'SYSTEM', 'OTHER']);
 
 export const addLeadFollowupSchema = z.object({
-    leadId: z.string(),
+    leadId: z.string().uuid(),
     // Matching leadActivityTypeEnum: PHONE_CALL, WECHAT_CHAT, STORE_VISIT, HOME_VISIT, QUOTE_SENT, SYSTEM
     // Matching leadActivityTypeEnum: PHONE_CALL, WECHAT_CHAT, STORE_VISIT, HOME_VISIT, QUOTE_SENT, SYSTEM
     type: followUpTypeEnum.default('PHONE_CALL'),
@@ -76,19 +78,21 @@ export const addLeadFollowupSchema = z.object({
     quoteId: z.string().uuid().optional(),
     purchaseIntention: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
     customerLevel: z.string().optional(),
+    version: z.number().optional(),
 });
 
 export const voidLeadSchema = z.object({
-    id: z.string(),
+    id: z.string().uuid(),
     reason: z.string().min(1, '请输入作废原因'),
+    version: z.number().optional(),
 });
 
 export const deleteLeadSchema = z.object({
-    id: z.string(),
+    id: z.string().uuid(),
 });
 
 export const restoreLeadSchema = z.object({
-    id: z.string(),
+    id: z.string().uuid(),
     reason: z.string().optional(), // 恢复原因
 });
 
@@ -110,7 +114,7 @@ export const leadFilterSchema = z.object({
     }).optional(),
     tags: z.array(z.string()).optional(),
 }).transform((data) => {
-    const validStatuses = ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'INVALID'];
+    const validStatuses = ['PENDING_ASSIGNMENT', 'PENDING_FOLLOWUP', 'FOLLOWING_UP', 'WON', 'INVALID', 'PENDING_APPROVAL', 'MEASUREMENT_SCHEDULED', 'QUOTED', 'LOST', 'PENDING_REVIEW'];
     return {
         ...data,
         status: data.status?.filter(s => validStatuses.includes(s)),
@@ -118,7 +122,7 @@ export const leadFilterSchema = z.object({
 });
 
 export const getLeadTimelineLogsSchema = z.object({
-    leadId: z.string(),
+    leadId: z.string().uuid(),
 });
 
 export const analyticsDateRangeSchema = z.object({

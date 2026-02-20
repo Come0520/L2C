@@ -6,7 +6,10 @@ import { logger } from "@/shared/lib/logger";
 
 export class ApprovalNotificationService {
     /**
-     * Notify approver about a new task
+     * 向审批人发送新任务通知
+     * 
+     * @param taskId - 需要处理的审批任务 ID
+     * @param tenantId - 租户 ID（可选，用于安全隔离）
      */
     static async notifyNewTask(taskId: string, tenantId?: string) {
         try {
@@ -42,7 +45,12 @@ export class ApprovalNotificationService {
     }
 
     /**
-     * Notify requester about approval result
+     * 向申请人发送审批结果通知
+     * 
+     * 在整个审批流实例完结（全部通过或被驳回）时触发。
+     * 
+     * @param approvalId - 审批实例 ID
+     * @param tenantId - 租户 ID（可选，用于安全隔离）
      */
     static async notifyResult(approvalId: string, tenantId?: string) {
         try {

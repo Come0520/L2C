@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/shared/ui/button';
@@ -58,9 +58,7 @@ export function QuickQuoteForm({ leadId }: QuickQuoteFormProps) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const form = useForm<QuickQuoteFormValues>({
-        // 注意: zod 4 与 @hookform/resolvers 存在类型不兼容问题，运行时正常
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(quickQuoteFormSchema) as any,
+        resolver: zodResolver(quickQuoteFormSchema) as unknown as Resolver<QuickQuoteFormValues>,
         defaultValues: {
             planType: '',
             rooms: [

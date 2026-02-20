@@ -16,6 +16,13 @@ const createMeasureFromQuoteSchema = z.object({
     leadId: z.string().uuid(), // Required per schema
 });
 
+/**
+ * 内部服务器操作：从报价单创建关联的测量任务
+ * @param data 包含报价单ID、客户ID和线索ID的对象
+ * @param context 执行上下文，包含用户会话信息
+ * @returns 包含创建的测量任务ID的成功响应
+ * @throws 当无权访问或报价单不存在时抛出错误
+ */
 const createMeasureFromQuoteActionInternal = createSafeAction(createMeasureFromQuoteSchema, async (data, context) => {
     const tenantId = context.session.user.tenantId;
     if (!tenantId) throw new Error('Unauthorized');
@@ -48,6 +55,11 @@ const createMeasureFromQuoteActionInternal = createSafeAction(createMeasureFromQ
     };
 });
 
+/**
+ * 客户端可调用的包装方法：从报价单创建关联的测量任务
+ * @param params 包含所需参数的对象
+ * @returns 包装了响应的创建结果
+ */
 export async function createMeasureFromQuote(params: z.infer<typeof createMeasureFromQuoteSchema>) {
     return createMeasureFromQuoteActionInternal(params);
 }

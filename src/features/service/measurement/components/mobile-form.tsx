@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/shared/ui/button';
@@ -31,7 +32,7 @@ export function MeasurementMobileForm({ taskId, onSuccess }: MeasurementMobileFo
             variant: 'A',
             items: [{
                 roomName: '',
-                windowType: '平开窗',
+                windowType: 'STRAIGHT',
                 width: 0,
                 height: 0,
             }]
@@ -46,7 +47,7 @@ export function MeasurementMobileForm({ taskId, onSuccess }: MeasurementMobileFo
                 toast.success('测量数据已提交');
                 onSuccess?.();
             } else {
-                toast.error(result.error || '提交失败');
+                toast.error((result as { error?: string }).error || '提交失败');
             }
         } catch (_error) {
             toast.error('提交过程中发生错误');
@@ -75,6 +76,7 @@ export function MeasurementMobileForm({ taskId, onSuccess }: MeasurementMobileFo
                     <Label>窗型</Label>
                     <Select
                         value={items[0].windowType}
+                        // @ts-expect-error - Typescript exact match limitation
                         onValueChange={(v) => form.setValue('items.0.windowType', v)}
                     >
                         <SelectTrigger className="bg-background">

@@ -31,7 +31,7 @@ const confirmQuoteSchema = z.object({
     remark: z.string().max(500, "备注最多500字").optional(),
 });
 
-type ConfirmQuoteFormData = z.infer<typeof confirmQuoteSchema>;
+type ConfirmQuoteFormData = z.output<typeof confirmQuoteSchema>;
 
 interface ConfirmQuoteDialogProps {
     open: boolean;
@@ -47,6 +47,16 @@ export function ConfirmQuoteDialog({
     defaultAmount
 }: ConfirmQuoteDialogProps) {
     const router = useRouter();
+    const form = useForm({
+        resolver: zodResolver(confirmQuoteSchema),
+        defaultValues: {
+            poId,
+            totalAmount: Number(defaultAmount) || 0,
+            remark: '' as string | undefined,
+            supplierQuoteImg: undefined as string | undefined,
+        }
+    });
+
     const {
         register,
         handleSubmit,
@@ -54,14 +64,7 @@ export function ConfirmQuoteDialog({
         watch,
         formState: { errors, isSubmitting },
         reset
-    } = useForm<ConfirmQuoteFormData>({
-        resolver: zodResolver(confirmQuoteSchema) as any,
-        defaultValues: {
-            poId,
-            totalAmount: Number(defaultAmount) || 0,
-            remark: ''
-        }
-    });
+    } = form;
 
     useEffect(() => {
         if (open) {
@@ -87,7 +90,7 @@ export function ConfirmQuoteDialog({
             toast.success('报价已确认，进入待付款状态');
             onOpenChange(false);
             router.refresh();
-        } catch (error) {
+        } catch (_error) {
             toast.error('请求失败');
         }
     };

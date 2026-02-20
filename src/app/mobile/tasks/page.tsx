@@ -8,7 +8,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMobileAuth } from '@/shared/auth/mobile-auth-context';
 import { mobileGet } from '@/shared/lib/mobile-api-client';
-import { MapPin, Clock, ChevronRight, Loader2 } from 'lucide-react';
+import { MapPin, Clock, ChevronRight } from 'lucide-react';
+import { MobileTaskSkeleton } from '@/shared/ui/skeleton-variants';
 
 // ============================================================
 // 类型定义
@@ -142,11 +143,7 @@ export default function MobileTasksPage() {
 
     // 加载状态
     if (authLoading || isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            </div>
-        );
+        return <MobileTaskSkeleton />;
     }
 
     return (
@@ -162,8 +159,8 @@ export default function MobileTasksPage() {
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key as typeof activeTab)}
                         className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.key
-                                ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400'
+                            ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400'
                             }`}
                     >
                         {tab.label}

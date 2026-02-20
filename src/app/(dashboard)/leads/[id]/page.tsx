@@ -12,13 +12,13 @@ import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import Edit from 'lucide-react/dist/esm/icons/edit';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Zap from 'lucide-react/dist/esm/icons/zap';
-import Ban from 'lucide-react/dist/esm/icons/ban';
+
 import Link from 'next/link';
 
 import { EditLeadDialog } from '@/features/leads/components/edit-lead-dialog';
 import { AddFollowupDialog } from '@/features/leads/components/add-followup-dialog';
 import { LeadStatusBar } from '@/features/leads/components/lead-status-bar';
-import { VoidLeadDialog } from '@/features/leads/components/void-lead-dialog';
+import { VoidLeadButton } from '@/features/leads/components/void-lead-button';
 import { LeadActivityLog } from '@/features/leads/components/lead-activity-log';
 import { LeadRelatedCards } from '@/features/leads/components/lead-related-cards';
 import { NoiseButton } from '@/shared/ui/noise-button';
@@ -107,16 +107,7 @@ export default async function LeadDetailPage({
                             </Link>
                         </NoiseButton>
                         {lead.status !== 'WON' && lead.status !== 'INVALID' && (
-                            <VoidLeadDialog
-                                leadId={lead.id}
-                                userId={userId}
-                                trigger={
-                                    <Button variant="outline" size="sm" className="text-error-600 border-error-200 hover:bg-error-50">
-                                        <Ban className="h-4 w-4 mr-2" />
-                                        标记作废
-                                    </Button>
-                                }
-                            />
+                            <VoidLeadButton leadId={lead.id} userId={userId} />
                         )}
                         <Button disabled variant="ghost" size="sm" title="只有在成交后才能转为客户">
                             转为客户

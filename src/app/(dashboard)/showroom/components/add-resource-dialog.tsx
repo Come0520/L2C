@@ -37,7 +37,8 @@ export function AddResourceDialog() {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createShowroomItemSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
+    resolver: zodResolver(createShowroomItemSchema) as any,
     defaultValues: {
       type: 'CASE',
       title: '',

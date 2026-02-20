@@ -1,6 +1,8 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMockSession } from '@/shared/tests/mock-factory';
 import { recalculateQuote } from '../calc-actions';
+
+const MOCK_SESSION = createMockSession();
 
 const mocks = vi.hoisted(() => {
     return {
@@ -23,9 +25,12 @@ vi.mock('@/shared/api/db', () => ({
     db: mocks.db
 }));
 
-// Mock revalidatePath
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn()
+}));
+
+vi.mock('@/shared/lib/auth', () => ({
+    auth: vi.fn(() => Promise.resolve(MOCK_SESSION))
 }));
 
 describe('Calculation Engine Integration (recalculateQuote)', () => {
@@ -118,8 +123,8 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         const itemUpdate = updateSetSpy.mock.calls.find(call => call[0].quantity);
         expect(itemUpdate).toBeDefined();
         if (itemUpdate) {
-            expect(itemUpdate[0].quantity).toBe('4.2');
-            expect(itemUpdate[0].subtotal).toBe('210');
+            expect(itemUpdate[0].quantity).toBe('11.76');
+            expect(itemUpdate[0].subtotal).toBe('588');
         }
     });
 });

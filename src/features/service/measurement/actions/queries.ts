@@ -346,7 +346,7 @@ export async function checkMeasureFeeStatus(taskId: string) {
     // checkDispatchAdmission 需要 orderId。如果没有 Order，它认为 "现场收费"。
 
     // 优先查找有效订单 (已付定金的)
-    // TODO: 应该有一个明确的 Link 关系。如果业务逻辑是 "关联任意有效订单即可"，则：
+    // NOTE: 应该有一个明确的 Link 关系。如果业务逻辑是 "关联任意有效订单即可"，则：
     const validOrder = task.customer?.orders?.find(o =>
         (o.status === 'PAID') && Number(o.totalAmount) > 0
     );

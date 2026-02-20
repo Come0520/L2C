@@ -33,7 +33,7 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
         if (!quote) throw new Error('Quote not found');
 
         // 2. 调用 Service 层转换
-        const order = await OrderService.convertFromQuote(quoteId, tenantId, paymentAmount);
+        const order = await OrderService.convertFromQuote(quoteId, tenantId, paymentAmount ?? '0');
 
         // 3. 记录审计日志
         await AuditService.record({
@@ -46,7 +46,7 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
         });
 
         // 4. 异步处理佣金逻辑 (不阻塞订单创建)
-        checkAndGenerateCommission(order.id, tenantId).catch((e: Error) => {
+        checkAndGenerateCommission(order.id, 'ORDER_CREATED').catch((e: Error) => {
             console.error('[createOrderFromQuote] 佣金处理失败:', e.message);
         });
 

@@ -6,25 +6,24 @@ import {
     approvalTasks,
     approvalFlows
 } from "@/shared/api/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count, ne } from "drizzle-orm";
 import { createSafeAction } from '@/shared/lib/server-action';
-import { z } from 'zod';
-
-// Schema 定义
-const emptySchema = z.object({});
-const getApprovalDetailsSchema = z.object({
-    id: z.string().uuid(),
-});
+import { emptySchema, getApprovalDetailsSchema, paginationSchema } from '../schema';
 
 // createSafeAction 内部实现
-const getPendingApprovalsInternal = createSafeAction(emptySchema, async (_params, { session }) => {
+const getPendingApprovalsInternal = createSafeAction(paginationSchema, async (params, { session }) => {
     try {
+        const { page = 1, pageSize = 10 } = params;
+        const offset = (page - 1) * pageSize;
+
+        const whereClause = and(
+            eq(approvalTasks.tenantId, session.user.tenantId),
+            eq(approvalTasks.approverId, session.user.id),
+            eq(approvalTasks.status, 'PENDING')
+        );
+
         const tasks = await db.query.approvalTasks.findMany({
-            where: and(
-                eq(approvalTasks.tenantId, session.user.tenantId),
-                eq(approvalTasks.approverId, session.user.id),
-                eq(approvalTasks.status, 'PENDING')
-            ),
+            where: whereClause,
             with: {
                 approval: {
                     with: {
@@ -33,30 +32,122 @@ const getPendingApprovalsInternal = createSafeAction(emptySchema, async (_params
                 },
                 node: true
             },
-            orderBy: [desc(approvalTasks.createdAt)]
+            orderBy: [desc(approvalTasks.createdAt)],
+            limit: pageSize,
+            offset: offset,
         });
-        return { success: true, data: tasks };
+
+        const totalResult = await db.select({ value: count() })
+            .from(approvalTasks)
+            .where(whereClause);
+
+        const total = totalResult[0]?.value || 0;
+
+        return {
+            tasks,
+            pagination: {
+                total,
+                page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize)
+            }
+        };
     } catch (e: unknown) {
         const { logger } = await import('@/shared/lib/logger');
         const message = e instanceof Error ? e.message : String(e);
         logger.error("getPendingApprovals error", { error: e, message });
-        return { success: false, error: message };
+        throw new Error(message);
     }
 });
 
-const getApprovalHistoryInternal = createSafeAction(emptySchema, async (_params, { session }) => {
+const getProcessedApprovalsInternal = createSafeAction(paginationSchema, async (params, { session }) => {
     try {
+        const { page = 1, pageSize = 10 } = params;
+        const offset = (page - 1) * pageSize;
+
+        const whereClause = and(
+            eq(approvalTasks.tenantId, session.user.tenantId),
+            eq(approvalTasks.approverId, session.user.id),
+            ne(approvalTasks.status, 'PENDING')
+        );
+
+        const tasks = await db.query.approvalTasks.findMany({
+            where: whereClause,
+            with: {
+                approval: {
+                    with: {
+                        flow: true,
+                        requester: true
+                    }
+                },
+                node: true
+            },
+            orderBy: [desc(approvalTasks.actionAt)],
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const totalResult = await db.select({ value: count() })
+            .from(approvalTasks)
+            .where(whereClause);
+
+        const total = totalResult[0]?.value || 0;
+
+        return {
+            tasks,
+            pagination: {
+                total,
+                page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize)
+            }
+        };
+    } catch (e: unknown) {
+        const { logger } = await import('@/shared/lib/logger');
+        const message = e instanceof Error ? e.message : String(e);
+        logger.error("getProcessedApprovals error", { error: e, message });
+        throw new Error(message);
+    }
+});
+
+const getApprovalHistoryInternal = createSafeAction(paginationSchema, async (params, { session }) => {
+    try {
+        const { page = 1, pageSize = 10 } = params;
+        const offset = (page - 1) * pageSize;
+
+        const whereClause = and(
+            eq(approvals.tenantId, session.user.tenantId),
+            eq(approvals.requesterId, session.user.id)
+        );
+
         const myApprovals = await db.query.approvals.findMany({
-            where: and(
-                eq(approvals.tenantId, session.user.tenantId),
-                eq(approvals.requesterId, session.user.id)
-            ),
+            where: whereClause,
             with: {
                 flow: true,
             },
-            orderBy: [desc(approvals.createdAt)]
+            orderBy: [desc(approvals.createdAt)],
+            limit: pageSize,
+            offset: offset,
         });
-        return { success: true, data: myApprovals };
+
+        const totalResult = await db.select({ value: count() })
+            .from(approvals)
+            .where(whereClause);
+
+        const total = totalResult[0]?.value || 0;
+
+        return {
+            success: true,
+            data: {
+                approvals: myApprovals,
+                pagination: {
+                    total,
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(total / pageSize)
+                }
+            }
+        };
     } catch (e: unknown) {
         const { logger } = await import('@/shared/lib/logger');
         const message = e instanceof Error ? e.message : String(e);
@@ -117,18 +208,29 @@ const getApprovalFlowsInternal = createSafeAction(emptySchema, async (_params, {
 // 导出函数
 /**
  * 获取当前用户的待处理审批任务列表
- * @returns 待处理任务数组
+ * @param params 分页参数
+ * @returns 待处理任务数组及分页信息
  */
-export async function getPendingApprovals() {
-    return getPendingApprovalsInternal({});
+export async function getPendingApprovals(params: { page?: number; pageSize?: number } = {}) {
+    return getPendingApprovalsInternal({ page: params.page ?? 1, pageSize: params.pageSize ?? 10 });
+}
+
+/**
+ * 获取当前用户已处理的审批任务列表
+ * @param params 分页参数
+ * @returns 已处理任务数组及分页信息
+ */
+export async function getProcessedApprovals(params: { page?: number; pageSize?: number } = {}) {
+    return getProcessedApprovalsInternal({ page: params.page ?? 1, pageSize: params.pageSize ?? 10 });
 }
 
 /**
  * 获取当前用户发起的审批历史列表
- * @returns 审批实例数组
+ * @param params 分页参数
+ * @returns 审批实例数组及分页信息
  */
-export async function getApprovalHistory() {
-    return getApprovalHistoryInternal({});
+export async function getApprovalHistory(params: { page?: number; pageSize?: number } = {}) {
+    return getApprovalHistoryInternal({ page: params.page ?? 1, pageSize: params.pageSize ?? 10 });
 }
 
 /**

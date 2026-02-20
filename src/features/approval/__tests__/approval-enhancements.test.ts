@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { InferSelectModel } from 'drizzle-orm';
 
-// Ensure env is loaded before ANY other imports (except types/vitest)
-// Force set env for test
-process.env.DATABASE_URL = 'postgresql://l2c_test_user:l2c_test_password@localhost:5434/l2c_test';
-process.env.AUTH_SECRET = 'test_secret_for_enhancements';
+// 1. 使用 vi.hoisted 提前注入环境变量
+vi.hoisted(() => {
+    process.env.DATABASE_URL = 'postgresql://l2c_test_user:l2c_test_password@localhost:5434/l2c_test';
+    process.env.AUTH_SECRET = 'test_secret_for_enhancements';
+});
 
 import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
@@ -75,8 +76,8 @@ describe('Approval Enhancements', () => {
         }).returning() as PaymentBill[];
 
         // 3. Submit
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId, role: 'ADMIN' }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId, role: 'ADMIN' }, expires: '' });
         const res = await submissionActions.submitApproval({
             entityType: 'PAYMENT_BILL', entityId: bill.id, flowCode: 'TEST_ANY'
         });
@@ -92,8 +93,8 @@ describe('Approval Enhancements', () => {
         expect(tasks.length).toBeGreaterThanOrEqual(1);
 
         // 5. User1 Approves
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: user1Id, tenantId, role: 'FINANCE' }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: user1Id, tenantId, role: 'FINANCE' }, expires: '' });
         const task1 = tasks.find((t) => t.approverId === user1Id);
         if (!task1) throw new Error('Task1 not found');
 
@@ -129,23 +130,23 @@ describe('Approval Enhancements', () => {
             amount: '100', status: 'PENDING', recordedBy: adminId, paymentMethod: 'CASH', proofUrl: 'url'
         }).returning() as PaymentBill[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId, role: 'ADMIN' }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId, role: 'ADMIN' }, expires: '' });
         await submissionActions.submitApproval({ entityType: 'PAYMENT_BILL', entityId: bill.id, flowCode: 'TEST_ALL' });
 
         const instance = await db.query.approvals.findFirst({ where: (t, { eq }) => eq(t.entityId, bill.id) });
         const tasks = await db.query.approvalTasks.findMany({ where: (t, { eq }) => eq(t.approvalId, instance!.id) });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: user1Id, tenantId }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: user1Id, tenantId }, expires: '' });
         const task1 = tasks.find((t) => t.approverId === user1Id);
         await processingActions.processApproval({ taskId: task1!.id, action: 'APPROVE' });
 
         const midInstance = await db.query.approvals.findFirst({ where: (t, { eq }) => eq(t.id, instance!.id) });
         expect(midInstance!.status).toBe('PENDING');
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: user2Id, tenantId }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: user2Id, tenantId }, expires: '' });
         const task2 = tasks.find((t) => t.approverId === user2Id);
         await processingActions.processApproval({ taskId: task2!.id, action: 'APPROVE' });
 
@@ -174,8 +175,8 @@ describe('Approval Enhancements', () => {
             amount: '100', status: 'PENDING', recordedBy: adminId, paymentMethod: 'CASH', proofUrl: 'url'
         }).returning() as PaymentBill[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' });
         await submissionActions.submitApproval({ entityType: 'PAYMENT_BILL', entityId: bill.id, flowCode: 'TEST_DEL' });
 
         const instance = await db.query.approvals.findFirst({ where: (t, { eq }) => eq(t.entityId, bill.id) });
@@ -197,8 +198,8 @@ describe('Approval Enhancements', () => {
             amount: '100', status: 'PENDING', recordedBy: adminId, paymentMethod: 'CASH', proofUrl: 'url'
         }).returning() as PaymentBill[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' } as any);
+        // @ts-expect-error — 仅 mock 必要的用户、租户和角色信息
+        vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' });
         await submissionActions.submitApproval({ entityType: 'PAYMENT_BILL', entityId: bill.id, flowCode: 'TEST_WITHDRAW' });
 
         const instance = await db.query.approvals.findFirst({ where: (t, { eq }) => eq(t.entityId, bill.id) });

@@ -9,12 +9,11 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { Edit, MoreHorizontal, Power, PowerOff, Trash2, Box } from 'lucide-react';
 import Image from 'next/image';
+import { Product } from '../types';
 
 interface ProductCardProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  item: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEdit: (product: any) => void;
+  item: Product;
+  onEdit: (product: Product) => void;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   onDelete: (id: string) => void;
 }
@@ -65,7 +64,7 @@ export function ProductCard({ item, onEdit, onToggleStatus, onDelete }: ProductC
               <DropdownMenuItem onClick={() => onEdit(item)}>
                 <Edit className="mr-2 h-4 w-4" /> 编辑
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleStatus(item.id, item.isActive)}>
+              <DropdownMenuItem onClick={() => onToggleStatus(item.id, !!item.isActive)}>
                 {item.isActive ? (
                   <>
                     <PowerOff className="mr-2 h-4 w-4" /> 下架

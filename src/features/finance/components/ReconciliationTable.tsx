@@ -23,6 +23,15 @@ interface ReconciliationTableProps {
     data: Reconciliation[];
 }
 
+/**
+ * 对账单核心数据表格 (Reconciliation Table)
+ * 
+ * 展示所有财务发起的对账记录列表，支持多维度的业务对象（客户、供应商、渠道、内部）。
+ * 提供差异金额的直观高亮，以及确认、驳回及查看详情等快捷流转操作入口。
+ * 
+ * @param {ReconciliationTableProps} props - 需渲染的对账单数据数组
+ * @returns {JSX.Element} 对账单表格组件
+ */
 export function ReconciliationTable({ data }: ReconciliationTableProps) {
     const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
         const variants: Record<string, "success" | "info" | "warning" | "error" | "secondary" | "default"> = {

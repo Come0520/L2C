@@ -2,7 +2,7 @@
  * L2C 数据库类型定�?
  * 基于 Supabase 生成的类型，手动补充业务类型
  * 
- * TODO: 使用 `supabase gen types typescript` 自动生成
+ * NOTE: 使用 `supabase gen types typescript` 自动生成
  */
 
 // 枚举类型

@@ -10,8 +10,10 @@ import {
 import { CustomerForm } from './customer-form';
 import { useState } from 'react';
 
+import { CustomerDetail } from '@/features/customers/types';
+
 interface EditCustomerDialogProps {
-    customer: any;
+    customer: CustomerDetail;
     trigger: React.ReactNode;
 }
 

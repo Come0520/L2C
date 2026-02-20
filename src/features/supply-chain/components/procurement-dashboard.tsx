@@ -18,8 +18,18 @@ interface DashboardMetrics {
 
 import { PurchaseOrder } from '../types';
 
+export interface SimpleDraftPO {
+    id: string;
+    poNo: string;
+    supplierId: string;
+    supplierName: string;
+    totalCost: string | null;
+    orderNo?: string;
+    createdAt: Date;
+}
+
 interface ProcurementDashboardProps {
-    draftPos?: PurchaseOrder[];
+    draftPos?: SimpleDraftPO[];
 }
 
 export function ProcurementDashboard({ draftPos: _draftPos }: ProcurementDashboardProps) {

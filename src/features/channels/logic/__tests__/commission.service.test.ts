@@ -305,6 +305,7 @@ describe('calculateOrderCommission() 函数', () => {
         });
 
         it('阶梯配置为无效JSON时应使用基础费率', async () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
             const order = { totalAmount: '10000', items: [], tenantId: 't1' };
             const channel = {
                 commissionType: 'TIERED',
@@ -316,6 +317,8 @@ describe('calculateOrderCommission() 函数', () => {
             const result = await calculateOrderCommission(order, channel);
             expect(result).not.toBeNull();
             expect(result!.amount.toNumber()).toBe(800);
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
     });
 
@@ -335,7 +338,7 @@ describe('calculateOrderCommission() 函数', () => {
 
             vi.mocked(db.query.products.findMany).mockResolvedValue([
                 { id: 'p1', channelPrice: '100', channelPriceMode: 'FIXED', name: 'Product 1' }
-            ] as any);
+            ] as unknown as ReturnType<typeof db.query.products.findMany>);
 
             vi.mocked(db.query.financeConfigs.findFirst).mockResolvedValue(null);
 
@@ -363,7 +366,7 @@ describe('calculateOrderCommission() 函数', () => {
 
             vi.mocked(db.query.products.findMany).mockResolvedValue([
                 { id: 'p1', channelPrice: '100', channelPriceMode: 'FIXED', name: 'Product 1' }
-            ] as any);
+            ] as unknown as ReturnType<typeof db.query.products.findMany>);
             vi.mocked(db.query.financeConfigs.findFirst).mockResolvedValue(null);
 
             const result = await calculateOrderCommission(order, channel);
@@ -389,7 +392,7 @@ describe('calculateOrderCommission() 函数', () => {
 
             vi.mocked(db.query.products.findMany).mockResolvedValue([
                 { id: 'p1', channelPrice: '100', channelPriceMode: 'FIXED', name: 'Product 1' }
-            ] as any);
+            ] as unknown as ReturnType<typeof db.query.products.findMany>);
             vi.mocked(db.query.financeConfigs.findFirst).mockResolvedValue(null);
 
             const result = await calculateOrderCommission(order, channel);
@@ -404,34 +407,37 @@ describe('checkAndGenerateCommission() 集成测试流程', () => {
     });
 
     it('当佣金记录已存在时应跳过生成（幂等性）', async () => {
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
         // Mock Order
         vi.mocked(db.query.orders.findFirst).mockResolvedValue({
             id: 'order-1', channelId: 'ch-1', tenantId: 't1', totalAmount: '100', items: []
-        } as any);
+        } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Channel
         vi.mocked(db.query.channels.findFirst).mockResolvedValue({
             id: 'ch-1', tenantId: 't1', commissionTriggerMode: 'PAYMENT_COMPLETED',
             commissionType: 'FIXED', commissionRate: '10', cooperationMode: 'COMMISSION'
-        } as any);
+        } as unknown as ReturnType<typeof db.query.channels.findFirst>);
 
         // Mock Existing Commission in Transaction
-        mockTx.query.channelCommissions.findFirst.mockResolvedValue({ id: 'existing-comm' } as any);
+        mockTx.query.channelCommissions.findFirst.mockResolvedValue({ id: 'existing-comm' } as unknown as ReturnType<typeof db.query.channelCommissions.findFirst>);
 
         await checkAndGenerateCommission('order-1', 'PAYMENT_COMPLETED');
 
         expect(db.transaction).toHaveBeenCalled();
         expect(mockTx.insert).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalled();
+        consoleSpy.mockRestore();
     });
 
     it('触发事件不匹配时应跳过', async () => {
         // Mock Order
         vi.mocked(db.query.orders.findFirst).mockResolvedValue({
             id: 'order-1', channelId: 'ch-1', tenantId: 't1'
-        } as any);
+        } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Channel (Requires ORDER_COMPLETED)
         vi.mocked(db.query.channels.findFirst).mockResolvedValue({
             id: 'ch-1', tenantId: 't1', commissionTriggerMode: 'ORDER_COMPLETED'
-        } as any);
+        } as unknown as ReturnType<typeof db.query.channels.findFirst>);
 
         await checkAndGenerateCommission('order-1', 'PAYMENT_COMPLETED');
 
@@ -439,21 +445,24 @@ describe('checkAndGenerateCommission() 集成测试流程', () => {
     });
 
     it('未找到订单或渠道时应安全返回', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
         vi.mocked(db.query.orders.findFirst).mockResolvedValue(null);
         await checkAndGenerateCommission('order-1', 'PAYMENT_COMPLETED');
         expect(db.query.channels.findFirst).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalled();
+        consoleSpy.mockRestore();
     });
 
     it('正常流程应生成佣金并更新统计', async () => {
         // Mock Order
         vi.mocked(db.query.orders.findFirst).mockResolvedValue({
             id: 'order-1', channelId: 'ch-1', tenantId: 't1', totalAmount: '1000', items: []
-        } as any);
+        } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Channel
         vi.mocked(db.query.channels.findFirst).mockResolvedValue({
             id: 'ch-1', tenantId: 't1', commissionTriggerMode: 'PAYMENT_COMPLETED',
             commissionType: 'FIXED', commissionRate: '10', cooperationMode: 'COMMISSION'
-        } as any);
+        } as unknown as ReturnType<typeof db.query.channels.findFirst>);
 
         // Mock No Existing Commission
         mockTx.query.channelCommissions.findFirst.mockResolvedValue(null);
@@ -477,11 +486,11 @@ describe('handleCommissionClawback() 退款扣回逻辑', () => {
 
     it('PENDING 状态的佣金应直接作废', async () => {
         // Mock Order
-        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as any);
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Commissions
         vi.mocked(db.query.channelCommissions.findMany).mockResolvedValue([
             { id: 'comm-1', tenantId: 't1', status: 'PENDING', amount: '100' }
-        ] as any);
+        ] as unknown as ReturnType<typeof db.query.channelCommissions.findMany>);
 
         await handleCommissionClawback('order-1', 100);
 
@@ -493,14 +502,14 @@ describe('handleCommissionClawback() 退款扣回逻辑', () => {
 
     it('SETTLED 状态的佣金应生成负向调整记录', async () => {
         // Mock Order
-        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as any);
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Commissions
         vi.mocked(db.query.channelCommissions.findMany).mockResolvedValue([
             {
                 id: 'comm-1', tenantId: 't1', channelId: 'ch-1',
                 status: 'SETTLED', amount: '100', orderAmount: '1000'
             }
-        ] as any);
+        ] as unknown as ReturnType<typeof db.query.channelCommissions.findMany>);
 
         // Refund 500 (50% of 1000) -> Should clawback 50 (50% of 100)
         await handleCommissionClawback('order-1', 500);
@@ -520,14 +529,14 @@ describe('handleCommissionClawback() 退款扣回逻辑', () => {
 
     it('全额退款应标记为 FULL_REFUND', async () => {
         // Mock Order
-        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as any);
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as unknown as ReturnType<typeof db.query.orders.findFirst>);
         // Mock Commissions
         vi.mocked(db.query.channelCommissions.findMany).mockResolvedValue([
             {
                 id: 'comm-1', tenantId: 't1', channelId: 'ch-1',
                 status: 'PAID', amount: '100', orderAmount: '1000'
             }
-        ] as any);
+        ] as unknown as ReturnType<typeof db.query.channelCommissions.findMany>);
 
         // Refund 1000 -> Full
         await handleCommissionClawback('order-1', 1000);

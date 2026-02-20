@@ -103,7 +103,7 @@ const updateUserPreferencesActionInternal = createSafeAction(
             });
 
             // 清除偏好设置缓存
-            revalidateTag('user-preferences');
+            revalidateTag('user-preferences', 'default');
             revalidatePath('/settings/preferences');
 
             return { success: true, message: '偏好设置已更新' };

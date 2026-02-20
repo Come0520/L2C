@@ -233,7 +233,8 @@ export class CustomerService {
     mergedIds: string[],
     fieldPriority: 'PRIMARY' | 'LATEST',
     tenantId: string,
-    operatorId: string
+    operatorId: string,
+    targetVersion?: number
   ) {
     // 1. 获取所有客户信息
     const primary = await db.query.customers.findFirst({
@@ -242,6 +243,11 @@ export class CustomerService {
 
     if (!primary) {
       throw new AppError('主档案不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
+    }
+
+    // 乐观锁初步校验
+    if (targetVersion !== undefined && primary.version !== targetVersion) {
+      throw new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
     }
 
     // [Fix 4.3] 边界情况检查：主档案已合并
@@ -432,7 +438,7 @@ export class CustomerService {
 
       // 4. 更新主档案
       // [Fix 2.5] 更新主档案增加 tenantId 检查
-      await tx
+      const [updatedPrimary] = await tx
         .update(customers)
         .set({
           totalOrders,
@@ -440,8 +446,20 @@ export class CustomerService {
           avgOrderAmount: avgOrderAmount.toFixed(2),
           mergedFrom: [...(primary.mergedFrom || []), ...mergedIds],
           updatedAt: new Date(),
+          version: (primary.version || 0) + 1,
         })
-        .where(and(eq(customers.id, primaryId), eq(customers.tenantId, tenantId)));
+        .where(
+          and(
+            eq(customers.id, primaryId),
+            eq(customers.tenantId, tenantId),
+            targetVersion !== undefined ? eq(customers.version, targetVersion) : undefined
+          )
+        )
+        .returning();
+
+      if (!updatedPrimary && targetVersion !== undefined) {
+        throw new AppError('并发合并失败，数据已被修改', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+      }
 
       // 5. 标记被合并档案
       // [Fix 2.6] 标记被合并档案增加 tenantId 检查

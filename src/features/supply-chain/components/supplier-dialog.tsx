@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -29,29 +29,32 @@ export function SupplierDialog({
     onSuccess
 }: SupplierDialogProps) {
     const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
 
     // Determine if controlled or uncontrolled
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : uncontrolledOpen;
     const setOpen = isControlled ? setControlledOpen! : setUncontrolledOpen;
 
-    const handleSubmit = async (values: SupplierFormValues) => {
-        try {
-            if (initialData?.id) {
-                const res = await updateSupplier({ ...values, id: initialData.id });
-                if (res?.error) throw new Error(res.error);
-                toast.success('供应商更新成功');
-            } else {
-                const res = await createSupplier(values);
-                if (res?.error) throw new Error(res.error);
-                toast.success('供应商创建成功');
+    const handleSubmit = (values: SupplierFormValues) => {
+        startTransition(async () => {
+            try {
+                if (initialData?.id) {
+                    const res = await updateSupplier({ ...values, id: initialData.id });
+                    if (res?.error) throw new Error(res.error);
+                    toast.success('供应商更新成功');
+                } else {
+                    const res = await createSupplier(values);
+                    if (res?.error) throw new Error(res.error);
+                    toast.success('供应商创建成功');
+                }
+                setOpen(false);
+                onSuccess?.();
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '未知系统错误';
+                toast.error('操作失败', { description: message });
             }
-            setOpen(false);
-            onSuccess?.();
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : '操作失败';
-            toast.error(message);
-        }
+        });
     };
 
     return (
@@ -67,6 +70,7 @@ export function SupplierDialog({
                 <SupplierForm
                     initialData={initialData}
                     onSubmit={handleSubmit}
+                    isLoading={isPending}
                 />
             </DialogContent>
         </Dialog>

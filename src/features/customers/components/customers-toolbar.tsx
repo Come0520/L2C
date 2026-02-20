@@ -22,42 +22,52 @@ export function CustomersToolbar() {
     const type = searchParams.get('type') || 'ALL';
     const level = searchParams.get('level') || 'ALL';
 
+    const [isPending, startTransition] = React.useTransition();
+
     // Sync Search to URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams.toString());
         const currentSearch = params.get('search') || '';
 
         if (debouncedSearch !== currentSearch) {
-            if (debouncedSearch) {
-                params.set('search', debouncedSearch);
-            } else {
-                params.delete('search');
-            }
-            params.set('page', '1');
-            router.push(`?${params.toString()}`);
+            startTransition(() => {
+                if (debouncedSearch) {
+                    params.set('search', debouncedSearch);
+                } else {
+                    params.delete('search');
+                }
+                params.set('page', '1');
+                router.push(`?${params.toString()}`);
+            });
         }
     }, [debouncedSearch, router, searchParams]);
 
     const handleFilterChange = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams.toString());
-        if (value && value !== 'ALL') {
-            params.set(key, value);
-        } else {
-            params.delete(key);
-        }
-        params.set('page', '1');
-        router.push(`?${params.toString()}`);
+        startTransition(() => {
+            if (value && value !== 'ALL') {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+            params.set('page', '1');
+            router.push(`?${params.toString()}`);
+        });
     };
 
     const isFiltered = type !== 'ALL' || level !== 'ALL' || !!search;
 
     const handleReset = () => {
         setSearch('');
-        router.push('?page=1');
+        startTransition(() => {
+            router.push('?page=1');
+        });
     };
 
     const handleRefresh = () => {
-        router.refresh();
+        startTransition(() => {
+            router.refresh();
+        });
     };
 
     return (
@@ -65,7 +75,8 @@ export function CustomersToolbar() {
             searchProps={{
                 value: search,
                 onChange: setSearch,
-                placeholder: "搜索姓名、电话、编号..."
+                placeholder: "搜索姓名、电话、编号...",
+                isPending: isPending
             }}
             onRefresh={handleRefresh}
         >

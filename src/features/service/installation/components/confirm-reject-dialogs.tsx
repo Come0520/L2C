@@ -24,7 +24,7 @@ import {
     FormLabel,
     FormMessage,
 } from '@/shared/ui/form';
-import { confirmInstallation, rejectInstallation } from '../actions';
+import { confirmInstallationAction, rejectInstallationAction } from '../actions';
 import { toast } from 'sonner';
 
 // --- Confirm Dialog ---
@@ -59,7 +59,7 @@ export function ConfirmInstallDialog({ taskId, estimatedFee, trigger }: ConfirmI
     async function onSubmit(values: z.infer<typeof confirmSchema>) {
         setIsLoading(true);
         try {
-            const result = await confirmInstallation({
+            const result = await confirmInstallationAction({
                 taskId,
                 actualLaborFee: parseFloat(values.actualLaborFee),
                 adjustmentReason: values.adjustmentReason,
@@ -182,7 +182,7 @@ export function RejectInstallDialog({ taskId, trigger }: RejectInstallDialogProp
     async function onSubmit(values: z.infer<typeof rejectSchema>) {
         setIsLoading(true);
         try {
-            const result = await rejectInstallation({
+            const result = await rejectInstallationAction({
                 id: taskId,
                 reason: values.reason,
             });

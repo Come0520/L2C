@@ -20,6 +20,8 @@
 | 1.2 | 差距分析文档指出 `LeadsFilterBar` 和 `LeadsAdvancedFilter` 是空组件，当前文件大小表明仍未实质性实现（分别 91B 和 7.5KB） | CodeMissing | `components/lead-filters.tsx`, `components/leads-advanced-filter.tsx` | 确认是否为当前迭代的必须项 | |
 | 1.3 | 架构文档定义了乐观锁 (Optimistic Locking) 机制（`version` 字段），但 `mutations.ts` 中的 `updateLead` 未传递或校验 `version` 字段 | Mismatch | `actions/mutations.ts:71-91` | 在更新操作中增加 `version` 校验，防止并发覆盖 | |
 | 1.4 | 需求要求"特定权限可查看全号并触发审计日志"，但移动端 GET 详情 API 直接返回完整的 `lead` 对象，未做手机号脱敏处理 | Mismatch | `api/mobile/leads/[id]/route.ts:37` | 详情 API 应对 `customerPhone` 进行脱敏（同列表页一致） | |
+| 1.5 | 状态枚举缺少核心业务节点 | Mismatch | `shared/api/schema/leads.ts` vs `线索需求.md` | 在 DB 和全链路补充状态: `MEASUREMENT_SCHEDULED`, `QUOTED`, `LOST`, `PENDING_REVIEW` | |
+| 1.6 | 批量导入追溯字段缺失 | DocMissing | `shared/api/schema/leads.ts` | 按需求文档添加 `import_batch_id` 和 `raw_data` 字段保存原始批次数据 | |
 
 ## 2. 业务逻辑 (Business Logic)
 

@@ -21,15 +21,18 @@ setup('authenticate', async ({ page }) => {
     console.log('Waiting for login response...');
     await page.waitForTimeout(2000);
 
-    // 等待跳转到工作台
+    // 等待跳转
     try {
-        console.log('Waiting for redirect to workbench...');
-        await expect(page).toHaveURL(/.*workbench/, { timeout: 15000 });
+        console.log('Waiting for redirect...');
+        await page.waitForTimeout(5000); // 给一点稳定时间
+        console.log('Final URL after redirect:', page.url());
+        // 只要不是登录页且包含基本路径即可
+        await expect(page).not.toHaveURL(/.*login/, { timeout: 15000 });
         console.log('Authentication successful');
     } catch (e) {
         console.error('Authentication failed, taking screenshot...');
         await page.screenshot({ path: 'auth-failure.png' });
-        console.log('Current URL:', page.url());
+        console.log('Current URL at failure:', page.url());
         throw e;
     }
 

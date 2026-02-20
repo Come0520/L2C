@@ -85,6 +85,7 @@ Good agent prompts are:
 1. **Focused** - One clear problem domain
 2. **Self-contained** - All context needed to understand the problem
 3. **Specific about output** - What should the agent return?
+4. **Identity Declaration** - Require the agent to state its identity before replying (e.g., `[Subagent 2 - API Security]`), especially when running in Antigravity or similar UIs.
 
 ```markdown
 Fix the 3 failing tests in src/agents/agent-tool-abort.test.ts:
@@ -104,7 +105,9 @@ These are timing/race condition issues. Your task:
 
 Do NOT just increase timeouts - find the real issue.
 
-Return: Summary of what you found and what you fixed.
+Return: 
+1. Always start your response with `[Agent 1 - Abort Logic] ` to identify yourself.
+2. Summary of what you found and what you fixed.
 ```
 
 ## Common Mistakes

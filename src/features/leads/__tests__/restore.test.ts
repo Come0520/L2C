@@ -39,6 +39,7 @@ vi.mock('@/shared/lib/auth', () => ({
 // Mock next/server for NextRequest/NextResponse if used, or just cache
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock dynamic imports for approval
@@ -50,44 +51,44 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 
 describe('Lead Restore Actions', () => {
-    const tenantId = 'test-tenant-id';
-    const userId = 'test-user-id';
-    const leadId = 'test-lead-id';
+    const tenantId = '11111111-1111-4111-8111-111111111111';
+    const userId = '22222222-2222-4222-8222-222222222222';
+    const leadId = '33333333-3333-4333-8333-333333333333';
 
     beforeEach(() => {
         vi.clearAllMocks();
         // vi.spyOn(console, 'error').mockImplementation(() => { }); // Suppress error logs - ENABLE FOR DEBUGGING
 
         // Default auth mock
-        (auth as any).mockResolvedValue({
+        vi.mocked(auth).mockResolvedValue({
             user: { id: userId, tenantId: tenantId }
-        });
+        } as never);
     });
 
     describe('canRestoreLead', () => {
         it('should return false if user is not authenticated', async () => {
-            (auth as any).mockResolvedValue(null);
+            vi.mocked(auth).mockResolvedValue(null);
             const result = await canRestoreLead(leadId);
             expect(result.canRestore).toBe(false);
             expect(result.reason).toContain('未登录');
         });
 
         it('should return false if lead does not exist', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(undefined as never);
             const result = await canRestoreLead(leadId);
             expect(result.canRestore).toBe(false);
             expect(result.reason).toBe('线索不存在');
         });
 
         it('should return false if lead status is not INVALID', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue({ status: 'WON' });
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue({ status: 'WON' } as never);
             const result = await canRestoreLead(leadId);
             expect(result.canRestore).toBe(false);
             expect(result.reason).toContain('仅可恢复');
         });
 
         it('should return true if lead status is INVALID', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue({ status: 'INVALID' });
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue({ status: 'INVALID' } as never);
             const result = await canRestoreLead(leadId);
             expect(result.canRestore).toBe(true);
         });
@@ -97,7 +98,7 @@ describe('Lead Restore Actions', () => {
         const validInput = { id: leadId, reason: 'Test restore' };
 
         it('should throw/return error if not authenticated', async () => {
-            (auth as any).mockResolvedValue(null);
+            vi.mocked(auth).mockResolvedValue(null);
             const result = await restoreLeadAction(validInput);
             expect(result.success).toBe(false);
             expect(result.error).toContain('Unauthorized');
@@ -109,14 +110,14 @@ describe('Lead Restore Actions', () => {
         });
 
         it('should fail if lead not found', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(undefined as never);
             const result = await restoreLeadAction(validInput);
             expect(result.success).toBe(false);
             expect(result.error).toBe('线索不存在');
         });
 
         it('should fail if lead is not INVALID', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue({ status: 'FOLLOWING_UP' });
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue({ status: 'FOLLOWING_UP' } as never);
             const result = await restoreLeadAction(validInput);
             expect(result.success).toBe(false);
             expect(result.error).toContain('仅可恢复');
@@ -129,11 +130,11 @@ describe('Lead Restore Actions', () => {
                 status: 'INVALID',
                 statusHistory: [{ oldStatus: 'FOLLOWING_UP', newStatus: 'INVALID', createdAt: new Date() }]
             };
-            (db.query.leads.findFirst as any).mockResolvedValue(mockLead);
-            (db.query.leadStatusHistory.findFirst as any).mockResolvedValue({ oldStatus: 'FOLLOWING_UP' });
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(mockLead as never);
+            vi.mocked(db.query.leadStatusHistory.findFirst).mockResolvedValue({ oldStatus: 'FOLLOWING_UP' } as never);
 
             // Mock transaction to ensure the callback is executed correctly
-            (db.transaction as any).mockImplementation(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementation(async (cb: any) => {
                 // 使用完整的事务 Mock（包含 select 链以支持行锁）
                 return await cb({
                     query: {

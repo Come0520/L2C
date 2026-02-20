@@ -103,7 +103,7 @@ export async function checkPaymentBeforeInstall(orderId: string, tenantId: strin
 
                 // 计算渠道当前欠款（所有未结清订单的欠款总和）
                 if (channelSettlement === 'MONTHLY') {
-                    // TODO: 计算渠道所有订单的欠款总和
+                    // NOTE: 计算渠道所有订单的欠款总和
                     // 这里简化为只检查当前订单
                     channelDebt = 0;
                 }

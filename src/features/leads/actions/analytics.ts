@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { leads, marketChannels, quotes, orders } from '@/shared/api/schema';
-import { eq, and, gte, lte, sql, count } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, countDistinct } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '@/shared/lib/auth';
 import { analyticsDateRangeSchema } from '../schemas';
@@ -42,58 +42,16 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
                 .select({
                     channelId: leads.sourceChannelId,
                     channelName: marketChannels.name,
-                    leadCount: count(leads.id),
-                    // 统计关联的报价数
-                    quoteCount: sql<number>`(
-                        SELECT count(DISTINCT q.id) 
-                        FROM ${quotes} q 
-                        WHERE q.lead_id IN (
-                            SELECT l2.id FROM ${leads} l2 
-                            WHERE l2.source_channel_id = ${leads.sourceChannelId}
-                            AND l2.tenant_id = ${tenantId}
-                            ${r.from ? sql`AND l2.created_at >= ${r.from}` : sql``}
-                            ${r.to ? sql`AND l2.created_at <= ${r.to}` : sql``}
-                        )
-                    )`,
-                    // 统计关联的订单数和总金额
-                    orderCount: sql<number>`(
-                        SELECT count(DISTINCT o.id) 
-                        FROM ${orders} o 
-                        JOIN ${quotes} q2 ON o.quote_id = q2.id
-                        WHERE q2.lead_id IN (
-                            SELECT l3.id FROM ${leads} l3 
-                            WHERE l3.source_channel_id = ${leads.sourceChannelId}
-                            AND l3.tenant_id = ${tenantId}
-                            ${r.from ? sql`AND l3.created_at >= ${r.from}` : sql``}
-                            ${r.to ? sql`AND l3.created_at <= ${r.to}` : sql``}
-                        )
-                    )`,
-                    totalAmount: sql<number>`COALESCE((
-                        SELECT sum(o2.total_amount) 
-                        FROM ${orders} o2 
-                        JOIN ${quotes} q3 ON o2.quote_id = q3.id
-                        WHERE q3.lead_id IN (
-                            SELECT l4.id FROM ${leads} l4 
-                            WHERE l4.source_channel_id = ${leads.sourceChannelId}
-                            AND l4.tenant_id = ${tenantId}
-                            ${r.from ? sql`AND l4.created_at >= ${r.from}` : sql``}
-                            ${r.to ? sql`AND l4.created_at <= ${r.to}` : sql``}
-                        )
-                    ), 0)`,
-                    // 计算平均成交周期 (仅针对已成交的线索)
-                    avgCycleDays: sql<number>`COALESCE((
-                        SELECT AVG(EXTRACT(EPOCH FROM (l5.won_at - l5.created_at)) / 86400)
-                        FROM ${leads} l5
-                        WHERE l5.source_channel_id = ${leads.sourceChannelId}
-                        AND l5.tenant_id = ${tenantId}
-                        AND l5.status = 'WON'
-                        AND l5.won_at IS NOT NULL
-                        ${r.from ? sql`AND l5.created_at >= ${r.from}` : sql``}
-                        ${r.to ? sql`AND l5.created_at <= ${r.to}` : sql``}
-                    ), 0)`,
+                    leadCount: countDistinct(leads.id),
+                    quoteCount: countDistinct(quotes.id),
+                    orderCount: countDistinct(orders.id),
+                    totalAmount: sql<number>`COALESCE(SUM(DISTINCT ${orders.totalAmount}), 0)`,
+                    avgCycleDays: sql<number>`COALESCE(AVG(CASE WHEN ${leads.status} = 'WON' AND ${leads.wonAt} IS NOT NULL THEN (EXTRACT(EPOCH FROM (${leads.wonAt} - ${leads.createdAt})) / 86400) END), 0)`,
                 })
                 .from(leads)
                 .leftJoin(marketChannels, eq(leads.sourceChannelId, marketChannels.id))
+                .leftJoin(quotes, eq(leads.id, quotes.leadId))
+                .leftJoin(orders, eq(quotes.id, orders.quoteId))
                 .where(and(...whereConditions))
                 .groupBy(leads.sourceChannelId, marketChannels.name);
 

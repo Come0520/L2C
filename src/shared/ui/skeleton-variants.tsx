@@ -72,3 +72,79 @@ export function ListSkeleton({ count = 5 }: { count?: number }) {
         </div>
     );
 }
+
+export function MobileTaskSkeleton() {
+    return (
+        <div className="space-y-4 px-4 py-4">
+            <div className="flex bg-gray-100 dark:bg-zinc-800 rounded-lg p-1 mb-4 h-9">
+                <Skeleton className="flex-1 h-7" />
+                <Skeleton className="flex-1 h-7" />
+                <Skeleton className="flex-1 h-7" />
+            </div>
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 mb-3">
+                    <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-5 w-12" />
+                            <Skeleton className="h-5 w-16" />
+                        </div>
+                        <Skeleton className="h-5 w-5" />
+                    </div>
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export function MobileApprovalSkeleton() {
+    return (
+        <div className="space-y-4 px-4 py-4">
+            <div className="flex items-center justify-between mb-2">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-5 w-16" />
+                    </div>
+                    <Skeleton className="h-6 w-full mb-2" />
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export function MobileDetailSkeleton() {
+    return (
+        <div className="space-y-6 px-4 py-4 mt-14">
+            <Skeleton className="h-6 w-16 mb-4" /> {/* Back button */}
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-5 w-16" />
+                </div>
+                <Skeleton className="h-7 w-3/4 mb-3" />
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                </div>
+            </div>
+            <div className="space-y-3">
+                <Skeleton className="h-12 w-full rounded-md" />
+                <Skeleton className="h-12 w-full rounded-md" />
+            </div>
+        </div>
+    );
+}

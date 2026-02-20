@@ -34,8 +34,10 @@ const executeImportSchema = z.object({
     actions: z.array(importActionSchema)
 });
 
-/*
- * Get list of completed measure tasks for the quote's customer/lead
+/**
+ * 获取指定报价单关联客户的已完成可导入测量任务列表
+ * @param quoteId 报价单ID
+ * @returns 包含测量任务列表的成功或失败响应
  */
 export async function getImportableMeasureTasks(quoteId: string) {
     const session = await auth();
@@ -69,6 +71,11 @@ export async function getImportableMeasureTasks(quoteId: string) {
     return { success: true, data: tasks };
 }
 
+/**
+ * 内部操作：预览将测量数据导入至特定报价单的效果
+ * @param data 包含报价单ID和测量任务ID的对象
+ * @returns 预览差异和操作列表
+ */
 const previewMeasurementImportActionInternal = createSafeAction(previewImportSchema, async (data) => {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
@@ -77,10 +84,20 @@ const previewMeasurementImportActionInternal = createSafeAction(previewImportSch
     return result;
 });
 
+/**
+ * 客户端调用：预览测量数据导入效果
+ * @param params 包含报价单ID和测量任务ID的对象
+ * @returns 预览结果数据
+ */
 export async function previewMeasurementImport(params: z.infer<typeof previewImportSchema>) {
     return previewMeasurementImportActionInternal(params);
 }
 
+/**
+ * 内部操作：确认并执行测量数据的导入，创建或更新报价行项目
+ * @param data 包含导入操作定义的请求对象
+ * @returns 执行成功状态及相关详情
+ */
 const executeMeasurementImportActionInternal = createSafeAction(executeImportSchema, async (data) => {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
@@ -94,6 +111,11 @@ const executeMeasurementImportActionInternal = createSafeAction(executeImportSch
     return result;
 });
 
+/**
+ * 客户端调用：确认并执行测量数据导入
+ * @param params 导入操作请求参数
+ * @returns 导入结果响应
+ */
 export async function executeMeasurementImport(params: z.infer<typeof executeImportSchema>) {
     return executeMeasurementImportActionInternal(params);
 }

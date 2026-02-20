@@ -104,7 +104,7 @@ const DEFAULT_PLANS: Record<string, PlanConfig> = {
  * 加载租户活跃的报价方案
  */
 export async function loadActivePlan(_tenantId: string) {
-    // TODO: 从数据库加载租户自定义方案
+    // 💡 待优化: 从数据库加载租户自定义方案
     return null;
 }
 
@@ -112,6 +112,6 @@ export async function loadActivePlan(_tenantId: string) {
  * 获取租户的报价方案列表
  */
 export async function fetchQuotePlans(_tenantId: string): Promise<Record<string, PlanConfig>> {
-    // TODO: 从数据库加载租户自定义方案，如无则返回默认方案
+    // 💡 待优化: 从数据库加载租户自定义方案，如无则返回默认方案
     return DEFAULT_PLANS;
 }

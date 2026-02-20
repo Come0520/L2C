@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getInstallTaskById, getAvailableWorkers } from '@/features/service/installation/actions';
+import { getInstallTaskById, getInstallWorkersAction } from '@/features/service/installation/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -43,7 +43,7 @@ export default async function InstallTaskDetailPage({
     }
 
     const task = result.data;
-    const workerRes = await getAvailableWorkers();
+    const workerRes = await getInstallWorkersAction();
     const workers = workerRes.success ? (workerRes.data || []) : [];
     const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.PENDING;
 

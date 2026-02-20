@@ -116,7 +116,9 @@ const updateProductBundleActionInternal = createSafeAction(updateProductBundleSc
         // 记录审计日志
         await AuditService.recordFromSession(session, 'productBundles', id, 'UPDATE', {
             new: updates,
-            itemsUpdated: !!items
+            changed: {
+                itemsUpdated: !!items
+            }
         }, tx);
 
         revalidatePath(SUPPLY_CHAIN_PATHS.PRODUCT_BUNDLES);

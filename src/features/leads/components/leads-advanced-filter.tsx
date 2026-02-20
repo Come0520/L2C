@@ -10,13 +10,19 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition, useCallback, useMemo } from 'react';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
+import { MultiSelect } from '@/shared/ui/multi-select';
 import { format } from 'date-fns';
 
+/**
+ * 线索模块高级筛选组件接口
+ */
 interface LeadsAdvancedFilterProps {
+    /** 租户 ID */
     tenantId: string;
+    /** 销售人员列表 */
     salesList?: Array<{ id: string; name: string }>;
 }
 
@@ -35,43 +41,78 @@ const TAG_OPTIONS = [
     { value: 'MEASURED', label: '已测量' },
 ];
 
+/**
+ * 线索模块高级筛选组件
+ * 支持意向等级、渠道、销售、标签(多选)及日期范围过滤
+ */
 export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedFilterProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const [, startTransition] = useTransition();
+
+    // 从 URL 解析初始状态
+    const initialTags = useMemo(() => {
+        const t = searchParams.get('tags');
+        return t ? t.split(',').filter(Boolean) : [];
+    }, [searchParams]);
 
     // 筛选状态
     const [filters, setFilters] = useState({
         intentionLevel: searchParams.get('intentionLevel') || '',
         channelId: searchParams.get('channelId') || '',
         salesId: searchParams.get('salesId') || '',
-        tags: searchParams.get('tags') || '',
+        tags: initialTags,
         dateFrom: searchParams.get('dateFrom') || '',
         dateTo: searchParams.get('dateTo') || '',
     });
 
-    // 监听 filters 变化自动应用 (防抖? 或者直接 push 路由)
-    // 这里为了响应迅速，我们在 onChange 时直接触发, 但为了避免过于频繁，通常在 Select onChange 时触发即可。
-    // 但是 DatePicker 可能会频繁触发。
-
-    // 直接复用 Measurement 的逻辑，单个 filter 变化直接更新 URL
-    const updateUrl = (updates: Partial<typeof filters>) => {
+    /**
+     * 更新 URL 参数并触发导航
+     */
+    const updateUrl = useCallback((updates: Partial<typeof filters>) => {
         const params = new URLSearchParams(searchParams.toString());
+
         Object.entries(updates).forEach(([key, value]) => {
-            if (value && value !== 'ALL') {
-                params.set(key, value);
+            if (Array.isArray(value)) {
+                // 处理数组类型（如标签多选）
+                if (value.length > 0) {
+                    params.set(key, value.join(','));
+                } else {
+                    params.delete(key);
+                }
+            } else if (value && value !== 'ALL') {
+                params.set(key, value as string);
             } else {
                 params.delete(key);
             }
         });
-        params.set('page', '1');
-        router.push(`?${params.toString()}`);
-    };
 
+        params.set('page', '1'); // 任何筛选变化都重置页码
+
+        startTransition(() => {
+            router.push(`?${params.toString()}`);
+        });
+    }, [router, searchParams]);
+
+    /**
+     * 处理普通单选变化
+     */
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         updateUrl({ [key]: value });
     };
 
+    /**
+     * 处理多选变化（如标签）
+     */
+    const handleMultiFilterChange = (key: string, values: string[]) => {
+        setFilters(prev => ({ ...prev, [key]: values }));
+        updateUrl({ [key]: values });
+    };
+
+    /**
+     * 处理日期范围变化
+     */
     const handleDateRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
         const from = range?.from ? format(range.from, 'yyyy-MM-dd') : '';
         const to = range?.to ? format(range.to, 'yyyy-MM-dd') : '';
@@ -79,28 +120,38 @@ export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedF
         updateUrl({ dateFrom: from, dateTo: to });
     };
 
+    /**
+     * 清空所有筛选条件
+     */
     const handleClear = () => {
         const emptyState = {
             intentionLevel: '',
             channelId: '',
             salesId: '',
-            tags: '',
+            tags: [],
             dateFrom: '',
             dateTo: '',
         };
         setFilters(emptyState);
+
         const params = new URLSearchParams(searchParams.toString());
-        Object.keys(emptyState).forEach(k => params.delete(k));
+        ['intentionLevel', 'channelId', 'salesId', 'tags', 'dateFrom', 'dateTo'].forEach(k => params.delete(k));
         params.set('page', '1');
-        router.push(`?${params.toString()}`);
+
+        startTransition(() => {
+            router.push(`?${params.toString()}`);
+        });
     };
 
-    const dateRange = filters.dateFrom ? {
+    const dateRange = useMemo(() => filters.dateFrom ? {
         from: new Date(filters.dateFrom),
         to: filters.dateTo ? new Date(filters.dateTo) : undefined
-    } : undefined;
+    } : undefined, [filters.dateFrom, filters.dateTo]);
 
-    const hasFilters = Object.values(filters).some(v => v !== '' && v !== 'ALL');
+    const hasFilters = useMemo(() => {
+        const { tags, ...others } = filters;
+        return tags.length > 0 || Object.values(others).some(v => v !== '' && v !== 'ALL');
+    }, [filters]);
 
     return (
         <div className="flex flex-wrap items-center gap-2">
@@ -120,21 +171,15 @@ export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedF
                 </SelectContent>
             </Select>
 
-            {/* 渠道 - ChannelPicker 需要确认是否支持高度自定义，还是用Select封装 */}
-            {/* 为了简单统一，这里我们假设 ChannelPicker 能适应 button 样式，或者如果 ChannelPicker 复杂，我们先用简单 Select 占位？ */}
-            {/* 之前的代码里用了 ChannelPicker，但现在为了统一 "平铺 Select" 风格，如果 ChannelPicker 是个 Dialog Trigger，那也行。但看 props 似乎是个 Select */}
+            {/* 渠道选择 */}
             <div className="w-[140px]">
-                {/* 暂时用 div 包裹 ChannelPicker 以限制宽度，实际上可能需要深入 ChannelPicker 修改样式 */}
                 <ChannelPicker
                     tenantId={tenantId}
                     value={filters.channelId}
                     onChange={(v) => handleFilterChange('channelId', v)}
                     placeholder="渠道"
-                // 假设 ChannelPicker 支持 className
-                // className="h-9 bg-muted/20 border-white/10" 
                 />
             </div>
-
 
             {/* 归属销售 */}
             <Select
@@ -153,21 +198,16 @@ export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedF
                 </SelectContent>
             </Select>
 
-            {/* 标签/阶段 */}
-            <Select
-                value={filters.tags || 'ALL'}
-                onValueChange={(v) => handleFilterChange('tags', v)}
-            >
-                <SelectTrigger className="w-[120px] bg-muted/20 border-white/10 h-9">
-                    <SelectValue placeholder="标签" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="ALL">所有标签</SelectItem>
-                    {TAG_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            {/* 标签多选 */}
+            <div className="min-w-[140px]">
+                <MultiSelect
+                    options={TAG_OPTIONS}
+                    selected={filters.tags}
+                    onChange={(values) => handleMultiFilterChange('tags', values)}
+                    placeholder="选择标签"
+                    className="bg-muted/20 border-white/10 h-9 min-h-auto py-0"
+                />
+            </div>
 
             {/* 日期范围 */}
             <div className="w-[240px]">
@@ -179,7 +219,7 @@ export function LeadsAdvancedFilter({ tenantId, salesList = [] }: LeadsAdvancedF
             </div>
 
             {hasFilters && (
-                <Button variant="ghost" size="icon" onClick={handleClear} className="h-9 w-9">
+                <Button variant="ghost" size="icon" onClick={handleClear} className="h-9 w-9" title="清除所有筛选">
                     <X className="h-4 w-4" />
                 </Button>
             )}

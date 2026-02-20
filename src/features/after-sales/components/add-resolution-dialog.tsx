@@ -30,7 +30,7 @@ import {
     SelectValue,
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
-import { toast } from '@/shared/hooks/use-toast';
+import { toast } from 'sonner';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -40,12 +40,13 @@ interface AddResolutionDialogProps {
     onSuccess?: () => void;
 }
 
-export function AddResolutionDialog({ ticketId, currentStatus, onSuccess }: AddResolutionDialogProps) {
+export function AddResolutionDialog({ ticketId, currentStatus: _currentStatus, onSuccess }: AddResolutionDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, setIsPending] = useState(false);
 
     const form = useForm<z.infer<typeof updateStatusSchema>>({
-        resolver: zodResolver(updateStatusSchema),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
+        resolver: zodResolver(updateStatusSchema) as any,
         defaultValues: {
             ticketId,
             status: 'PROCESSING',
@@ -58,14 +59,14 @@ export function AddResolutionDialog({ ticketId, currentStatus, onSuccess }: AddR
         try {
             const result = await updateTicketStatus(values);
             if (result.success) {
-                toast({ title: '更新成功', description: '工单状态及处理方案已更新' });
+                toast.success('工单状态及处理方案已更新');
                 setOpen(false);
                 onSuccess?.();
             } else {
-                toast({ title: '更新失败', description: result.message, variant: 'destructive' });
+                toast.error(result.error || '更新失败');
             }
-        } catch (error) {
-            toast({ title: '错误', description: '系统异常，请稍后再试', variant: 'destructive' });
+        } catch (_error) {
+            toast.error('系统异常，请稍后再试');
         } finally {
             setIsPending(false);
         }

@@ -10,21 +10,25 @@ import { QuoteConfig } from '@/services/quote-config.service';
 import { ProductAutocomplete } from './product-autocomplete';
 import { createQuoteItemSchema } from '../actions/schema';
 
+import { z } from 'zod';
+
+type QuoteItemFormValues = z.infer<typeof createQuoteItemSchema>;
+
 interface DynamicQuoteFormProps {
     quoteId: string;
     roomId?: string | null;
     category: string;
     config: QuoteConfig;
-    onSubmit: (data: any) => Promise<void>;
+    onSubmit: (data: QuoteItemFormValues) => Promise<void>;
 }
 
 export function DynamicQuoteForm({ quoteId, roomId, category, config, onSubmit }: DynamicQuoteFormProps) {
-    const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
+    const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<QuoteItemFormValues>({
         resolver: zodResolver(createQuoteItemSchema),
         defaultValues: {
             quoteId,
             roomId: roomId || undefined,
-            category: category as any,
+            category: category as QuoteItemFormValues['category'],
             quantity: 1,
             width: 0,
             height: 0,
@@ -38,7 +42,7 @@ export function DynamicQuoteForm({ quoteId, roomId, category, config, onSubmit }
         return config.visibleFields.includes(fieldId);
     };
 
-    const handleFormSubmit = async (data: any) => {
+    const handleFormSubmit = async (data: QuoteItemFormValues) => {
         await onSubmit(data);
     };
 

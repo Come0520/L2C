@@ -7,7 +7,7 @@ import {
     approvalTasks,
     users
 } from "@/shared/api/schema";
-import { eq, and, asc, gt } from "drizzle-orm";
+import { eq, and, asc, gt, sql } from "drizzle-orm";
 import { auth } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ApprovalDelegationService } from "@/services/approval-delegation.service";
@@ -69,8 +69,16 @@ export async function _processApprovalLogic(
         return { success: false, error: '审批任务不存在' };
     }
 
-    if (task.status !== 'PENDING') {
-        return { success: false, error: '任务已处理' };
+    // 锁定审批主记录以顺序化同一审批实例下的并行操作
+    await tx.execute(sql`SELECT id FROM approvals WHERE id = ${task.approvalId} FOR UPDATE`);
+
+    // 重新获取任务最新状态（防止在等待锁的过程中该任务被其他并行请求取消或完成）
+    const currentTask = await tx.query.approvalTasks.findFirst({
+        where: eq(approvalTasks.id, payload.taskId)
+    });
+
+    if (!currentTask || currentTask.status !== 'PENDING') {
+        return { success: false, error: '任务已被并行处理或状态已变更' };
     }
 
     // Verify Approver

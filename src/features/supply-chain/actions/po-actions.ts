@@ -264,7 +264,8 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
 
     revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
     if (currentPO?.supplierId) {
-        revalidateTag(`supplier-rating-${currentPO.supplierId}`);
+        // revalidateTag 不支持多参数，这里修复
+        revalidateTag(`supplier-rating-${currentPO.supplierId}`, 'default');
     }
     return { success: true };
 }
@@ -767,7 +768,8 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
         }
 
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        revalidateTag(`supplier-rating-${po.supplierId}`);
+        // revalidateTag 同样修复
+        revalidateTag(`supplier-rating-${po.supplierId}`, 'default');
         return { success: true, data: { status: newStatus, allFullyReceived } };
     });
 });

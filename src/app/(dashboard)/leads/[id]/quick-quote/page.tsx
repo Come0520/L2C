@@ -14,12 +14,12 @@ export default async function QuickQuotePage({ params }: PageProps) {
     let lead, plans;
     try {
         const result = await getLeadById({ id });
-        if (!result.success || !result.data) {
+        if (!result) {
             notFound();
         }
-        lead = result.data;
+        lead = result;
 
-        // Fetch quote plans
+        // 获取报价方案
         const session = await auth();
         if (!session?.user?.tenantId) {
             notFound();

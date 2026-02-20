@@ -19,13 +19,15 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 
+import { APStatementWithRelations, APSupplierStatementWithRelations, APLaborStatementWithRelations } from '../types';
+
 interface APStatementTableProps {
-    data: any[];
+    data: APStatementWithRelations[];
     type: 'SUPPLIER' | 'LABOR';
 }
 
 const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, "success" | "info" | "warning" | "error" | "secondary" | "default"> = {
         CALCULATED: 'secondary',
         CONFIRMED: 'info',
         PARTIAL: 'warning',
@@ -47,23 +49,50 @@ const getStatusLabel = (status: string) => {
 };
 
 interface APStatementTableRowProps {
-    item: any;
+    item: APStatementWithRelations;
     type: 'SUPPLIER' | 'LABOR';
-    onCreatePayment: (statement: any) => void;
+    onCreatePayment: (statement: APStatementWithRelations) => void;
 }
 
+/**
+ * 应付账单数据行组件 (AP Statement Table Row)
+ * 
+ * 使用 `React.memo` 优化重渲染性能，呈现单条应付账单核心指标：
+ * 总金额、已付金额、待付金额及业务关联对象等，并提供收银/付款操作入口。
+ * 
+ * @param {APStatementTableRowProps} props - 行渲染属性
+ */
 const APStatementTableRow = React.memo(function APStatementTableRow({ item, type, onCreatePayment }: APStatementTableRowProps) {
+    const isSupplier = type === 'SUPPLIER';
+
+    const renderSecondaryField = () => {
+        if (isSupplier) {
+            const supplierItem = item as APSupplierStatementWithRelations;
+            return (
+                <>
+                    <TableCell>{supplierItem.supplier?.name || supplierItem.supplierName || '-'}</TableCell>
+                    <TableCell>
+                        <Link href={`/purchase-orders/${supplierItem.purchaseOrderId}`} className="text-blue-500 hover:underline">
+                            {supplierItem.purchaseOrder?.poNo || '查看采购单'}
+                        </Link>
+                    </TableCell>
+                </>
+            );
+        } else {
+            const laborItem = item as APLaborStatementWithRelations;
+            return (
+                <>
+                    <TableCell>{laborItem.worker?.name || laborItem.workerName || '-'}</TableCell>
+                    <TableCell>{laborItem.settlementPeriod}</TableCell>
+                </>
+            );
+        }
+    };
+
     return (
         <TableRow key={item.id}>
             <TableCell className="font-medium">{item.statementNo}</TableCell>
-            <TableCell>{type === 'SUPPLIER' ? (item.supplier?.name || item.supplierName) : (item.worker?.name || item.workerName)}</TableCell>
-            <TableCell>
-                {type === 'SUPPLIER' ? (
-                    <Link href={`/purchase-orders/${item.purchaseOrderId}`} className="text-blue-500 hover:underline">
-                        {item.purchaseOrder?.orderNo || '查看采购单'}
-                    </Link>
-                ) : item.settlementPeriod}
-            </TableCell>
+            {renderSecondaryField()}
             <TableCell>¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
             <TableCell className="text-blue-600">¥{parseFloat(item.paidAmount).toLocaleString()}</TableCell>
             <TableCell className="font-semibold text-orange-600">¥{parseFloat(item.pendingAmount).toLocaleString()}</TableCell>
@@ -72,7 +101,7 @@ const APStatementTableRow = React.memo(function APStatementTableRow({ item, type
                     {getStatusLabel(item.status)}
                 </Badge>
             </TableCell>
-            <TableCell>{format(new Date(item.createdAt), 'yyyy-MM-dd')}</TableCell>
+            <TableCell>{item.createdAt ? format(new Date(item.createdAt), 'yyyy-MM-dd') : '-'}</TableCell>
             <TableCell className="text-right space-x-2">
                 <Button variant="ghost" size="icon" title="查看明细" asChild>
                     <Link href={`/finance/ap/${type.toLowerCase()}/${item.id}`}>
@@ -89,11 +118,20 @@ const APStatementTableRow = React.memo(function APStatementTableRow({ item, type
     );
 });
 
+/**
+ * 应付账单核心数据表格 (AP Statement Table)
+ * 
+ * 支持“供应商应付”与“劳务应付”两种类型面板。
+ * 具备表格明细清单概览、空状态提示、快捷进入对账/付款单的触发能力。
+ * 
+ * @param {APStatementTableProps} props - 表格渲染数据和业务类型区分标识
+ * @returns {JSX.Element} 应付对账单表格的 React 回显结构
+ */
 export function APStatementTable({ data, type }: APStatementTableProps) {
     const [isBillDialogOpen, setIsBillDialogOpen] = useState(false);
-    const [selectedStatement, setSelectedStatement] = useState<any>(null);
+    const [selectedStatement, setSelectedStatement] = useState<APStatementWithRelations | null>(null);
 
-    const handleCreatePayment = React.useCallback((statement: any) => {
+    const handleCreatePayment = React.useCallback((statement: APStatementWithRelations | null) => {
         setSelectedStatement(statement);
         setIsBillDialogOpen(true);
     }, []);

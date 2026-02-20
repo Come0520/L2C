@@ -18,6 +18,7 @@ import {
     Loader2,
     Navigation,
 } from 'lucide-react';
+import { MobileDetailSkeleton } from '@/shared/ui/skeleton-variants';
 import { toast } from 'sonner';
 
 // ============================================================
@@ -209,11 +210,7 @@ export default function MobileTaskDetailPage({ params }: PageProps) {
 
     // 加载状态
     if (authLoading || isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            </div>
-        );
+        return <MobileDetailSkeleton />;
     }
 
     if (!task) {

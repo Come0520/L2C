@@ -27,7 +27,15 @@ export type WidgetType =
     | 'executive-summary'    // 总经理摘要
     | 'cash-flow-forecast'   // 现金流预测
     | 'ar-aging'             // 应收账龄
-    | 'enhanced-funnel';      // 增强型漏斗
+    | 'enhanced-funnel'      // 增强型漏斗
+    | 'kpi-sales'
+    | 'kpi-leads'
+    | 'kpi-orders'
+    | 'kpi-conversion'
+    | 'ar-ap-summary'
+    | 'delivery-efficiency'
+    | 'customer-source'
+    | 'sales-funnel';
 
 export interface WidgetConfig {
     id: string;

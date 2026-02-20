@@ -12,7 +12,7 @@ vi.mock('@/shared/api/db', () => {
         where: mockReturnSelf,
         returning: vi.fn().mockResolvedValue([{ id: 'updated' }]),
         execute: vi.fn().mockResolvedValue([{ id: 'updated' }]),
-        then: function (resolve: any) { resolve([{ id: 'updated' }]); }
+        then: function (resolve: (val: unknown) => void) { resolve([{ id: 'updated' }]); }
     };
 
     return {
@@ -60,7 +60,7 @@ describe('LeadService', () => {
         vi.clearAllMocks();
 
         // 默认系统设置 Mock
-        (getSettingInternal as any).mockImplementation(async (key: string) => {
+        vi.mocked(getSettingInternal).mockImplementation(async (key: string) => {
             if (key === 'LEAD_DUPLICATE_STRATEGY') return 'NONE';
             if (key === 'LEAD_AUTO_ASSIGN_RULE') return 'ROUND_ROBIN';
             return null;
@@ -82,15 +82,15 @@ describe('LeadService', () => {
                 update: vi.fn(() => ({
                     set: vi.fn().mockReturnThis(),
                     where: vi.fn().mockReturnThis(),
-                    then: function (resolve: any) { resolve([{ id: 'updated' }]); }
+                    then: function (resolve: (val: unknown) => void) { resolve([{ id: 'updated' }]); }
                 }))
             };
-            (db.transaction as any).mockImplementation((cb: any) => cb(tx));
+            vi.mocked(db.transaction).mockImplementation(async (cb) => cb(tx as never));
 
             // Mock Auto-distribute
-            (distributeToNextSales as any).mockResolvedValue({ salesId: 'sales-1', salesName: 'Sales 1' });
+            vi.mocked(distributeToNextSales).mockResolvedValue({ salesId: 'sales-1', salesName: 'Sales 1' } as never);
 
-            const result = await LeadService.createLead(input as any, mockTenantId, mockUserId);
+            const result = await LeadService.createLead(input as never, mockTenantId, mockUserId);
 
             expect(result.lead).toBeDefined();
             expect(result.isDuplicate).toBe(false);
@@ -100,7 +100,7 @@ describe('LeadService', () => {
 
         it('should detect phone duplicate', async () => {
             // 开启消重策略
-            (getSettingInternal as any).mockResolvedValue('AUTO_LINK');
+            vi.mocked(getSettingInternal).mockResolvedValue('AUTO_LINK');
 
             const input = { customerPhone: '13800000000' };
 
@@ -111,11 +111,11 @@ describe('LeadService', () => {
                     customers: { findFirst: vi.fn().mockResolvedValue(null) } // Needed if code checks customer too
                 },
                 insert: vi.fn(),
-                update: vi.fn(() => ({ set: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), then: (r: any) => r([]) }))
+                update: vi.fn(() => ({ set: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), then: (r: (val: unknown) => void) => r([]) }))
             };
-            (db.transaction as any).mockImplementation((cb: any) => cb(tx));
+            vi.mocked(db.transaction).mockImplementation(async (cb) => cb(tx as never));
 
-            const result = await LeadService.createLead(input as any, mockTenantId, mockUserId);
+            const result = await LeadService.createLead(input as never, mockTenantId, mockUserId);
             if (!result.isDuplicate) console.error('Duplicate detection failed. Result:', result);
 
             expect(result.isDuplicate).toBe(true);
@@ -126,7 +126,7 @@ describe('LeadService', () => {
     describe('getLead', () => {
         it('should return lead if found and tenant matches', async () => {
             // Service implementation uses db.query.leads.findFirst directly (not transactional)
-            (db.query.leads.findFirst as any).mockResolvedValue({ id: mockLeadId, tenantId: mockTenantId });
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue({ id: mockLeadId, tenantId: mockTenantId } as never);
 
             const result = await LeadService.getLead(mockLeadId, mockTenantId);
             expect(result).toBeDefined();
@@ -134,7 +134,7 @@ describe('LeadService', () => {
         });
 
         it('should return null if tenant mismatch', async () => {
-            (db.query.leads.findFirst as any).mockResolvedValue(null);
+            vi.mocked(db.query.leads.findFirst).mockResolvedValue(null);
 
             const result = await LeadService.getLead(mockLeadId, 'other-tenant');
             expect(result).toBeNull();
@@ -149,7 +149,7 @@ describe('LeadService', () => {
                 update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ ...mockLead, assignedSalesId: mockUserId, status: 'PENDING_FOLLOWUP' }]) }) }) }),
                 insert: vi.fn().mockReturnValue({ values: vi.fn() })
             };
-            (db.transaction as any).mockImplementation((cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));
 
             const result = await LeadService.claimFromPool(mockLeadId, mockTenantId, mockUserId);
             expect(result.assignedSalesId).toBe(mockUserId);
@@ -161,10 +161,10 @@ describe('LeadService', () => {
             const mockTx = {
                 select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([mockLead]) }) }) })
             };
-            (db.transaction as any).mockImplementation((cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));
 
             await expect(LeadService.claimFromPool(mockLeadId, mockTenantId, mockUserId))
-                .rejects.toThrow('Lead already assigned');
+                .rejects.toThrow('线索不是待分配状态或已被认领');
         });
     });
 
@@ -176,7 +176,7 @@ describe('LeadService', () => {
                 insert: vi.fn().mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'new-customer-id' }]) }) }),
                 update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn() }) })
             };
-            (db.transaction as any).mockImplementation((cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));
 
             const customerId = await LeadService.convertLead(mockLeadId, undefined, mockTenantId, mockUserId);
             expect(customerId).toBe('new-customer-id');

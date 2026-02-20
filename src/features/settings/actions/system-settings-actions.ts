@@ -9,7 +9,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
 import { parseSettingValue, validateValueType } from './setting-utils';
@@ -182,6 +182,8 @@ export async function updateSetting(key: string, value: unknown) {
     await updateSettingInternal(tx, key, value, tenantId, userId);
   });
 
+  revalidateTag('all-settings', 'default');
+  revalidateTag(`all-settings-${tenantId}`, 'default');
   revalidatePath('/settings');
   return { success: true };
 }
@@ -214,6 +216,8 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
     }
   });
 
+  revalidateTag('all-settings', 'default');
+  revalidateTag(`all-settings-${tenantId}`, 'default');
   revalidatePath('/settings');
   return { success: true };
 }
@@ -258,23 +262,41 @@ export async function initTenantSettings(tenantId: string) {
 }
 
 /**
+ * 获取所有配置（按分类分组）的内部缓存 wrapper
+ *
+ * @description 使用 unstable_cache 按 tenantId 缓存，tag: all-settings / all-settings-{tenantId}
+ * 系统配置变动极少，适合较长周期缓存（revalidate: 300s）。
+ * 更新配置时通过 revalidateTag 失效。
+ */
+const getCachedAllSettings = (tenantId: string) =>
+  unstable_cache(
+    async () => {
+      const allSettings = await db.query.systemSettings.findMany({
+        where: eq(systemSettings.tenantId, tenantId),
+      });
+
+      const grouped: Record<string, Record<string, unknown>> = {};
+      for (const setting of allSettings) {
+        if (!grouped[setting.category]) {
+          grouped[setting.category] = {};
+        }
+        grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+      }
+
+      return grouped;
+    },
+    [`all-settings-${tenantId}`],
+    { tags: ['all-settings', `all-settings-${tenantId}`], revalidate: 300 }
+  );
+
+/**
  * 获取所有配置（按分类分组）
+ *
+ * @description 已使用 unstable_cache 缓存，tag: all-settings / all-settings-{tenantId}，revalidate: 300s
  */
 export async function getAllSettings() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('未授权');
 
-  const allSettings = await db.query.systemSettings.findMany({
-    where: eq(systemSettings.tenantId, session.user.tenantId),
-  });
-
-  const grouped: Record<string, Record<string, unknown>> = {};
-  for (const setting of allSettings) {
-    if (!grouped[setting.category]) {
-      grouped[setting.category] = {};
-    }
-    grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
-  }
-
-  return grouped;
+  return getCachedAllSettings(session.user.tenantId)();
 }

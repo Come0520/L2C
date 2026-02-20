@@ -39,8 +39,8 @@ describe('Reconciliation Actions', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue(mockSession);
-        (checkPermission as any).mockResolvedValue(true);
+        vi.mocked(auth).mockResolvedValue(mockSession);
+        vi.mocked(checkPermission).mockResolvedValue(true);
     });
 
     describe('generateAggregatedStatement', () => {
@@ -55,9 +55,9 @@ describe('Reconciliation Actions', () => {
                     id: 'f47ac10b-58cc-4372-a567-0e02b2c3d404'
                 },
             ];
-            (db.query.arStatements.findMany as any).mockResolvedValue(mockStatements);
+            vi.mocked(db.query.arStatements.findMany).mockResolvedValue(mockStatements);
 
-            const result: any = await generateAggregatedStatement({
+            const result = await generateAggregatedStatement({
                 startDate: '2023-01-01',
                 endDate: '2023-01-31'
             });
@@ -107,9 +107,9 @@ describe('Reconciliation Actions', () => {
                     })
                 })
             };
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
-            const result: any = await batchWriteOff({
+            const result = await batchWriteOff({
                 receiptId: mockReceiptId,
                 statementIds: mockStatementIds
             });
@@ -132,9 +132,9 @@ describe('Reconciliation Actions', () => {
                     pendingAmount: '50'
                 }
             ];
-            (db.query.arStatements.findMany as any).mockResolvedValue(mockStatements);
+            vi.mocked(db.query.arStatements.findMany).mockResolvedValue(mockStatements);
 
-            const result: any = await crossPeriodReconciliation({
+            const result = await crossPeriodReconciliation({
                 originalStartDate: '2023-01-01',
                 originalEndDate: '2023-01-31',
                 newEndDate: '2023-02-28'
@@ -148,7 +148,7 @@ describe('Reconciliation Actions', () => {
 
     describe('权限校验', () => {
         it('未登录时应拒绝 generateAggregatedStatement', async () => {
-            (auth as any).mockResolvedValue(null);
+            vi.mocked(auth).mockResolvedValue(null);
 
             // 函数直接 throw Error，需用 rejects.toThrow 断言
             await expect(
@@ -160,7 +160,7 @@ describe('Reconciliation Actions', () => {
         });
 
         it('权限不足时应拒绝 batchWriteOff', async () => {
-            (checkPermission as any).mockResolvedValue(false);
+            vi.mocked(checkPermission).mockResolvedValue(false);
 
             await expect(
                 batchWriteOff({
@@ -171,7 +171,7 @@ describe('Reconciliation Actions', () => {
         });
 
         it('权限不足时应拒绝 crossPeriodReconciliation', async () => {
-            (checkPermission as any).mockResolvedValue(false);
+            vi.mocked(checkPermission).mockResolvedValue(false);
 
             await expect(
                 crossPeriodReconciliation({

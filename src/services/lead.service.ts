@@ -222,7 +222,7 @@ export class LeadService {
                     oldStatus: existingLead.status || 'PENDING_ASSIGNMENT',
                     newStatus: data.status,
                     changedBy: operatorId,
-                    reason: 'Lead Update', // 可以考虑让调用方传入 reason
+                    reason: '编辑线索更新状态', // Changed to Chinese
                 });
             }
 
@@ -233,19 +233,26 @@ export class LeadService {
     /**
      * Assign lead to a sales user.
      */
-    static async assignLead(id: string, salesId: string, tenantId: string, userId: string) {
+    static async assignLead(id: string, salesId: string, tenantId: string, userId: string, version?: number) {
         return await db.transaction(async (tx) => {
+            const whereCondition = and(
+                eq(leads.id, id),
+                eq(leads.tenantId, tenantId),
+                version !== undefined ? eq(leads.version, version) : undefined
+            );
+
             const [lead] = await tx.select().from(leads)
-                .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
+                .where(whereCondition)
                 .for('update');
 
-            if (!lead) throw new Error('Lead not found or access denied');
+            if (!lead) throw new Error(version !== undefined ? '数据已被他人修改，请刷新后重试' : 'Lead not found or access denied');
 
             const [updated] = await tx.update(leads)
                 .set({
                     assignedSalesId: salesId,
                     assignedAt: new Date(),
                     status: lead.status === 'PENDING_ASSIGNMENT' ? 'PENDING_FOLLOWUP' : lead.status,
+                    version: sql`${leads.version} + 1`,
                 })
                 .where(eq(leads.id, id))
                 .returning();
@@ -256,7 +263,7 @@ export class LeadService {
                 oldStatus: lead.status || 'PENDING_ASSIGNMENT',
                 newStatus: updated.status || 'PENDING_ASSIGNMENT',
                 changedBy: userId,
-                reason: 'Manual Assignment',
+                reason: '手动分配',
             });
 
             return updated;
@@ -273,13 +280,19 @@ export class LeadService {
         quoteId?: string;
         purchaseIntention?: typeof leadActivities.$inferInsert.purchaseIntention;
         customerLevel?: string;
-    }, tenantId: string, userId: string): Promise<string> {
+    }, tenantId: string, userId: string, version?: number): Promise<string> {
         return await db.transaction(async (tx) => {
             // 1. Verify lead existence and access
+            const whereCondition = and(
+                eq(leads.id, leadId),
+                eq(leads.tenantId, tenantId),
+                version !== undefined ? eq(leads.version, version) : undefined
+            );
+
             const [lead] = await tx.select().from(leads)
-                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .where(whereCondition)
                 .for('update');
-            if (!lead) throw new Error('Lead not found');
+            if (!lead) throw new Error(version !== undefined ? '数据已被他人修改，请刷新后重试' : 'Lead not found or access denied');
 
             // 2. Insert Activity
             const [activity] = await tx.insert(leadActivities).values({
@@ -298,6 +311,7 @@ export class LeadService {
             const updateData: Partial<typeof leads.$inferInsert> = {
                 lastActivityAt: new Date(),
                 nextFollowupAt: data.nextFollowupAt || null, // Clear if not provided? Or keep? Usually update.
+                version: sql`${leads.version} + 1` as any,
             };
 
             if (lead.status === 'PENDING_FOLLOWUP') {
@@ -315,7 +329,7 @@ export class LeadService {
 
             await tx.update(leads)
                 .set(updateData)
-                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)));
+                .where(eq(leads.id, leadId));
 
             return activity.id;
         });
@@ -324,13 +338,19 @@ export class LeadService {
     /**
      * Void a lead (Mark as lost/void).
      */
-    static async voidLead(leadId: string, reason: string, tenantId: string, userId: string): Promise<void> {
+    static async voidLead(leadId: string, reason: string, tenantId: string, userId: string, version?: number): Promise<void> {
         await db.transaction(async (tx) => {
+            const whereCondition = and(
+                eq(leads.id, leadId),
+                eq(leads.tenantId, tenantId),
+                version !== undefined ? eq(leads.version, version) : undefined
+            );
+
             const [lead] = await tx.select().from(leads)
-                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .where(whereCondition)
                 .for('update');
 
-            if (!lead) throw new Error('Lead not found');
+            if (!lead) throw new Error(version !== undefined ? '数据已被他人修改，请刷新后重试' : 'Lead not found or access denied');
             if (lead.status === 'WON') throw new Error('Cannot void a WON lead');
             if (lead.status === 'INVALID') return; // Already voided
 
@@ -340,8 +360,9 @@ export class LeadService {
                 .set({
                     status: 'INVALID',
                     lostReason: reason,
+                    version: sql`${leads.version} + 1`,
                 })
-                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)));
+                .where(eq(leads.id, leadId));
 
             await tx.insert(leadStatusHistory).values({
                 tenantId,
@@ -361,16 +382,23 @@ export class LeadService {
         leadId: string,
         targetCustomerId: string | undefined,
         tenantId: string,
-        userId: string
+        userId: string,
+        version?: number
     ) {
         return await db.transaction(async (tx) => {
             let finalCustomerId = targetCustomerId;
 
+            const whereCondition = and(
+                eq(leads.id, leadId),
+                eq(leads.tenantId, tenantId),
+                version !== undefined ? eq(leads.version, version) : undefined
+            );
+
             const [lead] = await tx.select().from(leads)
-                .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
+                .where(whereCondition)
                 .for('update');
 
-            if (!lead) throw new Error('Lead not found or access denied');
+            if (!lead) throw new Error(version !== undefined ? '数据已被他人修改，请刷新后重试' : 'Lead not found or access denied');
 
             // If no customer ID provided, create new customer from lead info
             if (!finalCustomerId) {
@@ -395,6 +423,7 @@ export class LeadService {
                     status: 'WON',
                     customerId: finalCustomerId,
                     wonAt: new Date(),
+                    version: sql`${leads.version} + 1`,
                 })
                 .where(eq(leads.id, leadId));
 
@@ -414,7 +443,7 @@ export class LeadService {
                 oldStatus: lead.status || 'PENDING_ASSIGNMENT',
                 newStatus: 'WON',
                 changedBy: userId,
-                reason: 'Converted to Customer',
+                reason: '已转化为客户',
             });
 
             return finalCustomerId;
@@ -449,13 +478,17 @@ export class LeadService {
     /**
      * Release a lead back to the public pool.
      */
-    static async releaseToPool(leadId: string, tenantId: string, userId: string) {
+    static async releaseToPool(leadId: string, tenantId: string, userId: string, hasManagePerm: boolean = false) {
         await db.transaction(async (tx) => {
             const [lead] = await tx.select().from(leads)
                 .where(and(eq(leads.id, leadId), eq(leads.tenantId, tenantId)))
                 .for('update');
 
             if (!lead) throw new Error('Lead not found or access denied');
+
+            if (!hasManagePerm && lead.assignedSalesId !== userId) {
+                throw new Error('无权释放非本人的线索');
+            }
 
             await tx.update(leads)
                 .set({
@@ -470,7 +503,7 @@ export class LeadService {
                 oldStatus: lead.status || 'PENDING_ASSIGNMENT',
                 newStatus: 'PENDING_ASSIGNMENT',
                 changedBy: userId,
-                reason: 'Released to Pool',
+                reason: '释放至公海池',
             });
         });
     }
@@ -487,8 +520,8 @@ export class LeadService {
 
             if (!lead) throw new Error('Lead not found or access denied');
 
-            if (lead.assignedSalesId) {
-                throw new Error('Lead already assigned');
+            if (lead.assignedSalesId || lead.status !== 'PENDING_ASSIGNMENT') {
+                throw new Error('线索不是待分配状态或已被认领');
             }
 
             const [updatedLead] = await tx.update(leads)
@@ -506,7 +539,7 @@ export class LeadService {
                 oldStatus: lead.status || 'PENDING_ASSIGNMENT',
                 newStatus: 'PENDING_FOLLOWUP',
                 changedBy: userId,
-                reason: 'Claimed from Pool',
+                reason: '从公海池认领',
             });
 
             return updatedLead;

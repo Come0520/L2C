@@ -111,7 +111,7 @@ export function truncate(text: string, length: number): string {
  */
 export function escapeSqlLike(str: string): string {
     if (!str) return str;
-    return str.replace(/[%_]/g, '\\$&');
+    return str.replace(/[\\%_]/g, '\\$&');
 }
 
 // [Fix 4.2] 输入清理工具

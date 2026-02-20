@@ -6,7 +6,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
-import { eq, and, desc, or } from 'drizzle-orm';
+import { eq, and, desc, or, count } from 'drizzle-orm';
 import { apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
@@ -82,11 +82,10 @@ export async function GET(request: NextRequest) {
         });
 
         // 6. 统计总数
-        const allTasks = await db.query.approvalTasks.findMany({
-            where: and(...conditions),
-            columns: { id: true }
-        });
-        const total = allTasks.length;
+        const totalResult = await db.select({ value: count() })
+            .from(approvalTasks)
+            .where(and(...conditions));
+        const total = Number(totalResult[0]?.value || 0);
 
         // 7. 格式化响应
         const items = tasks.map(task => ({

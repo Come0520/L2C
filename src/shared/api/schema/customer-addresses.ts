@@ -5,6 +5,7 @@ import {
     boolean,
     timestamp,
     index,
+    integer,
 } from 'drizzle-orm/pg-core';
 import { customers } from './customers';
 import { tenants } from './infrastructure';
@@ -23,6 +24,7 @@ export const customerAddresses = pgTable('customer_addresses', {
     address: varchar('address', { length: 255 }).notNull(), // Detailed address
 
     isDefault: boolean('is_default').default(false),
+    version: integer('version').default(0).notNull(),
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

@@ -7,13 +7,22 @@ import { Button } from '@/shared/ui/button';
 import { CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { Pagination } from '@/shared/ui/pagination';
+import { type ApprovalTask } from '../schema';
 
 export function ApprovalTaskList({
     tasks,
-    isPending
+    isPending,
+    pagination
 }: {
-    tasks: Array<any>;
+    tasks: ApprovalTask[];
     isPending: boolean;
+    pagination?: {
+        total: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+    };
 }) {
     if (tasks.length === 0) {
         return (
@@ -25,14 +34,22 @@ export function ApprovalTaskList({
 
     return (
         <div className="space-y-4">
-            {tasks.map((task) => (
-                <TaskCard key={task.id} task={task} isPending={isPending} />
-            ))}
+            <div className="space-y-4">
+                {tasks.map((task) => (
+                    <TaskCard key={task.id} task={task} isPending={isPending} />
+                ))}
+            </div>
+            {pagination && pagination.totalPages > 1 && (
+                <Pagination
+                    totalPages={pagination.totalPages}
+                    currentPage={pagination.page}
+                />
+            )}
         </div>
     );
 }
 
-function TaskCard({ task, isPending }: { task: any; isPending: boolean }) {
+function TaskCard({ task, isPending }: { task: ApprovalTask; isPending: boolean }) {
     const statusIcons: Record<string, React.ReactNode> = {
         'PENDING': <Clock className="w-4 h-4 text-amber-500" />,
         'APPROVED': <CheckCircle2 className="w-4 h-4 text-green-500" />,

@@ -35,7 +35,7 @@ vi.mock('bcryptjs', () => ({
 
 // Mock createSafeAction
 vi.mock('@/shared/lib/server-action', () => ({
-    createSafeAction: <T extends z.ZodTypeAny, R>(schema: T, handler: (data: z.infer<T>, ctx: { session: any }) => Promise<R>) => {
+    createSafeAction: <T extends z.ZodTypeAny, R>(schema: T, handler: (data: z.infer<T>, ctx: { session: { user: { id: string, tenantId: string } } }) => Promise<R>) => {
         return async (data: unknown) => {
             const parsed = schema.safeParse(data);
             if (!parsed.success) {

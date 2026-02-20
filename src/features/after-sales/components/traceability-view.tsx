@@ -61,7 +61,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                                     <Truck className="h-3 w-3" /> 关联采购/生产单
                                 </h4>
                                 {purchaseOrders.length === 0 ? <p className="text-xs text-muted-foreground italic pl-5">无相关记录</p> :
-                                    purchaseOrders.map((po: { id: string; poNo: string; supplierName: string | null; status: string }) => (
+                                    purchaseOrders.map((po: { id: string; poNo: string; supplierName: string | null; status: string | null }) => (
                                         <div key={po.id} className="border p-2 rounded text-sm bg-card hover:bg-muted/10 transition-colors flex justify-between items-center">
                                             <div>
                                                 <div className="font-medium text-slate-800">{po.poNo}</div>
@@ -79,12 +79,12 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                                     <Wrench className="h-3 w-3" /> 关联安装/服务任务
                                 </h4>
                                 {installTasks.length === 0 ? <p className="text-xs text-muted-foreground italic pl-5">无相关记录</p> :
-                                    installTasks.map((task: { id: string; taskNo: string; scheduledAt: Date | string | null; status: string }) => (
+                                    installTasks.map((task: { id: string; taskNo: string; scheduledAt?: Date | string | null; scheduledDate?: Date | string | null; status: string }) => (
                                         <div key={task.id} className="border p-2 rounded text-sm bg-card hover:bg-muted/10 transition-colors flex justify-between items-center">
                                             <div>
                                                 <div className="font-medium text-slate-800">{task.taskNo}</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    {task.scheduledAt ? format(new Date(task.scheduledAt), 'yyyy-MM-dd') : '未排期'}
+                                                    {(task.scheduledAt || task.scheduledDate) ? format(new Date((task.scheduledAt || task.scheduledDate) as string | Date), 'yyyy-MM-dd') : '未排期'}
                                                 </div>
                                             </div>
                                             <Badge variant="secondary" className="scale-90">{task.status}</Badge>
@@ -146,7 +146,7 @@ export function TraceabilityView({ ticket }: TraceabilityViewProps) {
                                                 <AlertTriangle className="h-4 w-4 text-red-500" />
                                                 <span className="font-semibold text-sm">{notice.noticeNo}</span>
                                                 <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                                                    {REASON_CATEGORY_LABELS[notice.liabilityReasonCategory] || notice.liabilityReasonCategory || '未分类'}
+                                                    {REASON_CATEGORY_LABELS[notice.liabilityReasonCategory ?? ''] || notice.liabilityReasonCategory || '未分类'}
                                                 </Badge>
                                             </div>
                                             <p className="text-sm text-slate-600 pl-6">{notice.reason}</p>

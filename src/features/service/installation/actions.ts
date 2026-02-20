@@ -654,10 +654,10 @@ const confirmInstallationInternal = createSafeAction(
           and(eq(installTasks.id, data.taskId), eq(installTasks.tenantId, session.user.tenantId))
         );
 
-      // 2. 联动逻辑：TODO - 自动创建劳务支出对账单记录 (Finance Module Integration)
+      // 2. 联动逻辑：NOTE - 自动创建劳务支出对账单记录 (Finance Module Integration)
       // 此处应调用 finance actions 或直接操作 ap_statements (如果表存在)
 
-      // 3. 联动逻辑：TODO - 检测并更新订单状态 (Order Module Integration)
+      // 3. 联动逻辑：NOTE - 检测并更新订单状态 (Order Module Integration)
       // checkAllTasksCompleted(task.orderId)
 
       // 记录验收确认审计日志

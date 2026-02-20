@@ -109,7 +109,7 @@ export function ApprovalFlowDesigner({ flowId, initialData }: ApprovalFlowDesign
             const definition = {
                 nodes: nodes.map((n: Node) => ({
                     id: n.id,
-                    type: n.type as any,
+                    type: n.type || 'default',
                     data: n.data,
                     position: n.position
                 })),
@@ -140,7 +140,7 @@ export function ApprovalFlowDesigner({ flowId, initialData }: ApprovalFlowDesign
             const definition = {
                 nodes: nodes.map((n: Node) => ({
                     id: n.id,
-                    type: n.type as any,
+                    type: n.type || 'default',
                     data: n.data,
                     position: n.position
                 })),

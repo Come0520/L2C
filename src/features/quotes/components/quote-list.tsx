@@ -37,11 +37,22 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: '已过期',
 };
 
+interface QuoteListItem {
+  id: string;
+  quoteNo: string;
+  customer?: { name?: string | null } | null;
+  status: string;
+  finalAmount: number | string;
+  creator?: { name?: string | null } | null;
+  createdAt?: string | Date | null;
+  [key: string]: unknown;
+}
+
 export function QuoteList() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const [quotes, setQuotes] = useState<any[]>([]);
+  const [quotes, setQuotes] = useState<QuoteListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const activeTab = searchParams.get('status') || 'ALL';
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -65,7 +76,7 @@ export function QuoteList() {
       const { data } = await getQuotes({
         statuses: statuses.length > 0 ? statuses : undefined,
       });
-      setQuotes(data || []);
+      setQuotes((data as QuoteListItem[]) || []);
     } catch (error) {
       console.error(error);
       toast.error('加载失败');

@@ -38,7 +38,7 @@ export async function getShowroomItems(input: z.infer<typeof getShowroomItemsSch
 
     if (redis && !search) {
         const cached = await redis.get(cacheKey);
-        if (cached) return cached as any;
+        if (cached) return cached as { data: (typeof showroomItems.$inferSelect)[]; pagination: { total: number; page: number; pageSize: number; totalPages: number } };
     }
 
     // 2. 构造查询
@@ -54,7 +54,7 @@ export async function getShowroomItems(input: z.infer<typeof getShowroomItemsSch
         ));
     }
 
-    if (type && type !== 'all') {
+    if (type && (type as string) !== 'all') {
         whereConditions.push(eq(showroomItems.type, type));
     }
 

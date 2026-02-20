@@ -10,32 +10,30 @@ import {
 import { Button } from '@/shared/ui/button';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createSupplierSchema, updateSupplierSchema } from '../schemas';
+import { createSupplierSchema } from '../schemas';
 import { createSupplier, updateSupplier } from '../actions/supplier-actions';
 import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { ProcessorFormBasic } from './processor-form-basic';
 import { ProcessorFormPrices } from './processor-form-prices';
 import { ProcessorFormFiles } from './processor-form-files';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { z } from 'zod';
-import { ProcessorFormData } from '../types';
+import { ProcessorInitialData } from '../types';
 
 // 扩展 Schema 类型以适应表单
-type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
-// type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
+type CreateSupplierInput = z.input<typeof createSupplierSchema>;
+
 
 interface ProcessorDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData?: any;
+    initialData?: ProcessorInitialData;
     onSuccess?: () => void;
 }
 
 export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: ProcessorDialogProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [activeTab, setActiveTab] = useState("basic");
 
     const form = useForm<CreateSupplierInput>({
@@ -44,7 +42,7 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
             supplierType: 'PROCESSOR' as const,
             paymentPeriod: 'CASH' as const,
             processingPrices: { items: [] },
-            ...initialData
+            ...initialData as Partial<CreateSupplierInput>
         },
     });
 
@@ -54,42 +52,43 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
                 supplierType: 'PROCESSOR',
                 paymentPeriod: 'CASH',
                 processingPrices: initialData?.processingPrices || { items: [] },
-                ...initialData
+                ...initialData as Partial<CreateSupplierInput>
             });
-            setActiveTab("basic");
+        } else {
+            setTimeout(() => setActiveTab("basic"), 0);
         }
     }, [initialData, open, form]);
 
-    const onSubmit = async (data: CreateSupplierInput) => {
-        setIsSubmitting(true);
-        try {
-            if (initialData?.id) {
-                // Update
-                const res = await updateSupplier({ ...data, id: initialData.id });
-                if (res?.error) {
-                    toast.error(res.error);
+    const onSubmit = (data: z.input<typeof createSupplierSchema>) => {
+        startTransition(async () => {
+            try {
+                if (initialData?.id) {
+                    // Update
+                    const res = await updateSupplier({ ...data, id: initialData.id } as Parameters<typeof updateSupplier>[0]);
+                    if (res?.error) {
+                        toast.error('更新失败', { description: res.error });
+                    } else {
+                        toast.success('加工厂更新成功');
+                        onSuccess?.();
+                        onOpenChange(false);
+                    }
                 } else {
-                    toast.success('加工厂更新成功');
-                    onSuccess?.();
-                    onOpenChange(false);
+                    // Create
+                    const res = await createSupplier(data as Parameters<typeof createSupplier>[0]);
+                    if (res?.error) {
+                        toast.error('创建失败', { description: res.error });
+                    } else {
+                        toast.success('加工厂创建成功');
+                        onSuccess?.();
+                        onOpenChange(false);
+                    }
                 }
-            } else {
-                // Create
-                const res = await createSupplier(data);
-                if (res?.error) {
-                    toast.error(res.error);
-                } else {
-                    toast.success('加工厂创建成功');
-                    onSuccess?.();
-                    onOpenChange(false);
-                }
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : '未知系统错误';
+                toast.error('保存失败', { description: message });
+                console.error(error);
             }
-        } catch (error) {
-            toast.error('保存失败');
-            console.error(error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (
@@ -132,8 +131,8 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
                     <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
                         取消
                     </Button>
-                    <Button type="submit" form="processor-form" disabled={isSubmitting}>
-                        {isSubmitting ? '保存中...' : '保存'}
+                    <Button type="submit" form="processor-form" disabled={isPending}>
+                        {isPending ? '保存中...' : '保存'}
                     </Button>
                 </div>
             </DialogContent>

@@ -62,7 +62,7 @@ export function OrderList() {
                 channelId: filters.channelId,
                 dateRange: filters.dateRange,
             });
-            if (!result?.success || !result.data?.success) {
+            if (!result?.success) {
                 throw new Error(result?.error || '获取订单列表失败');
             }
             return result.data;

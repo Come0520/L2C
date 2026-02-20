@@ -3,7 +3,7 @@
 
 import { db } from '@/shared/api/db';
 import { leads, orders, measureTasks, arStatements, installTasks } from '@/shared/api/schema';
-import { eq, and, count, sum, inArray } from 'drizzle-orm';
+import { eq, and, count, inArray, sql } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { createLogger } from '@/shared/lib/logger';
@@ -51,7 +51,7 @@ export const getDashboardStats = createSafeAction(
                     db.select({ value: count() }).from(leads).where(eq(leads.tenantId, tenantId)),
                     db.select({ value: count() }).from(orders).where(and(eq(orders.tenantId, tenantId), inArray(orders.status, ['SIGNED', 'PAID']))),
                     db.select({ value: count() }).from(measureTasks).where(and(eq(measureTasks.tenantId, tenantId), eq(measureTasks.status, 'PENDING'))),
-                    db.select({ sum: sum(arStatements.amount) }).from(arStatements).where(and(eq(arStatements.tenantId, tenantId), eq(arStatements.status, 'PARTIAL'))),
+                    db.select({ sum: sql<number>`COALESCE(SUM(${(arStatements as any).totalAmount}), 0)` }).from(arStatements).where(and(eq(arStatements.tenantId, tenantId), eq(arStatements.status, 'PARTIAL'))),
                     db.select({ value: count() }).from(installTasks).where(and(eq(installTasks.tenantId, tenantId), eq(installTasks.status, 'PENDING_DISPATCH')))
                 ]);
 

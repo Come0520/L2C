@@ -85,50 +85,61 @@ export function UserForm({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>姓名</Label>
-            <Input {...form.register('name')} placeholder="用户姓名" />
-          </div>
-
-          {/* 只读信息：手机号和邮箱 */}
-          {initialData && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">手机号</Label>
-                <Input value={initialData.phone || '-'} disabled className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">邮箱</Label>
-                <Input value={initialData.email || '未绑定'} disabled className="bg-muted" />
-              </div>
+          <fieldset disabled={loading} className="space-y-4">
+            <div className="space-y-2">
+              <Label>姓名</Label>
+              <Input {...form.register('name')} placeholder="请输入用户姓名" />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label>角色</Label>
-            <RoleSelector
-              options={availableRoles}
-              selected={form.watch('roles')}
-              onSelect={(vals) => form.setValue('roles', vals)}
-            />
-          </div>
+            {/* 只读信息：手机号和邮箱 */}
+            {initialData && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground opacity-70">手机号</Label>
+                  <Input value={initialData.phone || '-'} disabled className="bg-muted/50 cursor-not-allowed" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground opacity-70">邮箱</Label>
+                  <Input value={initialData.email || '未绑定'} disabled className="bg-muted/50 cursor-not-allowed" />
+                </div>
+              </div>
+            )}
 
-          <div className="flex items-center justify-between space-x-2">
-            <Label htmlFor="active-mode">账号状态 (启用/禁用)</Label>
-            <Switch
-              id="active-mode"
-              checked={form.watch('isActive')}
-              onCheckedChange={(checked) => form.setValue('isActive', checked)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>角色</Label>
+              <RoleSelector
+                options={availableRoles}
+                selected={form.watch('roles')}
+                onSelect={(vals) => form.setValue('roles', vals)}
+              />
+            </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="active-mode" className="text-sm font-medium">账号状态</Label>
+                <p className="text-xs text-muted-foreground">控制该用户是否可以登录系统</p>
+              </div>
+              <Switch
+                id="active-mode"
+                checked={form.watch('isActive')}
+                onCheckedChange={(checked) => form.setValue('isActive', checked)}
+              />
+            </div>
+          </fieldset>
+
+          <DialogFooter className="pt-4 border-t">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
               取消
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              保存
+            <Button type="submit" disabled={loading} className="min-w-[100px]">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  提交中...
+                </>
+              ) : (
+                '保存更改'
+              )}
             </Button>
           </DialogFooter>
         </form>

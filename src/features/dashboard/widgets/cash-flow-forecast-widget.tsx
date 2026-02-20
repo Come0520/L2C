@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { getCashFlowForecast } from "@/features/analytics/actions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/shared/utils";
+import { createLogger } from "@/shared/lib/logger";
+
+const logger = createLogger('CashFlowForecastWidget');
+import useSWR from 'swr';
+import { fetcher } from '@/shared/lib/fetcher';
 import {
     Area,
     AreaChart,
@@ -30,28 +34,24 @@ interface CashFlowData {
     };
 }
 
+
+
 export function CashFlowForecastWidget({ className }: CashFlowForecastWidgetProps) {
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<CashFlowData | null>(null);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const res = await getCashFlowForecast({ forecastDays: 30 }); // 默认预测30天
-                if (res?.data?.success) {
-                    setData(res.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to load cash flow forecast", error);
+    const { data: swrData, isLoading } = useSWR<{ success: boolean; data: CashFlowData }>(
+        '/api/workbench/cash-flow-forecast',
+        fetcher,
+        {
+            refreshInterval: 600000, // 10分钟刷新一次
+            revalidateOnFocus: false,
+            onError: (err) => {
+                logger.error("Failed to load cash flow forecast via SWR", {}, err);
                 toast.error("加载现金流预测失败");
-            } finally {
-                setLoading(false);
             }
-        };
+        }
+    );
 
-        loadData();
-    }, []);
+    const data = swrData?.success ? swrData.data : null;
+    const loading = isLoading;
 
     if (loading) {
         return (

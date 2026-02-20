@@ -64,7 +64,7 @@ export async function getShareContent(shareId: string) {
     // 1. 公开限流检查
     const clientHeaders = await headers();
     const ip = clientHeaders.get('x-forwarded-for') || 'anonymous';
-    const rateLimit = await checkRateLimit(`showroom_share_${ip}`, 60, 60);
+    const rateLimit = await checkRateLimit(`showroom_share_${ip}`, { max: 60, windowMs: 60 * 1000, keyType: 'ip', prefix: 'ratelimit:showroom' });
 
     if (!rateLimit.allowed) {
         throw new ShowroomError(ShowroomErrors.SHARE_RATE_LIMIT);

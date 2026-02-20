@@ -14,13 +14,15 @@ import { Button } from '@/shared/ui/button';
 import { Eye } from 'lucide-react';
 import Link from 'next/link';
 
+import { ReceiptBillWithRelations } from '../types';
+
 interface ReceiptBillTableProps {
-    data: any[];
+    data: ReceiptBillWithRelations[];
 }
 
 export function ReceiptBillTable({ data }: ReceiptBillTableProps) {
     const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
-        const variants: Record<string, any> = {
+        const variants: Record<string, "success" | "info" | "warning" | "error" | "secondary" | "default"> = {
             DRAFT: 'secondary',
             PENDING_APPROVAL: 'warning',
             APPROVED: 'info',

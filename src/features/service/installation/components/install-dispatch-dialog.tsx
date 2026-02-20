@@ -30,7 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import { dispatchInstallTask } from '../actions';
+import { dispatchInstallTaskAction } from '../actions';
 import { toast } from 'sonner';
 
 const formSchema = z.object({
@@ -69,7 +69,7 @@ export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispa
     async function executeDispatch(values: z.infer<typeof formSchema>, force: boolean) {
         setIsLoading(true);
         try {
-            const result = await dispatchInstallTask({
+            const result = await dispatchInstallTaskAction({
                 id: taskId,
                 installerId: values.installerId,
                 scheduledDate: values.scheduledDate ? new Date(values.scheduledDate) : undefined,

@@ -60,6 +60,8 @@ export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCan
         }, 'image/png');
     };
 
+    const SignaturePad = ReactSignatureCanvas as any;
+
     return (
         <div className={cn("flex flex-col gap-4", className)}>
             <div
@@ -67,7 +69,7 @@ export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCan
                 className="border-2 border-dashed border-border rounded-lg bg-muted/10 overflow-hidden touch-none"
                 style={{ height: canvasSize.height }}
             >
-                <ReactSignatureCanvas
+                <SignaturePad
                     ref={sigCanvas}
                     canvasProps={useMemo(() => ({
                         width: canvasSize.width,

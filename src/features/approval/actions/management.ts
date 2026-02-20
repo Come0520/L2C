@@ -37,7 +37,8 @@ export async function withdrawApproval(payload: {
         }
 
         // 2. Permission Check (Only Requester can withdraw)
-        // TODO: Admin might also withdraw? For now, restriction to requester.
+        // 设计选型：当前仅允许发起人撤回，管理员撤回权限可在后续需求变更时扩展
+        // （参考 revokeApprovalAction 对审批人撤销动作的处理）
         if (instance.requesterId !== session.user.id) {
             return { success: false, error: '无权撤回此审批' };
         }

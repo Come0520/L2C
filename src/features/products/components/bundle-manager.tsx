@@ -160,7 +160,7 @@ export function BundleManager() {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            // TODO: 调用 Server Action 保存
+            // NOTE: 调用 Server Action 保存
             // if (editingBundle) {
             //     await updateBundle(editingBundle.id, formData);
             // } else {
@@ -338,7 +338,7 @@ export function BundleManager() {
                             </div>
                         </div>
 
-                        {/* TODO: 添加子商品管理 */}
+                        {/* NOTE: 添加子商品管理 */}
                         <div className="border rounded-lg p-4 bg-muted/30">
                             <p className="text-sm text-muted-foreground text-center">
                                 子商品管理功能开发中...

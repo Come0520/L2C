@@ -1,35 +1,32 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Target, Users, Percent, DollarSign, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { getSalesDashboardStats, DashboardStats } from '@/features/sales/actions/dashboard';
+import { createLogger } from "@/shared/lib/logger";
+import useSWR from 'swr';
+import { fetcher } from '@/shared/lib/fetcher';
+import { DashboardStats } from '@/features/sales/actions/dashboard';
 
-// Helper hook to fetch stats
+const logger = createLogger('SalesWidgets');
+
+// Helper hook to fetch stats using SWR
 function useSalesStats() {
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetch() {
-            try {
-                const res = await getSalesDashboardStats();
-                if (res.success && res.data) {
-                    setStats(res.data);
-                } else {
-                    console.error(res.error);
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
+    const { data, isLoading } = useSWR<DashboardStats>(
+        '/api/sales/dashboard/stats',
+        fetcher,
+        {
+            refreshInterval: 300000, // 每5分钟刷新一次
+            revalidateOnFocus: true,
+            onError: (err) => {
+                logger.error("Failed to fetch sales stats via SWR", { error: err.message });
             }
         }
-        fetch();
-    }, []);
+    );
 
-    return { stats, loading };
+    return {
+        stats: data || null,
+        loading: isLoading
+    };
 }
 
 /**

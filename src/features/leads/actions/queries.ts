@@ -10,6 +10,15 @@ import { unstable_cache } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { escapeSqlLike } from '@/shared/lib/utils';
 
+/**
+ * 以分页形式获取线索列表
+ * 支持按状态、意向级别、渠道分类、日期范围等进行多维度组合查询
+ * 
+ * @param {z.infer<typeof leadFilterSchema>} input - 线索查询与过滤条件
+ * @returns {Promise<{data: any[], total: number, page: number, pageSize: number, totalPages: number}>} 分页线索数据及元信息
+ * @throws {Error} 未登录或缺少租户信息时抛出
+ * @audit 依赖 tenantId 进行租户数据隔离
+ */
 export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -127,6 +136,16 @@ async function getLeadDetailInternal(id: string, tenantId: string) {
     return lead;
 }
 
+/**
+ * 根据 ID 获取单条线索详情
+ * 包含分配销售、渠道来源及客户详细关联信息
+ * 
+ * @param {Object} args - 参数对象
+ * @param {string} args.id - 线索唯一标识符
+ * @returns {Promise<any | null>} 返回线索完整数据，不存在时返回 null
+ * @throws {Error} 未登录或缺少租户信息时抛出
+ * @audit 依赖 tenantId 进行租户数据严格隔离校验
+ */
 export async function getLeadById({ id }: { id: string }) {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -149,6 +168,15 @@ export async function getLeadById({ id }: { id: string }) {
     return lead;
 }
 
+/**
+ * 获取指定线索的操作时间线（活动记录）
+ * 用于追踪线索从创建、变配、跟进到成交的全生命周期事件
+ * 
+ * @param {z.infer<typeof getLeadTimelineLogsSchema>} input - 包含线索 ID 的输入参数
+ * @returns {Promise<any[]>} 按创建时间倒序排列的活动事件数组
+ * @throws {Error} 未登录、缺乏租户信息或线索不可见时抛出
+ * @audit 在查询活动前需二次校验当前租户是否拥有该线索访问权限
+ */
 export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsSchema>) {
     // 认证检查
     const session = await auth();
@@ -193,7 +221,12 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
 
 /**
  * 获取市场渠道列表
- * 安全修复：添加认证检查
+ * 安全修复：添加认证检查，支持根据父节点 ID 获取级联子渠道
+ * 
+ * @param {string} [parentId] - 选填的父渠道 ID。若无，则查询顶级渠道
+ * @returns {Promise<any[]>} 具有给定层级关系的活跃渠道列表
+ * @throws {Error} 未登录或缺少租户信息时抛出
+ * @audit 依赖 tenantId 隔离企业级字典配置
  */
 export async function getChannels(parentId?: string) {
     const session = await auth();
@@ -226,6 +259,14 @@ export async function getChannels(parentId?: string) {
     )(parentId);
 }
 
+/**
+ * 获取系统内的活跃销售人员列表
+ * 供线索分配下拉框等选用
+ * 
+ * @returns {Promise<any[]>} 启用的相关企业下销售用户列表
+ * @throws {Error} 未登录或缺少租户信息时抛出
+ * @audit 结果局限于同一租户 (tenantId) 内部
+ */
 export async function getSalesUsers() {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -261,8 +302,13 @@ export async function getSalesUsers() {
 }
 
 /**
- * 获取线索转化漏斗统计
- * 升级版：支持日期范围过滤，并基于线索状态变更历史进行统计
+ * 获取线索转化漏斗统计（分析大盘指标用）
+ * 升级版：支持日期范围过滤，并基于线索状态变更历史进行精确阶段转化统计
+ * 
+ * @param {z.infer<typeof analyticsDateRangeSchema>} [input] - 可选的分析日期范围
+ * @returns {Promise<any[]>} 每个线索阶段的新进入计数
+ * @throws {Error} 未登录或缺少租户信息时抛出
+ * @audit 支持租户及日期下钻审计数据
  */
 export async function getLeadFunnelStats(input?: z.infer<typeof analyticsDateRangeSchema>) {
     const session = await auth();

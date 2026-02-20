@@ -55,6 +55,8 @@ const createReceiptSchema = z.object({
 
 type FormValues = z.infer<typeof createReceiptSchema>;
 
+import { ARStatementWithRelations, FinanceAccount } from '../types';
+
 interface ReceiptBillDialogProps {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
@@ -65,7 +67,7 @@ interface ReceiptBillDialogProps {
     customerPhone?: string;
     amount?: string | number;
 
-    initialStatement?: any; // 保持向后兼容，后续可定义具体类型
+    initialStatement?: ARStatementWithRelations | null;
 }
 
 export function ReceiptBillDialog({
@@ -86,7 +88,7 @@ export function ReceiptBillDialog({
 
     const [isPending, startTransition] = useTransition();
 
-    const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
+    const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
 
     useEffect(() => {
         if (open) {
@@ -113,6 +115,7 @@ export function ReceiptBillDialog({
     const initialStatementCustomerName = initialStatement?.customerName;
     const initialStatementCustomerPhone = initialStatement?.customer?.phone;
     const initialStatementOrderId = initialStatement?.orderId;
+    const initialStatementOrderNo = initialStatement?.order?.orderNo;
 
     useEffect(() => {
         if (open) {
@@ -155,22 +158,36 @@ export function ReceiptBillDialog({
         }
     }, [
         open, orderId, customerId, customerName, customerPhone, amount, form,
-        initialStatementId, initialStatementPendingAmount, initialStatementCustomerId,
-        initialStatementCustomerName, initialStatementCustomerPhone, initialStatementOrderId
+        initialStatement, initialStatementId, initialStatementPendingAmount,
+        initialStatementCustomerId, initialStatementCustomerName,
+        initialStatementCustomerPhone, initialStatementOrderId
     ]);
 
     const onSubmit = (values: FormValues) => {
         startTransition(async () => {
             try {
+                // 转换为 Action 期望的类型 (CreateReceiptBillData)
+                const actionData = {
+                    ...values,
+                    totalAmount: values.totalAmount.toString(),
+                    items: values.items?.map(item => ({
+                        orderId: item.orderId,
+                        orderNo: initialStatementOrderId === item.orderId ? (initialStatementOrderNo || 'UNKNOWN') : 'UNKNOWN',
+                        amount: item.amount.toString(),
+                        statementId: item.statementId,
+                    }))
+                };
 
-                const result = await createAndSubmitReceipt(values as any); // Action 输入与 Zod 类型可能不匹配
-                if (result.success) {
+                const result = await createAndSubmitReceipt(
+                    actionData as Parameters<typeof createAndSubmitReceipt>[0]
+                );
+                const res = result as { success?: boolean; error?: string; data?: unknown; serverError?: string };
+                if (res.success || res.data) {
                     toast.success('收款单已提交审批');
                     onOpenChange?.(false);
                     form.reset();
                 } else {
-
-                    toast.error((result as any).error || '提交失败');
+                    toast.error(res.error || res.serverError || '提交失败');
                 }
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : '提交失败';

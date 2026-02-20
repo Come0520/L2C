@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { addPOLogistics } from '../actions/po-actions';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 // 支持两种使用模式：受控模式 (open/onClose) 和触发器模式 (trigger)
 interface AddLogisticsDialogProps {
@@ -27,6 +28,7 @@ interface LogisticsFormData {
 
 export function AddLogisticsDialog({ poId, open: controlledOpen, onClose, trigger }: AddLogisticsDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
     // 如果提供 trigger，则使用内部状态管理；否则使用受控模式
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : internalOpen;
@@ -47,21 +49,24 @@ export function AddLogisticsDialog({ poId, open: controlledOpen, onClose, trigge
     });
 
     const handleSubmit = async (data: LogisticsFormData) => {
-        try {
-            await addPOLogistics({
-                poId,
-                company: data.company,
-                trackingNo: data.trackingNo,
-                shippedAt: data.shippedAt,
-                remark: data.remark
-            });
-            toast.success('物流信息已填写');
-            form.reset();
-            handleOpenChange(false);
-        } catch (error) {
-            toast.error('填写物流信息失败');
-            console.error(error);
-        }
+        startTransition(async () => {
+            try {
+                await addPOLogistics({
+                    poId,
+                    company: data.company,
+                    trackingNo: data.trackingNo,
+                    shippedAt: data.shippedAt,
+                    remark: data.remark
+                });
+                toast.success('物流信息已填写');
+                form.reset();
+                handleOpenChange(false);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : '未知系统错误';
+                toast.error('填写物流信息失败', { description: message });
+                console.error(error);
+            }
+        });
     };
 
     return (
@@ -114,7 +119,8 @@ export function AddLogisticsDialog({ poId, open: controlledOpen, onClose, trigge
                         <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                             取消
                         </Button>
-                        <Button type="submit">
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             确认
                         </Button>
                     </DialogFooter>

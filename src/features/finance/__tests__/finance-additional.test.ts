@@ -45,27 +45,26 @@ describe('Finance Note Actions - Credit & Debit', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue(mockSession);
-        (checkPermission as any).mockResolvedValue(true);
-        (db.update as any).mockReturnValue({
+        vi.mocked(auth).mockResolvedValue(mockSession);
+        vi.mocked(checkPermission).mockResolvedValue(true);
+        vi.mocked(db.update).mockReturnValue({
             set: vi.fn().mockReturnValue({
                 where: vi.fn().mockResolvedValue(true)
             })
-        });
+        } as never);
     });
 
     describe('Credit Notes', () => {
         it('createCreditNote should successfully create a pending credit note', async () => {
-            (db.insert as any).mockReturnValueOnce({
+            vi.mocked(db.insert).mockReturnValueOnce({
                 values: vi.fn().mockReturnValue({
                     returning: vi.fn().mockResolvedValue([{ id: 'mock-credit-note-id' }])
                 })
             });
 
-            console.log("===> createCreditNote function:", createCreditNote.toString().slice(0, 100));
-            console.log("===> is mock function:", vi.isMockFunction(createCreditNote));
 
-            const result: any = await createCreditNote({
+
+            const result = await createCreditNote({
                 customerId: 'f47ac10b-58cc-4372-a567-0e02b2c3d403',
                 customerName: 'Test Customer',
                 type: 'REFUND',
@@ -96,10 +95,10 @@ describe('Finance Note Actions - Credit & Debit', () => {
                     values: vi.fn().mockResolvedValue(true)
                 })
             };
-            (db.query.creditNotes.findFirst as any).mockResolvedValue(mockCreditNote);
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.query.creditNotes.findFirst).mockResolvedValue(mockCreditNote as never);
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
-            const result: any = await approveCreditNote('mock-credit-note-id', true);
+            const result = await approveCreditNote('mock-credit-note-id', true);
             const data = result.data || result;
             expect(data.success).toBe(true);
             expect(mockTx.update).toHaveBeenCalledTimes(2); // one for creditNote, one for arStatement
@@ -108,13 +107,13 @@ describe('Finance Note Actions - Credit & Debit', () => {
 
     describe('Debit Notes', () => {
         it('createDebitNote should successfully create a pending debit note', async () => {
-            (db.insert as any).mockReturnValueOnce({
+            vi.mocked(db.insert).mockReturnValueOnce({
                 values: vi.fn().mockReturnValue({
                     returning: vi.fn().mockResolvedValue([{ id: 'mock-debit-note-id' }])
                 })
             });
 
-            const result: any = await createDebitNote({
+            const result = await createDebitNote({
                 supplierId: 'f47ac10b-58cc-4372-a567-0e02b2c3d404',
                 supplierName: 'Test Supplier',
                 type: 'QUALITY_DEDUCTION',
@@ -145,10 +144,10 @@ describe('Finance Note Actions - Credit & Debit', () => {
                     values: vi.fn().mockResolvedValue(true)
                 })
             };
-            (db.query.debitNotes.findFirst as any).mockResolvedValue(mockDebitNote);
-            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+            vi.mocked(db.query.debitNotes.findFirst).mockResolvedValue(mockDebitNote as never);
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: never) => unknown) => cb(mockTx as never));
 
-            const result: any = await approveDebitNote('mock-debit-note-id', true);
+            const result = await approveDebitNote('mock-debit-note-id', true);
             const data = result.data || result;
             expect(data.success).toBe(true);
             expect(mockTx.update).toHaveBeenCalledTimes(2); // one for debitNote, one for apStatement

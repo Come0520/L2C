@@ -63,6 +63,7 @@ export function SubmitDataDialog({ open: controlledOpen, onOpenChange: setContro
                 if (onSuccess) onSuccess();
                 onOpenChange?.(false);
             } else {
+                // @ts-expect-error - Response returns error object with message
                 toast.error(result.error || '提交失败');
             }
         } catch (error) {
@@ -87,7 +88,7 @@ export function SubmitDataDialog({ open: controlledOpen, onOpenChange: setContro
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="type" className="text-right">窗型</Label>
-                        <Select value={windowType} onValueChange={(v: string) => setWindowType(v)}>
+                        <Select value={windowType} onValueChange={(v: string) => setWindowType(v as typeof WINDOW_TYPES[number])}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="选择窗型" />
                             </SelectTrigger>

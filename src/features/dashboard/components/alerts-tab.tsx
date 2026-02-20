@@ -203,7 +203,7 @@ export function AlertsTab() {
 
 // ============ 报警项组件 ============
 
-function AlertRow({ item }: { item: AlertItem }) {
+const AlertRow = React.memo(function AlertRow({ item }: { item: AlertItem }) {
     const sevConfig = SEVERITY_CONFIG[item.severity];
     const Icon = sevConfig.icon;
 
@@ -223,7 +223,7 @@ function AlertRow({ item }: { item: AlertItem }) {
             </span>
         </div>
     );
-}
+});
 
 // ============ 工具函数 ============
 

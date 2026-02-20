@@ -92,7 +92,7 @@ export function ConfirmPaymentDialog({
             toast.success('付款已确认，进入待发货状态');
             onOpenChange(false);
             router.refresh();
-        } catch (error) {
+        } catch (_error) {
             toast.error('请求失败');
         }
     };
@@ -118,7 +118,7 @@ export function ConfirmPaymentDialog({
                             <Label htmlFor="paymentMethod">付款方式</Label>
                             <Select
                                 value={paymentMethod}
-                                onValueChange={(val: any) => setValue('paymentMethod', val)}
+                                onValueChange={(val: ConfirmPaymentFormData['paymentMethod']) => setValue('paymentMethod', val)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="选择方式" />

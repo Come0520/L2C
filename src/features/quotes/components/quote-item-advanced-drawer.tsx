@@ -77,24 +77,28 @@ export function QuoteItemAdvancedDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
+      const processedAttributes: Record<string, any> = { ...attributes };
+      // 将可能会产生 undefined 的字段转为 null
+      processedAttributes.fabricWidth = attributes.fabricWidth ? Number(attributes.fabricWidth) : null;
+      processedAttributes.sideLoss = attributes.sideLoss !== undefined && attributes.sideLoss !== '' ? Number(attributes.sideLoss) : null;
+      processedAttributes.bottomLoss = attributes.bottomLoss !== undefined && attributes.bottomLoss !== '' ? Number(attributes.bottomLoss) : null;
+      processedAttributes.headerLoss = attributes.headerLoss !== undefined && attributes.headerLoss !== '' ? Number(attributes.headerLoss) : null;
+      processedAttributes.rollLength = attributes.rollLength ? Number(attributes.rollLength) : null;
+      processedAttributes.patternRepeat = attributes.patternRepeat !== undefined && attributes.patternRepeat !== '' ? Number(attributes.patternRepeat) : null;
+
+      // 清理原先的 undefined 避免 ts 报错
+      Object.keys(processedAttributes).forEach(key => {
+        if (processedAttributes[key] === undefined) {
+          delete processedAttributes[key];
+        }
+      });
+
       await updateQuoteItem({
         id: item.id,
         processFee,
         foldRatio: isCurtain ? foldRatio : undefined,
         remark,
-        attributes: {
-          ...attributes,
-          // Ensure numeric values are numbers
-          fabricWidth: attributes.fabricWidth ? Number(attributes.fabricWidth) : undefined,
-          sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
-          bottomLoss:
-            attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : undefined,
-          headerLoss:
-            attributes.headerLoss !== undefined ? Number(attributes.headerLoss) : undefined,
-          rollLength: attributes.rollLength ? Number(attributes.rollLength) : undefined,
-          patternRepeat:
-            attributes.patternRepeat !== undefined ? Number(attributes.patternRepeat) : undefined,
-        },
+        attributes: processedAttributes,
       });
       toast.success('高级配置已保存');
       if (onSuccess) onSuccess();

@@ -32,7 +32,7 @@ const updateNotificationPreferenceActionInternal = createSafeAction(updatePrefer
     const existing = await db.query.notificationPreferences.findFirst({
         where: and(
             eq(notificationPreferences.userId, session.user.id),
-            eq(notificationPreferences.notificationType, data.notificationType as any)
+            eq(notificationPreferences.notificationType, data.notificationType)
         )
     });
 
@@ -47,7 +47,7 @@ const updateNotificationPreferenceActionInternal = createSafeAction(updatePrefer
         await db.insert(notificationPreferences).values({
             tenantId: session.user.tenantId!,
             userId: session.user.id,
-            notificationType: data.notificationType as any,
+            notificationType: data.notificationType,
             channels: data.channels,
         });
     }

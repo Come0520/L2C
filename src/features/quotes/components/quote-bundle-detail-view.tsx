@@ -3,8 +3,8 @@
 import React from 'react';
 
 interface QuoteBundleDetailViewProps {
-    bundle: any;
-    plans: any;
+    bundle: Record<string, unknown>;
+    plans: Record<string, any>;
 }
 
 export function QuoteBundleDetailView({ bundle, plans }: QuoteBundleDetailViewProps) {

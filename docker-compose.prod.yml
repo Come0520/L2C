@@ -12,9 +12,6 @@ services:
       dockerfile: Dockerfile
       target: migrator
     container_name: l2c-db-migrate
-    # 直接覆盖 Dockerfile CMD，确保使用 push 模式（不依赖完整迁移文件链）
-    # CI=true 让 drizzle-kit 跳过交互提示，自动接受默认选项
-    command: [ "sh", "-c", "CI=true npx drizzle-kit push 2>&1" ]
     environment:
       - DATABASE_URL=${DATABASE_URL}
     networks:

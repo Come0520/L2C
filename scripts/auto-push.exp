@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+# 自动回答 drizzle-kit push 的交互提示
+# 遇到 "created or renamed" 时按 Enter 选择默认选项（create column）
+set timeout 120
+spawn npx drizzle-kit push
+expect {
+    "created or renamed" {
+        send "\r"
+        exp_continue
+    }
+    "Yes, I want to" {
+        send "\r"
+        exp_continue
+    }
+    eof
+}
+foreach {pid spawnid os_error_flag value} [wait] break
+exit $value

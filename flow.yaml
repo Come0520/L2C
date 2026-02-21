@@ -157,7 +157,7 @@ stages:
 
                   # 8. 构建所有镜像
                   echo "=== 构建 Docker 镜像 ==="
-                  docker compose -f docker-compose.prod.yml build
+                  docker compose -f docker-compose.prod.yml build --no-cache
 
                   # 9. 先单独前台运行 db-migrate（带 120 秒超时，日志可见）
                   echo "=== 执行数据库迁移（容器内，超时 120 秒）==="

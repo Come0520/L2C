@@ -86,9 +86,6 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# 安装 expect 工具（用于自动回答 drizzle-kit 的交互提示）
-RUN apk add --no-cache expect
-
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
@@ -99,9 +96,5 @@ COPY src/shared/api/schema.ts ./src/shared/api/schema.ts
 COPY src/shared/api/schema/ ./src/shared/api/schema/
 COPY tsconfig.json ./
 
-# 复制 expect 脚本：自动回答 drizzle-kit push 的交互提示
-COPY scripts/auto-push.exp /app/auto-push.exp
-RUN chmod +x /app/auto-push.exp
-
-CMD ["/app/auto-push.exp"]
-
+# 使用 Alpine 自带的 yes 命令自动接受 drizzle-kit 的交互提示（无需安装 expect）
+CMD ["sh", "-c", "yes '' | npx drizzle-kit push --force 2>&1"]

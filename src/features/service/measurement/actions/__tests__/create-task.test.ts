@@ -69,6 +69,7 @@ vi.mock('@/features/approval/actions/submission', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Measurement Action: createMeasureTask', () => {

@@ -7,6 +7,7 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../auth-utils';
 
 interface CalcRequest {
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Calculate Error:', error);
+        logger.error('Calculate Error:', error);
         return apiError('计算失败', 500);
     }
 }

@@ -19,12 +19,15 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
 
-import { QuoteItem } from '@/shared/api/schema/quotes';
+import { QuoteItem as SharedQuoteItem } from '@/shared/api/schema/quotes';
+import { QuoteItem as UIQuoteItem } from './quote-items-table/types';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteItemAdvancedDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: QuoteItem | null;
+  // 兼容 UI 流转的 local QuoteItem 和 DB 层 SharedQuoteItem
+  item: UIQuoteItem | SharedQuoteItem | null;
   onSuccess?: () => void;
 }
 
@@ -77,7 +80,13 @@ export function QuoteItemAdvancedDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
-      const processedAttributes: Record<string, any> = { ...attributes };
+      const processedAttributes: Record<string, string | number | boolean | null> = {};
+      Object.keys(attributes).forEach((key) => {
+        const val = attributes[key];
+        if (val !== undefined && val !== null) {
+          processedAttributes[key] = String(val);
+        }
+      });
       // 将可能会产生 undefined 的字段转为 null
       processedAttributes.fabricWidth = attributes.fabricWidth ? Number(attributes.fabricWidth) : null;
       processedAttributes.sideLoss = attributes.sideLoss !== undefined && attributes.sideLoss !== '' ? Number(attributes.sideLoss) : null;
@@ -98,14 +107,17 @@ export function QuoteItemAdvancedDrawer({
         processFee,
         foldRatio: isCurtain ? foldRatio : undefined,
         remark,
-        attributes: processedAttributes,
+        attributes: processedAttributes as Record<
+          string,
+          string | number | boolean | (string | number | boolean | null)[] | null
+        >,
       });
       toast.success('高级配置已保存');
       if (onSuccess) onSuccess();
       onOpenChange(false);
     } catch (error) {
       toast.error('保存失败');
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }

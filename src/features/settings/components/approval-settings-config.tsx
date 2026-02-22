@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
@@ -42,7 +43,7 @@ export function ApprovalSettingsConfig() {
                     form.reset(settings as unknown as ApprovalSettingsFormData);
                 }
             } catch (error) {
-                console.error('加载审批流设置失败:', error);
+                logger.error('加载审批流设置失败:', error);
             } finally {
                 setIsLoading(false);
             }

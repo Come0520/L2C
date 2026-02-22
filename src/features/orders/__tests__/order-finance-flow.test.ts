@@ -158,7 +158,7 @@ describe('Order & Finance Integration Flow', () => {
         };
         mockDbQuery.orders.findFirst.mockResolvedValue(orderMock);
 
-        const confirmResult = await confirmOrderProduction({ orderId: VALID_ORDER_ID });
+        const confirmResult = await confirmOrderProduction({ orderId: VALID_ORDER_ID, version: 1 });
         expect(confirmResult.success).toBe(true);
 
         // Verify Status Update -> PENDING_PRODUCTION (according to state machine)
@@ -174,15 +174,16 @@ describe('Order & Finance Integration Flow', () => {
             tenantId: VALID_TENANT_ID,
             totalAmount: '10000',
             paidAmount: '0',
-            settlementType: 'MONTHLY',
+            settlementType: 'CREDIT',
             depositRatio: 0,
             productionTrigger: 'NONE',
             customer: { creditLimit: 100000 },
-            approvalStatus: 'NONE'
+            approvalStatus: 'NONE',
+            version: 1,
         };
         mockDbQuery.orders.findFirst.mockResolvedValue(orderMock);
 
-        const confirmResult = await confirmOrderProduction({ orderId: VALID_ORDER_ID });
+        const confirmResult = await confirmOrderProduction({ orderId: VALID_ORDER_ID, version: 1 });
         expect(confirmResult.success).toBe(true);
     });
 });

@@ -1,3 +1,8 @@
+<!--
+  登录页
+  pages/login/login.wxml
+  审计修复: 添加错误提示区域、密码可见性切换
+-->
 <view class="container">
   <view class="header">
     <view class="title">欢迎回来</view>
@@ -5,6 +10,11 @@
   </view>
 
   <view class="form-card">
+    <!-- 错误提示区域 -->
+    <view class="error-banner" wx:if="{{errorMsg}}">
+      <text class="error-text">{{errorMsg}}</text>
+    </view>
+
     <view class="form-item">
       <view class="label">账号</view>
       <input 
@@ -17,13 +27,18 @@
 
     <view class="form-item">
       <view class="label">密码</view>
-      <input 
-        class="input" 
-        type="password" 
-        placeholder="请输入密码" 
-        placeholder-class="placeholder" 
-        model:value="{{password}}"
-      />
+      <view class="password-wrap">
+        <input 
+          class="input password-input" 
+          type="{{showPassword ? 'text' : 'password'}}" 
+          placeholder="请输入密码" 
+          placeholder-class="placeholder" 
+          model:value="{{password}}"
+        />
+        <view class="eye-toggle" bindtap="togglePassword">
+          <text>{{showPassword ? '🙈' : '👁'}}</text>
+        </view>
+      </view>
     </view>
 
     <button 

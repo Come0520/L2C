@@ -6,7 +6,7 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';
 
 import { cn } from '@/shared/lib/utils';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 
 interface CommandDialogProps extends DialogProps {
     children?: React.ReactNode;
@@ -31,6 +31,7 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
     return (
         <Dialog {...props}>
             <DialogContent className="overflow-hidden p-0 shadow-lg">
+                <DialogTitle className="sr-only">全局搜索</DialogTitle>
                 <Command className="command-root">
                     {children}
                 </Command>

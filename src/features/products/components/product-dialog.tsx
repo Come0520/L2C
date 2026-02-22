@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import { useState } from 'react';
 import {
     Dialog,
@@ -7,23 +9,23 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/shared/ui/dialog';
-import { ProductForm } from './product-form';
+import { ProductForm, type ProductFormValues } from './product-form';
 import { createProduct, updateProduct } from '../actions/mutations';
 import { toast } from 'sonner';
 
 interface ProductDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData?: any; // 产品数据结构复杂，后续可定义具体类型
+    /** 产品初始数据，编辑模式时传入 */
+    initialData?: Partial<ProductFormValues> & { id?: string; specs?: Record<string, unknown> };
     onSuccess: () => void;
 }
 
 export function ProductDialog({ open, onOpenChange, initialData, onSuccess }: ProductDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleSubmit = async (values: any) => { // 表单值由 ProductForm 控制
+    /** 表单提交处理，值类型由 ProductForm 控制 */
+    const handleSubmit = async (values: ProductFormValues) => {
         setIsLoading(true);
         try {
             if (initialData?.id) {
@@ -44,7 +46,7 @@ export function ProductDialog({ open, onOpenChange, initialData, onSuccess }: Pr
             onSuccess();
             onOpenChange(false);
         } catch (error: unknown) {
-            console.error('Product operation failed:', error);
+            logger.error('Product operation failed:', error);
             toast.error('操作失败');
         } finally {
             setIsLoading(false);

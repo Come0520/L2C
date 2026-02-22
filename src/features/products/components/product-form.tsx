@@ -1,4 +1,4 @@
-
+import { logger } from '@/shared/lib/logger';
 import { ProductSupplierManager } from './product-supplier-manager';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -50,8 +50,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
         // zodResolver 接受 union schema（createProductSchema | updateProductSchema）时
         // 第三泛型无法自动收窄，使用 as 断言确保 Control 类型一致
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        // @ts-expect-error - React Hook Form / Zod mismatch
-        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema),
+        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as any,
         defaultValues: initialData ? {
             ...initialData,
             attributes: initialData.specs || {},
@@ -94,7 +93,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 setSuppliersList(result.data.data);
             }
         } catch (error) {
-            console.error('Failed to fetch suppliers', error);
+            logger.error('Failed to fetch suppliers', error);
         } finally {
             setFetchingSuppliers(false);
         }
@@ -127,7 +126,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 setAttributeSchema([]);
             }
         } catch (error) {
-            console.error('Failed to fetch attribute template', error);
+            logger.error('Failed to fetch attribute template', error);
         }
     }, [category]);
 

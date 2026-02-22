@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import { useState } from 'react';
 import { ExcelImporter } from '@/shared/components/excel-import/excel-importer';
 import { productImportConfig, ProductImportItem } from '@/features/products/import-config';
@@ -33,8 +35,7 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
         attributes: {},
       }));
 
-      // @ts-expect-error - Payload type compatibility check
-      const result = await batchCreateProducts(payload);
+      const result = await batchCreateProducts(payload as unknown as Parameters<typeof batchCreateProducts>[0]);
 
       if (result.success && result.data) {
         const { successCount, errorCount, errors } = result.data;
@@ -65,7 +66,7 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
         toast.error(result.error || '导入操作失败');
       }
     } catch (error) {
-      console.error('Import failed', error);
+      logger.error('Import failed', error);
       toast.error('导入处理失败');
       throw error; // Re-throw to let ExcelImporter handle state
     }

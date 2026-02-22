@@ -12,7 +12,9 @@ const { mockInsert, mockUpdate, mockQueryFindFirst } = vi.hoisted(() => {
         })
     });
     const fnInsert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined)
+        values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: '880e8400-e29b-41d4-a716-446655440001', tenantId: '880e8400-e29b-41d4-a716-446655440000', category: 'PHYSICAL', templateSchema: [] }])
+        })
     });
     return {
         mockInsert: fnInsert,
@@ -53,6 +55,15 @@ vi.mock('@/shared/lib/auth', () => ({
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn()
 }));
+
+vi.mock('@/shared/services/audit-service', () => ({
+    AuditService: { log: vi.fn().mockResolvedValue(undefined) }
+}));
+
+vi.mock('drizzle-orm', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, eq: vi.fn(), and: vi.fn() };
+});
 
 // --- 由于 createSafeAction 内部调用 server-only 逻辑，需要特殊处理 auth ---
 // 但是为了简单起见，我们在外部已经把 auth mock 掉了。

@@ -3,6 +3,12 @@ import { orderStatusEnum } from '@/shared/api/schema';
 // 辅助类型：从 Enum 中提取订单状态类型
 type OrderStatus = typeof orderStatusEnum.enumValues[number];
 
+/**
+ * 订单业务状态机管理器。
+ * 
+ * @description 封装了订单模块的核心流转规则（FSM），用于确保订单在生命周期内的非法流转检查。
+ * 状态机定义了从草稿 (`DRAFT`) 到结案 (`COMPLETED`) 的标准路径，以及叫停 (`HALTED`)、取消 (`CANCELLED`) 等异常场景。
+ */
 export class OrderStateMachine {
     private static readonly transitions: Record<OrderStatus, OrderStatus[]> = {
         'DRAFT': ['PENDING_MEASURE', 'CANCELLED'],

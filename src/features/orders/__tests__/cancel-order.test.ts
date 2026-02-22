@@ -61,6 +61,7 @@ describe('Order Cancellation', () => {
         tenantId: 'test-tenant',
         status: 'PENDING_PRODUCTION',
         totalAmount: '1000.00',
+        version: 1,
     };
 
     beforeEach(() => {
@@ -81,8 +82,9 @@ describe('Order Cancellation', () => {
 
         const input = {
             orderId: '123e4567-e89b-12d3-a456-426614174000',
-            reason: '客户主动取消', // Must be one of valid reasons
+            reason: '客户主动取消' as const, // Must be one of valid reasons
             remark: 'Customer changed mind',
+            version: 1,
         };
 
         const result = await requestCancelOrder(input);
@@ -104,7 +106,8 @@ describe('Order Cancellation', () => {
 
         const result = await requestCancelOrder({
             orderId: '123e4567-e89b-12d3-a456-426614174000',
-            reason: '客户主动取消',
+            reason: '客户主动取消' as const,
+            version: 1,
         });
 
         expect(result.success).toBe(false);
@@ -128,14 +131,11 @@ describe('Order Cancellation', () => {
 
         const result = await requestCancelOrder({
             orderId: '123e4567-e89b-12d3-a456-426614174000',
-            reason: '客户主动取消',
+            reason: '客户主动取消' as const,
+            version: 1,
         });
 
         expect(result.success).toBe(true);
-        // Debug logging
-        if (!result.success || !result.message?.includes('订单已成功取消')) {
-            console.log('Failed result:', JSON.stringify(result, null, 2));
-        }
         expect(result.message).toContain('订单已成功取消');
         // Should have called transaction to update order directly
         expect(db.transaction).toHaveBeenCalled();
@@ -146,7 +146,8 @@ describe('Order Cancellation', () => {
 
         const result = await requestCancelOrder({
             orderId: '123e4567-e89b-12d3-a456-426614174000',
-            reason: '客户主动取消',
+            reason: '客户主动取消' as const,
+            version: 1,
         });
 
         expect(result.success).toBe(false);

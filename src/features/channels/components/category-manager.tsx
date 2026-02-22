@@ -122,9 +122,8 @@ export function CategoryManager({ initialData, tenantId: _tenantId }: CategoryMa
                     }
                 }
                 setIsDialogOpen(false);
-            } catch (error) {
+            } catch (_error) {
                 toast.error('操作失败，请重试');
-                console.error(error);
             }
         });
     };
@@ -138,9 +137,8 @@ export function CategoryManager({ initialData, tenantId: _tenantId }: CategoryMa
                 await deleteChannelCategory(category.id);
                 setCategories(prev => prev.filter(c => c.id !== category.id));
                 toast.success('渠道类型删除成功');
-            } catch (error) {
+            } catch (_error) {
                 toast.error('删除失败，请重试');
-                console.error(error);
             }
         });
     };

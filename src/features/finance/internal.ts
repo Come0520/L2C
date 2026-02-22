@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 /**
  * 财务模块内部工具函数 (Internal Utility Functions)
  * 主要用于财务模块内部跨文件的逻辑复用，且不涉及复杂的业务校验。

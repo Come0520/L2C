@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { financeConfigs, financeAccounts } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
@@ -29,7 +31,7 @@ export async function getFinanceConfig() {
     });
 
     // 将数组转化为对象
-    const configMap: Record<string, any> = {};
+    const configMap: Record<string, unknown> = {};
     configs.forEach(c => {
         try {
             configMap[c.configKey] = JSON.parse(c.configValue);

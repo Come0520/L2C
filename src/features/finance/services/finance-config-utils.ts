@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 /**
  * 财务配置工具函数
  * 这些是纯函数，不涉及数据库操作，可以在客户端和服务端使用

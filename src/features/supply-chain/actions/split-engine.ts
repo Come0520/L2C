@@ -1,21 +1,3 @@
-'use server';
-
-/**
- * 拆单引擎 (Split Engine)
- *
- * 两阶段拆单核心逻辑：
- *   阶段一（硬拆 — 按 productType）：按 FINISHED / CUSTOM 分类
- *   阶段二（流向拆 — 按 supplierType）：CUSTOM 类型按供应商类型决定流向
- *
- * 拆单决策矩阵：
- * | productType | supplierType | 生成单据 | PO.type   |
- * |-------------|-------------|---------|-----------|
- * | FINISHED    | SUPPLIER    | PO      | FINISHED  |
- * | CUSTOM      | SUPPLIER    | PO      | FABRIC    |
- * | CUSTOM      | PROCESSOR   | WO      | —         |
- * | CUSTOM      | BOTH        | PO + WO | FABRIC    |
- */
-
 import { db } from '@/shared/api/db';
 import { and, eq, inArray, asc } from 'drizzle-orm';
 import {
@@ -32,6 +14,7 @@ import { PO_STATUS } from '../constants';
 import { AuditService } from '@/shared/lib/audit-service';
 import type { Session } from 'next-auth';
 import type { SplitCondition } from '../types';
+import crypto from 'crypto';
 
 // ============ 类型定义 ============
 
@@ -110,10 +93,12 @@ export async function executeSplitRouting(
     tenantId: string,
     session: Session
 ): Promise<SplitEngineResult> {
+    console.warn('[supply-chain] executeSplitRouting 启动:', { orderId });
     // 1. 获取订单项并联查产品信息
     const enrichedItems = await getEnrichedOrderItems(orderId, tenantId);
 
     if (enrichedItems.length === 0) {
+        console.warn('[supply-chain] executeSplitRouting: 订单无有效项，跳过');
         return {
             createdPOIds: [],
             createdTaskIds: [],
@@ -137,9 +122,14 @@ export async function executeSplitRouting(
     // 6. 合并所有已路由的项
     const allRoutedItems = [...routedFinishedItems, ...routedCustomItems];
 
-    // 7. 按供应商分组生成结果
+    // 7. 生成最终结果
     const result = await generateSplitResult(allRoutedItems, orderId, tenantId, session);
 
+    console.warn('[supply-chain] executeSplitRouting 执行成功:', {
+        poCount: result.createdPOIds.length,
+        taskCount: result.createdTaskIds.length,
+        pendingPoolCount: result.pendingPoolItemIds.length
+    });
     return result;
 }
 
@@ -300,6 +290,7 @@ async function resolveBySupplierType(
             case 'BOTH':
                 // 兼具供应和加工 → 生成 FABRIC PO（面料采购）
                 // 注：WO 在 PO 到货后由独立流程触发
+                console.warn('[supply-chain] resolveBySupplierType: 检测到兼备供应商，流向设为 PO(FABRIC)', { supplierId });
                 result.push({
                     ...item,
                     resolvedSupplierId: supplierId,
@@ -474,10 +465,11 @@ async function generateSplitResult(
 
             if (key.docType === 'PO') {
                 // 创建采购单 (DRAFT)
-                const poNo = generateDocNo('PO');
+                const poNo = await generateDocNo('PO', tenantId);
                 const poType = key.poType ?? 'FINISHED';
 
                 const [newPO] = await tx.insert(purchaseOrders).values({
+                    id: `po_${crypto.randomUUID()}`,
                     tenantId,
                     poNo,
                     orderId,
@@ -486,13 +478,14 @@ async function generateSplitResult(
                     type: poType as 'FINISHED' | 'FABRIC' | 'STOCK',
                     status: PO_STATUS.DRAFT,
                     createdBy: session.user.id,
-                }).returning({ id: purchaseOrders.id });
+                }).returning({ id: purchaseOrders.id, poNo: purchaseOrders.poNo });
 
                 if (!newPO) continue;
                 createdPOIds.push(newPO.id);
 
                 // 创建采购单明细
                 const poItemValues = items.map(item => ({
+                    id: `poi_${crypto.randomUUID()}`,
                     tenantId,
                     poId: newPO.id,
                     orderItemId: item.orderItemId,
@@ -512,7 +505,7 @@ async function generateSplitResult(
                 // 添加审计日志 (PO 生成)
                 await AuditService.recordFromSession(session, 'purchaseOrders', newPO.id, 'CREATE', {
                     new: {
-                        poNo,
+                        poNo: newPO.poNo,
                         poType,
                         supplierId: key.supplierId,
                         supplierName: key.supplierName,
@@ -536,22 +529,24 @@ async function generateSplitResult(
             } else if (key.docType === 'WO') {
                 // 创建加工任务 (PENDING)
                 for (const item of items) {
-                    const taskNo = generateDocNo('WO');
+                    const taskNo = await generateDocNo('WO', tenantId);
                     const [newTask] = await tx.insert(productionTasks).values({
+                        id: `task_${crypto.randomUUID()}`,
                         tenantId,
                         taskNo,
                         orderId,
                         orderItemId: item.orderItemId,
                         workshop: 'SEWING', // 默认车间，可后续调整
                         status: 'PENDING',
-                    }).returning({ id: productionTasks.id });
+                        createdBy: session.user.id,
+                    }).returning({ id: productionTasks.id, taskNo: productionTasks.taskNo });
 
                     if (newTask) {
                         createdTaskIds.push(newTask.id);
                         // 添加审计日志 (WO 生成)
                         await AuditService.recordFromSession(session, 'productionTasks', newTask.id, 'CREATE', {
                             new: {
-                                taskNo,
+                                taskNo: newTask.taskNo,
                                 orderItemId: item.orderItemId,
                                 productName: item.productName
                             }

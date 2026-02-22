@@ -13,6 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import { toast } from 'sonner';
 
 import { VersionQuote, VersionQuoteItem, VersionQuoteRoom } from '../types';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteVersionCompareProps {
     currentQuote: VersionQuote;
@@ -44,7 +45,7 @@ export function QuoteVersionCompare({ currentQuote, versions }: QuoteVersionComp
             const { data } = await getQuote(versionId);
             setCompareQuote((data as unknown as VersionQuote) || null);
         } catch (error) {
-            console.error('Fetch version failed', error);
+            logger.error('Fetch version failed', error);
             toast.error('获取版本数据失败');
         } finally {
             setLoading(false);

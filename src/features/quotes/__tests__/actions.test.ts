@@ -37,20 +37,29 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/api/schema/quotes', () => ({
-  quotes: { id: 'id', tenantId: 'tenantId', bundleId: 'bundleId', quoteId: 'quoteId' },
-  quoteItems: { id: 'id', tenantId: 'tenantId', quoteId: 'quoteId', roomId: 'roomId' },
-  quoteRooms: { id: 'id', tenantId: 'tenantId', quoteId: 'quoteId' },
-}));
+vi.mock('@/shared/api/schema/quotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/schema/quotes')>();
+  return {
+    ...actual,
+  };
+});
 
-vi.mock('@/shared/api/schema/catalogs', () => ({
-  products: { id: 'id', category: 'category', isActive: 'isActive' },
-}));
+vi.mock('@/shared/api/schema/catalogs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/schema/catalogs')>();
+  return {
+    ...actual,
+    products: { id: 'id', category: 'category', isActive: 'isActive' },
+  };
+});
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a, b) => ({ field: a, value: b })),
-  and: vi.fn((...args) => args),
-}));
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('drizzle-orm')>();
+  return {
+    ...actual,
+    eq: vi.fn((a: unknown, b: unknown) => ({ field: a, value: b })),
+    and: vi.fn((...args: unknown[]) => args),
+  };
+});
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -63,6 +72,11 @@ vi.mock('next/headers', () => ({
 
 vi.mock('next/cookies', () => ({
   cookies: vi.fn(),
+}));
+
+vi.mock('@/shared/lib/auth', () => ({
+  auth: vi.fn(),
+  checkPermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/shared/lib/server-action', () => ({

@@ -62,7 +62,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/shared/api/schema/quotes', () => ({
-    quotes: { id: 'quotes.id', tenantId: 'quotes.tenantId' }
+    quotes: { id: 'quotes.id', tenantId: 'quotes.tenantId', version: 'quotes.version' }
 }));
 
 // Mock 相关的 Service
@@ -201,5 +201,94 @@ describe('Quote Lifecycle Actions (L5)', () => {
         const { approveQuote } = await import('../quote-lifecycle-actions');
 
         await expect(approveQuote({ id: MOCK_QUOTE_ID })).rejects.toThrow('无权执行此操作');
+    });
+
+    // ── 乐观锁 (版本冲突) 测试 ──
+
+    it('lockQuote 版本冲突：传入旧 version 后 db.update 返回空时应抛出并发错误', async () => {
+        // 模拟 returning() 返回空数组（版本号不匹配）
+        mockUpdateChain.returning.mockResolvedValueOnce([]);
+
+        const { lockQuote } = await import('../quote-lifecycle-actions');
+
+        await expect(
+            lockQuote({ id: MOCK_QUOTE_ID, version: 1 })
+        ).rejects.toThrow('报价数据已被修改，请刷新后重试');
+    });
+
+    it('lockQuote 正常锁定时 set 调用应包含 version 自增表达式', async () => {
+        const { lockQuote } = await import('../quote-lifecycle-actions');
+
+        const result = await lockQuote({ id: MOCK_QUOTE_ID });
+
+        // 验证 set 调用含 version 字段和 lockedAt
+        const setArgs = mockUpdateChain.set.mock.calls[0][0];
+        expect(setArgs).toHaveProperty('version');
+        expect(setArgs).toHaveProperty('lockedAt');
+        expect(result).toHaveProperty('id', MOCK_QUOTE_ID);
+    });
+
+    it('unlockQuote 应同步递增 version', async () => {
+        const { unlockQuote } = await import('../quote-lifecycle-actions');
+
+        const result = await unlockQuote({ id: MOCK_QUOTE_ID });
+
+        // 验证 set 调用含 version 自增
+        const setArgs = mockUpdateChain.set.mock.calls[0][0];
+        expect(setArgs).toHaveProperty('version');
+        expect(setArgs.lockedAt).toBeNull();
+        expect(result).toHaveProperty('id', MOCK_QUOTE_ID);
+    });
+
+    it('submitQuote 正常版本检查：传入 version 时应先调用 preflightVersionCheck（即触发 db.update）', async () => {
+        const { submitQuote } = await import('../quote-lifecycle-actions');
+
+        // 模拟 preflightVersionCheck 成功的 update 返回
+        mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+
+        await submitQuote({ id: MOCK_QUOTE_ID, version: 10 });
+
+        // 验证 db.update 被调用，且 where 包含版本校验
+        expect(mockDb.update).toHaveBeenCalled();
+        const whereArgs = mockUpdateChain.where.mock.calls[0][0];
+        // Drizzle-orm and() 内部结构比较复杂，这里简单验证 mock 调用
+        expect(mockUpdateChain.set).toHaveBeenCalledWith(expect.objectContaining({
+            version: expect.anything()
+        }));
+    });
+
+    it('submitQuote 版本冲突：传入 version 但 db.update 未找到记录时应抛出错误', async () => {
+        const { submitQuote } = await import('../quote-lifecycle-actions');
+
+        // 模拟 preflightVersionCheck 失败（返回空）
+        mockUpdateChain.returning.mockResolvedValueOnce([]);
+
+        await expect(
+            submitQuote({ id: MOCK_QUOTE_ID, version: 10 })
+        ).rejects.toThrow('报价数据已被修改，请刷新后重试');
+    });
+
+    it('approveQuote 正常版本检查逻辑同 submitQuote', async () => {
+        const { approveQuote } = await import('../quote-lifecycle-actions');
+        mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+
+        await approveQuote({ id: MOCK_QUOTE_ID, version: 5 });
+
+        expect(mockDb.update).toHaveBeenCalled();
+        expect(mockUpdateChain.set).toHaveBeenCalledWith(expect.objectContaining({
+            version: expect.anything()
+        }));
+    });
+
+    it('rejectQuote 正常版本检查逻辑同 submitQuote', async () => {
+        const { rejectQuote } = await import('../quote-lifecycle-actions');
+        mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+
+        await rejectQuote({ id: MOCK_QUOTE_ID, rejectReason: 'test', version: 3 });
+
+        expect(mockDb.update).toHaveBeenCalled();
+        expect(mockUpdateChain.set).toHaveBeenCalledWith(expect.objectContaining({
+            version: expect.anything()
+        }));
     });
 });

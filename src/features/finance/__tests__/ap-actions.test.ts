@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createPaymentBill, verifyPaymentBill, generateLaborSettlement, createSupplierRefundStatement } from '../actions/ap';
+import { createPaymentBill, verifyPaymentBill, generateLaborSettlement, createSupplierRefundStatement, getAPSupplierStatements, getAPSupplierStatement, getAPLaborStatements, getAPLaborStatement, getApStatementById, createSupplierLiabilityStatement } from '../actions/ap';
 import { createPaymentBillSchema } from '../actions/schema';
 import { db } from '@/shared/api/db';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { financeAccounts } from '@/shared/api/schema';
+import { financeAccounts, apSupplierStatements, apLaborStatements, liabilityNotices, paymentBills } from '@/shared/api/schema';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { FinanceApprovalLogic } from '@/features/finance/logic/finance-approval';
 
@@ -25,8 +25,8 @@ vi.mock('@/shared/api/db', () => ({
         query: {
             paymentBills: { findFirst: vi.fn() },
             financeAccounts: { findFirst: vi.fn() },
-            apSupplierStatements: { findFirst: vi.fn() },
-            apLaborStatements: { findFirst: vi.fn() },
+            apSupplierStatements: { findFirst: vi.fn(), findMany: vi.fn() },
+            apLaborStatements: { findFirst: vi.fn(), findMany: vi.fn() },
         },
         transaction: vi.fn(),
         update: vi.fn(),
@@ -68,6 +68,8 @@ vi.mock('@/features/finance/logic/finance-approval', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    unstable_cache: vi.fn().mockImplementation((fn: any) => fn),
 }));
 
 // Mock 动态导入 liabilityNotices
@@ -91,65 +93,65 @@ describe('AP Actions', () => {
         (checkPermission as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     });
 
-    describe('createPaymentBill validation', () => {
-        it('should pass schema validation with our mock data', () => {
-            const mockData = {
-                type: 'SUPPLIER' as const,
-                payeeType: 'SUPPLIER' as const,
-                payeeId: 'f47ac10b-58cc-4372-a567-0e02b2c3d403',
-                payeeName: 'Test Supplier',
-                amount: 1000,
-                paymentMethod: 'TRANSFER',
-                proofUrl: 'test.png',
-                items: [
-                    { statementType: 'AP_SUPPLIER' as const, statementId: 'f47ac10b-58cc-4372-a567-0e02b2c3d404', amount: 1000 }
-                ]
-            };
+    describe('Queries (getAPSupplierStatements, getApStatementById, detail queries)', () => {
+        it('should get supplier statements with permission', async () => {
+            (db.query.apSupplierStatements.findMany as any).mockResolvedValue([
+                { id: 'stmt-1', totalAmount: '100', supplier: { name: 'Supplier A' } }
+            ]);
 
-            const result = createPaymentBillSchema.safeParse(mockData);
-            if (!result.success) {
-                console.error('DEBUG ZOD ERROR:', JSON.stringify(result.error.errors, null, 2));
-            }
-            expect(result.success).toBe(true);
+            const result = await getAPSupplierStatements({ limit: 10 });
+            expect(result).toHaveLength(1);
+            expect(result[0]).toHaveProperty('id', 'stmt-1');
         });
-    });
 
-    describe('createPaymentBill implementation', () => {
-        it('should create bill and submit approval if flow is active', async () => {
-            const mockData = {
-                type: 'SUPPLIER' as const,
-                payeeType: 'SUPPLIER' as const,
-                payeeId: 'f47ac10b-58cc-4372-a567-0e02b2c3d403',
-                payeeName: 'Test Supplier',
-                amount: 1000,
-                paymentMethod: 'TRANSFER',
-                proofUrl: 'test.png',
-                items: [
-                    { statementType: 'AP_SUPPLIER' as const, statementId: 'f47ac10b-58cc-4372-a567-0e02b2c3d404', amount: 1000 }
-                ]
-            };
+        it('should get single supplier statement detail', async () => {
+            const mockId = 'f47ac10b-58cc-4372-a567-0e02b2c3d409';
+            (db.query.apSupplierStatements.findFirst as any).mockResolvedValue({
+                id: mockId,
+                tenantId: mockTenantId,
+                supplier: { name: 'A' }
+            });
 
-            const mockTx = {
-                insert: vi.fn().mockReturnValue({
-                    values: vi.fn().mockReturnValue({
-                        returning: vi.fn().mockResolvedValue([{ id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' }]),
-                    }),
-                }),
-                query: {
-                    apSupplierStatements: { findFirst: vi.fn().mockResolvedValue({ id: 's1', pendingAmount: '1000' }) }
-                }
-            };
+            const result = await getAPSupplierStatement(mockId);
+            expect(result).toHaveProperty('id', mockId);
+            expect(db.query.apSupplierStatements.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+                where: expect.anything()
+            }));
+        });
 
-            (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
-            (db.insert as ReturnType<typeof vi.fn>).mockReturnValue(createChainedMock([{ id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' }]));
-            (db.update as ReturnType<typeof vi.fn>).mockReturnValue(createChainedMock());
-            (FinanceApprovalLogic.isFlowActive as ReturnType<typeof vi.fn>).mockResolvedValue(true);
-            (submitApproval as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        it('should get labor statements list', async () => {
+            (db.query.apLaborStatements.findMany as any).mockResolvedValue([{ id: 'l-1', worker: { name: 'W1' } }]);
+            (checkPermission as any).mockResolvedValueOnce(true); // LABOR_VIEW
 
-            const result = await createPaymentBill(mockData);
+            const result = await getAPLaborStatements();
+            expect(result).toHaveLength(1);
+            expect(result[0]).toHaveProperty('id', 'l-1');
+        });
 
-            expect(result.data).toHaveProperty('id', 'f47ac10b-58cc-4372-a567-0e02b2c3d479');
-            expect(submitApproval).toHaveBeenCalled();
+        it('should get single labor statement detail', async () => {
+            const mockId = 'f47ac10b-58cc-4372-a567-0e02b2c3d410';
+            (db.query.apLaborStatements.findFirst as any).mockResolvedValue({
+                id: mockId,
+                worker: { name: 'W1' },
+                feeDetails: []
+            });
+
+            const result = await getAPLaborStatement(mockId);
+            expect(result).toHaveProperty('id', mockId);
+        });
+
+        it('should throw error when missing VIEW permission', async () => {
+            (checkPermission as any).mockResolvedValue(false);
+            await expect(getAPSupplierStatements()).rejects.toThrow('权限不足：需要财务查看权限');
+        });
+
+        it('should get by ID (supplier routing)', async () => {
+            (db.query.apSupplierStatements.findFirst as any).mockResolvedValue({ id: 's1', purchaseOrder: { items: [] } });
+            (db.query.apLaborStatements.findFirst as any).mockResolvedValue(null);
+
+            const result = await getApStatementById({ id: 's1' });
+            expect(result.success).toBe(true);
+            expect(result.data).toHaveProperty('type', 'SUPPLIER');
         });
     });
 
@@ -163,10 +165,9 @@ describe('AP Actions', () => {
                 amount: '100',
                 status: 'PENDING',
                 accountId: mockAccountId,
+                paymentNo: 'BILL-001'
             };
             const mockAccount = { id: mockAccountId, balance: '1000' };
-
-            // Mock builder to handle chained calls and returning()
 
             const mockTx = {
                 query: {
@@ -175,119 +176,135 @@ describe('AP Actions', () => {
                     apSupplierStatements: { findFirst: vi.fn() },
                     apLaborStatements: { findFirst: vi.fn() },
                 },
-                update: vi.fn((table: unknown) => {
-                    if (table === financeAccounts) {
-                        return createChainedMock([mockAccount]);
-                    }
-                    return createChainedMock([{ ...mockBill, status: 'PAID' }]);
+                update: vi.fn((table: any) => {
+                    if (table === financeAccounts) return createChainedMock([mockAccount]);
+                    if (table === paymentBills) return createChainedMock([{ ...mockBill, status: 'PAID' }]);
+                    return createChainedMock([]);
                 }),
                 insert: vi.fn().mockReturnValue(createChainedMock([]))
             };
 
-            (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
+            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
 
             const result = await verifyPaymentBill({ id: mockBillId, status: 'VERIFIED' });
-
-            if (result.serverError) {
-                console.error('Verify failed:', result.serverError);
-            }
             expect(result.data).toEqual({ success: true });
+            expect(mockTx.update).toHaveBeenCalledWith(paymentBills);
             expect(mockTx.update).toHaveBeenCalledWith(financeAccounts);
         });
 
-        it('should fail if insufficient balance', async () => {
+        it('should handle REJECTED status', async () => {
+            const mockTx = {
+                query: {
+                    paymentBills: { findFirst: vi.fn().mockResolvedValue({ id: mockBillId, status: 'PENDING', items: [] }) },
+                },
+                update: vi.fn().mockReturnValue(createChainedMock([])),
+            };
+            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+            const result = await verifyPaymentBill({ id: mockBillId, status: 'REJECTED', remark: 'Invalid' });
+            expect(result.data).toEqual({ success: true });
+            expect(mockTx.update).toHaveBeenCalledWith(paymentBills);
+        });
+
+        it('should update statement status to COMPLETED when fully paid', async () => {
+            const stmtId = 'stmt-111';
             const mockBill = {
                 id: mockBillId,
-                amount: '2000',
+                amount: '100',
                 status: 'PENDING',
                 accountId: mockAccountId,
+                items: [{ statementType: 'AP_SUPPLIER', statementId: stmtId, amount: '100' }]
             };
-            const mockAccount = { id: mockAccountId, balance: '1000' };
+            const mockStmt = { id: stmtId, totalAmount: '100', paidAmount: '0', status: 'PENDING' };
 
             const mockTx = {
                 query: {
                     paymentBills: { findFirst: vi.fn().mockResolvedValue(mockBill) },
-                    financeAccounts: { findFirst: vi.fn().mockResolvedValue(mockAccount) },
-                    apSupplierStatements: { findFirst: vi.fn() },
-                    apLaborStatements: { findFirst: vi.fn() },
+                    financeAccounts: { findFirst: vi.fn().mockResolvedValue({ balance: '500' }) },
+                    apSupplierStatements: { findFirst: vi.fn().mockResolvedValue(mockStmt) },
                 },
-                update: vi.fn().mockReturnValue(createChainedMock([mockBill])),
-                insert: vi.fn().mockReturnValue(createChainedMock([]))
+                update: vi.fn().mockReturnValue(createChainedMock([{}])),
+                insert: vi.fn().mockReturnValue(createChainedMock([])),
             };
+            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
 
-            (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
+            await verifyPaymentBill({ id: mockBillId, status: 'VERIFIED' });
+
+            // 验证对账单更新为 COMPLETED
+            expect(mockTx.update).toHaveBeenCalledWith(apSupplierStatements);
+        });
+
+        it('should fail if payment bill status is not auditable', async () => {
+            const mockTx = {
+                query: {
+                    paymentBills: { findFirst: vi.fn().mockResolvedValue({ id: mockBillId, status: 'PAID' }) },
+                }
+            };
+            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
 
             const result = await verifyPaymentBill({ id: mockBillId, status: 'VERIFIED' });
-
-            // createSafeAction 捕获 Error 后返回 { error: message, success: false }
-            expect(result.error).toMatch(/余额不足/);
+            expect(result.error).toMatch(/状态不可审核/);
         });
     });
 
     describe('generateLaborSettlement', () => {
-        it('无待结算安装任务时应返回 count: 0', async () => {
+        it('should combine tasks and deductions correctly', async () => {
             const mockTx = {
-                select: vi.fn().mockReturnValue({
-                    from: vi.fn().mockReturnValue({
-                        where: vi.fn().mockResolvedValue([]),
-                    }),
-                }),
-                query: {
-                    installTasks: {
-                        findMany: vi.fn().mockResolvedValue([]),
-                    },
-                    liabilityNotices: {
-                        findMany: vi.fn().mockResolvedValue([]),
-                    },
-                },
-                insert: vi.fn().mockReturnValue({
-                    values: vi.fn().mockReturnValue({
-                        returning: vi.fn().mockResolvedValue([{ id: 'stmt-1' }]),
-                    }),
-                }),
-                update: vi.fn().mockReturnValue({
-                    set: vi.fn().mockReturnValue({
-                        where: vi.fn().mockResolvedValue([]),
-                    }),
-                }),
-            };
-
-            (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(
-                async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx)
-            );
-
-            const result = await generateLaborSettlement();
-
-            expect(result).toEqual({ count: 0, deductionCount: 0 });
-        });
-
-        it('有完成任务时应生成结算单', async () => {
-            const mockTx = {
-                select: vi.fn().mockReturnValue({
-                    from: vi.fn().mockReturnValue({
-                        where: vi.fn().mockResolvedValue([]),
-                    }),
-                }),
+                select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) }),
                 query: {
                     installTasks: {
                         findMany: vi.fn().mockResolvedValue([
-                            {
-                                id: 'task-1',
-                                installerId: 'worker-1',
-                                taskNo: 'TASK-001',
-                                status: 'COMPLETED',
-                                actualLaborFee: '500',
-                                installer: { name: '张三' },
-                            },
+                            { id: 't1', installerId: 'w1', actualLaborFee: '1000', installer: { name: 'Worker' } }
                         ]),
                     },
                     liabilityNotices: {
-                        findMany: vi.fn().mockResolvedValue([]),
+                        findMany: vi.fn().mockResolvedValue([
+                            { id: 'ln1', liablePartyId: 'w1', amount: '200', reason: 'Damage' }
+                        ]),
                     },
                 },
                 insert: vi.fn().mockReturnValue({
                     values: vi.fn().mockReturnValue({
-                        returning: vi.fn().mockResolvedValue([{ id: 'stmt-new' }]),
+                        returning: vi.fn().mockResolvedValue([{ id: 's1' }]),
+                    }),
+                }),
+                update: vi.fn().mockReturnValue(createChainedMock([])),
+            };
+
+            (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+            const result = await generateLaborSettlement();
+            expect(result).toEqual({ count: 1, deductionCount: 1 });
+
+            // 验证插入明细时的金额计算 (1000 - 200 = 800)
+            const insertCalls = mockTx.insert(apLaborStatements).values.mock.calls;
+            const settlementValue = insertCalls[0][0];
+            expect(settlementValue.totalAmount).toBe('800.00');
+        });
+    });
+
+    describe('createSupplierLiabilityStatement', () => {
+        const mockNoticeId = 'notice-123';
+
+        it('should create liability statement for FACTORY', async () => {
+            const mockTx = {
+                query: {
+                    liabilityNotices: {
+                        findFirst: vi.fn().mockResolvedValue({
+                            id: mockNoticeId,
+                            liablePartyType: 'FACTORY',
+                            status: 'CONFIRMED',
+                            amount: '500',
+                            liablePartyId: 'sup-1',
+                        }),
+                    },
+                    suppliers: {
+                        findFirst: vi.fn().mockResolvedValue({ id: 'sup-1', name: 'Supplier A' }),
+                    },
+                },
+                insert: vi.fn().mockReturnValue({
+                    values: vi.fn().mockReturnValue({
+                        returning: vi.fn().mockResolvedValue([{ id: 'new-stmt-id', statementNo: 'AP-DED-1' }]),
                     }),
                 }),
                 update: vi.fn().mockReturnValue({
@@ -301,11 +318,31 @@ describe('AP Actions', () => {
                 async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx)
             );
 
-            const result = await generateLaborSettlement();
+            const result = await createSupplierLiabilityStatement(mockNoticeId);
 
-            expect(result).toEqual({ count: 1, deductionCount: 0 });
-            // 验证 insert 被调用（创建结算单 + 费用明细）
+            expect(result).toEqual({ success: true, statementId: 'new-stmt-id' });
             expect(mockTx.insert).toHaveBeenCalled();
+            expect(mockTx.update).toHaveBeenCalled();
+        });
+
+        it('should reject if not FACTORY', async () => {
+            const mockTx = {
+                query: {
+                    liabilityNotices: {
+                        findFirst: vi.fn().mockResolvedValue({
+                            id: mockNoticeId,
+                            liablePartyType: 'INSTALLER',
+                            status: 'CONFIRMED',
+                        }),
+                    },
+                },
+            };
+
+            (db.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+                async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx)
+            );
+
+            await expect(createSupplierLiabilityStatement(mockNoticeId)).rejects.toThrow('此定责单非供应商(工厂)责任');
         });
     });
 

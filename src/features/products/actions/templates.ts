@@ -9,6 +9,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { productCategoryEnum } from '@/shared/api/schema';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 属性字段定义 Schema
@@ -62,11 +63,30 @@ const upsertAttributeTemplateActionInternal = createSafeAction(templateSchemaZod
                 updatedAt: new Date()
             })
             .where(eq(productAttributeTemplates.id, existing.id));
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'product_attribute_templates',
+            recordId: existing.id,
+            action: 'UPDATE',
+            oldValues: { templateSchema: existing.templateSchema },
+            newValues: { templateSchema: data.templateSchema }
+        });
     } else {
-        await db.insert(productAttributeTemplates).values({
+        const [inserted] = await db.insert(productAttributeTemplates).values({
             tenantId: session.user.tenantId,
             category: data.category,
             templateSchema: data.templateSchema,
+        }).returning();
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'product_attribute_templates',
+            recordId: inserted.id,
+            action: 'CREATE',
+            newValues: inserted
         });
     }
 
@@ -101,3 +121,4 @@ const getAttributeTemplateActionInternal = createSafeAction(getTemplateSchemaZod
 export async function getAttributeTemplate(params: z.infer<typeof getTemplateSchemaZod>) {
     return getAttributeTemplateActionInternal(params);
 }
+

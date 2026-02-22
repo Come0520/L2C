@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 // Webhook 处理器 - 内部业务逻辑（非 Server Action）
 
 import { db } from '@/shared/api/db';

@@ -6,6 +6,7 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { channels, channelContacts } from '@/shared/api/schema';
 import { eq, and, asc } from 'drizzle-orm';
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 
         return apiSuccess(result);
     } catch (error) {
-        console.error('Get Channels Error:', error);
+        logger.error('Get Channels Error:', error);
         return apiError('获取渠道失败', 500);
     }
 }

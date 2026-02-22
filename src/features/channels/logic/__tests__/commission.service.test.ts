@@ -148,7 +148,6 @@ describe('佣金计算逻辑', () => {
             const channelTrigger = 'PAYMENT_COMPLETED';
             const currentEvent = 'ORDER_CREATED';
 
-            expect(channelTrigger === currentEvent).toBe(false);
         });
 
         it('渠道未配置时应使用默认模式', () => {
@@ -320,6 +319,20 @@ describe('calculateOrderCommission() 函数', () => {
             expect(consoleSpy).toHaveBeenCalled();
             consoleSpy.mockRestore();
         });
+
+        it('阶梯配置为普通对象时应回退到基础费率', async () => {
+            const order = { totalAmount: '10000', items: [], tenantId: 't1' };
+            const channel = {
+                commissionType: 'TIERED',
+                commissionRate: '8', // fallback rate
+                cooperationMode: 'COMMISSION',
+                tieredRates: { minAmount: 0, rate: 10 }, // Invalid shape for TieredRate array
+            };
+
+            const result = await calculateOrderCommission(order, channel);
+            expect(result).not.toBeNull();
+            expect(result!.amount.toNumber()).toBe(800); // 10000 * 8%
+        });
     });
 
     describe('底价模式 (BASE_PRICE)', () => {
@@ -398,12 +411,104 @@ describe('calculateOrderCommission() 函数', () => {
             const result = await calculateOrderCommission(order, channel);
             expect(result).toBeNull();
         });
+
+        it('底价模式下商品列表获取异常或为空时退回无佣金', async () => {
+            const order = {
+                totalAmount: '1000',
+                items: [
+                    { productId: 'p1', unitPrice: 100, quantity: 1 } // valid item
+                ],
+                tenantId: 't1',
+            };
+            const channel = {
+                cooperationMode: 'BASE_PRICE',
+                level: 'B',
+            };
+
+            // Mock DB returning nothing for products
+            vi.mocked(db.query.products.findMany).mockResolvedValue([]);
+            vi.mocked(db.query.financeConfigs.findFirst).mockResolvedValue(null);
+
+            const result = await calculateOrderCommission(order, channel);
+            expect(result).toBeNull();
+        });
+
+        it('全局等级配置格式错误时使用默认折扣率', async () => {
+            const order = {
+                totalAmount: '300',
+                items: [
+                    { productId: 'p1', unitPrice: 150, quantity: 2 }
+                ],
+                tenantId: 't1',
+            };
+            const channel = {
+                cooperationMode: 'BASE_PRICE',
+                level: 'S',
+            };
+
+            vi.mocked(db.query.products.findMany).mockResolvedValue([
+                { id: 'p1', channelPrice: '100', channelPriceMode: 'FIXED', name: 'Product 1' }
+            ] as unknown as ReturnType<typeof db.query.products.findMany>);
+
+            // Invalid JSON
+            vi.mocked(db.query.financeConfigs.findFirst).mockResolvedValue({
+                id: '1', configKey: 'CHANNEL_GRADE_DISCOUNTS', configValue: 'invalid-json', tenantId: 't1',
+                isActive: true, createdAt: new Date(), updatedAt: new Date(),
+                description: null
+            });
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+            const result = await calculateOrderCommission(order, channel);
+            // Default S level discount applies: 0.9
+            const expectedProfit = (150 - 100 * 0.9) * 2;
+            expect(result).not.toBeNull();
+            expect(result!.amount.toNumber()).toBe(expectedProfit);
+
+            consoleWarnSpy.mockRestore();
+        });
     });
 });
 
 describe('checkAndGenerateCommission() 集成测试流程', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    it('回溯线索关联渠道Id时正常工作', async () => {
+        // Order has no channelId, but has leadId
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+            id: 'order-1', channelId: null, leadId: 'lead-1', tenantId: 't1', totalAmount: '100', items: []
+        } as unknown as ReturnType<typeof db.query.orders.findFirst>);
+
+        vi.mocked(db.query.leads.findFirst).mockResolvedValue({
+            id: 'lead-1', channelId: 'ch-via-lead'
+        } as unknown as ReturnType<typeof db.query.leads.findFirst>);
+
+        vi.mocked(db.query.channels.findFirst).mockResolvedValue({
+            id: 'ch-via-lead', tenantId: 't1', commissionTriggerMode: 'PAYMENT_COMPLETED',
+            commissionType: 'FIXED', commissionRate: '10', cooperationMode: 'COMMISSION'
+        } as unknown as ReturnType<typeof db.query.channels.findFirst>);
+
+        mockTx.query.channelCommissions.findFirst.mockResolvedValue(null);
+
+        await checkAndGenerateCommission('order-1', 'PAYMENT_COMPLETED');
+
+        expect(db.query.leads.findFirst).toHaveBeenCalled();
+        expect(db.query.channels.findFirst).toHaveBeenCalled();
+        expect(mockTx.insert).toHaveBeenCalled();
+    });
+
+    it('关联渠道亦缺失时提前退出', async () => {
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({
+            id: 'order-1', channelId: null, leadId: 'lead-1', tenantId: 't1', totalAmount: '100', items: []
+        } as unknown as ReturnType<typeof db.query.orders.findFirst>);
+        vi.mocked(db.query.leads.findFirst).mockResolvedValue({
+            id: 'lead-1', channelId: null
+        } as unknown as ReturnType<typeof db.query.leads.findFirst>);
+
+        await checkAndGenerateCommission('order-1', 'PAYMENT_COMPLETED');
+        // Will not query channel
+        expect(db.query.channels.findFirst).not.toHaveBeenCalled();
     });
 
     it('当佣金记录已存在时应跳过生成（幂等性）', async () => {
@@ -547,5 +652,36 @@ describe('handleCommissionClawback() 退款扣回逻辑', () => {
             adjustmentType: 'FULL_REFUND',
             adjustmentAmount: '-100.00'
         }));
+    });
+
+    it('处理无效状态的佣金和不合法金额跳过逻辑', async () => {
+        // Mock Order
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as unknown as ReturnType<typeof db.query.orders.findFirst>);
+        vi.mocked(db.query.channelCommissions.findMany).mockResolvedValue([
+            {
+                id: 'comm-1', tenantId: 't1', channelId: 'ch-1',
+                status: 'SETTLED', amount: '100', orderAmount: '0' // orderAmount 0 -> skip ratio
+            },
+            {
+                id: 'comm-2', tenantId: 't1', channelId: 'ch-1',
+                status: 'SETTLED', amount: '0', orderAmount: '1000' // zero comm -> skip clawback
+            }
+        ] as unknown as ReturnType<typeof db.query.channelCommissions.findMany>);
+
+        await handleCommissionClawback('order-1', 500);
+        expect(mockTx.insert).not.toHaveBeenCalled();
+    });
+
+    it('订单找不到或没有待处理佣金时直接退出', async () => {
+        // Missing Order
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue(null);
+        await handleCommissionClawback('not-found', 100);
+        expect(db.query.channelCommissions.findMany).not.toHaveBeenCalled();
+
+        // No Commissions
+        vi.mocked(db.query.orders.findFirst).mockResolvedValue({ id: 'order-1', tenantId: 't1' } as unknown as ReturnType<typeof db.query.orders.findFirst>);
+        vi.mocked(db.query.channelCommissions.findMany).mockResolvedValue([]);
+        await handleCommissionClawback('order-1', 100);
+
     });
 });

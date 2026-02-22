@@ -1,50 +1,92 @@
+/**
+ * 报价单列表页
+ * 审计修复: 添加下拉刷新、状态中文映射完善、上拉分页
+ */
 import { authStore } from '../../stores/auth-store';
+
+/** 报价单状态中文映射 */
+const STATUS_MAP: Record<string, string> = {
+    'DRAFT': '草稿',
+    'PENDING_APPROVAL': '待审批',
+    'APPROVED': '已批准',
+    'PENDING_CUSTOMER': '待确认',
+    'ACCEPTED': '已接受',
+    'REJECTED': '已拒绝',
+    'LOCKED': '已锁定',
+    'ORDERED': '已转单',
+    'EXPIRED': '已过期',
+    'CONFIRMED': '已确认',
+    'PENDING': '待确认',
+};
 
 Page({
     data: {
         keyword: '',
         list: [] as any[],
-        loading: false
+        loading: false,
+        refreshing: false,
+        loadingMore: false,
+        noMore: false,
+        page: 1,
+        pageSize: 20,
     },
 
     onShow() {
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 2 }); // Index 2 is now Quotes
+            this.getTabBar().setData({ selected: 2 });
         }
+        this.resetAndFetch();
+    },
+
+    /** 重置分页并加载 */
+    resetAndFetch() {
+        this.setData({ page: 1, list: [], noMore: false });
         this.fetchList();
     },
 
+    /** 获取报价单列表 */
     async fetchList() {
-        this.setData({ loading: true });
+        const { page, pageSize, loadingMore } = this.data;
+        if (loadingMore) return;
+
+        this.setData({ loading: page === 1, loadingMore: page > 1 });
         try {
             const app = getApp<IAppOption>();
             const res = await app.request('/quotes', {
-                data: { keyword: this.data.keyword }
+                data: { keyword: this.data.keyword, page, limit: pageSize }
             });
             if (res.success) {
-                // Mock formatting status text
-                const formatted = res.data.map((item: any) => ({
+                const formatted = (res.data || []).map((item: any) => ({
                     ...item,
-                    statusText: this.getStatusText(item.status),
+                    statusText: STATUS_MAP[item.status] || item.status,
                     updatedAt: item.updatedAt ? item.updatedAt.split('T')[0] : ''
                 }));
-                this.setData({ list: formatted });
+
+                const newList = page === 1 ? formatted : [...this.data.list, ...formatted];
+                this.setData({
+                    list: newList,
+                    noMore: formatted.length < pageSize,
+                });
             }
         } catch (err) {
             console.error(err);
             wx.showToast({ title: '加载失败', icon: 'none' });
         } finally {
-            this.setData({ loading: false });
+            this.setData({ loading: false, refreshing: false, loadingMore: false });
         }
     },
 
-    getStatusText(status: string) {
-        const map: Record<string, string> = {
-            'DRAFT': '草稿',
-            'CONFIRMED': '已确认',
-            'PENDING': '待确认'
-        };
-        return map[status] || status;
+    /** 下拉刷新 */
+    onPullDownRefresh() {
+        this.setData({ refreshing: true });
+        this.resetAndFetch();
+    },
+
+    /** 上拉加载更多 */
+    onLoadMore() {
+        if (this.data.noMore || this.data.loadingMore) return;
+        this.setData({ page: this.data.page + 1 });
+        this.fetchList();
     },
 
     onSearchInput(e: any) {
@@ -52,7 +94,7 @@ Page({
     },
 
     onSearch() {
-        this.fetchList();
+        this.resetAndFetch();
     },
 
     onAdd() {

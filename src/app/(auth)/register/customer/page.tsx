@@ -1,10 +1,10 @@
+﻿'use client';
+
 /**
  * 客户注册页面
  * 
  * 通过客户详情页发送的邀请链接注册
  */
-'use client';
-
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';

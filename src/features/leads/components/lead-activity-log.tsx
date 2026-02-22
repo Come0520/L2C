@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 import { getLeadTimeline } from '../actions';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { formatDate } from '@/shared/lib/utils';

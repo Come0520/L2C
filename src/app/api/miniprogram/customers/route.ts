@@ -1,20 +1,25 @@
 /**
  * 客户管理 API
  *
- * GET /api/miniprogram/customers - 获取客户列表
- * POST /api/miniprogram/customers - 快速创建客户
+ * GET  /api/miniprogram/customers — 获取客户列表（带分页）
+ * POST /api/miniprogram/customers — 快速创建客户
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
-import { db } from '@/shared/api/db';
-import { customers, customerAddresses } from '@/shared/api/schema';
-import { eq, and, or, like, desc, isNull } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../auth-utils';
-
-
+import { CreateCustomerSchema, PaginationSchema } from '../miniprogram-schemas';
+import { CustomerService } from '@/shared/services/miniprogram/customer.service';
 
 /**
- * GET - 获取客户列表
+ * 获取客户列表（分页、搜索、手机号脱敏）
+ *
+ * @route GET /api/miniprogram/customers
+ * @auth 需要登录（Bearer Token）
+ * @query keyword - 搜索关键词（姓名或手机号模糊匹配，可选）
+ * @query page - 页码（默认 1）
+ * @query limit - 每页条数（默认 50，最大 100）
+ * @returns 客户列表，手机号自动脱敏为 138****1234 格式
  */
 export async function GET(request: NextRequest) {
   try {
@@ -25,61 +30,39 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get('keyword');
-    const limit = parseInt(searchParams.get('limit') || '50');
 
-    // 构建查询条件
-    let whereClause = and(
-      eq(customers.tenantId, user.tenantId),
-      isNull(customers.deletedAt)
-    );
-
-    if (keyword) {
-      whereClause = and(
-        whereClause,
-        or(
-          like(customers.name, `%${keyword}%`),
-          like(customers.phone, `%${keyword}%`)
-        )
-      );
-    }
-
-    const list = await db.query.customers.findMany({
-      where: whereClause,
-      orderBy: [desc(customers.updatedAt)],
-      limit,
-      columns: {
-        id: true,
-        name: true,
-        phone: true,
-        level: true,
-        totalOrders: true,
-        // address removed as it is not in customers table
-        lifecycleStage: true,
-      },
+    // 分页参数验证
+    const pagination = PaginationSchema.safeParse({
+      page: searchParams.get('page'),
+      limit: searchParams.get('limit'),
+      cursor: searchParams.get('cursor') || undefined,
     });
+    const { page, limit, cursor } = pagination.success
+      ? pagination.data
+      : { page: 1, limit: 50, cursor: undefined };
 
-    // 手机号脱敏
-    const data = list.map((c) => ({
-      id: c.id,
-      name: c.name,
-      phone: c.phone ? c.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '',
-      level: c.level,
-      totalOrders: c.totalOrders,
-      lifecycleStage: c.lifecycleStage,
-    }));
+    const result = await CustomerService.getCustomers(user.tenantId, { keyword, page, limit, cursor });
 
-    return apiSuccess(data);
+    const response = apiSuccess({ list: result.data, total: result.total, page: result.page, limit: result.limit });
+    response.headers.set('Cache-Control', 'private, max-age=30');
+    return response;
   } catch (error) {
-    console.error('Get Customers Error:', error);
-    return apiError(
-      process.env.NODE_ENV === 'development' ? `获取客户列表失败: ${error instanceof Error ? error.message : String(error)}` : '获取客户列表失败',
-      500
-    );
+    logger.error('[Customers] 获取客户列表失败', { route: 'customers', error });
+    return apiError('获取客户列表失败', 500);
   }
 }
 
 /**
- * POST - 快速创建客户
+ * 快速创建客户（可附带默认地址）
+ *
+ * @route POST /api/miniprogram/customers
+ * @auth 需要登录（Bearer Token）
+ * @body name - 客户姓名（必填）
+ * @body phone - 手机号（可选）
+ * @body wechat - 微信号（可选）
+ * @body address - 默认地址（可选，将自动保存至地址表）
+ * @returns 新创建的客户信息
+ * @audit 记录 CREATE 审计日志
  */
 export async function POST(request: NextRequest) {
   try {
@@ -89,45 +72,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, wechat, address } = body;
 
-    if (!name) {
-      return apiError('客户姓名不能为空', 400);
+    // Zod 输入验证
+    const parsed = CreateCustomerSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0].message, 400);
     }
 
-    // 生成客户编号
-    const customerNo = `C${Date.now()}`;
+    const newCustomer = await CustomerService.createCustomer(user.tenantId, user.id, parsed.data);
 
-    const [newCustomer] = await db
-      .insert(customers)
-      .values({
-        tenantId: user.tenantId,
-        customerNo,
-        name,
-        phone: phone || '',
-        wechat: wechat || null,
-        createdBy: user.id,
-      })
-      .returning({
-        id: customers.id,
-        name: customers.name,
-        phone: customers.phone,
-      });
-
-    // 如果提供了地址，保存到地址表
-    if (address) {
-      await db.insert(customerAddresses).values({
-        tenantId: user.tenantId,
-        customerId: newCustomer.id,
-        address: address,
-        label: '默认地址',
-        isDefault: true,
-      });
-    }
+    logger.info('[Customers] 客户创建成功', {
+      route: 'customers',
+      customerId: newCustomer.id,
+      userId: user.id,
+      tenantId: user.tenantId,
+    });
 
     return apiSuccess(newCustomer);
   } catch (error) {
-    console.error('Create Customer Error:', error);
+    logger.error('[Customers] 创建客户失败', { route: 'customers', error });
     return apiError('创建客户失败', 500);
   }
 }

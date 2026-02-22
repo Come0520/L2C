@@ -6,6 +6,7 @@ import { db } from '@/shared/api/db';
 import { and, eq } from 'drizzle-orm';
 import { installTasks } from '@/shared/api/schema/service';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
 
 /** 现场发现 Schema */
 const fieldDiscoverySchema = z.object({
@@ -54,7 +55,7 @@ const submitFieldDiscoveryActionInternal = createSafeAction(fieldDiscoverySchema
         revalidatePath('/service/installation');
         return { success: true, message: '现场发现已记录' };
     } catch (error) {
-        console.error('Submit field discovery failed:', error);
+        logger.error('Submit field discovery failed:', error);
         return { success: false, error: '记录失败' };
     }
 });

@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';

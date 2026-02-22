@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import * as React from 'react';
 import { useState, useMemo, useCallback } from 'react';
@@ -159,7 +160,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                 toast.error(result.message);
             }
         } catch (error) {
-            console.error('保存权限配置失败:', error);
+            logger.error('保存权限配置失败:', error);
             toast.error('保存失败，请稍后重试');
         } finally {
             setIsSaving(false);

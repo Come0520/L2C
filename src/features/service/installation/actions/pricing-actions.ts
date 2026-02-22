@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 // ============================================================
 // Schema Definitions
@@ -62,7 +63,7 @@ export async function getLaborRates(entityType: 'TENANT' | 'WORKER', entityId: s
 
         return { success: true, data: rates };
     } catch (error: unknown) {
-        console.error('获取工费规则失败:', error);
+        logger.error('获取工费规则失败:', error);
         return { success: false, error: '获取工费规则失败' };
     }
 }
@@ -152,7 +153,7 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
         revalidatePath('/settings/labor-pricing');
         return { success: true };
     } catch (error: unknown) {
-        console.error('保存工费规则失败:', error);
+        logger.error('保存工费规则失败:', error);
         return { success: false, error: '保存工费规则失败' };
     }
 }
@@ -207,7 +208,7 @@ export async function batchUpsertTenantLaborRates(
         revalidatePath('/settings/labor-pricing');
         return { success: true };
     } catch (error: unknown) {
-        console.error('批量保存工费规则失败:', error);
+        logger.error('批量保存工费规则失败:', error);
         return { success: false, error: '批量保存工费规则失败' };
     }
 }
@@ -299,7 +300,7 @@ export async function calculateLaborFee(input: LaborFeeCalculationInput) {
             },
         };
     } catch (error: unknown) {
-        console.error('计算工费失败:', error);
+        logger.error('计算工费失败:', error);
         return { success: false, error: '计算工费失败' };
     }
 }

@@ -23,10 +23,10 @@ const mockQueryBuilder = {
     from: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockResolvedValue([{ count: 1 }]),
+    orderBy: vi.fn().mockResolvedValue([{ value: 1 }]),
     groupBy: vi.fn().mockReturnThis(),
     then: function (resolve: any) {
-        resolve([{ count: 1 }]);
+        resolve([{ value: 1 }]);
     }
 };
 

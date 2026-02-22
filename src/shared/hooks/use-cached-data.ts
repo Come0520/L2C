@@ -1,9 +1,10 @@
+'use client';
+
 /**
  * useCachedData - SWR 封装 hook
  * 
  * 提供自动去重、缓存和后台重新验证功能
  */
-'use client';
 
 import useSWR, { SWRConfiguration } from 'swr';
 

@@ -1,9 +1,9 @@
+'use client';
+
 /**
  * Auth Provider
  * 为客户端组件提供 Session 上下文
  */
-
-'use client';
 
 import { SessionProvider } from 'next-auth/react';
 import type { ReactNode } from 'react';

@@ -13,6 +13,9 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { LeadService } from '@/services/lead.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
+import { db } from '@/shared/api/db';
+import { logger } from "@/shared/lib/logger";
 
 /**
  * 创建新线索
@@ -21,7 +24,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
  * 若发现重复的电话或地址（通过 isDuplicate 检测），则返回 DUPLICATE 状态。
  * 
  * @param {z.infer<typeof createLeadSchema>} input - 创建线索的数据负载
- * @returns {Promise<{success: boolean, data?: any, status?: string, conflict?: any, error?: string}>}
+ * @returns {Promise<{success: boolean, data?: unknown, status?: string, conflict?: unknown, error?: string}>}}
  * @throws {Error} 若用户未登录或缺乏租户信息则抛出 Unauthorized 错误
  */
 export async function createLead(input: z.infer<typeof createLeadSchema>) {
@@ -37,6 +40,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
     const data = createLeadSchema.parse(input);
 
     try {
+        logger.info('[leads] 创建线索开始:', { tenantId, userId, leadData: data });
         // 构造 LeadService 输入：转换字段名和处理可选值
         const result = await LeadService.createLead({
             ...data,
@@ -59,11 +63,23 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
             };
         }
 
+        logger.info('[leads] 创建线索成功:', { leadId: result.lead.id, tenantId, leadNo: result.lead.leadNo });
+
+        await AuditService.log(db, {
+            tenantId: tenantId,
+            userId: userId,
+            tableName: 'leads',
+            recordId: result.lead.id,
+            action: 'CREATE',
+            newValues: { data }
+        });
+
         revalidateTag(`leads-${tenantId}`, 'default');
         revalidatePath('/leads');
         return { success: true, data: result.lead };
 
     } catch (error: unknown) {
+        logger.error('[leads] 创建线索失败:', { error, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false, error: message };
     }
@@ -76,7 +92,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
  * 更新成功之后将重置当前线索以及列表缓存。
  * 
  * @param {z.infer<typeof updateLeadSchema>} input - 更新线索的数据负载
- * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * @returns {Promise<{success: boolean, data?: unknown, error?: string}>}}
  * @throws {Error} 若未登录或无权修改则抛出错误
  */
 export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
@@ -90,6 +106,7 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
     const { id, ...data } = updateLeadSchema.parse(input);
 
     try {
+        logger.info('[leads] 更新线索开始:', { leadId: id, tenantId: session.user.tenantId, userId: session.user.id, updateData: data });
         const updated = await LeadService.updateLead(id, {
             customerName: data.customerName,
             customerPhone: data.customerPhone,
@@ -108,12 +125,24 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
             tags: data.tags ?? null,
         }, session.user.tenantId);
 
+        logger.info('[leads] 更新线索成功:', { leadId: id, tenantId: session.user.tenantId });
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'leads',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { updatedFields: data }
+        });
+
         revalidatePath('/leads');
         revalidatePath(`/leads/${id}`);
         revalidateTag(`leads-${session.user.tenantId}`, 'default');
         revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
         return { success: true as const, data: updated };
     } catch (error: unknown) {
+        logger.error('[leads] 更新线索失败:', { error, leadId: id, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false as const, error: message };
     }
@@ -126,7 +155,7 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
  * 支持传入可选的 version 字段乐观锁控制以避免并发覆盖。
  * 
  * @param {z.infer<typeof assignLeadSchema>} input - 包含线索 ID、销售 ID 以及版本号的分配数据
- * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * @returns {Promise<{success: boolean, data?: unknown, error?: string}>}}
  * @throws {Error} 未登录或未授权分配时抛出
  */
 export async function assignLead(input: z.infer<typeof assignLeadSchema>) {
@@ -140,13 +169,26 @@ export async function assignLead(input: z.infer<typeof assignLeadSchema>) {
     const { id, salesId, version } = assignLeadSchema.parse(input);
 
     try {
+        logger.info('[leads] 分配销售开始:', { leadId: id, newSalesId: salesId, tenantId: session.user.tenantId, userId: session.user.id, version });
         const updated = await LeadService.assignLead(id, salesId, session.user.tenantId, session.user.id, version);
+
+        logger.info('[leads] 分配销售成功:', { leadId: id, newSalesId: salesId, tenantId: session.user.tenantId });
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'leads',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { action: 'ASSIGN', salesId }
+        });
 
         revalidatePath('/leads');
         revalidateTag(`leads-${session.user.tenantId}`, 'default');
         revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
         return { success: true as const, data: updated };
     } catch (error: unknown) {
+        logger.error('[leads] 分配销售失败:', { error, leadId: id, newSalesId: salesId, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false as const, error: message };
     }
@@ -173,12 +215,29 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) 
     const userId = session.user.id;
     const { leadId, version, ...data } = addLeadFollowupSchema.parse(input);
 
-    await LeadService.addActivity(leadId, data, tenantId, userId, version);
+    try {
+        logger.info('[leads] 添加跟进记录开始:', { leadId, tenantId, userId, version });
+        await LeadService.addActivity(leadId, data, tenantId, userId, version);
 
-    revalidatePath(`/leads/${leadId}`);
-    revalidatePath('/leads');
-    revalidateTag(`leads-${tenantId}`, 'default');
-    revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+        logger.info('[leads] 添加跟进记录成功:', { leadId, tenantId });
+
+        await AuditService.log(db, {
+            tenantId: tenantId,
+            userId: userId,
+            tableName: 'leads',
+            recordId: leadId,
+            action: 'CREATE',
+            newValues: { activityData: data }
+        });
+
+        revalidatePath(`/leads/${leadId}`);
+        revalidatePath('/leads');
+        revalidateTag(`leads-${tenantId}`, 'default');
+        revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+    } catch (error: unknown) {
+        logger.error('[leads] 添加跟进记录失败:', { error, leadId, tenantId, userId });
+        throw error;
+    }
 }
 
 /**
@@ -201,13 +260,26 @@ export async function voidLead(input: z.infer<typeof voidLeadSchema>) {
     const { id, reason, version } = voidLeadSchema.parse(input);
 
     try {
+        logger.info('[leads] 作废线索开始:', { leadId: id, reason, tenantId: session.user.tenantId, userId: session.user.id, version });
         await LeadService.voidLead(id, reason, session.user.tenantId, session.user.id, version);
+
+        logger.info('[leads] 作废线索成功:', { leadId: id, tenantId: session.user.tenantId });
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'leads',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { action: 'VOID', reason }
+        });
 
         revalidatePath('/leads');
         revalidateTag(`leads-${session.user.tenantId}`, 'default');
         revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
         return { success: true as const };
     } catch (error: unknown) {
+        logger.error('[leads] 作废线索失败:', { error, leadId: id, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false as const, error: message };
     }
@@ -229,18 +301,30 @@ export async function releaseToPool(leadId: string) {
         throw new Error('Unauthorized: 未登录或缺少租户信息');
     }
     // 基础操作权限
-    await checkPermission(session, PERMISSIONS.LEAD.TRANSFER);
-    // @ts-expect-error - 类型尚未在 next-auth 中补全权限系统
-    const hasManagePerm = session.user.permissions?.includes(PERMISSIONS.LEAD.MANAGE) || false;
+    const userWithPerms = session.user as typeof session.user & { permissions?: string[] };
+    const hasManagePerm = userWithPerms.permissions?.includes(PERMISSIONS.LEAD.MANAGE) || false;
 
     try {
+        logger.info('[leads] 释放线索至公海开始:', { leadId, tenantId: session.user.tenantId, userId: session.user.id, hasManagePerm });
         await LeadService.releaseToPool(leadId, session.user.tenantId, session.user.id, hasManagePerm);
+
+        logger.info('[leads] 释放线索至公海成功:', { leadId, tenantId: session.user.tenantId });
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'leads',
+            recordId: leadId,
+            action: 'UPDATE',
+            newValues: { action: 'RELEASE_TO_POOL' }
+        });
 
         revalidatePath('/leads');
         revalidateTag(`leads-${session.user.tenantId}`, 'default');
         revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
         return { success: true as const };
     } catch (error: unknown) {
+        logger.error('[leads] 释放线索至公海失败:', { error, leadId, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false as const, error: message };
     }
@@ -264,13 +348,26 @@ export async function claimFromPool(leadId: string) {
     await checkPermission(session, PERMISSIONS.LEAD.EDIT);
 
     try {
+        logger.info('[leads] 从公海认领线索开始:', { leadId, tenantId: session.user.tenantId, userId: session.user.id });
         await LeadService.claimFromPool(leadId, session.user.tenantId, session.user.id);
+
+        logger.info('[leads] 从公海认领线索成功:', { leadId, tenantId: session.user.tenantId, userId: session.user.id });
+
+        await AuditService.log(db, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            tableName: 'leads',
+            recordId: leadId,
+            action: 'UPDATE',
+            newValues: { action: 'CLAIM_FROM_POOL' }
+        });
 
         revalidatePath('/leads');
         revalidateTag(`leads-${session.user.tenantId}`, 'default');
         revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
         return { success: true as const };
     } catch (error: unknown) {
+        logger.error('[leads] 从公海认领线索失败:', { error, leadId, tenantId: session.user.tenantId, userId: session.user.id });
         const message = error instanceof Error ? error.message : String(error);
         return { success: false as const, error: message };
     }
@@ -298,15 +395,32 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
     const userId = session.user.id;
     const { leadId, customerId, version } = convertLeadSchema.parse(input);
 
-    const newCustomerId = await LeadService.convertLead(leadId, customerId, tenantId, userId, version);
+    try {
+        logger.info('[leads] 转化线索为客户开始:', { leadId, customerId, tenantId, userId, version });
+        const newCustomerId = await LeadService.convertLead(leadId, customerId, tenantId, userId, version);
 
-    revalidatePath('/leads');
-    // Also revalidate customers list as a new customer might be created
-    revalidatePath('/customers');
-    revalidateTag(`leads-${tenantId}`, 'default');
-    revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+        logger.info('[leads] 转化线索为客户成功:', { leadId, newCustomerId, tenantId });
 
-    return newCustomerId;
+        await AuditService.log(db, {
+            tenantId: tenantId,
+            userId: userId,
+            tableName: 'leads',
+            recordId: leadId,
+            action: 'UPDATE',
+            newValues: { action: 'CONVERT_TO_CUSTOMER', newCustomerId }
+        });
+
+        revalidatePath('/leads');
+        // Also revalidate customers list as a new customer might be created
+        revalidatePath('/customers');
+        revalidateTag(`leads-${tenantId}`, 'default');
+        revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+
+        return newCustomerId;
+    } catch (error: unknown) {
+        logger.error('[leads] 转化线索为客户失败:', { error, leadId, customerId, tenantId, userId });
+        throw error;
+    }
 }
 
 /**
@@ -331,6 +445,8 @@ export async function importLeads(data: unknown[]) {
 
     let successCount = 0;
     const errors: { row: number, error: string }[] = [];
+
+    logger.info('[leads] 批量导入线索开始:', { dataLength: data.length, tenantId, userId });
 
     // Batch processing
     for (let i = 0; i < data.length; i++) {
@@ -378,10 +494,22 @@ export async function importLeads(data: unknown[]) {
                 successCount++;
             }
         } catch (err: unknown) {
+            logger.error('[leads] 处理单条线索导入失败:', { error: err, row: i + 1, dataRow: validData, tenantId });
             const errMsg = err instanceof Error ? err.message : 'Unknown error';
             errors.push({ row: i + 1, error: errMsg });
         }
     }
+
+    logger.info('[leads] 批量导入线索结束:', { successCount, errorCount: errors.length, tenantId, userId });
+
+    await AuditService.log(db, {
+        tenantId: tenantId,
+        userId: userId,
+        tableName: 'leads',
+        recordId: 'BATCH_IMPORT',
+        action: 'CREATE',
+        newValues: { successCount, errorCount: errors.length }
+    });
 
     revalidatePath('/leads');
     revalidateTag(`leads-${tenantId}`, 'default');

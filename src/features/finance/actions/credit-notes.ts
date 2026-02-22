@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 /**
  * 贷项通知单管理 (Credit Notes)
  * 
@@ -45,7 +47,7 @@ const createCreditNoteSchema = z.object({
  * 底层会记录创建操作的审计日志。
  * 
  * @param {z.infer<typeof createCreditNoteSchema>} input - 包含客户信息、关联订单/账单、类型、金额及防篡改原因
- * @returns {Promise<any>} 返回新创建的贷项通知单及状态信息
+ * @returns 返回新创建的贷项通知单及状态信息
  * @throws {Error} 如果当前用户无权限或写入数据库失败
  */
 export async function createCreditNote(input: z.infer<typeof createCreditNoteSchema>) {
@@ -88,7 +90,7 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
             tableName: 'credit_notes',
             recordId: creditNote.id,
             action: 'CREATE',
-            newValues: creditNote as Record<string, any>,
+            newValues: creditNote as Record<string, unknown>,
             details: { creditNoteNo: creditNote.creditNoteNo, amount: data.amount }
         });
 
@@ -100,7 +102,7 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
             message: '贷项通知单已创建，待审批'
         };
     } catch (error) {
-        console.error('创建贷项通知单失败:', error);
+        logger.error('创建贷项通知单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '创建失败'
@@ -120,7 +122,7 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
  * @param {string} id - 贷项通知单ID
  * @param {boolean} approved - 是否通过审批
  * @param {string} [rejectReason] - 可选的拒绝原因，在 `approved=false` 时必填或自动补充为空
- * @returns {Promise<any>} 返回审批动作的生效数据和成功状态
+ * @returns 返回审批动作的生效数据和成功状态
  * @throws {Error} 若四眼原则冲突、单据非 `PENDING` 状态等情况将抛出错误
  */
 export async function approveCreditNote(id: string, approved: boolean, rejectReason?: string) {
@@ -198,7 +200,7 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
                     tableName: 'credit_notes',
                     recordId: id,
                     action: 'APPROVE',
-                    newValues: { status: 'APPROVED', approvedBy: userId, approvedAt: new Date() } as Record<string, any>,
+                    newValues: { status: 'APPROVED', approvedBy: userId, approvedAt: new Date() } as Record<string, unknown>,
                     oldValues: { status: creditNote.status },
                     details: { creditNoteNo: creditNote.creditNoteNo, approved: true }
                 });
@@ -239,7 +241,7 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
             return { success: true, message: '贷项通知单已拒绝' };
         }
     } catch (error) {
-        console.error('审批贷项通知单失败:', error);
+        logger.error('审批贷项通知单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '审批失败'
@@ -255,7 +257,7 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
  * 
  * @param {number} [page=1] - 当前页码
  * @param {number} [pageSize=20] - 每页条数
- * @returns {Promise<any>} 返回贷项通知单分页数据集合
+ * @returns 返回贷项通知单分页数据集合
  * @throws {Error} 未授权或无视图权限时报错
  */
 export async function getCreditNotes(page = 1, pageSize = 20) {
@@ -289,7 +291,7 @@ export async function getCreditNotes(page = 1, pageSize = 20) {
  * 基于主键ID查询单条通知单明细，通常用于全屏展示、审批面板弹出等需要完整核对数据的场景。
  * 
  * @param {string} id - 贷项通知单的唯一 ID
- * @returns {Promise<any>} 返回贷项通知单详细模型
+ * @returns 返回贷项通知单详细模型
  * @throws {Error} 如果查询失败或记录不存在
  */
 export async function getCreditNote(id: string) {

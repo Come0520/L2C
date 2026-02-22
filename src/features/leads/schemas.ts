@@ -31,40 +31,40 @@ export const leadSchema = z.object({
 
     // Linking to existing customer (Lead = Opportunity)
     customerId: z.string().uuid().optional().nullable(),
-});
+}).describe('核心线索数据结构，涵盖客户信息、地址、来源渠道及意向级别等');
 
 
 export const updateLeadSchema = leadSchema.partial().extend({
     id: z.string().uuid(),
     version: z.number().optional(),
-});
+}).describe('更新线索信息的请求数据结构，要求包含主键id与版本号用于乐观锁控制');
 
 // ==================== Mutation Schemas ====================
 
-export const createLeadSchema = leadSchema;
+export const createLeadSchema = leadSchema.describe('创建新线索的数据结构定义，包含客户基本信息及来源维度');
 
 export const createCustomerSchema = z.object({
     name: z.string(),
     phone: z.string(),
-});
+}).describe('创建客户基础信息结构，包含姓名与必填手机号');
 
 export const assignLeadSchema = z.object({
     id: z.string().uuid(),
     salesId: z.string().min(1, '请选择销售人员'),
     version: z.number().optional(),
-});
+}).describe('将指定线索分配给对应销售人员的数据结构');
 
 export const bulkAssignSchema = z.object({
     ids: z.array(z.string().uuid()).min(1, '请至少选择一个线索'),
     salesId: z.string().min(1, '请选择销售人员'),
-});
+}).describe('批量将多个线索分配给指定销售人员的数据结构');
 
 export const convertLeadSchema = z.object({
     leadId: z.string().uuid(),
     customerId: z.string().uuid().optional(),
     force: z.boolean().optional(),
     version: z.number().optional(),
-});
+}).describe('线索转化为客户的过程数据结构，记录转化的目标客户对象及强制转换标识');
 
 export const followUpTypeEnum = z.enum(['PHONE_CALL', 'WECHAT_CHAT', 'STORE_VISIT', 'HOME_VISIT', 'QUOTE_SENT', 'SYSTEM', 'OTHER']);
 
@@ -79,13 +79,13 @@ export const addLeadFollowupSchema = z.object({
     purchaseIntention: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
     customerLevel: z.string().optional(),
     version: z.number().optional(),
-});
+}).describe('为销售线索添加跟进记录的请求结构，支持设置下次跟进时间及意向变化');
 
 export const voidLeadSchema = z.object({
     id: z.string().uuid(),
     reason: z.string().min(1, '请输入作废原因'),
     version: z.number().optional(),
-});
+}).describe('作废无效线索的数据结构，必须提供作废原因');
 
 export const deleteLeadSchema = z.object({
     id: z.string().uuid(),
@@ -119,11 +119,11 @@ export const leadFilterSchema = z.object({
         ...data,
         status: data.status?.filter(s => validStatuses.includes(s)),
     };
-});
+}).describe('线索列表多维检索过滤条件结构，支持按状态、意向、来源、分配人员及时间段进行组合筛选');
 
 export const getLeadTimelineLogsSchema = z.object({
     leadId: z.string().uuid(),
-});
+}).describe('拉取单个线索详细时间线操作日志的请求结构');
 
 export const analyticsDateRangeSchema = z.object({
     from: z.date().optional(),

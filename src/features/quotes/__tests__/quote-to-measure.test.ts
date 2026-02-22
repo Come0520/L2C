@@ -4,11 +4,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mocks
-const mockDbInsert = vi.fn();
-const mockDbQueryStrings = {
-    findFirst: vi.fn(),
-};
+// 使用 vi.hoisted 确保变量在 vi.mock 工厂提升后仍可访问
+const { mockDbInsert, mockDbQueryStrings } = vi.hoisted(() => ({
+    mockDbInsert: vi.fn(),
+    mockDbQueryStrings: {
+        findFirst: vi.fn(),
+    },
+}));
 
 vi.mock('@/shared/api/db', () => ({
     db: {
@@ -16,16 +18,38 @@ vi.mock('@/shared/api/db', () => ({
             quotes: mockDbQueryStrings,
         },
         insert: mockDbInsert,
-        transaction: vi.fn(async (cb) => cb({
+        transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({
             insert: mockDbInsert,
             query: { quotes: mockDbQueryStrings }
         })),
     },
 }));
 
+vi.mock('@/shared/api/schema/quotes', () => ({
+    quotes: { id: 'id', tenantId: 'tenantId' },
+}));
+
+vi.mock('@/shared/api/schema/service', () => ({
+    measureTasks: { id: 'id' },
+}));
+
+vi.mock('drizzle-orm', () => ({
+    eq: vi.fn((a, b) => ({ field: a, value: b })),
+    and: vi.fn((...args: unknown[]) => args),
+}));
+
+vi.mock('next/cache', () => ({
+    revalidatePath: vi.fn(),
+}));
+
 vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn().mockResolvedValue(true),
-    auth: vi.fn().mockResolvedValue({ user: { id: 'test-user', tenantId: 'test-tenant' } }),
+    auth: vi.fn().mockResolvedValue({
+        user: {
+            id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00099',
+            tenantId: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00098',
+        },
+    }),
 }));
 
 vi.mock('@/shared/utils/doc-no', () => ({
@@ -35,9 +59,9 @@ vi.mock('@/shared/utils/doc-no', () => ({
 import { createMeasureFromQuote } from '../actions/measure-integration';
 
 describe('createMeasureFromQuote - 验证报价转量尺', () => {
-    const VALID_QUOTE_ID = 'quote-123';
-    const VALID_LEAD_ID = 'lead-123';
-    const VALID_CUSTOMER_ID = 'cust-123';
+    const VALID_QUOTE_ID = 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001';
+    const VALID_LEAD_ID = 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00002';
+    const VALID_CUSTOMER_ID = 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00003';
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -56,7 +80,8 @@ describe('createMeasureFromQuote - 验证报价转量尺', () => {
             leadId: VALID_LEAD_ID
         });
         expect(result.success).toBe(false);
-        expect(result.message).toContain('不存在');
+        // createSafeAction 返回的错误字段名为 error，而非 message
+        expect(result.error).toContain('不存在');
     });
 
     it('应正确创建测量任务', async () => {

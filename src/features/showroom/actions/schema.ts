@@ -12,8 +12,10 @@ export const getShowroomItemsSchema = z.object({
     pageSize: z.number().int().positive().max(100).default(10).describe('每页条数'),
     search: z.string().optional().describe('搜索关键词'),
     type: z.enum(showroomItemTypeEnum.enumValues).optional().describe('素材类型'),
+    categoryId: z.string().optional().describe('产品分类'),
     status: z.enum(showroomItemStatusEnum.enumValues).optional().describe('素材状态'),
     minScore: z.number().optional().describe('最低评分'),
+    sortBy: z.enum(['latest', 'score', 'views']).default('score').describe('排序规则'),
 });
 
 /** 创建展厅素材参数 */
@@ -45,11 +47,14 @@ export const createShareLinkSchema = z.object({
         overridePrice: z.number().optional().describe('改价快照 (可选)'),
     })).min(1, '请至少选择一个商品').describe('分享列表'),
     expiresInDays: z.number().int().min(1).max(365).default(15).describe('有效天数'),
+    password: z.string().min(4).max(6).optional().describe('访问提取码 (可选)'),
+    maxViews: z.number().int().min(1).max(9999).optional().describe('最大访问次数 (选填阅后即焚)'),
 });
 
 /** 获取分享内容验证参数 */
 export const getShareContentSchema = z.object({
     shareId: z.string().uuid().describe('分享记录 ID'),
+    password: z.string().optional().describe('提取码参数'),
 });
 
 /** 停用分享链接参数 */

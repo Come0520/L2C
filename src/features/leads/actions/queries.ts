@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { leads, leadActivities, leadStatusHistory, marketChannels, users } from '@/shared/api/schema';
 import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count } from 'drizzle-orm';
@@ -15,7 +17,7 @@ import { escapeSqlLike } from '@/shared/lib/utils';
  * 支持按状态、意向级别、渠道分类、日期范围等进行多维度组合查询
  * 
  * @param {z.infer<typeof leadFilterSchema>} input - 线索查询与过滤条件
- * @returns {Promise<{data: any[], total: number, page: number, pageSize: number, totalPages: number}>} 分页线索数据及元信息
+ * @returns {Promise<{data: unknown[], total: number, page: number, pageSize: number, totalPages: number}>} 分页线索数据及元信息
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 依赖 tenantId 进行租户数据隔离
  */
@@ -78,10 +80,12 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
 
             const whereClause = and(...whereConditions);
 
-            const [total] = await db
-                .select({ count: count() })
+            const [totalResult] = await db
+                .select({ value: sql<number>`count(*)`.mapWith(Number) })
                 .from(leads)
                 .where(whereClause);
+
+            const totalCount = totalResult?.value || 0;
 
             const rows = await db.query.leads.findMany({
                 where: whereClause,
@@ -98,10 +102,10 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
 
             return {
                 data: rows,
-                total: total?.count || 0,
+                total: totalCount,
                 page: f.page,
                 pageSize: f.pageSize,
-                totalPages: Math.ceil((total?.count || 0) / f.pageSize),
+                totalPages: Math.ceil(totalCount / f.pageSize),
             };
         },
         [`leads-${tenantId}-${JSON.stringify(filters)}`],
@@ -142,7 +146,7 @@ async function getLeadDetailInternal(id: string, tenantId: string) {
  * 
  * @param {Object} args - 参数对象
  * @param {string} args.id - 线索唯一标识符
- * @returns {Promise<any | null>} 返回线索完整数据，不存在时返回 null
+ * @returns {Promise<unknown | null>} 返回线索完整数据，不存在时返回 null
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 依赖 tenantId 进行租户数据严格隔离校验
  */
@@ -173,7 +177,7 @@ export async function getLeadById({ id }: { id: string }) {
  * 用于追踪线索从创建、变配、跟进到成交的全生命周期事件
  * 
  * @param {z.infer<typeof getLeadTimelineLogsSchema>} input - 包含线索 ID 的输入参数
- * @returns {Promise<any[]>} 按创建时间倒序排列的活动事件数组
+ * @returns {Promise<unknown[]>} 按创建时间倒序排列的活动事件数组
  * @throws {Error} 未登录、缺乏租户信息或线索不可见时抛出
  * @audit 在查询活动前需二次校验当前租户是否拥有该线索访问权限
  */
@@ -224,7 +228,7 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
  * 安全修复：添加认证检查，支持根据父节点 ID 获取级联子渠道
  * 
  * @param {string} [parentId] - 选填的父渠道 ID。若无，则查询顶级渠道
- * @returns {Promise<any[]>} 具有给定层级关系的活跃渠道列表
+ * @returns {Promise<unknown[]>} 具有给定层级关系的活跃渠道列表
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 依赖 tenantId 隔离企业级字典配置
  */
@@ -263,7 +267,7 @@ export async function getChannels(parentId?: string) {
  * 获取系统内的活跃销售人员列表
  * 供线索分配下拉框等选用
  * 
- * @returns {Promise<any[]>} 启用的相关企业下销售用户列表
+ * @returns {Promise<unknown[]>} 启用的相关企业下销售用户列表
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 结果局限于同一租户 (tenantId) 内部
  */
@@ -306,7 +310,7 @@ export async function getSalesUsers() {
  * 升级版：支持日期范围过滤，并基于线索状态变更历史进行精确阶段转化统计
  * 
  * @param {z.infer<typeof analyticsDateRangeSchema>} [input] - 可选的分析日期范围
- * @returns {Promise<any[]>} 每个线索阶段的新进入计数
+ * @returns {Promise<unknown[]>} 每个线索阶段的新进入计数
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 支持租户及日期下钻审计数据
  */

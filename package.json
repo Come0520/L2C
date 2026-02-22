@@ -29,6 +29,8 @@
     "docker:test:down": "docker-compose -f docker-compose.test.yml down",
     "prettier:fix": "prettier --write .",
     "l2c-check": "tsx scripts/l2c-check.ts",
+    "deploy:check": "pnpm lint && pnpm type-check",
+    "deploy:verify": "tsx scripts/verify-deployment.ts",
     "prepare": "husky"
   },
   "lint-staged": {

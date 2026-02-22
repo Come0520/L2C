@@ -21,6 +21,21 @@ import { DataTableToolbar } from '@/components/ui/data-table-toolbar'; // Correc
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
 import { Edit2 } from 'lucide-react';
 
+/** 工单数据（服务端查询返回） */
+interface TicketData {
+    id: string;
+    ticketNo: string;
+    type: string;
+    description: string | null;
+    status: string;
+    result?: string | null;
+    resolution?: string | null;
+    customer?: { name?: string | null; phone?: string | null } | null;
+    order?: { orderNo?: string | null } | null;
+    createdAt: string | Date | null;
+    [key: string]: unknown;
+}
+
 const STATUS_MAP: Record<string, string> = {
     'PENDING': '待处理',
     'PROCESSING': '处理中',
@@ -48,7 +63,7 @@ export function TicketList({
     currentPage,
     totalPages
 }: {
-    tickets: any[],
+    tickets: TicketData[],
     total: number,
     currentPage: number,
     totalPages: number
@@ -69,7 +84,7 @@ export function TicketList({
         setLocalTickets(tickets);
     }, [tickets]);
 
-    const [selectedTicket, setSelectedTicket] = useState<any>(null);
+    const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
     const [status, setStatus] = useState('');
     const [result, setResult] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
@@ -117,14 +132,13 @@ export function TicketList({
     const handleUpdate = async () => {
         if (!selectedTicket) return;
         setIsUpdating(true);
-        // @ts-expect-error - Dropdown menu mapping
-        const res = await updateTicketStatus(selectedTicket.id, status, result);
+        const res = await updateTicketStatus(selectedTicket.id, status as 'PENDING' | 'PROCESSING' | 'PENDING_VERIFY' | 'CLOSED', result);
         setIsUpdating(false);
         if (res.success) {
             toast.success('更新成功');
             setSelectedTicket(null);
             // Optimistic update
-            setLocalTickets(prev => prev.map((t: any) =>
+            setLocalTickets(prev => prev.map((t: TicketData) =>
                 t.id === selectedTicket.id ? { ...t, status, result } : t
             ));
         } else {
@@ -169,7 +183,7 @@ export function TicketList({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {localTickets.map((ticket: any) => (
+                            {localTickets.map((ticket: TicketData) => (
                                 <TableRow key={ticket.id}>
                                     <TableCell className="font-mono">{ticket.ticketNo}</TableCell>
                                     <TableCell>{TYPE_MAP[ticket.type] || ticket.type}</TableCell>
@@ -178,7 +192,7 @@ export function TicketList({
                                         <div className="text-xs text-muted-foreground">{ticket.customer?.phone}</div>
                                     </TableCell>
                                     <TableCell>{ticket.order?.orderNo || '-'}</TableCell>
-                                    <TableCell className="max-w-[200px] truncate" title={ticket.description}>
+                                    <TableCell className="max-w-[200px] truncate" title={ticket.description ?? undefined}>
                                         {ticket.description}
                                     </TableCell>
                                     <TableCell>
@@ -190,7 +204,7 @@ export function TicketList({
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        {format(new Date(ticket.createdAt), 'yyyy-MM-dd HH:mm')}
+                                        {ticket.createdAt ? format(new Date(ticket.createdAt), 'yyyy-MM-dd HH:mm') : '-'}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex gap-2">

@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
@@ -59,7 +60,7 @@ export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListPro
       setConfirmDialog({ open: false, type: 'toggle', user: null });
     } catch (error) {
       toast.error('操作失败，请重试');
-      console.error('UserList detail action failed:', error);
+      logger.error('UserList detail action failed:', error);
     } finally {
       setLoading(false);
     }

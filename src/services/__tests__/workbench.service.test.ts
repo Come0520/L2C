@@ -78,10 +78,17 @@ describe('WorkbenchService 综合测试', () => {
             expect(db.query.orders.findMany).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }));
         });
 
-        it('数据库报错时应正常抛出', async () => {
+        it('子查询报错时应返回对应的空列表', async () => {
             (db.query.leads.findMany as any).mockRejectedValue(new Error('DB_ERROR'));
-            await expect(WorkbenchService.getUnifiedTodos(tenantId, userId, ['ADMIN']))
-                .rejects.toThrow('DB_ERROR');
+            (db.query.orders.findMany as any).mockResolvedValue([]);
+            (db.query.purchaseOrders.findMany as any).mockResolvedValue([]);
+            (db.query.productionTasks.findMany as any).mockResolvedValue([]);
+            (db.query.afterSalesTickets.findMany as any).mockResolvedValue([]);
+
+            const result = await WorkbenchService.getUnifiedTodos(tenantId, userId, ['ADMIN']);
+            const leadCat = result.categories.find(c => c.category === 'LEAD');
+            expect(leadCat?.count).toBe(0);
+            expect(result.leads).toHaveLength(0);
         });
     });
 

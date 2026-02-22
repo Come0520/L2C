@@ -25,8 +25,8 @@ export function AttributionSettingsForm() {
             try {
                 const settings = await getAttributionSettings();
                 setModel(settings.attributionModel as AttributionModel);
-            } catch (e) {
-                console.error(e);
+            } catch (_e) {
+                // 加载失败静默处理
             } finally {
                 setLoading(false);
             }

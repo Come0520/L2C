@@ -1,8 +1,9 @@
 import { db } from "@/shared/api/db";
 import { orders } from "@/shared/api/schema/orders";
-import { eq, and, lte, or, sql } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { OrderService } from "./order.service";
-import { subHours, subDays } from "date-fns";
+import { subHours } from "date-fns";
+import { logger } from "@/shared/lib/logger";
 
 export class OrderJobService {
     /**
@@ -23,12 +24,12 @@ export class OrderJobService {
             )
         });
 
-        console.log(`[OrderJob] 发现 ${autoResumeOrders.length} 个订单满足 48h 自动恢复条件`);
+        logger.info(`[OrderJob] 发现 ${autoResumeOrders.length} 个订单满足 48h 自动恢复条件`);
 
         for (const order of autoResumeOrders) {
             try {
-                await OrderService.resumeOrder(order.id, order.tenantId, 'system');
-                console.log(`[OrderJob] 订单 ${order.orderNo} 已自动恢复`);
+                await OrderService.resumeOrder(order.id, order.tenantId, order.version || 0, 'system');
+                logger.info(`[OrderJob] 订单 ${order.orderNo} 已自动恢复`);
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : String(error);
                 console.error(`[OrderJob] 自动恢复订单 ${order.orderNo} 失败: ${message}`);
@@ -51,8 +52,8 @@ export class OrderJobService {
 
             if (totalPauseDays >= 7) {
                 try {
-                    console.log(`[OrderJob] 订单 ${order.orderNo} 累计叫停 ${totalPauseDays} 天，执行强制恢复`);
-                    await OrderService.resumeOrder(order.id, order.tenantId, 'system');
+                    logger.info(`[OrderJob] 订单 ${order.orderNo} 累计叫停 ${totalPauseDays} 天，执行强制恢复`);
+                    await OrderService.resumeOrder(order.id, order.tenantId, order.version || 0, 'system');
                     // 可以额外发送预警通知
                 } catch (error: unknown) {
                     const message = error instanceof Error ? error.message : String(error);

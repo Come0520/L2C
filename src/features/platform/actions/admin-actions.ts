@@ -14,6 +14,9 @@ import {
     notifyTenantApproved,
     notifyTenantRejected
 } from '@/services/wechat-subscribe-message.service';
+import { logger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
+import { unstable_cache } from 'next/cache';
 
 // ============ 类型定义 ============
 
@@ -84,7 +87,7 @@ export async function getPendingTenants(): Promise<{
 
         return { success: true, data: pendingList };
     } catch (error) {
-        console.error('获取待审批列表失败:', error);
+        logger.error('获取待审批列表失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '获取失败'
@@ -114,37 +117,40 @@ export async function getAllTenants(options?: {
         const pageSize = Math.min(100, options?.pageSize || 10);
         const offset = (page - 1) * pageSize;
 
-        // 1. 获取总数
-        const [{ count }] = await db.execute(sql`SELECT count(*) as count FROM ${tenants}`);
-        const total = Number(count);
+        // 使用 unstable_cache 缓存列表查询，60s 过期
+        const data = await unstable_cache(
+            async () => {
+                // 1. 获取总数
+                const [{ count }] = await db.execute(sql`SELECT count(*) as count FROM ${tenants}`);
+                const total = Number(count);
 
-        // 2. 获取分页数据
-        const list = await db.query.tenants.findMany({
-            columns: {
-                id: true,
-                name: true,
-                code: true,
-                applicantName: true,
-                applicantPhone: true,
-                applicantEmail: true,
-                region: true,
-                businessDescription: true,
-                createdAt: true,
+                // 2. 获取分页数据
+                const list = await db.query.tenants.findMany({
+                    columns: {
+                        id: true,
+                        name: true,
+                        code: true,
+                        applicantName: true,
+                        applicantPhone: true,
+                        applicantEmail: true,
+                        region: true,
+                        businessDescription: true,
+                        createdAt: true,
+                    },
+                    limit: pageSize,
+                    offset: offset,
+                    orderBy: desc(tenants.createdAt),
+                });
+
+                return { tenants: list, total };
             },
-            limit: pageSize,
-            offset: offset,
-            orderBy: desc(tenants.createdAt),
-        });
+            [`all-tenants-${page}-${pageSize}`],
+            { tags: ['platform-tenants'], revalidate: 60 }
+        )();
 
-        return {
-            success: true,
-            data: {
-                tenants: list,
-                total: total
-            }
-        };
+        return { success: true, data };
     } catch (error) {
-        console.error('获取租户列表失败:', error);
+        logger.error('获取租户列表失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '获取失败'
@@ -152,7 +158,6 @@ export async function getAllTenants(options?: {
     }
 }
 
-import { AuditService } from '@/shared/lib/audit-service';
 
 /**
  * 审批通过租户申请
@@ -196,7 +201,7 @@ export async function approveTenant(tenantId: string): Promise<{
                 .where(eq(users.tenantId, tenantId));
 
             // 4. 记录审计日志
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
@@ -204,16 +209,16 @@ export async function approveTenant(tenantId: string): Promise<{
                 action: 'UPDATE',
                 changedFields: { status: 'active', isActive: true },
                 newValues: { status: 'active', isActive: true },
-            }, tx);
+            });
         });
 
         notifyTenantApproved(tenantId).catch(err => {
-            console.error('发送通知失败:', err);
+            logger.error('发送通知失败:', err);
         });
 
         return { success: true };
     } catch (error) {
-        console.error('审批记录失败:', error);
+        logger.error('审批记录失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '操作失败' };
     }
 }
@@ -256,23 +261,23 @@ export async function rejectTenant(
                 })
                 .where(eq(tenants.id, tenantId));
 
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
                 recordId: tenantId,
                 action: 'UPDATE',
                 changedFields: { status: 'rejected', rejectReason: reason.trim() },
-            }, tx);
+            });
         });
 
         notifyTenantRejected(tenantId, reason).catch(err => {
-            console.error('发送通知失败:', err);
+            logger.error('发送通知失败:', err);
         });
 
         return { success: true };
     } catch (error) {
-        console.error('拒绝申请失败:', error);
+        logger.error('拒绝申请失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '操作失败' };
     }
 }
@@ -309,7 +314,7 @@ export async function suspendTenant(
                 .where(eq(users.tenantId, tenantId));
 
             // 2. 记录审计日志
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
@@ -317,12 +322,12 @@ export async function suspendTenant(
                 action: 'UPDATE',
                 changedFields: { status: 'suspended', isActive: false },
                 newValues: { status: 'suspended', isActive: false, reason },
-            }, tx);
+            });
         });
 
         return { success: true };
     } catch (error) {
-        console.error('暂停租户失败:', error);
+        logger.error('暂停租户失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '操作失败' };
     }
 }
@@ -367,7 +372,7 @@ export async function activateTenant(tenantId: string): Promise<{
                 .where(eq(users.tenantId, tenantId));
 
             // 3. 记录审计日志
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
@@ -375,12 +380,12 @@ export async function activateTenant(tenantId: string): Promise<{
                 action: 'UPDATE',
                 changedFields: { status: 'active', isActive: true },
                 newValues: { status: 'active', isActive: true },
-            }, tx);
+            });
         });
 
         return { success: true };
     } catch (error) {
-        console.error('恢复租户失败:', error);
+        logger.error('恢复租户失败:', error);
         return { success: false, error: error instanceof Error ? error.message : '操作失败' };
     }
 }
@@ -429,7 +434,7 @@ export async function getVerificationPendingTenants(): Promise<{
 
         return { success: true, data: pendingList };
     } catch (error) {
-        console.error('获取待认证列表失败:', error);
+        logger.error('获取待认证列表失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '获取失败'
@@ -471,7 +476,7 @@ export async function approveVerification(tenantId: string): Promise<{
                 .where(eq(tenants.id, tenantId));
 
             // 3. 记录审计日志
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
@@ -479,12 +484,12 @@ export async function approveVerification(tenantId: string): Promise<{
                 action: 'UPDATE',
                 changedFields: { verificationStatus: 'verified' },
                 newValues: { verificationStatus: 'verified' },
-            }, tx);
+            });
         });
 
         return { success: true };
     } catch (error) {
-        console.error('认证通过失败:', error);
+        logger.error('认证通过失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '操作失败'
@@ -533,19 +538,19 @@ export async function rejectVerification(
                 .where(eq(tenants.id, tenantId));
 
             // 3. 记录审计日志
-            await AuditService.record({
+            await AuditService.log(tx, {
                 tenantId,
                 userId: adminId,
                 tableName: 'tenants',
                 recordId: tenantId,
                 action: 'UPDATE',
                 changedFields: { verificationStatus: 'rejected', verificationRejectReason: reason.trim() },
-            }, tx);
+            });
         });
 
         return { success: true };
     } catch (error) {
-        console.error('认证驳回失败:', error);
+        logger.error('认证驳回失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '操作失败'

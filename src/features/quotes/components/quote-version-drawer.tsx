@@ -17,6 +17,7 @@ import { History, Plus, Clock, Check, FileText, ArrowRight, Copy, X } from 'luci
 import { createNextVersion } from '../actions/mutations';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteVersion {
     id: string;
@@ -64,7 +65,7 @@ export function QuoteVersionDrawer({
                 toast.error('创建失败，请稍后重试', { id: 'create-version' });
             }
         } catch (e) {
-            console.error('[CreateVersionError]', e);
+            logger.error('[CreateVersionError]', e);
             toast.error('系统异常', { id: 'create-version' });
         } finally {
             setIsCreating(false);

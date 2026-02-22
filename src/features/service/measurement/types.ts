@@ -39,5 +39,5 @@ export interface MeasureTask {
 
 export const MeasureResultSchema = z.object({
     taskId: z.string().uuid(),
-    data: z.any()
+    data: z.record(z.string(), z.unknown())
 });

@@ -16,6 +16,7 @@ export const getOrdersSchema = z.object({
 export const cancelOrderSchema = z.object({
     orderId: z.string().uuid(),
     reason: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 export const createOrderSchema = z.object({
@@ -36,6 +37,7 @@ export const splitOrderSchema = z.object({
             supplierId: z.string().uuid(),
         })
     ),
+    version: z.number().int().positive(),
 });
 
 export const requestDeliverySchema = z.object({
@@ -43,16 +45,19 @@ export const requestDeliverySchema = z.object({
     company: z.string().min(1, '请填写物流公司'),
     trackingNo: z.string().optional(),
     remark: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 export const updateLogisticsSchema = z.object({
     orderId: z.string().uuid(),
     company: z.string().min(1, '请填写物流公司'),
     trackingNo: z.string().min(1, '请填写快递单号'),
+    version: z.number().int().positive(),
 });
 
 export const confirmInstallationSchema = z.object({
     orderId: z.string().uuid(),
+    version: z.number().int().positive(),
 });
 
 // 叫停原因枚举
@@ -81,6 +86,7 @@ export const requestOrderCancellationSchema = z.object({
     orderId: z.string().uuid(),
     reason: z.enum(CANCEL_REASONS),
     remark: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 /**
@@ -89,38 +95,46 @@ export const requestOrderCancellationSchema = z.object({
 export const pauseOrderSchema = z.object({
     orderId: z.string().uuid(),
     reason: z.string().min(2, '请填写叫停原因'),
+    version: z.number().int().positive(),
 });
 
 export const haltOrderSchema = z.object({
     orderId: z.string().uuid(),
     reason: z.enum(HALT_REASONS),
     remark: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 export const completeOrderSchema = z.object({
     orderId: z.string().uuid(),
+    version: z.number().int().positive(),
 });
 
 export const closeOrderSchema = z.object({
     orderId: z.string().uuid(),
+    version: z.number().int().positive(),
 });
 
 export const resumeOrderSchema = z.object({
     orderId: z.string().uuid(),
     remark: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 export const confirmProductionSchema = z.object({
     orderId: z.string().uuid(),
     productionStartTime: z.string().optional(),
     remark: z.string().optional(),
+    version: z.number().int().positive(),
 });
 
 export const requestCustomerConfirmationSchema = z.object({
     orderId: z.string().uuid(),
+    version: z.number().int().positive(),
 });
 
 export const customerRejectSchema = z.object({
     orderId: z.string().uuid(),
     reason: z.string().min(1, '请填写拒绝原因'),
+    version: z.number().int().positive(),
 });

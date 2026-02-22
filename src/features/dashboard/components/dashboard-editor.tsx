@@ -66,8 +66,8 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
                 } else {
                     setConfig(getDefaultDashboardConfig(userRole));
                 }
-            } catch (error) {
-                console.error('加载仪表盘配置失败:', error);
+            } catch {
+                // 加载失败时回退到默认配置
                 setConfig(getDefaultDashboardConfig(userRole));
             } finally {
                 setLoading(false);
@@ -177,8 +177,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
             } else {
                 toast.error('保存失败', { description: result.error });
             }
-        } catch (error) {
-            console.error('保存配置失败:', error);
+        } catch {
             toast.error('保存失败');
         } finally {
             setSaving(false);
@@ -193,8 +192,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
             const defaultConfig = getDefaultDashboardConfig(userRole);
             setConfig(defaultConfig);
             toast.success('已恢复默认配置');
-        } catch (error) {
-            console.error('重置配置失败:', error);
+        } catch {
             toast.error('重置失败');
         } finally {
             setSaving(false);

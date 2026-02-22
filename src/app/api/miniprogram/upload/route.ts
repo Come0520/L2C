@@ -5,6 +5,7 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import fs from 'fs';
 import path from 'path';
 import { writeFile } from 'fs/promises';
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       height: 0,
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     return apiError('上传失败', 500);
   }
 }

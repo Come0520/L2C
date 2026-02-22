@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return apiSuccess({ message: '签到成功' });
   } catch (error) {
-    console.error('[POST /api/miniprogram/tasks/[id]/check-in] Error:', error);
+    logger.error('[POST /api/miniprogram/tasks/[id]/check-in] Error:', error);
     const message = error instanceof Error ? error.message : '服务器错误';
     return apiError(message, 500);
   }

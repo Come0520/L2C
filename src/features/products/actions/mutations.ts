@@ -8,6 +8,7 @@ import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
+import { AuditService } from '@/shared/services/audit-service';
 import {
     createProductSchema,
     updateProductSchema,
@@ -61,6 +62,15 @@ const createProductActionInternal = createSafeAction(createProductSchema, async 
         createdBy: session.user!.id,
     }).returning();
 
+    await AuditService.log(db, {
+        tenantId: session.user!.tenantId,
+        userId: session.user!.id!,
+        tableName: 'products',
+        recordId: product.id,
+        action: 'CREATE',
+        newValues: product
+    });
+
     revalidatePath('/supply-chain/products');
     return { id: product.id };
 });
@@ -112,6 +122,16 @@ const updateProductActionInternal = createSafeAction(updateProductSchema, async 
 
     if (!product) throw new Error('更新失败，产品未找到');
 
+    await AuditService.log(db, {
+        tenantId: session.user!.tenantId,
+        userId: session.user!.id!,
+        tableName: 'products',
+        recordId: id,
+        action: 'UPDATE',
+        newValues: product,
+        oldValues: { id }
+    });
+
     revalidatePath('/supply-chain/products');
     return { id: product.id };
 });
@@ -131,6 +151,15 @@ const deleteProductActionInternal = createSafeAction(deleteProductSchema, async 
             eq(products.id, id),
             eq(products.tenantId, session.user.tenantId)
         ));
+
+    await AuditService.log(db, {
+        tenantId: session.user!.tenantId,
+        userId: session.user!.id!,
+        tableName: 'products',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: { id }
+    });
 
     revalidatePath('/supply-chain/products');
     return { success: true };
@@ -152,6 +181,16 @@ const activateProductActionInternal = createSafeAction(activateProductSchema, as
             eq(products.id, id),
             eq(products.tenantId, session.user.tenantId)
         ));
+
+    await AuditService.log(db, {
+        tenantId: session.user!.tenantId,
+        userId: session.user!.id!,
+        tableName: 'products',
+        recordId: id,
+        action: 'UPDATE',
+        newValues: { isActive },
+        details: { action: isActive ? 'ACTIVATE' : 'DEACTIVATE' }
+    });
 
     revalidatePath('/supply-chain/products');
     return { success: true };
@@ -196,7 +235,7 @@ const batchCreateProductsActionInternal = createSafeAction(
                     throw new Error(`SKU "${data.sku}" 已存在`);
                 }
 
-                await db.insert(products).values({
+                const batchProduct = await db.insert(products).values({
                     tenantId,
                     sku: data.sku,
                     name: data.name,
@@ -216,9 +255,17 @@ const batchCreateProductsActionInternal = createSafeAction(
                     isToCEnabled: data.isToCEnabled,
                     defaultSupplierId: data.defaultSupplierId,
                     isStockable: data.isStockable,
-                    specs: data.attributes || {},
                     description: data.description,
                     createdBy: userId,
+                }).returning();
+
+                await AuditService.log(db, {
+                    tenantId,
+                    userId,
+                    tableName: 'products',
+                    recordId: batchProduct[0].id,
+                    action: 'CREATE',
+                    newValues: batchProduct[0]
                 });
 
                 results.successCount++;
@@ -240,3 +287,4 @@ const batchCreateProductsActionInternal = createSafeAction(
 export async function batchCreateProducts(params: z.infer<typeof batchCreateProductsSchema>) {
     return batchCreateProductsActionInternal(params);
 }
+

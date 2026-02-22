@@ -3,6 +3,7 @@ import Dysmsapi20170525, * as $Dysmsapi20170525 from '@alicloud/dysmsapi20170525
 import * as $OpenApi from '@alicloud/openapi-client';
 import * as $Util from '@alicloud/tea-util';
 import { env } from '@/shared/config/env';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 阿里云短信服务封装
@@ -41,7 +42,7 @@ export class SmsService {
     static async sendVerificationCode(phone: string, code: string): Promise<{ success: boolean; message?: string }> {
         // 开发环境/测试环境可能未配置，模拟发送
         if (!env.SMS_ACCESS_KEY_ID || !env.SMS_ACCESS_KEY_SECRET) {
-            console.log(`[MOCK SMS] To: ${phone}, Code: ${code}`);
+            logger.info(`[MOCK SMS] To: ${phone}, Code: ${code}`);
             return { success: true, message: 'Mock sent' };
         }
 
@@ -63,7 +64,7 @@ export class SmsService {
                 return { success: false, message: resp.body?.message || 'Unknown error' };
             }
 
-            console.log(`[SMS] Sent to ${phone}: ${code}`);
+            logger.info(`[SMS] Sent to ${phone}: ${code}`);
             return { success: true };
         } catch (error: unknown) {
             console.error('SMS Service Error:', error);

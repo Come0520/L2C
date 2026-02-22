@@ -71,7 +71,11 @@ const checkWarrantyStatusAction = createSafeAction(checkWarrantySchema, async ({
 });
 
 /**
- * 根据订单完成日期自动判定当前是否处于保修期
+ * 依据公司或租户政策以及原订单完成日期时间轴测算当前产品是否享有保修红利
+ * 这可能决定其后的任何售后维修是作为免费保内处理，还是转换为有偿的按单付费。
+ * 
+ * @param data - 指向可能触发保内报修服务的订单源 ID 实例
+ * @returns 返回明确保内测算时间判定点和天数差值的保修有效状态说明
  */
 export async function checkWarrantyStatus(data: z.infer<typeof checkWarrantySchema>) {
     return checkWarrantyStatusAction(data);

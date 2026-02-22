@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 export * from './schemas';
 export * from './internal';
 export * from './actions/ar';

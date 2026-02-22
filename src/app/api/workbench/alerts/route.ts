@@ -16,8 +16,8 @@ export async function GET() {
             );
         }
 
-        // 角色权限校验：仅 ADMIN, MANAGER, FINANCE 可访问全局报警
-        const allowedRoles = ['ADMIN', 'MANAGER', 'FINANCE'];
+        // 角色权限校验：ADMIN/MANAGER/FINANCE/TENANT_ADMIN/OWNER 可访问全局报警
+        const allowedRoles = ['ADMIN', 'MANAGER', 'FINANCE', 'TENANT_ADMIN', 'OWNER', 'SUPER_ADMIN'];
         const userRoles = session.user.roles || [];
         const hasPermission = userRoles.some(role => allowedRoles.includes(role)) || allowedRoles.includes(session.user.role || '');
 

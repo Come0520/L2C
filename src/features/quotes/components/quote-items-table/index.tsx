@@ -329,7 +329,6 @@ export function QuoteItemsTable({
       <QuoteItemAdvancedDrawer
         open={advancedDrawerOpen}
         onOpenChange={setAdvancedDrawerOpen}
-        // @ts-expect-error - Expected structural mismatch
         item={editingItem}
         onSuccess={onItemUpdate}
       />

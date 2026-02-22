@@ -57,6 +57,9 @@ export const showroomShares = pgTable('showroom_shares', {
     isActive: integer('is_active').default(1), // 1=Active, 0=Inactive
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 
+    passwordHash: varchar('password_hash', { length: 255 }), // 可选，访问密码 Hash
+    maxViews: integer('max_views'), // 可选，最大访问次数限制 (阅后即焚)
+
     views: integer('views').default(0),
     lastViewedAt: timestamp('last_viewed_at', { withTimezone: true }),
 

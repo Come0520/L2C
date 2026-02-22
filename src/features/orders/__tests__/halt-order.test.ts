@@ -59,7 +59,8 @@ describe('Order Halt Actions', () => {
             const result = await haltOrderAction({
                 orderId: VALID_ORDER_ID,
                 reason: 'CUSTOMER_REQUEST',
-                remark: 'Test Halt'
+                remark: 'Test Halt',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -67,6 +68,7 @@ describe('Order Halt Actions', () => {
             expect(mockOrderService.haltOrder).toHaveBeenCalledWith(
                 VALID_ORDER_ID,
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id,
                 expect.stringContaining('CUSTOMER_REQUEST')
             );
@@ -78,7 +80,8 @@ describe('Order Halt Actions', () => {
             const result = await haltOrderAction({
                 orderId: VALID_ORDER_ID,
                 reason: 'OTHER',
-                remark: 'Error test'
+                remark: 'Error test',
+                version: 1,
             });
 
             expect(result.success).toBe(false);
@@ -95,7 +98,8 @@ describe('Order Halt Actions', () => {
 
             const result = await resumeOrderAction({
                 orderId: VALID_ORDER_ID,
-                remark: 'Resume test'
+                remark: 'Resume test',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -103,6 +107,7 @@ describe('Order Halt Actions', () => {
             expect(mockOrderService.resumeOrder).toHaveBeenCalledWith(
                 VALID_ORDER_ID,
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id
             );
         });

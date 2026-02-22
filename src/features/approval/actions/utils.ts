@@ -86,8 +86,7 @@ export async function revertEntityStatus(
     switch (entityType) {
         case 'QUOTE':
             await tx.update(quotes)
-                // @ts-expect-error — 横切状态回退：targetStatus 由调用方动态传入，无法匹配单一 schema 枚举
-                .set({ status: targetStatus })
+                .set({ status: targetStatus as typeof quotes.$inferInsert.status })
                 .where(and(eq(quotes.id, entityId), eq(quotes.tenantId, tenantId)));
             break;
         case 'ORDER':
@@ -194,8 +193,7 @@ export async function completeEntityStatus(
             // 更新线索状态
             await tx.update(leads)
                 .set({
-                    // @ts-expect-error — LEAD_RESTORE 恢复到历史状态，枚举不精确匹配
-                    status: restoreStatus,
+                    status: restoreStatus as typeof leads.$inferInsert.status,
                     updatedAt: new Date()
                 })
                 .where(and(eq(leads.id, entityId), eq(leads.tenantId, tenantId)));

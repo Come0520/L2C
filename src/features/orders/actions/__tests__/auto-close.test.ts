@@ -50,8 +50,8 @@ describe('Auto-close Action', () => {
 
     it('应成功处理待结案订单', async () => {
         const mockOrders = [
-            { id: 'o1', orderNo: 'ORD-01' } as any,
-            { id: 'o2', orderNo: 'ORD-02' } as any
+            { id: 'o1', orderNo: 'ORD-01', version: 0 } as any,
+            { id: 'o2', orderNo: 'ORD-02', version: 0 } as any
         ];
         vi.mocked(db.query.orders.findMany).mockResolvedValue(mockOrders);
         vi.mocked(OrderService.updateOrderStatus).mockResolvedValue({ success: true } as any);
@@ -62,14 +62,14 @@ describe('Auto-close Action', () => {
         expect(result.count).toBe(2);
         expect(OrderService.updateOrderStatus).toHaveBeenCalledTimes(2);
         expect(OrderService.updateOrderStatus).toHaveBeenCalledWith(
-            'o1', 'COMPLETED', 't1', 'u1'
+            'o1', 'COMPLETED', 't1', 0, 'u1'
         );
     });
 
     it('当部分订单处理失败时，应记录错误信息但不中断整体流程', async () => {
         const mockOrders = [
-            { id: 'o1', orderNo: 'ORD-01' } as any,
-            { id: 'o2', orderNo: 'ORD-02' } as any
+            { id: 'o1', orderNo: 'ORD-01', version: 0 } as any,
+            { id: 'o2', orderNo: 'ORD-02', version: 0 } as any
         ];
         vi.mocked(db.query.orders.findMany).mockResolvedValue(mockOrders);
         vi.mocked(OrderService.updateOrderStatus)

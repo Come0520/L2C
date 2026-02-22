@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -70,7 +71,7 @@ export function CurtainCalcConfig({ initialConfig }: CurtainCalcConfigProps) {
             toast.success('窗帘计算参数已保存');
         } catch (error) {
             toast.error('保存失败，请重试');
-            console.error(error);
+            logger.error(error);
         } finally {
             setIsSaving(false);
         }

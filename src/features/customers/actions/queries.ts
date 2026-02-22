@@ -1,11 +1,12 @@
 'use server';
 
 import { db } from '../../../shared/api/db';
-import { customers } from '../../../shared/api/schema';
-import { eq, and, desc, sql, isNull } from 'drizzle-orm';
+import { customers, orders } from '../../../shared/api/schema';
+import { eq, and, desc, sql, isNull, sum, max, count } from 'drizzle-orm';
 import { z } from 'zod';
-import { getCustomersSchema, customerLifecycleStages, customerPipelineStatuses } from '../schemas';
+import { getCustomersSchema, customerLifecycleStages, customerPipelineStatuses, getReferralChainSchema, searchCustomersSchema } from '../schemas';
 import { auth, checkPermission } from '@/shared/lib/auth';
+import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { CustomerListItem, CustomerDetail, CustomerProfile, ReferralChain } from '../types';
 import { logger } from '@/shared/lib/logger';
@@ -18,104 +19,109 @@ import { AppError, ERROR_CODES } from '@/shared/lib/errors';
  * Security check: Automatically gets tenantId from session for tenant isolation (安全检查：自动从 session 获取 tenantId 实现租户隔离)
  */
 export async function getCustomers(params: z.input<typeof getCustomersSchema>): Promise<{ data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } }> {
-    const session = await auth();
-    if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
-
-    const tenantId = session.user.tenantId;
-    const parsedArgs = getCustomersSchema.parse(params);
-    const { page, search, type, level, assignedSalesId, lifecycleStage, pipelineStatus } = parsedArgs;
-    const safePageSize = Math.min(parsedArgs.pageSize, 100);
-    const offset = (page - 1) * safePageSize;
-
-    // 首先添加租户隔离条件
-    // [Fix 1.1] 过滤已合并和已删除的客户
-    const whereConditions = [
-        eq(customers.tenantId, tenantId),
-        eq(customers.isMerged, false),
-        isNull(customers.deletedAt)
-    ];
-
-    // [Fix 1.4] 数据范围权限控制
-    // 如果没有 ALL_VIEW 权限，强制只能查看自己名下的客户
-    const hasAllView = await checkPermission(session, PERMISSIONS.CUSTOMER.ALL_VIEW);
-    if (!hasAllView) {
-        // 如果用户尝试查询其他人的数据，或者是默认查询，都强制加上 assignedSalesId = userId
-        // 注意：如果用户传了 assignedSalesId 且不等于 userId，查询结果将为空 (userId AND otherId)
-        whereConditions.push(eq(customers.assignedSalesId, session.user.id));
-    } else if (assignedSalesId) {
-        // 如果有 ALL_VIEW 权限且指定了 assignedSalesId，则按指定筛选
-        whereConditions.push(eq(customers.assignedSalesId, assignedSalesId));
-    }
-
-    if (search) {
-        // [Fix 3.2] SQL 注入与通配符转义
-        // 虽然 sql 模板是参数化的，但 LIKE 模式中的 % 和 _ 需要转义防止模式匹配攻击
-        const escapedSearch = search.replace(/[%_]/g, '\\$&');
-        whereConditions.push(
-            sql`(${customers.name} ILIKE ${`%${escapedSearch}%`} OR ${customers.phone} ILIKE ${`%${escapedSearch}%`} OR ${customers.customerNo} ILIKE ${`%${escapedSearch}%`})`
-        );
-    }
-
-    if (type) {
-        whereConditions.push(eq(customers.type, type));
-    }
-
-    if (level) {
-        if (['A', 'B', 'C', 'D'].includes(level)) {
-            whereConditions.push(eq(customers.level, level as 'A' | 'B' | 'C' | 'D'));
-        }
-    }
-
-    // [Fix 1.5] 新增字段过滤
-    if (lifecycleStage) {
-        whereConditions.push(eq(customers.lifecycleStage, lifecycleStage as (typeof customerLifecycleStages)[number]));
-    }
-
-    if (pipelineStatus) {
-        whereConditions.push(eq(customers.pipelineStatus, pipelineStatus as (typeof customerPipelineStatuses)[number]));
-    }
-
-    const whereClause = and(...whereConditions);
-
-    let data;
     try {
-        data = await db.query.customers.findMany({
-            where: whereClause,
-            with: {
-                assignedSales: true,
-            },
-            orderBy: [desc(customers.createdAt)],
-            limit: safePageSize,
-            offset: offset,
-        });
+        const session = await auth();
+        if (!session?.user?.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
+
+        const tenantId = session.user.tenantId;
+        const parsedArgs = getCustomersSchema.parse(params);
+        const { page, search, type, level, assignedSalesId, lifecycleStage, pipelineStatus } = parsedArgs;
+        const safePageSize = Math.min(parsedArgs.pageSize, 100);
+        const offset = (page - 1) * safePageSize;
+
+        // 首先添加租户隔离条件
+        // [Fix 1.1] 过滤已合并和已删除的客户
+        const whereConditions = [
+            eq(customers.tenantId, tenantId),
+            eq(customers.isMerged, false),
+            isNull(customers.deletedAt)
+        ];
+
+        // [Fix 1.4] 数据范围权限控制
+        // 如果没有 ALL_VIEW 权限，强制只能查看自己名下的客户
+        const hasAllView = await checkPermission(session, PERMISSIONS.CUSTOMER.ALL_VIEW);
+        if (!hasAllView) {
+            // 如果用户尝试查询其他人的数据，或者是默认查询，都强制加上 assignedSalesId = userId
+            // 注意：如果用户传了 assignedSalesId 且不等于 userId，查询结果将为空 (userId AND otherId)
+            whereConditions.push(eq(customers.assignedSalesId, session.user.id));
+        } else if (assignedSalesId) {
+            // 如果有 ALL_VIEW 权限且指定了 assignedSalesId，则按指定筛选
+            whereConditions.push(eq(customers.assignedSalesId, assignedSalesId));
+        }
+
+        if (search) {
+            // [Fix 3.2] SQL 注入与通配符转义
+            // 虽然 sql 模板是参数化的，但 LIKE 模式中的 % 和 _ 需要转义防止模式匹配攻击
+            const escapedSearch = search.replace(/[%_]/g, '\\$&');
+            whereConditions.push(
+                sql`(${customers.name} ILIKE ${`%${escapedSearch}%`} OR ${customers.phone} ILIKE ${`%${escapedSearch}%`} OR ${customers.customerNo} ILIKE ${`%${escapedSearch}%`})`
+            );
+        }
+
+        if (type) {
+            whereConditions.push(eq(customers.type, type));
+        }
+
+        if (level) {
+            if (['A', 'B', 'C', 'D'].includes(level)) {
+                whereConditions.push(eq(customers.level, level as 'A' | 'B' | 'C' | 'D'));
+            }
+        }
+
+        // [Fix 1.5] 新增字段过滤
+        if (lifecycleStage) {
+            whereConditions.push(eq(customers.lifecycleStage, lifecycleStage as (typeof customerLifecycleStages)[number]));
+        }
+
+        if (pipelineStatus) {
+            whereConditions.push(eq(customers.pipelineStatus, pipelineStatus as (typeof customerPipelineStatuses)[number]));
+        }
+
+        const whereClause = and(...whereConditions);
+
+        let data;
+        try {
+            data = await db.query.customers.findMany({
+                where: whereClause,
+                with: {
+                    assignedSales: true,
+                },
+                orderBy: [desc(customers.createdAt)],
+                limit: safePageSize,
+                offset: offset,
+            });
+        } catch (error) {
+            logger.error('Error fetching customers with relations, falling back to basic query:', error, { tenantId, params });
+            // Fallback: try fetching without relations if the join fails (e.g. schema mismatch)
+            data = await db.query.customers.findMany({
+                where: whereClause,
+                orderBy: [desc(customers.createdAt)],
+                limit: safePageSize,
+                offset: offset,
+            });
+        }
+
+        // Count for pagination
+        const countResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(customers)
+            .where(whereClause);
+
+        const total = Number(countResult[0].count);
+
+        const formattedData = data.map((customer: any) => ({
+            ...customer,
+            assignedSalesName: customer.assignedSales?.name || null
+        }));
+
+        return {
+            data: formattedData as CustomerListItem[],
+            pagination: { page, pageSize: safePageSize, total, totalPages: Math.ceil(total / safePageSize) }
+        };
     } catch (error) {
-        logger.error('Error fetching customers with relations, falling back to basic query:', error, { tenantId, params });
-        // Fallback: try fetching without relations if the join fails (e.g. schema mismatch)
-        data = await db.query.customers.findMany({
-            where: whereClause,
-            orderBy: [desc(customers.createdAt)],
-            limit: safePageSize,
-            offset: offset,
-        });
+        logger.error('[customers] 获取客户列表失败:', error);
+        throw error;
     }
-
-    // Count for pagination
-    const countResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(customers)
-        .where(whereClause);
-
-    const total = Number(countResult[0].count);
-
-    return {
-        data,
-        pagination: {
-            page,
-            pageSize: safePageSize,
-            total,
-            totalPages: Math.ceil(total / safePageSize),
-        },
-    } as { data: CustomerListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number } };
 }
 
 /**
@@ -161,15 +167,12 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetail | un
 // [Customer-01] 客户画像增强
 // ============================================================
 
-import { orders } from '@/shared/api/schema';
-import { sum, count, max } from 'drizzle-orm';
-import { createSafeAction } from '@/shared/lib/server-action';
 
 const getCustomerProfileSchema = z.object({
     customerId: z.string().uuid(),
 });
 
-const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSchema, async ({ customerId }, { session }) => {
+const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSchema, async ({ customerId }: { customerId: string }, { session }) => {
     if (!session.user.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
 
@@ -186,7 +189,7 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
             }
         });
     } catch (error) {
-        console.error('Error fetching customer profile with relations, falling back:', error);
+        logger.error('Error fetching customer profile with relations, falling back:', { error });
         customer = await db.query.customers.findFirst({
             where: and(
                 eq(customers.id, customerId),
@@ -277,24 +280,23 @@ const getCustomerProfileActionInternal = createSafeAction(getCustomerProfileSche
 });
 
 /**
- * Get customer profile
  * 获取客户画像
- * Aggregates basic customer info, order stats, and RFM analytical data. 
- * (聚合客户基本信息、订单统计和 RFM 分析数据)
+ * Get customer profile
+ * 
+ * 聚合客户基本信息、订单统计和 RFM 分析数据
+ * Aggregates basic customer info, order stats, and RFM analytical data.
+ * @param params 包含 customerId 的参数对象
  */
-export async function getCustomerProfile(params: z.infer<typeof getCustomerProfileSchema>) {
+export const getCustomerProfile = async (params: z.infer<typeof getCustomerProfileSchema>) => {
+    logger.info('[customers] 获取客户画像:', { customerId: params.customerId });
     return getCustomerProfileActionInternal(params);
-}
+};
 
 // ============================================================
 // [Customer-03] 转介绍追踪
 // ============================================================
 
-const getReferralChainSchema = z.object({
-    customerId: z.string().uuid(),
-});
-
-const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, async ({ customerId }, { session }) => {
+const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, async ({ customerId }: { customerId: string }, { session }) => {
     if (!session.user.tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
 
@@ -342,11 +344,14 @@ const getReferralChainActionInternal = createSafeAction(getReferralChainSchema, 
 });
 
 /**
- * Get customer referral chain
  * 获取客户转介绍链
+ * Get customer referral chain
+ * 
+ * 构建包含推荐人、直接下级和二级下级的树状结构
  * Builds a tree structure containing referrer, immediate downstream, and secondary downstream.
- * (构建包含推荐人、直接下级和二级下级的树状结构)
+ * @param params 包含 customerId 的参数对象
  */
-export async function getReferralChain(params: z.infer<typeof getReferralChainSchema>) {
+export const getReferralChain = async (params: z.infer<typeof getReferralChainSchema>) => {
+    logger.info('[customers] 获取客户转介绍链:', { customerId: params.customerId });
     return getReferralChainActionInternal(params);
-}
+};

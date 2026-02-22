@@ -22,7 +22,9 @@ vi.mock('@/shared/api/db', () => ({
         },
         update: vi.fn(() => ({
             set: vi.fn(() => ({
-                where: vi.fn(() => Promise.resolve({}))
+                where: vi.fn(() => ({
+                    returning: vi.fn(() => Promise.resolve([{ id: '550e8400-e29b-41d4-a716-446655440000' }]))
+                }))
             }))
         })),
     }
@@ -89,6 +91,14 @@ describe('Order Actions (Final Polish)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (auth as any).mockResolvedValue(mockSession);
+        // 预设 orders.findFirst 默认返回 PAID 状态的订单（用于 confirmOrderProduction / requestDelivery）
+        (db.query.orders.findFirst as any).mockResolvedValue({
+            id: VALID_ORDER_ID,
+            tenantId: VALID_TENANT_ID,
+            status: 'PAID',
+            settlementType: 'CASH',
+            version: 1,
+        });
     });
 
     describe('createOrderFromQuote', () => {
@@ -116,7 +126,7 @@ describe('Order Actions (Final Polish)', () => {
                 tenantId: VALID_TENANT_ID
             });
 
-            const result = await confirmOrderProduction({ orderId: VALID_ORDER_ID });
+            const result = await confirmOrderProduction({ orderId: VALID_ORDER_ID, version: 1 });
 
             expect(result.success).toBe(true);
             expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_PRODUCTION_STARTED' }));
@@ -127,7 +137,8 @@ describe('Order Actions (Final Polish)', () => {
         it('should successfully split order', async () => {
             const result = await splitOrder({
                 orderId: VALID_ORDER_ID,
-                items: [{ itemId: VALID_ITEM_ID, quantity: '1', supplierId: VALID_SUPPLIER_ID }]
+                items: [{ itemId: VALID_ITEM_ID, quantity: '1', supplierId: VALID_SUPPLIER_ID }],
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -139,7 +150,8 @@ describe('Order Actions (Final Polish)', () => {
         it('should update status', async () => {
             const result = await requestDelivery({
                 orderId: VALID_ORDER_ID,
-                company: 'SF'
+                company: 'SF',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -152,7 +164,8 @@ describe('Order Actions (Final Polish)', () => {
             const result = await updateLogistics({
                 orderId: VALID_ORDER_ID,
                 company: 'JD',
-                trackingNo: 'JD123456789'
+                trackingNo: 'JD123456789',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -162,7 +175,7 @@ describe('Order Actions (Final Polish)', () => {
 
     describe('confirmInstallationAction', () => {
         it('should call OrderService', async () => {
-            const result = await confirmInstallationAction(VALID_ORDER_ID);
+            const result = await confirmInstallationAction({ orderId: VALID_ORDER_ID, version: 1 });
 
             expect(result.success).toBe(true);
             expect(OrderService.confirmInstallation).toHaveBeenCalled();
@@ -172,7 +185,7 @@ describe('Order Actions (Final Polish)', () => {
 
     describe('customerAcceptAction', () => {
         it('should call customerAccept', async () => {
-            const result = await customerAcceptAction(VALID_ORDER_ID);
+            const result = await customerAcceptAction({ orderId: VALID_ORDER_ID, version: 1 });
 
             expect(result.success).toBe(true);
             expect(OrderService.customerAccept).toHaveBeenCalled();
@@ -182,7 +195,7 @@ describe('Order Actions (Final Polish)', () => {
 
     describe('closeOrderAction', () => {
         it('should close order', async () => {
-            const result = await closeOrderAction(VALID_ORDER_ID);
+            const result = await closeOrderAction({ orderId: VALID_ORDER_ID, version: 1 });
 
             expect(result.success).toBe(true);
             expect(AuditService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'ORDER_CLOSED' }));

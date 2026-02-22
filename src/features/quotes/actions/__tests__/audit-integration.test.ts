@@ -152,31 +152,31 @@ const MOCK_SESSION = {
 };
 
 const MOCK_UUID = {
-    QUOTE: '33333333-3333-3333-3333-333333333333',
-    CUSTOMER: '44444444-4444-4444-4444-444444444444',
-    PROJECT: '55555555-5555-5555-5555-555555555555',
-    MEASURE: '66666666-6666-6666-6666-666666666666',
-    NEW_QUOTE: '77777777-7777-7777-7777-777777777777',
-    ORDER: '88888888-8888-8888-8888-888888888888'
+    QUOTE: '33100000-0000-4000-a000-000000000021',
+    CUSTOMER: '33100000-0000-4000-a000-000000000022',
+    PROJECT: '33100000-0000-4000-a000-000000000023',
+    MEASURE: '33100000-0000-4000-a000-000000000024',
+    NEW_QUOTE: '33100000-0000-4000-a000-000000000025',
+    ORDER: '33100000-0000-4000-a000-000000000026'
 };
 
 describe('Quote Actions Audit Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // 默认模拟登录用户
-        vi.mocked(auth).mockResolvedValue(MOCK_SESSION as any);
+        vi.mocked(auth).mockResolvedValue(MOCK_SESSION as Parameters<typeof auth>[0] extends never ? typeof MOCK_SESSION : Awaited<ReturnType<typeof auth>>);
 
         // Mock QuoteService 返回的 ID
-        vi.mocked(QuoteService.copyQuote).mockResolvedValue({ id: MOCK_UUID.NEW_QUOTE, quoteNo: 'QT-NEW' } as any);
-        vi.mocked(QuoteService.createNextVersion).mockResolvedValue({ id: MOCK_UUID.NEW_QUOTE, quoteNo: 'QT-VER' } as any);
-        vi.mocked(QuoteLifecycleService.convertToOrder).mockResolvedValue({ id: MOCK_UUID.ORDER } as any);
+        vi.mocked(QuoteService.copyQuote).mockResolvedValue({ id: MOCK_UUID.NEW_QUOTE, quoteNo: 'QT-NEW' } as Awaited<ReturnType<typeof QuoteService.copyQuote>>);
+        vi.mocked(QuoteService.createNextVersion).mockResolvedValue({ id: MOCK_UUID.NEW_QUOTE, quoteNo: 'QT-VER' } as Awaited<ReturnType<typeof QuoteService.createNextVersion>>);
+        vi.mocked(QuoteLifecycleService.convertToOrder).mockResolvedValue({ id: MOCK_UUID.ORDER } as Awaited<ReturnType<typeof QuoteLifecycleService.convertToOrder>>);
 
         // Mock DB insert returning 必须匹配 schema
         vi.mocked(db.insert).mockReturnValue({
             values: vi.fn().mockReturnValue({
                 returning: vi.fn().mockResolvedValue([{ id: MOCK_UUID.QUOTE, quoteNo: 'QT-MOCK' }])
             })
-        } as any);
+        } as ReturnType<typeof db.insert>);
     });
 
     describe('createQuote', () => {
@@ -187,7 +187,7 @@ describe('Quote Actions Audit Integration', () => {
                 measureVariantId: MOCK_UUID.MEASURE
             };
 
-            await createQuote(input as any);
+            await createQuote(input as Parameters<typeof createQuote>[0]);
 
             expect(AuditService.recordFromSession).toHaveBeenCalledWith(
                 MOCK_SESSION,
@@ -213,7 +213,7 @@ describe('Quote Actions Audit Integration', () => {
                 discountRate: '1.0000',
                 discountAmount: '0.00',
                 totalAmount: '1000.00'
-            } as any);
+            } as Awaited<ReturnType<typeof db.query.quotes.findFirst>>);
 
             const input = {
                 id: MOCK_UUID.QUOTE,
@@ -243,7 +243,7 @@ describe('Quote Actions Audit Integration', () => {
     describe('copyQuote', () => {
         it('复制报价单应记录审计日志', async () => {
             // 模拟源报价单存在
-            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE } as any);
+            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE } as Awaited<ReturnType<typeof db.query.quotes.findFirst>>);
 
             const input = {
                 quoteId: MOCK_UUID.QUOTE,
@@ -271,7 +271,7 @@ describe('Quote Actions Audit Integration', () => {
         beforeEach(() => {
             // 确保每次测试前 mock 数据干净
             vi.clearAllMocks();
-            vi.mocked(auth).mockResolvedValue(MOCK_SESSION as any);
+            vi.mocked(auth).mockResolvedValue(MOCK_SESSION as Awaited<ReturnType<typeof auth>>);
         });
 
         it('提交报价单应记录审计日志', async () => {
@@ -294,7 +294,7 @@ describe('Quote Actions Audit Integration', () => {
         });
 
         it('锁定报价单应记录审计日志', async () => {
-            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE, tenantId: MOCK_SESSION.user.tenantId } as any);
+            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE, tenantId: MOCK_SESSION.user.tenantId } as Awaited<ReturnType<typeof db.query.quotes.findFirst>>);
             await LifecycleActions.lockQuote({ id: MOCK_UUID.QUOTE });
             expect(AuditService.recordFromSession).toHaveBeenCalledWith(
                 MOCK_SESSION, 'quotes', MOCK_UUID.QUOTE, 'UPDATE',
@@ -305,7 +305,7 @@ describe('Quote Actions Audit Integration', () => {
         });
 
         it('解锁报价单应记录审计日志', async () => {
-            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE, tenantId: MOCK_SESSION.user.tenantId } as any);
+            vi.mocked(db.query.quotes.findFirst).mockResolvedValue({ id: MOCK_UUID.QUOTE, tenantId: MOCK_SESSION.user.tenantId } as Awaited<ReturnType<typeof db.query.quotes.findFirst>>);
             await LifecycleActions.unlockQuote({ id: MOCK_UUID.QUOTE });
             expect(AuditService.recordFromSession).toHaveBeenCalledWith(
                 MOCK_SESSION, 'quotes', MOCK_UUID.QUOTE, 'UPDATE',

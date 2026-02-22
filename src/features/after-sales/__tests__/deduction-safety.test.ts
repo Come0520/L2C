@@ -118,5 +118,78 @@ describe('Deduction Safety Logic (Optimized)', () => {
             expect(result.allowed).toBe(false);
             expect(result.status).toBe('BLOCKED');
         });
+
+        it('should allow if new deduction is within limit for new party', async () => {
+            (db.select as any).mockReturnValue({
+                from: vi.fn().mockReturnThis(),
+                where: vi.fn().mockResolvedValue([{ totalDeducted: null, totalSettled: null }]) // empty ledger
+            });
+            const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 1000); // Installer max is 5000
+            expect(result.allowed).toBe(true);
+            expect(result.status).toBe('NORMAL');
+            expect(result.remainingQuota).toBe(4000);
+        });
+
+        it('should block if new deduction exceeds limit for new party', async () => {
+            (db.select as any).mockReturnValue({
+                from: vi.fn().mockReturnThis(),
+                where: vi.fn().mockResolvedValue([{ totalDeducted: null, totalSettled: null }]) // empty ledger
+            });
+            const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 6000); // Exceeds 5000
+            expect(result.allowed).toBe(false);
+            expect(result.status).toBe('BLOCKED');
+            expect(result.remainingQuota).toBe(5000);
+        });
+
+        it('should warn if new total approaches limit', async () => {
+            (db.select as any).mockReturnValue({
+                from: vi.fn().mockReturnThis(),
+                where: vi.fn().mockResolvedValue([{ totalDeducted: '3000', totalSettled: '0' }])
+            });
+            (db.query.users.findFirst as any).mockResolvedValue({ name: 'Installer A' });
+
+            const result = await checkDeductionAllowed('INSTALLER', 'inst-1', 1500); // 3000+1500=4500, ratio 0.9
+            expect(result.allowed).toBe(true);
+            expect(result.status).toBe('WARNING');
+        });
+    });
+
+    describe('Tenant Context & Other Party Types', () => {
+        it('should return null/empty if no tenant session', async () => {
+            const authModule = await import('@/shared/lib/auth');
+            const auth = authModule.auth as any;
+            auth.mockResolvedValueOnce({ user: { id: 'user-1' } }); // No tenantId
+
+            const ledger = await getDeductionLedger('INSTALLER', 'inst-1');
+            expect(ledger).toBeNull();
+
+            auth.mockResolvedValueOnce({ user: { id: 'user-1' } });
+            const ledgers = await getAllDeductionLedgers();
+            expect(ledgers).toEqual([]);
+        });
+
+        it('should correctly configure limits for MEASURER, LOGISTICS, CUSTOMER, COMPANY', async () => {
+            (db.select as any).mockReturnValue({
+                from: vi.fn().mockReturnThis(),
+                where: vi.fn().mockResolvedValue([{ totalDeducted: '100', totalSettled: '0' }])
+            });
+
+            // MEASURER
+            let ledger = await getDeductionLedger('MEASURER', 'p-1');
+            expect(ledger?.maxAllowed).toBe(DEDUCTION_SAFETY_CONFIG.MEASURER_MAX_DEDUCTION);
+
+            // LOGISTICS
+            ledger = await getDeductionLedger('LOGISTICS', 'p-2');
+            expect(ledger?.maxAllowed).toBe(DEDUCTION_SAFETY_CONFIG.LOGISTICS_MAX_DEDUCTION);
+
+            // CUSTOMER
+            ledger = await getDeductionLedger('CUSTOMER', 'p-3');
+            expect(ledger?.maxAllowed).toBe(9999999);
+
+            // COMPANY
+            ledger = await getDeductionLedger('COMPANY', 'p-4');
+            expect(ledger?.maxAllowed).toBe(9999999);
+            expect(ledger?.partyName).toBe('公司内部');
+        });
     });
 });

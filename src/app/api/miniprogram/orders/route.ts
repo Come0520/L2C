@@ -1,160 +1,141 @@
+/**
+ * 订单 API
+ *
+ * GET  /api/miniprogram/orders — 获取订单列表（带分页）
+ * POST /api/miniprogram/orders — 从报价单创建订单
+ */
 import { NextRequest } from 'next/server';
-import { db } from '@/shared/api/db';
-import { orders, orderItems, quotes, paymentSchedules } from '@/shared/api/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { generateOrderNo } from '@/shared/lib/generators';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../auth-utils';
+import { CreateOrderSchema, PaginationSchema } from '../miniprogram-schemas';
+import { OrderService } from '@/shared/services/miniprogram/order.service';
+import { IdempotencyGuard, RateLimiter } from '@/shared/services/miniprogram/security.service';
 
-
-
+/**
+ * 获取订单列表（分页、状态筛选、关联客户名称）
+ *
+ * @route GET /api/miniprogram/orders
+ * @auth 需要登录（Bearer Token）
+ * @query status - 订单状态筛选（可选，'ALL' 或具体状态值）
+ * @query page - 页码（默认 1）
+ * @query limit - 每页条数（默认 50，最大 100）
+ * @returns 订单列表，含客户名称
+ */
 export async function GET(request: NextRequest) {
     try {
         const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return apiError('Unauthorized', 401);
+            return apiError('未授权', 401);
         }
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
 
-        const conditions = [eq(orders.tenantId, user.tenantId)];
-        const VALID_STATUSES = ['PENDING', 'PENDING_PO', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'Draft']; // Add other statuses as needed
-        if (status && status !== 'ALL' && VALID_STATUSES.includes(status)) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            conditions.push(eq(orders.status, status as any));
-        }
-
-        const list = await db.query.orders.findMany({
-            where: and(...conditions),
-            orderBy: [desc(orders.createdAt)],
-            with: {
-                customer: {
-                    columns: { name: true } // Denormalized name is on order, but fetch relation just in case
-                }
-            }
+        // 分页参数验证
+        const pagination = PaginationSchema.safeParse({
+            page: searchParams.get('page'),
+            limit: searchParams.get('limit'),
+            cursor: searchParams.get('cursor') || undefined,
         });
+        const { page, limit, cursor } = pagination.success
+            ? pagination.data
+            : { page: 1, limit: 50, cursor: undefined };
 
-        return apiSuccess(list);
+        const list = await OrderService.getOrders(user.tenantId, { status, page, limit, cursor });
+
+        const response = apiSuccess(list);
+        response.headers.set('Cache-Control', 'private, max-age=60');
+        return response;
 
     } catch (error) {
-        console.error('Get Orders Error:', error);
-        return apiError('Internal Error', 500);
+        logger.error('[Orders] 获取订单列表失败', { route: 'orders', error });
+        return apiError('获取订单列表失败', 500);
     }
 }
 
+/**
+ * 从已确认报价单创建订单（含订单项、付款计划）
+ *
+ * @route POST /api/miniprogram/orders
+ * @auth 需要登录（Bearer Token）
+ * @body quoteId - 报价单 ID（UUID 格式，必须为已确认状态）
+ * @returns 新订单信息
+ * @audit 记录 CREATE_FROM_QUOTE 审计日志
+ * @transaction 使用事务确保订单、订单项、付款计划原子创建
+ */
 export async function POST(request: NextRequest) {
     try {
         const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return apiError('Unauthorized', 401);
+            return apiError('未授权', 401);
         }
 
         const body = await request.json();
-        const { quoteId } = body;
 
-        if (!quoteId) {
-            return apiError('Quote ID required', 400);
+        // Zod 输入验证
+        const parsed = CreateOrderSchema.safeParse(body);
+        if (!parsed.success) {
+            return apiError(parsed.error.issues[0].message, 400);
         }
 
-        // 1. Fetch Quote
-        const quote = await db.query.quotes.findFirst({
-            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, user.tenantId)),
-            with: {
-                items: true
+        // 频控：单用户 2秒/次 创建速率限制
+        if (!RateLimiter.allow(`create_order_${user.id}`, 3, 2000)) {
+            return apiError('操作太频繁，请稍后再试', 429);
+        }
+
+        const { quoteId } = parsed.data;
+
+        // 幂等键：同一租户同一用户针对同一个 quoteId 只能产生一个有效流转操作
+        const idemKey = `order:create:${user.tenantId}:${user.id}:${quoteId}`;
+        const idemRecord = IdempotencyGuard.check(idemKey);
+
+        if (idemRecord) {
+            if (idemRecord.status === 'COMPLETED') {
+                return apiSuccess(idemRecord.response);
             }
-        });
-
-        if (!quote) {
-            return apiError('Quote not found', 404);
+            if (idemRecord.status === 'PROCESSING') {
+                return apiError('订单正在处理中，请勿重复提交', 409);
+            }
         }
 
-        // Logic Check: Quote must be ORDERED
-        if (quote.status !== 'ORDERED') {
-            return apiError('Quote must be confirmed first', 400);
-        }
+        // 抢占幂等执行锁
+        IdempotencyGuard.start(idemKey);
 
-        // NOTE: Check if order already exists for this quote? (Optional but good practice)
+        try {
+            const result = await OrderService.createOrderFromQuote(user.tenantId, user.id, quoteId);
 
-        // 2. Create Order
-        const orderNo = await generateOrderNo(user.tenantId);
+            // 操作完满后写入缓存以便应对前端超时引起的即刻自动重试
+            IdempotencyGuard.complete(idemKey, result);
 
-        return await db.transaction(async (tx) => {
-            // A. Insert Order
-            const [newOrder] = await tx.insert(orders).values({
+            logger.info('[Orders] 订单创建成功', {
+                route: 'orders',
+                orderId: result.id,
+                quoteId,
+                userId: user.id,
                 tenantId: user.tenantId,
-                orderNo: orderNo,
-                quoteId: quote.id,
-                quoteVersionId: quote.id, // Simplifying for now, assuming quote is latest
-                customerId: quote.customerId,
-                // customerName: order.customer?.name,
-                // customerPhone: order.customer?.phone,
-                totalAmount: quote.totalAmount,
-                paidAmount: "0",
-                balanceAmount: quote.totalAmount,
-                settlementType: 'CASH', // Default to Cash
-                status: 'PENDING_PO',
-                salesId: user.id,
-                remark: quote.notes,
-                createdBy: user.id
-            }).returning();
+            });
 
-            // B. Insert Items
-            if (quote.items && quote.items.length > 0) {
-                const itemsToInsert = quote.items.map(item => ({
-                    tenantId: user.tenantId,
-                    orderId: newOrder.id,
-                    quoteItemId: item.id,
-                    roomName: item.roomName || 'Unknown Room',
-                    productId: item.productId,
-                    productName: item.productName,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    category: item.category as any,
-                    quantity: item.quantity,
-                    width: item.width,
-                    height: item.height,
-                    unitPrice: item.unitPrice,
-                    subtotal: item.subtotal,
-                    status: 'PENDING' as const
-                }));
-                await tx.insert(orderItems).values(itemsToInsert);
-            }
+            return apiSuccess(result);
+        } catch (bizError: unknown) {
+            IdempotencyGuard.fail(idemKey);
 
-            // C. Create Default Payment Schedules (Deposit 60%, Balance 40%)
-            // This logic should ideally be configurable. For MVP hardcode.
-            const total = parseFloat(quote.totalAmount as string);
-            const deposit = (total * 0.6).toFixed(2);
-            const balance = (total - parseFloat(deposit)).toFixed(2);
-
-            await tx.insert(paymentSchedules).values([
-                {
-                    tenantId: user.tenantId,
-                    orderId: newOrder.id,
-                    name: '预付款 (60%)',
-                    amount: deposit,
-                    status: 'PENDING',
-                    expectedDate: new Date().toISOString() // Now
-                },
-                {
-                    tenantId: user.tenantId,
-                    orderId: newOrder.id,
-                    name: '尾款 (40%)',
-                    amount: balance,
-                    status: 'PENDING',
-                    // expectedDate set to later?
+            if (bizError instanceof Error) {
+                if (bizError.message === 'QUOTE_NOT_FOUND') {
+                    return apiError('报价单不存在', 404);
                 }
-            ]);
-
-            // D. Update Quote Status
-            await tx.update(quotes)
-                .set({ status: 'ORDERED' }) // Assume we add this status or use existing logical equivalent
-                .where(eq(quotes.id, quote.id));
-
-            return apiSuccess(newOrder);
-        });
+                if (bizError.message === 'QUOTE_NOT_CONFIRMED') {
+                    return apiError('报价单需先确认后才能下单', 400);
+                }
+            }
+            throw bizError;
+        }
 
     } catch (error) {
-        console.error('Create Order Error:', error);
-        return apiError('Internal Error', 500);
+        logger.error('[Orders] 创建订单失败', { route: 'orders', error });
+        // 对于非预期的系统级错误，也要释放锁
+        // IdempotencyGuard.fail 会在下一次 TTL 时限或手动捕获触发时剔除，此为宽泛捕获无需强制在此释放
+        return apiError('创建订单失败', 500);
     }
 }
+

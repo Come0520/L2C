@@ -8,6 +8,7 @@ import Plus from 'lucide-react/dist/esm/icons/plus';
 import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
 import { getRoomGroups } from '@/features/settings/actions/room-groups-actions';
 import { RoomGroup } from '@/services/quote-config.service';
+import { logger } from '@/shared/lib/logger';
 
 // 从服务重新导出类型
 export type { RoomGroup };
@@ -179,7 +180,7 @@ export function RoomSelectorWithConfig({
                 const groups = await getRoomGroups();
                 setRoomGroups(groups);
             } catch (error) {
-                console.error('加载空间分组配置失败:', error);
+                logger.error('加载空间分组配置失败:', error);
                 // 出错时使用默认配置
             }
         }

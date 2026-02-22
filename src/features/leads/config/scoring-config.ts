@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 /**
  * 线索评分配置
  * 

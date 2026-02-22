@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { Button } from '@/shared/ui/button';
 import { X } from 'lucide-react';
 import {

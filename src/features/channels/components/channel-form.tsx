@@ -30,8 +30,7 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
     };
 
     const form = useForm<ChannelInput>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
-        resolver: zodResolver(channelSchema) as any,
+        resolver: zodResolver(channelSchema),
         defaultValues: {
             category: initialData?.category || 'OFFLINE',
             channelType: initialData?.channelType || 'DECORATION_CO',
@@ -322,6 +321,7 @@ export function ChannelForm({ initialData, tenantId: _tenantId }: ChannelFormPro
                                                     type="number"
                                                     step="0.01"
                                                     {...field}
+                                                    value={(field.value as number | string) ?? ''}
                                                     onChange={(e) => field.onChange(e.target.value)}
                                                 />
                                             </FormControl>

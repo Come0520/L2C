@@ -10,6 +10,7 @@ import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../auth-utils';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
@@ -34,7 +35,7 @@ async function verifyAdmin(request: NextRequest) {
     // 从数据库获取用户角色
     const user = await db.query.users.findFirst({
       where: (u, { eq }) => eq(u.id, authUser.id),
-      columns: { role: true, tenantId: true },
+      columns: { id: true, role: true, tenantId: true },
     });
 
     if (user?.role === 'admin' || user?.role === 'BOSS') {
@@ -69,8 +70,8 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(paymentConfig);
   } catch (error) {
-    console.error('Get Payment Config Error:', error);
-    return apiError('获取失败', 500);
+    logger.error('[TenantConfig] 获取支付配置异常', { route: 'tenant/payment-config', error });
+    return apiError('获取支付配置失败', 500);
   }
 }
 
@@ -114,9 +115,20 @@ export async function POST(request: NextRequest) {
         .where(eq(tenants.id, user.tenantId!));
     });
 
+    // 3. 审计日志
+    const { AuditService } = await import('@/shared/services/audit-service');
+    await AuditService.log(db, {
+      tableName: 'tenants',
+      recordId: user.tenantId!,
+      action: 'UPDATE_PAYMENT_CONFIG',
+      userId: user.id,
+      tenantId: user.tenantId!,
+      details: validation.data
+    });
+
     return apiSuccess(null);
   } catch (error) {
-    console.error('Update Payment Config Error:', error);
-    return apiError(error instanceof Error ? error.message : '更新失败', 500);
+    logger.error('[TenantConfig] 更新支付配置异常', { route: 'tenant/payment-config', error });
+    return apiError('更新支付配置失败', 500);
   }
 }

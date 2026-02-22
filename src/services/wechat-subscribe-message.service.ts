@@ -12,6 +12,7 @@
 import { db } from '@/shared/api/db';
 import { users, tenants, customers } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
 
 // ============ 类型定义 ============
 
@@ -95,7 +96,7 @@ async function sendSubscribeMessage(
     const result: WeChatApiResponse = await response.json();
 
     if (result.errcode === 0) {
-      console.log(`[微信订阅消息] 发送成功, openId: ${openId.slice(0, 10)}...`);
+      logger.info(`[微信订阅消息] 发送成功, openId: ${openId.slice(0, 10)}...`);
       return true;
     } else {
       console.error(`[微信订阅消息] 发送失败: ${result.errcode} - ${result.errmsg}`);
@@ -119,7 +120,7 @@ async function sendSubscribeMessage(
 export async function notifyTenantApproved(tenantId: string): Promise<boolean> {
   const templateId = process.env.WECHAT_TEMPLATE_TENANT_APPROVED;
   if (!templateId) {
-    console.log('[微信订阅消息] 租户审批通过模板未配置，跳过发送');
+    logger.info('[微信订阅消息] 租户审批通过模板未配置，跳过发送');
     return false;
   }
 
@@ -137,7 +138,7 @@ export async function notifyTenantApproved(tenantId: string): Promise<boolean> {
   });
 
   if (!applicant?.wechatOpenId) {
-    console.log('[微信订阅消息] 申请人未绑定微信，跳过发送');
+    logger.info('[微信订阅消息] 申请人未绑定微信，跳过发送');
     return false;
   }
 
@@ -162,7 +163,7 @@ export async function notifyTenantApproved(tenantId: string): Promise<boolean> {
 export async function notifyTenantRejected(tenantId: string, reason: string): Promise<boolean> {
   const templateId = process.env.WECHAT_TEMPLATE_TENANT_REJECTED;
   if (!templateId) {
-    console.log('[微信订阅消息] 租户审批拒绝模板未配置，跳过发送');
+    logger.info('[微信订阅消息] 租户审批拒绝模板未配置，跳过发送');
     return false;
   }
 

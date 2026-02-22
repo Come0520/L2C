@@ -4,6 +4,7 @@ import { invitations, users } from '@/shared/api/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../auth-utils';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 
 
 
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(list);
   } catch (error) {
-    console.error('获取邀请列表失败:', error);
+    logger.error('获取邀请列表失败:', error);
     return apiError('获取失败', 500);
   }
 }

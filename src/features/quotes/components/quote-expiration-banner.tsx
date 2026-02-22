@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { refreshExpiredQuotePrices } from '@/features/quotes/actions/expiration-actions';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteExpirationBannerProps {
     quoteId: string;
@@ -55,7 +56,7 @@ export function QuoteExpirationBanner({
                 });
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('操作发生错误');
         } finally {
             setIsRefreshing(false);

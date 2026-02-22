@@ -41,7 +41,7 @@ export function QuotePdfDownloader({ quote, mode, className, children }: QuotePd
             fileName={`${mode === 'internal' ? '内部' : '客户'}报价单-${quote.quoteNo}.pdf`}
             className={className}
         >
-            {/* @ts-ignore - known issue with react-pdf types vs react 18/19 */}
+            {/* Known issue with react-pdf types vs react 18/19 */}
             {({ loading }: { loading: boolean }) => {
                 if (loading) {
                     return (

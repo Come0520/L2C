@@ -19,8 +19,11 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { Decimal } from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
 
+/**
+ * 获取订单利润数据的请求参数验证 Schema
+ */
 const getOrderProfitSchema = z.object({
-    orderId: z.string()
+    orderId: z.string().describe('需要进行利润分析分析和测算的系统对应订单主键 ID (order UUID)')
 });
 
 const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, async ({ orderId }, { session }) => {
@@ -210,6 +213,13 @@ const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, asy
     };
 });
 
+/**
+ * 获取并在系统中动态核算某一特定订单的整体盈利状况。
+ * 本方法会综合库存材料、非库存材料采买、安装费用、服务量测等费用评估总毛利率。
+ * 
+ * @param params `{ orderId: string }`
+ * @returns Object 包含总计营收、详细成本清单、以及总毛利额和当前利润比。
+ */
 export async function getOrderProfitability(params: z.infer<typeof getOrderProfitSchema>) {
     return getOrderProfitabilityInternal(params);
 }

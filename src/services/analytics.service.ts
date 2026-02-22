@@ -1,6 +1,6 @@
 import { db } from "@/shared/api/db";
 import { leads, orders, users, quotes, leadStatusEnum, orderStatusEnum } from "@/shared/api/schema";
-import { count, sum, eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { count, sum, eq, desc, and, gte, lte, sql, type AnyColumn } from "drizzle-orm";
 
 export interface DateRange {
     start: Date;
@@ -73,8 +73,7 @@ export class AnalyticsService {
         // 3. Quotes Created
         // 4. Orders Confirmed
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const timeFilter = (col: any) =>
+        const timeFilter = (col: AnyColumn) =>
             range ? and(gte(col, range.start), lte(col, range.end)) : undefined;
 
         const [totalLeads] = await db

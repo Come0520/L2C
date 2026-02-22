@@ -39,6 +39,11 @@ const chainDelete = () => ({
 
 mockDb.$count = vi.fn().mockResolvedValue(1);
 mockDb.execute = vi.fn().mockResolvedValue([]);
+mockDb.select = vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([{ pending: 1, inTransit: 2, completed: 3, delayed: 0 }])
+    })
+});
 
 // 事务 mock
 mockDb.transaction = vi.fn(async (cb) => {

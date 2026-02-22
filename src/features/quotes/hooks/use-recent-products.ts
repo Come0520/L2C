@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { logger } from '@/shared/lib/logger';
 
 const STORAGE_KEY = 'quote-recent-products';
 const MAX_RECENT_ITEMS = 10;
@@ -52,7 +53,7 @@ export function useRecentProducts() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
             } catch (error) {
-                console.warn('无法保存最近使用商品:', error);
+                logger.warn('无法保存最近使用商品:', error);
             }
 
             return updated;
@@ -67,7 +68,7 @@ export function useRecentProducts() {
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch (error) {
-            console.warn('无法清除最近使用商品:', error);
+            logger.warn('无法清除最近使用商品:', error);
         }
     }, []);
 

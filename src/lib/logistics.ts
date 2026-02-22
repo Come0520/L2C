@@ -2,6 +2,8 @@
 const key = process.env.KUAIDI100_KEY;
 const customer = process.env.KUAIDI100_CUSTOMER;
 
+import { logger } from '@/shared/lib/logger';
+
 export interface TrackingResult {
     message: string;
     state: string;
@@ -22,7 +24,7 @@ export interface TrackingResult {
 
 export async function queryTracking(company: string, trackingNo: string): Promise<TrackingResult | null> {
     if (!key || !customer) {
-        console.warn('Kuaidi100 API keys not configured (KUAIDI100_KEY, KUAIDI100_CUSTOMER)');
+        logger.warn('Kuaidi100 API keys not configured (KUAIDI100_KEY, KUAIDI100_CUSTOMER)');
         return null;
     }
 
@@ -57,7 +59,7 @@ export async function queryTracking(company: string, trackingNo: string): Promis
         if (result.message && result.status !== '200') { // API often returns 200 even on logical error, but 'status' field helps
             // Note: The interface defines 'status' as string. 200 is success.
             // If validation fails, it might return message.
-            console.warn('Kuaidi100 returned error:', result.message);
+            logger.warn('Kuaidi100 returned error:', result.message);
             return null;
         }
 

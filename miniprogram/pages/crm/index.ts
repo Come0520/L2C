@@ -1,3 +1,7 @@
+/**
+ * 客户列表页
+ * 审计修复: 添加下拉刷新、分页加载
+ */
 import { authStore } from '../../stores/auth-store';
 
 Page({
@@ -5,6 +9,11 @@ Page({
         keyword: '',
         list: [] as any[],
         loading: false,
+        refreshing: false,
+        loadingMore: false,
+        noMore: false,
+        page: 1,
+        pageSize: 20,
         userInfo: null
     },
 
@@ -13,25 +22,53 @@ Page({
             this.getTabBar().setData({ selected: 2 });
         }
         this.setData({ userInfo: authStore.userInfo });
+        this.resetAndFetch();
+    },
+
+    /** 重置分页并加载 */
+    resetAndFetch() {
+        this.setData({ page: 1, list: [], noMore: false });
         this.fetchList();
     },
 
+    /** 获取客户列表 */
     async fetchList() {
-        this.setData({ loading: true });
+        const { page, pageSize, loadingMore } = this.data;
+        if (loadingMore) return;
+
+        this.setData({ loading: page === 1, loadingMore: page > 1 });
         try {
             const app = getApp<IAppOption>();
             const res = await app.request('/customers', {
-                data: { keyword: this.data.keyword }
+                data: { keyword: this.data.keyword, page, limit: pageSize }
             });
             if (res.success) {
-                this.setData({ list: res.data });
+                const items = res.data || [];
+                const newList = page === 1 ? items : [...this.data.list, ...items];
+                this.setData({
+                    list: newList,
+                    noMore: items.length < pageSize,
+                });
             }
         } catch (err) {
             console.error(err);
             wx.showToast({ title: '加载失败', icon: 'none' });
         } finally {
-            this.setData({ loading: false });
+            this.setData({ loading: false, refreshing: false, loadingMore: false });
         }
+    },
+
+    /** 下拉刷新 */
+    onPullDownRefresh() {
+        this.setData({ refreshing: true });
+        this.resetAndFetch();
+    },
+
+    /** 上拉加载更多 */
+    onLoadMore() {
+        if (this.data.noMore || this.data.loadingMore) return;
+        this.setData({ page: this.data.page + 1 });
+        this.fetchList();
     },
 
     onSearchInput(e: any) {
@@ -39,10 +76,9 @@ Page({
     },
 
     onSearch() {
-        this.fetchList();
+        this.resetAndFetch();
     },
 
-    // 跳转详情
     navigateToDetail(e: any) {
         const id = e.currentTarget.dataset.id;
         wx.navigateTo({ url: `/pages/crm/detail/index?id=${id}` });
@@ -60,14 +96,13 @@ Page({
     },
 
     onTapItem(e: any) {
-        // For now, no detail page, maybe navigate to create quote for this customer?
         const id = e.currentTarget.dataset.id;
         wx.showActionSheet({
             itemList: ['查看详情', '开报价单'],
             success: (res) => {
-                if (res.tapIndex === 1) {
-                    // Navigate to Create Quote with customer pre-filled
-                    // wx.navigateTo({ url: `/pages/quotes/create?customerId=${id}` });
+                if (res.tapIndex === 0) {
+                    wx.navigateTo({ url: `/pages/crm/detail/index?id=${id}` });
+                } else if (res.tapIndex === 1) {
                     wx.showToast({ title: '开单功能开发中', icon: 'none' });
                 }
             }

@@ -24,6 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
       args:
         - NEXT_PUBLIC_GIT_COMMIT_SHA=${GIT_COMMIT_SHA:-unknown}
         - NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME:-unknown}
@@ -51,7 +52,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 90s
 
   # Nginx 反向代理
   nginx:

@@ -45,7 +45,8 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock notification service

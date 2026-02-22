@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import ReactSignatureCanvas from 'react-signature-canvas';
 import { Button } from '@/shared/ui/button';
@@ -136,7 +138,7 @@ export function OfflineSignatureCanvas({
                 onComplete();
             }
         } catch (error) {
-            console.error('签名处理失败:', error);
+            logger.error('签名处理失败:', error);
             toast.error('签名处理失败');
         } finally {
             setIsSubmitting(false);

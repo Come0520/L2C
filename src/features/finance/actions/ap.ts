@@ -1,4 +1,5 @@
 'use server';
+import { logger } from "@/shared/lib/logger";
 
 import { db } from '@/shared/api/db';
 import {
@@ -13,11 +14,12 @@ import {
     purchaseOrders,
 } from '@/shared/api/schema';
 import { AuditService } from '@/shared/services/audit-service';
+
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_cache, revalidateTag } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { createPaymentBillSchema, verifyPaymentBillSchema } from './schema';
 import { z } from 'zod';
@@ -27,27 +29,50 @@ import { handleCommissionClawback } from '@/features/channels/logic/commission.s
 import { generateBusinessNo } from '@/shared/lib/generate-no';
 
 /**
- * 获取供应商应付对账单
+ * 获取供应商应付对账单列表
+ * 支持基于 `limit` 和 `offset` 参数进行系统分页拉取。
+ * 
+ * @param params `{ limit?: number, offset?: number }` - 默认获取最新 50 条。
+ * @returns 带有嵌套 PO 和 Supplier 实体对象的对账单列表
  */
-export async function getAPSupplierStatements() {
+export async function getAPSupplierStatements(params?: { limit?: number; offset?: number }) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：查看应付数据
     if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
-    return await db.query.apSupplierStatements.findMany({
-        where: eq(apSupplierStatements.tenantId, session.user.tenantId),
-        with: {
-            purchaseOrder: true,
-            supplier: true,
+    const limit = params?.limit || 50;
+    const offset = params?.offset || 0;
+    const tenantId = session.user.tenantId;
+
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取供应商应付对账单列表', { tenantId, limit, offset });
+            return await db.query.apSupplierStatements.findMany({
+                where: eq(apSupplierStatements.tenantId, tenantId),
+                with: {
+                    purchaseOrder: true,
+                    supplier: true,
+                },
+                orderBy: [desc(apSupplierStatements.createdAt)],
+                limit,
+                offset
+            });
         },
-        orderBy: [desc(apSupplierStatements.createdAt)],
-    });
+        [`ap-supplier-statements-${tenantId}-${limit}-${offset}`],
+        {
+            tags: [`finance-ap-supplier-${tenantId}`],
+            revalidate: 60,
+        }
+    )();
 }
 
 /**
- * 获取单条供应商应付对账单
+ * 获取单条供应商应付对账单详情
+ * 
+ * @param id 应付对账单的唯一标识 UUID
+ * @returns 包含特定应付单所有层级信息的实体
  */
 export async function getAPSupplierStatement(id: string) {
     const session = await auth();
@@ -56,39 +81,74 @@ export async function getAPSupplierStatement(id: string) {
     // 权限检查：查看应付数据
     if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
-    return await db.query.apSupplierStatements.findFirst({
-        where: and(
-            eq(apSupplierStatements.id, id),
-            eq(apSupplierStatements.tenantId, session.user.tenantId)
-        ),
-        with: {
-            purchaseOrder: true,
-            supplier: true,
+    const tenantId = session.user.tenantId;
+
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取单条供应商应付对账单详情', { id, tenantId });
+            return await db.query.apSupplierStatements.findFirst({
+                where: and(
+                    eq(apSupplierStatements.id, id),
+                    eq(apSupplierStatements.tenantId, tenantId)
+                ),
+                with: {
+                    purchaseOrder: true,
+                    supplier: true,
+                }
+            });
+        },
+        [`ap-supplier-statement-${id}`],
+        {
+            tags: [`finance-ap-supplier-detail-${id}`],
+            revalidate: 60,
         }
-    });
+    )();
 }
 
 /**
- * 获取劳务应付对账单
+ * 获取劳务费用的应付对账单列表
+ * 增加基于 `limit` 与 `offset` 的列表级返回容量限制。
+ * 
+ * @param params `{ limit?: number, offset?: number }` - 默认抓取前 50 条最新项
+ * @returns Array 包含劳务结算项主记录以及绑定的工人信息的列表
  */
-export async function getAPLaborStatements() {
+export async function getAPLaborStatements(params?: { limit?: number; offset?: number }) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：查看人工费用
     if (!await checkPermission(session, PERMISSIONS.FINANCE.LABOR_VIEW)) throw new Error('权限不足：需要人工费查看权限');
 
-    return await db.query.apLaborStatements.findMany({
-        where: eq(apLaborStatements.tenantId, session.user.tenantId),
-        with: {
-            worker: true,
+    const limit = params?.limit || 50;
+    const offset = params?.offset || 0;
+    const tenantId = session.user.tenantId;
+
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取劳务结算单列表', { tenantId, limit, offset });
+            return await db.query.apLaborStatements.findMany({
+                where: eq(apLaborStatements.tenantId, tenantId),
+                with: {
+                    worker: true,
+                },
+                orderBy: [desc(apLaborStatements.createdAt)],
+                limit,
+                offset
+            });
         },
-        orderBy: [desc(apLaborStatements.createdAt)],
-    });
+        [`ap-labor-statements-${tenantId}-${limit}-${offset}`],
+        {
+            tags: [`finance-ap-labor-${tenantId}`],
+            revalidate: 60,
+        }
+    )();
 }
 
 /**
- * 获取单条劳务应付对账单
+ * 获取单条劳务应付对账单的明细数据
+ * 
+ * @param id 针对单项劳务费用的系统主键 ID 
+ * @returns 基于查询主键解析获得的劳务费用以及关联人工明细详情的 JSON 数据
  */
 export async function getAPLaborStatement(id: string) {
     const session = await auth();
@@ -97,20 +157,36 @@ export async function getAPLaborStatement(id: string) {
     // 权限检查：查看人工费用
     if (!await checkPermission(session, PERMISSIONS.FINANCE.LABOR_VIEW)) throw new Error('权限不足：需要人工费查看权限');
 
-    return await db.query.apLaborStatements.findFirst({
-        where: and(
-            eq(apLaborStatements.id, id),
-            eq(apLaborStatements.tenantId, session.user.tenantId)
-        ),
-        with: {
-            worker: true,
-            feeDetails: true,
+    const tenantId = session.user.tenantId;
+
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取单条劳务结算单详情', { id, tenantId });
+            return await db.query.apLaborStatements.findFirst({
+                where: and(
+                    eq(apLaborStatements.id, id),
+                    eq(apLaborStatements.tenantId, tenantId)
+                ),
+                with: {
+                    worker: true,
+                    feeDetails: true,
+                }
+            });
+        },
+        [`ap-labor-statement-${id}`],
+        {
+            tags: [`finance-ap-labor-detail-${id}`],
+            revalidate: 60,
         }
-    });
+    )();
 }
 
 /**
- * 获取任意类型的AP对账单详情 (Unified)
+ * 面向通用结算台拉取跨业务的应付对象 (Unified Statement API)
+ * 该方法自动路由适配至供应链侧供应商采购付款申请或是外包服务工人工费结算。
+ * 
+ * @param filters 查询结构体，携带目标结算单主键 `{ id: string }`
+ * @returns 包含额外类型字段标识（`SUPPLIER` or `LABOR`）及嵌套内容集的合并结算响应
  */
 export async function getApStatementById(filters: { id: string }) {
     const session = await auth();
@@ -118,6 +194,8 @@ export async function getApStatementById(filters: { id: string }) {
 
     // 权限检查：查看应付数据
     if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+
+    console.log('[finance] 跨业务搜索应付单', { filters });
 
     const { id } = filters;
 
@@ -174,13 +252,18 @@ export async function getApStatementById(filters: { id: string }) {
     return { success: false, error: 'Not found' };
 }
 
-
 /**
- * 创建付款单
+ * 基于业务上下游申请或系统事件初始化/生成支付流水主账单。
+ * 该方法自动管理和串联财务事务的执行机制：若业务超过限制将会开启工作流进行人工干预流转审批，否则将会自动推进进账。
+ * 
+ * @param data Zod 安全验证后的表单级数据字典
+ * @returns Object 执行成果及系统流水生成编号
  */
 export const createPaymentBill = createSafeAction(createPaymentBillSchema, async (data, { session }) => {
     // 权限检查：创建收付款
     if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+
+    console.log('[finance] 创建付款单', { data });
 
     const { items, ...billData } = data;
 
@@ -196,7 +279,6 @@ export const createPaymentBill = createSafeAction(createPaymentBillSchema, async
             recordedBy: session.user.id!,
             amount: new Decimal(billData.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2),
         }).returning();
-
 
         if (items && items.length > 0) {
             await Promise.all(items.map(async (item) => {
@@ -243,13 +325,26 @@ export const createPaymentBill = createSafeAction(createPaymentBillSchema, async
                 });
 
                 if (approvalRes.success) {
+                    console.log('[finance] 付款单提交审批成功', { billId: paymentBill.id, flowCode });
                     await db.update(paymentBills)
                         .set({ status: 'PENDING_APPROVAL' })
                         .where(eq(paymentBills.id, paymentBill.id));
+
+                    // 添加审批提交审计
+                    await AuditService.log(db, {
+                        tenantId: session.user.tenantId,
+                        userId: session.user.id!,
+                        tableName: 'payment_bills',
+                        recordId: paymentBill.id,
+                        action: 'UPDATE',
+                        oldValues: { status: 'PENDING' },
+                        newValues: { status: 'PENDING_APPROVAL' },
+                        details: { action: 'SUBMIT_APPROVAL', flowCode }
+                    });
                 }
             }
         } catch (error) {
-            console.error('Failed to submit approval:', error);
+            logger.error('Failed to submit approval:', error);
             // Don't fail the creation, just log error. Or should we?
             // Usually if logic requires approval, failure to start approval is critical.
             // But for now let's keep it non-blocking or re-throw if strict.
@@ -267,9 +362,12 @@ export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async
     // 权限检查：审批财务
     if (!await checkPermission(session, PERMISSIONS.FINANCE.APPROVE)) throw new Error('权限不足：需要财务审批权限');
 
+    console.log('[finance] 审核付款单', { data });
+
     const { id, status, remark } = data;
 
     return await db.transaction(async (tx) => {
+        // 1. 获取并锁定付款单
         const bill = await tx.query.paymentBills.findFirst({
             where: and(
                 eq(paymentBills.id, id),
@@ -281,6 +379,8 @@ export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async
         });
 
         if (!bill) throw new Error('付款单不存在');
+        console.log('[finance] 正在审核付款单', { billId: id, status: bill.status });
+
         // Allow paying if PENDING (legacy) or APPROVED (workflow done)
         const validStatuses = ['PENDING', 'APPROVED'];
         if (!validStatuses.includes(bill.status)) throw new Error('付款单状态不可审核支付');
@@ -292,6 +392,18 @@ export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async
                     eq(paymentBills.id, id),
                     eq(paymentBills.tenantId, session.user.tenantId)
                 ));
+
+            await AuditService.log(tx, {
+                tenantId: session.user.tenantId,
+                userId: session.user.id!,
+                tableName: 'payment_bills',
+                recordId: id,
+                action: 'UPDATE',
+                oldValues: { status: bill.status, remark: bill.remark },
+                newValues: { status: 'REJECTED', remark: remark || bill.remark }
+            });
+
+            console.log('[finance] 付款单审核完成', { billId: id, newStatus: status });
             return { success: true };
         }
 
@@ -475,7 +587,9 @@ export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async
         // F-18: Audit Log (This was already handled above for both REJECTED and PAID)
         // Removed duplicate audit log here.
 
+        revalidateTag(`finance-ap-supplier-${session.user.tenantId}`);
         revalidatePath('/finance/ap');
+        console.log('[finance] verifyPaymentBill 执行成功', { id, newStatus: status });
         return { success: true };
     });
 });
@@ -489,6 +603,8 @@ export async function generateLaborSettlement() {
 
     // 权限检查：财务管理（批量操作）
     if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+
+    console.log('[finance] 开始生成劳务结算单');
 
     // 导入 liabilityNotices 表
     const { liabilityNotices } = await import('@/shared/api/schema');
@@ -637,8 +753,12 @@ export async function generateLaborSettlement() {
                 details: { taskCount: tasks.length, deductionCount: liabilities.length }
             });
 
+            console.log('[finance] 劳务结算单项处理完成', { statementId: statement.id, totalAmount: totalAmount.toFixed(2) });
+
             settlementCount++;
         }
+
+        console.log('[finance] 劳务结算单生成完成', { settlementCount, deductionCount });
 
         revalidatePath('/finance/ap/labor');
         return { count: settlementCount, deductionCount };
@@ -655,6 +775,8 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
 
     // 权限检查：创建收付款
     if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+
+    console.log('[finance] 创建供应商定责扣款对账单', { liabilityNoticeId });
 
     const { liabilityNotices, suppliers } = await import('@/shared/api/schema');
 
@@ -747,13 +869,15 @@ const createSupplierRefundSchema = z.object({
 });
 
 /**
- * 创建供应商退款对账单（红字 AP）
- *
- * 逻辑：
- * 1. 验证原对账单存在且已付款
- * 2. 验证退款金额不超过已付金额
- * 3. 创建红字 AP 对账单（负数金额）
- * 4. 创建对应的收款单
+ * 针对供应链模块发起的针对供应商退款业务。
+ * 
+ * 生成并创建对应的供应商退款对账单（也就是财务常说的“红字 AP”冲转单）。
+ * 其处理逻辑包含：
+ * 1. 验证原对账单存在且已付款；
+ * 2. 验证当前需要发起退款金额不超过已付金额（防超退）；
+ * 3. 产生对应带有 UUID/No.的红字 AP 冲量单（为负数金额）。
+ * @param input `{ originalStatementId: string, refundAmount: number, reason: string, remark?: string }`
+ * @returns Object 包装成功状态及被创建红字单的所有结构内容。
  */
 export async function createSupplierRefundStatement(input: z.infer<typeof createSupplierRefundSchema>) {
     try {
@@ -857,7 +981,7 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
             };
         });
     } catch (error) {
-        console.error('创建供应商退款对账单失败:', error);
+        logger.error('创建供应商退款对账单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '操作失败'
@@ -866,7 +990,12 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
 }
 
 /**
- * 内部调用：从 PO 生成应付账款
+ * 【仅供内部系统调用】接收来自于采购订单 PO 的流转并转化将其初始化为财务侧可见的应付账款。
+ * 该行为为服务端纯事务性，依赖传入的安全上下文 TenantId 和当前已存储或新生成的订单编号执行同步结转动作。
+ * 
+ * @param poId 被结转转化和确认完结的当前系统层级（DB中存在）的采购订单主要建 ID。
+ * @param tenantId 当前跨边界结转的安全租户。
+ * @returns 结转执行情况并包揽系统新产生的结单 Statement ID
  */
 export async function createApFromPoInternal(poId: string, tenantId: string) {
     return await db.transaction(async (tx) => {
@@ -923,7 +1052,12 @@ export async function createApFromPoInternal(poId: string, tenantId: string) {
 }
 
 /**
- * 更新付款单 (Revise)
+ * 发起对现有应付账款、付款单等关联业务的事务修改申请 (Revise)
+ * 如果单子当前处于需要被外部人员退回或正在处于 DRAFT 可修正状态时适用。
+ * 在每次提交变更之后所有挂载状态将会重置并按设定尝试挂靠新一次关联（可复用相同的 Workflow）。
+ * 
+ * @param data 包含了主验证 ID 及基于 Schema 提供所有重新修改（金额、事项明细及对象引用）字段的提交对象
+ * @returns Object 执行成果及系统流水生成编号
  */
 export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSchema> & { id: string }) {
     const session = await auth();
@@ -985,6 +1119,7 @@ export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSc
             : FinanceApprovalLogic.FLOW_CODES.PAYMENT;
 
         const isApprovalActive = await FinanceApprovalLogic.isFlowActive(session.user.tenantId, flowCode);
+
 
         if (isApprovalActive) {
             // Check if there is an active approval? existingBill status check ensures we are not active.

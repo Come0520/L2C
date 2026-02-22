@@ -10,6 +10,9 @@ import { ChevronDown, ChevronUp, Plus, Trash2, Save } from 'lucide-react';
 import { updateQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
 
+import { QuoteItem as SharedQuoteItem } from '@/shared/api/schema/quotes';
+import { logger } from '@/shared/lib/logger';
+
 /**
  * 高级参数配置接口
  */
@@ -60,7 +63,7 @@ interface QuoteItemExpandRowProps {
   /** 备注 */
   remark?: string;
   /** 附件列表 */
-  attachments?: AttachmentItem[];
+  attachments?: (SharedQuoteItem & { amount?: number })[];
   /** 是否只读 */
   readOnly?: boolean;
   /** 是否展开 */
@@ -190,13 +193,13 @@ export function QuoteItemExpandRow({
             editedAttrs.groundClearance !== undefined
               ? Number(editedAttrs.groundClearance)
               : undefined,
-        } as Record<string, any>,
+        } as Record<string, string | number | boolean | null>,
       });
       toast.success('配置已保存');
       onSave?.();
     } catch (error) {
       toast.error('保存失败');
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }
@@ -441,7 +444,9 @@ export function QuoteItemExpandRow({
                     className="grid grid-cols-[120px_1fr_100px_80px_80px_80px_80px_40px] items-center gap-2 border-t px-3 py-2 text-sm"
                   >
                     <span className="text-muted-foreground">
-                      {ATTACHMENT_TYPES.find((t) => t.value === att.type)?.label || att.type}
+                      {ATTACHMENT_TYPES.find((t) => t.value === att.attributes?.attachmentType)?.label ||
+                        att.attributes?.attachmentType ||
+                        '辅料'}
                     </span>
                     <span className="truncate">{att.productName}</span>
                     <span className="text-muted-foreground truncate text-xs">
@@ -450,7 +455,7 @@ export function QuoteItemExpandRow({
                     <span className="text-right">{att.quantity}</span>
                     <span className="text-center">{att.unit}</span>
                     <span className="text-right">¥{att.unitPrice}</span>
-                    <span className="text-right font-medium">¥{att.subtotal}</span>
+                    <span className="text-right font-medium">¥{att.amount}</span>
                     {!readOnly && (
                       <Button
                         size="icon"

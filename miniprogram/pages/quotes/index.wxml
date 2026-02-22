@@ -1,6 +1,10 @@
-<!--pages/quotes/index.wxml-->
+<!--
+  报价单列表页
+  pages/quotes/index.wxml
+  审计修复: 添加下拉刷新、loading 状态、上拉加载、状态中文映射
+-->
 <view class="container">
-  <!-- Search Bar -->
+  <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-wrap">
         <icon type="search" size="14" color="#94a3b8"></icon>
@@ -14,8 +18,21 @@
     </view>
   </view>
 
-  <!-- List -->
-  <scroll-view class="list-container" scroll-y="true">
+  <!-- 列表（含下拉刷新 + 上拉加载） -->
+  <scroll-view 
+    class="list-container" 
+    scroll-y="true"
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onPullDownRefresh"
+    bindscrolltolower="onLoadMore"
+  >
+    <!-- Loading 状态 -->
+    <view wx:if="{{loading && !list.length}}" class="loading-state">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 列表内容 -->
     <block wx:for="{{list}}" wx:key="id">
         <view class="quote-card" bindtap="onTapItem" data-id="{{item.id}}">
             <view class="card-header">
@@ -39,14 +56,23 @@
         </view>
     </block>
 
+    <!-- 加载更多 -->
+    <view class="load-more" wx:if="{{loadingMore}}">
+      <text>加载更多...</text>
+    </view>
+    <view class="load-more" wx:if="{{noMore && list.length}}">
+      <text>— 没有更多了 —</text>
+    </view>
+
+    <!-- 空状态 -->
     <view class="empty-state" wx:if="{{!list.length && !loading}}">
         <image class="empty-img" src="/assets/empty.png" /> 
         <text>暂无报价单</text>
     </view>
   </scroll-view>
 
-  <!-- FAB -->
-  <view class="fab-add" bindtap="onAdd">
-    +
+  <!-- FAB 按钮 -->
+  <view class="fab-add" bindtap="onAdd" hover-class="fab-active">
+    <image class="fab-icon" src="/assets/icons/flash-active.svg" />
   </view>
 </view>

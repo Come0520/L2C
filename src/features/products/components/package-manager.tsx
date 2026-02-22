@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/shared/lib/logger';
+
 import { useState, useEffect, useCallback } from 'react';
 import {
     getPackages,
@@ -54,7 +56,7 @@ export function PackageManager() {
                 toast.error(result.error || '获取套餐列表失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('获取套餐列表失败');
         } finally {
             setIsLoading(false);
@@ -87,7 +89,7 @@ export function PackageManager() {
                 toast.error(result.error || '删除失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('删除失败');
         }
     };
@@ -102,7 +104,7 @@ export function PackageManager() {
                 toast.error(result.error || '操作失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('操作失败');
         }
     };
@@ -227,8 +229,7 @@ export function PackageManager() {
             <PackageFormDialog
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
-                // @ts-expect-error - Package inferred types slightly differ
-                editingData={editingPackage || undefined}
+                editingData={editingPackage as React.ComponentProps<typeof PackageFormDialog>['editingData']}
                 onSuccess={loadPackages}
             />
         </div>

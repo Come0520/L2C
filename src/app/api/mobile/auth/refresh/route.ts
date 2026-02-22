@@ -53,10 +53,11 @@ async function refreshHandler(request: NextRequest) {
             const user = await db.query.users.findFirst({
                 where: and(
                     eq(users.id, payload.userId),
-                    eq(users.tenantId, payload.tenantId)
+                    eq(users.tenantId, payload.tenantId),
+                    eq(users.isActive, true)
                 )
             });
-            if (!user) return apiError('账户已失效', 401);
+            if (!user) return apiError('账户已失效或被禁用', 401);
         }
 
         // 生成新的 Token 对

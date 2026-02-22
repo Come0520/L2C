@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import React, { useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -97,7 +98,7 @@ export function FollowUpDialog({
                 onSuccess?.();
                 handleOpenChange(false);
             } catch (error) {
-                console.error('Add followup error:', error);
+                logger.error('Add followup error:', error);
                 const message = error instanceof Error ? error.message : '添加失败';
                 toast.error(message);
             }

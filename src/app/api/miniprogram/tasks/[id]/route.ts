@@ -9,6 +9,7 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import {
   measureTasks,
@@ -192,7 +193,7 @@ export async function GET(
 
     return apiSuccess(taskData);
   } catch (error) {
-    console.error('Get Task Detail Error:', error);
+    logger.error('Get Task Detail Error:', error);
     return apiError('获取详情失败', 500);
   }
 }
@@ -238,7 +239,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return apiSuccess({ message: '更新成功' });
   } catch (error) {
-    console.error('Update Task Error:', error);
+    logger.error('Update Task Error:', error);
     return apiError('更新失败', 500);
   }
 }

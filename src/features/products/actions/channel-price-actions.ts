@@ -1,4 +1,5 @@
 'use server';
+import { logger } from "@/shared/lib/logger";
 
 /**
  * 渠道专属价 Server Actions
@@ -13,6 +14,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 辅助函数：获取 tenantId
 async function getTenantIdFromSession() {
@@ -73,7 +75,7 @@ export async function getChannelPrices(productId: string) {
 
         return { success: true, data };
     } catch (error) {
-        console.error('获取渠道专属价失败:', error);
+        logger.error('获取渠道专属价失败:', error);
         return { success: false, error: '获取渠道专属价失败' };
     }
 }
@@ -114,7 +116,7 @@ export async function getAllChannelPrices() {
 
         return { success: true, data };
     } catch (error) {
-        console.error('获取所有渠道专属价失败:', error);
+        logger.error('获取所有渠道专属价失败:', error);
         return { success: false, error: '获取渠道专属价列表失败' };
     }
 }
@@ -153,10 +155,20 @@ export async function addChannelPrice(productId: string, input: z.infer<typeof c
             })
             .returning();
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'channel_specific_prices',
+            recordId: created.id,
+            action: 'CREATE',
+            newValues: created
+        });
+
         revalidatePath(`/products/${productId}`);
         return { success: true, data: created };
     } catch (error) {
-        console.error('添加渠道专属价失败:', error);
+        logger.error('添加渠道专属价失败:', error);
         return { success: false, error: '添加渠道专属价失败' };
     }
 }
@@ -183,10 +195,21 @@ export async function updateChannelPrice(id: string, input: z.infer<typeof updat
             ))
             .returning();
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'channel_specific_prices',
+            recordId: updated.id,
+            action: 'UPDATE',
+            newValues: { specialPrice: validated.specialPrice, isActive: validated.isActive },
+            oldValues: { id }
+        });
+
         revalidatePath('/products');
         return { success: true, data: updated };
     } catch (error) {
-        console.error('更新渠道专属价失败:', error);
+        logger.error('更新渠道专属价失败:', error);
         return { success: false, error: '更新渠道专属价失败' };
     }
 }
@@ -206,10 +229,20 @@ export async function removeChannelPrice(id: string) {
                 eq(channelSpecificPrices.tenantId, tenantId)
             ));
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'channel_specific_prices',
+            recordId: id,
+            action: 'DELETE',
+            oldValues: { id }
+        });
+
         revalidatePath('/products');
         return { success: true };
     } catch (error) {
-        console.error('删除渠道专属价失败:', error);
+        logger.error('删除渠道专属价失败:', error);
         return { success: false, error: '删除渠道专属价失败' };
     }
 }
@@ -291,7 +324,7 @@ export async function getProductPriceForChannel(productId: string, channelId?: s
             }
         };
     } catch (error) {
-        console.error('获取商品价格失败:', error);
+        logger.error('获取商品价格失败:', error);
         return { success: false, error: '获取商品价格失败' };
     }
 }

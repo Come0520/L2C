@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFinanceAccountSchema } from '../actions/schema';
@@ -32,14 +33,19 @@ import { createFinanceAccount, updateFinanceAccount } from '@/features/finance/a
 import { toast } from 'sonner';
 import { useTransition, useEffect } from 'react';
 import { z } from 'zod';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { financeAccounts } from '@/shared/api/schema';
+
+/** 财务账户行类型 */
+type FinanceAccount = InferSelectModel<typeof financeAccounts>;
 
 type FormValues = z.infer<typeof createFinanceAccountSchema>;
 
 interface AccountDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-     
-    initialData?: any; // 账户数据结构复杂，后续可定义具体类型
+
+    initialData?: FinanceAccount | null;
 }
 
 export function AccountDialog({ open, onOpenChange, initialData }: AccountDialogProps) {
@@ -62,12 +68,12 @@ export function AccountDialog({ open, onOpenChange, initialData }: AccountDialog
             form.reset({
                 accountNo: initialData.accountNo,
                 accountName: initialData.accountName,
-                accountType: initialData.accountType,
+                accountType: initialData.accountType as FormValues['accountType'],
                 accountNumber: initialData.accountNumber || '',
                 bankName: initialData.bankName || '',
                 branchName: initialData.branchName || '',
                 holderName: initialData.holderName,
-                isDefault: initialData.isDefault,
+                isDefault: initialData.isDefault ?? false,
                 remark: initialData.remark || '',
             });
         } else if (open && !initialData) {

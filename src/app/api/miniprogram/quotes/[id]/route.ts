@@ -8,6 +8,7 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems, customers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../auth-utils';
 
 
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     return apiSuccess(data);
   } catch (error) {
-    console.error('Fetch quote error:', error);
+    logger.error('Fetch quote error:', error);
     return apiError('获取报价单失败', 500);
   }
 }

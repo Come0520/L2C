@@ -12,6 +12,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 // 输入校验 Schema
 const RejectMeasureTaskSchema = z.object({
@@ -133,7 +134,7 @@ const rejectMeasureTaskActionInternal = createSafeAction(
 
                     warningMessage = `任务累计驳回 ${newRejectCount} 次，已通知${newRejectCount >= 4 ? '区域经理' : '店长'}介入。`;
                 } catch (notifyError) {
-                    console.error('[驳回预警] 通知管理层失败:', notifyError);
+                    logger.error('[驳回预警] 通知管理层失败:', notifyError);
                 }
             }
 

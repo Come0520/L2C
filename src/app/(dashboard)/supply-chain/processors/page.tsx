@@ -70,6 +70,7 @@ export default function ProcessorsPage() {
     // 更好的做法是：修改 ProcessorTable，移除内部 Drawer，改由外部传入 onEdit。
     // 让我们先按这个 "提升状态" 的思路写 Page，然后回去改 ProcessorTable。
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleEdit = (processor: any) => {
         setSelectedProcessor(processor);
         setDialogOpen(true);

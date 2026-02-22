@@ -6,9 +6,16 @@ import { eq, desc } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { format } from 'date-fns';
+import { logger } from '@/shared/lib/logger';
 
 /**
- * 导出订单数据（性能优化：仅查询必要字段，支持大规模导出预备）
+ * 导出订单数据 Action
+ * 
+ * 核心逻辑：查询当前租户下的订单数据，并将其转换为 CSV 格式输出。
+ * 性能优化：限制查询条数，仅加载必要关联数据。
+ * 
+ * @param _filters 过滤条件的记录对象，用于拓展复杂的导出条件筛选
+ * @returns 包含操作结果、CSV 字符串内容以及文件名的对象
  */
 export async function exportOrdersAction(_filters: Record<string, unknown>) {
     try {
@@ -44,6 +51,8 @@ export async function exportOrdersAction(_filters: Record<string, unknown>) {
             ...rows.map(r => r.join(','))
         ].join('\n');
 
+        logger.info('[orders] 导出订单成功:', { tenantId: session.user.tenantId, rowCount: rows.length });
+
         return {
             success: true,
             data: csvContent,
@@ -51,6 +60,7 @@ export async function exportOrdersAction(_filters: Record<string, unknown>) {
         };
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Export failed';
+        logger.error('[orders] 导出订单失败:', { error });
         return { success: false, error: message };
     }
 }

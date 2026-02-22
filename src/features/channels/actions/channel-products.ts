@@ -11,6 +11,8 @@ import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 获取已设置渠道底价的商品列表
+ * 
+ * @returns {Promise<{success: boolean, data: any[], error?: string}>} 返回包含数据的商品列表响应
  */
 export async function getChannelProducts() {
     const session = await auth();
@@ -50,6 +52,10 @@ export async function getChannelProducts() {
 
 /**
  * 获取所有可用商品（用于添加到渠道选品池）
+ * 
+ * 获取当前租户下活跃的且没有特定渠道价格约束的通用商品。
+ * 
+ * @returns {Promise<{success: boolean, data: any[], error?: string}>} 结构包含通用商品池的内容
  */
 export async function getAvailableProducts() {
     const session = await auth();
@@ -90,8 +96,14 @@ const updateChannelPriceSchema = z.object({
 
 /**
  * 更新商品渠道底价
+ * 
+ * 依照给定的商品ID，为其更新底价并产生审计流水。
+ * 
+ * @param {z.infer<typeof updateChannelPriceSchema>} input - 待更新底价的商品信息
+ * @returns {Promise<{success: boolean, error?: string}>} 更新事务的结果
  */
 export async function updateProductChannelPrice(input: z.infer<typeof updateChannelPriceSchema>) {
+    console.log('[channels] 开始更新商品渠道底价:', input);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
@@ -157,8 +169,14 @@ const batchUpdateSchema = z.object({
 
 /**
  * 批量更新商品渠道底价
+ * 
+ * 通过事务来原子化更新数组中批量的商品底价配置记录。
+ * 
+ * @param {z.infer<typeof batchUpdateSchema>} input - 包含多个更新实体的对象
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function batchUpdateChannelPrices(input: z.infer<typeof batchUpdateSchema>) {
+    console.log('[channels] 批量更新商品渠道底价，条数:', input?.updates?.length);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
@@ -211,8 +229,14 @@ export async function batchUpdateChannelPrices(input: z.infer<typeof batchUpdate
 
 /**
  * 移除商品的渠道底价（从选品池移除）
+ * 
+ * 将该商品的 channelPrice 字段重新置空且登记至渠道产品审计。
+ * 
+ * @param {string} productId - 商品ID
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function removeFromChannelPool(productId: string) {
+    console.log('[channels] 从选品池移除商品底价:', { productId });
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };

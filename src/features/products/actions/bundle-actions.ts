@@ -1,4 +1,5 @@
 'use server';
+import { logger } from "@/shared/lib/logger";
 
 /**
  * 组合商品 (Bundle) Server Actions
@@ -13,6 +14,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 辅助函数：获取 tenantId
 async function getTenantIdFromSession() {
@@ -79,7 +81,7 @@ export async function getBundles() {
         const data = await getCachedBundles(tenantId)();
         return { success: true, data };
     } catch (error) {
-        console.error('获取组合商品列表失败:', error);
+        logger.error('获取组合商品列表失败:', error);
         return { success: false, error: '获取组合商品列表失败' };
     }
 }
@@ -125,7 +127,7 @@ export async function getBundleById(id: string) {
 
         return { success: true, data: { ...data, items } };
     } catch (error) {
-        console.error('获取组合商品详情失败:', error);
+        logger.error('获取组合商品详情失败:', error);
         return { success: false, error: '获取组合商品详情失败' };
     }
 }
@@ -152,12 +154,22 @@ export async function createBundle(input: z.infer<typeof createBundleSchema>) {
             })
             .returning();
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'product_bundles',
+            recordId: created.id,
+            action: 'CREATE',
+            newValues: created
+        });
+
         revalidateTag('packages', 'default');
         revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true, data: created };
     } catch (error) {
-        console.error('创建组合商品失败:', error);
+        logger.error('创建组合商品失败:', error);
         return { success: false, error: '创建组合商品失败' };
     }
 }
@@ -188,12 +200,23 @@ export async function updateBundle(id: string, input: z.infer<typeof updateBundl
             ))
             .returning();
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'product_bundles',
+            recordId: updated.id,
+            action: 'UPDATE',
+            newValues: updateData,
+            oldValues: { id }
+        });
+
         revalidateTag('packages', 'default');
         revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true, data: updated };
     } catch (error) {
-        console.error('更新组合商品失败:', error);
+        logger.error('更新组合商品失败:', error);
         return { success: false, error: '更新组合商品失败' };
     }
 }
@@ -222,12 +245,22 @@ export async function deleteBundle(id: string) {
                 eq(productBundles.tenantId, tenantId)
             ));
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'product_bundles',
+            recordId: id,
+            action: 'DELETE',
+            oldValues: { id }
+        });
+
         revalidateTag('packages', 'default');
         revalidateTag(`packages-${tenantId}`, 'default');
         revalidatePath('/products/bundles');
         return { success: true };
     } catch (error) {
-        console.error('删除组合商品失败:', error);
+        logger.error('删除组合商品失败:', error);
         return { success: false, error: '删除组合商品失败' };
     }
 }
@@ -265,10 +298,20 @@ export async function updateBundleItems(bundleId: string, items: z.infer<typeof 
             );
         }
 
+        const session = await auth();
+        await AuditService.log(db, {
+            tenantId,
+            userId: session?.user?.id || 'system',
+            tableName: 'product_bundle_items',
+            recordId: bundleId,
+            action: 'UPDATE',
+            details: { action: 'UPDATE_ITEMS', itemCount: validatedItems.length }
+        });
+
         revalidatePath('/products/bundles');
         return { success: true };
     } catch (error) {
-        console.error('更新组合商品明细失败:', error);
+        logger.error('更新组合商品明细失败:', error);
         return { success: false, error: '更新组合商品明细失败' };
     }
 }
@@ -316,7 +359,7 @@ export async function calculateBundleCost(bundleId: string) {
             }
         };
     } catch (error) {
-        console.error('计算组合商品成本失败:', error);
+        logger.error('计算组合商品成本失败:', error);
         return { success: false, error: '计算组合商品成本失败' };
     }
 }

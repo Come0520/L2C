@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import React from 'react';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -30,7 +31,7 @@ export class LeadsErrorBoundary extends React.Component<Props, State> {
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
         // 在生产环境中可以上报到 Sentry 等监控系统
-        console.error('Leads Error Boundary caught an error:', error, errorInfo);
+        logger.error('Leads Error Boundary caught an error:', error, errorInfo);
     }
 
     handleReset = () => {

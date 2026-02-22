@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import React, { useCallback, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
@@ -322,7 +323,7 @@ export const LeadTable = React.memo(function LeadTable({
                                 toast.error(res.error || '认领失败');
                             }
                         } catch (error) {
-                            console.error('Claim error:', error);
+                            logger.error('Claim error:', error);
                             toast.error('认领失败');
                         }
                     });
@@ -347,7 +348,7 @@ export const LeadTable = React.memo(function LeadTable({
                                 toast.error(res.error || '恢复失败');
                             }
                         } catch (error) {
-                            console.error('Restore error:', error);
+                            logger.error('Restore error:', error);
                             toast.error('恢复失败');
                         }
                     });
@@ -384,16 +385,16 @@ export const LeadTable = React.memo(function LeadTable({
             >
                 <Table style={{ display: 'grid' }}>
                     <TableHeader className="sticky top-0 bg-background z-10 shadow-sm" style={{ display: 'grid' }}>
-                        <TableRow style={{ display: 'grid', gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr' }}>
-                            <TableHead>线索编号</TableHead>
-                            <TableHead>客户信息</TableHead>
-                            <TableHead>意向</TableHead>
-                            <TableHead>状态</TableHead>
-                            <TableHead>标签</TableHead>
-                            <TableHead>来源</TableHead>
-                            <TableHead>跟进销售</TableHead>
-                            <TableHead>最后活动</TableHead>
-                            <TableHead className="text-right">操作</TableHead>
+                        <TableRow style={{ display: 'grid', gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr', alignItems: 'center' }}>
+                            <TableHead className="flex items-center">线索编号</TableHead>
+                            <TableHead className="flex items-center">客户信息</TableHead>
+                            <TableHead className="flex items-center">意向</TableHead>
+                            <TableHead className="flex items-center">状态</TableHead>
+                            <TableHead className="flex items-center">标签</TableHead>
+                            <TableHead className="flex items-center">来源</TableHead>
+                            <TableHead className="flex items-center">跟进销售</TableHead>
+                            <TableHead className="flex items-center">最后活动</TableHead>
+                            <TableHead className="flex items-center justify-end">操作</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody

@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { channelCategories, channels } from '@/shared/api/schema/channels';
 import { eq, and, asc, or, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { channelCategorySchema, type ChannelCategoryInput } from './schema';
+import { channelCategorySchema } from './schema';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
@@ -13,11 +13,19 @@ import { z } from 'zod';
 // ==================== 渠道类型 CRUD Actions ====================
 
 /**
- * 获取所有渠道类型
+ * 分页获取渠道分类列表
  * 
- * 安全检查：自动从 session 获取 tenantId
+ * 获取系统配置的渠道分类分页列表。支持可选的类别名称或状态筛选。
+ *
+ * @param {any} params - 结构化查询参数，支持 page, limit, name, isActive
+ * @returns {Promise<{success: boolean, data: any[], total: number, error?: string}>} 带有总数的分类列表对象
  */
-export async function getChannelCategories() {
+export async function getChannelCategories(_params?: {
+    page?: number;
+    limit?: number;
+    name?: string;
+    isActive?: boolean;
+}) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -33,9 +41,11 @@ export async function getChannelCategories() {
 }
 
 /**
- * 获取启用的渠道类型（用于下拉选择）
+ * 获取所有启用的渠道分类
  * 
- * 安全检查：自动从 session 获取 tenantId
+ * 供下拉框、表单选择等场景使用的地方，获取当前处于激活状态的所有渠道分类。
+ * 
+ * @returns {Promise<{success: boolean, data: any[], error?: string}>} 启用状态的分类数组
  */
 export async function getActiveChannelCategories() {
     const session = await auth();
@@ -56,9 +66,10 @@ export async function getActiveChannelCategories() {
 }
 
 /**
- * 根据 ID 获取渠道类型
+ * 根据ID获取特定渠道分类名细
  * 
- * 安全检查：自动从 session 获取 tenantId
+ * @param {string} id - 要查询的目标渠道分类ID
+ * @returns {Promise<{success: boolean, data: any, error?: string}>} 包含单条分类详情的实体数据
  */
 export async function getChannelCategoryById(id: string) {
     const session = await auth();
@@ -81,11 +92,15 @@ export async function getChannelCategoryById(id: string) {
 }
 
 /**
- * 创建渠道类型
+ * 创建渠道分类
  * 
- * 安全检查：需要 SETTINGS.MANAGE 权限
+ * 用于新增针对渠道的管理分类标签，创建时进行名称唯一性校验并生成系统日志。
+ * 
+ * @param {z.infer<typeof channelCategorySchema>} input - 创建渠道分类所需各项表单输入
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>} 处理结果
  */
-export async function createChannelCategory(input: ChannelCategoryInput) {
+export async function createChannelCategory(input: z.infer<typeof channelCategorySchema>) {
+    console.log('[channels] 开始创建渠道分类:', input);
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -132,14 +147,17 @@ export async function createChannelCategory(input: ChannelCategoryInput) {
 }
 
 /**
- * 更新渠道类型
+ * 更新现有渠道分类
  * 
- * 安全检查：需要 SETTINGS.MANAGE 权限
+ * 对指定 ID 的渠道分类执行更名、属性修改等操作，同时会核实名称的唯一性限制（除去自身），
+ * 同时产生操作审计日志。
+ * 
+ * @param {string} id - 更新目标分类的 UUID
+ * @param {z.infer<typeof channelCategorySchema>} input - 更新字段载荷
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>} 更新事务结果
  */
-export async function updateChannelCategory(
-    id: string,
-    input: Partial<ChannelCategoryInput>
-) {
+export async function updateChannelCategory(id: string, input: z.infer<typeof channelCategorySchema>) {
+    console.log('[channels] 开始更新渠道分类:', { id, updates: input });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -212,11 +230,16 @@ export async function updateChannelCategory(
 }
 
 /**
- * 删除渠道类型
+ * 删除特定渠道分类
  * 
- * 安全检查：需要 SETTINGS.MANAGE 权限
+ * 如果目标分类下尚未关联任何实质性的渠道实例，则允许进行硬删除处理，否则触发软保护机制报错。
+ * 操作伴随着一条审计记录。
+ * 
+ * @param {string} id - 被硬删除操作指定的分类ID
+ * @returns {Promise<{success: boolean, error?: string}>} 处理反馈信息
  */
 export async function deleteChannelCategory(id: string) {
+    console.log('[channels] 开始删除渠道分类:', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -266,11 +289,14 @@ export async function deleteChannelCategory(id: string) {
 }
 
 /**
- * 切换渠道类型启用状态
+ * 切换某个特定渠道分类的激活/停用状态
  * 
- * 安全检查：需要 SETTINGS.MANAGE 权限
+ * @param {string} id - 被控制分类对象的唯一编号
+ * @param {boolean} isActive - 即将设定的在线状态预设值
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function toggleChannelCategoryActive(id: string) {
+export async function toggleChannelCategoryActive(id: string, isActive: boolean) {
+    console.log('[channels] 切换分类激活状态:', { id, isActive });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

@@ -2,6 +2,7 @@ import { ChannelAdapter, NotificationPayload } from '../types';
 import { db } from '@/shared/api/db';
 import { users } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 微信通知适配器
@@ -69,7 +70,7 @@ export class WeChatAdapter implements ChannelAdapter {
         // 获取用户 OpenID
         const openId = await this.getRecipientOpenId(userId);
         if (!openId) {
-            console.warn(`[WeChat Adapter] User(${userId}) has no wechatOpenId bound, skipping.`);
+            logger.warn(`[WeChat Adapter] User(${userId}) has no wechatOpenId bound, skipping.`);
             return false;
         }
 
@@ -143,7 +144,7 @@ export class WeChatAdapter implements ChannelAdapter {
             if (result.errcode === 0) {
                 return true;
             } else {
-                console.error(`[WeChat Official] Send failed: ${result.errcode} - ${result.errmsg}`);
+                logger.error(`[WeChat Official] Send failed: ${result.errcode} - ${result.errmsg}`);
                 // 如果是 Token 过期，清除缓存
                 if (result.errcode === 40001 || result.errcode === 42001) {
                     officialAccountTokenCache = null;
@@ -151,7 +152,7 @@ export class WeChatAdapter implements ChannelAdapter {
                 return false;
             }
         } catch (error) {
-            console.error('[WeChat Official] Send error:', error);
+            logger.error('[WeChat Official] Send error:', { error });
             return false;
         }
     }
@@ -206,14 +207,14 @@ export class WeChatAdapter implements ChannelAdapter {
             if (result.errcode === 0) {
                 return true;
             } else {
-                console.error(`[WeChat Mini] Send failed: ${result.errcode} - ${result.errmsg}`);
+                logger.error(`[WeChat Mini] Send failed: ${result.errcode} - ${result.errmsg}`);
                 if (result.errcode === 40001 || result.errcode === 42001) {
                     miniProgramTokenCache = null;
                 }
                 return false;
             }
         } catch (error) {
-            console.error('[WeChat Mini] Send error:', error);
+            logger.error('[WeChat Mini] Send error:', { error });
             return false;
         }
     }
@@ -295,7 +296,7 @@ export class WeChatAdapter implements ChannelAdapter {
             });
             return user?.wechatOpenId || null;
         } catch (error) {
-            console.error('[WeChat Adapter] Failed to query user OpenID:', error);
+            logger.error('[WeChat Adapter] Failed to query user OpenID:', { error });
             return null;
         }
     }

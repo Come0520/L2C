@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 /**
  * 财务配置类型定义
  * 单独文件避免循环依赖

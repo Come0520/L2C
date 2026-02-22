@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -96,7 +97,7 @@ export function AttributeTemplateManager() {
                     });
                 }
             } catch (error) {
-                console.error(error);
+                logger.error(error);
                 toast.error('Failed to load template');
             } finally {
                 setIsLoading(false);
@@ -115,7 +116,7 @@ export function AttributeTemplateManager() {
                 toast.success('Template saved successfully');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('Failed to save template');
         } finally {
             setIsLoading(false);

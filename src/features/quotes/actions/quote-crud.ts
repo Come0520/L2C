@@ -10,13 +10,15 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { AuditService } from '@/shared/lib/audit-service';
 import { quotes } from '@/shared/api/schema/quotes';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 import { revalidatePath } from 'next/cache';
 import { QuoteService } from '@/services/quote.service';
 import { DiscountControlService } from '@/services/discount-control.service';
 import Decimal from 'decimal.js';
 import { createQuoteSchema, updateQuoteSchema, createQuoteBundleSchema } from './schema';
 import { updateBundleTotal } from './shared-helpers';
+import { logger } from '@/shared/lib/logger';
 
 // ─── 创建报价套餐 ───────────────────────────────
 
@@ -31,9 +33,14 @@ export const createQuoteBundleActionInternal = createSafeAction(
   createQuoteBundleSchema,
   async (data, context) => {
     const tenantId = context.session.user.tenantId;
-    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+    if (!tenantId) {
+      logger.error('未授权访问：缺少租户信息');
+      throw new Error('未授权访问：缺少租户信息');
+    }
 
-    const quoteNo = `QB${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    logger.info('[quotes] 开始创建报价套餐', { customerId: data.customerId, leadId: data.leadId });
+
+    const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     const [newBundle] = await db
       .insert(quotes)
@@ -58,6 +65,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
+    logger.info('[quotes] 报价套餐创建成功', { bundleId: newBundle.id, quoteNo: newBundle.quoteNo });
     return newBundle;
   }
 );
@@ -67,9 +75,6 @@ export const createQuoteBundleActionInternal = createSafeAction(
  * @param params 套餐请求参数
  * @returns 包装了响应的套餐实例
  */
-export async function createQuoteBundle(params: z.infer<typeof createQuoteBundleSchema>) {
-  return createQuoteBundleActionInternal(params);
-}
 
 // ─── 创建报价单 ─────────────────────────────────
 
@@ -82,9 +87,13 @@ export async function createQuoteBundle(params: z.infer<typeof createQuoteBundle
  */
 const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
   const tenantId = context.session.user.tenantId;
-  if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+  if (!tenantId) {
+    logger.error('未授权访问：缺少租户信息');
+    throw new Error('未授权访问：缺少租户信息');
+  }
 
   const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  logger.info('[quotes] 开始创建报价单', { customerId: data.customerId, bundleId: data.bundleId, title: data.title });
 
   const [newQuote] = await db
     .insert(quotes)
@@ -118,6 +127,7 @@ const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (dat
   });
 
   revalidatePath('/quotes');
+  logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
   return newQuote;
 });
 
@@ -134,20 +144,25 @@ export async function createQuote(params: z.infer<typeof createQuoteSchema>) {
 
 /**
  * 更新报价单，包含自动重新计算折扣和最终金额的校验逻辑
- * @param data 包含要更新属性的对象（含报价单ID）
+ * 【乐观锁】传入 version 时启用并发冲突检测，版本不匹配将抛出 CONCURRENCY_CONFLICT
+ * @param data 包含要更新属性的对象（含报价单ID 和可选的版本号）
  * @param context 执行上下文，用于安全检查和审计日志
  * @returns 包含成功状态的响应
  */
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
-  const { id, ...updateData } = data;
+  const { id, version, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
+  logger.info('[quotes] 开始更新报价单', { quoteId: id, version, updateKeys: Object.keys(updateData) });
 
   // 安全检查：验证报价单属于当前租户
   const quote = await db.query.quotes.findFirst({
     where: and(eq(quotes.id, id), eq(quotes.tenantId, userTenantId)),
   });
 
-  if (!quote) throw new Error('报价单不存在或无权操作');
+  if (!quote) {
+    logger.warn('报价单不存在或无权操作', { quoteId: id, tenantId: userTenantId });
+    throw new Error('报价单不存在或无权操作');
+  }
 
   // 折扣逻辑（使用 Decimal.js 保证精度一致性）
   const totalAmountDec = new Decimal(quote.totalAmount || 0);
@@ -168,7 +183,8 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   // 计算最终金额（精确计算）
   const finalAmountDec = Decimal.max(0, totalAmountDec.mul(newRate).sub(newDiscountAmountDec));
 
-  await db
+  // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
+  const [updated] = await db
     .update(quotes)
     .set({
       ...updateData,
@@ -177,8 +193,20 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
       finalAmount: finalAmountDec.toFixed(2),
       approvalRequired: requiresApproval,
       updatedAt: new Date(),
+      version: sql`${quotes.version} + 1`,
     })
-    .where(and(eq(quotes.id, id), eq(quotes.tenantId, userTenantId)));
+    .where(and(
+      eq(quotes.id, id),
+      eq(quotes.tenantId, userTenantId),
+      version !== undefined ? eq(quotes.version, version) : undefined
+    ))
+    .returning();
+
+  // 【乐观锁】版本不匹配时抛出并发冲突错误
+  if (!updated && version !== undefined) {
+    logger.warn('乐观锁冲突：报价数据已被修改', { quoteId: id, currentVersion: version });
+    throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+  }
 
   // 审计日志：记录报价单更新
   await AuditService.recordFromSession(context.session, 'quotes', id, 'UPDATE', {
@@ -188,6 +216,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
+  logger.info('[quotes] 报价单更新成功', { quoteId: id });
   return { success: true };
 });
 
@@ -206,6 +235,7 @@ export const copyQuote = createSafeAction(
   }),
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
+    logger.info('[quotes] 开始复制报价单', { quoteId: data.quoteId, targetCustomerId: data.targetCustomerId });
 
     // 安全检查：验证源报价单归属
     const sourceQuote = await db.query.quotes.findFirst({
@@ -213,7 +243,10 @@ export const copyQuote = createSafeAction(
       columns: { id: true },
     });
 
-    if (!sourceQuote) throw new Error('报价单不存在或无权操作');
+    if (!sourceQuote) {
+      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId: userTenantId });
+      throw new Error('报价单不存在或无权操作');
+    }
 
     const newQuote = await QuoteService.copyQuote(
       data.quoteId,
@@ -228,6 +261,7 @@ export const copyQuote = createSafeAction(
     });
 
     revalidatePath('/quotes');
+    logger.info('[quotes] 报价单复制成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
     return newQuote;
   }
 );

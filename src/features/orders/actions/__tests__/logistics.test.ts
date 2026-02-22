@@ -7,9 +7,16 @@ import { LogisticsService } from '@/services/logistics.service';
 
 vi.mock('@/shared/api/db', () => ({
     db: {
+        query: {
+            orders: {
+                findFirst: vi.fn(),
+            },
+        },
         update: vi.fn(() => ({
             set: vi.fn(() => ({
-                where: vi.fn(() => Promise.resolve()),
+                where: vi.fn(() => ({
+                    returning: vi.fn(() => Promise.resolve([{ id: '11111111-1111-4111-8111-111111111111' }])),
+                })),
             })),
         })),
     },
@@ -44,6 +51,13 @@ describe('Logistics Actions', () => {
         vi.clearAllMocks();
         (auth as any).mockResolvedValue(mockSession);
         (checkPermission as any).mockResolvedValue(undefined);
+        // 预设 findFirst 返回带 version 的订单（requestDelivery 在更新前会先查询）
+        (db.query.orders.findFirst as any).mockResolvedValue({
+            id: '11111111-1111-4111-8111-111111111111',
+            tenantId: 't123',
+            status: 'IN_PRODUCTION',
+            version: 1,
+        });
     });
 
     describe('requestDelivery', () => {
@@ -52,6 +66,7 @@ describe('Logistics Actions', () => {
             company: 'shunfeng',
             trackingNo: 'SF123',
             remark: 'Test remark',
+            version: 1,
         };
 
         it('应成功请求发货并记录审计日志', async () => {
@@ -81,6 +96,7 @@ describe('Logistics Actions', () => {
             orderId: '11111111-1111-4111-8111-222222222222',
             company: 'yuantong',
             trackingNo: 'YT456',
+            version: 1,
         };
 
         it('应成功更新物流信息并记录审计', async () => {

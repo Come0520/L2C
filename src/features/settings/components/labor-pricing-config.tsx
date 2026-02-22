@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
@@ -67,18 +68,18 @@ export function LaborPricingConfig({ entityType = 'TENANT', entityId }: LaborPri
             setIsLoading(true);
             try {
                 const result = await getTenantLaborRates();
-                if (result.success && result.data) {
+                if (result.success && 'data' in result && result.data) {
                     // 将数据库数据映射为表格行
-                    const existingRates = new Map(
-                        result.data.map((r) => [r.category, r])
+                    const existingRates = new Map<string, any>(
+                        result.data.map((r: any) => [r.category, r])
                     );
 
                     const initialRates: RateRow[] = CATEGORIES.map((cat) => {
                         const existing = existingRates.get(cat.key);
                         return {
                             category: cat.key,
-                            unitPrice: existing ? parseFloat(existing.unitPrice || '0') : 0,
-                            baseFee: existing ? parseFloat(existing.baseFee || '0') : 0,
+                            unitPrice: existing && existing.unitPrice ? parseFloat(existing.unitPrice.toString() || '0') : 0,
+                            baseFee: existing && existing.baseFee ? parseFloat(existing.baseFee.toString() || '0') : 0,
                             unitType: (existing?.unitType || cat.defaultUnit) as RateRow['unitType'],
                         };
                     });
@@ -96,7 +97,7 @@ export function LaborPricingConfig({ entityType = 'TENANT', entityId }: LaborPri
                     );
                 }
             } catch (error) {
-                console.error('加载工费配置失败:', error);
+                logger.error('加载工费配置失败:', error);
                 toast.error('加载工费配置失败');
             } finally {
                 setIsLoading(false);
@@ -128,7 +129,7 @@ export function LaborPricingConfig({ entityType = 'TENANT', entityId }: LaborPri
                     toast.error(result.error || '保存失败');
                 }
             } catch (error) {
-                console.error('保存工费配置失败:', error);
+                logger.error('保存工费配置失败:', error);
                 toast.error('保存失败');
             }
         });

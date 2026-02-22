@@ -84,7 +84,7 @@ export const saveDashboardConfigAction = createSafeAction(
             revalidateTag(`dashboard-config:${userId}`, 'default');
             return { success: true };
         } catch (error) {
-            logger.error('保存仪表盘配置失败', { userId, tenantId }, error);
+            logger.error('保存仪表盘配置失败', { userId, tenantId, error });
             throw new Error('保存失败');
         }
     }
@@ -118,7 +118,7 @@ export const resetDashboardConfigAction = createSafeAction(
             revalidateTag(`dashboard-config:${userId}`, 'default');
             return { success: true };
         } catch (error) {
-            logger.error('重置仪表盘配置失败', { userId, tenantId }, error);
+            logger.error('重置仪表盘配置失败', { userId, tenantId, error });
             throw new Error('重置失败');
         }
     }

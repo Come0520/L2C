@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { products, suppliers, auditLogs } from '@/shared/api/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -41,20 +41,24 @@ const getProductsActionInternal = createSafeAction(getProductsSchema, async (par
         offset: offset,
     });
 
-    // 手动关联供应商信息 (Drizzle 关联查询在某些配置下更灵活)
-    const productWithSuppliers = await Promise.all(
-        data.map(async (p) => {
-            if (!p.defaultSupplierId) return { ...p, supplier: null };
-            // P1 修复：供应商查询添加租户验证
-            const supplier = await db.query.suppliers.findFirst({
-                where: and(
-                    eq(suppliers.id, p.defaultSupplierId),
-                    eq(suppliers.tenantId, session.user!.tenantId)
-                )
-            });
-            return { ...p, supplier };
-        })
-    );
+    // 手动关联供应商信息 (解决 N+1 查询性能问题)
+    const supplierIds = Array.from(new Set(data.map(p => p.defaultSupplierId).filter(Boolean))) as string[];
+    const supplierMap = new Map();
+
+    if (supplierIds.length > 0) {
+        const suppliersData = await db.query.suppliers.findMany({
+            where: and(
+                inArray(suppliers.id, supplierIds),
+                eq(suppliers.tenantId, session.user!.tenantId)
+            )
+        });
+        suppliersData.forEach(s => supplierMap.set(s.id, s));
+    }
+
+    const productWithSuppliers = data.map(p => ({
+        ...p,
+        supplier: p.defaultSupplierId ? (supplierMap.get(p.defaultSupplierId) || null) : null
+    }));
 
     const totalResult = await db
         .select({ count: sql<number>`count(*)` })

@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -41,7 +42,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
             setRoleOptions(options);
           })
           .catch((err) => {
-            console.error('Failed to load roles:', err);
+            logger.error('Failed to load roles:', err);
           })
           .finally(() => {
             setLoadingRoles(false);
@@ -67,7 +68,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
         alert(result.error || '生成失败');
       }
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       alert('生成失败');
     } finally {
       setLoading(false);

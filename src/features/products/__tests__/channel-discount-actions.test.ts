@@ -69,7 +69,9 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    unstable_cache: vi.fn((fn: Function) => fn),
 }));
 
 import {

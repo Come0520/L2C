@@ -4,6 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // 极简 Mock 策略
 // ---------------------------------------------------------
 
+// Mock next/cache 以绕过 Vitest 环境中缺少 incrementalCache 的问题
+vi.mock('next/cache', () => ({
+    unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+    revalidateTag: vi.fn(),
+}));
+
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {

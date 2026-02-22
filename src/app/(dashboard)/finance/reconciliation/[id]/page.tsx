@@ -9,6 +9,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import type { BadgeProps } from "@/shared/ui/badge";
 
 export default async function ReconciliationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -18,7 +19,7 @@ export default async function ReconciliationDetailPage({ params }: { params: Pro
         notFound();
     }
 
-    const getStatusVariant = (status: string): any => {
+    const getStatusVariant = (status: string): BadgeProps['variant'] => {
         switch (status) {
             case 'PENDING': return 'warning';
             case 'COMPLETED': return 'success';
@@ -136,7 +137,7 @@ export default async function ReconciliationDetailPage({ params }: { params: Pro
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {reconciliation.details.map((detail: any) => (
+                                {reconciliation.details.map((detail: { id: string; documentNo?: string; relatedDocumentNo?: string | null; documentAmount?: string | null; reconciliationAmount?: string | null; difference?: string | null; remark?: string | null }) => (
                                     <TableRow key={detail.id}>
                                         <TableCell>{detail.documentNo}</TableCell>
                                         <TableCell>{detail.relatedDocumentNo || '-'}</TableCell>

@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 import { db } from "@/shared/api/db";
 import { measureTasks, quotes } from "@/shared/api/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -48,7 +49,7 @@ export async function LeadRelatedCards({ leadId, tenantId }: LeadRelatedCardsPro
             limit: 5
         });
     } catch (error) {
-        console.error('[LeadRelatedCards] Error fetching measurements:', error);
+        logger.error('[LeadRelatedCards] Error fetching measurements:', error);
         // 继续执行，仅显示空状态
     }
 
@@ -66,7 +67,7 @@ export async function LeadRelatedCards({ leadId, tenantId }: LeadRelatedCardsPro
             limit: 5
         });
     } catch (error) {
-        console.error('[LeadRelatedCards] Error fetching quotes:', error);
+        logger.error('[LeadRelatedCards] Error fetching quotes:', error);
         // 继续执行，仅显示空状态
     }
 

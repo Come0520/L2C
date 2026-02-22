@@ -63,6 +63,7 @@ export const channels = pgTable('channels', {
     totalDealAmount: decimal('total_deal_amount', { precision: 15, scale: 2 }).default('0'),
 
     status: channelStatusEnum('status').default('ACTIVE'), // 渠道状态
+    version: integer('version').default(0).notNull(), // 乐观锁版本号
 
     assignedManagerId: uuid('assigned_manager_id').references(() => users.id),
 

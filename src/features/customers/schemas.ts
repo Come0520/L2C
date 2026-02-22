@@ -126,3 +126,7 @@ export const mergeCustomersSchema = z.object({
     sourceCustomerIds: z.array(z.string().min(1)).min(1),
     fieldPriority: z.enum(['PRIMARY', 'LATEST']).default('PRIMARY'),
 });
+
+export const getReferralChainSchema = z.object({
+    customerId: z.string().min(1)
+});

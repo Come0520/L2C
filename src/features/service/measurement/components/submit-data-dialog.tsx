@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -63,11 +65,10 @@ export function SubmitDataDialog({ open: controlledOpen, onOpenChange: setContro
                 if (onSuccess) onSuccess();
                 onOpenChange?.(false);
             } else {
-                // @ts-expect-error - Response returns error object with message
-                toast.error(result.error || '提交失败');
+                toast.error('error' in result ? (result.error as string) : '提交失败');
             }
         } catch (error) {
-            console.error('Submit measurement data error:', error);
+            logger.error('Submit measurement data error:', error);
             toast.error('提交过程中发生错误');
         } finally {
             setLoading(false);

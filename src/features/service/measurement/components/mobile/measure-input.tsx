@@ -1,7 +1,7 @@
-
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { logger } from "@/shared/lib/logger";
 import { Button } from '@/shared/ui/button';
 import Delete from 'lucide-react/dist/esm/icons/delete';
 import Check from 'lucide-react/dist/esm/icons/check';

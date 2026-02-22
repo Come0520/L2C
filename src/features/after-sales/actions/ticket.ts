@@ -12,13 +12,16 @@ import { generateTicketNo, escapeLikePattern, maskPhoneNumber } from '../utils';
 import { isValidTransition } from '../logic/state-machine';
 import { AuditService } from '@/shared/lib/audit-service';
 import { createTicketSchema, updateStatusSchema, _placeholderSchema } from './schemas';
+import { logger } from '@/shared/lib/logger';
 
 
 /**
- * 分页获取售后工单列表
- * 包含租户隔离、状态过滤和工单号模糊搜索。
- * @param params { page, pageSize, status, search } 分页和过滤参数
- * @returns 包含工单列表的成功响应
+ * 分页获取售后工单列表 (Server Action)
+ * 包含多维度的租户隔离、状态过滤、优先级和工单号模糊搜索。
+ * 供售后看板及列表页展示使用。
+ * 
+ * @param params - 包含 page, pageSize, status, search, type, priority 等分页和过滤参数对象
+ * @returns 包含经过手机号隐私脱敏后的工单列表及成功状态标识
  */
 export async function getAfterSalesTickets(params?: {
     page?: number;
@@ -134,19 +137,25 @@ const createAfterSalesTicketAction = createSafeAction(createTicketSchema, async 
             new: newTicket as Record<string, unknown>,
         });
 
+        logger.info(`[After Sales] Successfully created ticket: ${newTicket.id} for order: ${data.orderId}`);
+
         revalidatePath('/after-sales');
         revalidateTag('after-sales-analytics', 'default');
         return { success: true, data: newTicket, message: "售后工单创建成功" };
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "服务器内部错误";
-        console.error('[After Sales] Create Ticket Failed:', err); // 强化日志上下文
+        logger.error('[After Sales] Create Ticket Failed:', { error: err });
         return { success: false, message };
     }
 });
 
 /**
- * 创建售后工单
- * @param data 工单基本信息
+ * 向系统中请求创建一条新的售后工单记录
+ * 需先通过 `createTicketSchema` 的入参合法性校验验证。
+ * 它封装了生成防重规则单号以及校验调用者身份的强安全操作。
+ * 
+ * @param data - 由前端页面组装并传入的新工单数据模型
+ * @returns 包含建立的工单实例和成功标识的对象
  */
 export async function createAfterSalesTicket(data: z.infer<typeof createTicketSchema>) {
     return createAfterSalesTicketAction(data);
@@ -201,7 +210,12 @@ const getAfterSalesTicketDetailAction = createSafeAction(z.object({ id: z.string
 });
 
 /**
- * 根据 ID 获取工单详情
+ * 获取指定售后工单的详尽信息展示数据
+ * 穿透包含：客户基础资料、关联的原始订单、责任判决及处理跟踪记录等。
+ * 已对客户手机进行默认脱敏响应，可安全传递至前端展示层。
+ * 
+ * @param ticketId - 指定查询的唯一售后工单标识 ID
+ * @returns 包含完整聚合数据的单据模型
  */
 export async function getTicketDetail(ticketId: string) {
     return getAfterSalesTicketDetailAction({ id: ticketId });
@@ -253,6 +267,8 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
         changed: { status: data.status }
     });
 
+    logger.info(`[After Sales] Ticket ${data.ticketId} status updated to ${data.status} by user ${session.user.id}`);
+
     revalidatePath(`/after-sales/${data.ticketId}`);
     revalidatePath('/after-sales');
     revalidateTag('after-sales-analytics', 'default');
@@ -260,14 +276,23 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
 });
 
 /**
- * 手动更新工单状态及处理方案
+ * 手动向系统提交状态运转及最终处理方案的保存操作
+ * 基于严格的状态机流程检查，不允许断层流转或回退流转。
+ * 更新后将自动记录全量的系统级别核心参数变化监控及快照至审计表中。
+ * 
+ * @param data - 需要更新的工单状态和（如需要）处理结果意见的格式化字符串
+ * @returns 通知前后端刷新并返回状态文字描述结果的封装对象
  */
 export async function updateTicketStatus(data: z.infer<typeof updateStatusSchema>) {
     return updateTicketStatusAction(data);
 }
 
 /**
- * 获取工单的审计日志 (用于时间轴展示)
+ * 获取工单随时间的动作审计日志历史记录
+ * 这些审计日志常用于前端展示追踪时间轴，以及追溯异常流转。
+ * 
+ * @param ticketId - 需要查询日志历史轨迹的目标工单 ID
+ * @returns 单据所有带有时间戳的历史状态快照集
  */
 export async function getTicketLogs(ticketId: string) {
     const session = await auth();
@@ -289,43 +314,57 @@ export async function getTicketLogs(ticketId: string) {
 }
 
 /**
- * 售后成本结案
- * 计算最终内部损失并存档。
+ * 进行单据层面的退款及衍生赔付成本全额结案操作
+ * 根据最终所有的核算损失更新定结属性，并将系统的账务和状态予以永久关闭。
+ * 
+ * @param ticketId - 待核算结案的工单 UUID
+ * @returns 返回标记系统内部财务确认节点成功的消息
  */
 export async function closeResolutionCostClosure(ticketId: string) {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
-    const ticket = await db.query.afterSalesTickets.findFirst({
-        where: eq(afterSalesTickets.id, ticketId)
-    });
+    try {
 
-    if (!ticket) return { success: false, error: '工单不存在' };
+        const ticket = await db.query.afterSalesTickets.findFirst({
+            where: eq(afterSalesTickets.id, ticketId)
+        });
 
-    const actualCost = Number(ticket.totalActualCost || 0);
-    const actualDeduction = Number(ticket.actualDeduction || 0);
-    const internalLoss = actualCost - actualDeduction;
+        if (!ticket) return { success: false, error: '工单不存在' };
 
-    await db.update(afterSalesTickets)
-        .set({
-            internalLoss: internalLoss.toString(),
-            status: 'CLOSED',
-            closedAt: new Date(),
-            updatedAt: new Date()
-        })
-        .where(eq(afterSalesTickets.id, ticketId));
+        const actualCost = Number(ticket.totalActualCost || 0);
+        const actualDeduction = Number(ticket.actualDeduction || 0);
+        const internalLoss = actualCost - actualDeduction;
 
-    await AuditService.recordFromSession(session, 'after_sales_tickets', ticketId, 'UPDATE', {
-        changed: { internalLoss: internalLoss.toString(), status: 'CLOSED' }
-    });
+        await db.update(afterSalesTickets)
+            .set({
+                internalLoss: internalLoss.toString(),
+                status: 'CLOSED',
+                closedAt: new Date(),
+                updatedAt: new Date()
+            })
+            .where(eq(afterSalesTickets.id, ticketId));
 
-    revalidateTag(`after-sales-ticket-${ticketId}`, 'default');
-    return { success: true, message: '成本结案成功' };
+        await AuditService.recordFromSession(session, 'after_sales_tickets', ticketId, 'UPDATE', {
+            changed: { internalLoss: internalLoss.toString(), status: 'CLOSED' }
+        });
+
+        logger.info(`[After Sales] Ticket ${ticketId} financially closed with internal loss: ${internalLoss}`);
+
+        revalidateTag(`after-sales-ticket-${ticketId}`, 'default');
+        return { success: true, message: '成本结案成功' };
+    } catch (err) {
+        logger.error(`[After Sales] Failed to close cost for ticket ${ticketId}:`, { error: err });
+        return { success: false, error: '结案执行过程中发生系统异常，详见错误日志' };
+    }
 }
 
 /**
- * 校验工单财务结案状态
- * 检查所有关联定责单是否已财务同步。
+ * 检验售后工单是否具备执行财务结案的前置状态条件
+ * 遍历并检查其产生的所有被扣方关联的定责单是否已完全同入到财务模块完成记账。
+ * 
+ * @param ticketId - 触发财务终结判断的工单凭证
+ * @returns 描述是否已经没有遗漏而畅通的校验状态集
  */
 export async function checkTicketFinancialClosure(ticketId: string) {
     const notices = await db.query.liabilityNotices.findMany({
@@ -350,8 +389,11 @@ export async function checkTicketFinancialClosure(ticketId: string) {
 }
 
 /**
- * 创建换货订单 (占位实现)
- * 基于售后工单生成一个换货类型的销售订单。
+ * [演示占位] 快捷派生创建关联的换货类型采购工单
+ * 未来应进一步与 WMS (仓库管理) 模块对接进行自动的调拨与替换单产生。
+ * 
+ * @param ticketId - 需要被继承的父工单号
+ * @returns 基于原订单上下文环境产生的相关全新子订单数据
  */
 export async function createExchangeOrder(ticketId: string) {
     const session = await auth();

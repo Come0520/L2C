@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPaymentOrderSchema } from '../actions/schema';
@@ -34,6 +35,20 @@ import { toast } from 'sonner';
 import { useTransition, useEffect, useState } from 'react';
 import { z } from 'zod';
 import { PhotoUpload } from '@/shared/components/photo-upload';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { financeAccounts } from '@/shared/api/schema';
+
+/** 财务账户行类型 */
+type FinanceAccount = InferSelectModel<typeof financeAccounts>;
+
+/** 初始对账单数据（从外部传入） */
+interface InitialStatementData {
+    customerId: string;
+    customerName: string;
+    customer?: { phone?: string };
+    pendingAmount: string;
+    orderId: string;
+}
 
 type FormValues = z.infer<typeof createPaymentOrderSchema>;
 
@@ -47,8 +62,8 @@ interface PaymentOrderDialogProps {
     customerId?: string;
     customerName?: string;
     amount?: string | number;
-     
-    initialStatement?: any; // 保持向后兼容，后续可定义具体类型
+
+    initialStatement?: InitialStatementData;
 }
 
 export function PaymentOrderDialog({
@@ -67,12 +82,12 @@ export function PaymentOrderDialog({
     const onOpenChange = isControlled ? setControlledOpen : setInternalOpen;
 
     const [isPending, startTransition] = useTransition();
-     
-    const [accounts, setAccounts] = useState<any[]>([]); // 账户列表类型后续可精确定义
+
+    const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
 
     useEffect(() => {
         if (open) {
-            getFinanceAccounts().then(setAccounts).catch(console.error);
+            getFinanceAccounts().then(setAccounts).catch(logger.error);
         }
     }, [open]);
 

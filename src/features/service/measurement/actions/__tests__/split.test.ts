@@ -68,6 +68,7 @@ vi.mock('../../utils', () => ({
 // --- Mock Next.js 缓存 ---
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // --- Mock Drizzle Schema 表对象 ---

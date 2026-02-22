@@ -8,7 +8,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { mockUpdate, mockQueryFindFirst, mockAuditRecord, mockExecuteSplitRouting } = vi.hoisted(() => {
     const fnUpdate = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue(undefined)
+            where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440000' }])
+            })
         })
     });
     return {
@@ -101,6 +103,7 @@ describe('Order Production Actions', () => {
             const result = await confirmOrderProduction({
                 orderId: mockOrderId,
                 remark: '开始生产',
+                version: 1,
             });
 
             expect(result).toEqual({ success: true });
@@ -124,11 +127,13 @@ describe('Order Production Actions', () => {
                 id: mockOrderId,
                 tenantId: mockTenantId,
                 status: 'SIGNED', // 未付款
-                settlementType: 'MONTHLY',
+                settlementType: 'CREDIT',
+                version: 1,
             });
 
             const result = await confirmOrderProduction({
                 orderId: mockOrderId,
+                version: 1,
             });
 
             expect(result).toEqual({ success: true });
@@ -142,14 +147,14 @@ describe('Order Production Actions', () => {
                 settlementType: 'FULL',
             });
 
-            await expect(confirmOrderProduction({ orderId: mockOrderId }))
+            await expect(confirmOrderProduction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow('Order must be PAID to start production');
         });
 
         it('订单不存在时抛出异常', async () => {
             mockQueryFindFirst.mockResolvedValueOnce(null);
 
-            await expect(confirmOrderProduction({ orderId: mockOrderId }))
+            await expect(confirmOrderProduction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow('Order not found');
         });
 
@@ -157,7 +162,7 @@ describe('Order Production Actions', () => {
             // @ts-expect-error - 模拟未登录状态
             vi.mocked(auth).mockResolvedValueOnce(null);
 
-            await expect(confirmOrderProduction({ orderId: mockOrderId }))
+            await expect(confirmOrderProduction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow('Unauthorized');
         });
     });
@@ -172,6 +177,7 @@ describe('Order Production Actions', () => {
                     supplierId: '220e8400-e29b-41d4-a716-446655440020',
                 },
             ],
+            version: 1,
         };
 
         it('成功执行拆单', async () => {

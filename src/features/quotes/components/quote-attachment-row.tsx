@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Check } from 'lucide-react';
 import { createQuoteItem, updateQuoteItem, deleteQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 附件类型选项
@@ -160,7 +161,7 @@ export function QuoteAttachmentRow({
             onSave?.();
         } catch (error) {
             toast.error('操作失败');
-            console.error(error);
+            logger.error(error);
         } finally {
             setLoading(false);
         }
@@ -179,7 +180,7 @@ export function QuoteAttachmentRow({
             onDelete?.();
         } catch (error) {
             toast.error('删除失败');
-            console.error(error);
+            logger.error(error);
         } finally {
             setLoading(false);
         }

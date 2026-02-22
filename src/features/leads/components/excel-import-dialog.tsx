@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import {

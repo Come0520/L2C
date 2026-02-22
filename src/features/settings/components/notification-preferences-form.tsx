@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useEffect, useState, useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
@@ -66,7 +67,7 @@ export function NotificationPreferencesForm() {
                     }
                 }
             } catch (error) {
-                console.error('加载偏好设置失败:', error);
+                logger.error('加载偏好设置失败:', error);
                 toast.error('加载偏好设置失败');
             } finally {
                 setIsLoading(false);

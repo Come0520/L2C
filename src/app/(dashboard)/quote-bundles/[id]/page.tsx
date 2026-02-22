@@ -15,9 +15,15 @@ export default async function QuoteBundleDetailPage({
         params,
         auth()
     ]);
+    const tenantId = session?.user?.tenantId;
+    if (!tenantId) {
+        notFound();
+    }
+
+    // 修正 Promise.all 和解构的错误
     const [result, plans] = await Promise.all([
         getQuoteBundleById({ id }),
-        session?.user?.tenantId ? fetchQuotePlans(session.user.tenantId) : Promise.resolve([] as any[])
+        fetchQuotePlans(tenantId)
     ]);
 
     if (!result.success || !result.data) {
@@ -26,7 +32,7 @@ export default async function QuoteBundleDetailPage({
 
     return (
         <Suspense fallback={<DetailSkeleton />}>
-            <QuoteBundleDetailView bundle={result.data} plans={plans} />
+            <QuoteBundleDetailView bundle={result.data} plans={plans || {}} />
         </Suspense>
     );
 }

@@ -69,8 +69,7 @@ export function MergeCustomerDialog({ targetCustomer, userId, trigger }: MergeCu
                 // 排除目标客户自己
                 // res.data is assumed to be Customer[] or compatible
                 setSearchResults(res.data.filter((c: Customer) => c.id !== targetCustomer.id));
-            } catch (err) {
-                console.error('Search failed:', err);
+            } catch (_err) {
                 toast.error('搜索客户失败');
             } finally {
                 setSearching(false);

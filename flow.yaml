@@ -155,9 +155,17 @@ stages:
                   # 7. 停止旧容器
                   docker compose -f docker-compose.prod.yml down || true
 
-                  # 8. 构建所有镜像
+                  # 8. 检查可用内存并构建 Docker 镜像
                   echo "=== 构建 Docker 镜像 ==="
-                  docker compose -f docker-compose.prod.yml build --no-cache
+                  FREE_MEM=$(free -m | awk '/^Mem:/{print $7}')
+                  echo "当前可用内存: ${FREE_MEM}MB"
+                  if [ "$FREE_MEM" -lt 2048 ]; then
+                    echo "⚠️ 可用内存不足 2GB，清理 Docker 缓存释放空间..."
+                    docker system prune -f
+                    docker builder prune -f
+                    echo "清理后可用内存: $(free -m | awk '/^Mem:/{print $7}')MB"
+                  fi
+                  docker compose -f docker-compose.prod.yml build
 
                   # 9. 尝试运行 db-migrate（非阻塞，schema 变更已手动执行）
                   echo "=== 执行数据库迁移（容器内，超时 120 秒）==="
@@ -172,20 +180,23 @@ stages:
                   docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx
                   echo "容器已启动，等待健康检查..."
 
-                  # 9. 健康检查（最多等 2 分钟）
+                  # 11. 健康检查（最多等 3 分钟）
                   HEALTHY=false
-                  for i in $(seq 1 24); do
+                  for i in $(seq 1 36); do
                     if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                       echo "✅ 健康检查通过 (第 ${i} 次尝试)"
                       HEALTHY=true
                       break
                     fi
-                    echo "  等待中... ($i/24)"
+                    echo "  等待中... ($i/36)"
                     sleep 5
                   done
 
                   if [ "$HEALTHY" = "false" ]; then
-                    echo "❌ 健康检查超时！"
+                    echo "❌ 健康检查超时 (等待 3 分钟)！"
+                    echo "=== Docker 容器状态 ==="
+                    docker compose -f docker-compose.prod.yml ps
+                    echo "=== 最近容器日志 ==="
                     docker compose -f docker-compose.prod.yml logs --tail=80 app
                     # 自动回滚
                     if [ -f release.prev.tar.gz ]; then

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 import type { AttributionModel } from './schema';
 
 
@@ -97,7 +98,7 @@ export async function updateAttributionSettingsAction(
 
         return { success: true, data: { success: true } };
     } catch (error) {
-        console.error('更新归因设置失败:', error);
+        logger.error('更新归因设置失败:', { error });
         return { success: false, error: '更新失败' };
     }
 }

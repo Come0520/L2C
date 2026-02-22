@@ -28,8 +28,13 @@ export type ProcessingOrderStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CA
 /**
  * 分页获取加工单列表
  * 
- * @description 支持根据状态和加工单号搜索。包含权限校验和租户隔离。
- * @param params 分页、状态过滤及搜索关键词
+ * @description 结合供应商和订单信息，分页查询加工单。支持状态过滤和单号模糊搜索。
+ * @param params 查询参数对象：
+ * - `page` (number, optional): 页码，默认 1
+ * - `pageSize` (number, optional): 每页数量，默认 20
+ * - `status` (string, optional): 加工单状态过滤
+ * - `search` (string, optional): 加工单号模糊搜索关键词
+ * @returns {Promise<{success: boolean, data: any[], total: number, ...}>} 返回数据列表及分页信息
  */
 export async function getProcessingOrders(params: {
     page?: number;
@@ -37,8 +42,10 @@ export async function getProcessingOrders(params: {
     status?: string;
     search?: string;
 }) {
+    console.warn('[supply-chain] getProcessingOrders 查询参数:', params);
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+    // ... (保持原有逻辑)
 
     // 权限检查
     try {
@@ -117,12 +124,15 @@ export async function getProcessingOrders(params: {
 /**
  * 根据 ID 获取加工单详细信息
  * 
- * @description 包含关联的供应商、订单信息及详细的加工项明细。
- * @param params 包含加工单 ID
+ * @description 获取加工单主表数据及其关联的供应商、订单和对应的加工项明细明细。
+ * @param params 包含 `id` (string) 加工单 ID 的对象
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>} 返回加工单详情对象
  */
 export async function getProcessingOrderById({ id }: { id: string }) {
+    console.warn('[supply-chain] getProcessingOrderById 查询 ID:', id);
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
+    // ... (保持原有逻辑)
 
     // 权限检查
     try {
@@ -188,9 +198,12 @@ export async function getProcessingOrderById({ id }: { id: string }) {
 /**
  * 更新加工单状态
  * 
- * @description 流转规则：PENDING -> PROCESSING (记录开始时间) -> COMPLETED (记录完成时间)。
+ * @description 根据目标状态更新加工单，流转规则遵循：PENDING -> PROCESSING -> COMPLETED。
+ * 进入 PROCESSING 时自动记录 startAt，进入 COMPLETED 时记录 completedAt。
  * @param id 加工单 ID
- * @param status 目标状态
+ * @param status 目标状态 ('PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED')
+ * @returns {Promise<{success: boolean, error?: string}>} 返回执行结果状态
+ * @throws {Error} 更新失败时记录异常日志
  */
 export async function updateProcessingOrderStatus(id: string, status: ProcessingOrderStatus) {
     const session = await auth();
@@ -203,25 +216,32 @@ export async function updateProcessingOrderStatus(id: string, status: Processing
         return { success: false, error: '无供应链管理权限' };
     }
 
-    await db.update(workOrders)
-        .set({
-            status,
-            ...(status === 'PROCESSING' ? { startAt: new Date() } : {}),
-            ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
-            updatedAt: new Date(),
-        })
-        .where(and(
-            eq(workOrders.id, id),
-            eq(workOrders.tenantId, session.user.tenantId)
-        ));
+    console.warn('[supply-chain] updateProcessingOrderStatus 开始更新:', { id, status });
+    try {
+        await db.update(workOrders)
+            .set({
+                status,
+                ...(status === 'PROCESSING' ? { startAt: new Date() } : {}),
+                ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(workOrders.id, id),
+                eq(workOrders.tenantId, session.user.tenantId)
+            ));
 
-    // 记录审计日志
-    await AuditService.recordFromSession(session, 'workOrders', id, 'UPDATE', {
-        new: { status }
-    });
+        // 记录审计日志
+        await AuditService.recordFromSession(session, 'workOrders', id, 'UPDATE', {
+            new: { status }
+        });
 
-    revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
-    return { success: true };
+        console.warn('[supply-chain] updateProcessingOrderStatus 更新成功');
+        revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
+        return { success: true };
+    } catch (error) {
+        console.error('[supply-chain] updateProcessingOrderStatus 更新失败:', error);
+        return { success: false, error: '更新加工单状态失败' };
+    }
 }
 
 // ============ 创建/更新 Schema ============
@@ -249,8 +269,9 @@ const updateProcessingOrderSchema = z.object({
 /**
  * 创建新加工单
  *
- * @description 流程包含生成加工单号 (WO-*)、创建主表记录及批量插入明细。
- * @param data 符合 createProcessingOrderSchema 的输入数据
+ * @description 开启数据库事务，包含生成加工单号 (WO-*)、创建主表记录及关联插入加工明细。
+ * @param data 符合 createProcessingOrderSchema 定义的对象，包含关联 ID、供应商及明细
+ * @returns {Promise<{success: boolean, id?: string, woNo?: string, error?: string}>} 返回创建成功的单据信息
  */
 export async function createProcessingOrder(data: z.infer<typeof createProcessingOrderSchema>) {
     const session = await auth();
@@ -263,71 +284,81 @@ export async function createProcessingOrder(data: z.infer<typeof createProcessin
         return { success: false, error: '无供应链管理权限' };
     }
 
+    console.warn('[supply-chain] createProcessingOrder 开始创建:', { orderId: data.orderId, supplierId: data.supplierId });
     // 校验输入
     const parsed = createProcessingOrderSchema.safeParse(data);
     if (!parsed.success) {
+        console.warn('[supply-chain] createProcessingOrder 输入校验失败:', parsed.error.issues);
         return { success: false, error: parsed.error.issues[0]?.message || '输入校验失败' };
     }
 
     const { orderId, poId, supplierId, remark, items } = parsed.data;
     const tenantId = session.user.tenantId;
 
-    // 验证关联订单存在且属于当前租户
-    const [orderRecord] = await db.select({ id: orders.id })
-        .from(orders)
-        .where(and(
-            eq(orders.id, orderId),
-            eq(orders.tenantId, tenantId)
-        ))
-        .limit(1);
+    try {
 
-    if (!orderRecord) {
-        return { success: false, error: '关联订单不存在或无权访问' };
-    }
+        // 验证关联订单存在且属于当前租户
+        const [orderRecord] = await db.select({ id: orders.id })
+            .from(orders)
+            .where(and(
+                eq(orders.id, orderId),
+                eq(orders.tenantId, tenantId)
+            ))
+            .limit(1);
 
-    // 生成加工单号
-    const woNo = generateDocNo('WO');
-
-    // 事务：创建主记录 + 明细
-    const result = await db.transaction(async (tx) => {
-        // 创建 workOrders 主记录
-        const [wo] = await tx.insert(workOrders).values({
-            tenantId,
-            woNo,
-            orderId,
-            poId,
-            supplierId,
-            status: 'PENDING',
-            remark: remark || null,
-            createdBy: session.user.id,
-        }).returning({ id: workOrders.id });
-
-        // 批量创建 workOrderItems
-        if (items.length > 0) {
-            await tx.insert(workOrderItems).values(
-                items.map(item => ({
-                    woId: wo.id,
-                    orderItemId: item.orderItemId,
-                    status: 'PENDING' as const,
-                }))
-            );
+        if (!orderRecord) {
+            console.warn('[supply-chain] createProcessingOrder 订单验证未通过:', orderId);
+            return { success: false, error: '关联订单不存在或无权访问' };
         }
 
-        // 记录审计日志
-        await AuditService.recordFromSession(session, 'workOrders', wo.id, 'CREATE', {
-            new: {
+        // 生成加工单号
+        const woNo = generateDocNo('WO');
+
+        // 事务：创建主记录 + 明细
+        const result = await db.transaction(async (tx) => {
+            // 创建 workOrders 主记录
+            const [wo] = await tx.insert(workOrders).values({
+                tenantId,
                 woNo,
                 orderId,
+                poId,
                 supplierId,
-                itemCount: items.length
+                status: 'PENDING',
+                remark: remark || null,
+                createdBy: session.user.id,
+            }).returning({ id: workOrders.id });
+
+            // 批量创建 workOrderItems
+            if (items.length > 0) {
+                await tx.insert(workOrderItems).values(
+                    items.map(item => ({
+                        woId: wo.id,
+                        orderItemId: item.orderItemId,
+                        status: 'PENDING' as const,
+                    }))
+                );
             }
-        }, tx);
 
-        return wo;
-    });
+            // 记录审计日志
+            await AuditService.recordFromSession(session, 'workOrders', wo.id, 'CREATE', {
+                new: {
+                    woNo,
+                    orderId,
+                    supplierId,
+                    itemCount: items.length
+                }
+            }, tx);
 
-    revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
-    return { success: true, id: result.id, woNo };
+            return wo;
+        });
+
+        console.warn('[supply-chain] createProcessingOrder 创建成功:', result.id);
+        revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
+        return { success: true, id: result.id, woNo };
+    } catch (error) {
+        console.error('[supply-chain] createProcessingOrder 创建内部错误:', error);
+        return { success: false, error: '创建加工单失败' };
+    }
 }
 
 /**
@@ -356,47 +387,54 @@ export async function updateProcessingOrder(id: string, data: z.infer<typeof upd
 
     const tenantId = session.user.tenantId;
 
-    // 检查加工单存在性 + 租户隔离 + 状态
-    const [existing] = await db.select({
-        id: workOrders.id,
-        status: workOrders.status,
-    })
-        .from(workOrders)
-        .where(and(
-            eq(workOrders.id, id),
-            eq(workOrders.tenantId, tenantId)
-        ))
-        .limit(1);
+    console.warn('[supply-chain] 更新加工单基本信息:', { id, tenantId });
+    try {
 
-    if (!existing) {
-        return { success: false, error: '加工单不存在或无权访问' };
+        // 检查加工单存在性 + 租户隔离 + 状态
+        const [existing] = await db.select({
+            id: workOrders.id,
+            status: workOrders.status,
+        })
+            .from(workOrders)
+            .where(and(
+                eq(workOrders.id, id),
+                eq(workOrders.tenantId, tenantId)
+            ))
+            .limit(1);
+
+        if (!existing) {
+            return { success: false, error: '加工单不存在或无权访问' };
+        }
+
+        if (existing.status !== 'PENDING') {
+            return { success: false, error: `当前状态 ${existing.status} 不允许修改` };
+        }
+
+        // 构建更新字段
+        const updateFields: Record<string, unknown> = {
+            updatedAt: new Date(),
+        };
+
+        if (parsed.data.supplierId) updateFields.supplierId = parsed.data.supplierId;
+        if (parsed.data.remark !== undefined) updateFields.remark = parsed.data.remark;
+
+        await db.update(workOrders)
+            .set(updateFields)
+            .where(and(
+                eq(workOrders.id, id),
+                eq(workOrders.tenantId, tenantId)
+            ));
+
+        // 记录审计日志
+        await AuditService.recordFromSession(session, 'workOrders', id, 'UPDATE', {
+            new: updateFields
+        });
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
+        return { success: true };
+    } catch (error) {
+        console.error('[supply-chain] 更新加工单基本信息失败:', error);
+        return { success: false, error: '更新加工单失败' };
     }
-
-    if (existing.status !== 'PENDING') {
-        return { success: false, error: `当前状态 ${existing.status} 不允许修改` };
-    }
-
-    // 构建更新字段
-    const updateFields: Record<string, unknown> = {
-        updatedAt: new Date(),
-    };
-
-    if (parsed.data.supplierId) updateFields.supplierId = parsed.data.supplierId;
-    if (parsed.data.remark !== undefined) updateFields.remark = parsed.data.remark;
-
-    await db.update(workOrders)
-        .set(updateFields)
-        .where(and(
-            eq(workOrders.id, id),
-            eq(workOrders.tenantId, tenantId)
-        ));
-
-    // 记录审计日志
-    await AuditService.recordFromSession(session, 'workOrders', id, 'UPDATE', {
-        new: updateFields
-    });
-
-    revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
-    return { success: true };
 }
 

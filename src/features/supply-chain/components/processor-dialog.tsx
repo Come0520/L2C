@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import {
     Dialog,
@@ -86,7 +87,7 @@ export function ProcessorDialog({ open, onOpenChange, initialData, onSuccess }: 
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : '未知系统错误';
                 toast.error('保存失败', { description: message });
-                console.error(error);
+                logger.error(error);
             }
         });
     };

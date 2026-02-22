@@ -3,11 +3,11 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { showroomItems } from '@/shared/api/schema/showroom';
-import { eq, and, desc, sql, or } from 'drizzle-orm';
+import { eq, and, desc, sql, or, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { createShowroomItemSchema, updateShowroomItemSchema, deleteShowroomItemSchema, getShowroomItemsSchema } from './schema';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import DOMPurify from 'isomorphic-dompurify';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { calculateScore } from '../logic/scoring';
@@ -24,11 +24,11 @@ import { SQL } from 'drizzle-orm';
  * 包含搜索、分类过滤和 0 状态过滤
  * @param input 查询参数
  */
-export async function getShowroomItems(input: z.infer<typeof getShowroomItemsSchema>) {
+export async function getShowroomItems(input: z.input<typeof getShowroomItemsSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-    const { page, pageSize, search, type, status, minScore } = getShowroomItemsSchema.parse(input);
+    const { page, pageSize, search, type, status, minScore, sortBy, categoryId } = getShowroomItemsSchema.parse(input);
     const offset = (page - 1) * pageSize;
 
     // 1. 缓存读取 (仅限非搜索查询)
@@ -62,14 +62,32 @@ export async function getShowroomItems(input: z.infer<typeof getShowroomItemsSch
         whereConditions.push(sql`${showroomItems.score} >= ${minScore}`);
     }
 
-    // 3. 执行合并查询 (SQL 窗口函数优化)
+    if (categoryId) {
+        // 如果存在分类要求，则必须借用表连接去判定 `product.category`，这是一个扩展点 (视需求如果仅靠 product_id 需要做 subquery)
+        // 简单实现：我们在 showroom_items 定义中有关联 productId, 通过子查询达成同类过滤
+        const { products } = await import('@/shared/api/schema/catalogs');
+        whereConditions.push(inArray(showroomItems.productId, db.select({ id: products.id }).from(products).where(sql`${products.category} = ${categoryId}`)));
+    }
+
+    // 3. 排序策略
+    let orderByCondition;
+    if (sortBy === 'latest') {
+        orderByCondition = desc(showroomItems.createdAt);
+    } else if (sortBy === 'views') {
+        orderByCondition = desc(showroomItems.views);
+    } else {
+        // default to score
+        orderByCondition = desc(showroomItems.score);
+    }
+
+    // 4. 执行合并查询 (SQL 窗口函数优化)
     const result = await db.select({
         item: showroomItems,
         totalCount: sql<number>`count(*) OVER()`.mapWith(Number),
     })
         .from(showroomItems)
         .where(and(...whereConditions))
-        .orderBy(desc(showroomItems.score), desc(showroomItems.createdAt))
+        .orderBy(orderByCondition, desc(showroomItems.createdAt))
         .limit(pageSize)
         .offset(offset);
 
@@ -117,7 +135,7 @@ export async function getShowroomItemDetail(id: string) {
  * 自动计算内容得分并记录审计日志
  * @param input 创建参数
  */
-export async function createShowroomItem(input: z.infer<typeof createShowroomItemSchema>) {
+export async function createShowroomItem(input: z.input<typeof createShowroomItemSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
@@ -138,7 +156,14 @@ export async function createShowroomItem(input: z.infer<typeof createShowroomIte
     }).returning();
 
     // 记录审计日志
-    await AuditService.recordFromSession(session, 'showroom_items', newItem.id, 'CREATE', { new: newItem });
+    await AuditService.log(db, {
+        tableName: 'showroom_items',
+        recordId: newItem.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: newItem as Record<string, unknown>
+    });
 
     revalidatePath('/showroom');
     await invalidateShowroomCache(session.user.tenantId);
@@ -150,7 +175,7 @@ export async function createShowroomItem(input: z.infer<typeof createShowroomIte
  * 仅限创建者或管理员，自动更新得分
  * @param input 更新参数
  */
-export async function updateShowroomItem(input: z.infer<typeof updateShowroomItemSchema>) {
+export async function updateShowroomItem(input: z.input<typeof updateShowroomItemSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
@@ -194,9 +219,14 @@ export async function updateShowroomItem(input: z.infer<typeof updateShowroomIte
         .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)))
         .returning();
 
-    await AuditService.recordFromSession(session, 'showroom_items', id, 'UPDATE', {
-        old: existing as Record<string, unknown>,
-        new: updatedItem as Record<string, unknown>
+    await AuditService.log(db, {
+        tableName: 'showroom_items',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existing as Record<string, unknown>,
+        newValues: updatedItem as Record<string, unknown>
     });
 
     revalidatePath('/showroom');
@@ -210,7 +240,7 @@ export async function updateShowroomItem(input: z.infer<typeof updateShowroomIte
  * 将状态更改为 ARCHIVED
  * @param id 素材 ID
  */
-export async function deleteShowroomItem(input: z.infer<typeof deleteShowroomItemSchema>) {
+export async function deleteShowroomItem(input: z.input<typeof deleteShowroomItemSchema>) {
     const session = await auth();
     if (!session?.user?.id) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
@@ -231,7 +261,14 @@ export async function deleteShowroomItem(input: z.infer<typeof deleteShowroomIte
         .set({ status: 'ARCHIVED', updatedAt: new Date(), updatedBy: session.user.id })
         .where(eq(showroomItems.id, id));
 
-    await AuditService.recordFromSession(session, 'showroom_items', id, 'DELETE', { old: existing as Record<string, unknown> });
+    await AuditService.log(db, {
+        tableName: 'showroom_items',
+        recordId: id,
+        action: 'DELETE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existing as Record<string, unknown>
+    });
 
     revalidatePath('/showroom');
     await invalidateShowroomCache(session.user.tenantId);

@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import Decimal from 'decimal.js';
+import { logger } from '@/shared/lib/logger';
 
 interface ImportItem {
     roomName: string;
@@ -107,7 +108,7 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
         return { successCount: items.length, errors: [] };
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error('Batch import failed:', error);
+        logger.error('Batch import failed:', { error });
         return { successCount: 0, errors: [message] };
     }
 }

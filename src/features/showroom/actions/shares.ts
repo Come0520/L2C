@@ -3,16 +3,20 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { showroomShares, showroomItems } from '@/shared/api/schema/showroom';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, gte } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { createShareLinkSchema, deactivateShareSchema } from './schema';
-import { AuditService } from '@/shared/lib/audit-service';
+import { createShareLinkSchema, deactivateShareSchema, getShareContentSchema } from './schema';
+import { createHash } from 'crypto';
+import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { ShowroomShareItemSnapshot, ShowroomAuditData } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
+import { createLogger } from '@/shared/lib/logger';
+
+const logger = createLogger('ShowroomSharesAction');
 
 /**
  * 云展厅分享功能 Actions
@@ -23,11 +27,11 @@ import { ShowroomError, ShowroomErrors } from '../errors';
  * @param input 分享参数，包含素材列表、过期时间、改价快照等
  * @returns 分享记录 ID 和完整访问 URL
  */
-export async function createShareLink(input: z.infer<typeof createShareLinkSchema>) {
+export async function createShareLink(input: z.input<typeof createShareLinkSchema>) {
     const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+    if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-    const { items, expiresInDays } = createShareLinkSchema.parse(input);
+    const { items, expiresInDays, password, maxViews } = createShareLinkSchema.parse(input);
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
@@ -38,12 +42,19 @@ export async function createShareLink(input: z.infer<typeof createShareLinkSchem
         salesId: session.user.id,
         itemsSnapshot: itemsSnapshot,
         expiresAt: expiresAt,
+        passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
+        maxViews: maxViews || null,
         isActive: 1,
     }).returning({ id: showroomShares.id });
 
     // 记录审计日志
-    await AuditService.recordFromSession(session, 'showroom_shares', shareId.id, 'CREATE', {
-        new: { items, expiresInDays, expiresAt } as Record<string, unknown>
+    await AuditService.log(db, {
+        tableName: 'showroom_shares',
+        recordId: shareId.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews } as Record<string, unknown>
     });
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -60,7 +71,8 @@ export async function createShareLink(input: z.infer<typeof createShareLinkSchem
  * @param shareId 分享 ID
  * @throws 403/404/429 对应错误
  */
-export async function getShareContent(shareId: string) {
+export async function getShareContent(input: z.input<typeof getShareContentSchema>) {
+    const { shareId, password } = getShareContentSchema.parse(input);
     // 1. 公开限流检查
     const clientHeaders = await headers();
     const ip = clientHeaders.get('x-forwarded-for') || 'anonymous';
@@ -88,9 +100,25 @@ export async function getShareContent(shareId: string) {
         throw new ShowroomError(ShowroomErrors.SHARE_EXPIRED);
     }
 
+    // 检查密码保护
+    if (share.passwordHash) {
+        if (!password) {
+            throw new ShowroomError(ShowroomErrors.INVALID_PASSWORD);
+        }
+        const inputHash = createHash('sha256').update(password).digest('hex');
+        if (inputHash !== share.passwordHash) {
+            throw new ShowroomError(ShowroomErrors.INVALID_PASSWORD);
+        }
+    }
+
+    // 检查阅后即焚上线 (MaxViews)
+    if (share.maxViews && (share.views || 0) >= share.maxViews) {
+        throw new ShowroomError(ShowroomErrors.SHARE_LIMIT_EXCEEDED);
+    }
+
     // 3. 统计逻辑：抗压计数 (Redis)
     if (!redis) {
-        console.error('[Security] Redis unavailable for rate limiting. Blocking request.');
+        logger.error('Redis 不可用，无法执行限流，已拒绝请求', { shareId });
         throw new ShowroomError(ShowroomErrors.REDIS_UNAVAILABLE);
     }
 
@@ -130,7 +158,7 @@ export async function getShareContent(shareId: string) {
  */
 export async function getMyShareLinks(page = 1, pageSize = 20) {
     const session = await auth();
-    if (!session?.user?.id) throw new Error('Unauthorized');
+    if (!session?.user?.id) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
     const result = await db.query.showroomShares.findMany({
         where: and(
@@ -148,9 +176,9 @@ export async function getMyShareLinks(page = 1, pageSize = 20) {
 /**
  * 停用分享链接
  */
-export async function deactivateShareLink(input: z.infer<typeof deactivateShareSchema>) {
+export async function deactivateShareLink(input: z.input<typeof deactivateShareSchema>) {
     const session = await auth();
-    if (!session?.user?.tenantId) throw new Error('Unauthorized');
+    if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
     const { shareId } = deactivateShareSchema.parse(input);
 
@@ -163,11 +191,53 @@ export async function deactivateShareLink(input: z.infer<typeof deactivateShareS
         .returning();
 
     if (updated) {
-        await AuditService.recordFromSession(session, 'showroom_shares', shareId, 'UPDATE', {
-            new: { isActive: 0 } as ShowroomAuditData['new']
+        await AuditService.log(db, {
+            tableName: 'showroom_shares',
+            recordId: shareId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: { isActive: 0 } as Record<string, unknown>
         });
         revalidatePath('/showroom');
     }
 
     return { success: !!updated };
+}
+
+/**
+ * 获取展厅分享整体看板统计信息 (供后台或大盘使用)
+ * 提取全租户下产生的有效分享与总浏览趋势
+ */
+export async function getShareDashboardStats() {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
+
+    const tenantId = session.user.tenantId;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    try {
+        // 核心聚合指标查询
+        const aggregated = await db.select({
+            totalShares: sql<number>`COUNT(*)`,
+            totalViews: sql<number>`SUM(${showroomShares.views})`,
+            activeShares: sql<number>`SUM(CASE WHEN ${showroomShares.isActive} = 1 THEN 1 ELSE 0 END)`,
+            recentShares: sql<number>`SUM(CASE WHEN ${showroomShares.createdAt} >= ${sevenDaysAgo} THEN 1 ELSE 0 END)`,
+        }).from(showroomShares)
+            .where(eq(showroomShares.tenantId, tenantId));
+
+        return {
+            success: true,
+            data: {
+                totalShares: Number(aggregated[0]?.totalShares || 0),
+                totalViews: Number(aggregated[0]?.totalViews || 0),
+                activeShares: Number(aggregated[0]?.activeShares || 0),
+                recentNewShares: Number(aggregated[0]?.recentShares || 0),
+            }
+        };
+    } catch (err) {
+        logger.error('Failed to get share dashboard stats', { error: err as Error });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }

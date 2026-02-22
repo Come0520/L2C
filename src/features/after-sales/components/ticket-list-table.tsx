@@ -87,7 +87,7 @@ export function TicketListTable({ tickets, isLoading }: TicketListTableProps) {
                                         <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-bold border ${getPriorityColor(ticket.priority || '')}`}>
                                             {ticket.priority}
                                         </span>
-                                        <Badge variant={getStatusVariant(ticket.status) as any} className="w-fit text-[10px]">
+                                        <Badge variant={getStatusVariant(ticket.status) as "default" | "secondary" | "destructive" | "outline"} className="w-fit text-[10px]">
                                             {ticket.status}
                                         </Badge>
                                     </div>

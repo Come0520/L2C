@@ -8,34 +8,23 @@ import { db } from '@/shared/api/db';
 import { users, tenants } from '@/shared/api/schema';
 import { eq, or } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
-import { SignJWT } from 'jose';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
-
-// 生成 JWT Token (复用逻辑)
-async function generateToken(userId: string, tenantId: string) {
-  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-
-  const token = await new SignJWT({
-    userId,
-    tenantId,
-    type: 'miniprogram',
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('30d')
-    .sign(secret);
-
-  return token;
-}
+import { logger } from '@/shared/lib/logger';
+import { generateMiniprogramToken } from '../../auth-utils';
+import { LoginSchema } from '../../miniprogram-schemas';
+import { AuditService } from '@/shared/services/audit-service';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { account, password } = body;
 
-    if (!account || !password) {
-      return apiError('请输入账号和密码', 400);
+    // Zod 输入验证
+    const parsed = LoginSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0].message, 400);
     }
+
+    const { account, password } = parsed.data;
 
     // 1. 查找用户 (支持手机号或邮箱)
     const user = await db.query.users.findFirst({
@@ -65,8 +54,24 @@ export async function POST(request: NextRequest) {
       return apiError('租户信息异常', 500);
     }
 
-    // 4. 生成 Token
-    const token = await generateToken(user.id, user.tenantId);
+    // 4. 生成 Token（统一 7d 有效期）
+    const token = await generateMiniprogramToken(user.id, user.tenantId);
+
+    // 5. 审计日志
+    await AuditService.log(db, {
+      tableName: 'users',
+      recordId: user.id,
+      action: 'LOGIN',
+      userId: user.id,
+      tenantId: user.tenantId,
+      details: { method: 'PASSWORD', account }
+    });
+
+    logger.info('[Login] 用户登录成功', {
+      route: 'auth/login',
+      userId: user.id,
+      tenantId: user.tenantId,
+    });
 
     return apiSuccess({
       token,
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
       tenantStatus: tenant.status,
     });
   } catch (error: unknown) {
-    console.error('Login Error:', error);
+    logger.error('[Login] 登录服务异常', { route: 'auth/login', error });
     return apiError('登录服务异常', 500);
   }
 }

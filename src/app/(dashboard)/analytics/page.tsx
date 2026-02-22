@@ -27,8 +27,17 @@ interface KeyMetrics {
     pendingPayables: string;
 }
 
+interface FunnelStage {
+    stage: string;
+    count: number;
+    conversionRate: string | null;
+    avgDaysInStage: string | null;
+    previousPeriodCount: number;
+    trend: string | null;
+}
+
 interface FunnelResponse {
-    stages: any[];
+    stages: FunnelStage[];
     summary: {
         overallConversion: string;
         avgCycleTime: string;
@@ -68,10 +77,10 @@ export default function AnalyticsPage() {
                     getLeaderboard({ startDate: startDate.toISOString(), endDate: endDate.toISOString(), limit: 5, sortBy: 'amount' }),
                 ]);
 
-                if (metricsRes?.data?.success) setMetrics(metricsRes.data.data);
-                if (funnelRes?.data?.success) setFunnelData(funnelRes.data.data);
-                if (trendRes?.data?.success) setTrendData(trendRes.data.data.map((item: { date: string; amount: string; count: number }) => ({ ...item, amount: Number(item.amount) })));
-                if (leaderboardRes?.data?.success) setLeaderboardData(leaderboardRes.data.data);
+                if (metricsRes?.success && metricsRes.data) setMetrics(metricsRes.data as KeyMetrics);
+                if (funnelRes?.success && funnelRes.data) setFunnelData(funnelRes.data as FunnelResponse);
+                if (trendRes?.success && trendRes.data) setTrendData((trendRes.data as unknown as TrendData[]).map((item: TrendData) => ({ ...item, amount: Number(item.amount) })));
+                if (leaderboardRes?.success && leaderboardRes.data) setLeaderboardData(leaderboardRes.data as LeaderboardItem[]);
 
             } catch (error) {
                 console.error(error);

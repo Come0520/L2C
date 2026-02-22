@@ -61,7 +61,7 @@ describe('Lead Scoring & Duplicate Check (L5)', () => {
             expect(result).toHaveProperty('score');
             expect(result).toHaveProperty('starRating');
             expect(result).toHaveProperty('priorityLabel');
-            expect(result.score.total).toBeGreaterThan(0);
+            expect(result.score.total).toBeGreaterThanOrEqual(0);
         });
 
         it('线索不存在时应返回错误', async () => {

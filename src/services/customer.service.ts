@@ -21,6 +21,7 @@ import { randomBytes } from 'node:crypto';
 import { format } from 'date-fns';
 import { AuditService } from '../shared/services/audit-service';
 import { AppError, ERROR_CODES } from '../shared/lib/errors';
+import { logger } from '../shared/lib/logger';
 
 export class CustomerService {
   /**
@@ -523,7 +524,7 @@ export class CustomerService {
 
     // [Fix 1.2] 等级降级校验
     if (data.level && existing.level && data.level < existing.level) {
-      console.warn(`Customer level downgrade attempt: ${existing.level} -> ${data.level}`);
+      logger.warn(`Customer level downgrade attempt: ${existing.level} -> ${data.level}`);
       // 如果 strict mode: throw new AppError('不允许降低客户等级', ERROR_CODES.INVALID_OPERATION, 400);
     }
 

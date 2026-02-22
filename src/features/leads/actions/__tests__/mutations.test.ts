@@ -40,6 +40,10 @@ vi.mock('next/cache', () => ({
     revalidateTag: vi.fn(),
 }));
 
+vi.mock('@/shared/api/db', () => ({
+    db: {}
+}));
+
 vi.mock('@/shared/config/permissions', () => ({
     PERMISSIONS: {
         LEAD: {

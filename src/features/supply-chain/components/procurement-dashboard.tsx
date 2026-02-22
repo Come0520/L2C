@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -44,7 +45,7 @@ export function ProcurementDashboard({ draftPos: _draftPos }: ProcurementDashboa
                     setMetrics(result.data);
                 }
             } catch (error) {
-                console.error('Error fetching metrics:', error);
+                logger.error('Error fetching metrics:', error);
             } finally {
                 setLoading(false);
             }

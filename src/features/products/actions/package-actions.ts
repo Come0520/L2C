@@ -1,4 +1,5 @@
 'use server';
+import { logger } from "@/shared/lib/logger";
 
 /**
  * 套餐管理 Server Actions
@@ -13,12 +14,13 @@ import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 // =============================================
 // Schema 定义
 // =============================================
 
-const createPackageSchema = z.object({
+export const createPackageSchema = z.object({
     packageNo: z.string().min(1, '套餐编号不能为空'),
     packageName: z.string().min(1, '套餐名称不能为空'),
     packageType: z.enum(['QUANTITY', 'COMBO', 'CATEGORY', 'TIME_LIMITED']),
@@ -70,7 +72,7 @@ export async function getPackages() {
 
         return { success: true, data };
     } catch (error) {
-        console.error('获取套餐列表失败:', error);
+        logger.error('获取套餐列表失败:', error);
         return { success: false, error: '获取套餐列表失败' };
     }
 }
@@ -114,7 +116,7 @@ export async function getPackageById(id: string) {
 
         return { success: true, data: { ...data, products: packageProductsList } };
     } catch (error) {
-        console.error('获取套餐详情失败:', error);
+        logger.error('获取套餐详情失败:', error);
         return { success: false, error: '获取套餐详情失败' };
     }
 }
@@ -124,8 +126,9 @@ export async function getPackageById(id: string) {
  */
 export async function createPackage(input: z.infer<typeof createPackageSchema>) {
     try {
-        const tenantId = await getTenantIdFromSession();
-        if (!tenantId) return { success: false, error: '未授权' };
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
 
         const validated = createPackageSchema.parse(input);
 
@@ -148,10 +151,19 @@ export async function createPackage(input: z.infer<typeof createPackageSchema>) 
             })
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: created.id,
+            action: 'CREATE',
+            newValues: { packageData: created }
+        });
+
         revalidatePath('/products/packages');
         return { success: true, data: created };
     } catch (error) {
-        console.error('创建套餐失败:', error);
+        logger.error('创建套餐失败:', error);
         return { success: false, error: '创建套餐失败' };
     }
 }
@@ -161,8 +173,9 @@ export async function createPackage(input: z.infer<typeof createPackageSchema>) 
  */
 export async function updatePackage(id: string, input: z.infer<typeof updatePackageSchema>) {
     try {
-        const tenantId = await getTenantIdFromSession();
-        if (!tenantId) return { success: false, error: '未授权' };
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
 
         const validated = updatePackageSchema.parse(input);
 
@@ -189,10 +202,19 @@ export async function updatePackage(id: string, input: z.infer<typeof updatePack
             ))
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { updatedFields: updateData }
+        });
+
         revalidatePath('/products/packages');
         return { success: true, data: updated };
     } catch (error) {
-        console.error('更新套餐失败:', error);
+        logger.error('更新套餐失败:', error);
         return { success: false, error: '更新套餐失败' };
     }
 }
@@ -202,8 +224,9 @@ export async function updatePackage(id: string, input: z.infer<typeof updatePack
  */
 export async function deletePackage(id: string) {
     try {
-        const tenantId = await getTenantIdFromSession();
-        if (!tenantId) return { success: false, error: '未授权' };
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
 
         // 先删除关联的商品
         await db
@@ -218,10 +241,19 @@ export async function deletePackage(id: string) {
                 eq(productPackages.tenantId, tenantId)
             ));
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: id,
+            action: 'DELETE',
+            newValues: { action: 'PACKAGE_DELETED' }
+        });
+
         revalidatePath('/products/packages');
         return { success: true };
     } catch (error) {
-        console.error('删除套餐失败:', error);
+        logger.error('删除套餐失败:', error);
         return { success: false, error: '删除套餐失败' };
     }
 }
@@ -231,8 +263,9 @@ export async function deletePackage(id: string) {
  */
 export async function togglePackageStatus(id: string, isActive: boolean) {
     try {
-        const tenantId = await getTenantIdFromSession();
-        if (!tenantId) return { success: false, error: '未授权' };
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
 
         const [updated] = await db
             .update(productPackages)
@@ -243,10 +276,19 @@ export async function togglePackageStatus(id: string, isActive: boolean) {
             ))
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { action: 'TOGGLE_STATUS', isActive }
+        });
+
         revalidatePath('/products/packages');
         return { success: true, data: updated };
     } catch (error) {
-        console.error('切换套餐状态失败:', error);
+        logger.error('切换套餐状态失败:', error);
         return { success: false, error: '切换套餐状态失败' };
     }
 }
@@ -281,7 +323,7 @@ export async function getPackageProducts(packageId: string) {
 
         return { success: true, data };
     } catch (error) {
-        console.error('获取套餐商品失败:', error);
+        logger.error('获取套餐商品失败:', error);
         return { success: false, error: '获取套餐商品失败' };
     }
 }
@@ -291,8 +333,9 @@ export async function getPackageProducts(packageId: string) {
  */
 export async function addPackageProduct(packageId: string, input: z.infer<typeof packageProductSchema>) {
     try {
-        const tenantId = await getTenantIdFromSession();
-        if (!tenantId) return { success: false, error: '未授权' };
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
 
         const validated = packageProductSchema.parse(input);
 
@@ -308,10 +351,19 @@ export async function addPackageProduct(packageId: string, input: z.infer<typeof
             })
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: packageId,
+            action: 'CREATE',
+            newValues: { action: 'ADD_PRODUCT', product: created }
+        });
+
         revalidatePath('/products/packages');
         return { success: true, data: created };
     } catch (error) {
-        console.error('添加套餐商品失败:', error);
+        logger.error('添加套餐商品失败:', error);
         return { success: false, error: '添加套餐商品失败' };
     }
 }
@@ -321,6 +373,10 @@ export async function addPackageProduct(packageId: string, input: z.infer<typeof
  */
 export async function removePackageProduct(packageId: string, productId: string) {
     try {
+        const session = await auth();
+        if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
+        const tenantId = session.user.tenantId;
+
         await db
             .delete(packageProducts)
             .where(and(
@@ -328,10 +384,19 @@ export async function removePackageProduct(packageId: string, productId: string)
                 eq(packageProducts.productId, productId)
             ));
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: session.user.id,
+            tableName: 'product_packages',
+            recordId: packageId,
+            action: 'DELETE',
+            newValues: { action: 'REMOVE_PRODUCT', productId }
+        });
+
         revalidatePath('/products/packages');
         return { success: true };
     } catch (error) {
-        console.error('移除套餐商品失败:', error);
+        logger.error('移除套餐商品失败:', error);
         return { success: false, error: '移除套餐商品失败' };
     }
 }
@@ -421,7 +486,7 @@ export async function calculatePackagePrice(packageId: string, items: PackageIte
             }
         };
     } catch (error) {
-        console.error('计算套餐价格失败:', error);
+        logger.error('计算套餐价格失败:', error);
         return { success: false, error: '计算套餐价格失败' };
     }
 }

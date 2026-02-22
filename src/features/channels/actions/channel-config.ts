@@ -28,6 +28,10 @@ const gradeDiscountsSchema = z.record(z.string(), z.number().min(0).max(1));
 
 /**
  * 获取渠道等级折扣配置
+ * 
+ * 返回不同渠道等级（如S, A, B, C）对应的折扣比例配置。如果还未设置，则返回默认值。
+ * 
+ * @returns {Promise<ChannelGradeDiscounts>} 渠道折扣比例映射
  */
 export async function getChannelGradeDiscounts(): Promise<ChannelGradeDiscounts> {
     const session = await auth();
@@ -56,8 +60,15 @@ export async function getChannelGradeDiscounts(): Promise<ChannelGradeDiscounts>
 
 /**
  * 更新渠道等级折扣配置
+ * 
+ * 将用户配置的具体渠道等级折扣映射固化至系统设置，同时产生审计日志。
+ * 注意需要包含相应的基础权限设置。
+ * 
+ * @param {ChannelGradeDiscounts} discounts - 渠道折扣字典对象
+ * @returns {Promise<{success: boolean, error?: string}>} 返回操作结果与可能的异常消息
  */
 export async function updateChannelGradeDiscounts(discounts: ChannelGradeDiscounts) {
+    console.log('[channels] 更新渠道等级折扣配置:', discounts);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };

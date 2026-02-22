@@ -25,6 +25,15 @@ vi.mock('sonner', () => ({
     },
 }));
 
+vi.mock('@/shared/ui/dropdown-menu', () => ({
+    DropdownMenu: ({ children }: any) => <div>{children}</div>,
+    DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
+    DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+    DropdownMenuItem: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
+    DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
+    DropdownMenuSeparator: () => <hr />,
+}));
+
 const mockSuppliers = [
     { id: 'sup-1', name: 'Supplier A', supplierNo: 'SUP001' },
     { id: 'sup-2', name: 'Supplier B', supplierNo: 'SUP002' },
@@ -39,6 +48,11 @@ const mockRules: SplitRule[] = [
         conditions: [],
         targetType: 'PURCHASE_ORDER',
         targetSupplierId: 'sup-1',
+        supplier: {
+            id: 'sup-1',
+            name: 'Supplier A',
+            supplierNo: 'SUP001',
+        } as any,
         isActive: true,
         createdBy: 'user-1',
         createdAt: new Date(),
@@ -67,47 +81,35 @@ describe('SplitRuleManager', () => {
     });
 
     it('renders the rule list correctly', () => {
-        render(<SplitRuleManager initialRules={mockRules} suppliers={mockSuppliers} />);
+        render(<SplitRuleManager rules={mockRules as any} suppliers={mockSuppliers} />);
 
-        expect(screen.getByText('拆单规则配置')).toBeInTheDocument();
+        expect(screen.getByText('智能拆单规则')).toBeInTheDocument();
         expect(screen.getByText('Test Rule 1')).toBeInTheDocument();
         expect(screen.getByText('Test Rule 2')).toBeInTheDocument();
-        expect(screen.getByText('Supplier A')).toBeInTheDocument(); // Supplier name resolution
-        expect(screen.getByText('启用')).toBeInTheDocument();
-        expect(screen.getByText('禁用')).toBeInTheDocument();
+        expect(screen.getByText('Supplier A')).toBeInTheDocument();
+        expect(screen.getByText('启用中')).toBeInTheDocument();
+        expect(screen.getByText('已禁用')).toBeInTheDocument();
     });
 
-    it('opens add dialog when "添加规则" is clicked', () => {
-        render(<SplitRuleManager initialRules={mockRules} suppliers={mockSuppliers} />);
+    it('opens add dialog when "新建规则" is clicked', () => {
+        render(<SplitRuleManager rules={mockRules as any} suppliers={mockSuppliers} />);
 
-        const addButton = screen.getByRole('button', { name: /添加规则/ });
+        const addButton = screen.getByRole('button', { name: /新建规则/ });
         fireEvent.click(addButton);
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: '添加规则' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '新建规则' })).toBeInTheDocument();
         expect(screen.getByLabelText('规则名称')).toBeInTheDocument();
     });
 
     it('calls deleteSplitRule when delete button is clicked', async () => {
-        render(<SplitRuleManager initialRules={mockRules} suppliers={mockSuppliers} />);
+        render(<SplitRuleManager rules={mockRules as any} suppliers={mockSuppliers} />);
 
-        // Find delete buttons (trash icon usually in a button)
-        // Since we use Lucide icons, we might not see text. We can look for buttons.
-        const deleteButtons = screen.getAllByRole('button', { name: '' });
-        // The last column has 2 buttons per row. 
-        // Let's assume the component renders standard buttons.
-        // Or we can find by verify if we can select by row.
+        // The DropdownMenuItem for Delete is mocked as a <button> containing the text '删除'
+        const deleteButtons = screen.getAllByRole('button', { name: /删除/i });
 
-        // Simpler: Just find the delete button for the first rule if possible, or all of them.
-        // We can just click the first delete button found.
-        // The table row contains "Test Rule 1".
-
-        const row1 = screen.getByText('Test Rule 1').closest('tr');
-        const deleteBtn = row1?.querySelector('button:last-child'); // Assuming delete is the second button
-
-        if (deleteBtn) {
-            fireEvent.click(deleteBtn);
-        }
+        // click the first delete button (for rule-1)
+        fireEvent.click(deleteButtons[0]);
 
         expect(global.confirm).toHaveBeenCalled();
         await waitFor(() => {
@@ -116,7 +118,7 @@ describe('SplitRuleManager', () => {
     });
 
     it('renders empty state when no rules', () => {
-        render(<SplitRuleManager initialRules={[]} suppliers={mockSuppliers} />);
-        expect(screen.getByText('暂无规则')).toBeInTheDocument();
+        render(<SplitRuleManager rules={[]} suppliers={mockSuppliers} />);
+        expect(screen.getByText(/暂无拆单规则，创建一个规则来开始自动分配订单/i)).toBeInTheDocument();
     });
 });

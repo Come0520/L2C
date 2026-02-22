@@ -38,6 +38,7 @@ export async function getQuoteVersions(rootId: string) {
 /**
  * 获取报价单列表（分页）
  * 已添加租户隔离，仅返回当前租户的报价单
+ * 安全防护：强制限制 pageSize 最大为 100，防止深分页恶意击穿数据库
  */
 export async function getQuotes({
     page = 1,
@@ -61,7 +62,9 @@ export async function getQuotes({
     }
     const tenantId = session.user.tenantId;
 
-    const offset = (page - 1) * pageSize;
+    // 安全防护：硬性限制 pageSize 范围 [1, 100]，防止深分页攻击
+    const safePageSize = Math.min(Math.max(pageSize, 1), 100);
+    const offset = (page - 1) * safePageSize;
     const conditions = [];
 
     // 0. 租户隔离 (必须条件)
@@ -118,7 +121,7 @@ export async function getQuotes({
     // Fetch Data
     const data = await db.query.quotes.findMany({
         where: whereCondition,
-        limit: pageSize,
+        limit: safePageSize,
         offset: offset,
         orderBy: [desc(quotes.createdAt)],
         with: {
@@ -139,9 +142,9 @@ export async function getQuotes({
         data,
         meta: {
             page,
-            pageSize,
+            pageSize: safePageSize,
             total,
-            totalPages: Math.ceil(total / pageSize)
+            totalPages: Math.ceil(total / safePageSize)
         }
     };
 }

@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { leads } from '@/shared/api/schema';
 import { eq, and, or, ilike } from 'drizzle-orm';
@@ -32,6 +34,7 @@ const calculateLeadScoreSchema = z.object({
  */
 const calculateLeadScoreInternal = createSafeAction(calculateLeadScoreSchema, async ({ leadId }, { session }) => {
     const tenantId = session.user.tenantId;
+    logger.info('[leads] 计算线索评分开始:', { leadId, tenantId });
 
     const lead = await db.query.leads.findFirst({
         where: and(
@@ -63,6 +66,8 @@ const calculateLeadScoreInternal = createSafeAction(calculateLeadScoreSchema, as
     // 优先级标签
     const priorityLabel = getPriorityLabel(totalScore);
 
+    logger.info('[leads] 计算线索评分成功:', { leadId, tenantId, totalScore, starRating });
+
     return {
         leadId,
         score: {
@@ -81,6 +86,14 @@ const calculateLeadScoreInternal = createSafeAction(calculateLeadScoreSchema, as
     };
 });
 
+/**
+ * 对外暴露的 Server Action：计算线索评分
+ * 
+ * 依据来源、意向级别和预算信息打分，并返回星级和处理优先级。
+ *
+ * @param {z.infer<typeof calculateLeadScoreSchema>} data - 包含线索 ID 的输入负载
+ * @returns {Promise<any>}
+ */
 export async function calculateLeadScore(data: z.infer<typeof calculateLeadScoreSchema>) {
     return calculateLeadScoreInternal(data);
 }
@@ -102,6 +115,7 @@ const checkDuplicateSchema = z.object({
 const checkLeadDuplicateInternal = createSafeAction(checkDuplicateSchema, async (params, { session }) => {
     const { phone, address, name } = params;
     const tenantId = session.user.tenantId;
+    logger.info('[leads] 检查线索去重开始:', { phone, address, name, tenantId });
 
     if (!phone && !address) {
         return { isDuplicate: false, matches: [] };
@@ -174,13 +188,22 @@ const checkLeadDuplicateInternal = createSafeAction(checkDuplicateSchema, async 
         };
     }).filter(m => m.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
 
+    const isDuplicateMatch = matches.some(m => m.matchScore >= 70);
+    logger.info('[leads] 检查线索去重结果:', { isDuplicate: isDuplicateMatch, matchCount: matches.length, tenantId });
+
     return {
-        isDuplicate: matches.some(m => m.matchScore >= 70),
+        isDuplicate: isDuplicateMatch,
         highConfidenceCount: matches.filter(m => m.matchScore >= 70).length,
         matches,
     };
 });
 
+/**
+ * 对外暴露的 Server Action：检测当前线索是否存在重复
+ * 
+ * @param {z.infer<typeof checkDuplicateSchema>} data - 需检测的电话、地址、姓名
+ * @returns {Promise<any>} 返回查重详情与可能存在的重复线索列表
+ */
 export async function checkLeadDuplicate(data: z.infer<typeof checkDuplicateSchema>) {
     return checkLeadDuplicateInternal(data);
 }
@@ -199,6 +222,7 @@ const batchCheckDuplicateSchema = z.object({
 
 const batchCheckLeadDuplicatesInternal = createSafeAction(batchCheckDuplicateSchema, async ({ items }, { session }) => {
     const tenantId = session.user.tenantId;
+    logger.info('[leads] 批量检查线索去重开始:', { itemCount: items.length, tenantId });
 
     // 先收集所有手机号进行批量查询
     const phones = items.map(i => i.phone).filter(Boolean) as string[];
@@ -233,14 +257,23 @@ const batchCheckLeadDuplicatesInternal = createSafeAction(batchCheckDuplicateSch
         };
     });
 
+    const duplicateCount = results.filter(r => r.isDuplicate).length;
+    logger.info('[leads] 批量检查线索去重结果:', { totalChecked: items.length, duplicateCount, tenantId });
+
     return {
         totalChecked: items.length,
-        duplicateCount: results.filter(r => r.isDuplicate).length,
+        duplicateCount,
         uniqueCount: results.filter(r => !r.isDuplicate).length,
         results,
     };
 });
 
+/**
+ * 对外暴露的 Server Action：批量检查当前线索是否存在重复
+ * 
+ * @param {z.infer<typeof batchCheckDuplicateSchema>} data - 线索批量列表
+ * @returns {Promise<any>}
+ */
 export async function batchCheckLeadDuplicates(data: z.infer<typeof batchCheckDuplicateSchema>) {
     return batchCheckLeadDuplicatesInternal(data);
 }

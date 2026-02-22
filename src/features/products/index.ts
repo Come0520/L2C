@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 import { productCategoryEnum } from '@/shared/api/schema';
 
 export type { ProductCategory } from '@/shared/api/schema';

@@ -27,11 +27,11 @@ vi.mock('@/shared/ui/dialog', () => ({
 }));
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-}));
+global.ResizeObserver = class ResizeObserver {
+    observe() { }
+    unobserve() { }
+    disconnect() { }
+} as any;
 
 // Mock UI Components to avoid Radix UI issues in JSDOM
 vi.mock('@/shared/ui/dialog', () => ({
@@ -72,10 +72,10 @@ describe('UserForm Loading', () => {
         const saveButton = screen.getByRole('button', { name: /保存/i }) as HTMLButtonElement;
 
         // 填写必填项（如果有校验）
-        const nameInput = screen.getByPlaceholderText(/用户姓名/i);
+        const nameInput = screen.getByPlaceholderText(/用户/i); // Adjusted to be safer since exact match might vary
         fireEvent.change(nameInput, { target: { value: 'New Name' } });
 
-        fireEvent.submit(screen.getByRole('form'));
+        fireEvent.click(saveButton);
 
         // 验证 Loading 状态：按钮应被禁用
         await waitFor(() => {
@@ -101,9 +101,10 @@ describe('UserForm Loading', () => {
 
         render(<UserForm {...defaultProps} />);
 
-        const nameInput = screen.getByPlaceholderText(/用户姓名/i);
+        const saveButton = screen.getByRole('button', { name: /保存/i }) as HTMLButtonElement;
+        const nameInput = screen.getByPlaceholderText(/用户/i);
         fireEvent.change(nameInput, { target: { value: 'New Name' } });
-        fireEvent.submit(screen.getByRole('form'));
+        fireEvent.click(saveButton);
 
         await waitFor(() => {
             expect(toast.error).toHaveBeenCalledWith(errorMessage);

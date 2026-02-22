@@ -5,6 +5,7 @@ import { salesTargets, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../auth-utils';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 
 
 
@@ -86,8 +87,8 @@ export async function GET(request: NextRequest) {
         return apiSuccess(formatted);
 
     } catch (error) {
-        console.error('Get Targets Error:', error);
-        return apiError('Failed to fetch targets', 500);
+        logger.error('[SalesTarget] 获取销售目标异常', { route: 'sales/targets', error });
+        return apiError('获取销售目标失败', 500);
     }
 }
 
@@ -132,10 +133,21 @@ export async function POST(request: NextRequest) {
                 }
             });
 
+        // 审计日志
+        const { AuditService } = await import('@/shared/services/audit-service');
+        await AuditService.log(db, {
+            tableName: 'sales_targets',
+            recordId: `${userId}_${year}_${month}`,
+            action: 'SET_TARGET',
+            userId: user.id,
+            tenantId: user.tenantId,
+            details: { targetUserId: userId, year, month, amount: targetAmount }
+        });
+
         return apiSuccess(null);
 
     } catch (error) {
-        console.error('Set Target Error:', error);
-        return apiError('Failed to set target', 500);
+        logger.error('[SalesTarget] 设置销售目标异常', { route: 'sales/targets', error });
+        return apiError('设置销售目标失败', 500);
     }
 }

@@ -84,6 +84,9 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     return {
         ...actual,
         sql: vi.fn(), // 替换 sql 操作防止语法错误
+        and: vi.fn(),
+        eq: vi.fn(),
+        inArray: vi.fn(),
     };
 });
 
@@ -99,8 +102,8 @@ describe('Products Queries (L5)', () => {
             { id: 'another-product', name: '产品B', defaultSupplierId: null },
         ];
         mockDbQuery.products.findMany.mockResolvedValue(mockProducts);
-        // 模拟返回对应的供应商
-        mockDbQuery.suppliers.findFirst.mockResolvedValue({ id: MOCK_SUPPLIER_ID, name: '供应商A' });
+        // 模拟返回对应的供应商（重构后使用 findMany 而非 findFirst）
+        mockDbQuery.suppliers.findMany.mockResolvedValue([{ id: MOCK_SUPPLIER_ID, name: '供应商A' }]);
 
         const { getProducts } = await import('../queries');
         const result = await getProducts({ page: 1, pageSize: 10 });

@@ -10,6 +10,7 @@ import { activitySchema } from '../schemas';
 import { trimInput } from '@/shared/lib/utils';
 import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
+import { logger } from '@/shared/lib/logger';
 
 export interface ActivityDTO {
     id: string;
@@ -25,12 +26,23 @@ export interface ActivityDTO {
     images?: string[];
 }
 
+/**
+ * 获取客户的动态/活动记录
+ * Get customer activities
+ * 
+ * 安全检查：自动从 session 获取 tenantId 并校验 CUSTOMER.VIEW 权限
+ * Security check: Automatically gets tenantId and checks CUSTOMER.VIEW permission
+ * @param customerId 客户 ID
+ */
 export async function getActivities(customerId: string): Promise<{ success: boolean; data?: ActivityDTO[]; error?: string }> {
     try {
         const session = await auth();
         if (!session?.user?.id || !session?.user?.tenantId) {
+            logger.warn('[customers] 未授权访问客户动态:', { customerId });
             return { success: false, error: 'Unauthorized' };
         }
+
+        logger.info('[customers] 获取客户动态:', { customerId, userId: session.user.id, tenantId: session.user.tenantId });
 
         // 权限检查
         await checkPermission(session, PERMISSIONS.CUSTOMER.VIEW);
@@ -51,19 +63,30 @@ export async function getActivities(customerId: string): Promise<{ success: bool
         return { success: true, data: list as ActivityDTO[] };
 
     } catch (error) {
-        console.error('getActivities error:', error);
+        logger.error('[customers] 获取客户动态失败:', error);
         return { success: false, error: 'Failed to fetch activities' };
     }
 }
 
+/**
+ * 创建客户动态/活动记录
+ * Create customer activity
+ * 
+ * 安全检查：自动从 session 获取 tenantId 并校验 CUSTOMER.EDIT 权限
+ * Security check: Automatically gets tenantId and checks CUSTOMER.EDIT permission
+ * @param input 活动表单数据
+ */
 export async function createActivity(
     input: z.infer<typeof activitySchema>
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
     try {
         const session = await auth();
         if (!session?.user?.id || !session?.user?.tenantId) {
+            logger.warn('[customers] 未授权创建客户动态:', { input });
             return { success: false, error: 'Unauthorized' };
         }
+
+        logger.info('[customers] 创建客户动态:', { ...input, userId: session.user.id, tenantId: session.user.tenantId });
 
         // [Fix 5.4] 使用 activitySchema 校验并清理输入
         const data = trimInput(activitySchema.parse(input));
@@ -108,7 +131,7 @@ export async function createActivity(
         return { success: true, data: newActivity };
 
     } catch (error) {
-        console.error('createActivity error:', error);
+        logger.error('[customers] 创建客户动态失败:', error);
         return { success: false, error: 'Failed to create activity' };
     }
 }

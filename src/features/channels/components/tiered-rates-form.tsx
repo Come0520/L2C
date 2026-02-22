@@ -51,6 +51,7 @@ export function TieredRatesForm({ form }: TieredRatesFormProps) {
                                             type="number"
                                             placeholder="0"
                                             {...field}
+                                            value={(field.value as number | string) ?? ''}
                                             onChange={(e) => field.onChange(e.target.value)}
                                         />
                                     </FormControl>
@@ -74,7 +75,7 @@ export function TieredRatesForm({ form }: TieredRatesFormProps) {
                                                 const val = e.target.value;
                                                 field.onChange(val === '' ? undefined : val);
                                             }}
-                                            value={field.value ?? ''}
+                                            value={(field.value as number | string) ?? ''}
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -93,6 +94,7 @@ export function TieredRatesForm({ form }: TieredRatesFormProps) {
                                             type="number"
                                             step="0.01"
                                             {...field}
+                                            value={(field.value as number | string) ?? ''}
                                             onChange={(e) => field.onChange(e.target.value)}
                                         />
                                     </FormControl>

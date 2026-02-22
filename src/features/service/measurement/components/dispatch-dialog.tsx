@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -68,7 +70,7 @@ export function DispatchDialog({ open: controlledOpen, onOpenChange: setControll
                 if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('指派失败');
         } finally {
             setLoading(false);

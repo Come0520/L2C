@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,7 +46,7 @@ import {
     FormLabel,
     FormMessage
 } from '@/shared/ui/form';
-import { Loader2, Plus, Trash2, Check } from 'lucide-react';
+import { Plus, Trash2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Schema for adding a supplier
@@ -80,7 +82,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
                 setSuppliers(result.data);
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('Failed to load product suppliers');
         } finally {
             setIsLoading(false);
@@ -192,8 +194,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
                                             <FormItem>
                                                 <FormLabel>采购价</FormLabel>
                                                 <FormControl>
-                                                    {/* @ts-expect-error */}
-                                                    <Input type="number" {...field} />
+                                                    <Input type="number" {...field} value={field.value as string | number | readonly string[] | undefined} onChange={field.onChange} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -206,8 +207,7 @@ export function ProductSupplierManager({ productId }: ProductSupplierManagerProp
                                             <FormItem>
                                                 <FormLabel>货期 (天)</FormLabel>
                                                 <FormControl>
-                                                    {/* @ts-expect-error */}
-                                                    <Input type="number" {...field} />
+                                                    <Input type="number" {...field} value={field.value as string | number | readonly string[] | undefined} onChange={field.onChange} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

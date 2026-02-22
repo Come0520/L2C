@@ -1,10 +1,10 @@
+﻿'use client';
+
 /**
  * 租户自助注册页面
  *
  * 企业可通过此页面申请入驻 L2C 销售管理系统
  */
-'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -14,7 +14,7 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Loader2, Building2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Loader2, Building2, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { submitTenantApplication } from '@/features/platform/actions/tenant-registration';
 
 // 中国省份列表
@@ -60,6 +60,8 @@ export default function TenantRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     companyName: '',
@@ -77,6 +79,24 @@ export default function TenantRegisterPage() {
     setError(null); // 清除错误
   };
 
+  // 计算密码强度
+  const calculateStrength = (pwd: string) => {
+    if (!pwd) return 0;
+    let score = 0;
+    if (pwd.length >= 8) score += 1;
+    if (/(?=.*[a-zA-Z])(?=.*\d)/.test(pwd)) score += 1;
+    if (/(?=.*[!@#$%^&*])/.test(pwd) || pwd.length >= 12) score += 1;
+    return score;
+  };
+
+  const strengthScore = calculateStrength(formData.password);
+  const strengthColor =
+    strengthScore === 0 ? 'bg-transparent' : strengthScore === 1 ? 'bg-red-500' : strengthScore === 2 ? 'bg-yellow-500' : 'bg-green-500';
+  const strengthText =
+    strengthScore === 0 ? '' : strengthScore === 1 ? '较弱 (请混合字母和数字)' : strengthScore === 2 ? '中等 (符合注册要求)' : '高强度';
+  const strengthColorText =
+    strengthScore === 0 ? 'text-transparent' : strengthScore === 1 ? 'text-red-500' : strengthScore === 2 ? 'text-yellow-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -86,8 +106,13 @@ export default function TenantRegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('密码至少6位');
+    if (formData.password.length < 8) {
+      setError('密码至少8位');
+      return;
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
+      setError('密码需包含字母和数字');
       return;
     }
 
@@ -259,29 +284,65 @@ export default function TenantRegisterPage() {
                 <Label htmlFor="password" className="text-foreground">
                   设置密码 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="至少6位"
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  required
-                  className="input-base"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="至少8位且包含字母和数字"
+                    value={formData.password}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                    required
+                    className="input-base pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    tabIndex={-1}
+                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {/* 密码强度检测进度条 */}
+                {formData.password && (
+                  <div className="mt-1.5 space-y-1 transition-all">
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={`h-full transition-all duration-300 ${strengthColor}`}
+                        style={{ width: `${(strengthScore / 3) * 100}%` }}
+                      />
+                    </div>
+                    <p className={`text-[11px] font-medium transition-colors ${strengthColorText}`}>
+                      {strengthText}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-foreground">
                   确认密码 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="再次输入"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                  required
-                  className="input-base"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="再次输入"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                    required
+                    className="input-base pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    tabIndex={-1}
+                    aria-label={showConfirmPassword ? '隐藏密码' : '显示密码'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 

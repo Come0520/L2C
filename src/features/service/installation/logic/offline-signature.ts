@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/shared/lib/logger';
+
 /**
  * 离线签名存储服务
  * 
@@ -62,7 +64,7 @@ function savePendingSignatures(signatures: PendingSignature[]): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(signatures));
     } catch (error) {
-        console.error('保存离线签名失败:', error);
+        logger.error('保存离线签名失败:', error);
     }
 }
 
@@ -122,7 +124,7 @@ export async function cacheSignatureOffline(
     pending.push(signature);
     savePendingSignatures(pending);
 
-    console.log(`[离线签名] 已暂存签名 ${id}，任务: ${taskId}`);
+    logger.info(`[离线签名] 已暂存签名 ${id}，任务: ${taskId}`);
 
     return id;
 }
@@ -177,7 +179,7 @@ export async function uploadSignature(
     uploadFn: (taskId: string, blob: Blob) => Promise<{ success: boolean; error?: string }>
 ): Promise<boolean> {
     if (!isOnline()) {
-        console.log(`[离线签名] 网络离线，跳过上传 ${signature.id}`);
+        logger.info(`[离线签名] 网络离线，跳过上传 ${signature.id}`);
         return false;
     }
 
@@ -189,16 +191,16 @@ export async function uploadSignature(
 
         if (result.success) {
             removeSignature(signature.id);
-            console.log(`[离线签名] 上传成功 ${signature.id}`);
+            logger.info(`[离线签名] 上传成功 ${signature.id}`);
             return true;
         } else {
             updateSignatureStatus(signature.id, 'failed', signature.retryCount + 1);
-            console.error(`[离线签名] 上传失败 ${signature.id}:`, result.error);
+            logger.error(`[离线签名] 上传失败 ${signature.id}:`, result.error);
             return false;
         }
     } catch (error) {
         updateSignatureStatus(signature.id, 'failed', signature.retryCount + 1);
-        console.error(`[离线签名] 上传异常 ${signature.id}:`, error);
+        logger.error(`[离线签名] 上传异常 ${signature.id}:`, error);
         return false;
     }
 }
@@ -219,11 +221,11 @@ export async function syncPendingSignatures(
     }
 
     if (!isOnline()) {
-        console.log('[离线签名] 网络离线，无法同步');
+        logger.info('[离线签名] 网络离线，无法同步');
         return { total: pending.length, success: 0, failed: 0 };
     }
 
-    console.log(`[离线签名] 开始同步 ${pending.length} 个待上传签名...`);
+    logger.info(`[离线签名] 开始同步 ${pending.length} 个待上传签名...`);
 
     let success = 0;
     let failed = 0;
@@ -249,7 +251,7 @@ export async function syncPendingSignatures(
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log(`[离线签名] 同步完成: 成功 ${success}, 失败 ${failed}`);
+    logger.info(`[离线签名] 同步完成: 成功 ${success}, 失败 ${failed}`);
 
     return { total: pending.length, success, failed };
 }

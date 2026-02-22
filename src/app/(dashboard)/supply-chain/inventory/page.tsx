@@ -12,15 +12,23 @@ export const metadata = {
   title: '库存查询',
 };
 
-async function InventoryData() {
-  // Initial fetch: all warehouses (or filter by default)
-  const result = await getInventoryLevels({});
-  const items = result.data ?? [];
+async function InventoryData({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+  const page = Number(searchParams?.page) || 1;
+  const pageSize = 20;
 
-  return <InventoryList initialItems={items} />;
+  // Initial fetch: all warehouses (or filter by default)
+  const result = await getInventoryLevels({ page, pageSize });
+  const items = result.data?.data ?? [];
+  const pagination = result.data?.pagination;
+
+  return <InventoryList initialItems={items} pagination={pagination} />;
 }
 
-export default function InventoryPage() {
+export default function InventoryPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   return (
     <div className="flex h-full flex-col space-y-4">
       <div className="glass-liquid-ultra flex-1 rounded-2xl border border-white/10 p-6">
@@ -43,7 +51,7 @@ export default function InventoryPage() {
         </div>
 
         <Suspense fallback={<TableSkeleton />}>
-          <InventoryData />
+          <InventoryData searchParams={searchParams} />
         </Suspense>
       </div>
     </div>

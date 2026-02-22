@@ -13,6 +13,18 @@ vi.mock('@/shared/lib/auth', () => ({
     })
 }));
 
+vi.mock('@/shared/lib/audit-service', () => ({
+    AuditService: {
+        record: vi.fn(),
+        recordFromSession: vi.fn(),
+    }
+}));
+
+vi.mock('next/cache', () => ({
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn()
+}));
+
 // 模拟数据库操作
 vi.mock('@/shared/api/db', () => ({
     db: {
@@ -56,17 +68,10 @@ describe('安装清单验证测试', () => {
                 ]
             };
 
-            const result = await updateInstallChecklistAction(mockData, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            const result = await updateInstallChecklistAction(mockData);
 
-            expect(result.success).toBe(true);
-            expect(result.message).toBe('清单状态已更新');
+            expect(result.data?.success).toBe(true);
+            expect(result.data?.message).toBe('清单状态已更新');
         });
 
         it('应该正确计算 allCompleted 状态 - 未完成', async () => {
@@ -78,14 +83,7 @@ describe('安装清单验证测试', () => {
                 ]
             };
 
-            await updateInstallChecklistAction(mockData, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            await updateInstallChecklistAction(mockData);
 
             const updateCall = (db.update as any).mock.results[0].value.set.mock.calls[0][0];
             expect(updateCall.checklistStatus.allCompleted).toBe(false);
@@ -101,14 +99,7 @@ describe('安装清单验证测试', () => {
                 ]
             };
 
-            await updateInstallChecklistAction(mockData, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            await updateInstallChecklistAction(mockData);
 
             const updateCall = (db.update as any).mock.results[0].value.set.mock.calls[0][0];
             expect(updateCall.checklistStatus.allCompleted).toBe(true);
@@ -132,17 +123,10 @@ describe('安装清单验证测试', () => {
             const result = await checkOutInstallTaskAction({
                 id: 'task-123',
                 location: { latitude: 39.9, longitude: 116.4 }
-            }, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            });
 
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('请先完成所有标准化作业检查项');
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.error).toBe('请先完成所有标准化作业检查项');
         });
 
         it('应该允许签退 - 当清单已完成时', async () => {
@@ -162,17 +146,10 @@ describe('安装清单验证测试', () => {
                 id: 'task-123',
                 location: { latitude: 39.9, longitude: 116.4 },
                 customerSignatureUrl: 'data:image/png;base64,...'
-            }, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            });
 
-            expect(result.success).toBe(true);
-            expect(result.message).toBe('已提交完工申请，待销售验收');
+            expect(result.data?.success).toBe(true);
+            expect(result.data?.message).toBe('已提交完工申请，待销售验收');
         });
 
         it('应该阻止签退 - 当清单不存在时', async () => {
@@ -185,17 +162,10 @@ describe('安装清单验证测试', () => {
             const result = await checkOutInstallTaskAction({
                 id: 'task-123',
                 location: { latitude: 39.9, longitude: 116.4 }
-            }, {
-                session: {
-                    user: {
-                        id: 'test-user-id',
-                        tenantId: 'test-tenant-id'
-                    }
-                }
-            } as any);
+            });
 
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('请先完成所有标准化作业检查项');
+            expect(result.data?.success).toBe(false);
+            expect(result.data?.error).toBe('请先完成所有标准化作业检查项');
         });
     });
 });

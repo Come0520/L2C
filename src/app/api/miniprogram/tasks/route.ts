@@ -10,6 +10,7 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks, customers } from '@/shared/api/schema';
 import { eq, and, or, desc } from 'drizzle-orm';
@@ -109,9 +110,11 @@ export async function GET(request: NextRequest) {
       result.installTasks = await installQuery;
     }
 
-    return apiSuccess(result);
+    const response = apiSuccess(result);
+    response.headers.set('Cache-Control', 'private, max-age=60');
+    return response;
   } catch (error) {
-    console.error('获取任务列表失败:', error);
+    logger.error('获取任务列表失败:', error);
     return apiError('获取任务列表失败', 500);
   }
 }

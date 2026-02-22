@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect, useTransition } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
@@ -273,7 +274,7 @@ function ProductSelect({ value, onSelect }: { value: string, onSelect: (product:
                     setProducts(res.data as unknown as Product[]);
                 }
             } catch (err) {
-                console.error(err);
+                logger.error(err);
             } finally {
                 setLoading(false);
             }

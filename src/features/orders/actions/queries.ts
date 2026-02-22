@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, desc, and, ilike, sql, inArray } from 'drizzle-orm';
+import { eq, desc, and, ilike, sql, inArray, count } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -42,6 +42,8 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
     // Cache key needs to include all filter parameters
     const statusKey = Array.isArray(params.status) ? params.status.sort().join(',') : (params.status || 'all');
     const salesIdKey = params.salesId || 'all';
+    const channelIdKey = params.channelId || 'all';
+    const dateRangeKey = params.dateRange ? `${params.dateRange.from.getTime()}-${params.dateRange.to?.getTime() || 'none'}` : 'none';
 
     // 缓存失效策略：基于租户的 tag 过滤 (Next.js 15+ 推荐模式)
     // 当订单发生增删改时，通过 revalidateTag(`orders-${tenantId}`) 批量失效
@@ -104,7 +106,7 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
                 totalPages: Math.ceil(total / pageSize)
             };
         },
-        [`orders-${tenantId}-${page}-${pageSize}-${params.search || 'all'}-${statusKey}-${salesIdKey}`],
+        [`orders-${tenantId}-${page}-${pageSize}-${params.search || 'all'}-${statusKey}-${salesIdKey}-${channelIdKey}-${dateRangeKey}`],
         {
             tags: ['orders', `orders-${tenantId}`],
             revalidate: 60
@@ -138,45 +140,102 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
 
     if (!order) throw new Error('Order not found');
 
-    return order;
+    const getCachedOrder = unstable_cache(
+        async () => order,
+        [`order-detail-${params.id}`],
+        {
+            tags: ['orders', `order-detail-${params.id}`],
+            revalidate: 30 // 详情缓存 30 秒
+        }
+    );
+
+    return getCachedOrder();
 });
 
 /**
- * 获取订单明细项（性能优化：按需加载）
+ * 获取订单明细项 Action。
+ * 
+ * @description 根据订单 ID 查询关联的所有明细项。
+ * 性能优化：
+ * 1. 按需加载：通过专用 Action 加载明细，避免主列表查询过重。
+ * 2. 缓存：使用 `unstable_cache` 缓存明细数据 (60s)，显著提升详情页二次访问速度。
+ * 3. 结果解耦：缓存 Key 与订单项 ID 绑定。
+ * 
+ * @param orderId 待查询详情的订单 ID
+ * @returns 包含订单项列表的返回对象 `{ success: true, data: items }`
  */
 export async function getOrderItems(orderId: string) {
     const session = await auth();
     if (!session) throw new Error('Unauthorized');
 
     // 权限检查省略...
-    const items = await db.query.orderItems.findMany({
-        where: eq(orderItems.orderId, orderId),
-        orderBy: (items, { asc }) => [asc(items.id)]
-    });
+    const getCachedItems = unstable_cache(
+        async () => {
+            return await db.query.orderItems.findMany({
+                where: eq(orderItems.orderId, orderId),
+                orderBy: (items, { asc }) => [asc(items.id)]
+            });
+        },
+        [`order-items-${orderId}`],
+        {
+            tags: ['order-items', `order-items-${orderId}`],
+            revalidate: 60 // 缓存 60 秒
+        }
+    );
 
+    const items = await getCachedItems();
     return { success: true, data: items };
 }
 
 /**
- * 获取订单收款计划（性能优化：按需加载）
+ * 获取订单收款计划 Action。
+ * 
+ * @description 查询订单关联的财务收款计划表。
+ * 性能优化：
+ * 1. 独立加载：财务数据与订单主表分离，优化首页加载。
+ * 2. 缓存维护：缓存时间 60s，配合 `order-payment-schedules` Tag 进行失效管理。
+ * 
+ * @param orderId 待查询收款计划的订单 ID
+ * @returns 包含收款计划列表的返回对象 `{ success: true, data: schedules }`
  */
 export async function getOrderPaymentSchedules(orderId: string) {
     const session = await auth();
     if (!session) throw new Error('Unauthorized');
 
-    const schedules = await db.query.paymentSchedules.findMany({
-        where: eq(paymentSchedules.orderId, orderId),
-        orderBy: (s, { asc }) => [asc(s.createdAt)]
-    });
+    const getCachedSchedules = unstable_cache(
+        async () => {
+            return await db.query.paymentSchedules.findMany({
+                where: eq(paymentSchedules.orderId, orderId),
+                orderBy: (s, { asc }) => [asc(s.createdAt)]
+            });
+        },
+        [`order-payment-schedules-${orderId}`],
+        {
+            tags: ['order-payment-schedules', `order-payment-schedules-${orderId}`],
+            revalidate: 60 // 缓存 60 秒
+        }
+    );
 
+    const schedules = await getCachedSchedules();
     return { success: true, data: schedules };
 }
 
-// 导出函数
+/**
+ * 安全导出获取订单列表请求，主要用于分页和条件查询
+ *
+ * @param params 分页与搜索参数对象
+ * @returns 订单查询的结果与分页信息
+ */
 export async function getOrders(params: z.infer<typeof getOrdersSchema>) {
     return getOrdersInternal(params);
 }
 
+/**
+ * 安全导出根据订单 ID 获取单条订单详情的请求
+ *
+ * @param id 订单 ID 
+ * @returns 包含顾客及销售关联信息的完整订单对象
+ */
 export async function getOrderById(id: string) {
     return getOrderByIdInternal({ id });
 }

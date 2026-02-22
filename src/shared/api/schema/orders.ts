@@ -61,6 +61,7 @@ export const orders = pgTable('orders', {
     // Locking
     isLocked: boolean('is_locked').default(false),
     lockedAt: timestamp('locked_at', { withTimezone: true }),
+    version: integer('version').default(1).notNull(), // Add for optimistic locking
 
     salesId: uuid('sales_id').references(() => users.id),
 
@@ -126,6 +127,8 @@ export const orderItems = pgTable('order_items', {
     // Snapshot fields
     attributes: jsonb('attributes').default({}),
     calculationParams: jsonb('calculation_params'),
+
+    version: integer('version').default(1).notNull(), // Add for optimistic locking
 
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({

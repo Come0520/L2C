@@ -20,63 +20,76 @@ import {
 import { SUPPLY_CHAIN_PATHS } from '../constants';
 
 const createSupplierActionInternal = createSafeAction(createSupplierSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+        console.warn('[supply-chain] 创建供应商:', { name: data.name, tenantId: session.user.tenantId });
 
-    const existing = await db.query.suppliers.findFirst({
-        where: and(
-            eq(suppliers.tenantId, session.user.tenantId),
-            eq(suppliers.name, data.name)
-        )
-    });
+        const existing = await db.query.suppliers.findFirst({
+            where: and(
+                eq(suppliers.tenantId, session.user.tenantId),
+                eq(suppliers.name, data.name)
+            )
+        });
 
-    if (existing) {
-        throw new Error('供应商名称已存在');
-    }
-
-    const supplierNo = generateDocNo('SUP');
-
-    const [supplier] = await db.insert(suppliers).values({
-        tenantId: session.user.tenantId,
-        supplierNo,
-        name: data.name,
-        // [NEW] 供应商类型和加工厂字段
-        supplierType: data.supplierType,
-        processingPrices: data.processingPrices,
-        contractUrl: data.contractUrl,
-        contractExpiryDate: data.contractExpiryDate,
-        businessLicenseUrl: data.businessLicenseUrl,
-        bankAccount: data.bankAccount,
-        bankName: data.bankName,
-
-        contactPerson: data.contactPerson,
-        phone: data.phone,
-        paymentPeriod: data.paymentPeriod,
-        address: data.address,
-        remark: data.remark,
-        createdBy: session.user.id,
-    }).returning();
-
-    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
-
-    // 添加审计日志
-    await AuditService.recordFromSession(session, 'suppliers', supplier.id, 'CREATE', {
-        new: {
-            supplierNo: supplier.supplierNo,
-            name: supplier.name,
-            supplierType: supplier.supplierType
+        if (existing) {
+            throw new Error('供应商名称已存在');
         }
-    });
 
-    return { id: supplier.id };
+        const supplierNo = generateDocNo('SUP');
+
+        const [supplier] = await db.insert(suppliers).values({
+            tenantId: session.user.tenantId,
+            supplierNo,
+            name: data.name,
+            // [NEW] 供应商类型和加工厂字段
+            supplierType: data.supplierType,
+            processingPrices: data.processingPrices,
+            contractUrl: data.contractUrl,
+            contractExpiryDate: data.contractExpiryDate,
+            businessLicenseUrl: data.businessLicenseUrl,
+            bankAccount: data.bankAccount,
+            bankName: data.bankName,
+
+            contactPerson: data.contactPerson,
+            phone: data.phone,
+            paymentPeriod: data.paymentPeriod,
+            address: data.address,
+            remark: data.remark,
+            createdBy: session.user.id,
+        }).returning();
+
+        console.warn('[supply-chain] createSupplier 创建成功:', supplier.id);
+        revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+
+        // 添加审计日志
+        await AuditService.recordFromSession(session, 'suppliers', supplier.id, 'CREATE', {
+            new: {
+                supplierNo: supplier.supplierNo,
+                name: supplier.name,
+                supplierType: supplier.supplierType
+            }
+        });
+
+        return { id: supplier.id };
+    } catch (error) {
+        console.error('[supply-chain] 创建供应商失败:', error);
+        throw error;
+    }
 });
 
 /**
  * 创建新供应商
  * 
- * @description 包含基本信息、财务信息及合同附件。自动生成供应商编号 (SUP-*)。
- * @param params 符合 createSupplierSchema 的输入数据
+ * @description 核心逻辑：校验重名，自动生成 SUP- 前缀编号，支持录入资质、合同及收付款财务信息。包含审计日志。
+ * @param params 符合 createSupplierSchema 的输入数据，包含以下关键字段：
+ * - `name` (string): 供应商名称
+ * - `supplierType` ('SUPPLIER' | 'PROCESSOR' | 'BOTH'): 合作伙伴类型
+ * - `contactPerson` (string, optional): 联系人姓名
+ * - `phone` (string, optional): 联系电话
+ * @returns {Promise<{id: string}>} 创建成功的供应商 ID
  */
 export async function createSupplier(params: z.infer<typeof createSupplierSchema>) {
+    console.warn('[supply-chain] createSupplier 开始执行:', { name: params.name });
     return createSupplierActionInternal(params);
 }
 
@@ -127,10 +140,16 @@ const getSuppliersActionInternal = createSafeAction(getSuppliersSchema, async (p
 /**
  * 分页获取供应商列表
  * 
- * @description 支持模糊搜索（名称/编号）及类型过滤（供应商/加工厂）。
- * @param params 分页、搜索及过滤参数
+ * @description 支持根据类型（供应商/加工厂/两者）进行过滤。内置 ILIKE 模糊搜索功能。
+ * @param params 包含以下属性：
+ * - `page` (number): 页码
+ * - `pageSize` (number): 每页条数
+ * - `query` (string, optional): 名称或编号搜索词
+ * - `type` ('SUPPLIER' | 'PROCESSOR' | 'BOTH', optional): 列表按类型过滤
+ * @returns {Promise<{data: any[], total: number, ...}>} 分页后的供应商数据集
  */
 export async function getSuppliers(params: z.infer<typeof getSuppliersSchema>) {
+    console.warn('[supply-chain] getSuppliers 查询参数:', params);
     return getSuppliersActionInternal(params);
 }
 
@@ -152,46 +171,57 @@ const getSupplierByIdActionInternal = createSafeAction(getSupplierByIdSchema, as
 /**
  * 根据 ID 获取供应商详情
  * 
- * @param params 包含供应商 ID
+ * @description 包含租户隔离校验。获取单个供应商的全部注册字段信息。
+ * @param params 包含 `id` (string) 供应商 ID 的对象
+ * @returns {Promise<any>} 完整的供应商数据行对象
  */
 export async function getSupplierById(params: z.infer<typeof getSupplierByIdSchema>) {
+    console.warn('[supply-chain] getSupplierById 查询 ID:', params.id);
     return getSupplierByIdActionInternal(params);
 }
 
 const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+        const { id, ...updates } = data;
+        console.warn('[supply-chain] 更新供应商:', { id, tenantId: session.user.tenantId });
 
-    const { id, ...updates } = data;
+        const [supplier] = await db.update(suppliers)
+            .set({
+                ...updates,
+                updatedAt: new Date(),
+            })
+            .where(and(
+                eq(suppliers.id, id),
+                eq(suppliers.tenantId, session.user.tenantId)
+            ))
+            .returning();
 
-    const [supplier] = await db.update(suppliers)
-        .set({
-            ...updates,
-            updatedAt: new Date(),
-        })
-        .where(and(
-            eq(suppliers.id, id),
-            eq(suppliers.tenantId, session.user.tenantId)
-        ))
-        .returning();
+        if (!supplier) throw new Error('更新失败，未找到供应商');
 
-    if (!supplier) throw new Error('更新失败，未找到供应商');
+        // 添加审计日志
+        await AuditService.recordFromSession(session, 'suppliers', id, 'UPDATE', {
+            new: updates
+        });
 
-    // 添加审计日志
-    await AuditService.recordFromSession(session, 'suppliers', id, 'UPDATE', {
-        new: updates
-    });
-
-    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
-    revalidateTag(`supplier-rating-${id}`, 'default');
-    return { id: supplier.id };
+        revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+        revalidateTag(`supplier-rating-${id}`, 'default');
+        return { id: supplier.id };
+    } catch (error) {
+        console.error('[supply-chain] 更新供应商失败:', error);
+        throw error;
+    }
 });
 
 /**
  * 更新供应商信息
  * 
- * @param params 包含供应商 ID 及更新字段
+ * @description 仅变更提供的非空字段，支持更新财务、资质信息。触发评价体系缓存失效。
+ * @param params 包含 `id` 及其余待更新字段的对象
+ * @returns {Promise<{id: string}>} 更新后的记录 ID
  */
 export async function updateSupplier(params: z.infer<typeof updateSupplierSchema>) {
+    console.warn('[supply-chain] updateSupplier 开始更新:', { id: params.id });
     return updateSupplierActionInternal(params);
 }
 
@@ -308,18 +338,20 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
 /**
  * 获取供应商绩效评价数据
  * 
- * @description 计算三个维度的指标：
- * 1. 交期准时率 (40%): 实际到货日期 vs 预期交期。
- * 2. 质量合格率 (60%): 交付总量 vs 售后责任判定 (CONFIRMED) 次数。
- * 3. 综合评分: 加权总分及星级/等级标签。
- * 使用 unstable_cache 缓存 300 秒。
- * @param params 供应商 ID 及可选时间范围
+ * @description 依托 unstable_cache 实现的高性能指标计算 API。涵盖：
+ * 1. 交期准时率 (权重 40%): 延迟对比基于 expectedDate 字段。
+ * 2. 质量合格率 (权重 60%): 关联 liabilityNotices 中已 CONFIRMED 的记录。
+ * 3. 综合星级: 依据加权分判定 1-5 星等级。
+ * 缓存策略：有效期 300 秒，通过 `supplier-rating-${supplierId}` 标签联动刷新。
+ * @param params 包含 `supplierId` 及可选 `startDate`, `endDate`
+ * @returns {Promise<{metrics: any, details: any, ...}>} 详细的评价报告
  */
 export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>) {
     const session = await auth();
     if (!session?.user?.id) throw new Error('未授权');
 
     const { supplierId, startDate = '', endDate = '' } = params;
+    console.warn('[supply-chain] getSupplierRating 获取评分:', { supplierId, period: `${startDate} ~ ${endDate}` });
 
     return unstable_cache(
         async () => getSupplierRatingActionInternal(params),
@@ -367,30 +399,36 @@ const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSc
 });
 
 const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, async ({ id }, { session }) => {
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+    try {
+        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
+        console.warn('[supply-chain] 删除供应商:', { id, tenantId: session.user.tenantId });
 
-    // 检查是否有依赖数据（如采购单等）
-    const poExists = await db.query.purchaseOrders.findFirst({
-        where: and(
-            eq(purchaseOrders.supplierId, id),
-            eq(purchaseOrders.tenantId, session.user.tenantId)
-        )
-    });
+        // 检查是否有依赖数据（如采购单等）
+        const poExists = await db.query.purchaseOrders.findFirst({
+            where: and(
+                eq(purchaseOrders.supplierId, id),
+                eq(purchaseOrders.tenantId, session.user.tenantId)
+            )
+        });
 
-    if (poExists) {
-        throw new Error('该供应商已有采购数据，无法删除');
+        if (poExists) {
+            throw new Error('该供应商已有采购数据，无法删除');
+        }
+
+        await db.delete(suppliers).where(and(
+            eq(suppliers.id, id),
+            eq(suppliers.tenantId, session.user.tenantId)
+        ));
+
+        // 添加审计日志
+        await AuditService.recordFromSession(session, 'suppliers', id, 'DELETE');
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
+        return { success: true };
+    } catch (error) {
+        console.error('[supply-chain] 删除供应商失败:', error);
+        throw error;
     }
-
-    await db.delete(suppliers).where(and(
-        eq(suppliers.id, id),
-        eq(suppliers.tenantId, session.user.tenantId)
-    ));
-
-    // 添加审计日志
-    await AuditService.recordFromSession(session, 'suppliers', id, 'DELETE');
-
-    revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
-    return { success: true };
 });
 
 /**
@@ -398,6 +436,7 @@ const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, asyn
  * 
  * @description 仅限没有任何采购关联数据的供应商。
  * @param params 包含供应商 ID
+ * @returns {Promise<{success: boolean}>} 执行成功状态
  */
 export async function deleteSupplier(params: z.infer<typeof deleteSupplierSchema>) {
     return deleteSupplierActionInternal(params);
@@ -406,8 +445,10 @@ export async function deleteSupplier(params: z.infer<typeof deleteSupplierSchema
 /**
  * 获取供应商交付量排名
  * 
- * @description 根据已交付 (DELIVERED) 的采购单数量进行降序排列。
+ * @description 统计所有已交付 (DELIVERED) 的历史采购单总量进行排名，用于大盘数据展示。
+ * @returns {Promise<{rankings: any[], total: number}>} 排序后的供应商榜单
  */
 export async function getSupplierRankings() {
+    console.warn('[supply-chain] getSupplierRankings 开始统计排行');
     return getSupplierRankingsActionInternal({});
 }

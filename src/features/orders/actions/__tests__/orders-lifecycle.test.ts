@@ -16,7 +16,9 @@ const {
 } = vi.hoisted(() => {
     const fnUpdate = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue(undefined)
+            where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }])
+            })
         })
     });
     return {
@@ -44,6 +46,7 @@ vi.mock('@/shared/api/schema/orders', () => ({
         id: 'orders.id',
         tenantId: 'orders.tenantId',
         status: 'orders.status',
+        version: 'orders.version',
         updatedAt: 'orders.updatedAt',
     },
     orderChanges: {
@@ -56,6 +59,7 @@ vi.mock('@/shared/api/schema', () => ({
         id: 'orders.id',
         tenantId: 'orders.tenantId',
         status: 'orders.status',
+        version: 'orders.version',
     },
 }));
 
@@ -136,6 +140,7 @@ describe('Orders Lifecycle Actions', () => {
             const result = await cancelOrderAction({
                 orderId: mockOrderId,
                 reason: '客户要求取消',
+                version: 1,
             });
 
             expect(result).toEqual({ success: true });
@@ -153,7 +158,7 @@ describe('Orders Lifecycle Actions', () => {
             vi.mocked(auth).mockResolvedValueOnce(null);
 
             await expect(
-                cancelOrderAction({ orderId: mockOrderId, reason: '测试' })
+                cancelOrderAction({ orderId: mockOrderId, reason: '测试', version: 1 })
             ).rejects.toThrow();
         });
     });
@@ -163,12 +168,13 @@ describe('Orders Lifecycle Actions', () => {
     // =========================================================
     describe('confirmInstallationAction', () => {
         it('成功确认安装完成', async () => {
-            const result = await confirmInstallationAction(mockOrderId);
+            const result = await confirmInstallationAction({ orderId: mockOrderId, version: 1 });
 
             expect(result).toEqual({ success: true });
             expect(mockConfirmInstallation).toHaveBeenCalledWith(
                 mockOrderId,
                 mockTenantId,
+                1,
                 'u-001'
             );
             expect(mockAuditRecord).toHaveBeenCalledWith(
@@ -182,14 +188,14 @@ describe('Orders Lifecycle Actions', () => {
             // @ts-expect-error - 模拟未登录状态
             vi.mocked(auth).mockResolvedValueOnce(null);
 
-            await expect(confirmInstallationAction(mockOrderId))
+            await expect(confirmInstallationAction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow();
         });
 
         it('Service 异常时正确传播', async () => {
             mockConfirmInstallation.mockRejectedValueOnce(new Error('安装确认失败'));
 
-            await expect(confirmInstallationAction(mockOrderId))
+            await expect(confirmInstallationAction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow('安装确认失败');
         });
     });
@@ -199,12 +205,13 @@ describe('Orders Lifecycle Actions', () => {
     // =========================================================
     describe('customerAcceptAction', () => {
         it('成功验收通过', async () => {
-            const result = await customerAcceptAction(mockOrderId);
+            const result = await customerAcceptAction({ orderId: mockOrderId, version: 1 });
 
             expect(result).toEqual({ success: true });
             expect(mockCustomerAccept).toHaveBeenCalledWith(
                 mockOrderId,
-                mockTenantId
+                mockTenantId,
+                1
             );
             expect(mockAuditRecord).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -217,7 +224,7 @@ describe('Orders Lifecycle Actions', () => {
             // @ts-expect-error - 模拟未登录状态
             vi.mocked(auth).mockResolvedValueOnce(null);
 
-            await expect(customerAcceptAction(mockOrderId))
+            await expect(customerAcceptAction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow();
         });
     });
@@ -227,7 +234,7 @@ describe('Orders Lifecycle Actions', () => {
     // =========================================================
     describe('closeOrderAction', () => {
         it('成功关闭订单', async () => {
-            const result = await closeOrderAction(mockOrderId);
+            const result = await closeOrderAction({ orderId: mockOrderId, version: 1 });
 
             expect(result).toEqual({ success: true });
             expect(mockUpdate).toHaveBeenCalled();
@@ -242,7 +249,7 @@ describe('Orders Lifecycle Actions', () => {
             // @ts-expect-error - 模拟未登录状态
             vi.mocked(auth).mockResolvedValueOnce(null);
 
-            await expect(closeOrderAction(mockOrderId))
+            await expect(closeOrderAction({ orderId: mockOrderId, version: 1 }))
                 .rejects.toThrow();
         });
     });
@@ -254,12 +261,14 @@ describe('Orders Lifecycle Actions', () => {
         it('成功请求客户确认', async () => {
             const result = await requestCustomerConfirmationAction({
                 orderId: mockOrderId,
+                version: 1,
             });
 
             expect(result).toEqual({ success: true });
             expect(mockRequestCustomerConfirmation).toHaveBeenCalledWith(
                 mockOrderId,
                 mockTenantId,
+                1,
                 'u-001'
             );
         });
@@ -269,7 +278,7 @@ describe('Orders Lifecycle Actions', () => {
             vi.mocked(auth).mockResolvedValueOnce(null);
 
             await expect(
-                requestCustomerConfirmationAction({ orderId: mockOrderId })
+                requestCustomerConfirmationAction({ orderId: mockOrderId, version: 1 })
             ).rejects.toThrow();
         });
     });
@@ -282,12 +291,14 @@ describe('Orders Lifecycle Actions', () => {
             const result = await customerRejectAction({
                 orderId: mockOrderId,
                 reason: '颜色不对',
+                version: 1,
             });
 
             expect(result).toEqual({ success: true });
             expect(mockCustomerReject).toHaveBeenCalledWith(
                 mockOrderId,
                 mockTenantId,
+                1,
                 '颜色不对'
             );
             expect(mockAuditRecord).toHaveBeenCalledWith(
@@ -302,7 +313,7 @@ describe('Orders Lifecycle Actions', () => {
             vi.mocked(auth).mockResolvedValueOnce(null);
 
             await expect(
-                customerRejectAction({ orderId: mockOrderId, reason: '测试' })
+                customerRejectAction({ orderId: mockOrderId, reason: '测试', version: 1 })
             ).rejects.toThrow();
         });
     });

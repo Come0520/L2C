@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState } from 'react';
 import {
     Dialog,
@@ -30,7 +32,7 @@ export function MeasureSyncDialog({ open, onClose, tasks: _tasks, onSync }: Meas
             await onSync(Array.from(selectedItemIds));
             onClose();
         } catch (error) {
-            console.error('Sync failed:', error);
+            logger.error('Sync failed:', error);
         } finally {
             setSubmitting(false);
         }

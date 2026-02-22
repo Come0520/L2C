@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useState, useEffect, useTransition } from 'react';
 import {
     Dialog,
@@ -54,7 +55,7 @@ export function AssignLeadDialog({
                 })
                 .catch(err => {
                     if (!mounted) return;
-                    console.error('Failed to load sales users:', err);
+                    logger.error('Failed to load sales users:', err);
                     toast.error('加载销售列表失败');
                 })
                 .finally(() => {
@@ -94,7 +95,7 @@ export function AssignLeadDialog({
                     toast.error(res.error || '分配失败');
                 }
             } catch (error) {
-                console.error('Assign lead error:', error);
+                logger.error('Assign lead error:', error);
                 const message = error instanceof Error ? error.message : '分配失败';
                 toast.error(message);
             }

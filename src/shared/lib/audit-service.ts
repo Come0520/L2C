@@ -44,7 +44,7 @@ export class AuditService {
      * 从 Session 中便捷记录
      */
     static async recordFromSession(
-        session: any,
+        session: { user?: { tenantId?: string; id?: string } } | null,
         tableName: string,
         recordId: string,
         action: 'CREATE' | 'UPDATE' | 'DELETE',

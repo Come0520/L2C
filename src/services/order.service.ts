@@ -152,7 +152,7 @@ export class OrderService {
      * 锁定订单
      * 阻止对订单明细的进一步编辑。
      */
-    static async lockOrder(orderId: string, tenantId: string, _userId: string) {
+    static async lockOrder(orderId: string, tenantId: string, version: number, _userId: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -165,10 +165,17 @@ export class OrderService {
                 .set({
                     isLocked: true,
                     lockedAt: new Date(),
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             return updatedOrder;
         });
@@ -178,7 +185,7 @@ export class OrderService {
      * 更新订单状态
      * 订单确认时触发采购拆单。
      */
-    static async updateOrderStatus(orderId: string, newStatus: string, tenantId: string, userId: string) {
+    static async updateOrderStatus(orderId: string, newStatus: string, tenantId: string, version: number, userId: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -197,10 +204,17 @@ export class OrderService {
             const [updatedOrder] = await tx.update(orders)
                 .set({
                     status: newStatus as typeof orders.$inferSelect.status,
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // 审计日志
             await AuditService.record({
@@ -227,8 +241,7 @@ export class OrderService {
      * 申请撤单
      * 仅 PENDING_PRODUCTION 或 IN_PRODUCTION 状态的订单可发起撤单申请。
      */
-    static async requestCancellation(orderId: string, tenantId: string, userId: string, reason: string) {
-
+    static async requestCancellation(orderId: string, tenantId: string, version: number, userId: string, reason: string) {
 
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
@@ -254,12 +267,20 @@ export class OrderService {
             }
 
             // 锁定订单防止操作
-            await tx.update(orders)
+            const [updatedOrder] = await tx.update(orders)
                 .set({
                     isLocked: true,
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
+                .returning({ id: orders.id });
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // 审计日志
             await AuditService.record({
@@ -281,7 +302,7 @@ export class OrderService {
      * 叫停订单（原 Pause）
      * 仅流转中的订单可被叫停。
      */
-    static async haltOrder(orderId: string, tenantId: string, userId: string, reason: string) {
+    static async haltOrder(orderId: string, tenantId: string, version: number, userId: string, reason: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -311,10 +332,17 @@ export class OrderService {
                         ...(order.snapshotData as Record<string, unknown> || {}),
                         previousStatus
                     },
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // 审计日志
             await AuditService.record({
@@ -343,7 +371,7 @@ export class OrderService {
      * Resume Order
      * Restore original status and update cumulative pause days.
      */
-    static async resumeOrder(orderId: string, tenantId: string, userId: string, remark?: string) {
+    static async resumeOrder(orderId: string, tenantId: string, version: number, userId: string, remark?: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -385,10 +413,17 @@ export class OrderService {
                     pausedAt: null,
                     pauseReason: null,
                     pauseCumulativeDays: (order.pauseCumulativeDays || 0) + addedDays,
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(eq(orders.id, orderId))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // Audit Log
             await AuditService.record({
@@ -410,7 +445,7 @@ export class OrderService {
      * Confirm Installation Completed
      * Moves order to INSTALLATION_COMPLETED (or PENDING_CONFIRMATION if configured)
      */
-    static async confirmInstallation(orderId: string, tenantId: string, updatedBy: string) {
+    static async confirmInstallation(orderId: string, tenantId: string, version: number, updatedBy: string) {
         return await db.transaction(async (tx) => {
             // 先查询订单当前状态，进行状态验证
             const order = await tx.query.orders.findFirst({
@@ -425,10 +460,17 @@ export class OrderService {
             const [updatedOrder] = await tx.update(orders)
                 .set({
                     status: 'INSTALLATION_COMPLETED',
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // 审计日志
             await AuditService.record({
@@ -446,7 +488,7 @@ export class OrderService {
         });
     }
 
-    static async requestCustomerConfirmation(orderId: string, tenantId: string, userId: string) {
+    static async requestCustomerConfirmation(orderId: string, tenantId: string, version: number, userId: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -454,9 +496,19 @@ export class OrderService {
             if (!order) throw new Error('订单不存在');
 
             const [result] = await tx.update(orders)
-                .set({ status: 'PENDING_CONFIRMATION', updatedAt: new Date() })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .set({
+                    status: 'PENDING_CONFIRMATION',
+                    version: order.version + 1,
+                    updatedAt: new Date()
+                })
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             // 审计日志
             await AuditService.record({
@@ -474,7 +526,7 @@ export class OrderService {
         });
     }
 
-    static async customerAccept(orderId: string, tenantId: string) {
+    static async customerAccept(orderId: string, tenantId: string, version: number) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -482,9 +534,20 @@ export class OrderService {
             if (!order) throw new Error('订单不存在');
 
             const [result] = await tx.update(orders)
-                .set({ status: 'COMPLETED', completedAt: new Date(), updatedAt: new Date() })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .set({
+                    status: 'COMPLETED',
+                    version: order.version + 1,
+                    completedAt: new Date(),
+                    updatedAt: new Date()
+                })
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             await AuditService.record({
                 tenantId,
@@ -501,7 +564,7 @@ export class OrderService {
         });
     }
 
-    static async customerReject(orderId: string, tenantId: string, reason: string) {
+    static async customerReject(orderId: string, tenantId: string, version: number, reason: string) {
         return await db.transaction(async (tx) => {
             const order = await tx.query.orders.findFirst({
                 where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
@@ -512,10 +575,17 @@ export class OrderService {
                 .set({
                     status: 'INSTALLATION_REJECTED',
                     remark: reason,
+                    version: order.version + 1,
                     updatedAt: new Date()
                 })
-                .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
+                .where(and(
+                    eq(orders.id, orderId),
+                    eq(orders.tenantId, tenantId),
+                    eq(orders.version, version)
+                ))
                 .returning();
+
+            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
 
             await AuditService.record({
                 tenantId,

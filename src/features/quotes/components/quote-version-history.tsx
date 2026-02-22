@@ -7,6 +7,7 @@ import { History, Plus } from 'lucide-react';
 import { createNextVersion } from '../actions/mutations';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteVersionHistoryProps {
     currentQuoteId: string;
@@ -28,7 +29,7 @@ export function QuoteVersionHistory({ currentQuoteId, version, versions = [] }: 
                 toast.error('版本创建失败，请稍后重试', { id: 'create-version' });
             }
         } catch (e) {
-            console.error('[CreateVersionError]', e);
+            logger.error('[CreateVersionError]', e);
             toast.error('系统异常，无法创建版本', { id: 'create-version' });
         }
     };

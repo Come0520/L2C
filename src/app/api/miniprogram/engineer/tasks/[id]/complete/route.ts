@@ -3,7 +3,9 @@ import { db } from '@/shared/api/db';
 import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../../../auth-utils';
+import { AuditService } from '@/shared/services/audit-service';
 
 
 
@@ -11,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     try {
         const user = await getMiniprogramUser(request);
         if (!user || !user.tenantId) {
-            return apiError('Unauthorized', 401);
+            return apiError('未授权', 401);
         }
 
         const { id: taskId } = await params;
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { photos, signatureUrl, remark } = body;
 
         return await db.transaction(async (tx) => {
-            // Verify Task ownership
+            // 验证任务归属
             const task = await tx.query.installTasks.findFirst({
                 where: and(
                     eq(installTasks.id, taskId),
@@ -29,10 +31,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             });
 
             if (!task) {
-                return apiError('Task not found or not assigned to you', 404);
+                return apiError('任务不存在或未指派给您', 404);
             }
 
-            // 1. Update Task Status
+            // 1. 更新任务状态
             await tx.update(installTasks)
                 .set({
                     status: 'COMPLETED',
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 })
                 .where(eq(installTasks.id, taskId));
 
-            // 2. Insert Photos
+            // 2. 插入照片
             if (photos && photos.length > 0) {
                 const photoRecords = photos.map((url: string) => ({
                     tenantId: user.tenantId,
@@ -56,13 +58,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 await tx.insert(installPhotos).values(photoRecords);
             }
 
+            // 3. 审计日志
+            await AuditService.log(tx, {
+                tableName: 'install_tasks',
+                recordId: taskId,
+                action: 'COMPLETE',
+                userId: user.id,
+                tenantId: user.tenantId,
+                details: { photoCount: photos?.length || 0 }
+            });
+
             return apiSuccess(null);
         });
 
-    }
-    catch (error) {
-        console.error('Complete Task Error:', error);
-        return apiError('Internal Error', 500);
+    } catch (error) {
+        logger.error('[InstallTask] 完成任务失败', { route: 'engineer/tasks/complete', error });
+        return apiError('处理完成任务请求时发生错误', 500);
     }
 }
 

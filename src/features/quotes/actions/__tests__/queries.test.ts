@@ -19,7 +19,7 @@ const MOCK_SESSION = createMockSession();
 const MOCK_TENANT_ID = MOCK_SESSION.user.tenantId;
 
 // ── Mock Db Config ──
-const mockDb = createMockDb(['quotes', 'auditLogs']) as any;
+const mockDb = createMockDb(['quotes', 'auditLogs']) as ReturnType<typeof createMockDb> & Record<string, ReturnType<typeof vi.fn>>;
 
 // Mock Count behavior for pagination
 const mockQueryBuilder = {
@@ -123,7 +123,7 @@ describe('Quote Queries (L5)', () => {
         result = await getQuoteBundleById({ id: MOCK_QUOTE_ID });
         expect(result.success).toBe(true);
         // 验证结构转换 quotes: subQuotes
-        expect((result.data as any).quotes).toBeDefined();
+        expect((result.data as { quotes?: unknown }).quotes).toBeDefined();
     });
 
     it('getQuoteVersions 应当隔离租户并返回关联根节点的所有版本', async () => {

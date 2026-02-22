@@ -18,6 +18,8 @@ export const ShowroomErrors = {
     SHARE_EXPIRED: { code: 'SHOWROOM_1202', message: '分享链接已过期' },
     SHARE_RATE_LIMIT: { code: 'SHOWROOM_1203', message: '请求频率过高，请稍后再试' },
     REDIS_UNAVAILABLE: { code: 'SHOWROOM_1204', message: '服务暂时不可用 (Redis)' },
+    INVALID_PASSWORD: { code: 'SHOWROOM_1205', message: '访问提取码不正确或未提供' },
+    SHARE_LIMIT_EXCEEDED: { code: 'SHOWROOM_1206', message: '分享访问次数已达到上限，阅后即焚已启动' },
 } as const;
 
 export type ShowroomErrorCode = typeof ShowroomErrors[keyof typeof ShowroomErrors]['code'];

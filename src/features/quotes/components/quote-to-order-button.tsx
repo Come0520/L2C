@@ -55,8 +55,7 @@ export function QuoteToOrderButton({ quoteId, defaultAmount }: QuoteToOrderButto
 
                 // 检查是否是审批中状态
                 if ('pendingApproval' in result && result.pendingApproval) {
-                    // @ts-expect-error - 接口实际可能返回 error 对象带 messages
-                    toast.info(result.message || '已提交审批，请等待审批通过。');
+                    toast.info(('message' in result ? String(result.message) : undefined) || '已提交审批，请等待审批通过。');
                     setOpen(false);
                     router.refresh();
                     return;

@@ -117,7 +117,7 @@ describe('Order Creation Actions', () => {
             // 验证佣金异步处理被触发
             expect(mockCheckAndGenerateCommission).toHaveBeenCalledWith(
                 mockOrderId,
-                mockTenantId
+                'ORDER_CREATED'
             );
         });
 

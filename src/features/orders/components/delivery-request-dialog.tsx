@@ -23,6 +23,7 @@ interface DeliveryRequestDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     orderId: string;
+    version: number;
 }
 
 const CARRIERS = [
@@ -40,6 +41,7 @@ export function DeliveryRequestDialog({
     open,
     onOpenChange,
     orderId,
+    version,
 }: DeliveryRequestDialogProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +64,7 @@ export function DeliveryRequestDialog({
                 company: formData.carrier,
                 trackingNo: formData.trackingNo,
                 remark: formData.remark,
+                version,
             });
 
             if (result.success) {

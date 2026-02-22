@@ -8,7 +8,7 @@ import {
 import { ShowroomErrors } from '../../errors';
 import { canManageShowroomItem } from '../../logic/permissions';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Hoist mocks
 const mocks = vi.hoisted(() => ({
@@ -59,10 +59,9 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: {
-        record: vi.fn(),
-        recordFromSession: vi.fn(),
+        log: vi.fn(),
     },
 }));
 
@@ -117,7 +116,7 @@ describe('createShowroomItem() Action', () => {
         };
         const result = await createShowroomItem(input);
         expect(result.id).toBe(UUID_1);
-        expect(AuditService.recordFromSession).toHaveBeenCalled();
+        expect(AuditService.log).toHaveBeenCalled();
     });
 
     it('创建时应清洗 XSS 内容', async () => {
@@ -139,14 +138,12 @@ describe('createShowroomItem() Action', () => {
             createdBy: 'u1'
         }]);
         await createShowroomItem(input);
-        // 验证 recordFromSession 记录的是清洗后的内容
-        expect(AuditService.recordFromSession).toHaveBeenCalledWith(
+        expect(AuditService.log).toHaveBeenCalledWith(
             expect.anything(),
-            'showroom_items',
-            expect.anything(),
-            'CREATE',
             expect.objectContaining({
-                new: expect.objectContaining({ content: expect.not.stringContaining('<script>') })
+                tableName: 'showroom_items',
+                action: 'CREATE',
+                newValues: expect.objectContaining({ content: expect.not.stringContaining('<script>') })
             })
         );
     });
@@ -169,14 +166,14 @@ describe('updateShowroomItem() Action', () => {
 
         const result = await updateShowroomItem({ id: UUID_1, title: '新' });
         expect(result.id).toBe(UUID_1);
-        expect(AuditService.recordFromSession).toHaveBeenCalledWith(
+        expect(AuditService.log).toHaveBeenCalledWith(
             expect.anything(),
-            'showroom_items',
-            UUID_1,
-            'UPDATE',
             expect.objectContaining({
-                old: expect.any(Object),
-                new: expect.any(Object)
+                tableName: 'showroom_items',
+                recordId: UUID_1,
+                action: 'UPDATE',
+                oldValues: expect.any(Object),
+                newValues: expect.any(Object)
             })
         );
     });
@@ -211,6 +208,6 @@ describe('deleteShowroomItem() Action', () => {
         const result = await deleteShowroomItem({ id: UUID_1 });
         expect(result.success).toBe(true);
         expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ status: 'ARCHIVED' }));
-        expect(AuditService.recordFromSession).toHaveBeenCalled();
+        expect(AuditService.log).toHaveBeenCalled();
     });
 });

@@ -9,13 +9,16 @@ vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
             warehouses: { findFirst: vi.fn() },
-            inventory: { findFirst: vi.fn() },
+            inventory: { findFirst: vi.fn(), findMany: vi.fn() },
             products: { findFirst: vi.fn() },
         },
         select: vi.fn().mockReturnThis(),
         from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
         transaction: vi.fn(async (cb) => {
             return cb(db);
         }),
@@ -187,43 +190,35 @@ describe('Inventory Actions', () => {
         it('应成功获取库存在给定过滤条件下的等级', async () => {
             // This test is simple since it only SELECTs, just asserting it doesn't throw and calls the chain.
             mockDb.limit.mockResolvedValue([{ id: 'inv-1' }]);
-            mockDb.select.mockReturnValue({
-                from: vi.fn().mockReturnThis(),
-                leftJoin: vi.fn().mockReturnThis(),
-                where: vi.fn().mockReturnThis(),
-            } as any);
-
-            const { getInventoryLevels } = await import('../inventory-actions');
+            mockDb.select.mockReturnThis();
 
             // Note: Since the real getInventoryLevels has a nested query `.select({ total: count() })`, 
             // mocking entirely correctly for it involves more complex setup, but basic logic testing:
-            vi.doMock('@/shared/api/db', () => ({
-                db: {
-                    select: vi.fn().mockReturnValue({
-                        from: vi.fn().mockReturnValue({
-                            leftJoin: vi.fn().mockReturnValue({
-                                leftJoin: vi.fn().mockReturnValue({
-                                    where: vi.fn().mockReturnValue({
-                                        orderBy: vi.fn().mockReturnValue({
-                                            limit: vi.fn().mockReturnValue({
-                                                offset: vi.fn().mockResolvedValue([{
-                                                    inv: { id: 'inv-1', quantity: 10 },
-                                                    product: { name: 'P', category: 'C' },
-                                                    warehouse: { name: 'W' }
-                                                }])
-                                            })
-                                        })
-                                    })
-                                })
-                            }),
-                            where: vi.fn().mockResolvedValue([{ total: 1 }]) // For count query
+            // Two calls: one for results, one for count. 
+            // We use a custom object that can both be awaited directly (for the count query)
+            // or further chained with limit/offset/orderBy (for the results query).
+            mockDb.where.mockImplementation(() => {
+                return {
+                    limit: () => ({
+                        offset: () => ({
+                            orderBy: () => Promise.resolve([{
+                                id: 'inv-1', quantity: 10,
+                                productName: 'P',
+                                warehouseName: 'W'
+                            }])
                         })
-                    })
-                }
-            }));
+                    }),
+                    then: (resolve: any) => resolve([{ total: 1 }])
+                };
+            });
 
-            const localModule = await import('../inventory-actions');
-            const result = await localModule.getInventoryLevels({});
+            const { getInventoryLevels } = await import('../inventory-actions');
+            const result = await getInventoryLevels({ page: 1, pageSize: 20 });
+
+            if (!result.success) {
+                import('fs').then(fs => fs.writeFileSync('test-error.log', result.error ?? ''));
+                throw new Error('GET_INV_LEVELS_ERR: ' + result.error);
+            }
 
             expect(result.success).toBe(true);
         });

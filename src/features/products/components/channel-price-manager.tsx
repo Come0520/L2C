@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import { useState, useEffect, useCallback } from 'react';
 import {
     getAllChannelPrices,
@@ -145,7 +147,7 @@ export function ChannelPriceManager() {
                 setProducts(productResult.data as Product[]);
             }
         } catch (_error) {
-            console.error('加载选择器数据失败:', _error);
+            logger.error('加载选择器数据失败:', _error);
         }
     }, []);
 

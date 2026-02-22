@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { financeConfigs } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';

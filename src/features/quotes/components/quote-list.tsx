@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
+import { logger } from '@/shared/lib/logger';
 
 // Tab 配置：定义每个 Tab 对应的状态列表
 const QUOTE_TABS = [
@@ -78,7 +79,7 @@ export function QuoteList() {
       });
       setQuotes((data as QuoteListItem[]) || []);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       toast.error('加载失败');
     } finally {
       setLoading(false);
@@ -113,7 +114,7 @@ export function QuoteList() {
         toast.error(`创建失败: ${result.error}`);
       }
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       toast.error('创建报价单失败');
     } finally {
       setCreating(false);

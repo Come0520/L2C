@@ -16,14 +16,24 @@ import { z } from 'zod';
 /**
  * 生成佣金记录（订单完成时调用）
  * 
+ * 获取指定订单信息，并使用服务端的规则通过 Decimal.js 自动计算并生成佣金记录。
+ * 
  * 安全检查：需要 CHANNEL.MANAGE_COMMISSION 权限
  * P0 Fix: 移除前端传入金额/费率，改为服务端查询并使用 Decimal.js 计算
+ * 
+ * @param {Object} params - 佣金生成参数
+ * @param {string} params.channelId - 渠道ID
+ * @param {string} [params.leadId] - 关联的线索ID (可选)
+ * @param {string} params.orderId - 订单ID
+ * @returns {Promise<any>} 返回新生成的佣金记录
+ * @throws {Error} 订单/渠道校验失败，或重复生成佣金则抛出异常
  */
 export async function createCommissionRecord(params: {
     channelId: string;
     leadId?: string;
     orderId: string;
 }) {
+    console.log('[channels] 开始手动生成佣金记录:', params);
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -114,7 +124,18 @@ export async function createCommissionRecord(params: {
 /**
  * 获取渠道的佣金记录
  * 
+ * 支持按渠道、跨日期和状态分页查询该租户下的佣金明细。
+ * 
  * 安全检查：自动从 session 获取 tenantId
+ * 
+ * @param {Object} params - 查询参数集
+ * @param {string} [params.channelId] - 渠道ID过滤
+ * @param {'PENDING' | 'SETTLED' | 'PAID' | 'VOID'} [params.status] - 状态过滤
+ * @param {Date} [params.startDate] - 开始日期查询
+ * @param {Date} [params.endDate] - 结束日期查询
+ * @param {number} [params.page] - 页码
+ * @param {number} [params.pageSize] - 每页条数
+ * @returns {Promise<any>} 返回包含分页数据的佣金记录列表
  */
 export async function getChannelCommissions(params: {
     channelId?: string;
@@ -176,7 +197,11 @@ export async function getChannelCommissions(params: {
 /**
  * 获取待结算的佣金汇总（按渠道分组）
  * 
+ * 聚合当前租户所有处于 PENDING（待结算）状态的佣金，按 channelId 维度返回汇总数据。
+ * 
  * 安全检查：自动从 session 获取 tenantId
+ * 
+ * @returns {Promise<any[]>} 返回包含汇总及其关联渠道信息的数组
  */
 export async function getPendingCommissionSummary() {
     const session = await auth();
@@ -221,9 +246,17 @@ export async function getPendingCommissionSummary() {
 /**
  * 作废佣金记录
  * 
+ * 根据给定 id 作废处于待结算状态的佣金记录，记录作废原因及审计日志。
+ * 
  * 安全检查：需要 CHANNEL.MANAGE_COMMISSION 权限
+ * 
+ * @param {string} id - 佣金记录ID
+ * @param {string} reason - 作废理由备注
+ * @returns {Promise<any>} 返回被作废的记录
+ * @throws {Error} 未处于 PENDING 状态抛出异常
  */
 export async function voidCommission(id: string, reason: string) {
+    console.log('[channels] 开始作废佣金记录:', { commissionId: id, reason });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

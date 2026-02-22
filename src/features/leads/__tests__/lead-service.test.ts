@@ -51,6 +51,12 @@ vi.mock('@/features/settings/actions/system-settings-actions', () => ({
     getSettingInternal: vi.fn()
 }));
 
+vi.mock('@/shared/lib/audit-service', () => ({
+    AuditService: {
+        record: vi.fn()
+    }
+}));
+
 describe('LeadService', () => {
     const mockTenantId = 'tenant-123';
     const mockUserId = 'user-123';

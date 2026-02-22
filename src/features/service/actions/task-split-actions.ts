@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { workerSkills, quoteItems } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * 任务拆分推荐逻辑
@@ -36,7 +36,9 @@ export interface SplitPlan {
 }
 
 /**
- * 根据报价单分析品类，生成拆分建议
+ * 根据报价单分析商品品类，自动生成该报价所需的拆分任务与分配建议
+ * @param quoteId - 定价或报价单实体的唯一主键
+ * @returns 包含各子任务分解类目以及推荐相应安装技能的封装结果
  */
 export async function suggestTaskSplit(quoteId: string): Promise<{
     success: boolean;
@@ -65,8 +67,8 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
         }
 
         // 2. 按品类分组
-        const categoryGroups = new Map<string, typeof items>();
-        for (const item of items) {
+        const validItems = items.filter(item => { if (item.quantity === undefined) return true; return (Number(item.quantity) || 0) > 0; }); if (validItems.length === 0) return { success: false, error: "可拆分的商品数量已被耗尽或原始数量异常" }; const categoryGroups = new Map<string, typeof items>();
+        for (const item of items.filter(i => i.quantity === undefined || (Number(i.quantity) || 0) > 0)) {
             const category = item.product?.category || 'OTHER';
             const skillCategory = CATEGORY_SKILL_MAP[category] || 'OTHER';
 
@@ -84,8 +86,7 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
             const matchingSkills = await db.query.workerSkills.findMany({
                 where: and(
                     eq(workerSkills.tenantId, session.user.tenantId),
-                    // @ts-expect-error - dynamic type definition
-                    eq(workerSkills.skillType, `INSTALL_${category}`)
+                    eq(workerSkills.skillType, `INSTALL_${category}` as typeof workerSkills.$inferSelect['skillType'])
                 ),
             });
 
@@ -100,20 +101,20 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
 
         return { success: true, data: suggestions };
     } catch (error) {
-        console.error('分析拆分建议失败:', error);
+        logger.error('分析拆分建议失败:', error);
         return { success: false, error: '分析拆分建议失败' };
     }
 }
 
 import { unstable_cache } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
 
 const getCachedAvailableWorkers = unstable_cache(
     async (tenantId: string, skillType: string) => {
         const skills = await db.query.workerSkills.findMany({
             where: and(
                 eq(workerSkills.tenantId, tenantId),
-                // @ts-expect-error - enum assignment
-                eq(workerSkills.skillType, skillType)
+                eq(workerSkills.skillType, skillType as typeof workerSkills.$inferSelect['skillType'])
             ),
             with: {
                 worker: true,
@@ -130,7 +131,10 @@ const getCachedAvailableWorkers = unstable_cache(
 );
 
 /**
- * 获取可接单的师傅列表（按技能筛选）
+ * 根据具体的技能类型要求获取所有支持的且当前可供派单的可用施工人员
+ * 结果含有缓存时间控制，适用于大规模的自动排单运算
+ * @param skillType - 标准化的技能类型标识符常量（例: 'INSTALL_CURTAIN' 等）
+ * @returns 支持具有对应技能的安装或施工人员的用户列表数据对象
  */
 export async function getAvailableWorkers(skillType: string): Promise<{
     success: boolean;
@@ -146,13 +150,15 @@ export async function getAvailableWorkers(skillType: string): Promise<{
         const workers = await getCachedAvailableWorkers(session.user.tenantId, skillType);
         return { success: true, data: workers };
     } catch (error) {
-        console.error('获取师傅列表失败:', error);
+        logger.error('获取师傅列表失败:', error);
         return { success: false, error: '获取师傅列表失败' };
     }
 }
 
 /**
- * 获取或更新师傅技能
+ * 获取某个特定安装师/施工人员目前拥有的所有技能资格认定数据
+ * @param workerId - 特定员工或施工师傅的用户 ID
+ * @returns 包含当前工作人员所有的被认可技能标识字段列表响应
  */
 export async function getWorkerSkills(workerId: string) {
     const session = await auth();
@@ -170,13 +176,17 @@ export async function getWorkerSkills(workerId: string) {
 
         return { success: true, data: skills.map(s => s.skillType) };
     } catch (error) {
-        console.error('获取师傅技能失败:', error);
+        logger.error('获取师傅技能失败:', error);
         return { success: false, error: '获取师傅技能失败' };
     }
 }
 
 /**
- * 更新师傅技能（批量替换）
+ * 批量更新或覆写某施工人员的技能池数据（先清空后全量替换模式）
+ * 如果提供的技能数组为空，它将不抛出异常并默认清除全量原有技能
+ * @param workerId - 施工人员或员工的目标 ID
+ * @param skillTypes - 一组被更新为有效资格识别标识符的全新字符串数组
+ * @returns 操作更新后表示是否完成或遇到问题的状态
  */
 export async function updateWorkerSkills(workerId: string, skillTypes: string[]) {
     const session = await auth();
@@ -198,14 +208,14 @@ export async function updateWorkerSkills(workerId: string, skillTypes: string[])
                 skillTypes.map(skill => ({
                     tenantId: session.user.tenantId,
                     workerId,
-                    skillType: skill as any,
+                    skillType: skill as typeof workerSkills.$inferInsert['skillType'],
                 }))
             );
         }
 
         return { success: true };
     } catch (error) {
-        console.error('更新师傅技能失败:', error);
+        logger.error('更新师傅技能失败:', error);
         return { success: false, error: '更新师傅技能失败' };
     }
 }

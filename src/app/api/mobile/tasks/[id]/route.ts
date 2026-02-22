@@ -26,7 +26,7 @@ export async function GET(
     if (!isInternal.allowed) return isInternal.response;
 
     const taskId = params.id;
-    let detail: any = null;
+    let detail: Record<string, unknown> | null = null;
     let taskType = 'measure';
 
     try {

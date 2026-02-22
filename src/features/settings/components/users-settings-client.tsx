@@ -7,17 +7,19 @@ import { toggleUserActive, deleteUser } from '@/features/settings/actions/user-a
 import type { UserInfo } from '@/features/settings/actions/user-actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { Pagination } from '@/shared/ui/pagination';
 
 interface UsersSettingsClientProps {
   userData: UserInfo[];
   availableRoles?: { label: string; value: string }[];
+  totalPages?: number;
 }
 
 /**
  * 用户管理客户端组件
  * 管理编辑、禁用、删除等用户操作
  */
-export function UsersSettingsClient({ userData, availableRoles = [] }: UsersSettingsClientProps) {
+export function UsersSettingsClient({ userData, availableRoles = [], totalPages = 1 }: UsersSettingsClientProps) {
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
@@ -53,13 +55,15 @@ export function UsersSettingsClient({ userData, availableRoles = [] }: UsersSett
   };
 
   return (
-    <>
+    <div className="space-y-4">
       <UserList
         data={userData}
         onEdit={handleEdit}
         onToggleActive={handleToggleActive}
         onDelete={handleDelete}
       />
+
+      {totalPages > 1 && <Pagination totalPages={totalPages} />}
 
       <UserForm
         open={isDialogOpen}
@@ -68,6 +72,6 @@ export function UsersSettingsClient({ userData, availableRoles = [] }: UsersSett
         onSuccess={handleSuccess}
         availableRoles={availableRoles}
       />
-    </>
+    </div>
   );
 }

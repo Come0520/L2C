@@ -6,6 +6,7 @@ import { OrderService } from '@/services/order.service';
 import { AuditService } from '@/shared/lib/audit-service';
 import { createOrderSchema } from '../action-schemas';
 import { checkAndGenerateCommission } from '@/features/channels/logic/commission.service';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 从报价单创建订单 Action 类型定义
@@ -13,7 +14,19 @@ import { checkAndGenerateCommission } from '@/features/channels/logic/commission
 type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 /**
- * 从报价单创建订单
+ * 从报价单创建订单 Action。
+ * 
+ * @description 根据指定的报价单 ID 和首期付款金额，调用 OrderService 进行订单转换。
+ * 包含逻辑：
+ * 1. 权限与租户校验
+ * 2. 报价单合法性检查
+ * 3. 转换逻辑执行
+ * 4. 记录创建操作的审计日志
+ * 5. 触发佣金生成异步逻辑
+ * 
+ * @param input 包含报价单 ID (`quoteId`) 和可选的首期付款金额 (`paymentAmount`)
+ * @returns 创建成功的订单对象 Promise
+ * @throws {Error} 未授权、报价单不存在或转换失败时抛出
  */
 export async function createOrderFromQuote(input: CreateOrderInput) {
     const session = await auth();
@@ -45,14 +58,18 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
             newValues: { quoteId, paymentAmount },
         });
 
+        logger.info('[orders] 订单从报价单转化成功:', { orderId: order.id, tenantId, quoteId });
+        console.log('[orders] 订单从报价单转化成功:', { orderId: order.id, tenantId, quoteId });
+
         // 4. 异步处理佣金逻辑 (不阻塞订单创建)
         checkAndGenerateCommission(order.id, 'ORDER_CREATED').catch((e: Error) => {
-            console.error('[createOrderFromQuote] 佣金处理失败:', e.message);
+            logger.error('[createOrderFromQuote] 佣金处理失败:', e.message);
         });
 
         return order;
     } catch (e: unknown) {
         const error = e as Error;
+        console.log('[orders] 订单转化失败:', { quoteId, error: error.message });
         throw new Error(error.message || '订单创建失败');
     }
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { ProductForm, ProductFormValues } from './product-form';
@@ -43,7 +45,7 @@ export function ProductFormDialog({
             onOpenChange(false);
             onSuccess?.();
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('操作失败');
         } finally {
             setIsLoading(false);

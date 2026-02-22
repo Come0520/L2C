@@ -15,6 +15,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
 
 // =============================================
 // Schema 定义
@@ -143,6 +144,17 @@ export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDis
             })
             .where(eq(tenants.id, tenantId));
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: 'system', // 配置类更新暂用 system 标识
+            tableName: 'tenants',
+            recordId: tenantId,
+            action: 'UPDATE',
+            oldValues: { channelDiscounts: currentSettings.channelDiscounts },
+            newValues: { channelDiscounts: validated },
+            details: { action: 'UPDATE_GLOBAL_DISCOUNT' }
+        });
+
         // 失效全局折扣缓存
         revalidateTag('global-discount', 'default');
         revalidateTag(`global-discount-${tenantId}`, 'default');
@@ -209,6 +221,15 @@ export async function createDiscountOverride(input: z.infer<typeof overrideSchem
             })
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: 'system',
+            tableName: 'channel_discount_overrides',
+            recordId: override.id,
+            action: 'CREATE',
+            newValues: override
+        });
+
         revalidatePath('/settings/products');
         return { data: override };
     } catch (error) {
@@ -250,6 +271,16 @@ export async function updateDiscountOverride(
             .where(eq(channelDiscountOverrides.id, id))
             .returning();
 
+        await AuditService.log(db, {
+            tenantId,
+            userId: 'system',
+            tableName: 'channel_discount_overrides',
+            recordId: updated.id,
+            action: 'UPDATE',
+            newValues: input,
+            oldValues: { id }
+        });
+
         revalidatePath('/settings/products');
         return { data: updated };
     } catch (error) {
@@ -278,6 +309,15 @@ export async function deleteDiscountOverride(id: string) {
 
         await db.delete(channelDiscountOverrides)
             .where(eq(channelDiscountOverrides.id, id));
+
+        await AuditService.log(db, {
+            tenantId,
+            userId: 'system',
+            tableName: 'channel_discount_overrides',
+            recordId: id,
+            action: 'DELETE',
+            oldValues: { id }
+        });
 
         revalidatePath('/settings/products');
         return { success: true };
@@ -357,3 +397,4 @@ export async function getProductDiscountRate(
         return { error: error instanceof Error ? error.message : '获取折扣率失败' };
     }
 }
+

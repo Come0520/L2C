@@ -23,6 +23,7 @@ import { QuoteRoomAccordion } from './quote-room-accordion';
 import { RoomSelectorWithConfig } from './room-selector-popover';
 import { QuoteInlineAddRow } from './quote-inline-add-row';
 import { QuoteItemExpandRow } from './quote-item-expand-row';
+import { QuoteItem as SharedQuoteItem } from '@/shared/api/schema/quotes';
 import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
@@ -47,6 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import dynamic from 'next/dynamic';
+import { logger } from '@/shared/lib/logger';
 
 const QuoteItemAdvancedDrawer = dynamic(
   () => import('./quote-item-advanced-drawer').then((mod) => mod.QuoteItemAdvancedDrawer),
@@ -582,8 +584,9 @@ const QuoteItemRow = memo(
             foldRatio={Number(item.foldRatio) || 2}
             processFee={Number(item.processFee) || 0}
             remark={item.remark}
-            // @ts-expect-error - 类型与 UI Props 类型要求略有不同
-            attachments={(item.children?.filter(c => c.category === 'CURTAIN_ACCESSORY') || [])} // 提取附件
+            attachments={
+              (item.children?.filter((c) => c.category === 'CURTAIN_ACCESSORY') || []) as (SharedQuoteItem & { amount?: number })[]
+            } // 提取附件
             readOnly={readOnly}
             isExpanded={isExpanded}
             onToggle={onToggleExpand}
@@ -812,7 +815,7 @@ export function QuoteItemsTable({
       toast.success('已更新');
       if (onItemUpdate) onItemUpdate();
     } catch (_error) {
-      console.error('Failed to update item');
+      logger.error('Failed to update item');
       toast.error('更新失败');
     }
   };
@@ -871,7 +874,7 @@ export function QuoteItemsTable({
         await onItemUpdate();
       }
     } catch (_error) {
-      console.error(_error);
+      logger.error(_error);
       toast.error('添加失败');
     }
   };
@@ -954,7 +957,7 @@ export function QuoteItemsTable({
           }
         }
       } catch (e) {
-        console.warn('Strategy calc failed', e);
+        logger.warn('Strategy calc failed', e);
       }
     }
     return null;
@@ -1147,7 +1150,6 @@ export function QuoteItemsTable({
       <QuoteItemAdvancedDrawer
         open={advancedDrawerOpen}
         onOpenChange={setAdvancedDrawerOpen}
-        // @ts-expect-error - Expected structural mismatch
         item={editingItem}
         onSuccess={onItemUpdate}
       />

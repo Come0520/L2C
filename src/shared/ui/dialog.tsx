@@ -1,9 +1,9 @@
+'use client';
+
 /**
  * Dialog 组件
  * 基于 Radix UI
  */
-
-'use client';
 
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';

@@ -3,6 +3,7 @@
 import { db } from '@/shared/api/db';
 import { productSuppliers, suppliers } from '@/shared/api/schema';
 import { eq, and, ne } from 'drizzle-orm';
+import { AuditService } from '@/shared/services/audit-service';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -108,6 +109,15 @@ const addProductSupplierActionInternal = createSafeAction(addProductSupplierSche
         isDefault: data.isDefault,
     });
 
+    await AuditService.log(db, {
+        tenantId: session.user.tenantId,
+        userId: session.user.id!,
+        tableName: 'product_suppliers',
+        recordId: `${data.productId}-${data.supplierId}`,
+        action: 'CREATE',
+        newValues: data
+    });
+
     revalidatePath(`/supply-chain/products`);
     return { success: true };
 });
@@ -156,6 +166,16 @@ const updateProductSupplierActionInternal = createSafeAction(updateProductSuppli
             eq(productSuppliers.tenantId, session.user.tenantId)  // P0 修复：租户隔离
         ));
 
+    await AuditService.log(db, {
+        tenantId: session.user.tenantId,
+        userId: session.user.id!,
+        tableName: 'product_suppliers',
+        recordId: data.id,
+        action: 'UPDATE',
+        oldValues: current,
+        newValues: data
+    });
+
     revalidatePath(`/supply-chain/products`);
     return { success: true };
 });
@@ -177,6 +197,15 @@ const removeProductSupplierActionInternal = createSafeAction(removeProductSuppli
                 eq(productSuppliers.id, id)
             )
         );
+
+    await AuditService.log(db, {
+        tenantId: session.user.tenantId,
+        userId: session.user.id!,
+        tableName: 'product_suppliers',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: { id }
+    });
 
     revalidatePath(`/supply-chain/products`);
     return { success: true };
@@ -362,6 +391,17 @@ const autoSwitchDefaultSupplierActionInternal = createSafeAction(autoSwitchDefau
         .set({ isDefault: true })
         .where(eq(productSuppliers.id, bestSupplier.id));
 
+    await AuditService.log(db, {
+        tenantId: session.user.tenantId,
+        userId: session.user.id!,
+        tableName: 'product_suppliers',
+        recordId: bestSupplier.id,
+        action: 'UPDATE',
+        oldValues: { isDefault: false },
+        newValues: { isDefault: true },
+        details: { action: 'AUTO_SWITCH_DEFAULT', strategy, productId }
+    });
+
     revalidatePath(`/supply-chain/products`);
 
     return {
@@ -375,3 +415,4 @@ const autoSwitchDefaultSupplierActionInternal = createSafeAction(autoSwitchDefau
 export async function autoSwitchDefaultSupplier(params: z.infer<typeof autoSwitchDefaultSupplierSchema>) {
     return autoSwitchDefaultSupplierActionInternal(params);
 }
+

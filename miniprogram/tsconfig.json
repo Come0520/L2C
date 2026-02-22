@@ -10,8 +10,19 @@
     "outDir": "./dist",
     "rootDir": ".",
     "declaration": true,
-    "lib": ["ES2017"]
+    "lib": [
+      "ES2017"
+    ],
+    "types": [
+      "jest",
+      "node"
+    ]
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "./**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

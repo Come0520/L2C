@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 /**
  * 作废线索按钮 - 客户端组件包装器
  * 封装 VoidLeadDialog 的 open/onOpenChange 受控状态

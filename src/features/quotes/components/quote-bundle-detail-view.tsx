@@ -4,10 +4,10 @@ import React from 'react';
 
 interface QuoteBundleDetailViewProps {
     bundle: Record<string, unknown>;
-    plans: Record<string, any>;
+    plans: Record<string, unknown>;
 }
 
-export function QuoteBundleDetailView({ bundle, plans }: QuoteBundleDetailViewProps) {
+export function QuoteBundleDetailView(_props: QuoteBundleDetailViewProps) {
     return (
         <div className="p-4">
             <h2 className="text-xl font-bold">报价单详情 (Bundle Detail)</h2>

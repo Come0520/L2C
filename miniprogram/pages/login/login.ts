@@ -1,5 +1,6 @@
 /**
  * 账号登录页
+ * 审计修复: 添加 inline 错误提示、密码可见性切换
  */
 const app = getApp<IAppOption>();
 
@@ -8,28 +9,28 @@ Page({
         account: '',
         password: '',
         loggingIn: false,
+        showPassword: false,
+        errorMsg: '',
     },
 
-    /**
-     * 输入处理
-     */
-    onInput(e: any) {
-        const { field } = e.currentTarget.dataset;
-        this.setData({ [field]: e.detail.value });
+    /** 切换密码可见性 */
+    togglePassword() {
+        this.setData({ showPassword: !this.data.showPassword });
     },
 
-    /**
-     * 登录提交
-     */
+    /** 登录提交 */
     async onLogin() {
         const { account, password } = this.data;
 
+        // 清除之前的错误
+        this.setData({ errorMsg: '' });
+
         if (!account.trim()) {
-            wx.showToast({ title: '请输入账号', icon: 'none' });
+            this.setData({ errorMsg: '请输入账号' });
             return;
         }
         if (!password) {
-            wx.showToast({ title: '请输入密码', icon: 'none' });
+            this.setData({ errorMsg: '请输入密码' });
             return;
         }
 
@@ -53,14 +54,14 @@ Page({
                 wx.setStorageSync('token', token);
                 wx.setStorageSync('userInfo', user);
 
-                // 更新 AuthStore (如果在用)
+                // 更新 AuthStore
                 try {
                     const { authStore } = require('../../stores/auth-store');
                     if (authStore) {
                         authStore.setLogin(token, user);
                     }
                 } catch (_e) {
-                    // console.log('Update AuthStore failed, skipping...');
+                    // AuthStore 更新失败，不影响登录流程
                 }
 
                 wx.showToast({ title: '登录成功', icon: 'success' });
@@ -73,32 +74,25 @@ Page({
                     } else if (user.role === 'customer') {
                         wx.reLaunch({ url: '/pages/index/index' });
                     } else {
-                        // 默认去工作台
                         wx.reLaunch({ url: '/pages/workbench/index' });
                     }
                 }, 1000);
 
             } else {
-                throw new Error(result.error || '登录失败');
+                this.setData({ errorMsg: result.error || '登录失败' });
             }
         } catch (error: unknown) {
-            const errMsg = error instanceof Error ? error.message : '账号或密码错误';
-            console.error('Login Failed', error);
-            wx.showToast({
-                title: errMsg,
-                icon: 'none'
-            });
+            const errMsg = error instanceof Error ? error.message : '网络异常，请稍后重试';
+            this.setData({ errorMsg: errMsg });
         } finally {
             this.setData({ loggingIn: false });
         }
     },
 
-    /**
-     * 跳转注册/入驻
-     */
+    /** 跳转注册/入驻 */
     goRegister() {
         wx.navigateTo({ url: '/pages/register/register' });
     }
 });
 
-export { }; // Ensure this is treated as a module
+export { };

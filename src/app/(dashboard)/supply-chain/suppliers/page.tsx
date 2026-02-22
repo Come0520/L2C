@@ -12,12 +12,12 @@ import { toast } from 'sonner';
 
 export default function SuppliersPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [data, setData] = useState<any[]>([]); // 供应商列表类型后续可精确定义
+    const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState('');
     const [dialogOpen, setDialogOpen] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [selectedSupplier, setSelectedSupplier] = useState<any>(null); // 供应商类型后续可精确定义
+    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -45,7 +45,7 @@ export default function SuppliersPage() {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleEdit = (supplier: any) => { // 供应商类型后续可精确定义
+    const handleEdit = (supplier: any) => {
         setSelectedSupplier(supplier);
         setDialogOpen(true);
     };

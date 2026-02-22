@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -50,7 +52,7 @@ export function CreateMeasureTaskDialog() {
                 toast.error('error' in res ? res.error : '创建失败');
             }
         } catch (error: unknown) {
-            console.error(error);
+            logger.error(error);
             const message = error instanceof Error ? error.message : '创建失败';
             toast.error(message);
         } finally {

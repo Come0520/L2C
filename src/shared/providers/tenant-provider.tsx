@@ -1,9 +1,9 @@
+'use client';
+
 /**
  * Tenant Context & Provider
  * 提供当前租户信息，确保数据隔离
  */
-
-'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { useSession } from 'next-auth/react';

@@ -19,8 +19,8 @@ export function ChannelAnalytics() {
             try {
                 const res = await getChannelAnalytics();
                 setData(res);
-            } catch (e) {
-                console.error(e);
+            } catch (_e) {
+                // 加载失败静默处理
             } finally {
                 setLoading(false);
             }

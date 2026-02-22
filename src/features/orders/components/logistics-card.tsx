@@ -27,10 +27,11 @@ interface LogisticsData {
 
 interface LogisticsCardProps {
     orderId: string;
+    version: number;
     logistics: LogisticsData; // OrderLogisticsData
 }
 
-export function LogisticsCard({ orderId, logistics }: LogisticsCardProps) {
+export function LogisticsCard({ orderId, version, logistics }: LogisticsCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [company, setCompany] = useState(logistics?.company || 'shunfeng');
     const [trackingNo, setTrackingNo] = useState(logistics?.trackingNo || '');
@@ -41,7 +42,7 @@ export function LogisticsCard({ orderId, logistics }: LogisticsCardProps) {
 
         setLoading(true);
         try {
-            const res = await updateLogistics({ orderId, company, trackingNo });
+            const res = await updateLogistics({ orderId, company, trackingNo, version });
             if (res.success) {
                 toast.success('物流信息已更新');
                 setIsEditing(false);

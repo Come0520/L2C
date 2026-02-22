@@ -2,9 +2,10 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createShareLink, getShareContent } from '../shares';
 import { ShowroomErrors } from '../../errors';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
+import { createHash } from 'crypto';
 
 // Hoist mocks
 const mocks = vi.hoisted(() => ({
@@ -14,7 +15,7 @@ const mocks = vi.hoisted(() => ({
     insert: vi.fn(),
     update: vi.fn(),
     set: vi.fn(),
-    mockRedis: { incr: vi.fn(), get: vi.fn() } as unknown,
+    mockRedis: { incr: vi.fn(), get: vi.fn() } as any,
 }));
 
 mocks.insert.mockReturnValue({ values: vi.fn(() => ({ returning: mocks.returning })) });
@@ -33,10 +34,9 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 vi.mock('@/shared/lib/auth', () => ({ auth: vi.fn() }));
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: {
-        record: vi.fn(),
-        recordFromSession: vi.fn()
+        log: vi.fn(),
     }
 }));
 vi.mock('@/shared/lib/redis', () => ({
@@ -66,7 +66,18 @@ describe('createShareLink() Action', () => {
         const result = await createShareLink(input);
         expect(result.id).toBe(UUID_SHARE);
         expect(mocks.insert).toHaveBeenCalled();
-        expect(AuditService.recordFromSession).toHaveBeenCalled();
+        expect(AuditService.log).toHaveBeenCalled();
+    });
+
+    it('应成功解析密码及限阅次数并落库', async () => {
+        const input = {
+            items: [{ itemId: UUID_ITEM, overridePrice: 100 }],
+            expiresInDays: 7,
+            password: 'abcd',
+            maxViews: 5
+        };
+        await createShareLink(input);
+        expect(mocks.insert).toHaveBeenCalled();
     });
 });
 
@@ -97,7 +108,7 @@ describe('getShareContent() Action', () => {
             price: 150
         }]);
 
-        const result = await getShareContent(UUID_SHARE);
+        const result = await getShareContent({ shareId: UUID_SHARE });
         expect(result.expired).toBe(false);
         expect(result.items[0].overridePrice).toBe(99);
     });
@@ -113,7 +124,7 @@ describe('getShareContent() Action', () => {
             itemsSnapshot: []
         });
 
-        await getShareContent(UUID_SHARE);
+        await getShareContent({ shareId: UUID_SHARE });
         expect(mocks.update).toHaveBeenCalled();
     });
 
@@ -126,7 +137,7 @@ describe('getShareContent() Action', () => {
             itemsSnapshot: []
         });
 
-        await expect(getShareContent(UUID_SHARE)).rejects.toThrow(ShowroomErrors.REDIS_UNAVAILABLE.message);
+        await expect(getShareContent({ shareId: UUID_SHARE })).rejects.toThrow(ShowroomErrors.REDIS_UNAVAILABLE.message);
     });
     it('当分享被停用时应抛出错误', async () => {
         mocks.findFirst.mockResolvedValue({
@@ -136,12 +147,60 @@ describe('getShareContent() Action', () => {
             itemsSnapshot: []
         });
 
-        await expect(getShareContent(UUID_SHARE)).rejects.toThrow(ShowroomErrors.SHARE_NOT_FOUND.message);
+        await expect(getShareContent({ shareId: UUID_SHARE })).rejects.toThrow(ShowroomErrors.SHARE_NOT_FOUND.message);
     });
 
     it('当处理频率过快时应触发限流错误', async () => {
         vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 10, remaining: 0, reset: 0 });
 
-        await expect(getShareContent(UUID_SHARE)).rejects.toThrow(ShowroomErrors.SHARE_RATE_LIMIT.message);
+        await expect(getShareContent({ shareId: UUID_SHARE })).rejects.toThrow(ShowroomErrors.SHARE_RATE_LIMIT.message);
+    });
+
+    it('当达到阅后即焚上限时应抛出错误', async () => {
+        mocks.findFirst.mockResolvedValue({
+            id: UUID_SHARE,
+            isActive: 1,
+            expiresAt: new Date(Date.now() + 100000),
+            itemsSnapshot: [],
+            views: 3,
+            maxViews: 3
+        });
+        await expect(getShareContent({ shareId: UUID_SHARE })).rejects.toThrow(ShowroomErrors.SHARE_LIMIT_EXCEEDED.message);
+    });
+
+    it('当开启密码保护且未提供密码时抛出错误', async () => {
+        mocks.findFirst.mockResolvedValue({
+            id: UUID_SHARE,
+            isActive: 1,
+            expiresAt: new Date(Date.now() + 100000),
+            itemsSnapshot: [],
+            passwordHash: 'somehash'
+        });
+        await expect(getShareContent({ shareId: UUID_SHARE })).rejects.toThrow(ShowroomErrors.INVALID_PASSWORD.message);
+    });
+
+    it('当开启密码保护且密码错误时抛出错误', async () => {
+        mocks.findFirst.mockResolvedValue({
+            id: UUID_SHARE,
+            isActive: 1,
+            expiresAt: new Date(Date.now() + 100000),
+            itemsSnapshot: [],
+            passwordHash: 'realhash'
+        });
+        await expect(getShareContent({ shareId: UUID_SHARE, password: 'wrong' })).rejects.toThrow(ShowroomErrors.INVALID_PASSWORD.message);
+    });
+
+    it('当提供正确密码时成功获取内容', async () => {
+        const password = '8888';
+        const hash = createHash('sha256').update(password).digest('hex');
+        mocks.findFirst.mockResolvedValue({
+            id: UUID_SHARE,
+            isActive: 1,
+            expiresAt: new Date(Date.now() + 100000),
+            itemsSnapshot: [],
+            passwordHash: hash
+        });
+        const result = await getShareContent({ shareId: UUID_SHARE, password });
+        expect(result.expired).toBe(false);
     });
 });

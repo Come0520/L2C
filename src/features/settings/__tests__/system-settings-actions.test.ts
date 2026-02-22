@@ -15,7 +15,10 @@ vi.mock('@/shared/lib/auth', () => ({
     auth: mocks.auth,
     checkPermission: mocks.checkPermission,
 }));
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock('next/cache', () => ({
+    revalidatePath: mocks.revalidatePath,
+    unstable_cache: vi.fn((cb) => cb)
+}));
 
 // Mock DB
 vi.mock('@/shared/api/db', () => {

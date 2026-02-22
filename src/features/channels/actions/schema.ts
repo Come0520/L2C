@@ -89,6 +89,7 @@ export const channelSchema = z.object({
 
     assignedManagerId: z.string().uuid().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).default('ACTIVE'),
+    version: z.number().int().min(0).optional(),
 }).refine((data) => {
     if (data.channelType === 'OTHER' && !data.customChannelType) {
         return false;
@@ -107,7 +108,7 @@ export const channelContactSchema = z.object({
     isMain: z.boolean().default(false),
 });
 
-export type ChannelInput = z.infer<typeof channelSchema>;
+export type ChannelInput = z.input<typeof channelSchema>;
 export type ChannelContactInput = z.infer<typeof channelContactSchema>;
 
 // 渠道类型 Schema

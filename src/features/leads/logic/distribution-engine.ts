@@ -1,5 +1,4 @@
-// Lead 分配引擎 - 内部业务逻辑（非 Server Action）
-
+import { logger } from "@/shared/lib/logger";
 import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
@@ -191,7 +190,7 @@ export async function distributeToNextSales(
 
         // 暂未实现的策略
         if (config.strategy === 'LOAD_BALANCE' || config.strategy === 'CHANNEL_SPECIFIC') {
-            console.warn(`[Distribution] Strategy ${config.strategy} is not yet implemented. Falling back to MANUAL.`);
+            logger.warn(`[Distribution] Strategy ${config.strategy} is not yet implemented. Falling back to MANUAL.`);
             return { salesId: null, salesName: null, strategy: config.strategy };
         }
 

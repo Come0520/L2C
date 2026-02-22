@@ -8,11 +8,21 @@ import { revalidatePath } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
 import Decimal from 'decimal.js';
+import { logger } from '@/shared/lib/logger';
 
 /**
- * 创建订单付款记录
- *
- * 安全: 权限检查 + 租户隔离 + Decimal.js 精度计算 + 审计日志
+ * 创建订单付款记录 Action
+ * 
+ * 核心逻辑：记录实际付款金额、上传支付凭证、并更新订单已付金额和状态。
+ * 安全机制：权限检查 + 租户隔离 + Decimal.js 精度计算 + 审计日志。
+ * 
+ * @param data 包含付款详情的数据对象
+ * @param data.scheduleId 付款计划 ID
+ * @param data.actualAmount 实际付款金额
+ * @param data.proofImg 支付凭证图片地址
+ * @param data.paymentMethod 支付方式 (例如：'WECHAT', 'ALIPAY', 'BANK')
+ * @param data.orderId 关联订单 ID
+ * @returns 包含操作结果的对象 `{ success: true }` 或 `{ success: false, error: 错误信息 }`
  */
 export async function createOrderPayment(data: {
     scheduleId: string;
@@ -118,6 +128,8 @@ export async function createOrderPayment(data: {
                 changedFields: { paidAmount: newPaid, balanceAmount: newBalance, status: statusToSet }
             }, tx);
 
+            logger.info('[orders] 创建订单付款记录成功:', { orderId, scheduleId, tenantId, amount: actualAmount });
+
             revalidatePath(`/orders/${orderId}`);
             revalidatePath(`/orders`);
 
@@ -125,7 +137,7 @@ export async function createOrderPayment(data: {
         });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : '付款失败';
-        console.error('订单付款失败:', error);
+        logger.error('[Orders] Payment failed:', { error });
         return { success: false, error: message };
     }
 }

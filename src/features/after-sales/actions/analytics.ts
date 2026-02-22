@@ -9,7 +9,12 @@ import { getQualityAnalyticsSchema } from './schemas';
 import { unstable_cache } from 'next/cache';
 
 /**
- * 缓存的售后质量分析查询
+ * 高频调用下的缓存防剧烈透传函数（获取特定租户的售后质量分析结果）
+ * 基于稳定的 5 分钟局部短时缓存，以换取在大规模展示面板时强劲且极速的渲染速度。
+ * 
+ * @param tenantId - 指定聚合报表所属的企业空间 ID
+ * @param startDate - 查询聚合结果周期的开始日期限定
+ * @param endDate - 查询聚合结果周期的结束日期限定
  */
 const getCachedQualityAnalytics = unstable_cache(
     async (tenantId: string, startDate?: string, endDate?: string) => {
@@ -120,7 +125,12 @@ const getAfterSalesQualityAnalyticsAction = createSafeAction(getQualityAnalytics
 });
 
 /**
- * 获取指定时间范围内的售后质量多维统计报表
+ * 收取规定区间内的所有历史售后单据并产出直观洞察报告矩阵
+ * 用于给公司管理层直接展示当前的服务质量异常热点、损失发生集中区域。
+ * 含有基础类型分类和细致至赔偿金额深度的图表数据集组。
+ * 
+ * @param params - 提取多维报告要求的日期跨度起始端和结束端数据结构
+ * @returns 并行下发的质量追溯报表
  */
 export async function getAfterSalesQualityAnalytics(params: z.infer<typeof getQualityAnalyticsSchema>) {
     return getAfterSalesQualityAnalyticsAction(params);

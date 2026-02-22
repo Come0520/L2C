@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -48,7 +49,7 @@ export function RoomTypesConfig() {
                 const data = await getRoomGroups();
                 setGroups(data);
             } catch (error) {
-                console.error('加载配置失败:', error);
+                logger.error('加载配置失败:', error);
                 toast.error('加载配置失败');
                 setGroups(DEFAULT_GROUPS);
             } finally {
@@ -118,7 +119,7 @@ export function RoomTypesConfig() {
             await updateRoomGroups(groups);
             toast.success('配置已保存');
         } catch (error) {
-            console.error('保存失败:', error);
+            logger.error('保存失败:', error);
             toast.error('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
         } finally {
             setIsSaving(false);

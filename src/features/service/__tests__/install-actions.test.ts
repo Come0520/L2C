@@ -39,7 +39,7 @@ vi.mock('@/shared/lib/auth', () => ({
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
-            users: { findMany: mockUsersExecute },
+            users: { findMany: mockUsersExecute, findFirst: mockUsersExecute },
             installTasks: { findMany: mockTasksExecute },
         },
         update: vi.fn(() => ({
@@ -86,6 +86,7 @@ describe('Service Feature - Install Actions', () => {
 
     describe('dispatchInstallTask', () => {
         it('should dispatch an install task and update status', async () => {
+            mockUsersExecute.mockResolvedValueOnce({ id: mockInstallerId }); // Mock 师傅存在
             mockUpdateWhere.mockResolvedValueOnce([] as any); // mock successful update result
 
             const payload = {
@@ -121,6 +122,22 @@ describe('Service Feature - Install Actions', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toBe('Dispatch Failed');
+        });
+
+        it('should reject if assigned worker is strictly not found or unavailable', async () => {
+            // DB 层面没有搜到这个给定的 installerId
+            mockUsersExecute.mockResolvedValueOnce(null);
+
+            const result = await dispatchInstallTask({
+                taskId: mockTaskId,
+                installerId: 'invalid-installer',
+                scheduledDate: '2024-05-15T00:00:00.000Z',
+                scheduledTimeSlot: 'MORNING'
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('不存在');
+            expect(mockUpdateSet).not.toHaveBeenCalled();
         });
     });
 

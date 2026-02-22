@@ -1,13 +1,13 @@
+'use client';
+
 /**
- * 通用时间线组�?
+ * 通用时间线组?
  * 支持自定义图标、颜色映射，可展开收起
  */
 
-'use client';
 
 import { useState } from 'react';
 import { Circle, ChevronDown, ChevronUp } from 'lucide-react';
-
 
 import { cn, formatDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';

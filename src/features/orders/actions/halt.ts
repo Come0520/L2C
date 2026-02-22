@@ -17,6 +17,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { OrderService } from '@/services/order.service';
+import { logger } from '@/shared/lib/logger';
 
 import {
     haltOrderSchema,
@@ -39,11 +40,15 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
         // 权限检查
         await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
+        // 从入参中获取 version 用于乐观并发控制
+        const versionNum = 'version' in data ? Number(data.version) : 0;
+
         const result = await OrderService.haltOrder(
             data.orderId,
             session.user.tenantId,
+            versionNum,
             session.user.id,
-            JSON.stringify({ reason: data.reason, remark: data.remark }) // 保持原因格式一致性或根据需求调整
+            JSON.stringify({ reason: data.reason, remark: data.remark })
         );
 
         revalidatePath('/orders');
@@ -59,7 +64,7 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
             }
         };
     } catch (error) {
-        console.error('叫停订单失败:', error);
+        logger.error('叫停订单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '叫停失败'
@@ -82,9 +87,12 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
         // 权限检查
         await checkPermission(session, PERMISSIONS.ORDER.EDIT);
 
+        const versionNum = 'version' in data ? Number(data.version) : 0;
+
         const result = await OrderService.resumeOrder(
             data.orderId,
             session.user.tenantId,
+            versionNum,
             session.user.id
         );
 
@@ -102,7 +110,7 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
             }
         };
     } catch (error) {
-        console.error('恢复订单失败:', error);
+        logger.error('恢复订单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '恢复失败'

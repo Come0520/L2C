@@ -70,8 +70,19 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    unstable_cache: vi.fn((fn: Function) => fn),
 }));
+
+vi.mock('@/shared/services/audit-service', () => ({
+    AuditService: { log: vi.fn().mockResolvedValue(undefined) }
+}));
+
+vi.mock('drizzle-orm', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, eq: vi.fn(), and: vi.fn() };
+});
 
 import {
     getBundles,

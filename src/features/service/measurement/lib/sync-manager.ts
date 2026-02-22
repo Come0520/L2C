@@ -4,6 +4,7 @@ import { submitMeasureData } from '@/features/service/measurement/actions/workfl
 import { checkInMeasureTask } from '@/features/service/measurement/actions/check-in';
 import { measureSheetSchema } from '@/features/service/measurement/schemas';
 import { z } from 'zod';
+import { logger } from '@/shared/lib/logger';
 
 // Local Task Interface
 interface LocalMeasureTask {
@@ -29,7 +30,6 @@ export class SyncManager {
                 // Save to local offline store
                 for (const task of result.data) {
                     // Safe access to customer properties
-                    // MeasureTask 接口已包含 customer 和 attributes，无需 as any
                     const customer = task.customer;
                     // 注意：address 属性在 MeasureTask 中可能位于 lead.address 或直接在 task 上
                     // 根据 types.ts: MeasureTask 包含 customer?: { name, phone } 和 lead?: { address, community }
@@ -51,7 +51,7 @@ export class SyncManager {
             }
             return 0;
         } catch (error) {
-            console.error('Sync online tasks failed:', error);
+            logger.error('Sync online tasks failed:', error);
             throw error;
         }
     }
@@ -84,7 +84,7 @@ export class SyncManager {
 
                         // 签到失败是否阻断后续提交？通常记录日志但继续尝试提交数据
                         if (!checkInResult.success) {
-                            console.warn(`Check-in failed for task ${localTask.taskId}:`, 'error' in checkInResult ? checkInResult.error : '');
+                            logger.warn(`Check-in failed for task ${localTask.taskId}:`, 'error' in checkInResult ? checkInResult.error : '');
                         }
                     }
 
@@ -121,12 +121,12 @@ export class SyncManager {
                 }
             }
         } catch (error) {
-            console.error('Sync local changes failed:', error);
+            logger.error('Sync local changes failed:', error);
             throw error;
         }
 
         if (errors.length > 0) {
-            console.error('Sync partial errors:', errors);
+            logger.error('Sync partial errors:', errors);
         }
 
         return successCount;

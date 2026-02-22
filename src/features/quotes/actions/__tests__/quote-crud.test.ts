@@ -14,8 +14,8 @@ import Decimal from 'decimal.js';
 import { createMockDb, createMockQuery, createMockInsert, createMockUpdate } from '@/shared/tests/mock-db';
 import { createMockSession } from '@/shared/tests/mock-factory';
 
-const MOCK_QUOTE_ID = '110e8400-e29b-41d4-a716-446655440000';
-const MOCK_BUNDLE_ID = '220e8400-e29b-41d4-a716-446655440000';
+const MOCK_QUOTE_ID = '33100000-0000-4000-a000-000000000006';
+const MOCK_BUNDLE_ID = '33100000-0000-4000-a000-000000000007';
 const MOCK_SESSION = createMockSession();
 const MOCK_TENANT_ID = MOCK_SESSION.user.tenantId;
 
@@ -28,7 +28,7 @@ const mockUpdateChain = {
     where: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([{ id: MOCK_BUNDLE_ID }]),
 };
-mockDb.update = vi.fn(() => mockUpdateChain) as any;
+mockDb.update = vi.fn(() => mockUpdateChain) as ReturnType<typeof mockDb.update>;
 
 // 设置事务内的 Mock
 mockDb.transaction = vi.fn().mockImplementation(async (callback) => {
@@ -65,7 +65,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/shared/api/schema/quotes', () => ({
-    quotes: { id: 'quotes.id', tenantId: 'quotes.tenantId' },
+    quotes: { id: 'quotes.id', tenantId: 'quotes.tenantId', version: 'quotes.version' },
 }));
 
 // Mock shared-helpers
@@ -94,12 +94,12 @@ describe('Quotes CRUD Actions (L5)', () => {
             values: vi.fn().mockReturnThis(),
             returning: vi.fn().mockResolvedValue([{ id: MOCK_BUNDLE_ID, quoteNo: 'QB123', type: 'BUNDLE' }])
         };
-        mockDb.insert = vi.fn(() => insertChain) as any;
+        mockDb.insert = vi.fn(() => insertChain) as ReturnType<typeof mockDb.insert>;
 
-        const { createQuoteBundle } = await import('../quote-crud');
-        const result = await createQuoteBundle({
-            customerId: 'cus-123',
-            leadId: 'lead-123',
+        const { createQuoteBundleActionInternal } = await import('../quote-crud');
+        const result = await createQuoteBundleActionInternal({
+            customerId: '33333333-3333-3333-3333-333333333333',
+            leadId: '44444444-4444-4444-4444-444444444444',
             remark: 'Test Bundle'
         });
 
@@ -119,7 +119,7 @@ describe('Quotes CRUD Actions (L5)', () => {
             values: vi.fn().mockReturnThis(),
             returning: vi.fn().mockResolvedValue([{ id: MOCK_QUOTE_ID, quoteNo: 'QT123', bundleId: MOCK_BUNDLE_ID }])
         };
-        mockDb.insert = vi.fn(() => insertChain) as any;
+        mockDb.insert = vi.fn(() => insertChain) as ReturnType<typeof mockDb.insert>;
         const { updateBundleTotal } = await import('../shared-helpers');
 
         const { createQuote } = await import('../quote-crud');
@@ -156,7 +156,7 @@ describe('Quotes CRUD Actions (L5)', () => {
 
     it('copyQuote 应当调用 QuoteService 委托处理新复制', async () => {
         const { QuoteService } = await import('@/services/quote.service');
-        (QuoteService.copyQuote as any).mockResolvedValue({ id: 'new-copied-quote-id' });
+        vi.mocked(QuoteService.copyQuote).mockResolvedValue({ id: 'new-copied-quote-id' });
 
         const { copyQuote } = await import('../quote-crud');
         const result = await copyQuote({
@@ -177,5 +177,33 @@ describe('Quotes CRUD Actions (L5)', () => {
         mockDb.query.quotes.findFirst.mockResolvedValue(null);
         const { updateQuote } = await import('../quote-crud');
         await expect(updateQuote({ id: 'wrong-id' })).rejects.toThrow('报价单不存在或无权操作');
+    });
+
+    // ── 乐观锁 (版本冲突) 测试 ──
+
+    it('updateQuote 版本冲突：传入旧 version 时应抛出 CONCURRENCY_CONFLICT', async () => {
+        // 模拟 db.update().returning() 返回空数组（表示 where 条件不匹配 → 版本号不一致）
+        mockUpdateChain.returning.mockResolvedValueOnce([]);
+
+        const { updateQuote } = await import('../quote-crud');
+
+        await expect(
+            updateQuote({ id: MOCK_QUOTE_ID, version: 1, discountRate: 0.9 })
+        ).rejects.toThrow('报价数据已被修改，请刷新后重试');
+    });
+
+    it('updateQuote 正常版本更新：传入正确 version 应更新成功且 set 含 version 自增表达式', async () => {
+        // 模拟 db.update().returning() 返回更新后的记录
+        mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID, version: 2 }]);
+
+        const { updateQuote } = await import('../quote-crud');
+        const result = await updateQuote({ id: MOCK_QUOTE_ID, version: 1, discountRate: 0.85 });
+
+        expect(result).toEqual({ success: true });
+
+        // 验证 set 调用包含 version 字段（SQL 表达式）
+        const setArgs = mockUpdateChain.set.mock.calls[0][0];
+        expect(setArgs).toHaveProperty('version');
+        expect(setArgs.discountRate).toBe('0.8500');
     });
 });

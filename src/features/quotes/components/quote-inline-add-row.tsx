@@ -10,6 +10,7 @@ import { ProductPickerDialog } from './product-picker-dialog';
 import { createQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteInlineAddRowProps {
   /** 报价单 ID */
@@ -93,7 +94,7 @@ export function QuoteInlineAddRow({
         setIsEditing(false);
         onSuccess?.();
       } catch (error) {
-        console.error('添加商品失败:', error);
+        logger.error('添加商品失败:', error);
         toast.error('添加商品失败');
       } finally {
         setIsSubmitting(false);

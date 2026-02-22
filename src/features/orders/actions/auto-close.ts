@@ -7,12 +7,20 @@ import { OrderService } from "@/services/order.service";
 import { auth } from "@/shared/lib/auth";
 import { subDays } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/shared/lib/logger";
 
 /**
- * 自动结案 Action
+ * 自动结案后台任务 Action。
  * 
- * 逻辑：扫描所有处于 'INSTALLATION_COMPLETED' 状态且超过 7 天未更新的订单，
- * 自动将其状态流转为 'COMPLETED'。
+ * @description 扫描租户下所有处于“安装完成” (`INSTALLATION_COMPLETED`) 状态、且最后更新距今已超过 7 天的订单。
+ * 逻辑规范：
+ * 1. 系统性扫描：识别符合条件的停滞订单。
+ * 2. 自动确认：调用 OrderService 将其流转至最终态 `COMPLETED`。
+ * 3. 结果汇总：返回成功处理的订单数量及失败详情。
+ * 4. 缓存同步：结案后清理首页订单统计等缓存。
+ * 
+ * @note 通常作为计划任务 (Cron Job) 触发。手动触发时建议在业务低峰期执行。
+ * @returns 处理结果报告，包含总数、成功数及详细记录。
  */
 export async function autoCloseOrdersAction() {
     const session = await auth();
@@ -36,7 +44,8 @@ export async function autoCloseOrdersAction() {
             ),
             columns: {
                 id: true,
-                orderNo: true
+                orderNo: true,
+                version: true
             }
         });
 
@@ -52,12 +61,15 @@ export async function autoCloseOrdersAction() {
                     order.id,
                     'COMPLETED',
                     tenantId,
+                    order.version || 0,
                     session.user.id // 记录为当前用户触发，或记录为系统
                 );
+                console.log('[orders] 订单自动结案成功:', { orderId: order.id, orderNo: order.orderNo, tenantId });
                 results.push({ id: order.id, orderNo: order.orderNo, success: true });
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : 'Unknown error';
-                console.error(`自动结案失败 [${order.orderNo}]:`, message);
+                logger.error(`自动结案失败 [${order.orderNo}]:`, { error: message });
+                console.log('[orders] 订单自动结案失败:', { orderNo: order.orderNo, error: message });
                 results.push({ id: order.id, orderNo: order.orderNo, success: false, error: message });
             }
         }
@@ -74,7 +86,7 @@ export async function autoCloseOrdersAction() {
 
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Auto-close scan failed:', message);
+        logger.error('Auto-close scan failed:', { error: message });
         return { success: false, error: message };
     }
 }

@@ -55,6 +55,7 @@ vi.mock('@/shared/api/db', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 import { checkSchedulingConflict } from '../logic/conflict-detection';

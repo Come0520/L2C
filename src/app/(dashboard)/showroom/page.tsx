@@ -10,7 +10,7 @@ export default async function ShowroomPage(props: {
   const search = (searchParams?.search as string) || '';
   const type = (searchParams?.type as string) || 'all';
 
-  const itemType = showroomItemTypeEnum.enumValues.find(v => v === type) as typeof showroomItemTypeEnum.enumValues[number] | undefined;
+  const itemType = type === 'all' ? undefined : (showroomItemTypeEnum.enumValues.find(v => v === type) as typeof showroomItemTypeEnum.enumValues[number] | undefined);
 
   const result = await getShowroomItems({
     page,

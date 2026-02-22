@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 export async function executePoolRecycleJob() {
     return {
         totalProcessed: 0,

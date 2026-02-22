@@ -2,6 +2,7 @@ import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '../../widgets/layout/sidebar';
 import { Header } from '../../widgets/layout/header';
+import { GlobalSearchCommand } from '@/features/search/components/global-search-command';
 
 /**
  * Dashboard 布局组件
@@ -36,6 +37,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Header session={session} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">{children}</main>
       </div>
+
+      {/* 全局搜索组件 */}
+      <GlobalSearchCommand />
     </div>
   );
 }

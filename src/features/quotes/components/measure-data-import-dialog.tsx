@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import { ImportPreviewResult } from '@/services/quote.service';
+import { logger } from '@/shared/lib/logger';
 
 interface MeasureDataImportDialogProps {
     open: boolean;
@@ -67,7 +68,7 @@ export function MeasureDataImportDialog({ open, onOpenChange, quoteId, onSuccess
                         toast.error(result.error || 'Failed to load tasks');
                     }
                 } catch (err) {
-                    console.error(err);
+                    logger.error(err);
                     toast.error('Error loading measurement tasks');
                 } finally {
                     setIsLoading(false);

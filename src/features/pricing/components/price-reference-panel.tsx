@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { getPricingHints } from '@/features/pricing/actions/pricing-hints';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -38,7 +40,7 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
                     setError('无法获取定价建议');
                 }
             } catch (err) {
-                console.error(err);
+                logger.error(err);
                 setError('加载失败');
             } finally {
                 setLoading(false);
@@ -78,7 +80,7 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
         );
     }
 
-    const { product, stats, analysis } = data;
+    const { product, stats, analysis, trends, categoryAnalysis } = data;
     const isBelowCost = Number(analysis.suggestedPrice) < Number(product.cost);
     const isBelowFloor = Number(analysis.suggestedPrice) < Number(product.floorPrice);
 
@@ -130,11 +132,54 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
                         <span className="text-xs text-muted-foreground block">平均成交</span>
                         <span className="font-semibold block mt-0.5">¥{stats.avgSoldPrice}</span>
                     </div>
-                    <div className="p-2 rounded bg-muted/40">
-                        <span className="text-xs text-muted-foreground block">近期成交</span>
-                        <span className="font-semibold block mt-0.5">¥{stats.lastSoldPrice}</span>
-                    </div>
                 </div>
+
+                <Separator />
+
+                {/* 价格趋势 */}
+                {trends && trends.length > 0 && (
+                    <div className="space-y-2">
+                        <span className="text-xs font-medium text-muted-foreground">近6期价格趋势</span>
+                        <div className="flex items-end justify-between h-12 gap-1 px-1">
+                            {trends.map((t: any, i: number) => {
+                                const maxPrice = Math.max(...trends.map((x: any) => Number(x.avgPrice)), 1);
+                                const height = `${(Number(t.avgPrice) / maxPrice) * 100}%`;
+                                return (
+                                    <div key={i} className="flex flex-col items-center flex-1 group relative">
+                                        <div className="w-full bg-primary/20 rounded-t-sm group-hover:bg-primary/40 transition-colors" style={{ height: height || '10%' }} />
+                                        <span className="text-[10px] text-muted-foreground mt-1 scale-90">{t.month.slice(-2)}月</span>
+                                        <div className="absolute -top-6 bg-black text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                                            ¥{t.avgPrice}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {categoryAnalysis && (
+                    <>
+                        <Separator />
+                        <div className="space-y-2">
+                            <span className="text-xs font-medium text-muted-foreground">同品类参考水位 ({categoryAnalysis.productCount}款)</span>
+                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                <div className="bg-muted/30 p-1.5 rounded">
+                                    <span className="block text-muted-foreground mb-0.5">最低</span>
+                                    <span className="font-medium">¥{categoryAnalysis.minPrice}</span>
+                                </div>
+                                <div className="bg-muted/30 p-1.5 rounded">
+                                    <span className="block text-muted-foreground mb-0.5">平均</span>
+                                    <span className="font-medium text-primary">¥{categoryAnalysis.avgPrice}</span>
+                                </div>
+                                <div className="bg-muted/30 p-1.5 rounded">
+                                    <span className="block text-muted-foreground mb-0.5">最高</span>
+                                    <span className="font-medium">¥{categoryAnalysis.maxPrice}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 <Separator />
 
@@ -154,6 +199,14 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
                             {analysis.margin.actual}%
                         </span>
                     </div>
+                    {analysis.margin.estimated && (
+                        <div className="flex justify-between items-center bg-primary/5 p-1.5 -mx-1.5 rounded">
+                            <span className="font-medium">基于建议价预估毛利</span>
+                            <span className={cn("font-bold text-sm", Number(analysis.margin.estimated) < 20 ? "text-red-500" : "text-green-600")}>
+                                {analysis.margin.estimated}%
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {isBelowCost && (

@@ -17,7 +17,9 @@ vi.mock('@/shared/api/db', () => ({
         },
         update: vi.fn(() => ({
             set: vi.fn(() => ({
-                where: vi.fn().mockResolvedValue({}),
+                where: vi.fn(() => ({
+                    returning: vi.fn().mockResolvedValue([{ id: '11111111-1111-4111-8111-111111111111' }]),
+                })),
             })),
         })),
     },
@@ -80,6 +82,7 @@ describe('Order Mutations Actions', () => {
             const result = await updateOrderStatus({
                 id: VALID_UUID,
                 status: 'PROCESSING',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
@@ -100,6 +103,7 @@ describe('Order Mutations Actions', () => {
             const result = await updateOrderStatus({
                 id: VALID_UUID,
                 status: 'COMPLETED',
+                version: 1,
             });
 
             expect(result.success).toBe(false);
@@ -112,12 +116,14 @@ describe('Order Mutations Actions', () => {
             const result = await pauseOrder({
                 orderId: VALID_UUID,
                 reason: 'Wait for customer confirmation',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
             expect(OrderService.haltOrder).toHaveBeenCalledWith(
                 VALID_UUID,
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id,
                 'Wait for customer confirmation'
             );
@@ -133,12 +139,14 @@ describe('Order Mutations Actions', () => {
             const result = await resumeOrder({
                 orderId: VALID_UUID,
                 remark: 'Customer confirmed',
+                version: 1,
             });
 
             expect(result.success).toBe(true);
             expect(OrderService.resumeOrder).toHaveBeenCalledWith(
                 VALID_UUID,
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id,
                 'Customer confirmed'
             );

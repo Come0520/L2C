@@ -3,6 +3,7 @@ import { db } from '@/shared/api/db';
 import { customers, customerActivities } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../../auth-utils';
 
 
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
 
     } catch (error) {
-        console.error('Get Customer Detail Error:', error);
+        logger.error('Get Customer Detail Error:', error);
         return apiError('Internal Error', 500);
     }
 }

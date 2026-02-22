@@ -30,6 +30,7 @@ export interface CancelOrderDialogProps {
     orderId: string;
     orderNo: string;
     orderStatus: string;
+    version: number;
     onSuccess?: () => void;
 }
 
@@ -40,6 +41,7 @@ export function CancelOrderDialog({
     orderId,
     orderNo,
     orderStatus,
+    version,
     onSuccess,
 }: CancelOrderDialogProps) {
     const [open, setOpen] = useState(false);
@@ -62,6 +64,7 @@ export function CancelOrderDialog({
                 orderId,
                 reason,
                 remark: remark || undefined,
+                version,
             });
 
             if (result.success) {

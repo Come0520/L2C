@@ -40,6 +40,7 @@ interface SplitOrderDialogProps {
     orderId: string;
     orderItems: OrderItem[];
     suppliers: Supplier[];
+    version: number;
 }
 
 interface SplitItem {
@@ -59,6 +60,7 @@ export function SplitOrderDialog({
     orderId,
     orderItems,
     suppliers,
+    version,
 }: SplitOrderDialogProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +139,7 @@ export function SplitOrderDialog({
                     quantity: item.quantity,
                     supplierId: item.supplierId,
                 })),
+                version,
             });
 
             if (result.success) {

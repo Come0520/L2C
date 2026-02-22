@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -113,7 +114,7 @@ export function RoleDialog({ role, trigger, open, onOpenChange }: RoleDialogProp
                     toast.error(result.message);
                 }
             } catch (error) {
-                console.error(error);
+                logger.error(error);
                 toast.error('操作失败');
             }
         });

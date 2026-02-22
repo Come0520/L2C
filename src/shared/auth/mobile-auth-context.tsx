@@ -127,6 +127,7 @@ export function MobileAuthProvider({ children }: MobileAuthProviderProps) {
                 return { success: false, message: data.message || '登录失败' };
             }
         } catch (error) {
+            // 方案：客户端使用 console.error 是合理的（无法使用服务端 logger）
             console.error('Login error:', error);
             return { success: false, message: '网络错误，请稍后重试' };
         }

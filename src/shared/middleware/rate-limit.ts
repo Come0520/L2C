@@ -10,6 +10,7 @@
 
 import { Ratelimit } from '@upstash/ratelimit';
 import { redis } from '@/shared/lib/redis';
+import { logger } from '@/shared/lib/logger';
 
 // ============================================================
 // 类型定义
@@ -241,7 +242,7 @@ export async function checkRateLimit(
             // 降级到内存限流
         }
     } else if (process.env.NODE_ENV === 'production' && !hasWarnedAboutMemory) {
-        console.warn(
+        logger.warn(
             '[Rate Limit] 未配置 Upstash Redis，使用内存限流。' +
             '请配置 UPSTASH_REDIS_REST_URL 和 UPSTASH_REDIS_REST_TOKEN 环境变量。'
         );

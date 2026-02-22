@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { arStatements, paymentPlanNodes } from '@/shared/api/schema';
 import { AuditService } from '@/shared/services/audit-service';
@@ -123,7 +125,7 @@ const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema
  * 并记录创建收款计划的审计日志 (F-18/F-32)。
  * 
  * @param {z.infer<typeof createPaymentPlanSchema>} params - 包含对账单ID及收款节点数组定义
- * @returns {Promise<any>} 返回新创建的计划节点数据
+ * @returns 返回新创建的计划节点数据
  * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
  */
 export async function createPaymentPlan(params: z.infer<typeof createPaymentPlanSchema>) {
@@ -176,7 +178,7 @@ const getPaymentDueRemindersActionInternal = createSafeAction(getDueRemindersSch
  * 用于驱动销售和财务人员的催款和回款跟踪动作。
  * 
  * @param {z.infer<typeof getDueRemindersSchema>} params - 包含提前天数
- * @returns {Promise<any>} 返回预期内的催款汇总数据和明细清单（最多20条）
+ * @returns 返回预期内的催款汇总数据和明细清单（最多20条）
  * @throws {Error} 未授权时返回错误对象
  */
 export async function getPaymentDueReminders(params: z.infer<typeof getDueRemindersSchema>) {
@@ -261,7 +263,7 @@ const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteO
  * 会生成对应的坏账申请审批记录，并留下首道流转审计日志 (`BAD_DEBT_SUBMIT`)。
  * 
  * @param {z.infer<typeof submitBadDebtWriteOffSchema>} params - 包含对账单ID、申请核销金额、原因和凭证链接
- * @returns {Promise<any>} 返回包含申请详细的数据和审批流转成功状态
+ * @returns 返回包含申请详细的数据和审批流转成功状态
  * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
  */
 export async function submitBadDebtWriteOff(params: z.infer<typeof submitBadDebtWriteOffSchema>) {
@@ -358,7 +360,7 @@ const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtAppr
  * 并在底层记录流转操作和详细金额变动的审计日志。
  * 
  * @param {z.infer<typeof processBadDebtApprovalSchema>} params - 包含对账单ID、审批通过状态、核准核销金额及可选备注
- * @returns {Promise<any>} 返回审批动作的生效数据和成功状态
+ * @returns 返回审批动作的生效数据和成功状态
  * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
  */
 export async function processBadDebtApproval(params: z.infer<typeof processBadDebtApprovalSchema>) {

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { deleteQuoteTemplate } from '../actions/template-actions';
 import { toast } from 'sonner';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteTemplate {
     id: string;
@@ -96,7 +97,7 @@ export function QuoteTemplateList({ templates, categories }: QuoteTemplateListPr
                 toast.error('删除失败');
             }
         } catch (e) {
-            console.error('[DeleteTemplateError]', e);
+            logger.error('[DeleteTemplateError]', e);
             toast.error('系统异常');
         } finally {
             setIsDeleting(false);

@@ -133,5 +133,53 @@ describe('Virtual Cost Accounting Logic', () => {
             expect(byDept['销售部'].percentage).toBeCloseTo(28.57, 1);
             expect(byDept['采购部'].percentage).toBeCloseTo(57.14, 1);
         });
+
+        it('should handle empty costs gracefully and calculate 0 percentage', async () => {
+            (db.query.liabilityNotices.findMany as any).mockResolvedValue([]);
+            const byDept = await getVirtualCostByDepartment();
+            expect(Object.keys(byDept).length).toBe(0);
+        });
+    });
+
+    describe('Edge Cases and Mapping', () => {
+        it('should map unknown reasons to UNCLASSIFIED and OTHER department', async () => {
+            const unknownNotice = [{
+                id: 'n-unknown',
+                noticeNo: 'LN-UNK',
+                afterSalesId: 'as-unk',
+                liabilityReasonCategory: 'SOME_WEIRD_REASON',
+                amount: '300',
+                reason: 'Weird stuff',
+                confirmedAt: new Date(),
+                status: 'CONFIRMED',
+                liablePartyType: 'COMPANY',
+            }];
+            (db.query.liabilityNotices.findMany as any).mockResolvedValue(unknownNotice);
+
+            const costs = await getCompanyVirtualCosts();
+            expect(costs[0].accountCode).toBe('UNCLASSIFIED');
+            expect(costs[0].category).toBe('OTHER');
+
+            const summary = await getVirtualCostSummary();
+            expect(summary.totalAmount).toBe(300);
+            expect(summary.byCategory['OTHER']).toBe(300);
+
+            const byDept = await getVirtualCostByDepartment();
+            expect(byDept['管理部'].amount).toBe(300);
+            expect(byDept['管理部'].percentage).toBe(100);
+        });
+
+        it('should generate empty export report when no data', async () => {
+            (db.query.liabilityNotices.findMany as any).mockResolvedValue([]);
+            const report = await exportVirtualCostReport();
+            expect(report.rows).toEqual([]);
+            expect(report.headers.length).toBeGreaterThan(0);
+        });
+
+        it('should handle date ranges properly', async () => {
+            (db.query.liabilityNotices.findMany as any).mockResolvedValue([]);
+            await getCompanyVirtualCosts({ startDate: '2026-01-01', endDate: '2026-12-31' });
+            expect(db.query.liabilityNotices.findMany).toHaveBeenCalled();
+        });
     });
 });

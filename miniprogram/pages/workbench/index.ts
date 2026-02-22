@@ -70,8 +70,10 @@ Page({
         }
 
         try {
-            const app = getApp<IAppOption>();
-            const res = await app.request('/dashboard');
+            this.setData({ loading: true });
+            const res = await getApp().request({
+                url: '/dashboard'
+            });
 
             if (res.success) {
                 // Ensure stats exist, or default to 0

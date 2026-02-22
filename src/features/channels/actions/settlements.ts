@@ -12,6 +12,7 @@ import { Decimal } from 'decimal.js';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 
+
 // P2 Fix: Fix lint error (unused import is now used, check if we need to remove or keep)
 // AuditService IS used in the added chunks. 
 
@@ -22,7 +23,11 @@ const generateRandomSuffix = customAlphabet('0123456789', 6);
 
 /**
  * 生成结算单编号
- * 格式：STL + YYYYMMDD + 6位随机数
+ * 
+ * 使用自定义的 `0123456789` 字母表随机生成 6 位尾号，
+ * 并以 `STL` + `YYYYMMDD` 格式拼接为订单号。
+ * 
+ * @returns {string} 结算单的唯一编号
  */
 function generateSettlementNo(): string {
     const now = new Date();
@@ -35,7 +40,18 @@ function generateSettlementNo(): string {
 /**
  * 创建结算单（汇总指定周期的佣金）
  * 
+ * 开启事务，根据给定的周期内所有待结算佣金生成结算单，自动计算修正金额、总计，并记录系统审计日志。
+ * 数据处理时对于数据库生成的单号冲突 (code 23505) 提供重试机制。
+ * 
  * 安全检查：需要 CHANNEL.MANAGE_SETTLEMENT 权限
+ * 
+ * @param {Object} params - 创建参数
+ * @param {string} params.channelId - 渠道ID
+ * @param {Date} params.periodStart - 统计周期开始时间
+ * @param {Date} params.periodEnd - 统计周期结束时间
+ * @param {number} [params.adjustmentAmount] - 手动调节的金额偏移量，默认0
+ * @returns {Promise<any>} 返回新生成的结算单
+ * @throws {Error} 若周期内无佣金或其它校验与事务异常时则抛出错误
  */
 export async function createSettlement(params: {
     channelId: string;
@@ -43,6 +59,7 @@ export async function createSettlement(params: {
     periodEnd: Date;
     adjustmentAmount?: number;
 }) {
+    console.log('[channels] 开始创建结算单:', params);
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -140,9 +157,10 @@ export async function createSettlement(params: {
                 return settlement;
             });
         } catch (error) {
+            console.error('[channels] 创建结算单发生异常:', error);
             // Check for unique constraint violation code (Postgres: 23505)
             if (error instanceof Error && (error as { code?: string }).code === '23505' && retryCount < MAX_RETRIES) {
-                console.warn(`Settlement No collision detected, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+                console.warn(`[channels] 结算单号冲突，重试中... (${retryCount + 1}/${MAX_RETRIES})`);
                 retryCount++;
                 continue;
             }
@@ -154,7 +172,16 @@ export async function createSettlement(params: {
 /**
  * 获取结算单列表
  * 
+ * 支持按状态、渠道等条件分页查询当前租户所有关联的结算单列表。
+ * 
  * 安全检查：自动从 session 获取 tenantId
+ * 
+ * @param {Object} params - 分页与过滤参数
+ * @param {string} [params.channelId] - 渠道ID
+ * @param {'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID'} [params.status] - 结算单状态 (草稿/待处理/已批准/已支付)
+ * @param {number} [params.page] - 查询页数
+ * @param {number} [params.pageSize] - 页条目数
+ * @returns {Promise<any>} 包含分页结算数据的结构
  */
 export async function getSettlements(params: {
     channelId?: string;
@@ -206,7 +233,12 @@ export async function getSettlements(params: {
 /**
  * 获取结算单详情
  * 
+ * 返回包含指定结算单本身详情以及它所包含的所有佣金明细、创建者与渠道信息的数据视图。
+ * 
  * 安全检查：自动从 session 获取 tenantId
+ * 
+ * @param {string} id - 待获取结算单的 ID
+ * @returns {Promise<any | null>} 结算单详情加上佣金明细和关联表，查无记录返回 null
  */
 export async function getSettlementById(id: string) {
     const session = await auth();
@@ -248,9 +280,15 @@ export async function getSettlementById(id: string) {
 /**
  * 提交结算单审批
  * 
+ * 将草稿状态 (DRAFT) 的结算单推进为待审批 (PENDING) 状态，等待后续复核。
+ * 
  * 安全检查：需要 CHANNEL.MANAGE_SETTLEMENT 权限
+ * 
+ * @param {string} id - 将要提交审核的结算单ID
+ * @returns {Promise<any>} 返回更新后的记录集
  */
 export async function submitSettlementForApproval(id: string) {
+    console.log('[channels] 提交结算单审批:', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -280,10 +318,17 @@ export async function submitSettlementForApproval(id: string) {
 /**
  * 审批结算单
  * 
+ * 校验隔离职责约束后，将待审批 (PENDING) 的结算单设为 APPROVED。
+ * 同时会在财务账期模块中，自动生成基于渠道视域的应付对账/付款单 (paymentBills)。
+ * 
  * 安全检查：需要 FINANCE.APPROVE 权限
- * 审批通过后自动生成付款单
+ * 
+ * @param {string} id - 即将批准的结算单ID
+ * @returns {Promise<any>} 结算单连同新生成的支付单事务提交对象
+ * @throws {Error} 未授权，无效状态或是自审批违反隔离原则引发的异常
  */
 export async function approveSettlement(id: string) {
+    console.log('[channels] 开始审批结算单:', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -376,9 +421,16 @@ export async function approveSettlement(id: string) {
 /**
  * 标记结算单已付款
  * 
+ * 将已审批通过的结算单及其下所有相关佣金记录的业务状态一起标记为 PAID (已支付)。
+ * 
  * 安全检查：需要 FINANCE.APPROVE 权限
+ * 
+ * @param {string} id - 已批准结算单的编号
+ * @param {string} [paymentBillId] - 最终关联的打款流水记录号（可选）
+ * @returns {Promise<any>} 返回状态更新后的结算单结果
  */
 export async function markSettlementPaid(id: string, paymentBillId?: string) {
+    console.log('[channels] 标记结算单为已付款:', { id, paymentBillId });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

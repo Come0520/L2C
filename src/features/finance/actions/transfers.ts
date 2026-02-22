@@ -1,4 +1,7 @@
 'use server';
+import { unstable_cache, revalidateTag } from 'next/cache';
+
+import { logger } from "@/shared/lib/logger";
 
 /**
  * 资金调拨管理 (Internal Transfers)
@@ -39,28 +42,27 @@ const createTransferSchema = z.object({
  * 5. 记录完整的审计日志 (F-32)
  * 
  * @param {z.infer<typeof createTransferSchema>} input - 包含源账户ID、目标账户ID、调拨金额和备注
- * @returns {Promise<any>} 返回包含调拨单号和涉及账户信息的成功状态或失败错误源
+ * @returns 返回包含调拨单号和涉及账户信息的成功状态或失败错误源
  * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
  */
 export async function createInternalTransfer(input: z.infer<typeof createTransferSchema>) {
     try {
-        const data = createTransferSchema.parse(input);
         const session = await auth();
 
         if (!session?.user?.tenantId) {
             return { success: false, error: '未授权' };
         }
-
         const tenantId = session.user.tenantId;
+
+        // 权限检查
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+
+        console.log('[finance] 创建内部调拨', { input });
+        const validatedData = createTransferSchema.parse(input);
         const userId = session.user.id;
 
-        // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
-            return { success: false, error: '权限不足：需要财务管理权限' };
-        }
-
         // 验证不能自己转给自己
-        if (data.fromAccountId === data.toAccountId) {
+        if (validatedData.fromAccountId === validatedData.toAccountId) {
             return { success: false, error: '源账户和目标账户不能相同' };
         }
 
@@ -68,7 +70,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             // 1. 获取并锁定源账户
             const fromAccount = await tx.query.financeAccounts.findFirst({
                 where: and(
-                    eq(financeAccounts.id, data.fromAccountId),
+                    eq(financeAccounts.id, validatedData.fromAccountId),
                     eq(financeAccounts.tenantId, tenantId)
                 )
             });
@@ -82,7 +84,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             }
 
             const fromBalance = new Decimal(fromAccount.balance || '0');
-            const transferAmount = new Decimal(data.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+            const transferAmount = new Decimal(validatedData.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             if (fromBalance.lt(transferAmount)) {
                 return { success: false, error: `源账户余额不足，当前余额: ¥${fromBalance.toFixed(2, Decimal.ROUND_HALF_UP)}` };
             }
@@ -90,7 +92,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             // 2. 获取目标账户
             const toAccount = await tx.query.financeAccounts.findFirst({
                 where: and(
-                    eq(financeAccounts.id, data.toAccountId),
+                    eq(financeAccounts.id, validatedData.toAccountId),
                     eq(financeAccounts.tenantId, tenantId)
                 )
             });
@@ -110,11 +112,11 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             const [transfer] = await tx.insert(internalTransfers).values({
                 tenantId,
                 transferNo,
-                fromAccountId: data.fromAccountId,
-                toAccountId: data.toAccountId,
+                fromAccountId: validatedData.fromAccountId,
+                toAccountId: validatedData.toAccountId,
                 amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
                 status: 'COMPLETED',
-                remark: data.remark,
+                remark: validatedData.remark,
                 createdBy: userId,
                 approvedBy: userId,
                 approvedAt: new Date(),
@@ -128,7 +130,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                     updatedAt: new Date()
                 })
                 .where(and(
-                    eq(financeAccounts.id, data.fromAccountId),
+                    eq(financeAccounts.id, validatedData.fromAccountId),
                     eq(financeAccounts.tenantId, tenantId),
                     eq(financeAccounts.balance, fromBalance.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁检查
                 ));
@@ -138,7 +140,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             const [fromTransaction] = await tx.insert(accountTransactions).values({
                 tenantId,
                 transactionNo: generateBusinessNo('TXN-OUT'),
-                accountId: data.fromAccountId,
+                accountId: validatedData.fromAccountId,
                 transactionType: 'EXPENSE',
                 amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
                 balanceBefore: fromBalance.toFixed(2, Decimal.ROUND_HALF_UP),
@@ -156,7 +158,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                     updatedAt: new Date()
                 })
                 .where(and(
-                    eq(financeAccounts.id, data.toAccountId),
+                    eq(financeAccounts.id, validatedData.toAccountId),
                     eq(financeAccounts.tenantId, tenantId)
                 ));
 
@@ -165,7 +167,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             const [toTransaction] = await tx.insert(accountTransactions).values({
                 tenantId,
                 transactionNo: generateBusinessNo('TXN-IN'),
-                accountId: data.toAccountId,
+                accountId: validatedData.toAccountId,
                 transactionType: 'INCOME',
                 amount: transferAmount.toFixed(2, Decimal.ROUND_HALF_UP),
                 balanceBefore: toBalance.toFixed(2, Decimal.ROUND_HALF_UP),
@@ -198,8 +200,11 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 })
                 .where(eq(internalTransfers.id, transfer.id));
 
+            revalidateTag(`finance-transfer-${tenantId}`);
             revalidatePath('/finance');
             revalidatePath('/finance/accounts');
+
+            console.log('[finance] createInternalTransfer 执行成功', { transferNo });
 
             return {
                 success: true,
@@ -208,13 +213,14 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                     transferNo,
                     fromAccount: fromAccount.accountName,
                     toAccount: toAccount.accountName,
-                    amount: data.amount,
+                    amount: validatedData.amount,
                     message: '资金调拨成功'
                 }
             };
         });
     } catch (error) {
-        console.error('资金调拨失败:', error);
+        console.log('[finance] 资金调拨失败', { error, input });
+        logger.error('资金调拨失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '调拨失败'
@@ -228,43 +234,54 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
  * 分页获取系统的内部资金调拨单历史记录，按创建时间倒序排列。
  * 查询包含关联的源账户和目标账户简要信息（名称和账号），以及操作人信息。
  * 
- * @param {number} [page=1] - 当前页码
- * @param {number} [pageSize=20] - 每页条数
- * @returns {Promise<any>} 返回调拨单列表及状态
+ * @param {object} [params] - 分页参数
+ * @param {number} [params.limit=50] - 每页条数
+ * @param {number} [params.offset=0] - 偏移量
+ * @returns 返回调拨单列表及状态
  * @throws {Error} 未授权或缺少财务查看权限时返回带错误信息的对象
  */
-export async function getInternalTransfers(page = 1, pageSize = 20) {
+export async function getInternalTransfers(params?: { limit?: number; offset?: number }) {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权', data: [] };
     }
+
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        return { success: false, error: '权限不足：需要财务管理权限', data: [] };
+    }
+
+    const limit = params?.limit || 50;
+    const offset = params?.offset || 0;
     const tenantId = session.user.tenantId;
 
-    // 权限检查 F-29
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
-        return { success: false, error: '权限不足：需要财务查看权限', data: [] };
-    }
-    const offset = (page - 1) * pageSize;
-
-    const transfers = await db.query.internalTransfers.findMany({
-        where: eq(internalTransfers.tenantId, tenantId),
-        with: {
-            fromAccount: {
-                columns: { accountName: true, accountNo: true }
-            },
-            toAccount: {
-                columns: { accountName: true, accountNo: true }
-            },
-            createdByUser: {
-                columns: { name: true }
-            }
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取内部调拨记录', { tenantId, limit, offset });
+            const transfers = await db.query.internalTransfers.findMany({
+                where: eq(internalTransfers.tenantId, tenantId),
+                with: {
+                    fromAccount: {
+                        columns: { accountName: true, accountNo: true }
+                    },
+                    toAccount: {
+                        columns: { accountName: true, accountNo: true }
+                    },
+                    createdByUser: {
+                        columns: { name: true }
+                    }
+                },
+                limit: limit,
+                offset: offset,
+                orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
+            });
+            return { success: true, data: transfers };
         },
-        limit: pageSize,
-        offset,
-        orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
-    });
-
-    return { success: true, data: transfers };
+        [`internal-transfers-${tenantId}-${limit}-${offset}`],
+        {
+            tags: [`finance-transfer-${tenantId}`],
+            revalidate: 60,
+        }
+    )();
 }
 
 /**
@@ -279,7 +296,7 @@ export async function getInternalTransfers(page = 1, pageSize = 20) {
  * 
  * @param {string} transferId - 需要冲销的调拨单 ID
  * @param {string} [reason] - 可选的冲销原因
- * @returns {Promise<any>} 返回冲销操作结果和相关金额
+ * @returns 返回冲销操作结果和相关金额
  * @throws {Error} 未授权或缺少财务管理权限时返回错误对象
  */
 export async function cancelInternalTransfer(transferId: string, reason?: string) {
@@ -295,6 +312,8 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
+
+        console.log('[finance] 取消内部调拨', { transferId, reason });
 
         return await db.transaction(async (tx) => {
 
@@ -440,8 +459,12 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
                 })
                 .where(eq(internalTransfers.id, transferId));
 
+            revalidateTag(`finance-transfer-${tenantId}`);
+            revalidateTag(`finance-transfer-detail-${transfer.id}`);
             revalidatePath('/finance');
             revalidatePath('/finance/transfers');
+
+            console.log('[finance] cancelInternalTransfer 执行成功', { transferNo: transfer.transferNo });
 
             return {
                 success: true,
@@ -453,7 +476,8 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             };
         });
     } catch (error) {
-        console.error('冲销调拨失败:', error);
+        console.log('[finance] 取消调拨失败', { error, transferId });
+        logger.error('冲销调拨失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '冲销失败'
@@ -467,7 +491,7 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
  * 根据调拨单 ID 查询完整的调拨明细数据，包含关联的源账户、目标账户以及创建和审批人信息。
  * 
  * @param {string} id - 调拨单的一级主键 ID
- * @returns {Promise<any>} 返回包含详细数据的调拨单详情
+ * @returns 返回包含详细数据的调拨单详情
  * @throws {Error} 未授权或缺少财务查看权限时返回错误对象
  */
 export async function getInternalTransfer(id: string) {
@@ -477,27 +501,36 @@ export async function getInternalTransfer(id: string) {
     }
     const tenantId = session.user.tenantId;
 
-    // 权限检查 F-29
     if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限' };
     }
 
-    const transfer = await db.query.internalTransfers.findFirst({
-        where: and(
-            eq(internalTransfers.id, id),
-            eq(internalTransfers.tenantId, tenantId)
-        ),
-        with: {
-            fromAccount: true,
-            toAccount: true,
-            createdByUser: { columns: { name: true } },
-            approvedByUser: { columns: { name: true } },
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取单条资金调拨详情', { id, tenantId });
+            const transfer = await db.query.internalTransfers.findFirst({
+                where: and(
+                    eq(internalTransfers.id, id),
+                    eq(internalTransfers.tenantId, tenantId)
+                ),
+                with: {
+                    fromAccount: true,
+                    toAccount: true,
+                    createdByUser: { columns: { name: true } },
+                    approvedByUser: { columns: { name: true } },
+                }
+            });
+
+            if (!transfer) {
+                return { success: false, error: '调拨单不存在' };
+            }
+
+            return { success: true, data: transfer };
+        },
+        [`internal-transfer-detail-${id}`],
+        {
+            tags: [`finance-transfer-detail-${id}`],
+            revalidate: 60,
         }
-    });
-
-    if (!transfer) {
-        return { success: false, error: '调拨单不存在' };
-    }
-
-    return { success: true, data: transfer };
+    )();
 }

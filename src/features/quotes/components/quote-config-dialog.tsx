@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { logger } from '@/shared/lib/logger';
 
 interface QuoteConfigDialogProps {
     currentConfig?: QuoteConfig;
@@ -101,7 +102,7 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
             setOpen(false);
             router.refresh();
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('保存失败');
         }
     };

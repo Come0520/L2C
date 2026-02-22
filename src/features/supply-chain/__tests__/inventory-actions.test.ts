@@ -35,6 +35,15 @@ const mockTx = {
                 productId: 'prod-1',
                 tenantId: 'test-tenant-id'
             })
+        },
+        products: {
+            findFirst: vi.fn().mockResolvedValue({
+                id: 'prod-1',
+                purchasePrice: '10.00'
+            })
+        },
+        warehouses: {
+            findFirst: vi.fn().mockResolvedValue({ id: 'wh-1', name: 'Warehouse 1' })
         }
     }
 };
@@ -51,6 +60,12 @@ vi.mock('@/shared/api/db', () => ({
             },
             warehouses: {
                 findFirst: vi.fn().mockResolvedValue({ id: 'wh-1', name: 'Warehouse 1' })
+            },
+            products: {
+                findFirst: vi.fn().mockResolvedValue({
+                    id: 'prod-1',
+                    purchasePrice: '10.00'
+                })
             }
         },
         transaction: vi.fn().mockImplementation(async (callback) => {

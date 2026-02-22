@@ -168,7 +168,7 @@ export function compareQuoteVersions(v1: ExtendedQuoteVersion, v2: ExtendedQuote
     const summaryFields: (keyof ExtendedQuoteVersion)[] = ['totalAmount', 'discount', 'finalAmount'];
     for (const field of summaryFields) {
         if (!areEqual(v1[field], v2[field])) {
-            // P2-R5-02: Removed @ts-ignore by adding index signature to QuoteVersionDiff.summary
+            // P2-R5-02: Removed ts-ignore annotation by adding index signature to QuoteVersionDiff.summary
             diff.summary[field as string] = {
                 oldValue: v1[field],
                 newValue: v2[field]

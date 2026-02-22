@@ -45,8 +45,7 @@ export function AddResolutionDialog({ ticketId, currentStatus: _currentStatus, o
     const [isPending, setIsPending] = useState(false);
 
     const form = useForm<z.infer<typeof updateStatusSchema>>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
-        resolver: zodResolver(updateStatusSchema) as any,
+        resolver: zodResolver(updateStatusSchema),
         defaultValues: {
             ticketId,
             status: 'PROCESSING',

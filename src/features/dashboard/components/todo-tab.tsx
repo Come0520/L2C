@@ -107,7 +107,8 @@ export function TodoTab() {
         try {
             const res = await actionFn();
             if (res && typeof res === 'object' && 'success' in res && res.success === false) {
-                throw new Error((res as any).error || "操作失败");
+                const errorMsg = 'error' in res && typeof res.error === 'string' ? res.error : '操作失败';
+                throw new Error(errorMsg);
             }
             toast.success("操作成功");
         } catch (err: unknown) {
@@ -415,6 +416,7 @@ const OrderTable = React.memo(function OrderTable({
                                             () => updateOrderStatus({
                                                 id: item.id,
                                                 status: 'CONFIRMED',
+                                                version: (item as unknown as { version: number }).version || 0,
                                             }),
                                             item.id,
                                             'ORDER'

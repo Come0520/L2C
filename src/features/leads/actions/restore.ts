@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { leads, leadStatusHistory } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -8,6 +10,7 @@ import { restoreLeadSchema } from '../schemas';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 线索状态类型（与 schema 中的 leadStatusEnum 保持一致）
 type LeadStatus = 'PENDING_ASSIGNMENT' | 'PENDING_FOLLOWUP' | 'FOLLOWING_UP' | 'WON' | 'INVALID';
@@ -34,7 +37,7 @@ export async function restoreLeadAction(
 
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
-    console.log('Restoring lead with input:', input);
+    logger.info('[leads] 恢复作废线索开始:', { tenantId, userId, input });
     const { id, reason } = restoreLeadSchema.parse(input);
 
     try {
@@ -78,8 +81,10 @@ export async function restoreLeadAction(
                 });
 
                 if (result.success) {
+                    logger.info('[leads] 恢复作废线索进入审批流程:', { leadId: id, tenantId });
                     return { success: true, error: undefined, targetStatus: '审批中' };
                 } else {
+                    logger.error('[leads] 恢复作废线索审批提交失败:', { error: result.error, leadId: id, tenantId });
                     return { success: false, error: 'error' in result && typeof result.error === 'string' ? result.error : '审批提交失败' };
                 }
             } catch (e: unknown) {
@@ -144,10 +149,21 @@ export async function restoreLeadAction(
         revalidateTag(`leads-${tenantId}`, 'default');
         revalidateTag(`lead-${tenantId}-${id}`, 'default');
 
+        logger.info('[leads] 恢复作废线索成功:', { leadId: id, tenantId, targetStatus: txResult.targetStatus });
+
+        await AuditService.log(db, {
+            tenantId,
+            userId,
+            tableName: 'leads',
+            recordId: id,
+            action: 'UPDATE',
+            newValues: { action: 'RESTORE', status: txResult.targetStatus, reason }
+        });
+
         return { success: true, targetStatus: txResult.targetStatus };
 
     } catch (error: unknown) {
-        console.error('Restore lead error:', error);
+        logger.error('[leads] 恢复作废线索失败:', { error, leadId: input.id, tenantId: session?.user?.tenantId, userId: session?.user?.id });
         const message = error instanceof Error ? error.message : '恢复失败';
         return { success: false, error: message };
     }
@@ -155,6 +171,11 @@ export async function restoreLeadAction(
 
 /**
  * 检查线索是否可恢复
+ * 
+ * 仅 INVALID 状态可恢复。
+ * 
+ * @param {string} leadId - 线索 ID
+ * @returns {Promise<{ canRestore: boolean; reason?: string }>} 返回是否可恢复布尔值和原因
  */
 export async function canRestoreLead(
     leadId: string

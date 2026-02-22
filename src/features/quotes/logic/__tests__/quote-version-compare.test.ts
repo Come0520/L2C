@@ -67,7 +67,7 @@ describe('Quote Version Compare Logic', () => {
     });
 
     it('should treat null and undefined as equal for optional fields', () => {
-        const itemNull: ExtendedItem = { ...baseItem, remark: null as any }; // simulating null from DB
+        const itemNull = { ...baseItem, remark: null } as ExtendedItem & { remark: null }; // 模拟 DB 中的 null
         const itemUndefined: ExtendedItem = { ...baseItem, remark: undefined };
 
         const diff = compareItems(itemNull, itemUndefined);

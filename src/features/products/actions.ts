@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 /**
  * 产品模块 Server Actions (Barrel File)
  */

@@ -1,3 +1,6 @@
+"use client";
+
+import { logger } from "@/shared/lib/logger";
 import { useEffect, useState, useTransition, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -79,7 +82,7 @@ export function LeadAnalyticsDashboard() {
                 setFunnelData(formattedFunnel);
                 setRoiStats(roiRes);
             } catch (error) {
-                console.error('Failed to load analytics:', error);
+                logger.error('Failed to load analytics:', error);
                 toast.error('获取分析数据异常');
             }
         });

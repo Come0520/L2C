@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { logger } from '@/shared/lib/logger';
 
 const hasUpstashConfig = !!(
     process.env.UPSTASH_REDIS_REST_URL &&
@@ -26,5 +27,6 @@ if (process.env.NODE_ENV !== 'production' && redis) {
 }
 
 if (!hasUpstashConfig && process.env.NODE_ENV === 'production') {
-    console.warn('[Redis] 未检测到 Upstash 配置，Redis 功能将不可用。');
+    logger.warn('[Redis] 未检测到 Upstash 配置，Redis 功能将不可用。');
 }
+

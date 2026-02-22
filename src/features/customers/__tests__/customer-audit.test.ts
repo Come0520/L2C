@@ -40,6 +40,8 @@ vi.mock('@/shared/api/db', () => ({
 vi.mock('@/shared/services/audit-service', () => ({
     AuditService: {
         log: vi.fn(),
+        record: vi.fn(),
+        recordFromSession: vi.fn(),
     },
 }));
 

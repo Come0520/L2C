@@ -16,7 +16,7 @@
         <view class="reactor-ring"></view>
         <view class="reactor-ring-inner"></view>
         <view class="core-text">
-            <text class="core-value">{{dashboard.targetCompletion || '85'}}%</text>
+            <text class="core-value">{{dashboard.targetCompletion || '0'}}%</text>
             <text class="core-label">目标达成</text>
         </view>
     </view>
@@ -75,7 +75,7 @@
                   <view class="todo-desc">{{item.desc}}</view>
               </view>
               <view class="todo-right">
-                  <view class="status-tag {{item.status}}">{{item.status}}</view>
+                  <view class="status-tag {{item.status}}">{{item.statusText || item.status}}</view>
                   <view class="time">{{item.time}}</view>
               </view>
           </view>

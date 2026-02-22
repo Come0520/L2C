@@ -18,6 +18,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Layout, Tag, X } from 'lucide-react';
 import { saveQuoteAsTemplate } from '../actions/template-actions';
 import { toast } from 'sonner';
+import { logger } from '@/shared/lib/logger';
 
 interface SaveAsTemplateDialogProps {
     quoteId: string;
@@ -84,7 +85,7 @@ export function SaveAsTemplateDialog({
                 toast.error('保存失败，请稍后重试');
             }
         } catch (e) {
-            console.error('[SaveTemplateError]', e);
+            logger.error('[SaveTemplateError]', e);
             toast.error('系统异常');
         } finally {
             setIsSubmitting(false);

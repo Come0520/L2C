@@ -12,6 +12,7 @@
 import { db } from '@/shared/api/db';
 import { notifications, notificationPreferences, notificationTypeEnum } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
+import { logger } from '@/shared/lib/logger';
 import { NotificationPayload } from './types';
 import { SmsAdapter } from './adapters/sms-adapter';
 import { LarkAdapter } from './adapters/lark-adapter';
@@ -44,7 +45,6 @@ export const notificationService = {
             activeChannels = pref?.channels || ['IN_APP'];
         }
 
-        // console.warn(`[NotificationService] Dispatching [${type}] to User(${userId}) via [${activeChannels.join(', ')}]`);
 
         // 2. 分发到各渠道 - 使用 Set 优化多次查找 O(1)
         const channelSet = new Set(activeChannels);
@@ -92,7 +92,7 @@ export const notificationService = {
         });
 
         if (!anySuccess && promises.length > 0) {
-            console.error('[NotificationService] All channels failed:', results);
+            logger.error('[NotificationService] All channels failed:', { results });
             return false;
         }
 

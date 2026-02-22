@@ -11,6 +11,7 @@ import { unstable_cache } from 'next/cache';
  * 获取渠道列表（支持分页、搜索、类型过滤、层级过滤）
  * 
  * 安全检查：自动从 session 获取 tenantId
+ * 安全防护：强制限制 pageSize 最大为 100，防止深分页恶意击穿数据库
  */
 export async function getChannels(params: {
     query?: string,
@@ -29,7 +30,7 @@ export async function getChannels(params: {
     const { query, type, parentId, page = 1, pageSize = 20 } = params;
 
     // P3 Fix: Enforce pagination limits
-    const limit = Math.min(Math.max(pageSize, 1), 100);
+    const safePageSize = Math.min(Math.max(pageSize, 1), 100);
 
     let whereClause = eq(channels.tenantId, tenantId);
 
@@ -66,12 +67,12 @@ export async function getChannels(params: {
         }
     }
 
-    const offsetValue = (page - 1) * pageSize;
+    const offsetValue = (page - 1) * safePageSize;
 
 
     const data = await db.query.channels.findMany({
         where: whereClause,
-        limit: limit,
+        limit: safePageSize,
         offset: offsetValue,
         orderBy: [desc(channels.createdAt)],
         with: {
@@ -84,14 +85,14 @@ export async function getChannels(params: {
 
     // 获取总数
     const totalItems = await db.$count(channels, whereClause);
-    const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalItems / safePageSize);
 
     return {
         data,
         totalPages,
         totalItems,
         currentPage: page,
-        pageSize: limit
+        pageSize: safePageSize
     };
 }
 

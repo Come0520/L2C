@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 export interface Channel {
     id: string;
     name: string;

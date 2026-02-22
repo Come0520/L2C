@@ -15,6 +15,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { createQuickQuote } from '@/features/quotes/actions';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 快速报价表单 Schema
@@ -45,8 +46,7 @@ const PLAN_OPTIONS = [
 
 interface QuickQuoteFormProps {
     leadId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    plans?: any;
+    plans?: unknown;
 }
 
 /**
@@ -100,7 +100,7 @@ export function QuickQuoteForm({ leadId }: QuickQuoteFormProps) {
                 toast.error(result.error || '创建报价失败');
             }
         } catch (error) {
-            console.error('QuickQuote Error:', error);
+            logger.error('QuickQuote Error:', error);
             toast.error('创建报价时发生错误');
         } finally {
             setIsSubmitting(false);

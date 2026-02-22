@@ -103,3 +103,8 @@ export const logger = {
         console.error('[ERROR]', ...args);
     }
 };
+
+/**
+ * 审计日志 (专用)
+ */
+export const auditLogger = createLogger('AUDIT');

@@ -19,6 +19,7 @@ import { submitApproval } from '@/features/approval/actions/submission';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 import {
     requestOrderCancellationSchema,
@@ -26,7 +27,17 @@ import {
 } from '../action-schemas';
 
 /**
- * 申请撤单（提交审批）
+ * 申请撤单 Action。
+ * 
+ * @description 向系统提交撤单申请。该操作逻辑如下：
+ * 1. 验证用户权限。
+ * 2. 检查订单当前状态是否在 `CANCELABLE_STATUSES` 范围内。
+ * 3. 创建 `orderChanges` 记录以追踪本次撤单申请。
+ * 4. 提交审批流 (`submitApproval`)。
+ * 5. 如果未配置审批流，则尝试直接执行撤单逻辑。
+ * 
+ * @param input 包含订单 ID (`orderId`)、撤单原因 (`reason`) 及备注。
+ * @returns 包含成功状态、消息及可能有的审批 ID (`approvalId`)。
  */
 export async function requestCancelOrder(input: z.infer<typeof requestOrderCancellationSchema>) {
     const session = await auth();
@@ -106,9 +117,10 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
             recordId: orderId,
             action: 'UPDATE',
             changedFields: { cancellationRequested: true, reason },
-            oldValues: { status: order.status },
             newValues: { status: 'CANCELLED_REQUESTED' } // 虚拟状态，用于日志
         });
+
+        console.log('[orders] 撤单申请已提交:', { orderId, tenantId, reason, approvalId: 'approvalId' in approvalResult ? approvalResult.approvalId : undefined });
 
         return {
             success: true,
@@ -116,7 +128,7 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
             message: '撤单申请已提交，等待审批'
         };
     } catch (error) {
-        console.error('撤单申请失败:', error);
+        logger.error('撤单申请失败:', error);
         return { success: false, error: '撤单申请失败' };
     }
 }
@@ -157,6 +169,8 @@ async function executeCancelOrder(
                 changedFields: { status: 'CANCELLED' }
             }, tx);
 
+            console.log('[orders] 撤单逻辑已执行:', { orderId, tenantId, changeRecordId });
+
             // 2. 更新变更记录状态为APPROVED
             await tx.update(orderChanges)
                 .set({
@@ -176,7 +190,7 @@ async function executeCancelOrder(
             message: '订单已成功取消'
         };
     } catch (error) {
-        console.error('执行撤单失败:', error);
+        logger.error('执行撤单失败:', error);
         return { success: false, error: '执行撤单失败' };
     }
 }

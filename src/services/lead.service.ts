@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { calculateLeadScore } from "@/features/leads/logic/scoring";
 import { getSettingInternal } from "@/features/settings/actions/system-settings-actions";
 import { distributeToNextSales } from '@/features/leads/logic/distribution-engine';
+import { AuditService } from '@/shared/lib/audit-service';
 import { escapeSqlLike } from "@/shared/lib/utils";
 
 export class LeadService {
@@ -123,6 +124,15 @@ export class LeadService {
                 assignedAt: (assignedSalesId || data.assignedSalesId) ? new Date() : null,
             }).returning();
 
+            await AuditService.record({
+                tenantId,
+                userId,
+                action: 'CREATE',
+                tableName: 'LEAD',
+                recordId: lead.id,
+                newValues: lead as unknown as Record<string, unknown>,
+            }, tx);
+
             // 8. Update Channel Statistics
             if (data.channelId) {
                 await tx.update(channels)
@@ -226,6 +236,10 @@ export class LeadService {
                 });
             }
 
+            if (operatorId) {
+                await AuditService.record({ tenantId, userId: operatorId, action: 'UPDATE', tableName: 'LEAD', recordId: id, oldValues: existingLead as unknown as Record<string, unknown>, newValues: updated as unknown as Record<string, unknown> }, tx);
+            }
+
             return updated;
         });
     }
@@ -266,6 +280,16 @@ export class LeadService {
                 reason: '手动分配',
             });
 
+            await AuditService.record({
+                tenantId,
+                userId,
+                action: 'ASSIGN',
+                tableName: 'LEAD',
+                recordId: id,
+                oldValues: { assignedSalesId: lead.assignedSalesId, status: lead.status },
+                newValues: { assignedSalesId: salesId, status: updated.status },
+            }, tx);
+
             return updated;
         });
     }
@@ -274,11 +298,11 @@ export class LeadService {
      * Add a followup activity to a lead.
      */
     static async addActivity(leadId: string, data: {
-        type: typeof leadActivities.$inferInsert.activityType;
+        type: typeof leadActivities.$inferInsert['activityType'];
         content: string;
         nextFollowupAt?: Date;
         quoteId?: string;
-        purchaseIntention?: typeof leadActivities.$inferInsert.purchaseIntention;
+        purchaseIntention?: typeof leadActivities.$inferInsert['purchaseIntention'];
         customerLevel?: string;
     }, tenantId: string, userId: string, version?: number): Promise<string> {
         return await db.transaction(async (tx) => {
@@ -308,12 +332,14 @@ export class LeadService {
             }).returning({ id: leadActivities.id });
 
             // 3. Update Lead (lastActivityAt, nextFollowupAt, status -> FOLLOWING_UP if pending)
-            const updateData: Partial<typeof leads.$inferInsert> = {
+            // 使用 Record 类型：兼容 SQL 表达式 (version) 和后续动态属性 (status)
+            const updateData: Record<string, unknown> = {
                 lastActivityAt: new Date(),
-                nextFollowupAt: data.nextFollowupAt || null, // Clear if not provided? Or keep? Usually update.
-                version: sql`${leads.version} + 1` as any,
+                nextFollowupAt: data.nextFollowupAt ?? null, // 清空或更新下次跟进时间
+                version: sql`${leads.version} + 1`,
             };
 
+            const oldStatus = lead.status;
             if (lead.status === 'PENDING_FOLLOWUP') {
                 updateData.status = 'FOLLOWING_UP';
                 // Add status history
@@ -330,6 +356,27 @@ export class LeadService {
             await tx.update(leads)
                 .set(updateData)
                 .where(eq(leads.id, leadId));
+
+            await AuditService.record({
+                tableName: 'leadActivities',
+                recordId: activity.id,
+                action: 'CREATE',
+                userId,
+                tenantId,
+                changedFields: { ...data, leadId, message: '添加跟进记录' } as unknown as Record<string, unknown>
+            }, tx);
+
+            if (updateData.status && updateData.status !== oldStatus) {
+                await AuditService.record({
+                    tableName: 'leads',
+                    recordId: leadId,
+                    action: 'STATUS_CHANGE',
+                    userId,
+                    tenantId,
+                    oldValues: { status: oldStatus },
+                    newValues: { status: updateData.status },
+                }, tx);
+            }
 
             return activity.id;
         });
@@ -372,6 +419,16 @@ export class LeadService {
                 changedBy: userId,
                 reason,
             });
+
+            await AuditService.record({
+                tableName: 'leads',
+                recordId: leadId,
+                action: 'VOID',
+                userId,
+                tenantId,
+                oldValues: { status: oldStatus, lostReason: lead.lostReason },
+                newValues: { status: 'INVALID', lostReason: reason },
+            }, tx);
         });
     }
 
@@ -416,6 +473,15 @@ export class LeadService {
                     type: 'INDIVIDUAL',
                 }).returning();
                 finalCustomerId = newCustomer.id;
+
+                await AuditService.record({
+                    tableName: 'customers',
+                    recordId: newCustomer.id,
+                    action: 'CREATE',
+                    userId,
+                    tenantId,
+                    changedFields: { ...newCustomer, message: '线索转化时创建新客户' } as unknown as Record<string, unknown>
+                }, tx);
             }
 
             await tx.update(leads)
@@ -445,6 +511,17 @@ export class LeadService {
                 changedBy: userId,
                 reason: '已转化为客户',
             });
+
+            await AuditService.record({
+                tableName: 'leads',
+                recordId: leadId,
+                action: 'CONVERT',
+                userId,
+                tenantId,
+                oldValues: { status: lead.status, customerId: lead.customerId },
+                newValues: { status: 'WON', customerId: finalCustomerId },
+                changedFields: { message: '线索转化为客户', newCustomerId: finalCustomerId }
+            }, tx);
 
             return finalCustomerId;
         });
@@ -490,6 +567,9 @@ export class LeadService {
                 throw new Error('无权释放非本人的线索');
             }
 
+            const oldStatus = lead.status;
+            const oldAssignedSalesId = lead.assignedSalesId;
+
             await tx.update(leads)
                 .set({
                     assignedSalesId: null,
@@ -505,6 +585,17 @@ export class LeadService {
                 changedBy: userId,
                 reason: '释放至公海池',
             });
+
+            await AuditService.record({
+                tableName: 'leads',
+                recordId: leadId,
+                action: 'RELEASE_TO_POOL',
+                userId,
+                tenantId,
+                oldValues: { assignedSalesId: oldAssignedSalesId, status: oldStatus },
+                newValues: { assignedSalesId: null, status: 'PENDING_ASSIGNMENT' },
+                changedFields: { message: '释放线索至公海池' }
+            }, tx);
         });
     }
 
@@ -524,6 +615,9 @@ export class LeadService {
                 throw new Error('线索不是待分配状态或已被认领');
             }
 
+            const oldStatus = lead.status;
+            const oldAssignedSalesId = lead.assignedSalesId;
+
             const [updatedLead] = await tx.update(leads)
                 .set({
                     assignedSalesId: userId,
@@ -541,6 +635,17 @@ export class LeadService {
                 changedBy: userId,
                 reason: '从公海池认领',
             });
+
+            await AuditService.record({
+                tableName: 'leads',
+                recordId: leadId,
+                action: 'CLAIM_FROM_POOL',
+                userId,
+                tenantId,
+                oldValues: { assignedSalesId: oldAssignedSalesId, status: oldStatus },
+                newValues: { assignedSalesId: userId, status: 'PENDING_FOLLOWUP' },
+                changedFields: { message: '从公海池认领线索' }
+            }, tx);
 
             return updatedLead;
         });

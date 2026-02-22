@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import {
     Table,
     TableBody,
@@ -15,16 +16,21 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { useState } from 'react';
 import { AccountDialog } from './AccountDialog';
 import { Badge } from '@/shared/ui/badge';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { financeAccounts } from '@/shared/api/schema';
+
+/** 财务账户行类型 */
+type FinanceAccount = InferSelectModel<typeof financeAccounts>;
 
 interface AccountListProps {
-    accounts: any[];
+    accounts: FinanceAccount[];
 }
 
 export function AccountList({ accounts }: AccountListProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingAccount, setEditingAccount] = useState<any>(null);
+    const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
 
-    const handleEdit = (account: any) => {
+    const handleEdit = (account: FinanceAccount) => {
         setEditingAccount(account);
         setIsDialogOpen(true);
     };

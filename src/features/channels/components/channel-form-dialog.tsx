@@ -116,8 +116,7 @@ export function ChannelFormDialog({
     const isEdit = !!channel;
 
     const form = useForm<FormData>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver 与 react-hook-form 泛型已知不兼容
-        resolver: zodResolver(formSchema) as any,
+        resolver: zodResolver(formSchema) as Extract<Parameters<typeof useForm<FormData>>[0], { resolver?: unknown }>['resolver'],
         defaultValues: {
             parentId: parentChannel?.id || channel?.parentId || null,
             hierarchyLevel: parentChannel ? parentChannel.hierarchyLevel + 1 : (channel?.hierarchyLevel || 1),
@@ -157,9 +156,8 @@ export function ChannelFormDialog({
                     toast.success('渠道创建成功');
                 }
                 onSuccess();
-            } catch (error) {
+            } catch (_error) {
                 toast.error('操作失败，请重试');
-                console.error(error);
             }
         });
     };

@@ -1,9 +1,10 @@
+'use server';
+
 /**
  * 邀请相关的 Server Actions
  *
  * 提供员工邀请和客户邀请的接口
  */
-'use server';
 
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';

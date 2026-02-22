@@ -6,6 +6,7 @@ import { QuoteConfigService, type QuoteConfig } from '@/services/quote-config.se
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 const updateModeSchema = z.object({
     mode: z.enum(['simple', 'advanced'])
@@ -77,8 +78,8 @@ const toggleQuoteModeActionInternal = createSafeAction(updateModeSchema, async (
     }
 
     await QuoteConfigService.updateUserMode(session.user.id, data.mode);
-
     revalidatePath('/quotes');
+    logger.info('[quotes] 报价模式切换成功', { userId: session.user.id, mode: data.mode });
     return { success: true };
 });
 
@@ -91,6 +92,7 @@ const updateGlobalQuoteConfigActionInternal = createSafeAction(updateGlobalConfi
     if (!session?.user?.id || !session.user.tenantId) {
         throw new Error('Unauthorized');
     }
+    logger.info('[quotes] 开始更新全局报价配置', { userId: session.user.id, tenantId: session.user.tenantId });
 
     // Simple Admin Check (Extend with checkPermission if needed later)
     if (session.user.role !== 'ADMIN') {
@@ -133,8 +135,8 @@ const updateUserPlanActionInternal = createSafeAction(updateUserPlanSchema, asyn
     }
 
     await QuoteConfigService.updateUserPlan(session.user.id, data.plan);
-
     revalidatePath('/quotes');
+    logger.info('[quotes] 用户方案更新成功', { userId: session.user.id, plan: data.plan });
     return { success: true };
 });
 

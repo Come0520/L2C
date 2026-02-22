@@ -4,7 +4,9 @@ import { afterSalesTickets, orders } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { generateNo } from '@/shared/lib/generators';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../auth-utils';
+import { RateLimiter } from '@/shared/services/miniprogram/security.service';
 
 
 
@@ -15,6 +17,11 @@ export async function POST(request: NextRequest) {
             return apiError('Unauthorized', 401);
         }
 
+        // 频控：单用户每 5 秒最多 2 个工单
+        if (!RateLimiter.allow(`create_ticket_${user.id}`, 2, 5000)) {
+            return apiError('提交太频繁，请稍后再试', 429);
+        }
+
         const body = await request.json();
         const { orderId, type, description, photos } = body;
 
@@ -22,14 +29,10 @@ export async function POST(request: NextRequest) {
             return apiError('Missing required fields', 400);
         }
 
-        // Verify order belongs to this customer/user needs a link between user and customer
-        // Currently, assuming user.id is LINKED to customer or we just trust the token owner context.
-        // For MVP, simplistic validation:
-
         // Ensure Order exists
         const order = await db.query.orders.findFirst({
             where: and(eq(orders.id, orderId), eq(orders.tenantId, user.tenantId)),
-            columns: { id: true, customerId: true } // Need customerId
+            columns: { id: true, customerId: true }
         });
 
         if (!order) {
@@ -50,11 +53,22 @@ export async function POST(request: NextRequest) {
             createdBy: user.id
         });
 
+        // 审计日志
+        const { AuditService } = await import('@/shared/services/audit-service');
+        await AuditService.log(db, {
+            tableName: 'after_sales_tickets',
+            recordId: ticketNo,
+            action: 'CREATE',
+            userId: user.id,
+            tenantId: user.tenantId,
+            details: { orderId, type }
+        });
+
         return apiSuccess({ ticketNo });
 
     } catch (error) {
-        console.error('Create Ticket Error:', error);
-        return apiError('Internal Error', 500);
+        logger.error('[ServiceTicket] 创建售后工单故障', { route: 'service/tickets', error });
+        return apiError('创建工单失败', 500);
     }
 }
 
@@ -65,21 +79,18 @@ export async function GET(request: NextRequest) {
             return apiError('Unauthorized', 401);
         }
 
-        // List tickets created by this user OR (if we link user to customer) for this customer
         const list = await db.query.afterSalesTickets.findMany({
             where: and(
                 eq(afterSalesTickets.tenantId, user.tenantId),
                 eq(afterSalesTickets.createdBy, user.id)
             ),
-            orderBy: [desc(afterSalesTickets.createdAt)],
-            with: {
-                // order: { columns: { orderNo: true } } // Optional info
-            }
+            orderBy: [desc(afterSalesTickets.createdAt)]
         });
 
         return apiSuccess(list);
 
-    } catch {
-        return apiError('Fetch failed', 500);
+    } catch (error) {
+        logger.error('[ServiceTicket] 获取工单列表异常', { route: 'service/tickets', error });
+        return apiError('获取失败', 500);
     }
 }

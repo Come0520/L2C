@@ -1,5 +1,5 @@
 // 通用数据工厂
-export function createMockSession(overrides: Record<string, any> = {}) {
+export function createMockSession(overrides: Record<string, unknown> = {}) {
     return {
         user: {
             id: 'test-user-id',
@@ -14,7 +14,7 @@ export function createMockSession(overrides: Record<string, any> = {}) {
     };
 }
 
-export function createMockMobileSession(overrides: Record<string, any> = {}) {
+export function createMockMobileSession(overrides: Record<string, unknown> = {}) {
     return {
         userId: 'test-user-id',
         tenantId: 'test-tenant-id',

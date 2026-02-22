@@ -4,11 +4,22 @@
     "description": "L2C Miniprogram",
     "main": "app.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
         "@vant/weapp": "^1.11.2"
+    },
+    "devDependencies": {
+        "@types/jest": "^29.5.11",
+        "jest": "^29.7.0",
+        "jest-environment-jsdom": "^30.2.0",
+        "miniprogram-api-typings": "^3.12.2",
+        "miniprogram-simulate": "^1.6.1",
+        "ts-jest": "^29.1.1",
+        "typescript": "^5.3.3"
     }
 }

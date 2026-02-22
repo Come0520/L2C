@@ -8,6 +8,8 @@ import { eq, or, and } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
 import { z } from 'zod';
 import { logger } from './logger';
+import { checkLoginRateLimit, resetLoginRateLimit } from './auth-rate-limit';
+import { AuditService } from '@/shared/services/audit-service';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -28,6 +30,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         const { username, password } = parsed.data;
 
+        // PC端登录速率限制
+        const rateCheck = checkLoginRateLimit(username);
+        if (!rateCheck.allowed) {
+          logger.warn('PC 端登录速率限制触发', { username });
+          return null;
+        }
+
         const user = await db.query.users.findFirst({
           where: and(
             or(eq(users.email, username), eq(users.phone, username)),
@@ -43,12 +52,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const passwordsMatch = await compare(password, user.passwordHash);
 
         if (!passwordsMatch) {
+          logger.warn('PC 端登录密码错误', { username });
+          await AuditService.log(db, {
+            tableName: 'auth_login',
+            recordId: user.id || 'unknown',
+            action: 'LOGIN_FAILED',
+            userId: user.id || 'unknown',
+            tenantId: user.tenantId || 'unknown',
+            details: { method: 'credentials', platform: 'pc', reason: 'invalid_password' }
+          });
           return null;
         }
 
         // 处理多角色逻辑：优先使用 roles 数组，如果为空则兼容旧 role
         const roles =
           (user.roles as string[])?.length > 0 ? (user.roles as string[]) : [user.role || 'USER'];
+
+        logger.info('PC 端登录成功', { userId: user.id, tenantId: user.tenantId });
+        await AuditService.log(db, {
+          tableName: 'auth_login',
+          recordId: user.id,
+          action: 'LOGIN_SUCCESS',
+          userId: user.id,
+          tenantId: user.tenantId,
+          details: { method: 'credentials', platform: 'pc' }
+        });
+
+        // 登录成功重置速率限制
+        resetLoginRateLimit(username);
 
         return {
           id: user.id,

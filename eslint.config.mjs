@@ -27,6 +27,29 @@ const eslintConfig = defineConfig([
       "react-compiler/react-compiler": "off"
     }
   },
+  // 测试文件放宽规则 - 测试代码中允许 any / console / 未使用变量
+  {
+    files: ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "**/tests/**"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+    }
+  },
+  // 脚本文件放宽规则 - CLI 脚本需要 console 输出
+  {
+    files: ["src/scripts/**"],
+    rules: {
+      "no-console": "off",
+    }
+  },
+  // Logger / 审计相关文件允许使用 console（它们就是 console 的封装层）
+  {
+    files: ["**/logger.ts", "**/logger.tsx", "**/version-logger.tsx", "**/audit-service.ts"],
+    rules: {
+      "no-console": "off",
+    }
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

@@ -26,10 +26,13 @@ vi.mock('@/shared/lib/audit-service', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock drizzle schema
+vi.mock('@/shared/api/db', () => ({ db: { update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([]) })) })) })) } }));
+
 vi.mock('@/shared/api/schema', () => ({
     measureTasks: {},
     measureTaskSplits: {}

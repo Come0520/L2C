@@ -1,4 +1,6 @@
 'use server';
+import { unstable_cache, revalidateTag } from 'next/cache';
+import { logger } from "@/shared/lib/logger";
 
 import { db } from '@/shared/api/db';
 import {
@@ -15,38 +17,46 @@ import { Decimal } from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
 import { generateBusinessNo } from '@/shared/lib/generate-no';
 
-
 /**
  * 获取应收对账单列表 (Get Accounts Receivable Statements)
  * 
  * 获取当前租户下所有的应收对账单，按创建时间倒序排列。
+ * 增加了 limit/offset 分页查询支持以防止查询过多导致 OOM。
  * 
  * 注：使用标准 select 查询替代 relational query API，
  * 以避免 Drizzle ORM 0.45.x lateral join 兼容性问题
  * 
+ * @param params `{ limit?: number, offset?: number }` 期望查阅的数据条目上限和游标跳过数量。
  * @returns {Promise<Array<typeof arStatements.$inferSelect>>} 应收对账单列表
  * @throws {Error} 未授权或权限不足时抛出错误
  */
-export async function getARStatements() {
-    try {
-        const session = await auth();
-        if (!session?.user?.tenantId) throw new Error('未授权');
+export async function getARStatements(params?: { limit?: number; offset?: number }) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
 
-        // 权限检查：查看应收数据
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
 
-        // 直接查询 arStatements，不使用 relational query，避免 lateral join 问题
-        const result = await db
-            .select()
-            .from(arStatements)
-            .where(eq(arStatements.tenantId, session.user.tenantId))
-            .orderBy(desc(arStatements.createdAt));
+    const limit = params?.limit || 50;
+    const offset = params?.offset || 0;
+    const tenantId = session.user.tenantId;
 
-        return result;
-    } catch (error) {
-        console.error('❌ getARStatements Error:', error);
-        throw error;
-    }
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取应收对账单列表', { tenantId, limit, offset });
+            return await db
+                .select()
+                .from(arStatements)
+                .where(eq(arStatements.tenantId, tenantId))
+                .orderBy(desc(arStatements.createdAt))
+                .limit(limit)
+                .offset(offset);
+        },
+        [`ar-statements-${tenantId}-${limit}-${offset}`],
+        {
+            tags: [`finance-ar-${tenantId}`],
+            revalidate: 60,
+        }
+    )();
 }
 
 /**
@@ -61,19 +71,30 @@ export async function getARStatements() {
 export async function getARStatement(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
+    const tenantId = session.user.tenantId;
 
-    return await db.query.arStatements.findFirst({
-        where: and(
-            eq(arStatements.id, id),
-            eq(arStatements.tenantId, session.user.tenantId)
-        ),
-        with: {
-            order: true,
-            customer: true,
-            channel: true,
-            commissionRecords: true,
+    return unstable_cache(
+        async () => {
+            console.log('[finance] [CACHE_MISS] 获取单条应收对账单详情', { id, tenantId });
+            return await db.query.arStatements.findFirst({
+                where: and(
+                    eq(arStatements.id, id),
+                    eq(arStatements.tenantId, tenantId)
+                ),
+                with: {
+                    order: true,
+                    customer: true,
+                    channel: true,
+                    commissionRecords: true,
+                }
+            });
+        },
+        [`ar-statement-${id}`],
+        {
+            tags: [`finance-ar-detail-${id}`],
+            revalidate: 60,
         }
-    });
+    )();
 }
 
 /**
@@ -83,7 +104,7 @@ export async function getARStatement(id: string) {
  * 委托 `FinanceService.createPaymentOrder` 核心方法完成业务操作。
  * 
  * @param {z.infer<typeof createPaymentOrderSchema>} data - 收款单的有效数据
- * @returns {Promise<any>} 返回服务层创建收款单的结果
+ * @returns 返回服务层创建收款单的结果
  * @throws {Error} 未授权或缺少财务创建权限时抛出错误
  */
 export async function createPaymentOrder(data: z.infer<typeof createPaymentOrderSchema>) {
@@ -92,6 +113,8 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
 
     // 权限检查：创建收付款
     if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+
+    console.log('[finance] 创建收款单', { data });
 
     const validatedData = createPaymentOrderSchema.parse(data);
     const { items, ...orderData } = validatedData;
@@ -114,7 +137,10 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
         }))
     };
 
-    return await FinanceService.createPaymentOrder(serviceData, session.user.tenantId, session.user.id!);
+    const result = await FinanceService.createPaymentOrder(serviceData, session.user.tenantId, session.user.id!);
+    revalidateTag(`finance-ar-${session.user.tenantId}`);
+    console.log('[finance] createPaymentOrder 执行成功', { serviceData });
+    return result;
 }
 
 /**
@@ -124,7 +150,7 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
  * 委托 `FinanceService.verifyPaymentOrder` 核心方法处理底层事务状态扭转。
  * 
  * @param {z.infer<typeof verifyPaymentOrderSchema>} data - 审核数据，包含收款单 ID、审核状态（VERIFIED | REJECTED）和可选备注
- * @returns {Promise<any>} 返回服务层审核结果
+ * @returns 返回服务层审核结果
  * @throws {Error} 未授权或缺少财务审批权限时抛出错误
  */
 export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrderSchema>) {
@@ -134,16 +160,22 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
     // 权限检查：审批财务
     if (!await checkPermission(session, PERMISSIONS.FINANCE.APPROVE)) throw new Error('权限不足：需要财务审批权限');
 
+    console.log('[finance] 审核收款单', { data });
+
     const { id, status, remark } = verifyPaymentOrderSchema.parse(data);
 
     // 类型安全：Schema 定义 status 为 'VERIFIED' | 'REJECTED'，与服务层一致
-    return await FinanceService.verifyPaymentOrder(
+    const result = await FinanceService.verifyPaymentOrder(
         id,
         status,
         session.user.tenantId,
         session.user.id!,
         remark
     );
+    revalidateTag(`finance-ar-${session.user.tenantId}`);
+    revalidateTag(`finance-ar-detail-${id}`);
+    console.log('[finance] verifyPaymentOrder 执行成功', { id, status });
+    return result;
 }
 
 // calculateCommission moved to FinanceService
@@ -183,6 +215,8 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
 
         const tenantId = session.user.tenantId;
         const _userId = session.user.id!;
+
+        console.log('[finance] 创建退款对账单', { input });
 
         return await db.transaction(async (tx) => {
             // 1. 获取原对账单
@@ -298,6 +332,10 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
                 );
             }
 
+            revalidateTag(`finance-ar-${tenantId}`);
+            revalidateTag(`finance-ar-detail-${originalStatement.id}`);
+            console.log('[finance] createRefundStatement 执行成功', { refundNo });
+
             return {
                 success: true,
                 data: {
@@ -311,7 +349,8 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
 
         });
     } catch (error) {
-        console.error('创建退款对账单失败:', error);
+        console.log('[finance] 创建退款对账单失败', { error, input });
+        logger.error('创建退款对账单失败:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : '操作失败'

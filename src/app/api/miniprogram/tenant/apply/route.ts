@@ -1,6 +1,6 @@
 /**
  * 小程序租户申请 API
- * 
+ *
  * POST /api/miniprogram/tenant/apply - 提交入驻申请
  */
 import { NextRequest } from 'next/server';
@@ -9,8 +9,10 @@ import { tenants, users } from '@/shared/api/schema';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { eq, or } from 'drizzle-orm';
-import { SignJWT } from 'jose';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
+import { generateMiniprogramToken } from '../../auth-utils';
+import { AuditService } from '@/shared/services/audit-service';
 
 import { z } from 'zod';
 
@@ -94,17 +96,28 @@ export async function POST(request: NextRequest) {
             return { tenant: newTenant, user: newUser };
         });
 
-        // 5. 签发受限 Token (针对未激活用户仅 24 小时有效期)
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const token = await new SignJWT({
+        // 5. 签发受限 Token（待审批用户仅 24h 有效期）
+        const token = await generateMiniprogramToken(
+            result.user.id,
+            result.tenant.id,
+            { type: 'miniprogram_pending', expiresIn: '24h' }
+        );
+
+        // 6. 审计日志
+        await AuditService.log(db, {
+            tableName: 'tenants',
+            recordId: result.tenant.id,
+            action: 'APPLY',
             userId: result.user.id,
             tenantId: result.tenant.id,
-            type: 'miniprogram_pending', // 标记为待审批类型
-        })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime('24h') // 相比原先的 30d，此时长更符合安全规范
-            .sign(secret);
+            details: { companyName, applicantName, phone }
+        });
+
+        logger.info('[TenantApply] 新租户申请提交', {
+            route: 'tenant/apply',
+            tenantId: result.tenant.id,
+            userId: result.user.id,
+        });
 
         return apiSuccess({
             tenantId: result.tenant.id,
@@ -119,7 +132,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('租户申请错误:', error);
-        return apiError(error instanceof Error ? error.message : '提交失败', 500);
+        logger.error('[TenantApply] 租户申请异常', { route: 'tenant/apply', error });
+        // 安全：不向客户端暴露 error.message 技术细节
+        return apiError('提交失败，请稍后重试', 500);
     }
 }

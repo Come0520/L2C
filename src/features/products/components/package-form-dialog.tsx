@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/shared/lib/logger';
+
 import { useState, useEffect } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -188,7 +190,7 @@ export function PackageFormDialog({
                 setPackageProductsList(result.data as unknown as PackageProductItem[]);
             }
         } catch (error) {
-            console.error('Failed to load package products', error);
+            logger.error('Failed to load package products', error);
         }
     };
 
@@ -210,7 +212,7 @@ export function PackageFormDialog({
                 toast.error(result.error || '保存失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('保存失败');
         } finally {
             setIsLoading(false);
@@ -233,7 +235,7 @@ export function PackageFormDialog({
                 toast.error(result.error);
             }
         } catch (error) {
-            console.error('Search failed', error);
+            logger.error('Search failed', error);
         } finally {
             setIsSearching(false);
         }
@@ -260,7 +262,7 @@ export function PackageFormDialog({
                 toast.error(result.error || '添加失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('添加失败');
         }
     };
@@ -276,7 +278,7 @@ export function PackageFormDialog({
                 toast.error(result.error || '移除失败');
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('移除失败');
         }
     };

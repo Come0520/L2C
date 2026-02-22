@@ -1,8 +1,8 @@
+﻿'use client';
+
 /**
  * 租户审批列表客户端组件
  */
-'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/shared/ui/card';

@@ -97,6 +97,20 @@ describe('Service Feature - Task Split Actions', () => {
             expect(otherSuggestion).toBeDefined();
             expect(otherSuggestion?.itemCount).toBe(1);
         });
+
+        it('应当在传回的所有商品可拆数量均为空或不规范时返回边界拦截失败', async () => {
+            const mockItemsZeroQty = [
+                { id: '1', product: { category: 'CURTAIN' }, quantity: '0' },
+                { id: '2', product: { category: 'WALLPAPER' }, quantity: '0' }
+            ];
+            mockQuoteItemsExecute.mockResolvedValueOnce(mockItemsZeroQty);
+
+            const result = await suggestTaskSplit('quote-123-zero');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('量异常');
+            expect(mockWorkerSkillsExecute).not.toHaveBeenCalled();
+        });
     });
 
     describe('updateWorkerSkills', () => {

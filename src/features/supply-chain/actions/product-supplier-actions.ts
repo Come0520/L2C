@@ -45,12 +45,14 @@ const updateProductSupplierSchema = productSupplierSchema.partial().omit({
 /**
  * 获取指定商品的所有活跃供应商关联信息
  *
- * @description 返回包含供应商基本资料（名称、联系人等）及关联属性（价格、前置期等）的列表。
- * @param productId 商品 ID
- * @returns 格式化后的关联信息列表
+ * @description 查询关联了该商品的全部供应商列表。内置 ID 关联转换，将数值型价格转为 number 类型。
+ * @param productId 商品唯一标识 (UUID)
+ * @returns {Promise<{success: boolean, data: any[]}>} 关联明细列表，包含价格、前置期、默认标记等
  */
 export async function getProductSuppliers(productId: string) {
+    console.warn('[supply-chain] getProductSuppliers 检索商品 ID:', productId);
     const session = await auth();
+    // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权', data: [] };
 
     try {
@@ -102,15 +104,17 @@ export async function getProductSuppliers(productId: string) {
 /**
  * 建立商品与供应商的关联
  *
- * @description 校验规则：
- * 1. 同一商品下同一活跃供应商不可重复。
- * 2. 若设为默认，自动取消该商品下其他供应商的默认标记。
- * 3. 包含审计日志记录。
- * 
- * @param data 关联信息（支持采购价、物流费、加工费、前置期及最小订货量）
+ * @description 业务约束：
+ * 1. 同一商品下同一活跃供应商不可重复关联。
+ * 2. 支持设置采购价、物流费、加工费等多重成本系数。
+ * 3. 允许指定“默认供应商”，设置时会自动撤销原默认供应商。
+ * @param data 符合 productSupplierSchema 的关联配置数据
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function addProductSupplier(data: z.infer<typeof productSupplierSchema>) {
+    console.warn('[supply-chain] addProductSupplier 开始关联:', { productId: data.productId, supplierId: data.supplierId });
     const session = await auth();
+    // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
     try {
@@ -139,6 +143,7 @@ export async function addProductSupplier(data: z.infer<typeof productSupplierSch
         .limit(1);
 
     if (existing) {
+        console.error('[supply-chain] addProductSupplier 关联已存在:', { productId, supplierId });
         return { success: false, error: '该供应商已关联此商品' };
     }
 
@@ -199,16 +204,16 @@ export async function addProductSupplier(data: z.infer<typeof productSupplierSch
 /**
  * 更新已有的商品-供应商关联信息
  *
- * @description 仅支持更新采购成本、物理指标及默认状态。
- * 若更新为默认供应商，将同步处理同一商品下的其他关联。
- * 
- * @param id 关联记录的 ID
- * @param data 待更新的字段
+ * @description 修改已有供应商的供应属性。支持物理成本系数、前置期策略及默认标记的变更。
+ * @param id 关联记录的主键 ID
+ * @param data 待更新的字段集（partial schema）
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function updateProductSupplier(
     id: string,
     data: z.infer<typeof updateProductSupplierSchema>
 ) {
+    console.warn('[supply-chain] updateProductSupplier 开始更新:', { id });
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
@@ -238,6 +243,7 @@ export async function updateProductSupplier(
         .limit(1);
 
     if (!existing) {
+        console.error('[supply-chain] updateProductSupplier 记录不存在:', id);
         return { success: false, error: '关联记录不存在' };
     }
 
@@ -291,11 +297,14 @@ export async function updateProductSupplier(
 /**
  * 移除商品-供应商关联
  * 
- * @description 采用软删除方式（isActive = false），并保留审计追踪。
- * @param id 关联记录的 ID
+ * @description 采用软删除机制 (isActive=false)，保留历史关联数据及其审计日志。
+ * @param id 关联记录的主键 ID
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function removeProductSupplier(id: string) {
+    console.warn('[supply-chain] removeProductSupplier 开始移除:', id);
     const session = await auth();
+    // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
     try {
@@ -336,12 +345,14 @@ export async function removeProductSupplier(id: string) {
 /**
  * 设为默认供应商
  *
- * @description 原子化操作：先清除该商品所有关联的默认标记，再将目标关联设为默认。
- * @param productId 商品 ID
- * @param supplierId 供应商 ID
+ * @description 原子化切换逻辑：清除同商品下所有其他关联的默认位。包含租户校验与审计。
+ * @param productId 目标商品 ID
+ * @param supplierId 目标供应商 ID
  */
 export async function setDefaultSupplier(productId: string, supplierId: string) {
+    console.warn('[supply-chain] setDefaultSupplier 设置默认:', { productId, supplierId });
     const session = await auth();
+    // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
     try {

@@ -163,7 +163,6 @@ export function EnhancedPOTable({ data }: POTableProps) {
     };
 
     const handleBatchConfirm = () => {
-        // console.log('Batch confirm:', Array.from(selectedIds));
     };
 
     return (

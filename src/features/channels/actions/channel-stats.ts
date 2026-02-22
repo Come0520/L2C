@@ -38,9 +38,13 @@ export interface ChannelStatsOverview {
 }
 
 /**
- * 获取单个渠道的统计数据
+ * 获取渠道详细统计数据
  * 
- * 权限：需要 CHANNEL.VIEW 权限
+ * 计算指定渠道的各类关键业务指标，包括引流线索数、转化订单数、成单总额、获得的佣金以及平均客单价等数据。
+ * 会分别统计总计数据和当月数据。
+ * 
+ * @param {string} channelId - 目标渠道ID
+ * @returns {Promise<{success: boolean, data: any, error?: string}>} 统计聚合数据响应结果
  */
 export async function getChannelStats(channelId: string): Promise<ChannelStats | null> {
     const session = await auth();
@@ -138,9 +142,11 @@ async function _getChannelStatsInternal(channelId: string, tenantId: string): Pr
 }
 
 /**
- * 获取渠道统计概览（Dashboard 卡片用）
+ * 获取企业/租户层面的渠道全局统计概览
  * 
- * 权限：需要 CHANNEL.VIEW 权限
+ * 聚合统计所有渠道产生的总客户数、总订单数、总业绩金额与已发佣金等全局概览信息。
+ * 
+ * @returns {Promise<{success: boolean, data: any, error?: string}>} 汇总的渠道概览数据响应
  */
 export async function getChannelStatsOverview(): Promise<ChannelStatsOverview> {
     const session = await auth();
@@ -217,9 +223,13 @@ export async function getChannelStatsOverview(): Promise<ChannelStatsOverview> {
 }
 
 /**
- * 获取渠道排行榜
+ * 获取渠道业绩排行榜
  * 
- * 权限：需要 CHANNEL.VIEW 权限
+ * 按照渠道的销售业绩金额（成单金额）进行降序排列，返回表现最好的渠道列表。
+ * 常用于首页仪表盘展示业绩排名。
+ * 
+ * @param {number} limit - 返回的排行榜记录数量限制，默认 10 
+ * @returns {Promise<{success: boolean, data: any[], error?: string}>} 渠道排行数据
  */
 export async function getChannelRanking(options?: {
     limit?: number;
@@ -373,9 +383,13 @@ export async function getChannelRanking(options?: {
 }
 
 /**
- * 获取渠道趋势数据（按月统计）
+ * 获取渠道增长趋势数据
  * 
- * 权限：需要 CHANNEL.VIEW 权限
+ * 根据指定的天数，按天统计在这段时间内通过渠道新增的线索数量和转换的订单数量，
+ * 用于图表展示趋势变化。
+ * 
+ * @param {number} days - 需要统计的回溯天数，默认 30 天
+ * @returns {Promise<{success: boolean, data: any[], error?: string}>} 按天聚合的趋势数据列表
  */
 export async function getChannelTrend(options?: {
     months?: number;

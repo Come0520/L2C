@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -40,7 +42,7 @@ export function ConfirmDialog({ open: controlledOpen, onOpenChange: setControlle
                 if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('确认失败');
         } finally {
             setLoading(false);
@@ -99,7 +101,7 @@ export function RejectDialog({ open: controlledOpen, onOpenChange: setControlled
                 if (onOpenChange) onOpenChange(false);
             }
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('操作失败');
         } finally {
             setLoading(false);

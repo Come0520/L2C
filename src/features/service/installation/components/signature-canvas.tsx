@@ -60,7 +60,7 @@ export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCan
         }, 'image/png');
     };
 
-    const SignaturePad = ReactSignatureCanvas as any;
+    const SignaturePad = ReactSignatureCanvas as unknown as React.ElementType;
 
     return (
         <div className={cn("flex flex-col gap-4", className)}>

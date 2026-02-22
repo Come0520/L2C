@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
@@ -45,7 +46,7 @@ export function QuickQuoteFieldConfig() {
                     setConfig(result.data);
                 }
             } catch (error) {
-                console.error('[QuickQuoteFieldConfig] Load error:', error);
+                logger.error('[QuickQuoteFieldConfig] Load error:', error);
                 toast.error('加载配置失败');
             } finally {
                 setIsLoading(false);
@@ -96,7 +97,7 @@ export function QuickQuoteFieldConfig() {
                 toast.error(result.error ?? '保存失败');
             }
         } catch (error) {
-            console.error('[QuickQuoteFieldConfig] Save error:', error);
+            logger.error('[QuickQuoteFieldConfig] Save error:', error);
             toast.error('保存配置失败');
         } finally {
             setIsSaving(false);

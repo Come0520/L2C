@@ -42,7 +42,7 @@ describe('Halt Actions', () => {
     });
 
     describe('haltOrderAction', () => {
-        const input = { orderId: '22222222-2222-4222-8222-222222222222', reason: 'MATERIAL_SHORTAGE' as const, remark: 'Wait for panel' };
+        const input = { orderId: '22222222-2222-4222-8222-222222222222', reason: 'MATERIAL_SHORTAGE' as const, remark: 'Wait for panel', version: 1 };
 
         it('应成功叫停订单', async () => {
             (OrderService.haltOrder as any).mockResolvedValue({ orderNo: 'ORD-001', snapshotData: '{"previousStatus":"IN_PRODUCTION"}' });
@@ -53,6 +53,7 @@ describe('Halt Actions', () => {
             expect(OrderService.haltOrder).toHaveBeenCalledWith(
                 input.orderId,
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id,
                 expect.stringContaining('MATERIAL_SHORTAGE')
             );
@@ -91,12 +92,13 @@ describe('Halt Actions', () => {
         it('应成功恢复叫停的订单', async () => {
             (OrderService.resumeOrder as any).mockResolvedValue({ success: true });
 
-            const result = await resumeOrderAction({ orderId: '22222222-2222-4222-8222-222222222222' });
+            const result = await resumeOrderAction({ orderId: '22222222-2222-4222-8222-222222222222', version: 1 });
 
             expect(result.success).toBe(true);
             expect(OrderService.resumeOrder).toHaveBeenCalledWith(
                 '22222222-2222-4222-8222-222222222222',
                 mockSession.user.tenantId,
+                1,
                 mockSession.user.id
             );
         });

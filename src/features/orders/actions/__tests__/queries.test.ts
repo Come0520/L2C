@@ -66,10 +66,6 @@ describe('Order Queries Actions', () => {
             const result = await getOrders({ page: 1, pageSize: 10 });
 
             expect(result.success).toBe(true);
-            // The result.data here will contain the object returned by the handler, which is { success: true, data: result.data ... }
-            // Wait, queries.ts handler returns { success: true, data: result.data, total: result.total, totalPages: result.totalPages }
-            // So result.data will be that object.
-            expect(result.data.success).toBe(true);
             expect(result.data.data).toEqual(mockOrders);
             expect(result.data.total).toBe(10);
         });
@@ -88,8 +84,7 @@ describe('Order Queries Actions', () => {
             const result = await getOrderById(VALID_UUID);
 
             expect(result.success).toBe(true);
-            expect(result.data.success).toBe(true);
-            expect(result.data.data).toEqual(mockOrder);
+            expect(result.data).toEqual(mockOrder);
             expect(db.query.orders.findFirst).toHaveBeenCalled();
         });
 
@@ -98,9 +93,8 @@ describe('Order Queries Actions', () => {
 
             const result = await getOrderById(VALID_UUID);
 
-            expect(result.success).toBe(true); // Action successfully ran
-            expect(result.data.success).toBe(false); // Business logic failed
-            expect(result.data.error).toBe('Order not found');
+            expect(result.success).toBe(false); // createSafeAction catches the thrown error
+            expect(result.error).toBe('Order not found');
         });
     });
 });

@@ -4,6 +4,7 @@ import { db } from '@/shared/api/db';
 import { notifications } from '@/shared/api/schema';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
+import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 import { Notification } from './types';
 import { notificationPreferences } from '@/shared/api/schema';
@@ -79,7 +80,7 @@ export async function getNotificationsPure(session: SessionUser, params: GetNoti
             }
         };
     } catch (error) {
-        console.error('getNotificationsPure safe fallback:', error);
+        logger.error('getNotificationsPure safe fallback:', { error });
         return {
             data: [],
             meta: {

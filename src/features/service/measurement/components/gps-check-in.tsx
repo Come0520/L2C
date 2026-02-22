@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { MapPin } from 'lucide-react';
@@ -43,7 +45,7 @@ export function GPSCheckIn({ taskId }: GPSCheckInProps) {
                         toast.error(result.error || '签到失败');
                     }
                 } catch (error) {
-                    console.error('GPS Check-in error:', error);
+                    logger.error('GPS Check-in error:', error);
                     toast.error('签到过程中发生错误');
                 } finally {
                     setLoading(false);
@@ -51,7 +53,7 @@ export function GPSCheckIn({ taskId }: GPSCheckInProps) {
             },
             (error) => {
                 setLoading(false);
-                console.error('Geolocation error:', error);
+                logger.error('Geolocation error:', error);
                 toast.error('获取地理位置失败，请在浏览器中允许定位权限');
             },
             { enableHighAccuracy: true, timeout: 10000 }

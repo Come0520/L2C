@@ -17,6 +17,7 @@ import {
 } from '@/features/quotes/actions/product-actions';
 
 import { CATEGORY_GROUPS, CATEGORY_LABELS } from '@/features/quotes/constants';
+import { logger } from '@/shared/lib/logger';
 
 // Add 'ALL' option
 const GROUP_OPTIONS = [{ label: '全部', value: 'ALL', categories: [] }, ...CATEGORY_GROUPS];
@@ -109,7 +110,7 @@ export function ProductPickerDialog({
         );
         setProducts(results);
       } catch (error) {
-        console.error('搜索商品失败:', error);
+        logger.error('搜索商品失败:', error);
         setProducts([]);
       } finally {
         setLoading(false);

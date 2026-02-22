@@ -103,11 +103,13 @@ const updateInstallItemSchema = z.object({
 
 /**
  * 获取安装任务列表 (支持搜索、筛选与分页)
- * @param params 
- * @param params.page 页码
- * @param params.pageSize 每页条数
- * @param params.search 搜索关键字 (单号/客户名/电话/师傅名)
- * @param params.status 任务状态
+ * 
+ * @param {Object} [params] - 查询参数
+ * @param {number} [params.page=1] - 当前页码，从1开始
+ * @param {number} [params.pageSize=20] - 每页显示的记录数
+ * @param {string} [params.search] - 模糊搜索关键字，匹配订单号、客户姓名、电话或师傅名称
+ * @param {string} [params.status] - 任务状态过滤条件 (如: PENDING_DISPATCH, COMPLETED)
+ * @returns {Promise<{success: boolean, data?: any[], pagination?: any, error?: string}>} 返回带分页信息的任务列表或错误信息
  */
 export async function getInstallTasks(params?: {
   page?: number;
@@ -227,7 +229,18 @@ export async function getInstallTaskById(id: string) {
 }
 
 /**
- * 创建安装单
+ * 创建安装任务的内部执行函数
+ * 
+ * 流程：
+ * 1. 验证用户权限与租户身份
+ * 2. 校验客户与订单是否存在
+ * 3. 生成唯一的安装任务号 (INS-日期-随机码)
+ * 4. 插入安装任务主表，并根据报价单项自动生成安装子项
+ * 5. 记录创建操作的审计日志
+ * 
+ * @param {z.infer<typeof createInstallTaskSchema>} data - 符合 Schema 校验的创建数据
+ * @param {Object} ctx - Server Action 执行上下文，包含 Session 信息
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回操作结果
  */
 const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, async (data, ctx) => {
   const session = ctx.session;
@@ -335,7 +348,19 @@ export async function createInstallTaskAction(data: z.infer<typeof createInstall
 }
 
 /**
- * 指派师傅 / 重新派单
+ * 指派师傅或重新派单的内部执行函数
+ * 
+ * 流程：
+ * 1. 校验调度权限
+ * 2. 冲突检测：检查师傅在指定日期和时段是否已有任务 (Hard/Soft 冲突)
+ * 3. 物流检查：核实关联订单的货物是否已到齐
+ * 4. 更新任务状态为 DISPATCHING (已指派，待确认)
+ * 5. 触发微信订阅消息通知师傅
+ * 6. 记录派单审计日志
+ * 
+ * @param {z.infer<typeof dispatchTaskSchema>} data - 指派参数，包含师傅ID、预约日期和时段
+ * @param {Object} ctx - Server Action 执行上下文
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回操作结果
  */
 const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (data, ctx) => {
   const session = ctx.session;
@@ -345,6 +370,11 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
   await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
 
   try {
+    logger.info(`[Dispatch] 准备指派安装任务: ${data.id}, 师傅: ${data.installerId}`, {
+      scheduledDate: data.scheduledDate,
+      timeSlot: data.scheduledTimeSlot
+    });
+
     // 1. Check Conflicts
     if (data.scheduledDate && data.scheduledTimeSlot) {
       const conflict = await checkSchedulingConflict(
@@ -415,6 +445,14 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
         )
       );
 
+    // 记录指派审计日志
+    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
+      new: { status: 'DISPATCHING', installerId: data.installerId, scheduledDate: data.scheduledDate },
+      event: 'DISPATCH_TASK'
+    });
+
+    logger.info(`[Dispatch] 安装任务指派成功: ${data.id}`);
+
     // 3. 发送任务通知
     if (data.installerId) {
       const taskInfo = await db.query.installTasks.findFirst({
@@ -454,7 +492,17 @@ export async function dispatchInstallTaskAction(data: z.infer<typeof dispatchTas
 }
 
 /**
- * 师傅签到
+ * 安装师傅上门签到逻辑
+ * 
+ * 流程：
+ * 1. 验证任务存在性与师傅身份
+ * 2. 检查任务状态是否为可签到状态 (DISPATCHING)
+ * 3. 记录签到地点与时间，并与预约时间对比进行迟到检测
+ * 4. 状态流转至 PENDING_VISIT (服务中)
+ * 
+ * @param {z.infer<typeof checkInTaskSchema>} data - 签到数据，包含地理位置坐标
+ * @param {Object} ctx - 执行上下文
+ * @returns {Promise<{success: boolean, message?: string, data?: any, error?: string}>} 返回签到结果，包含迟到详情
  */
 const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (data, ctx) => {
   const session = ctx.session;
@@ -612,7 +660,20 @@ export async function checkOutInstallTaskAction(data: z.infer<typeof checkOutTas
 }
 
 /**
- * 销售确认验收 (正式完结)
+ * 销售或管理人员确认安装验收
+ * 
+ * 此操作标志着安装服务的正式终结。
+ * 
+ * 流程：
+ * 1. 权限与租户隔离验证
+ * 2. 将任务状态更新为 COMPLETED
+ * 3. 记录最终确定的工费、调整原因及评价信息
+ * 4. 记录验收操作审计日志
+ * 5. (待扩展) 联动财务模块生成对账记录
+ * 
+ * @param {z.infer<typeof confirmInstallationSchema>} data - 验收参数，包含实际工费和评分
+ * @param {Object} ctx - 执行上下文
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回验收结果
  */
 const confirmInstallationInternal = createSafeAction(
   confirmInstallationSchema,

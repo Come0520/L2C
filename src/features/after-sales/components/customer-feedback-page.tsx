@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -73,7 +75,7 @@ export function CustomerFeedbackPage({
             });
             setIsSubmitted(true);
         } catch (error) {
-            console.error('提交评价失败:', error);
+            logger.error('提交评价失败:', error);
         } finally {
             setIsSubmitting(false);
         }

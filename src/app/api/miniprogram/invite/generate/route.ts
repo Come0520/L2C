@@ -11,6 +11,7 @@ import { SignJWT } from 'jose';
 import { getMiniprogramUser } from '../../auth-utils';
 import { customAlphabet } from 'nanoid';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { logger } from '@/shared/lib/logger';
 
 // 允许邀请的角色白名单
 const ALLOWED_INVITE_ROLES = ['SALES', 'INSTALLER', 'MEASURER', 'ShowroomManager', 'ADMIN', 'MANAGER'];
@@ -96,6 +97,17 @@ export async function POST(request: NextRequest) {
     // 使用公共 HTTPS 二维码生成服务，确保小程序可以加载
     const qrcodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteLink)}`;
 
+    // 3. 审计日志
+    const { AuditService } = await import('@/shared/services/audit-service');
+    await AuditService.log(db, {
+      tableName: 'invitations',
+      recordId: inviteCode,
+      action: 'GENERATE_INVITE',
+      userId: tokenData.id,
+      tenantId: tokenData.tenantId,
+      details: { role, maxUses }
+    });
+
     return apiSuccess({
       inviteCode,
       inviteLink,
@@ -104,7 +116,7 @@ export async function POST(request: NextRequest) {
       role,
     });
   } catch (error) {
-    console.error('生成邀请码错误:', error);
-    return apiError('生成失败', 500);
+    logger.error('[InviteGenerate] 生成邀请码失败', { route: 'invite/generate', error });
+    return apiError('生成邀请码失败', 500);
   }
 }

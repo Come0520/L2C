@@ -24,6 +24,7 @@ import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { AccessoryLinkageService } from '../services/accessory-linkage.service';
 import { AuditService } from '@/shared/lib/audit-service';
 import { SizeValidator } from '@/shared/lib/validators';
+import { logger } from '@/shared/lib/logger';
 
 // ─── 创建行项目 ─────────────────────────────────
 
@@ -38,14 +39,21 @@ const createQuoteItemActionInternal = createSafeAction(
   createQuoteItemSchema,
   async (data, context) => {
     const tenantId = context.session.user.tenantId;
-    if (!tenantId) throw new Error('未授权访问：缺少租户信息');
+    if (!tenantId) {
+      logger.error('未授权访问：缺少租户信息');
+      throw new Error('未授权访问：缺少租户信息');
+    }
+    logger.info('[quotes] 开始创建行项目', { quoteId: data.quoteId, productName: data.productName, category: data.category });
 
     // 安全检查：验证关联报价单归属
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.quoteId), eq(quotes.tenantId, tenantId)),
       columns: { id: true, tenantId: true, createdBy: true },
     });
-    if (!quote) throw new Error('报价单不存在或无权操作');
+    if (!quote) {
+      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId });
+      throw new Error('报价单不存在或无权操作');
+    }
 
     let quantity = data.quantity;
     const warnings: string[] = [];
@@ -188,6 +196,7 @@ const createQuoteItemActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
+    logger.info('[quotes] 行项目创建成功', { itemId: newItem.id, quoteId: data.quoteId });
     return newItem;
   }
 );
@@ -211,7 +220,11 @@ export async function createQuoteItem(params: z.infer<typeof createQuoteItemSche
  */
 export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data, context) => {
   const userTenantId = context.session.user.tenantId;
-  if (!userTenantId) throw new Error('未授权访问：缺少租户信息');
+  if (!userTenantId) {
+    logger.error('未授权访问：缺少租户信息');
+    throw new Error('未授权访问：缺少租户信息');
+  }
+  logger.info('[quotes] 开始更新行项目', { itemId: data.id });
 
   const { id, productId, productName: productNameFromUI, ...updateData } = data;
 
@@ -220,7 +233,10 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     where: and(eq(quoteItems.id, id), eq(quoteItems.tenantId, userTenantId)),
   });
 
-  if (!existing) throw new Error('行项目不存在或无权操作');
+  if (!existing) {
+    logger.warn('行项目不存在或无权操作', { itemId: id, tenantId: userTenantId });
+    throw new Error('行项目不存在或无权操作');
+  }
 
   // 从现有项目初始化变量
   const category = existing.category;
@@ -385,12 +401,16 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
  */
 export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (data, context) => {
   const userTenantId = context.session.user.tenantId;
+  logger.info('[quotes] 开始删除行项目', { itemId: data.id });
 
   // 安全检查：验证行项目属于当前租户
   const existing = await db.query.quoteItems.findFirst({
     where: and(eq(quoteItems.id, data.id), eq(quoteItems.tenantId, userTenantId)),
   });
-  if (!existing) return { success: false, error: '行项目不存在或无权操作' };
+  if (!existing) {
+    logger.warn('行项目不存在或无权操作', { itemId: data.id, tenantId: userTenantId });
+    return { success: false, error: '行项目不存在或无权操作' };
+  }
 
   // 审计日志：记录行项目删除（删除前记录）
   await AuditService.recordFromSession(context.session, 'quoteItems', data.id, 'DELETE', {
@@ -418,14 +438,21 @@ export const reorderQuoteItems = createSafeAction(
   reorderQuoteItemsSchema,
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
-    if (!userTenantId) throw new Error('未授权访问：缺少租户信息');
+    if (!userTenantId) {
+      logger.error('未授权访问：缺少租户信息');
+      throw new Error('未授权访问：缺少租户信息');
+    }
+    logger.info('[quotes] 开始对行项目排序', { quoteId: data.quoteId, itemCount: data.items.length });
 
     // 安全检查：验证报价单归属
     const quote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.quoteId), eq(quotes.tenantId, userTenantId)),
       columns: { id: true },
     });
-    if (!quote) throw new Error('报价单不存在或无权操作');
+    if (!quote) {
+      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId: userTenantId });
+      throw new Error('报价单不存在或无权操作');
+    }
 
     // 批量更新排序
     await db.transaction(async (tx) => {
@@ -437,7 +464,13 @@ export const reorderQuoteItems = createSafeAction(
       }
     });
 
+    // 审计日志：记录行项目重新排序
+    await AuditService.recordFromSession(context.session, 'quotes', data.quoteId, 'UPDATE', {
+      new: { action: 'REORDER_ITEMS', itemCount: data.items.length },
+    });
+
     revalidatePath(`/quotes/${data.quoteId}`);
+    logger.info('[quotes] 行项目排序完成', { quoteId: data.quoteId });
     return { success: true };
   }
 );

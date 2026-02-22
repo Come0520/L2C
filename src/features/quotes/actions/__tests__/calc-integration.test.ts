@@ -33,6 +33,11 @@ vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(() => Promise.resolve(MOCK_SESSION))
 }));
 
+const QUOTE_1_UUID = '33100000-0000-4000-a000-000000000013';
+const QUOTE_2_UUID = '33100000-0000-4000-a000-000000000014';
+const ITEM_1_UUID = '33100000-0000-4000-a000-000000000015';
+const ITEM_2_UUID = '33100000-0000-4000-a000-000000000016';
+
 describe('Calculation Engine Integration (recalculateQuote)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -41,7 +46,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
     it('should calculate Curtain quantity and update DB', async () => {
         // Setup: Quote with 1 Curtain Item
         const mockItem = {
-            id: 'item-1',
+            id: ITEM_1_UUID,
             width: '300', // 300 cm
             height: '270', // 270 cm
             unitPrice: '100',
@@ -54,7 +59,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         };
 
         const mockQuote = {
-            id: 'quote-1',
+            id: QUOTE_1_UUID,
             discountRate: '0.9', // 90% discount
             items: [mockItem]
         };
@@ -67,7 +72,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         mocks.db.update.mockReturnValue({ set: updateSetSpy });
 
         // Execute
-        const result = await recalculateQuote('quote-1');
+        const result = await recalculateQuote(QUOTE_1_UUID);
 
         // Assert
         expect(result.success).toBe(true);
@@ -95,7 +100,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
 
     it('should calculate Wallcloth usage (Perimeter) and update DB', async () => {
         const mockItem = {
-            id: 'item-2',
+            id: ITEM_2_UUID,
             width: '400',  // 400 cm
             height: '260', // 260 cm
             unitPrice: '50',
@@ -109,7 +114,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         };
 
         const mockQuote = {
-            id: 'quote-2',
+            id: QUOTE_2_UUID,
             discountRate: '1.0',
             items: [mockItem]
         };
@@ -118,7 +123,7 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         const updateSetSpy = vi.fn().mockReturnValue({ where: vi.fn() });
         mocks.db.update.mockReturnValue({ set: updateSetSpy });
 
-        await recalculateQuote('quote-2');
+        await recalculateQuote(QUOTE_2_UUID);
 
         const itemUpdate = updateSetSpy.mock.calls.find(call => call[0].quantity);
         expect(itemUpdate).toBeDefined();

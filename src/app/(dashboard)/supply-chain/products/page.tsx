@@ -160,7 +160,11 @@ export default function ProductsPage() {
       <ProductDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        initialData={editingProduct}
+        initialData={
+          editingProduct
+            ? (editingProduct as unknown as React.ComponentProps<typeof ProductDialog>['initialData'])
+            : undefined
+        }
         onSuccess={fetchData}
       />
     </div>

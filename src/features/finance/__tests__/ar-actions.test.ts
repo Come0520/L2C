@@ -16,6 +16,12 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn(),
 }));
 
+vi.mock('next/cache', () => ({
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    unstable_cache: vi.fn().mockImplementation((fn: any) => fn),
+}));
+
 // 模拟 DB 防止导入时连接数据库
 vi.mock('@/shared/api/db', () => ({
     db: {},

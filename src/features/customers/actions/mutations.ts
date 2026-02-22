@@ -61,6 +61,8 @@ export async function createCustomer(
   const userId = session.user.id;
   const tenantId = session.user.tenantId;
 
+  logger.info('[customers] 创建客户:', { input, userId, tenantId });
+
   try {
     const result = await CustomerService.createCustomer(
       {
@@ -89,7 +91,7 @@ export async function createCustomer(
     revalidatePath('/customers');
     return result.customer;
   } catch (e: unknown) {
-    logger.error('[createCustomer] Error:', e, { tenantId, userId });
+    logger.error('[customers] 创建客户失败:', e);
     throw e;
   }
 }
@@ -114,14 +116,21 @@ export async function updateCustomer(input: z.input<typeof updateCustomerSchema>
   const { id, version, data: rawData } = updateCustomerSchema.parse(input);
   const data = trimInput(rawData);
 
-  // 使用 Service 处理业务逻辑（含租户检查、降级校验、审计日志）
-  return await CustomerService.updateCustomer(
-    id,
-    data,
-    session.user.tenantId,
-    session.user.id,
-    version
-  );
+  logger.info('[customers] 更新客户:', { customerId: id, data, userId: session.user.id, tenantId: session.user.tenantId });
+
+  try {
+    // 使用 Service 处理业务逻辑（含租户检查、降级校验、审计日志）
+    return await CustomerService.updateCustomer(
+      id,
+      data,
+      session.user.tenantId,
+      session.user.id,
+      version
+    );
+  } catch (error) {
+    logger.error('[customers] 更新客户失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -139,13 +148,20 @@ export async function deleteCustomer(id: string) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
-  await CustomerService.deleteCustomer(
-    id,
-    session.user.tenantId,
-    session.user.id
-  );
+  logger.info('[customers] 删除客户:', { customerId: id, userId: session.user.id, tenantId: session.user.tenantId });
 
-  revalidatePath('/customers');
+  try {
+    await CustomerService.deleteCustomer(
+      id,
+      session.user.tenantId,
+      session.user.id
+    );
+
+    revalidatePath('/customers');
+  } catch (error) {
+    logger.error('[customers] 删除客户失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -166,54 +182,61 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
   const tenantId = session.user.tenantId;
   const data = trimInput(createAddressSchema.parse(input));
 
-  // 验证客户属于当前租户
-  const customer = await db.query.customers.findFirst({
-    where: and(eq(customers.id, data.customerId), eq(customers.tenantId, tenantId)),
-  });
-  if (!customer) throw new AppError('客户不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
+  logger.info('[customers] 添加客户地址:', { ...data, userId: session.user.id, tenantId });
 
-  return await db
-    .transaction(async (tx) => {
-      if (data.isDefault) {
-        // Unset other defaults
-        await tx
-          .update(customerAddresses)
-          .set({ isDefault: false })
-          .where(eq(customerAddresses.customerId, data.customerId));
-      }
-
-      const [newAddr] = await tx
-        .insert(customerAddresses)
-        .values({
-          tenantId,
-          customerId: data.customerId,
-          label: data.label,
-          province: data.province,
-          city: data.city,
-          district: data.district,
-          community: data.community,
-          address: data.address,
-          isDefault: data.isDefault,
-        })
-        .returning();
-
-      // 记录审计日志
-      await AuditService.log(tx, {
-        tableName: 'customer_addresses',
-        recordId: newAddr.id,
-        action: 'CREATE',
-        userId: session.user.id,
-        newValues: newAddr,
-        details: { customerId: data.customerId, label: data.label },
-        tenantId
-      });
-
-      return newAddr;
-    })
-    .then((res) => {
-      revalidatePath(`/customers/${data.customerId}`);
-      return res;
+  try {
+    // 验证客户属于当前租户
+    const customer = await db.query.customers.findFirst({
+      where: and(eq(customers.id, data.customerId), eq(customers.tenantId, tenantId)),
     });
+    if (!customer) throw new AppError('客户不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
+
+    return await db
+      .transaction(async (tx) => {
+        if (data.isDefault) {
+          // Unset other defaults
+          await tx
+            .update(customerAddresses)
+            .set({ isDefault: false })
+            .where(eq(customerAddresses.customerId, data.customerId));
+        }
+
+        const [newAddr] = await tx
+          .insert(customerAddresses)
+          .values({
+            tenantId,
+            customerId: data.customerId,
+            label: data.label,
+            province: data.province,
+            city: data.city,
+            district: data.district,
+            community: data.community,
+            address: data.address,
+            isDefault: data.isDefault,
+          })
+          .returning();
+
+        // 记录审计日志
+        await AuditService.log(tx, {
+          tableName: 'customer_addresses',
+          recordId: newAddr.id,
+          action: 'CREATE',
+          userId: session.user.id,
+          newValues: newAddr,
+          details: { customerId: data.customerId, label: data.label },
+          tenantId
+        });
+
+        return newAddr;
+      })
+      .then((res) => {
+        revalidatePath(`/customers/${data.customerId}`);
+        return res;
+      });
+  } catch (error) {
+    logger.error('[customers] 添加客户地址失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -234,60 +257,67 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
   const { id, version, ...rawData } = updateAddressSchema.parse(input);
   const data = trimInput(rawData);
 
-  return await db
-    .transaction(async (tx) => {
-      // 安全检查：验证地址属于当前租户
-      const addr = await tx.query.customerAddresses.findFirst({
-        where: and(
-          eq(customerAddresses.id, id),
-          eq(customerAddresses.tenantId, session.user.tenantId)
-        ),
-      });
-      if (!addr) throw new AppError('地址不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
-      if (version !== undefined && addr.version !== version) {
-        throw new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
-      }
+  logger.info('[customers] 更新客户地址:', { addressId: id, data, userId: session.user.id, tenantId: session.user.tenantId });
 
-      if (data.isDefault) {
-        await tx
-          .update(customerAddresses)
-          .set({ isDefault: false })
-          .where(eq(customerAddresses.customerId, addr.customerId));
-      }
-
-      const [updated] = await tx
-        .update(customerAddresses)
-        .set({ ...data, version: (addr.version || 0) + 1 })
-        .where(
-          and(
+  try {
+    return await db
+      .transaction(async (tx) => {
+        // 安全检查：验证地址属于当前租户
+        const addr = await tx.query.customerAddresses.findFirst({
+          where: and(
             eq(customerAddresses.id, id),
-            eq(customerAddresses.tenantId, session.user.tenantId),
-            version !== undefined ? eq(customerAddresses.version, version) : undefined
-          )
-        )
-        .returning();
-
-      if (!updated && version !== undefined) {
-        throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
-      }
-
-      if (updated) {
-        await AuditService.log(tx, {
-          tableName: 'customer_addresses',
-          recordId: id,
-          action: 'UPDATE',
-          userId: session.user.id,
-          changedFields: data,
-          details: { customerId: addr.customerId },
-          tenantId: session.user.tenantId
+            eq(customerAddresses.tenantId, session.user.tenantId)
+          ),
         });
-      }
+        if (!addr) throw new AppError('地址不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
+        if (version !== undefined && addr.version !== version) {
+          throw new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+        }
 
-      return updated;
-    })
-    .then((res) => {
-      return res;
-    });
+        if (data.isDefault) {
+          await tx
+            .update(customerAddresses)
+            .set({ isDefault: false })
+            .where(eq(customerAddresses.customerId, addr.customerId));
+        }
+
+        const [updated] = await tx
+          .update(customerAddresses)
+          .set({ ...data, version: (addr.version || 0) + 1 })
+          .where(
+            and(
+              eq(customerAddresses.id, id),
+              eq(customerAddresses.tenantId, session.user.tenantId),
+              version !== undefined ? eq(customerAddresses.version, version) : undefined
+            )
+          )
+          .returning();
+
+        if (!updated && version !== undefined) {
+          throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+        }
+
+        if (updated) {
+          await AuditService.log(tx, {
+            tableName: 'customer_addresses',
+            recordId: id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            changedFields: data,
+            details: { customerId: addr.customerId },
+            tenantId: session.user.tenantId
+          });
+        }
+
+        return updated;
+      })
+      .then((res) => {
+        return res;
+      });
+  } catch (error) {
+    logger.error('[customers] 更新客户地址失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -315,29 +345,36 @@ export async function deleteCustomerAddress(id: string, version?: number) {
     throw new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
 
-  const [deleted] = await db
-    .delete(customerAddresses)
-    .where(
-      and(
-        eq(customerAddresses.id, id),
-        eq(customerAddresses.tenantId, session.user.tenantId),
-        version !== undefined ? eq(customerAddresses.version, version) : undefined
-      )
-    ).returning();
+  logger.info('[customers] 删除客户地址:', { addressId: id, version, userId: session.user.id, tenantId: session.user.tenantId });
 
-  if (!deleted && version !== undefined) {
-    throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+  try {
+    const [deleted] = await db
+      .delete(customerAddresses)
+      .where(
+        and(
+          eq(customerAddresses.id, id),
+          eq(customerAddresses.tenantId, session.user.tenantId),
+          version !== undefined ? eq(customerAddresses.version, version) : undefined
+        )
+      ).returning();
+
+    if (!deleted && version !== undefined) {
+      throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+    }
+
+    // 记录审计日志
+    await AuditService.log(db, {
+      tableName: 'customer_addresses',
+      recordId: id,
+      action: 'DELETE',
+      userId: session.user.id,
+      details: { customerId: existingAddr.customerId },
+      tenantId: session.user.tenantId
+    });
+  } catch (error) {
+    logger.error('[customers] 删除客户地址失败:', error);
+    throw error;
   }
-
-  // 记录审计日志
-  await AuditService.log(db, {
-    tableName: 'customer_addresses',
-    recordId: id,
-    action: 'DELETE',
-    userId: session.user.id,
-    details: { customerId: existingAddr.customerId },
-    tenantId: session.user.tenantId
-  });
 }
 
 /**
@@ -366,41 +403,48 @@ export async function setDefaultAddress(id: string, customerId: string, version?
     throw new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(customerAddresses)
-      .set({ isDefault: false })
-      .where(
-        and(eq(customerAddresses.customerId, customerId), eq(customerAddresses.tenantId, tenantId))
-      );
+  logger.info('[customers] 设置客户默认地址:', { addressId: id, customerId, version, userId: session.user.id, tenantId });
 
-    const [updated] = await tx
-      .update(customerAddresses)
-      .set({ isDefault: true, version: (address.version || 0) + 1 })
-      .where(
-        and(
-          eq(customerAddresses.id, id),
-          eq(customerAddresses.tenantId, tenantId),
-          version !== undefined ? eq(customerAddresses.version, version) : undefined
-        )
-      ).returning();
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(customerAddresses)
+        .set({ isDefault: false })
+        .where(
+          and(eq(customerAddresses.customerId, customerId), eq(customerAddresses.tenantId, tenantId))
+        );
 
-    if (!updated && version !== undefined) {
-      throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
-    }
+      const [updated] = await tx
+        .update(customerAddresses)
+        .set({ isDefault: true, version: (address.version || 0) + 1 })
+        .where(
+          and(
+            eq(customerAddresses.id, id),
+            eq(customerAddresses.tenantId, tenantId),
+            version !== undefined ? eq(customerAddresses.version, version) : undefined
+          )
+        ).returning();
 
-    // 记录审计日志
-    await AuditService.log(tx, {
-      tableName: 'customer_addresses',
-      recordId: id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      details: { customerId, type: 'SET_DEFAULT' },
-      changedFields: { isDefault: true },
-      tenantId
+      if (!updated && version !== undefined) {
+        throw new AppError('并发更新失败，请重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
+      }
+
+      // 记录审计日志
+      await AuditService.log(tx, {
+        tableName: 'customer_addresses',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        details: { customerId, type: 'SET_DEFAULT' },
+        changedFields: { isDefault: true },
+        tenantId
+      });
     });
-  });
-  revalidatePath(`/customers/${customerId}`);
+    revalidatePath(`/customers/${customerId}`);
+  } catch (error) {
+    logger.error('[customers] 设置客户默认地址失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -425,22 +469,29 @@ export async function mergeCustomersAction(
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
-  const result = await CustomerService.mergeCustomers(
-    data.targetCustomerId,
-    data.sourceCustomerIds,
-    data.fieldPriority,
-    tenantId,
-    userId,
-    data.targetCustomerVersion
-  );
+  logger.info('[customers] 合并客户:', { ...data, userId, tenantId });
 
-  revalidatePath('/customers');
-  revalidatePath(`/customers/${data.targetCustomerId}`);
-  data.sourceCustomerIds.forEach((id) => {
-    revalidatePath(`/customers/${id}`);
-  });
+  try {
+    const result = await CustomerService.mergeCustomers(
+      data.targetCustomerId,
+      data.sourceCustomerIds,
+      data.fieldPriority,
+      tenantId,
+      userId,
+      data.targetCustomerVersion
+    );
 
-  return result;
+    revalidatePath('/customers');
+    revalidatePath(`/customers/${data.targetCustomerId}`);
+    data.sourceCustomerIds.forEach((id) => {
+      revalidatePath(`/customers/${id}`);
+    });
+
+    return result;
+  } catch (error) {
+    logger.error('[customers] 合并客户失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -461,5 +512,12 @@ export async function previewMergeAction(sourceId: string, targetId: string) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
-  return await CustomerService.previewMerge(targetId, sourceId, tenantId);
+  logger.info('[customers] 预览合并客户结果:', { sourceId, targetId, userId: session.user.id, tenantId });
+
+  try {
+    return await CustomerService.previewMerge(targetId, sourceId, tenantId);
+  } catch (error) {
+    logger.error('[customers] 预览合并客户结果失败:', error);
+    throw error;
+  }
 }

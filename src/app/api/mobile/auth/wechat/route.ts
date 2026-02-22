@@ -13,6 +13,7 @@ import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { env } from '@/shared/config/env';
 import { generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
 import { createLogger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 微信登录请求体
@@ -107,6 +108,15 @@ export async function POST(request: NextRequest) {
 
         // 5. 如果仍然没有客户，返回需要绑定的状态
         if (!customer) {
+            await AuditService.log(db, {
+                tableName: 'auth_login',
+                recordId: openid,
+                action: 'LOGIN_FAILED',
+                userId: openid,
+                tenantId: 'SYSTEM',
+                details: { method: 'wechat_miniprogram', platform: 'mobile', reason: 'need_binding' }
+            });
+
             return apiSuccess({
                 needBinding: true,
                 // P4.1: 脱敏处理 OpenID，不直接返回完整敏感信息
@@ -130,6 +140,15 @@ export async function POST(request: NextRequest) {
         );
 
         log.info(`微信登录: 客户 ${customer.name} 登录成功`);
+
+        await AuditService.log(db, {
+            tableName: 'auth_login',
+            recordId: customer.id,
+            action: 'LOGIN_SUCCESS',
+            userId: customer.id,
+            tenantId: customer.tenantId || 'SYSTEM',
+            details: { method: 'wechat_miniprogram', platform: 'mobile' }
+        });
 
         return apiSuccess({
             needBinding: false,

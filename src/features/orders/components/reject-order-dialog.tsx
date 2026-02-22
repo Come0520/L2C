@@ -20,10 +20,11 @@ import { Loader2, XCircle } from 'lucide-react';
 
 interface RejectOrderDialogProps {
     orderId: string;
+    version: number;
     trigger?: React.ReactNode;
 }
 
-export function RejectOrderDialog({ orderId, trigger }: RejectOrderDialogProps) {
+export function RejectOrderDialog({ orderId, version, trigger }: RejectOrderDialogProps) {
     const [open, setOpen] = useState(false);
     const [reason, setReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +38,7 @@ export function RejectOrderDialog({ orderId, trigger }: RejectOrderDialogProps) 
 
         setIsSubmitting(true);
         try {
-            await customerRejectAction({ orderId, reason });
+            await customerRejectAction({ orderId, reason, version });
             toast.success('已驳回验收');
             setOpen(false);
             router.refresh();

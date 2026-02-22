@@ -1,5 +1,7 @@
 'use server';
 
+import { logger } from "@/shared/lib/logger";
+
 import { db } from '@/shared/api/db';
 import { leads, marketChannels, quotes, orders } from '@/shared/api/schema';
 import { eq, and, gte, lte, sql, countDistinct } from 'drizzle-orm';
@@ -32,8 +34,11 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
     const tenantId = session.user.tenantId;
     const range = input ? analyticsDateRangeSchema.parse(input) : {};
 
+    logger.info('[leads] 获取渠道 ROI 统计开始:', { tenantId, range });
+
     return unstable_cache(
         async (r) => {
+            logger.info('[leads] 执行渠道 ROI 统计缓存查询:', { tenantId, params: r });
             const whereConditions = [eq(leads.tenantId, tenantId)];
             if (r.from) whereConditions.push(gte(leads.createdAt, r.from));
             if (r.to) whereConditions.push(lte(leads.createdAt, r.to));
@@ -54,6 +59,8 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
                 .leftJoin(orders, eq(quotes.id, orders.quoteId))
                 .where(and(...whereConditions))
                 .groupBy(leads.sourceChannelId, marketChannels.name);
+
+            logger.info('[leads] 执行渠道 ROI 统计缓存查询成功:', { resultCount: results.length, tenantId });
 
             return results.map(row => {
                 const leadCount = Number(row.leadCount || 0);

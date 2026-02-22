@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from "@/shared/lib/logger";
+
 import {
     AlertDialog,
     AlertDialogAction,

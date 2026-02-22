@@ -7,6 +7,7 @@ import {
     isOnline as checkOnline
 } from '../logic/offline-signature';
 import { toast } from 'sonner';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 网络状态和离线签名同步 Hook
@@ -50,7 +51,7 @@ export function useOfflineSignatureSync(
 
             refreshPendingCount();
         } catch (error) {
-            console.error('同步签名失败:', error);
+            logger.error('同步签名失败:', error);
             if (!silent) {
                 toast.error('签名同步失败');
             }
@@ -63,7 +64,7 @@ export function useOfflineSignatureSync(
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true);
-            console.log('[网络] 已恢复连接');
+            logger.info('[网络] 已恢复连接');
 
             // 网络恢复后自动同步
             const count = getPendingCount();
@@ -75,7 +76,7 @@ export function useOfflineSignatureSync(
 
         const handleOffline = () => {
             setIsOnline(false);
-            console.log('[网络] 连接已断开');
+            logger.info('[网络] 连接已断开');
             toast.warning('网络已断开，签名将自动保存到本地');
         };
 

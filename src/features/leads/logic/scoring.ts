@@ -1,3 +1,4 @@
+import { logger } from "@/shared/lib/logger";
 
 import { leads } from '@/shared/api/schema';
 

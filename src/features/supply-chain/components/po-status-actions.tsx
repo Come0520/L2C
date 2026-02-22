@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useOptimistic, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -48,7 +49,7 @@ export function PoStatusActions({ poId, initialStatus }: PoStatusActionsProps) {
                 }
             } catch (error) {
                 toast.error('操作发生错误');
-                console.error(error);
+                logger.error(error);
             }
         });
     };

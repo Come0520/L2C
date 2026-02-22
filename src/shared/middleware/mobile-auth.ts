@@ -10,6 +10,9 @@
 import { NextRequest } from 'next/server';
 import { verifyToken, MobileRole } from '@/shared/lib/jwt';
 import { apiUnauthorized, apiForbidden } from '@/shared/lib/api-response';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('mobile-auth');
 
 // ============================================================
 // 类型定义
@@ -96,7 +99,7 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
 
         return { success: true, session };
     } catch (error) {
-        console.error('Mobile auth error:', error);
+        log.error('移动端认证 Token 验证失败', {}, error);
         return {
             success: false,
             response: apiUnauthorized('Token 验证失败'),

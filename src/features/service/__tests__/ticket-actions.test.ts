@@ -66,6 +66,16 @@ vi.mock('@/shared/api/db', () => {
     let selectCallCount = 0;
     return {
         db: {
+            // 新增：模拟我们加上的防御性查询 (如果是 'ticket-closed-123' 则返回 CLOSED)
+            query: {
+                afterSalesTickets: {
+                    findFirst: vi.fn().mockImplementation(async ({ where }) => {
+                        // 使用非常简单的探测，测试用例传递了 ticket-closed-123 来测试拦截
+                        // 实际在 where 里的具体解析有点复杂，这里简单使用返回即可，被专门测试覆盖的可以 mockResolvedValueOnce
+                        return { status: 'PENDING' }; // 默认通过
+                    })
+                }
+            },
             select: vi.fn(() => {
                 selectCallCount++;
                 // 第一次 select 是数据查询，第二次是计数查询
@@ -183,6 +193,18 @@ describe('Service Feature - Ticket Actions', () => {
             ).rejects.toThrow('Forbidden');
 
             // 确认数据库操作未被执行
+            expect(mockUpdateSet).not.toHaveBeenCalled();
+        });
+
+        it('应当拦截对已关闭工单的再次状态流转操作', async () => {
+            // 利用 vitest 修改当前文件的 db mock 行为（更安全）
+            const { db } = await import('@/shared/api/db');
+            vi.mocked(db.query.afterSalesTickets.findFirst).mockResolvedValueOnce({ status: 'CLOSED' });
+
+            const result = await updateTicketStatus('ticket-closed-123', 'PROCESSING');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('已关闭');
             expect(mockUpdateSet).not.toHaveBeenCalled();
         });
     });

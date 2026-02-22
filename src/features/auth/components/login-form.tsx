@@ -68,7 +68,7 @@ export function LoginForm() {
             手机号 / 邮箱
           </Label>
           <div className="relative">
-            <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+            <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
             <Input
               id="username"
               type="text"
@@ -77,6 +77,8 @@ export function LoginForm() {
               onChange={(e) => setUsername(e.target.value)}
               className="glass-input pl-10"
               required
+              aria-required="true"
+              autoComplete="username"
             />
           </div>
         </LabelInputContainer>
@@ -87,7 +89,7 @@ export function LoginForm() {
             密码
           </Label>
           <div className="relative">
-            <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+            <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -96,6 +98,8 @@ export function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               className="glass-input pr-10 pl-10"
               required
+              aria-required="true"
+              autoComplete="current-password"
             />
             {/* 密码显示/隐藏切换按钮 */}
             <button
@@ -104,8 +108,9 @@ export function LoginForm() {
               className="absolute top-1/2 right-3 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-700 dark:hover:text-neutral-300"
               tabIndex={-1}
               aria-label={showPassword ? '隐藏密码' : '显示密码'}
+              aria-pressed={showPassword}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
             </button>
           </div>
         </LabelInputContainer>
@@ -125,10 +130,11 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
+          aria-busy={isLoading}
           className="group/btn from-primary-600 to-primary-700 shadow-primary-500/30 hover:from-primary-500 hover:to-primary-600 relative block h-11 w-full rounded-xl bg-gradient-to-br font-medium text-white shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="flex items-center justify-center">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
             {isLoading ? '登录中...' : '登录'}
           </span>
           <BottomGradient />

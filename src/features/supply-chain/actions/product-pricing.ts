@@ -32,65 +32,72 @@ interface PriceAnalysis {
  * @returns 包含各分项成本及总成本的对象
  */
 export const calculateProductCost = async (productId: string, supplierId?: string): Promise<CostBreakdown> => {
-    // 认证检查
-    const session = await auth();
-    if (!session?.user?.id) {
-        throw new Error('未授权');
-    }
+    try {
+        console.warn('[supply-chain] calculateProductCost 开始执行:', { productId, supplierId });
+        // 认证检查
+        const session = await auth();
+        if (!session?.user?.id) {
+            throw new Error('未授权');
+        }
 
-    // 查询产品时添加租户隔离
-    const product = await db.query.products.findFirst({
-        where: and(
-            eq(products.id, productId),
-            eq(products.tenantId, session.user.tenantId)
-        ),
-    });
-
-    if (!product) {
-        throw new Error('产品不存在或无权访问');
-    }
-
-    let purchasePrice = new Decimal(product.purchasePrice || 0);
-
-    // 如果指定了供应商，尝试获取供应商特定价格
-    if (supplierId) {
-        const supplierPrice = await db.query.productSuppliers.findFirst({
+        // 查询产品时添加租户隔离
+        const product = await db.query.products.findFirst({
             where: and(
-                eq(productSuppliers.productId, productId),
-                eq(productSuppliers.supplierId, supplierId),
-                eq(productSuppliers.tenantId, session.user.tenantId)
+                eq(products.id, productId),
+                eq(products.tenantId, session.user.tenantId)
             ),
         });
-        if (supplierPrice?.purchasePrice) {
-            purchasePrice = new Decimal(supplierPrice.purchasePrice);
+
+        if (!product) {
+            throw new Error('产品不存在或无权访问');
         }
+
+        let purchasePrice = new Decimal(product.purchasePrice || 0);
+
+        // 如果指定了供应商，尝试获取供应商特定价格
+        if (supplierId) {
+            const supplierPrice = await db.query.productSuppliers.findFirst({
+                where: and(
+                    eq(productSuppliers.productId, productId),
+                    eq(productSuppliers.supplierId, supplierId),
+                    eq(productSuppliers.tenantId, session.user.tenantId)
+                ),
+            });
+            if (supplierPrice?.purchasePrice) {
+                purchasePrice = new Decimal(supplierPrice.purchasePrice);
+            }
+        }
+
+        const logisticsCost = new Decimal(product.logisticsCost || 0);
+        const processingCost = new Decimal(product.processingCost || 0);
+        const lossRate = new Decimal(product.lossRate || 0);
+
+        // 计算损耗成本: (采购价 + 物流 + 加工) * 损耗率
+        // 或者根据具体业务逻辑调整，通常损耗是基于原材料成本
+        // 假设损耗仅基于采购价
+        const lossCost = purchasePrice.mul(lossRate);
+
+        // 如果损耗基于总投入
+        // const baseTotal = purchasePrice.add(logisticsCost).add(processingCost);
+        // const lossCost = baseTotal.mul(lossRate);
+
+        const totalCost = purchasePrice
+            .add(logisticsCost)
+            .add(processingCost)
+            .add(lossCost);
+
+        console.warn('[supply-chain] calculateProductCost 执行成功:', { totalCost: totalCost.toNumber() });
+        return {
+            purchaseCost: purchasePrice.toNumber(),
+            logisticsCost: logisticsCost.toNumber(),
+            processingCost: processingCost.toNumber(),
+            lossCost: lossCost.toNumber(),
+            totalCost: totalCost.toNumber(),
+        };
+    } catch (error) {
+        console.error('[supply-chain] calculateProductCost 异常:', error);
+        throw error;
     }
-
-    const logisticsCost = new Decimal(product.logisticsCost || 0);
-    const processingCost = new Decimal(product.processingCost || 0);
-    const lossRate = new Decimal(product.lossRate || 0);
-
-    // 计算损耗成本: (采购价 + 物流 + 加工) * 损耗率
-    // 或者根据具体业务逻辑调整，通常损耗是基于原材料成本
-    // 假设损耗仅基于采购价
-    const lossCost = purchasePrice.mul(lossRate);
-
-    // 如果损耗基于总投入
-    // const baseTotal = purchasePrice.add(logisticsCost).add(processingCost);
-    // const lossCost = baseTotal.mul(lossRate);
-
-    const totalCost = purchasePrice
-        .add(logisticsCost)
-        .add(processingCost)
-        .add(lossCost);
-
-    return {
-        purchaseCost: purchasePrice.toNumber(),
-        logisticsCost: logisticsCost.toNumber(),
-        processingCost: processingCost.toNumber(),
-        lossCost: lossCost.toNumber(),
-        totalCost: totalCost.toNumber(),
-    };
 };
 
 /**
@@ -108,19 +115,24 @@ export const analyzeProductProfit = async (
     sellingPrice: number,
     supplierId?: string
 ): Promise<PriceAnalysis> => {
-    const costs = await calculateProductCost(productId, supplierId);
-    const price = new Decimal(sellingPrice);
-    const cost = new Decimal(costs.totalCost);
+    try {
+        const costs = await calculateProductCost(productId, supplierId);
+        const price = new Decimal(sellingPrice);
+        const cost = new Decimal(costs.totalCost);
 
-    const margin = price.sub(cost);
-    const marginRate = price.isZero() ? new Decimal(0) : margin.div(price);
+        const margin = price.sub(cost);
+        const marginRate = price.isZero() ? new Decimal(0) : margin.div(price);
 
-    return {
-        basePrice: sellingPrice,
-        cost: costs,
-        margin: margin.toNumber(),
-        marginRate: marginRate.toNumber(),
-    };
+        return {
+            basePrice: sellingPrice,
+            cost: costs,
+            margin: margin.toNumber(),
+            marginRate: marginRate.toNumber(),
+        };
+    } catch (error) {
+        console.error('[supply-chain] analyzeProductProfit 异常:', error);
+        throw error;
+    }
 };
 
 /**
@@ -140,12 +152,15 @@ export const calculateChannelPrice = (
     fixedPrice?: number,
     discountRate?: number
 ): number => {
+    console.warn('[supply-chain] calculateChannelPrice 输入:', { basePrice, mode, fixedPrice, discountRate });
     if (mode === 'FIXED') {
-        return fixedPrice || basePrice;
+        const result = fixedPrice || basePrice;
+        return result;
     }
 
     if (mode === 'DISCOUNT' && discountRate) {
-        return new Decimal(basePrice).mul(discountRate).toNumber();
+        const result = new Decimal(basePrice).mul(discountRate).toNumber();
+        return result;
     }
 
     return basePrice;

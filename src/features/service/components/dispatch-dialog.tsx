@@ -15,7 +15,6 @@ import { DatePicker } from '@/shared/ui/date-picker';
 import { getInstallers, dispatchInstallTask } from '@/features/service/actions/install-actions';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { Input } from '@/shared/ui/input';
 
 interface Props {
     taskId: string;
@@ -27,7 +26,7 @@ export function DispatchDialog({ taskId, trigger }: Props) {
     const [date, setDate] = useState<Date>();
     const [timeSlot, setTimeSlot] = useState('');
     const [installerId, setInstallerId] = useState('');
-    const [installers, setInstallers] = useState<any[]>([]);
+    const [installers, setInstallers] = useState<{ id: string, name: string | null }[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
@@ -90,7 +89,7 @@ export function DispatchDialog({ taskId, trigger }: Props) {
                             <SelectContent>
                                 {installers.map(user => (
                                     <SelectItem key={user.id} value={user.id}>
-                                        {user.name}
+                                        {user.name || '未知师傅'}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

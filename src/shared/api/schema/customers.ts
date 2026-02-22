@@ -75,6 +75,12 @@ export const customers = pgTable('customers', {
     custAssignedSalesIdx: index('idx_customers_assigned_sales').on(table.assignedSalesId),
     custIsMergedIdx: index('idx_customers_is_merged').on(table.isMerged),
     custCreatedAtIdx: index('idx_customers_created_at').on(table.createdAt),
+    // Performance Optimization: Dashboard Group By Status
+    custTenantStatusIdx: index('idx_customers_tenant_status').on(table.tenantId, table.pipelineStatus),
+    // Performance Optimization: Sales Dashboard Group By Status
+    custTenantSalesStatusIdx: index('idx_customers_tenant_sales_status').on(table.tenantId, table.assignedSalesId, table.pipelineStatus),
+    // Performance Optimization: Cursor Pagination
+    custTenantUpdatedIdx: index('idx_customers_tenant_updated_at').on(table.tenantId, table.updatedAt),
 }));
 
 // 手机号查看日志表 (Phone View Logs)

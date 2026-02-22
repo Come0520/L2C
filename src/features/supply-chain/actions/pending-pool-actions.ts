@@ -24,6 +24,7 @@ import { PO_STATUS } from '../constants';
 import { generateDocNo } from '@/shared/lib/utils';
 import { AuditService } from '@/shared/lib/audit-service';
 import type { Session } from 'next-auth';
+import { logger } from '@/shared/lib/logger';
 
 // ============ 辅助函数 ============
 
@@ -87,6 +88,7 @@ export async function getPendingPurchaseItems(
     const tenantId = getTenantId(session);
     await checkPermission(session, PERMISSIONS.ORDER.VIEW);
 
+    console.warn('[supply-chain] getPendingPurchaseItems 开始执行:', { itemType, productType, supplierId, orderId, page });
     const validated = getPendingItemsSchema.parse(input);
     const { page, pageSize, itemType, productType, supplierId, orderId } = validated;
     const offset = (page - 1) * pageSize;
@@ -221,6 +223,11 @@ export async function getPendingPurchaseItems(
         }
     }
 
+    console.warn('[supply-chain] getPendingPurchaseItems 执行完成', {
+        draftPOCount: draftPOs.length,
+        pendingTaskCount: pendingTasks.length,
+        unmatchedItemCount: unmatchedItems.length
+    });
     return {
         draftPOs,
         pendingTasks,
@@ -250,6 +257,7 @@ export async function assignToSupplier(
 
     const validated = assignToSupplierSchema.parse(input);
     const { orderItemIds, supplierId, poType } = validated;
+    console.warn('[supply-chain] assignToSupplier 开始执行:', { orderItemIdsCount: orderItemIds.length, supplierId, poType });
 
     // 验证供应商存在
     const supplier = await db.query.suppliers.findFirst({
@@ -358,6 +366,7 @@ export async function assignToSupplier(
         }
     });
 
+    console.warn('[supply-chain] assignToSupplier 执行成功:', { createdPOCount: createdPOIds.length, assignedCount: items.length });
     return {
         success: true,
         createdPOIds,
@@ -385,6 +394,7 @@ export async function submitForApproval(
 
     const validated = submitForApprovalSchema.parse(input);
     const { poIds } = validated;
+    console.warn('[supply-chain] submitForApproval 开始执行:', { poIdsCount: poIds.length });
 
     // P1-05 修复：使用事务包裹批量操作，确保原子性
     return await db.transaction(async (tx) => {
@@ -423,6 +433,7 @@ export async function submitForApproval(
             }, tx);
         }
 
+        console.warn('[supply-chain] submitForApproval 执行成功:', { submittedCount: draftPoIds.length });
         return {
             success: true,
             submittedCount: draftPoIds.length,
@@ -465,6 +476,7 @@ export async function mergeToPurchaseOrder(
 
     const validated = mergeToPurchaseOrderSchema.parse(input);
     const { orderItemIds, supplierId: forcedSupplierId } = validated;
+    console.warn('[supply-chain] mergeToPurchaseOrder 开始执行:', { orderItemIdsCount: orderItemIds.length, forcedSupplierId });
 
     // 1. 查询所有选中的订单项（含产品信息）
     const items = await db
@@ -550,7 +562,7 @@ export async function mergeToPurchaseOrder(
             });
 
             if (!supplier) {
-                console.warn(`[合并采购] 供应商 ${groupSupplierId} 不存在，跳过`);
+                logger.warn(`[合并采购] 供应商 ${groupSupplierId} 不存在，跳过`);
                 continue;
             }
 
@@ -615,6 +627,7 @@ export async function mergeToPurchaseOrder(
         }
     });
 
+    console.warn('[supply-chain] mergeToPurchaseOrder 执行成功:', { createdPOCount: createdPOIds.length, assignedCount: assignedItemIds.length });
     return {
         success: true,
         createdPOIds,

@@ -6,6 +6,7 @@ import { products } from '@/shared/api/schema/catalogs';
 import { financeConfigs } from '@/shared/api/schema/finance';
 import { eq, and, sql, ne, inArray } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
+import { logger } from '@/shared/lib/logger';
 
 export type CommissionTriggerMode = 'ORDER_CREATED' | 'ORDER_COMPLETED' | 'PAYMENT_COMPLETED';
 
@@ -80,7 +81,7 @@ export async function calculateOrderCommission(
             // 阶梯费率计算
             let rates: TieredRate[] = [];
             if (typeof channel.tieredRates === 'string') {
-                try { rates = JSON.parse(channel.tieredRates); } catch (e) { console.error('Failed to parse tieredRates', e); }
+                try { rates = JSON.parse(channel.tieredRates); } catch (e) { logger.error('Failed to parse tieredRates', { error: e }); }
             } else {
                 rates = channel.tieredRates as unknown as TieredRate[];
             }
@@ -141,7 +142,7 @@ export async function calculateOrderCommission(
             try {
                 gradeDiscounts = { ...gradeDiscounts, ...JSON.parse(gradeConfig.configValue) };
             } catch {
-                console.warn('[Commission] Failed to parse grade discounts config');
+                logger.warn('[Commission] Failed to parse grade discounts config');
             }
         }
 
@@ -230,7 +231,7 @@ export async function checkAndGenerateCommission(
     });
 
     if (!order) {
-        console.error(`[Commission] Order ${orderId} not found`);
+        logger.error(`[Commission] Order ${orderId} not found`);
         return;
     }
 
@@ -254,7 +255,7 @@ export async function checkAndGenerateCommission(
     });
 
     if (!channel) {
-        console.error(`[Commission] Channel ${channelId} not found`);
+        logger.error(`[Commission] Channel ${channelId} not found`);
         return;
     }
 
@@ -283,7 +284,7 @@ export async function checkAndGenerateCommission(
         });
 
         if (existingInTx) {
-            console.warn(`[Commission] Commission already exists for order ${orderId} (Race condition intercepted)`);
+            logger.warn(`[Commission] Commission already exists for order ${orderId} (Race condition intercepted)`);
             return;
         }
 

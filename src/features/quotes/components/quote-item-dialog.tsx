@@ -25,6 +25,7 @@ import type { AlternativeSolution } from '../calc-strategies/types';
 import { CurtainFabricQuoteForm } from './curtain-fabric-quote-form';
 import { z } from 'zod';
 import { createQuoteItemSchema } from '../actions/schema';
+import { logger } from '@/shared/lib/logger';
 
 type QuoteItemFormValues = z.infer<typeof createQuoteItemSchema>;
 
@@ -126,7 +127,7 @@ export function QuoteItemDialog({
         const productList = res?.data?.data ?? [];
         setProducts(productList as ProductItem[]);
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         toast.error('Failed to load products');
       } finally {
         setLoadingProducts(false);
@@ -255,7 +256,7 @@ export function QuoteItemDialog({
       setQuantity(1);
       setHeightOverflowConfirmed(false);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       toast.error('添加失败');
     }
   };

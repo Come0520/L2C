@@ -68,7 +68,7 @@ describe('Workbench API 路由集成测试', () => {
 
     describe('GET /api/workbench/alerts', () => {
         it('授权请求且 Service 正常时应返回报警数据', async () => {
-            const mockSession = { user: { tenantId: 't1' } };
+            const mockSession = { user: { tenantId: 't1', roles: ['ADMIN'] } };
             const mockAlerts = { categories: [], items: [] };
             vi.mocked(auth).mockResolvedValue(mockSession as never);
             vi.mocked(WorkbenchService.getAlerts).mockResolvedValue(mockAlerts as never);

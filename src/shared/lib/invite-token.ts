@@ -1,9 +1,10 @@
+'use server';
+
 /**
  * 邀请令牌服务
  *
  * 用于生成和验证员工邀请、客户邀请的安全令牌
  */
-'use server';
 
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/shared/config/env';

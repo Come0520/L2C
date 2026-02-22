@@ -8,6 +8,7 @@ import { MeasureTaskStatus } from '../types';
 import { checkDispatchAdmission } from '../logic/fee-admission';
 import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 测量任务查询筛选参数
@@ -28,13 +29,12 @@ export interface MeasureTaskQueryFilters {
 }
 
 /**
- * 获取测量任务列表
+ * 获取测量任务列表 (支持高级筛选与分页)
  * 
- * 使用 React cache() 进行请求级去重，避免同一请求周期内重复查询数据库。
- * 由于列表查询条件复杂，不适合使用 key-based 缓存。
+ * 使用 React cache() 进行请求级去重，确保在同一渲染周期内多次调用不增加数据库负担。
  * 
- * @param filters - 筛选条件
- * @returns 任务列表分页数据
+ * @param {MeasureTaskQueryFilters} filters - 复杂的筛选条件对象
+ * @returns {Promise<{success: boolean, data: any[], total: number, error?: string}>} 返回分页数据及总记录数
  */
 export const getMeasureTasks = cache(async (filters: MeasureTaskQueryFilters) => {
     // 🔒 安全校验：强制租户隔离
@@ -163,19 +163,24 @@ export const getMeasureTasks = cache(async (filters: MeasureTaskQueryFilters) =>
             total: totalResult?.count || 0
         };
     } catch (error) {
-        console.error('getMeasureTasks error:', error);
+        logger.error('getMeasureTasks error:', error);
         return { success: false, error: '获取列表失败', data: [] };
     }
 });
 
 /**
- * 获取测量任务详情 (包含最新的测量单和明细)
+ * 获取特定测量任务的详细信息
  * 
- * 使用 unstable_cache 进行缓存，缓存标签为 `measure-task-${id}`。
- * 任何任务修改（状态变更、派工、费用豁免）都应触发此标签失效。
+ * 包含关联的：
+ * 1. 测量师 (Worker) 信息
+ * 2. 线索 (Lead/Address) 信息
+ * 3. 客户 (Customer) 信息
+ * 4. 最新版本的测量单 (Sheet) 及其明细 (Items)
  * 
- * @param id - 任务 ID
- * @returns 任务详情
+ * 使用 unstable_cache 缓存机制，通过任务 ID 标签实现精准失效管理。
+ * 
+ * @param {string} id - 测量任务 UUID
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  */
 export async function getMeasureTaskById(id: string) {
     // 🔒 安全校验：强制租户隔离
@@ -223,12 +228,12 @@ export async function getMeasureTaskById(id: string) {
 }
 
 /**
- * 获取可指派的测量师傅列表
+ * 获取当前租户下所有可用的测量师傅
  * 
- * 使用 unstable_cache 缓存，缓存标签为 `workers-${tenantId}`。
- * 缓存时间 1小时。
+ * 过滤条件：角色必须为 'WORKER' 且所属租户匹配。
+ * 为提升性能，此列表使用 unstable_cache 缓存 1 小时。
  * 
- * @returns 测量师列表
+ * @returns {Promise<{success: boolean, data: any[]}>}
  */
 export async function getAvailableWorkers() {
     // 🔒 安全校验：强制租户隔离
@@ -260,10 +265,13 @@ export async function getAvailableWorkers() {
 }
 
 /**
- * 获取测量任务的版本历史 (所有测量单)
+ * 获取测量任务的历史版本列表
  * 
- * @param taskId - 任务 ID
- * @returns 测量单列表
+ * 返回该任务下产生的所有测量单（Sheet）及其明细，按轮次 (Round) 和 变体 (Variant) 降序排列。
+ * 常用于对比多次测量结果或查询历史记录。
+ * 
+ * @param {string} taskId - 测量任务 UUID
+ * @returns {Promise<{success: boolean, data: any[]}>}
  */
 export async function getMeasureTaskVersions(taskId: string) {
     // 🔒 安全校验：强制租户隔离
@@ -297,10 +305,14 @@ export async function getMeasureTaskVersions(taskId: string) {
 }
 
 /**
- * 检查测量任务的费用状态 (定金检查)
+ * 检查测量任务的费用支付状态
  * 
- * @param taskId - 任务 ID
- * @returns 费用状态及派工许可
+ * 核心逻辑：
+ * 1. 检查是否已获得【费用豁免】许可
+ * 2. 调用 `checkDispatchAdmission` 统一逻辑，验证关联订单是否已支付满足派单要求的定金
+ * 
+ * @param {string} taskId - 测量任务 UUID
+ * @returns {Promise<{success: boolean, feeStatus: 'PAID' | 'PENDING' | 'WAIVED', canDispatch: boolean, message: string}>}
  */
 export async function checkMeasureFeeStatus(taskId: string) {
     // 🔒 安全校验：强制租户隔离

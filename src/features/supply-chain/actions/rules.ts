@@ -28,11 +28,14 @@ export async function getSplitRules() {
   const permResult = await requireViewPermission(session); // 或 requireManagePermission? 原代码是 VIEW
   if (!permResult.success) throw new Error(permResult.error);
 
-  return await db
+  console.warn('[supply-chain] getSplitRules 开始执行');
+  const result = await db
     .select()
     .from(splitRouteRules)
     .where(eq(splitRouteRules.tenantId, session.user.tenantId))
     .orderBy(desc(splitRouteRules.priority));
+  console.warn('[supply-chain] getSplitRules 执行成功:', { count: result.length });
+  return result;
 }
 
 /**
@@ -51,6 +54,7 @@ export async function createSplitRule(input: SplitRuleInput) {
   if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
+  console.warn('[supply-chain] createSplitRule 开始执行:', { name: validated.name, priority: validated.priority });
 
   await db.insert(splitRouteRules).values({
     tenantId: session.user.tenantId,
@@ -89,6 +93,7 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
   if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
+  console.warn('[supply-chain] updateSplitRule 开始执行:', { id, name: validated.name });
 
   // 安全检查：验证规则属于当前租户
   const existingRule = await db.query.splitRouteRules.findFirst({
@@ -158,14 +163,15 @@ export async function deleteSplitRule(id: string) {
  * 获取租户下的所有供应商列表 (简单清单)
  * 
  * @description 用于在规则配置界面展示供应商下拉选择。
- * @returns {Promise<{id: string, name: string, supplierNo: string}[]>}
+ * @returns {Promise<Array<{id: string, name: string, supplierNo: string}>>}
  */
 export async function getAllSuppliers() {
   const authResult = await requireAuth();
   if (!authResult.success) throw new Error(authResult.error);
   const session = authResult.session;
 
-  return await db
+  console.warn('[supply-chain] getAllSuppliers 开始执行');
+  const result = await db
     .select({
       id: suppliers.id,
       name: suppliers.name,
@@ -173,4 +179,6 @@ export async function getAllSuppliers() {
     })
     .from(suppliers)
     .where(eq(suppliers.tenantId, session.user.tenantId));
+  console.warn('[supply-chain] getAllSuppliers 执行成功:', { count: result.length });
+  return result;
 }

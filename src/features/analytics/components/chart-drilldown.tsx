@@ -1,5 +1,7 @@
 'use client';
 
+
+import { logger } from '@/shared/lib/logger';
 import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -67,7 +69,7 @@ export function ChartDrilldown({
                 data: subData
             }]);
         } catch (error) {
-            console.error('Drilldown failed:', error);
+            logger.error('Drilldown failed:', error);
         } finally {
             setIsLoading(false);
         }

@@ -175,14 +175,32 @@ describe('Distribution Engine', () => {
             const result = await distributeToNextSales(tenantId);
 
             expect(result.strategy).toBe('ROUND_ROBIN');
-            expect(result.salesId).toBe('sales1'); // index 0 -> next is index 1? Or current index used? 
-            // Logic: currentIndex = config.nextSalesIndex % length = 0.
-            // nextSales = list[0] -> sales1.
-            // newIndex = 1.
-            // Wait, logic says: const nextSales = salesList[currentIndex];
-            // So should be sales1.
-
             expect(result.salesId).toBe('sales1');
         });
     });
+
+    describe('getDistributionStatus', () => {
+        it('should return correct distribution status', async () => {
+            mockDb.query.tenants.findFirst.mockResolvedValue({
+                settings: { distribution: { strategy: 'ROUND_ROBIN', nextSalesIndex: 1 } }
+            });
+            mockDb.query.users.findMany.mockResolvedValue([
+                { id: 'sales1', name: 'Sales One' },
+                { id: 'sales2', name: 'Sales Two' }
+            ]);
+
+            const status = await getDistributionStatus();
+
+            expect(status.strategy).toBe('ROUND_ROBIN');
+            expect(status.salesPool.length).toBe(2);
+            expect(status.nextSalesIndex).toBe(1);
+            expect(status.nextSalesName).toBe('Sales Two');
+        });
+
+        it('should require authentication', async () => {
+            vi.mocked(auth).mockResolvedValue(null);
+            await expect(getDistributionStatus()).rejects.toThrow('Unauthorized');
+        });
+    });
 });
+

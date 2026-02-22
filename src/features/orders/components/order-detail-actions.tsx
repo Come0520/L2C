@@ -34,6 +34,7 @@ interface OrderDetailActionsProps {
         id: string;
         orderNo?: string;
         status: string;
+        version?: number;
         items?: Array<{
             id: string;
             productName: string;
@@ -63,7 +64,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
 
     const handleConfirmInstall = async () => {
         try {
-            await confirmInstallationAction(order.id);
+            await confirmInstallationAction({ orderId: order.id, version: order.version || 0 });
             toast.success('安装已确认完成');
             router.refresh();
         } catch { toast.error('操作失败'); }
@@ -71,7 +72,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
 
     const handleRequestConfirmation = async () => {
         try {
-            await requestCustomerConfirmationAction({ orderId: order.id });
+            await requestCustomerConfirmationAction({ orderId: order.id, version: order.version || 0 });
             toast.success('已通知客户验收');
             router.refresh();
         } catch { toast.error('操作失败'); }
@@ -79,7 +80,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
 
     const handleAccept = async () => {
         try {
-            await customerAcceptAction(order.id);
+            await customerAcceptAction({ orderId: order.id, version: order.version || 0 });
             toast.success('订单已验收完成');
             router.refresh();
         } catch { toast.error('操作失败'); }
@@ -123,7 +124,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                     <Button size="sm" variant="default" onClick={handleAccept} className="bg-green-600 hover:bg-green-700">
                         <CheckCircle className="h-4 w-4 mr-2" /> 确认验收
                     </Button>
-                    <RejectOrderDialog orderId={order.id} />
+                    <RejectOrderDialog orderId={order.id} version={order.version || 0} />
                 </>
             )}
 
@@ -154,6 +155,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                 orderId={order.id}
                 orderNo={order.orderNo || order.id}
                 orderStatus={order.status}
+                version={order.version || 0}
                 onSuccess={() => router.refresh()}
             />
 
@@ -162,6 +164,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                 open={splitDialogOpen}
                 onOpenChange={setSplitDialogOpen}
                 orderId={order.id}
+                version={order.version || 0}
                 orderItems={order.items || []}
                 suppliers={suppliers}
             />
@@ -171,6 +174,7 @@ export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActions
                 open={deliveryDialogOpen}
                 onOpenChange={setDeliveryDialogOpen}
                 orderId={order.id}
+                version={order.version || 0}
             />
         </div>
     );

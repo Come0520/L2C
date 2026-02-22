@@ -11,9 +11,10 @@ import { tenants, users } from '@/shared/api/schema';
 import { z } from 'zod';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, and, gte } from 'drizzle-orm';
 import { sendEmail } from '@/shared/lib/email';
 import { formatDate } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 
 // ============ 类型定义 ============
 
@@ -72,7 +73,21 @@ export async function submitTenantApplication(
       };
     }
 
-    // 2. 检查手机号/邮箱是否已存在
+    // 2. 注册频率限制：同一手机号 24 小时内最多提交 3 次申请
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentApplications = await db.query.tenants.findMany({
+      where: and(
+        eq(tenants.applicantPhone, data.phone),
+        gte(tenants.createdAt, oneDayAgo),
+      ),
+      columns: { id: true },
+    });
+
+    if (recentApplications.length >= 3) {
+      return { success: false, error: '提交过于频繁，请24小时后再试' };
+    }
+
+    // 3. 检查手机号/邮箱是否已存在（已激活的用户）
     const existingUser = await db.query.users.findFirst({
       where: or(eq(users.phone, data.phone), eq(users.email, data.email)),
     });
@@ -162,7 +177,7 @@ export async function submitTenantApplication(
           break; // 发送成功，退出循环
         } catch (err) {
           attempt++;
-          console.error(`发送管理员通知失败 (尝试 ${attempt}/${MAX_RETRIES}):`, err);
+          logger.error(`发送管理员通知失败 (尝试 ${attempt}/${MAX_RETRIES}):`, err);
           if (attempt < MAX_RETRIES) {
             await new Promise(resolve => setTimeout(resolve, 2000)); // 等待 2 秒后重试
           }
@@ -172,7 +187,7 @@ export async function submitTenantApplication(
 
     return { success: true, tenantId: result.id };
   } catch (error) {
-    console.error('租户申请失败:', error);
+    logger.error('租户申请失败:', error);
     return { success: false, error: '提交失败，请稍后重试' };
   }
 }
@@ -211,7 +226,7 @@ export async function getTenantApplicationStatus(phone: string): Promise<{
       rejectReason: tenant.rejectReason || undefined,
     };
   } catch (error) {
-    console.error('查询申请状态失败:', error);
+    logger.error('查询申请状态失败:', error);
     return { found: false };
   }
 }

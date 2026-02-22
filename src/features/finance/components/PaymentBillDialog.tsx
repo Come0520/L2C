@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPaymentBillSchema } from '../actions/schema';
@@ -84,7 +85,7 @@ export function PaymentBillDialog({
 
     useEffect(() => {
         if (open) {
-            getFinanceAccounts().then(setAccounts).catch(console.error);
+            getFinanceAccounts().then(setAccounts).catch(logger.error);
         }
     }, [open]);
 

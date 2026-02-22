@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { logger } from "@/shared/lib/logger";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
@@ -27,6 +28,11 @@ import { toast } from 'sonner';
 import { createInternalTransfer } from '../actions/transfers';
 import { getFinanceAccounts } from '../actions/config';
 import { useQuery } from '@tanstack/react-query';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { financeAccounts } from '@/shared/api/schema';
+
+/** 财务账户行类型 */
+type FinanceAccount = InferSelectModel<typeof financeAccounts>;
 
 interface CreateTransferDialogProps {
     trigger: React.ReactNode;
@@ -124,7 +130,7 @@ export function CreateTransferDialog({ trigger }: CreateTransferDialogProps) {
                                 <SelectValue placeholder="选择转出账户" />
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map((acc: any) => (
+                                {accounts.map((acc: FinanceAccount) => (
                                     <SelectItem key={acc.id} value={acc.id}>
                                         {acc.accountName} (¥{Number(acc.balance || 0).toLocaleString()})
                                     </SelectItem>
@@ -140,7 +146,7 @@ export function CreateTransferDialog({ trigger }: CreateTransferDialogProps) {
                                 <SelectValue placeholder="选择转入账户" />
                             </SelectTrigger>
                             <SelectContent>
-                                {accounts.map((acc: any) => (
+                                {accounts.map((acc: FinanceAccount) => (
                                     <SelectItem key={acc.id} value={acc.id}>
                                         {acc.accountName}
                                     </SelectItem>

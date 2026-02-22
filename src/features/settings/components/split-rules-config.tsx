@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -74,7 +75,7 @@ export function SplitRulesConfig() {
                 const data = await getSplitRules();
                 setRules(data as SplitRule[]);
             } catch (error) {
-                console.error('加载拆单规则失败:', error);
+                logger.error('加载拆单规则失败:', error);
                 toast.error('加载拆单规则失败');
             } finally {
                 setIsLoading(false);
@@ -100,7 +101,7 @@ export function SplitRulesConfig() {
                 ));
                 toast.success('状态已更新');
             } catch (error) {
-                console.error('更新失败:', error);
+                logger.error('更新失败:', error);
                 toast.error('更新失败');
             }
         });
@@ -155,7 +156,7 @@ export function SplitRulesConfig() {
                 }
                 setDialogOpen(false);
             } catch (error) {
-                console.error('保存失败:', error);
+                logger.error('保存失败:', error);
                 toast.error('保存失败');
             }
         });
@@ -169,7 +170,7 @@ export function SplitRulesConfig() {
                 setRules(rules.filter(r => r.id !== id));
                 toast.success('规则已删除');
             } catch (error) {
-                console.error('删除失败:', error);
+                logger.error('删除失败:', error);
                 toast.error('删除失败');
             }
         });

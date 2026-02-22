@@ -1,4 +1,5 @@
 'use client';
+import { logger } from '@/shared/lib/logger';
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
@@ -42,7 +43,7 @@ export function ChannelSettingsConfig() {
                 }
             } catch (err) {
                 if (isMounted) {
-                    console.error('加载渠道设置失败:', err);
+                    logger.error('加载渠道设置失败:', err);
                     setError(err instanceof Error ? err.message : '获取配置失败');
                     toast.error('加载渠道设置失败');
                 }

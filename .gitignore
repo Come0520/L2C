@@ -45,6 +45,11 @@ test_*.txt
 *-errors*.txt
 *.scratchpad.txt
 
+# 根目录临时调试脚本（禁止提交）
+/test-*.ts
+/test-*.json
+/debug-*.ts
+
 # env files (can opt-in for committing if needed)
 .env*
 

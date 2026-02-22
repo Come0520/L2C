@@ -1,1 +1,1 @@
-npx lint-staged --cwd .
+npx lint-staged

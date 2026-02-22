@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+miniprogram/node_modules
 /.pnp
 .pnp.*
 .yarn/*

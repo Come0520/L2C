@@ -193,14 +193,16 @@ stages:
                   echo "容器已启动，等待健康检查..."
 
                   # 9. 健康检查（最多等 3 分钟）
+                  # 注意：app 容器的 3000 未映射到宿主机，通过 nginx 80 端口检查
                   HEALTHY=false
                   for i in $(seq 1 36); do
-                    if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-                      echo "✅ 健康检查通过 (第 ${i} 次尝试)"
+                    STATUS=$(docker inspect --format='{{.State.Health.Status}}' l2c-app 2>/dev/null || echo "none")
+                    if [ "$STATUS" = "healthy" ]; then
+                      echo "✅ 容器健康检查通过 (第 ${i} 次尝试)"
                       HEALTHY=true
                       break
                     fi
-                    echo "  等待中... ($i/36)"
+                    echo "  等待中... ($i/36) [状态: $STATUS]"
                     sleep 5
                   done
 

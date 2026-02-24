@@ -7,8 +7,10 @@ services:
   # 数据库迁移服务（运行一次后退出）
   # 在容器内执行 drizzle-kit push，解决宿主机 GLIBC 不兼容问题
   db-migrate:
-    # 使用云效 CI 预构建的镜像（通过 docker load 加载）
-    image: l2c-db-migrate:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.prebuilt
+      target: migrator
     container_name: l2c-db-migrate
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -19,8 +21,10 @@ services:
   # Next.js 应用
   # 注意: 多实例部署请使用 Docker Swarm 或 Kubernetes
   app:
-    # 使用云效 CI 预构建的镜像（通过 docker load 加载）
-    image: l2c-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.prebuilt
+      target: runner
     container_name: l2c-app
     restart: unless-stopped
     depends_on:

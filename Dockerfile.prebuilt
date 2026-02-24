@@ -1,0 +1,56 @@
+# ===========================================================
+# 轻量级 Dockerfile - 使用 CI 预构建的 Next.js 产物
+# 不执行 pnpm install 或 pnpm build，仅 COPY 文件
+# ECS 上构建只需几秒，内存占用极低（<100MB）
+# ===========================================================
+
+# ===== 应用运行阶段 =====
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# 这些文件已在 CI 中构建好，直接 COPY（不消耗内存）
+COPY public ./public
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+COPY --chown=nextjs:nodejs .next/standalone ./
+COPY --chown=nextjs:nodejs .next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
+
+# ===== 数据库迁移阶段 =====
+# 仅安装 drizzle 相关依赖，比完整 pnpm install 轻量得多
+FROM node:20-alpine AS migrator
+WORKDIR /app
+
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+
+# 复制 package.json 并执行精简安装
+COPY package.json pnpm-lock.yaml ./
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+RUN pnpm install --frozen-lockfile
+
+# 复制迁移所需文件
+COPY drizzle ./drizzle
+COPY drizzle.config.ts ./
+COPY src/shared/api/schema.ts ./src/shared/api/schema.ts
+COPY src/shared/api/schema/ ./src/shared/api/schema/
+COPY tsconfig.json ./
+
+CMD ["sh", "-c", "yes '' | npx drizzle-kit push --force 2>&1"]

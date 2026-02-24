@@ -57,101 +57,110 @@ stages:
     name: "构建与部署"
     jobs:
       deploy_job:
-        name: "云效构建 → 镜像直传 → ECS 部署"
+        name: "CI 编译 → 产物直传 → ECS 轻量构建"
         runsOn:
           group: public/cn-beijing
           container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
         steps:
           deploy_step:
             step: Command
-            name: "构建镜像、传输并部署"
+            name: "编译、打包、传输并部署"
             with:
               run: |
-                echo "=== 方案A：云效构建镜像 + 直传 ECS ==="
+                echo "=== 方案B：CI 编译 Next.js + 产物直传 ECS ==="
 
-                # ========== 第一步：准备版本信息 ==========
+                # ========== 第一步：安装 Node.js + pnpm ==========
+                echo "=== 安装 Node.js 20 ==="
+                curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+                yum install -y nodejs sshpass
+                npm install -g pnpm@9.15.0
+                node -v && pnpm -v
+
+                # ========== 第二步：安装项目依赖 ==========
+                echo "=== 安装项目依赖 ==="
+                npm config set registry https://registry.npmmirror.com
+                pnpm config set registry https://registry.npmmirror.com
+                pnpm install --frozen-lockfile
+
+                # ========== 第三步：构建 Next.js ==========
                 export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
                 export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                 echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
+
                 mkdir -p public
                 echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
 
-                # ========== 第二步：在云效构建 Docker 镜像 ==========
-                echo "=== 在云效 CI 上构建 Docker 镜像（不在 ECS 上构建）==="
-                docker build \
-                  --target runner \
-                  --build-arg NEXT_PUBLIC_GIT_COMMIT_SHA="$GIT_COMMIT_SHA" \
-                  --build-arg NEXT_PUBLIC_BUILD_TIME="$BUILD_TIME" \
-                  -t l2c-app:latest \
-                  -f Dockerfile .
+                echo "=== 构建 Next.js 应用 ==="
+                export NEXT_PUBLIC_GIT_COMMIT_SHA="$GIT_COMMIT_SHA"
+                export NEXT_PUBLIC_BUILD_TIME="$BUILD_TIME"
+                export DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+                export AUTH_SECRET="build-time-placeholder-secret"
+                pnpm run build
+                echo "✅ Next.js 构建完成"
 
-                docker build \
-                  --target migrator \
-                  -t l2c-db-migrate:latest \
-                  -f Dockerfile .
+                # ========== 第四步：打包预编译产物 ==========
+                echo "=== 打包部署产物 ==="
+                tar -czf /tmp/l2c-deploy.tar.gz \
+                  .next/standalone/ \
+                  .next/static/ \
+                  public/ \
+                  Dockerfile.prebuilt \
+                  docker-compose.prod.yml \
+                  nginx/ \
+                  drizzle/ \
+                  drizzle.config.ts \
+                  src/shared/api/schema.ts \
+                  src/shared/api/schema/ \
+                  package.json \
+                  pnpm-lock.yaml \
+                  tsconfig.json
 
-                echo "✅ 镜像构建完成"
-                docker images | grep l2c
+                ls -lh /tmp/l2c-deploy.tar.gz
+                echo "✅ 产物打包完成"
 
-                # ========== 第三步：打包镜像为文件 ==========
-                echo "=== 导出镜像为压缩文件 ==="
-                docker save l2c-app:latest l2c-db-migrate:latest | gzip > /tmp/l2c-images.tar.gz
-                ls -lh /tmp/l2c-images.tar.gz
-                echo "✅ 镜像打包完成"
-
-                # ========== 第四步：安装部署工具 ==========
-                if command -v apt-get >/dev/null; then
-                  apt-get update -qq && apt-get install -y -qq sshpass curl
-                elif command -v yum >/dev/null; then
-                  yum install -y sshpass curl
-                elif command -v apk >/dev/null; then
-                  apk add --no-cache sshpass curl
-                else
-                  echo "无法安装 sshpass"; exit 1
-                fi
-
-                # 检查环境变量
+                # ========== 第五步：检查环境变量 ==========
                 if [ -z "$ECS_PASSWORD" ]; then echo "错误: ECS_PASSWORD 未设置"; exit 1; fi
                 if [ -z "$ECS_HOST" ]; then echo "错误: ECS_HOST 未设置"; exit 1; fi
 
-                # ========== 第五步：传输镜像和配置到 ECS ==========
-                echo "=== 上传镜像到 ECS (这一步可能需要几分钟) ==="
+                # ========== 第六步：传输到 ECS ==========
+                echo "=== 上传产物到 ECS ==="
                 sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
-                  /tmp/l2c-images.tar.gz root@$ECS_HOST:/root/L2C/l2c-images.tar.gz
-
-                # 同步 docker-compose 和 nginx 配置
-                echo "=== 同步部署配置文件 ==="
-                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
-                  docker-compose.prod.yml root@$ECS_HOST:/root/L2C/docker-compose.prod.yml
-                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no -r \
-                  nginx root@$ECS_HOST:/root/L2C/
-                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
-                  drizzle.config.ts root@$ECS_HOST:/root/L2C/
+                  /tmp/l2c-deploy.tar.gz root@$ECS_HOST:/root/L2C/l2c-deploy.tar.gz
 
                 echo "✅ 文件传输完成"
 
-                # ========== 第六步：远程部署 ==========
+                # ========== 第七步：远程部署 ==========
+                echo "=== SSH 到 ECS 执行部署 ==="
                 sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no root@$ECS_HOST << 'DEPLOY_EOF'
                   set -e
                   cd /root/L2C
 
-                  # 1. 停止旧容器
+                  # 1. 备份 .env
+                  if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
+
+                  # 2. 解压预编译产物
+                  echo "=== 解压部署产物 ==="
+                  tar -xzf l2c-deploy.tar.gz
+                  rm -f l2c-deploy.tar.gz
+
+                  # 3. 恢复 .env
+                  if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup /root/L2C/.env; fi
+
+                  # 4. 停止旧容器
                   echo "=== 停止旧容器 ==="
                   docker compose -f docker-compose.prod.yml down || true
 
-                  # 2. 清理空间
+                  # 5. 清理空间
                   echo "=== 清理 Docker 缓存 ==="
                   docker system prune -f
                   docker builder prune -f
 
-                  # 3. 加载预构建的镜像（核心步骤！不再在 ECS 上构建）
-                  echo "=== 加载预构建镜像 ==="
-                  docker load -i l2c-images.tar.gz
-                  rm -f l2c-images.tar.gz
-                  echo "✅ 镜像加载完成"
-                  docker images | grep l2c
+                  # 6. 构建轻量镜像（Dockerfile.prebuilt 仅 COPY 预编译文件，不会 OOM）
+                  echo "=== 构建轻量 Docker 镜像 ==="
+                  docker compose -f docker-compose.prod.yml build --no-cache
+                  echo "✅ 镜像构建完成"
 
-                  # 4. 执行数据库迁移（超时 120 秒）
+                  # 7. 执行数据库迁移（超时 120 秒）
                   echo "=== 执行数据库迁移 ==="
                   timeout 120 docker compose -f docker-compose.prod.yml run --rm db-migrate && {
                     echo "✅ 数据库迁移完成"
@@ -159,12 +168,12 @@ stages:
                     echo "⚠️ 数据库迁移跳过（可能已是最新），继续部署..."
                   }
 
-                  # 5. 启动应用和 Nginx
+                  # 8. 启动应用和 Nginx
                   echo "=== 启动应用 ==="
                   docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx
                   echo "容器已启动，等待健康检查..."
 
-                  # 6. 健康检查（最多等 3 分钟）
+                  # 9. 健康检查（最多等 3 分钟）
                   HEALTHY=false
                   for i in $(seq 1 36); do
                     if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
@@ -178,14 +187,12 @@ stages:
 
                   if [ "$HEALTHY" = "false" ]; then
                     echo "❌ 健康检查超时！"
-                    echo "=== Docker 容器状态 ==="
                     docker compose -f docker-compose.prod.yml ps
-                    echo "=== 最近容器日志 ==="
                     docker compose -f docker-compose.prod.yml logs --tail=80 app
                     exit 1
                   fi
 
-                  # 7. 输出最终状态
+                  # 10. 输出最终状态
                   docker compose -f docker-compose.prod.yml ps
                   docker image prune -f --filter "until=24h"
                   echo "=== L2C 部署成功完成 ==="

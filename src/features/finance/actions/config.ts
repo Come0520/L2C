@@ -1,13 +1,13 @@
 'use server';
 
-import { logger } from "@/shared/lib/logger";
+
 
 import { db } from '@/shared/api/db';
 import { financeConfigs, financeAccounts } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { clearFinanceConfigCache } from '../services/finance-config-utils';
 import {
     updateFinanceConfigSchema,
@@ -107,7 +107,7 @@ export async function updateFinanceConfig(data: z.infer<typeof updateFinanceConf
     // 清除配置缓存，确保业务逻辑读取最新值
     clearFinanceConfigCache(session.user.tenantId);
 
-    revalidatePath('/settings/finance');
+    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
     return { success: true };
 }
 
@@ -164,7 +164,7 @@ export async function createFinanceAccount(data: z.infer<typeof createFinanceAcc
         return newAccount;
     });
 
-    revalidatePath('/settings/finance');
+    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
     return account;
 }
 
@@ -220,6 +220,6 @@ export async function updateFinanceAccount(data: z.infer<typeof updateFinanceAcc
         return updatedAccount;
     });
 
-    revalidatePath('/settings/finance');
+    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
     return updated;
 }

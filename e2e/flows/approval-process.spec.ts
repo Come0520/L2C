@@ -17,8 +17,8 @@ test.describe('Approval Process Flow', () => {
         await page.goto('/settings/approvals');
         await page.getByRole('tab', { name: '审批流程' }).click();
 
-        // Check if ORDER_CHANGE exists
-        const existingCard = page.locator('.font-mono', { hasText: 'ORDER_CHANGE' });
+        // Check if ORDER_CHANGE exists (relaxing selector to be more robust)
+        const existingCard = page.locator('text=ORDER_CHANGE');
 
         // Wait for list to load (check for any card or empty state if we had one, but at least wait a bit)
         // Better: try to wait for existing card. If we are sure it exists.

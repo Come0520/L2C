@@ -19,3 +19,5 @@ export declare const pickerProps: {
         value: number;
     };
 };
+
+export {};

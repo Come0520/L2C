@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '@/shared/api/db';
 import { workOrders, workOrderItems, suppliers, orders, orderItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
@@ -35,6 +35,7 @@ vi.mock('@/shared/lib/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 const VALID_UUID = '123e4567-e89b-12d3-a456-426614174000';

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { type systemSettings } from '@/shared/api/schema/system-settings';
 
 type SystemSetting = typeof systemSettings.$inferSelect;
@@ -17,7 +17,8 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 vi.mock('next/cache', () => ({
     revalidatePath: mocks.revalidatePath,
-    unstable_cache: vi.fn((cb) => cb)
+    unstable_cache: vi.fn((cb) => cb),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock DB

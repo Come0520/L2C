@@ -3,6 +3,7 @@
  * 审计修复: 添加 inline 错误提示、密码可见性切换
  */
 const app = getApp<IAppOption>();
+import { authStore } from '../../stores/auth-store';
 
 Page({
     data: {
@@ -56,7 +57,6 @@ Page({
 
                 // 更新 AuthStore
                 try {
-                    const { authStore } = require('../../stores/auth-store');
                     if (authStore) {
                         authStore.setLogin(token, user);
                     }
@@ -96,3 +96,5 @@ Page({
 });
 
 export { };
+
+export {};

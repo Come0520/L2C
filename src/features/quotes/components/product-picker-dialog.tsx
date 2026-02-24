@@ -8,7 +8,12 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Badge } from '@/shared/ui/badge';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Card } from '@/shared/ui/card';
-import { Search, Grid, List, Check, Package, Loader2 } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Grid from 'lucide-react/dist/esm/icons/grid';
+import List from 'lucide-react/dist/esm/icons/list';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { cn } from '@/shared/lib/utils';
 import {

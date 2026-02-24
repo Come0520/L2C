@@ -6,7 +6,11 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { ChevronDown, ChevronUp, Plus, Trash2, Save } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { updateQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
 

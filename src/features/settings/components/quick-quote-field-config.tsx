@@ -8,7 +8,11 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Badge } from '@/shared/ui/badge';
 import { Separator } from '@/shared/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, Save, RotateCcw, Check, Eye } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Eye from 'lucide-react/dist/esm/icons/eye';
 import {
     QUOTE_FIELDS,
     FIELD_GROUPS,

@@ -1,5 +1,6 @@
 'use server';
 import { logger } from '@/shared/lib/logger';
+import { Decimal } from 'decimal.js';
 
 import { db } from "@/shared/api/db";
 import {
@@ -22,12 +23,18 @@ import { generateDocNo } from "@/shared/lib/utils";
 import { createSafeAction } from "@/shared/lib/server-action";
 import { z } from "zod";
 import { AuditService } from "@/shared/lib/audit-service";
+import type { ProcurementMetrics } from "../types";
+
 
 // 状态转换矩阵已迁移到 constants.ts（使用 VALID_PO_TRANSITIONS）
 
 // --- Schemas (可以在 schemas.ts 中定义，这里简化) ---
 // --- Schemas (可以在 schemas.ts 中定义，这里简化) ---
-import { createPOSchema } from "../schemas";
+import {
+    createPOSchema,
+    confirmPaymentSchema,
+    confirmReceiptSchema
+} from "../schemas";
 
 const batchUpdateStatusSchema = z.object({
     poIds: z.array(z.string()),
@@ -54,8 +61,9 @@ const batchDeleteSchema = z.object({
  * - `supplierId` (string, optional): 指定供应商 ID 过滤
  * - `paymentStatus` (string, optional): 付款状态过滤
  * - `search` (string, optional): 采购单号模糊搜索关键词
- * @returns {Promise<{success: boolean, data: any[], total: number, ...}>} 返回采购单列表及分页信息
+ * @returns {Promise<{success: boolean, data: PurchaseOrderListItem[], total: number, page: number, pageSize: number, totalPages: number, error?: string}>} 返回采购单列表及分页信息
  */
+
 export async function getPurchaseOrders(params: {
     page?: number;
     pageSize?: number;
@@ -64,7 +72,8 @@ export async function getPurchaseOrders(params: {
     paymentStatus?: string;
     search?: string;
 }) {
-    console.warn('[supply-chain] getPurchaseOrders 查询参数:', params);
+    logger.info('[supply-chain] getPurchaseOrders 查询参数:', params);
+
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0 };
@@ -119,10 +128,12 @@ export async function getPurchaseOrders(params: {
  * 
  * @description 获取采购单主表数据及其关联的订单信息、明细清单及创建人信息。
  * @param params 包含 `id` (string) 采购单 ID 的对象
- * @returns {Promise<{success: boolean, data?: any, error?: string}>} 返回采购单详情对象
+ * @returns {Promise<{success: boolean, data?: PurchaseOrderDetail, error?: string}>} 返回采购单详情对象
  */
+
 export async function getPoById({ id }: { id: string }) {
-    console.warn('[supply-chain] getPoById 查询 ID:', id);
+    logger.info('[supply-chain] getPoById 查询 ID:', id);
+
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
@@ -156,7 +167,8 @@ export async function getPoById({ id }: { id: string }) {
 export const createPurchaseOrder = createSafeAction(createPOSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 创建采购单:', { supplierId: data.supplierId, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 创建采购单:', { supplierId: data.supplierId, tenantId: session.user.tenantId });
+
 
         return await db.transaction(async (tx) => {
             const poNo = generateDocNo('PO');
@@ -172,8 +184,11 @@ export const createPurchaseOrder = createSafeAction(createPOSchema, async (data,
                 throw new Error(`供应商「${supplier.name}」已停用，无法创建采购单`);
             }
 
-            // 2. 计算总金额
-            const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0);
+            // SC-08 修复：使用 Decimal.js 进行精确计算，避免原生 JS 浮点乘法导致的金额误差
+            const totalAmount = data.items
+                .reduce((sum, item) => sum.plus(new Decimal(item.quantity).mul(new Decimal(item.unitCost))), new Decimal(0))
+                .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+                .toString();
 
             // 3. 创建 PO
             const [po] = await tx.insert(purchaseOrders).values({
@@ -252,7 +267,8 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
         if (!session?.user?.id) return { success: false, error: '未授权' };
 
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] updatePoStatus 开始更新:', { poId, status });
+        logger.info('[supply-chain] updatePoStatus 开始更新:', { poId, status });
+
 
         // 获取当前 PO 状态并校验租户隔离
         const currentPO = await db.query.purchaseOrders.findFirst({
@@ -322,7 +338,8 @@ export async function addPOLogistics(data: {
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-    console.warn('[supply-chain] 添加/更新采购单物流信息:', { poId: data.poId, logisticsCompany: data.company, trackingNo: data.trackingNo, tenantId: session.user.tenantId });
+    logger.info('[supply-chain] 添加/更新采购单物流信息:', { poId: data.poId, logisticsCompany: data.company, trackingNo: data.trackingNo, tenantId: session.user.tenantId });
+
 
     try {
         await db
@@ -369,7 +386,8 @@ export async function addPOLogistics(data: {
 export const batchUpdatePoStatus = createSafeAction(batchUpdateStatusSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 批量更新采购单状态:', { poIds: data.poIds, status: data.status, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 批量更新采购单状态:', { poIds: data.poIds, status: data.status, tenantId: session.user.tenantId });
+
 
         if (data.poIds.length === 0) {
             throw new Error('至少选择一个采购单');
@@ -410,7 +428,8 @@ export const batchUpdatePoStatus = createSafeAction(batchUpdateStatusSchema, asy
 export const batchDeleteDraftPOs = createSafeAction(batchDeleteSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 批量删除草稿状态采购单:', { poIds: data.poIds, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 批量删除草稿状态采购单:', { poIds: data.poIds, tenantId: session.user.tenantId });
+
 
         if (data.poIds.length === 0) {
             throw new Error('至少选择一个采购单');
@@ -488,7 +507,8 @@ const confirmQuoteSchema = z.object({
 export const confirmPoQuote = createSafeAction(confirmQuoteSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 确认采购单报价:', { poId: data.poId, totalAmount: data.totalAmount, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 确认采购单报价:', { poId: data.poId, totalAmount: data.totalAmount, tenantId: session.user.tenantId });
+
 
         const po = await db.query.purchaseOrders.findFirst({
             where: and(
@@ -533,17 +553,6 @@ export const confirmPoQuote = createSafeAction(confirmQuoteSchema, async (data, 
     }
 });
 
-/**
- * 确认付款 Schema
- */
-export const confirmPaymentSchema = z.object({
-    poId: z.string(),
-    paymentMethod: z.enum(['CASH', 'WECHAT', 'ALIPAY', 'BANK']),
-    paymentAmount: z.number().min(0.01, "付款金额必须大于0"),
-    paymentTime: z.string(),
-    paymentVoucherImg: z.string().optional(),
-    remark: z.string().optional(),
-});
 
 /**
  * 确认采购单付款
@@ -671,23 +680,6 @@ export const confirmPoCompletion = createSafeAction(confirmCompletionSchema, asy
     }
 });
 
-/**
- * 确认收货 Schema
- * 支持部分收货：每个商品可以指定本次收货数量
- */
-export const confirmReceiptSchema = z.object({
-    poId: z.string().uuid(),
-    warehouseId: z.string().uuid(),
-    receivedDate: z.string().refine((val) => !isNaN(Date.parse(val)), "无效的日期"),
-    remark: z.string().max(500).optional(),
-    items: z.array(z.object({
-        /** 采购单明细 ID，用于幂等性校验 */
-        poItemId: z.string().uuid(),
-        productId: z.string(),
-        /** 本次收货数量 */
-        quantity: z.number().min(0),
-    })),
-});
 
 /**
  * 确认收货/入库
@@ -695,12 +687,14 @@ export const confirmReceiptSchema = z.object({
  * @description 核心逻辑：支持部分收货，计算收货进度并更新 PO 状态。原子性更新库存信息并记录库存日志。
  * @param data 符合 confirmReceiptSchema 的收货明细
  * @status 流转：READY/SHIPPED → PARTIALLY_RECEIVED / COMPLETED
- * @returns {Promise<{success: boolean, data?: { status: string, allFullyReceived: boolean }}>} 成功状态及收货情况
+ * @returns {Promise<{success: boolean, data?: { status: string, allFullyReceived: boolean }, error?: string}>} 成功状态及收货情况
  */
+
 export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
-        console.warn('[supply-chain] 确认采购单收货:', { poId: data.poId, warehouseId: data.warehouseId, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 确认采购单收货:', { poId: data.poId, warehouseId: data.warehouseId, tenantId: session.user.tenantId });
+
 
         return await db.transaction(async (tx) => {
             // 1. 查询采购单 + 明细
@@ -857,7 +851,9 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
  *
  * @description 仅限已确认状态后的单据导出。返回结构化的 PO 基础信息和明细。
  * @param params 包含待导出 PO ID
+ * @returns {Promise<{success: boolean, data?: Partial<PurchaseOrderDetail>, error?: string}>}
  */
+
 export async function exportPoPdf({ poId }: { poId: string }) {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
@@ -924,7 +920,7 @@ async function getCachedDashboardMetrics(tenantId: string) {
  * 获取采购仪表盘统计指标
  * 
  * @description 统计待确认、运输中、已延期及已完成的采购单数量。使用 unstable_cache 缓存 60 秒。
- * @returns {Promise<ProcurementMetrics>}
+ * @returns {Promise<{success: boolean, data: ProcurementMetrics | null, error?: string}>}
  */
 export async function getProcurementDashboardMetrics() {
     const session = await auth();
@@ -933,14 +929,15 @@ export async function getProcurementDashboardMetrics() {
     const tenantId = session.user.tenantId;
 
     try {
-        const data = await unstable_cache(
+        const data = (await unstable_cache(
             async () => getCachedDashboardMetrics(tenantId),
             [`procurement-dashboard-metrics-${tenantId}`],
             {
                 revalidate: 60,
                 tags: [`procurement-metrics-${tenantId}`]
             }
-        )();
+        )()) as ProcurementMetrics;
+
 
         return {
             success: true,

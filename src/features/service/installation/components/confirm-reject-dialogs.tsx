@@ -42,6 +42,14 @@ interface ConfirmInstallDialogProps {
     trigger?: React.ReactNode;
 }
 
+/**
+ * 确认验收安装对话框组件
+ * 销售或管理人员点击此对话框，输入实际工费并完成评价以结束安装任务
+ * 
+ * @param {string} taskId - 任务 ID
+ * @param {number} estimatedFee - 预估工费（用于初始化实际工费）
+ * @param {React.ReactNode} trigger - 自定义触发元素
+ */
 export function ConfirmInstallDialog({ taskId, estimatedFee, trigger }: ConfirmInstallDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -168,6 +176,13 @@ interface RejectInstallDialogProps {
     trigger?: React.ReactNode;
 }
 
+/**
+ * 驳回安装任务对话框组件
+ * 用于在验收不通过时，填写原因并将任务退回给师傅整改
+ * 
+ * @param {string} taskId - 任务 ID
+ * @param {React.ReactNode} trigger - 自定义触发元素
+ */
 export function RejectInstallDialog({ taskId, trigger }: RejectInstallDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);

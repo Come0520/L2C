@@ -75,6 +75,7 @@ vi.mock('isomorphic-dompurify', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 import type { Session } from 'next-auth';

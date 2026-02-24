@@ -21,6 +21,10 @@ vi.mock('sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 
+vi.mock('@/shared/lib/logger', () => ({
+    logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+}));
+
 describe('Auth 模块结构测试', () => {
     it('LoginForm 组件应可导入', async () => {
         const mod = await import('../components/login-form');

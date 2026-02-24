@@ -4,8 +4,14 @@ import { useEffect, useState } from 'react';
 import { getActivities, ActivityDTO } from '@/features/customers/actions/activities';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Loader2, Phone, MessageSquare, MapPin, User, CheckCircle2 } from 'lucide-react';
+// 移除 Loader2 导入并在下方使用 Skeleton
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import User from 'lucide-react/dist/esm/icons/user';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Skeleton } from '@/shared/ui/skeleton';
 
 interface Props {
     customerId: string;
@@ -29,7 +35,22 @@ export function ActivityTimeline({ customerId, refreshTrigger }: Props) {
     }, [customerId, refreshTrigger]);
 
     if (loading && activities.length === 0) {
-        return <div className="flex justify-center p-4"><Loader2 className="animate-spin text-muted-foreground" /></div>;
+        return (
+            <div className="space-y-6 pl-2">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-4">
+                        <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                        <div className="flex-1 space-y-2 pt-1">
+                            <div className="flex justify-between">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-32" />
+                            </div>
+                            <Skeleton className="h-16 w-full rounded-lg" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
     }
 
     if (activities.length === 0) {

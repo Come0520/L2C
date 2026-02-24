@@ -1,14 +1,14 @@
-import { logger } from "@/shared/lib/logger";
-import { db } from '@/shared/api/db';
+import { db, type DbTransaction } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSettingInternal } from "@/features/settings/actions/system-settings-actions";
 import { AuditService } from '@/shared/services/audit-service';
-import type { PgTransaction } from 'drizzle-orm/pg-core';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 分配策略类型
  */
+
 export type DistributionStrategy = 'MANUAL' | 'ROUND_ROBIN' | 'LOAD_BALANCE' | 'CHANNEL_SPECIFIC';
 
 /**
@@ -105,16 +105,14 @@ async function getAvailableSalesList(tenantId: string): Promise<{ id: string; na
  */
 export async function distributeToNextSales(
     tenantId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    externalTx?: PgTransaction<any, any, any> // Drizzle 事务类型泛型过于复杂，此处使用 any
+    externalTx?: DbTransaction // 使用统一的事务类型定义
 ): Promise<{
     salesId: string | null;
     salesName: string | null;
     strategy: DistributionStrategy;
 }> {
     // 包装逻辑：如果有外部事务则直接使用，否则创建新事务
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const executeLogic = async (tx: PgTransaction<any, any, any>) => {
+    const executeLogic = async (tx: DbTransaction) => {
         // 使用 FOR UPDATE 锁定租户记录，防止并发分配
         const [tenant] = await tx.select()
             .from(tenants)

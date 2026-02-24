@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
-import { Plus, X, ArrowDown, Settings2 } from "lucide-react";
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import X from 'lucide-react/dist/esm/icons/x';
+import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
+import Settings2 from 'lucide-react/dist/esm/icons/settings2';
 import { Badge } from "@/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";

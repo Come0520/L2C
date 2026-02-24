@@ -3,8 +3,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { GlassIcons, type GlassIconItem } from '@/shared/ui/glass-icons';
-import { ShoppingCart, Wrench, DollarSign } from 'lucide-react';
-import { Layers } from 'lucide-react';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import Wrench from 'lucide-react/dist/esm/icons/wrench';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Layers from 'lucide-react/dist/esm/icons/layers';
 
 export interface RelatedDocumentsProps {
     orderId: string;

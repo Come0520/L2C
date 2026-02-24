@@ -133,6 +133,10 @@ const getUnreadCountActionInternal = createSafeAction(z.object({}), async (_para
  *
  * @returns `{ count: number }` 未读通知计数
  */
+/**
+ * 获取当前用户的未读通知总数
+ * 常用于 Header 铃铛图标的红点提示
+ */
 export async function getUnreadCount() {
     return getUnreadCountActionInternal({});
 }

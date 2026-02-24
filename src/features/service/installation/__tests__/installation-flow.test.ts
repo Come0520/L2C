@@ -41,10 +41,10 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 describe('Installation Flow Integration Test', () => {
-    let tenantId = 'test-tenant-install';
-    let taskId = 'test-install-task-1';
-    let installerId = 'installer-1';
-    let adminId = 'admin-install-1';
+    const tenantId = 'test-tenant-install';
+    const taskId = 'test-install-task-1';
+    const installerId = 'installer-1';
+    const adminId = 'admin-install-1';
 
     beforeEach(async () => {
         vi.clearAllMocks();

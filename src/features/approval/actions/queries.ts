@@ -22,24 +22,25 @@ const getPendingApprovalsInternal = createSafeAction(paginationSchema, async (pa
             eq(approvalTasks.status, 'PENDING')
         );
 
-        const tasks = await db.query.approvalTasks.findMany({
-            where: whereClause,
-            with: {
-                approval: {
-                    with: {
-                        flow: true
-                    }
+        const [tasks, totalResult] = await Promise.all([
+            db.query.approvalTasks.findMany({
+                where: whereClause,
+                with: {
+                    approval: {
+                        with: {
+                            flow: true
+                        }
+                    },
+                    node: true
                 },
-                node: true
-            },
-            orderBy: [desc(approvalTasks.createdAt)],
-            limit: pageSize,
-            offset: offset,
-        });
-
-        const totalResult = await db.select({ value: count() })
-            .from(approvalTasks)
-            .where(whereClause);
+                orderBy: [desc(approvalTasks.createdAt)],
+                limit: pageSize,
+                offset: offset,
+            }),
+            db.select({ value: count() })
+                .from(approvalTasks)
+                .where(whereClause)
+        ]);
 
         const total = totalResult[0]?.value || 0;
 
@@ -71,25 +72,26 @@ const getProcessedApprovalsInternal = createSafeAction(paginationSchema, async (
             ne(approvalTasks.status, 'PENDING')
         );
 
-        const tasks = await db.query.approvalTasks.findMany({
-            where: whereClause,
-            with: {
-                approval: {
-                    with: {
-                        flow: true,
-                        requester: true
-                    }
+        const [tasks, totalResult] = await Promise.all([
+            db.query.approvalTasks.findMany({
+                where: whereClause,
+                with: {
+                    approval: {
+                        with: {
+                            flow: true,
+                            requester: true
+                        }
+                    },
+                    node: true
                 },
-                node: true
-            },
-            orderBy: [desc(approvalTasks.actionAt)],
-            limit: pageSize,
-            offset: offset,
-        });
-
-        const totalResult = await db.select({ value: count() })
-            .from(approvalTasks)
-            .where(whereClause);
+                orderBy: [desc(approvalTasks.actionAt)],
+                limit: pageSize,
+                offset: offset,
+            }),
+            db.select({ value: count() })
+                .from(approvalTasks)
+                .where(whereClause)
+        ]);
 
         const total = totalResult[0]?.value || 0;
 
@@ -120,19 +122,20 @@ const getApprovalHistoryInternal = createSafeAction(paginationSchema, async (par
             eq(approvals.requesterId, session.user.id)
         );
 
-        const myApprovals = await db.query.approvals.findMany({
-            where: whereClause,
-            with: {
-                flow: true,
-            },
-            orderBy: [desc(approvals.createdAt)],
-            limit: pageSize,
-            offset: offset,
-        });
-
-        const totalResult = await db.select({ value: count() })
-            .from(approvals)
-            .where(whereClause);
+        const [myApprovals, totalResult] = await Promise.all([
+            db.query.approvals.findMany({
+                where: whereClause,
+                with: {
+                    flow: true,
+                },
+                orderBy: [desc(approvals.createdAt)],
+                limit: pageSize,
+                offset: offset,
+            }),
+            db.select({ value: count() })
+                .from(approvals)
+                .where(whereClause)
+        ]);
 
         const total = totalResult[0]?.value || 0;
 
@@ -158,28 +161,29 @@ const getApprovalHistoryInternal = createSafeAction(paginationSchema, async (par
 
 const getApprovalDetailsInternal = createSafeAction(getApprovalDetailsSchema, async (params, { session }) => {
     try {
-        const approval = await db.query.approvals.findFirst({
-            where: and(
-                eq(approvals.id, params.id),
-                eq(approvals.tenantId, session.user.tenantId)
-            ),
-            with: {
-                flow: true,
-            }
-        });
+        const [approval, tasks] = await Promise.all([
+            db.query.approvals.findFirst({
+                where: and(
+                    eq(approvals.id, params.id),
+                    eq(approvals.tenantId, session.user.tenantId)
+                ),
+                with: {
+                    flow: true,
+                }
+            }),
+            db.query.approvalTasks.findMany({
+                where: and(
+                    eq(approvalTasks.approvalId, params.id),
+                    eq(approvalTasks.tenantId, session.user.tenantId)
+                ),
+                with: {
+                    node: true,
+                },
+                orderBy: [desc(approvalTasks.createdAt)]
+            })
+        ]);
 
         if (!approval) return { success: false, error: "Not found" };
-
-        const tasks = await db.query.approvalTasks.findMany({
-            where: and(
-                eq(approvalTasks.approvalId, params.id),
-                eq(approvalTasks.tenantId, session.user.tenantId)
-            ),
-            with: {
-                node: true,
-            },
-            orderBy: [desc(approvalTasks.createdAt)]
-        });
 
         return { success: true, data: { approval, tasks } };
     } catch (e: unknown) {

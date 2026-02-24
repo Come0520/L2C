@@ -3,7 +3,11 @@ import { logger } from '@/shared/lib/logger';
 
 import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
-import { Plus, Trash2, Edit, Loader2, Save } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import { Switch } from '@/shared/ui/switch';
@@ -29,8 +33,8 @@ import {
     createSplitRule,
     updateSplitRule,
     deleteSplitRule,
-    type SplitRuleInput,
 } from '@/features/supply-chain/actions/rules';
+import type { SplitRuleInput } from '@/features/supply-chain/actions/rules.schema';
 
 /**
  * 采购拆单规则配置组件

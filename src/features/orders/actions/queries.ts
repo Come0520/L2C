@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, desc, and, ilike, sql, inArray, count } from 'drizzle-orm';
+import { eq, desc, and, ilike, sql, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -82,23 +82,24 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
 
             const whereClause = and(...conditions);
 
-            const totalResult = await db.select({ count: sql<number>`count(*)` })
-                .from(orders)
-                .where(whereClause);
+            const [totalResult, data] = await Promise.all([
+                db.select({ count: sql<number>`count(*)` })
+                    .from(orders)
+                    .where(whereClause),
+                db.query.orders.findMany({
+                    where: whereClause,
+                    with: {
+                        customer: true,
+                        sales: true,
+                        items: true, // Often needed in lists for previews
+                    },
+                    limit: pageSize,
+                    offset: offset,
+                    orderBy: [desc(orders.createdAt)],
+                })
+            ]);
 
             const total = Number(totalResult[0]?.count || 0);
-
-            const data = await db.query.orders.findMany({
-                where: whereClause,
-                with: {
-                    customer: true,
-                    sales: true,
-                    items: true, // Often needed in lists for previews
-                },
-                limit: pageSize,
-                offset: offset,
-                orderBy: [desc(orders.createdAt)],
-            });
 
             return {
                 data,

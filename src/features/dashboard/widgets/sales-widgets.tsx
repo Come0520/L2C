@@ -1,6 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Target, Users, Percent, DollarSign, Loader2 } from 'lucide-react';
+import Target from 'lucide-react/dist/esm/icons/target';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Percent from 'lucide-react/dist/esm/icons/percent';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { cn } from '@/shared/lib/utils';
 import { createLogger } from "@/shared/lib/logger";
 import useSWR from 'swr';
@@ -124,7 +128,12 @@ export function SalesLeadsWidget() {
 }
 
 /**
- * 我的转化率 Widget
+ * 销售人员转化率 Widget
+ * 该组件展示销售人员将线索转化为成交订单的成功率（百分比）。
+ * 转化率 = (已成交线索数 / 总线索数) * 100%
+ *
+ * @component
+ * @returns {JSX.Element} 转化率统计卡片组件
  */
 export function SalesConversionWidget() {
     const { stats, loading } = useSalesStats();
@@ -160,7 +169,12 @@ export function SalesConversionWidget() {
 }
 
 /**
- * 我的客单价 Widget
+ * 销售人员客单价 Widget
+ * 该组件展示销售人员的平均订单金额（客单价）。
+ * 客单价 = 总销售额 / 总订单数
+ *
+ * @component
+ * @returns {JSX.Element} 客单价统计卡片组件
  */
 export function SalesAvgOrderWidget() {
     const { stats, loading } = useSalesStats();

@@ -1,6 +1,6 @@
 'use server';
 
-import { logger } from "@/shared/lib/logger";
+
 
 import { db } from '@/shared/api/db';
 import { arStatements, paymentPlanNodes } from '@/shared/api/schema';
@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { Decimal } from 'decimal.js';
 
 // ============================================================
@@ -108,7 +108,7 @@ const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema
         return nodesToInsert;
     });
 
-    revalidatePath('/finance/ar');
+    revalidateTag(`finance-ar-${tenantId}`, 'default');
 
     return {
         success: true,
@@ -246,7 +246,7 @@ const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteO
             details: { type: 'BAD_DEBT_SUBMIT', ...writeOffData }
         });
 
-        revalidatePath('/finance/ar');
+        revalidateTag(`finance-ar-${tenantId}`, 'default');
         return {
             success: true,
             message: '坏账核销申请已提交，等待审批',
@@ -340,7 +340,7 @@ const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtAppr
             details: { writeOffAmount: actualWriteOff.toFixed(2), remark, type: 'BAD_DEBT_APPROVAL' }
         });
 
-        revalidatePath('/finance/ar');
+        revalidateTag(`finance-ar-${tenantId}`, 'default');
 
         return {
             success: true,

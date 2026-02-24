@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 客户模块 Server Actions 集成测试 (Mutations)
  *
  * 覆盖范围：
@@ -95,6 +95,7 @@ vi.mock('../../../../shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/utils', () => ({
@@ -150,9 +151,9 @@ describe('Customers Mutations (L5)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // 重置事务内 Mock 的默认行为
-        mockDbQuery.customers.findFirst.mockResolvedValue({ id: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID });
-        mockDbQuery.customerAddresses.findFirst.mockResolvedValue({ id: MOCK_ADDR_ID, customerId: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID });
-        mockTx.query.customerAddresses.findFirst.mockResolvedValue({ id: MOCK_ADDR_ID, customerId: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID });
+        mockDbQuery.customers.findFirst.mockResolvedValue({ id: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID, version: 1 });
+        mockDbQuery.customerAddresses.findFirst.mockResolvedValue({ id: MOCK_ADDR_ID, customerId: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID, version: 1 });
+        mockTx.query.customerAddresses.findFirst.mockResolvedValue({ id: MOCK_ADDR_ID, customerId: MOCK_CUSTOMER_ID, tenantId: MOCK_TENANT_ID, version: 1 });
     });
 
     it('createCustomer 应委托 CustomerService 并返回新客户', async () => {

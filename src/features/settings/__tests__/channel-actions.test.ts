@@ -1,4 +1,4 @@
-
+﻿
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     getChannelCategories,
@@ -39,6 +39,7 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/config/permissions', () => ({

@@ -43,7 +43,7 @@ vi.mock('@/shared/lib/logger', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    unstable_cache: vi.fn((fn: Function) => fn),
+    unstable_cache: vi.fn((fn: (...args: any[]) => any) => fn),
     revalidateTag: vi.fn(),
 }));
 
@@ -80,7 +80,7 @@ describe('Analytics 模块安全测试', () => {
 
         it('getLeaderboard - 未登录应返回 success: false', async () => {
             mockAuth.mockResolvedValue(null as never);
-            const result = await getLeaderboard({});
+            const result = await getLeaderboard({ sortBy: 'amount', limit: 10 });
             expect(result.success).toBe(false);
         });
     });

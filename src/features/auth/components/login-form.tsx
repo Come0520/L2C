@@ -3,20 +3,40 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 import Link from 'next/link';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
-import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Lock from 'lucide-react/dist/esm/icons/lock';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 
 /**
- * 登录表单组件 (Aceternity UI 风格)
- * 功能：
- * - 手机号/邮箱 + 密码登录
- * - 密码显示/隐藏切换
- * - 注册入口链接
- * - 忘记密码链接
+ * 登录表单验证 Schema
+ */
+const loginSchema = z.object({
+  username: z.string().min(1, '请输入手机号或邮箱'),
+  password: z.string().min(1, '请输入密码'),
+});
+
+/**
+ * 登录表单核心组件
+ * 
+ * 视觉风格：基于 Aceternity UI 的毛玻璃特效 (Glassmorphism)。
+ * 核心功能：
+ * 1. 凭证登录：支持手机号/邮箱 + 密码的组合校验。
+ * 2. 交互增强：密码明文切换、加载状态反馈、全表单错误提示。
+ * 3. 页面导流：关联注册流程 (Tenant Registration) 及忘记密码提示。
+ * 
+ * @example
+ * ```tsx
+ * <LoginForm />
+ * ```
  */
 export function LoginForm() {
   const router = useRouter();
@@ -24,9 +44,18 @@ export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Zod 安全校验
+    const validation = loginSchema.safeParse({ username, password });
+    if (!validation.success) {
+      toast.error(validation.error.issues[0]?.message || '请完善登录信息');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -37,21 +66,42 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error('登录失败：用户名或密码错误');
+        // 触发抖动反馈
+        setHasError(true);
+        setTimeout(() => setHasError(false), 500);
+
+        // 细化错误反馈
+        const errorMsg = result.error === 'CredentialsSignin'
+          ? '登录失败：用户名或密码错误'
+          : `登录失败: ${result.error}`;
+
+        logger.warn('[Auth:Login] 登录凭证校验失败', {
+          username: username.replace(/(.{3}).*(.{2})/, '$1***$2'),
+          error: result.error
+        });
+
+        toast.error(errorMsg);
       } else {
-        toast.success('登录成功');
+        toast.success('登录成功，欢迎回来');
         router.push('/');
         router.refresh();
       }
-    } catch (_error) {
-      toast.error('登录失败，请稍后重试');
+    } catch (_err: unknown) {
+      logger.error('[Auth:Login] 登录执行异常', {
+        error: _err instanceof Error ? _err.message : String(_err),
+        timestamp: new Date().toISOString()
+      });
+      toast.error('网络连接异常，请稍后重试');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="shadow-input mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl dark:bg-black/40">
+    <div className={cn(
+      "shadow-input mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl dark:bg-black/40 transition-all duration-300",
+      hasError && "animate-shake ring-2 ring-red-500/50"
+    )}>
       {/* 标题区域 */}
       <h2 className="text-center text-2xl font-bold text-neutral-800 dark:text-neutral-200">
         欢迎回到 L2C 系统
@@ -131,7 +181,7 @@ export function LoginForm() {
           type="submit"
           disabled={isLoading}
           aria-busy={isLoading}
-          className="group/btn from-primary-600 to-primary-700 shadow-primary-500/30 hover:from-primary-500 hover:to-primary-600 relative block h-11 w-full rounded-xl bg-gradient-to-br font-medium text-white shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="group/btn from-primary-600 to-primary-700 shadow-primary-500/30 hover:from-primary-500 hover:to-primary-600 relative block h-11 w-full rounded-xl bg-linear-to-br font-medium text-white shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="flex items-center justify-center">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -142,9 +192,9 @@ export function LoginForm() {
 
         {/* 分割线 */}
         <div className="my-6 flex items-center">
-          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
           <span className="px-4 text-sm text-neutral-500">或</span>
-          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
         </div>
 
         {/* 注册链接 */}
@@ -164,18 +214,21 @@ export function LoginForm() {
 
 /**
  * 底部渐变动效 (Aceternity UI 特效)
+ * 渲染两条水平渐变线，配合 hover 效果增强按钮的视觉感知度。
  */
 const BottomGradient = () => {
   return (
     <>
-      <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
-      <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
+      <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-linear-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
+      <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-linear-to-r from-transparent via-indigo-500 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
     </>
   );
 };
 
 /**
  * 输入框容器组件
+ * 
+ * @description 垂直布局包装容器，统一管理 Label 和 Input 的间距。
  */
 const LabelInputContainer = ({
   children,

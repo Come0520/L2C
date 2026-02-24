@@ -175,7 +175,9 @@ describe('Transfer Actions', () => {
                             .mockResolvedValueOnce(mockToAccount)
                     }
                 },
-                update: vi.fn().mockReturnValue(createChainedMock([mockTransfer])),
+                update: vi.fn()
+                    .mockReturnValueOnce(createChainedMock([mockTransfer])) // Mock status update to CANCELLING
+                    .mockReturnValue(createChainedMock()),
                 insert: vi.fn().mockReturnValue(createChainedMock()),
             };
 

@@ -3,7 +3,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { cn } from '@/shared/lib/utils';
-import { History, Plus, Minus, Edit, RotateCcw, Truck, CheckCircle } from 'lucide-react';
+import History from 'lucide-react/dist/esm/icons/history';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Minus from 'lucide-react/dist/esm/icons/minus';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 /**
  * 订单变更记录类型

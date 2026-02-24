@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { cn } from "@/shared/utils";
 import { createLogger } from "@/shared/lib/logger";
 

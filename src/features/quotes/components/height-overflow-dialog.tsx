@@ -11,7 +11,8 @@ import {
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { AlertTriangle, Check } from 'lucide-react';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import Check from 'lucide-react/dist/esm/icons/check';
 import type { AlternativeSolution } from '../calc-strategies/types';
 
 /**

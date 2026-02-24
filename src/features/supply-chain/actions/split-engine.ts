@@ -465,7 +465,7 @@ async function generateSplitResult(
 
             if (key.docType === 'PO') {
                 // 创建采购单 (DRAFT)
-                const poNo = await generateDocNo('PO', tenantId);
+                const poNo = generateDocNo('PO');
                 const poType = key.poType ?? 'FINISHED';
 
                 const [newPO] = await tx.insert(purchaseOrders).values({
@@ -529,7 +529,7 @@ async function generateSplitResult(
             } else if (key.docType === 'WO') {
                 // 创建加工任务 (PENDING)
                 for (const item of items) {
-                    const taskNo = await generateDocNo('WO', tenantId);
+                    const taskNo = generateDocNo('WO');
                     const [newTask] = await tx.insert(productionTasks).values({
                         id: `task_${crypto.randomUUID()}`,
                         tenantId,
@@ -538,7 +538,6 @@ async function generateSplitResult(
                         orderItemId: item.orderItemId,
                         workshop: 'SEWING', // 默认车间，可后续调整
                         status: 'PENDING',
-                        createdBy: session.user.id,
                     }).returning({ id: productionTasks.id, taskNo: productionTasks.taskNo });
 
                     if (newTask) {

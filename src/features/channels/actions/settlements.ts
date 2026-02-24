@@ -11,13 +11,23 @@ import { customAlphabet } from 'nanoid';
 import { Decimal } from 'decimal.js';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
-
+import { logger } from '@/shared/lib/logger';
 
 // P2 Fix: Fix lint error (unused import is now used, check if we need to remove or keep)
 // AuditService IS used in the added chunks. 
 
 
 const generateRandomSuffix = customAlphabet('0123456789', 6);
+
+/**
+ * 结算单查询参数
+ */
+export interface GetSettlementsParams {
+    channelId?: string;
+    status?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID';
+    page?: number;
+    pageSize?: number;
+}
 
 // ==================== 结算单 Actions ====================
 
@@ -50,7 +60,7 @@ function generateSettlementNo(): string {
  * @param {Date} params.periodStart - 统计周期开始时间
  * @param {Date} params.periodEnd - 统计周期结束时间
  * @param {number} [params.adjustmentAmount] - 手动调节的金额偏移量，默认0
- * @returns {Promise<any>} 返回新生成的结算单
+ * @returns {Promise<import('@/shared/api/schema/channels').ChannelSettlement>} 返回新生成的结算单
  * @throws {Error} 若周期内无佣金或其它校验与事务异常时则抛出错误
  */
 export async function createSettlement(params: {
@@ -59,7 +69,7 @@ export async function createSettlement(params: {
     periodEnd: Date;
     adjustmentAmount?: number;
 }) {
-    console.log('[channels] 开始创建结算单:', params);
+    logger.info('[channels] 开始创建结算单', { params });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -157,10 +167,10 @@ export async function createSettlement(params: {
                 return settlement;
             });
         } catch (error) {
-            console.error('[channels] 创建结算单发生异常:', error);
+            logger.error('[channels] 创建结算单发生异常:', error);
             // Check for unique constraint violation code (Postgres: 23505)
             if (error instanceof Error && (error as { code?: string }).code === '23505' && retryCount < MAX_RETRIES) {
-                console.warn(`[channels] 结算单号冲突，重试中... (${retryCount + 1}/${MAX_RETRIES})`);
+                logger.warn(`[channels] 结算单号冲突，重试中... (${retryCount + 1}/${MAX_RETRIES})`);
                 retryCount++;
                 continue;
             }
@@ -176,19 +186,11 @@ export async function createSettlement(params: {
  * 
  * 安全检查：自动从 session 获取 tenantId
  * 
- * @param {Object} params - 分页与过滤参数
- * @param {string} [params.channelId] - 渠道ID
- * @param {'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID'} [params.status] - 结算单状态 (草稿/待处理/已批准/已支付)
- * @param {number} [params.page] - 查询页数
- * @param {number} [params.pageSize] - 页条目数
- * @returns {Promise<any>} 包含分页结算数据的结构
+ * @param {GetSettlementsParams} params - 分页与过滤参数
+ * @returns {Promise<{ data: any[], totalItems: number, totalPages: number, currentPage: number }>} 包含分页结算数据的结构
  */
-export async function getSettlements(params: {
-    channelId?: string;
-    status?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID';
-    page?: number;
-    pageSize?: number;
-}) {
+export async function getSettlements(params: GetSettlementsParams) {
+    logger.info('[channels] Fetching settlements', { params });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -209,18 +211,18 @@ export async function getSettlements(params: {
 
     const offset = (page - 1) * pageSize;
 
-    const data = await db.query.channelSettlements.findMany({
-        where: whereClause,
-        limit: pageSize,
-        offset,
-        orderBy: [desc(channelSettlements.createdAt)],
-        with: {
-            channel: true,
-        }
-    });
-
-    // Get count
-    const totalItems = await db.$count(channelSettlements, whereClause);
+    const [data, totalItems] = await Promise.all([
+        db.query.channelSettlements.findMany({
+            where: whereClause,
+            limit: pageSize,
+            offset,
+            orderBy: [desc(channelSettlements.createdAt)],
+            with: {
+                channel: true,
+            }
+        }),
+        db.$count(channelSettlements, whereClause)
+    ]);
 
     return {
         data,
@@ -241,6 +243,7 @@ export async function getSettlements(params: {
  * @returns {Promise<any | null>} 结算单详情加上佣金明细和关联表，查无记录返回 null
  */
 export async function getSettlementById(id: string) {
+    logger.info('[channels] Fetching settlement by id', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -249,27 +252,27 @@ export async function getSettlementById(id: string) {
 
     const tenantId = session.user.tenantId;
 
-    const settlement = await db.query.channelSettlements.findFirst({
-        where: and(
-            eq(channelSettlements.id, id),
-            eq(channelSettlements.tenantId, tenantId)
-        ),
-        with: {
-            channel: true,
-            createdBy: true, // P1 Fix: need to know who created it
-        }
-    });
+    const [settlement, commissions] = await Promise.all([
+        db.query.channelSettlements.findFirst({
+            where: and(
+                eq(channelSettlements.id, id),
+                eq(channelSettlements.tenantId, tenantId)
+            ),
+            with: {
+                channel: true,
+                createdBy: true, // P1 Fix: need to know who created it
+            }
+        }),
+        db.query.channelCommissions.findMany({
+            where: and(
+                eq(channelCommissions.settlementId, id),
+                eq(channelCommissions.tenantId, tenantId)
+            ),
+            orderBy: [desc(channelCommissions.createdAt)],
+        })
+    ]);
 
     if (!settlement) return null;
-
-    // 获取关联的佣金记录
-    const commissions = await db.query.channelCommissions.findMany({
-        where: and(
-            eq(channelCommissions.settlementId, id),
-            eq(channelCommissions.tenantId, tenantId)
-        ),
-        orderBy: [desc(channelCommissions.createdAt)],
-    });
 
     return {
         ...settlement,
@@ -285,10 +288,10 @@ export async function getSettlementById(id: string) {
  * 安全检查：需要 CHANNEL.MANAGE_SETTLEMENT 权限
  * 
  * @param {string} id - 将要提交审核的结算单ID
- * @returns {Promise<any>} 返回更新后的记录集
+ * @returns {Promise<import('@/shared/api/schema/channels').ChannelSettlement>} 返回更新后的记录集
  */
 export async function submitSettlementForApproval(id: string) {
-    console.log('[channels] 提交结算单审批:', { id });
+    logger.info('[channels] 提交结算单审批', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -328,7 +331,7 @@ export async function submitSettlementForApproval(id: string) {
  * @throws {Error} 未授权，无效状态或是自审批违反隔离原则引发的异常
  */
 export async function approveSettlement(id: string) {
-    console.log('[channels] 开始审批结算单:', { id });
+    logger.info('[channels] 开始审批结算单', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -430,7 +433,7 @@ export async function approveSettlement(id: string) {
  * @returns {Promise<any>} 返回状态更新后的结算单结果
  */
 export async function markSettlementPaid(id: string, paymentBillId?: string) {
-    console.log('[channels] 标记结算单为已付款:', { id, paymentBillId });
+    logger.info('[channels] 标记结算单为已付款', { id, paymentBillId });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

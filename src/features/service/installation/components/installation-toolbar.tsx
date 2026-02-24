@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 
+/**
+ * 安装列表工具栏
+ * 
+ * 集成了带防抖功能的搜索框和表格刷新功能。
+ * 搜索结果会同步到 URL 的 `search` 参数中。
+ */
 export function InstallationToolbar() {
     const router = useRouter();
     const searchParams = useSearchParams();

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkPermission } from '../auth';
 import { db } from '@/shared/api/db';
 import { roles } from '@/shared/api/schema';
@@ -21,6 +21,7 @@ vi.mock('next-auth/providers/credentials', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: (cb: any) => cb,
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/api/db', () => ({

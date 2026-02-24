@@ -6,7 +6,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { OrderService } from "@/services/order.service";
 import { auth } from "@/shared/lib/auth";
 import { subDays } from "date-fns";
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { logger } from "@/shared/lib/logger";
 
 /**
@@ -75,7 +75,7 @@ export async function autoCloseOrdersAction() {
         }
 
         // 统一清除缓存
-        revalidatePath('/orders');
+        revalidateTag('orders', 'default');
 
         return {
             success: true,

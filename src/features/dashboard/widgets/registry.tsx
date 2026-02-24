@@ -2,23 +2,21 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import {
-    Users,
-    Target,
-    TrendingUp,
-    DollarSign,
-    Percent,
-    ClipboardCheck,
-    Truck,
-    Wrench,
-    Calendar,
-    CreditCard,
-    BarChart3,
-    Award,
-    Activity,
-    PieChart,
-    Layers,
-} from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Target from 'lucide-react/dist/esm/icons/target';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Percent from 'lucide-react/dist/esm/icons/percent';
+import ClipboardCheck from 'lucide-react/dist/esm/icons/clipboard-check';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import Wrench from 'lucide-react/dist/esm/icons/wrench';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import BarChart from 'lucide-react/dist/esm/icons/bar-chart';
+import Award from 'lucide-react/dist/esm/icons/award';
+import Activity from 'lucide-react/dist/esm/icons/activity';
+import PieChart from 'lucide-react/dist/esm/icons/pie-chart';
+import Layers from 'lucide-react/dist/esm/icons/layers';
 import type { WidgetType } from '../types';
 
 /**
@@ -115,7 +113,7 @@ export const WIDGET_REGISTRY: Partial<Record<WidgetType, WidgetMeta>> = {
         type: 'conversion-funnel',
         title: '销售漏斗',
         description: '线索到成交的转化漏斗',
-        icon: BarChart3,
+        icon: BarChart,
         iconColor: 'text-purple-500',
         permissions: ['MANAGER', 'ADMIN'],
         defaultSize: { w: 2, h: 2 },
@@ -213,7 +211,7 @@ export const WIDGET_REGISTRY: Partial<Record<WidgetType, WidgetMeta>> = {
         description: '待我审批的任务',
         icon: ClipboardCheck,
         iconColor: 'text-amber-500',
-        permissions: ['SALES', 'MANAGER', 'ADMIN', 'FINANCE', 'DISPATCHER'],
+        permissions: ['USER', 'SALES', 'MANAGER', 'ADMIN', 'FINANCE', 'DISPATCHER'],
         defaultSize: { w: 1, h: 1 },
     },
     'sales-trend': {
@@ -222,7 +220,7 @@ export const WIDGET_REGISTRY: Partial<Record<WidgetType, WidgetMeta>> = {
         description: '近期销售趋势图表',
         icon: TrendingUp,
         iconColor: 'text-blue-500',
-        permissions: ['MANAGER', 'ADMIN'],
+        permissions: ['USER', 'MANAGER', 'ADMIN'],
         defaultSize: { w: 2, h: 2 },
     },
     'channel-performance': {
@@ -231,7 +229,7 @@ export const WIDGET_REGISTRY: Partial<Record<WidgetType, WidgetMeta>> = {
         description: '渠道带单统计与佣金概览',
         icon: TrendingUp,
         iconColor: 'text-primary',
-        permissions: ['MANAGER', 'ADMIN'],
+        permissions: ['USER', 'MANAGER', 'ADMIN'],
         defaultSize: { w: 2, h: 2 },
     },
 };
@@ -273,12 +271,33 @@ export const WIDGET_COMPONENTS: Partial<Record<WidgetType, React.LazyExoticCompo
 };
 
 /**
+ * 角色映射表：将系统角色映射到 Widget 权限角色
+ * 支持多角色映射，确保所有用户都能访问对应的 Widget
+ */
+const ROLE_MAP: Record<string, string[]> = {
+    'TENANT_ADMIN': ['ADMIN'],
+    'SUPER_ADMIN': ['ADMIN'],
+    'OWNER': ['ADMIN', 'MANAGER'],
+    'ADMIN': ['ADMIN'],
+    'MANAGER': ['MANAGER'],
+    'SALES': ['SALES'],
+    'FINANCE': ['FINANCE'],
+    'DISPATCHER': ['DISPATCHER'],
+    'USER': ['USER'],
+};
+
+/**
  * 根据用户角色过滤可用的 Widget
+ * 通过角色映射支持 TENANT_ADMIN 等扩展角色
  */
 export function getAvailableWidgets(role: string): WidgetMeta[] {
     const widgets = Object.values(WIDGET_REGISTRY).filter((widget): widget is WidgetMeta => widget !== undefined);
+    // 获取映射后的权限角色列表，未匹配到时回退为 ['USER']
+    const mappedRoles = ROLE_MAP[role] || ['USER'];
     return widgets.filter(
-        widget => widget.permissions.includes(role) || widget.permissions.includes('ALL')
+        widget =>
+            mappedRoles.some(r => widget.permissions.includes(r)) ||
+            widget.permissions.includes('ALL')
     );
 }
 

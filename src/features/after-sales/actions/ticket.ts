@@ -3,9 +3,11 @@
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { cache } from 'react';
 import { db } from '@/shared/api/db';
-import { eq, desc, and, ilike } from 'drizzle-orm';
+import { eq, desc, and, ilike, sql } from 'drizzle-orm';
 import { afterSalesTickets, orders, auditLogs, liabilityNotices } from '@/shared/api/schema';
+import Decimal from 'decimal.js';
 import { afterSalesStatusEnum } from '@/shared/api/schema/enums';
 import { auth } from '@/shared/lib/auth';
 import { generateTicketNo, escapeLikePattern, maskPhoneNumber } from '../utils';
@@ -23,7 +25,7 @@ import { logger } from '@/shared/lib/logger';
  * @param params - 包含 page, pageSize, status, search, type, priority 等分页和过滤参数对象
  * @returns 包含经过手机号隐私脱敏后的工单列表及成功状态标识
  */
-export async function getAfterSalesTickets(params?: {
+export const getAfterSalesTickets = cache(async (params?: {
     page?: number;
     pageSize?: number;
     status?: string;
@@ -31,7 +33,7 @@ export async function getAfterSalesTickets(params?: {
     type?: string;
     priority?: string;
     isWarranty?: string;
-}) {
+}) => {
     // 安全校验：认证和租户隔离
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -76,6 +78,11 @@ export async function getAfterSalesTickets(params?: {
         }
     });
 
+    // P1 FIX (AS-D-02): 增加分页 count，补充精确的 tenantId 条件
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+        .from(afterSalesTickets)
+        .where(and(...conditions));
+
     // P1 FIX (AS-15): 列表页手机号脱敏
     const safeData = data.map(ticket => ({
         ...ticket,
@@ -86,8 +93,8 @@ export async function getAfterSalesTickets(params?: {
         } : null,
     }));
 
-    return { success: true, data: safeData };
-}
+    return { success: true, data: safeData, total: Number(count) };
+});
 
 /**
  * 创建售后工单 (Server Action)
@@ -217,9 +224,9 @@ const getAfterSalesTicketDetailAction = createSafeAction(z.object({ id: z.string
  * @param ticketId - 指定查询的唯一售后工单标识 ID
  * @returns 包含完整聚合数据的单据模型
  */
-export async function getTicketDetail(ticketId: string) {
+export const getTicketDetail = cache(async (ticketId: string) => {
     return getAfterSalesTicketDetailAction({ id: ticketId });
-}
+});
 
 /**
  * 更新工单状态 (Server Action)
@@ -269,8 +276,8 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
 
     logger.info(`[After Sales] Ticket ${data.ticketId} status updated to ${data.status} by user ${session.user.id}`);
 
-    revalidatePath(`/after-sales/${data.ticketId}`);
-    revalidatePath('/after-sales');
+    revalidateTag(`after-sales-ticket-${data.ticketId}`, 'default');
+    revalidateTag('after-sales-list', 'default');
     revalidateTag('after-sales-analytics', 'default');
     return { success: true, message: '状态更新成功' };
 });
@@ -322,19 +329,26 @@ export async function getTicketLogs(ticketId: string) {
  */
 export async function closeResolutionCostClosure(ticketId: string) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: '未授权' };
+    if (!session?.user?.id || !session?.user?.tenantId) return { success: false, error: '未授权' };
 
     try {
 
         const ticket = await db.query.afterSalesTickets.findFirst({
-            where: eq(afterSalesTickets.id, ticketId)
+            where: and(
+                eq(afterSalesTickets.id, ticketId),
+                eq(afterSalesTickets.tenantId, session.user.tenantId) // AS-S-01 修复跨越权查询
+            )
         });
 
-        if (!ticket) return { success: false, error: '工单不存在' };
+        if (!ticket) return { success: false, error: '工单不存在或无权操作' };
 
-        const actualCost = Number(ticket.totalActualCost || 0);
-        const actualDeduction = Number(ticket.actualDeduction || 0);
-        const internalLoss = actualCost - actualDeduction;
+        // 使用精度较高的计算，防止丢精度
+        const actualCost = new Decimal(ticket.totalActualCost || 0);
+        const actualDeduction = new Decimal(ticket.actualDeduction || 0);
+
+        // AS-Q-01: 若 internalLoss 为负数，说明扣超出成本，内部不仅没损失反而 "盈利"，此时在服务中心账务上应记为 0（超出部分进入债转或扣款冻结，而不应体现为负向内耗损失）
+        const computedLoss = actualCost.minus(actualDeduction);
+        const internalLoss = computedLoss.isNegative() ? new Decimal(0) : computedLoss;
 
         await db.update(afterSalesTickets)
             .set({
@@ -343,7 +357,7 @@ export async function closeResolutionCostClosure(ticketId: string) {
                 closedAt: new Date(),
                 updatedAt: new Date()
             })
-            .where(eq(afterSalesTickets.id, ticketId));
+            .where(and(eq(afterSalesTickets.id, ticketId), eq(afterSalesTickets.tenantId, session.user.tenantId))); // 安全保护
 
         await AuditService.recordFromSession(session, 'after_sales_tickets', ticketId, 'UPDATE', {
             changed: { internalLoss: internalLoss.toString(), status: 'CLOSED' }
@@ -367,8 +381,14 @@ export async function closeResolutionCostClosure(ticketId: string) {
  * @returns 描述是否已经没有遗漏而畅通的校验状态集
  */
 export async function checkTicketFinancialClosure(ticketId: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) return { success: false, error: '未授权' };
+
     const notices = await db.query.liabilityNotices.findMany({
-        where: eq(liabilityNotices.afterSalesId, ticketId)
+        where: and(
+            eq(liabilityNotices.afterSalesId, ticketId),
+            eq(liabilityNotices.tenantId, session.user.tenantId) // AS-S-03 防超权
+        )
     });
 
     if (notices.length === 0) {
@@ -397,14 +417,17 @@ export async function checkTicketFinancialClosure(ticketId: string) {
  */
 export async function createExchangeOrder(ticketId: string) {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: '未授权' };
+    if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     const ticket = await db.query.afterSalesTickets.findFirst({
-        where: eq(afterSalesTickets.id, ticketId),
+        where: and(
+            eq(afterSalesTickets.id, ticketId),
+            eq(afterSalesTickets.tenantId, session.user.tenantId) // AS-S-02 跨越权保护
+        ),
         with: { order: true }
     });
 
-    if (!ticket) return { success: false, error: '工单不存在' };
+    if (!ticket) return { success: false, error: '工单不存在或无权访问' };
 
     // 这里仅作为演示：创建一个关联原订单的草稿订单
     const newOrderNo = `EX${Date.now()}`;

@@ -1,32 +1,36 @@
-import * as simulate from 'miniprogram-simulate';
-import * as path from 'path';
+﻿import './setup';
+// remove path
 import { authStore } from '../stores/auth-store';
 
 describe('custom-tab-bar', () => {
     let container: any;
-    let componentId: string;
 
-    beforeAll(() => {
-        try {
-            // Load component
-            const componentPath = path.resolve(__dirname, '../custom-tab-bar/index');
-            console.log('Loading component from:', componentPath);
-            componentId = simulate.load(componentPath, 'custom-tab-bar');
-            console.log('Component loaded with ID:', componentId);
-        } catch (err) {
-            console.error('Failed to load component:', err);
-            throw err;
-        }
-    });
-
-    beforeEach(() => {
+    beforeEach(async () => {
         (global as any).resetWX();
+        vi.clearAllMocks();
         authStore.logout();
-        container = simulate.render(componentId);
-        container.attach(document.createElement('parent-wrapper'));
+
+        if (!container) {
+            await import('../custom-tab-bar/index');
+            container = (global as any).lastComponentContainer;
+        }
+
+        if (container) {
+            container.setData({
+                selected: 0,
+                list: []
+            });
+            // 触发 attached 生命周期
+            if (container.instance.lifetimes && container.instance.lifetimes.attached) {
+                container.instance.lifetimes.attached.call(container.instance);
+            }
+        }
+
+        if (!container) throw new Error('Component logic not loaded');
     });
 
     test('访客 (Guest) 应看到基础 Tabs', () => {
+        container.instance.updateTabs();
         const list = container.data.list;
         expect(list).toHaveLength(2);
         expect(list[0].text).toBe('首页');
@@ -35,7 +39,6 @@ describe('custom-tab-bar', () => {
 
     test('管理员 (Admin) 应看到管理 Tabs', () => {
         authStore.setLogin('token', { id: '1', name: 'Boss', role: 'admin' });
-        // Trigger manual update because simulate doesn't automatically trigger lifetimes attached again after render
         container.instance.updateTabs();
 
         const list = container.data.list;
@@ -57,7 +60,6 @@ describe('custom-tab-bar', () => {
         authStore.setLogin('token', { id: '1', name: 'Boss', role: 'admin' });
         container.instance.updateTabs();
 
-        // 直接调用组件方法以验证逻辑，或者修正事件分发
         container.instance.switchTab({
             currentTarget: {
                 dataset: {
@@ -73,3 +75,5 @@ describe('custom-tab-bar', () => {
         expect(container.data.selected).toBe(0);
     });
 });
+
+export { };

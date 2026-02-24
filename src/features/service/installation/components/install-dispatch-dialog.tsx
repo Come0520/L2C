@@ -41,12 +41,24 @@ const formSchema = z.object({
     dispatcherNotes: z.string().optional(),
 });
 
+/**
+ * 安装任务指派对话框属性
+ */
 interface InstallDispatchDialogProps {
+    /** 任务 ID */
     taskId: string;
+    /** 可选安装师傅列表 */
     workers: { id: string; name: string | null }[];
+    /** 自定义触发元素 */
     trigger?: React.ReactNode;
 }
 
+/**
+ * 安装任务指派对话框
+ * 
+ * 用于管理员或调度员将安装任务分配给特定的安装师傅，并设置预约时间和预估费用。
+ * 支持冲突检测（软冲突提示：重复调度或物流未就绪）。
+ */
 export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispatchDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);

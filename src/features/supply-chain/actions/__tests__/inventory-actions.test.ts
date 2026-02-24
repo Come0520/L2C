@@ -20,7 +20,16 @@ vi.mock('@/shared/api/db', () => ({
         offset: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         transaction: vi.fn(async (cb) => {
-            return cb(db);
+            return cb({
+                ...db,
+                execute: vi.fn().mockImplementation((...args) => {
+                    // Check if db.execute is mocked in the test scope
+                    if (vi.isMockFunction((db as any).execute)) {
+                        return (db as any).execute(...args);
+                    }
+                    return [];
+                }),
+            });
         }),
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
@@ -84,7 +93,7 @@ describe('Inventory Actions', () => {
 
         it('扣减库存导致负数时应报错', async () => {
             mockDb.query.warehouses.findFirst.mockResolvedValue({ id: VALID_UUID });
-            mockDb.query.inventory.findFirst.mockResolvedValue({ id: 'inv-1', quantity: 5 });
+            mockDb.execute = vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 5 }]);
 
             const { adjustInventory } = await import('../inventory-actions');
             const result = await adjustInventory({
@@ -99,7 +108,7 @@ describe('Inventory Actions', () => {
 
         it('正数调配或合法扣减时应成功并生成日志', async () => {
             mockDb.query.warehouses.findFirst.mockResolvedValue({ id: VALID_UUID });
-            mockDb.query.inventory.findFirst.mockResolvedValue({ id: 'inv-1', quantity: 10 });
+            mockDb.execute = vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 10 }]);
             mockDb.query.products.findFirst.mockResolvedValue({ id: VALID_UUID_2, purchasePrice: '15.5' });
 
             const { adjustInventory } = await import('../inventory-actions');
@@ -118,7 +127,7 @@ describe('Inventory Actions', () => {
 
         it('首次初始化某仓库的某商品库存应执行 insert', async () => {
             mockDb.query.warehouses.findFirst.mockResolvedValue({ id: VALID_UUID });
-            mockDb.query.inventory.findFirst.mockResolvedValue(null); // 无记录
+            mockDb.execute = vi.fn().mockResolvedValue([]); // 无记录
             mockDb.query.products.findFirst.mockResolvedValue({ id: VALID_UUID_2, purchasePrice: '15.5' });
 
             const { adjustInventory } = await import('../inventory-actions');
@@ -149,8 +158,9 @@ describe('Inventory Actions', () => {
         it('原仓库库存不足应报错', async () => {
             // Mock warehouses both exist
             mockDb.query.warehouses.findFirst.mockResolvedValue({ id: 'wh' });
-            // Mock from inventory (less than qty)
-            mockDb.query.inventory.findFirst.mockResolvedValueOnce({ id: 'inv-from', quantity: 5 });
+
+            // Mock for UPDATE
+            mockDb.execute = vi.fn().mockResolvedValue([{ id: 'inv-from', quantity: 5 }]);
 
             const { transferInventory } = await import('../inventory-actions');
             const result = await transferInventory({
@@ -165,10 +175,11 @@ describe('Inventory Actions', () => {
 
         it('合法调拨应能扣减原仓，增加目标仓', async () => {
             mockDb.query.warehouses.findFirst.mockResolvedValue({ id: 'wh' });
-            // from inventory
-            mockDb.query.inventory.findFirst.mockResolvedValueOnce({ id: 'inv-from', quantity: 20 });
-            // to inventory
-            mockDb.query.inventory.findFirst.mockResolvedValueOnce({ id: 'inv-to', quantity: 5 });
+
+            // from & to inventory execute
+            mockDb.execute = vi.fn()
+                .mockResolvedValueOnce([{ id: 'inv-from', quantity: 20 }])
+                .mockResolvedValueOnce([{ id: 'inv-to', quantity: 5 }]);
 
             const { transferInventory } = await import('../inventory-actions');
             const result = await transferInventory({
@@ -192,11 +203,6 @@ describe('Inventory Actions', () => {
             mockDb.limit.mockResolvedValue([{ id: 'inv-1' }]);
             mockDb.select.mockReturnThis();
 
-            // Note: Since the real getInventoryLevels has a nested query `.select({ total: count() })`, 
-            // mocking entirely correctly for it involves more complex setup, but basic logic testing:
-            // Two calls: one for results, one for count. 
-            // We use a custom object that can both be awaited directly (for the count query)
-            // or further chained with limit/offset/orderBy (for the results query).
             mockDb.where.mockImplementation(() => {
                 return {
                     limit: () => ({
@@ -229,6 +235,8 @@ describe('Inventory Actions', () => {
             mockDb.query.inventory.findFirst.mockResolvedValue({ id: 'inv-1' });
 
             const { setminStock } = await import('../inventory-actions');
+            const { AuditService } = await import('@/shared/lib/audit-service');
+
             const result = await setminStock({
                 productId: VALID_UUID_2,
                 warehouseId: 'inv-1',

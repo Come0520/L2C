@@ -10,8 +10,8 @@ import { useSession } from 'next-auth/react';
 import {
   getTenantInfo,
   getVerificationStatus,
-  type VerificationStatus,
 } from '@/features/settings/actions/tenant-info';
+import type { VerificationStatus } from '@/features/settings/types/tenant';
 import { logger } from '@/shared/lib/logger';
 
 // 租户信息接口

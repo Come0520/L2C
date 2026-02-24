@@ -53,3 +53,5 @@ declare const Dialog: {
     resetDefaultOptions(): void;
 };
 export default Dialog;
+
+export {};

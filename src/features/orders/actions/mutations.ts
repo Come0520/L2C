@@ -7,9 +7,10 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/lib/audit-service';
 import { OrderStateMachine } from '../logic/order-state-machine';
+import { logger } from '@/shared/lib/logger';
 
 // Update Order Status Schema
 const updateOrderStatusSchema = z.object({
@@ -84,10 +85,10 @@ const updateOrderStatusActionInternal = createSafeAction(updateOrderStatusSchema
         changedFields: { status: data.status, reason: data.reason },
     });
 
-    console.log('[orders] 订单状态更新成功:', { id: data.id, tenantId: session.user.tenantId, oldStatus: order.status, newStatus: data.status });
+    logger.info('[orders] 订单状态更新成功:', { id: data.id, tenantId: session.user.tenantId, oldStatus: order.status, newStatus: data.status });
 
-    revalidatePath('/orders');
-    revalidatePath(`/orders/${data.id}`);
+    revalidateTag('orders', 'default');
+    revalidateTag(`order-${data.id}`, 'default');
 
     return { success: true, id: data.id, newStatus: data.status };
 });
@@ -124,10 +125,10 @@ const requestOrderCancellationActionInternal = createSafeAction(requestOrderCanc
         data.reason
     );
 
-    revalidatePath('/orders');
-    revalidatePath(`/orders/${data.orderId}`);
+    revalidateTag('orders', 'default');
+    revalidateTag(`order-${data.orderId}`, 'default');
 
-    console.log('[orders] 申请取消订单提交成功:', { orderId: data.orderId, tenantId: session.user.tenantId, approvalId: result.approvalId });
+    logger.info('[orders] 申请取消订单提交成功:', { orderId: data.orderId, tenantId: session.user.tenantId, approvalId: result.approvalId });
 
     return { success: true, approvalId: result.approvalId };
 });
@@ -166,14 +167,22 @@ const pauseOrderActionInternal = createSafeAction(pauseOrderSchema, async (data,
         newValues: { reason: data.reason },
     });
 
-    revalidatePath('/orders');
-    revalidatePath(`/orders/${data.orderId}`);
+    revalidateTag('orders', 'default');
+    revalidateTag(`order-${data.orderId}`, 'default');
 
-    console.log('[orders] 订单已被叫停:', { orderId: data.orderId, tenantId: session.user.tenantId, reason: data.reason });
+    logger.info('[orders] 订单已被叫停:', { orderId: data.orderId, tenantId: session.user.tenantId, reason: data.reason });
 
     return { success: true };
 });
 
+/**
+ * 暂停/叫停订单 Action。
+ * 
+ * @description 暂停订单执行进程。必须提供暂停原因。该操作会记录订单中止时间及终止原因。
+ * 
+ * @param params 包含订单 ID、当前乐观锁版本及暂停原因。
+ * @returns 返回调用结果及成功标识。
+ */
 export async function pauseOrder(params: z.infer<typeof pauseOrderSchema>) {
     return pauseOrderActionInternal(params);
 }
@@ -199,14 +208,22 @@ const resumeOrderActionInternal = createSafeAction(resumeOrderSchema, async (dat
         newValues: { remark: data.remark },
     });
 
-    revalidatePath('/orders');
-    revalidatePath(`/orders/${data.orderId}`);
+    revalidateTag('orders', 'default');
+    revalidateTag(`order-${data.orderId}`, 'default');
 
-    console.log('[orders] 订单已恢复运行:', { orderId: data.orderId, tenantId: session.user.tenantId, remark: data.remark });
+    logger.info('[orders] 订单已恢复运行:', { orderId: data.orderId, tenantId: session.user.tenantId, remark: data.remark });
 
     return { success: true };
 });
 
+/**
+ * 恢复执行订单 Action。
+ * 
+ * @description 将因故暂停的订单重新挂起执行。可以通过备注记录恢复情况说明。
+ * 
+ * @param params 包含订单 ID、版本及恢复备注。
+ * @returns 成功则返回 true。
+ */
 export async function resumeOrder(params: z.infer<typeof resumeOrderSchema>) {
     return resumeOrderActionInternal(params);
 }

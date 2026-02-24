@@ -12,27 +12,42 @@ import { useRouter } from 'next/navigation';
 import { ApprovalProgressSteps } from './approval-progress-steps';
 import { AddApproverDialog } from './add-approver-dialog';
 
+/**
+ * 审批任务详情接口
+ */
 interface Task {
     // ... (existing properties)
     id: string;
+    /** 审批人简要信息 */
     approver?: { name: string | null } | null;
+    /** 任务当前状态 */
     status: string | null;
+    /** 关联的流程节点 ID */
     nodeId: string | null;
+    /** 关联的节点名称信息 */
     node: { name: string } | null;
+    /** 审批主实例信息 */
     approval: {
         id: string;
+        /** 流程模板信息 */
         flow: { name: string } | null;
-        requester?: { name: string | null } | null; // Made optional based on usage
+        /** 发起人信息 */
+        requester?: { name: string | null } | null;
         createdAt: Date | null;
         entityType: string;
         entityId: string;
         comment?: string;
         currentNodeId: string | null;
-        status: string; // Flow general status usually not null if default, but let's check. 
+        status: string;
+        /** 该实例下的所有任务记录 */
         tasks: Array<{ id: string; nodeId: string | null; status: string | null; approver?: { name: string | null } | null; actionAt?: Date | null; comment?: string | null }>;
     };
 }
 
+/**
+ * 审批任务详情组件
+ * 提供审批信息的全景展示，包括业务背景、处理表单及流转路径
+ */
 export function ApprovalTaskDetails({
     task,
     flowNodes

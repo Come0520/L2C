@@ -90,3 +90,5 @@ Page({
         wx.navigateTo({ url: '/pages/register/register' });
     }
 });
+
+export { };

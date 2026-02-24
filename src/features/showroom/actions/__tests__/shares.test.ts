@@ -44,7 +44,7 @@ vi.mock('@/shared/lib/redis', () => ({
 }));
 vi.mock('@/shared/middleware/rate-limit', () => ({ checkRateLimit: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: vi.fn() }));
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 
 import type { Session } from 'next-auth';
 const UUID_SHARE = '33333333-3333-4333-8333-333333333333';

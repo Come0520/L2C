@@ -7,6 +7,8 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { isValidTransition } from '@/features/after-sales/logic/state-machine';
+import { AuditService } from '@/shared/lib/audit-service';
 
 // Types for filters
 export interface TicketFilters {
@@ -44,7 +46,7 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
     const whereConditions = [eq(afterSalesTickets.tenantId, session.user.tenantId)];
 
     if (status && status !== 'all') {
-      whereConditions.push(eq(afterSalesTickets.status, status as "PENDING" | "PROCESSING" | "PENDING_VERIFY" | "CLOSED"));
+      whereConditions.push(eq(afterSalesTickets.status, status as any));
     }
 
     if (search) {
@@ -58,26 +60,35 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
       );
     }
 
-    const dataQuery = await query
-      .where(and(...whereConditions)!)
-      .limit(pageSize)
-      .offset(offset)
-      .orderBy(desc(afterSalesTickets.createdAt));
-
-    const countResult = await db
-      .select({ count: count(afterSalesTickets.id) })
-      .from(afterSalesTickets)
-      .leftJoin(customers, eq(afterSalesTickets.customerId, customers.id))
-      .where(and(...whereConditions)!);
+    const [dataResult, countResult] = await Promise.all([
+      query
+        .where(and(...whereConditions)!)
+        .limit(pageSize)
+        .offset(offset)
+        .orderBy(desc(afterSalesTickets.createdAt)),
+      db
+        .select({ count: count(afterSalesTickets.id) })
+        .from(afterSalesTickets)
+        .leftJoin(customers, eq(afterSalesTickets.customerId, customers.id))
+        .where(and(...whereConditions)!)
+    ]);
 
     const total = countResult[0]?.count || 0;
     const totalPages = Math.ceil(total / pageSize);
 
-    const formattedData = dataQuery.map((row) => ({
-      ...row.ticket,
-      customer: row.customer,
-      order: row.order,
-    }));
+    const formattedData = dataResult.map((row) => {
+      const customer = row.customer ? { ...row.customer } : null;
+      if (customer && customer.phone) {
+        // 脱敏手机号 (SV-S-02)
+        customer.phone = customer.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+      }
+
+      return {
+        ...row.ticket,
+        customer,
+        order: row.order,
+      };
+    });
 
     return {
       success: true,
@@ -95,13 +106,13 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
 /**
  * 更新指定售后工单的状态信息以及处理结果
  * @param id - 需要操作更改工单对应数据实体的唯一主键
- * @param status - 全新的流转或处理状态 ('PENDING' | 'PROCESSING' | 'PENDING_VERIFY' | 'CLOSED')
+ * @param status - 全新的流转或处理状态
  * @param result - (可选) 支持备注处理结论或修复方案信息
  * @returns 代表状态变更结果（是否成功、有无报错）的实例
  */
 export async function updateTicketStatus(
   id: string,
-  status: 'PENDING' | 'PROCESSING' | 'PENDING_VERIFY' | 'CLOSED',
+  status: 'PENDING' | 'INVESTIGATING' | 'PROCESSING' | 'PENDING_VISIT' | 'PENDING_CALLBACK' | 'PENDING_VERIFY' | 'CLOSED' | 'REJECTED',
   result?: string
 ) {
   const session = await auth();
@@ -119,22 +130,46 @@ export async function updateTicketStatus(
       )
     });
 
-    if (existingTicket?.status === 'CLOSED' && status !== 'CLOSED') {
+    if (!existingTicket) {
+      return { success: false, error: '工单不存在' };
+    }
+
+    if (existingTicket.status === 'CLOSED' && status !== 'CLOSED') {
       return { success: false, error: '已关闭的工单不能直接重新打开或流转' };
     }
 
-    await db
-      .update(afterSalesTickets)
-      .set({
-        status, // Schema enum
-        resolution: result || undefined,
-        updatedAt: new Date(),
-        // P0-1 Fix: Removed unconditional assignedTo override.
-        // Assignment should be handled by a dedicated action or only when claiming the ticket.
-      })
-      .where(
-        and(eq(afterSalesTickets.id, id), eq(afterSalesTickets.tenantId, session.user.tenantId))
+    if (!isValidTransition(existingTicket.status, status)) {
+      return { success: false, error: `非法状态流转: 从 ${existingTicket.status} 到 ${status} 是不被允许的。` };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(afterSalesTickets)
+        .set({
+          status, // Schema enum
+          resolution: result || undefined,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(afterSalesTickets.id, id), eq(afterSalesTickets.tenantId, session.user.tenantId))
+        );
+
+      // [SV-R-03] Write Audit log
+      await AuditService.recordFromSession(
+        session,
+        'after_sales_tickets',
+        id,
+        'UPDATE',
+        {
+          changed: {
+            from: existingTicket.status,
+            to: status,
+            resolution: result,
+          }
+        },
+        tx
       );
+    });
 
     revalidatePath('/service');
     return { success: true };

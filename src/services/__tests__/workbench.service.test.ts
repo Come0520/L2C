@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WorkbenchService } from '../workbench.service';
 import { db } from '@/shared/api/db';
 
 // Mock next/cache correctly for the pattern: unstable_cache(...)()
 vi.mock('next/cache', () => ({
     unstable_cache: (fn: any) => () => fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock database query layer

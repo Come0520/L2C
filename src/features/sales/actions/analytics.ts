@@ -1,5 +1,4 @@
 'use server';
-/* eslint-disable no-console */
 
 /**
  * Sales Analytics（销售分析）增强功能
@@ -73,6 +72,17 @@ export interface TargetWarning {
 /**
  * 计算某月的 ACCEPTED 报价金额合计
  */
+/**
+ * 计算指定月份的已达成业绩金额
+ * 
+ * @description 汇总指定租户下、指定月份内所有状态为 ACCEPTED 的报价单金额。
+ * 
+ * @param {string} tenantId - 租户 ID
+ * @param {number} year - 年份
+ * @param {number} month - 月份 (1-12)
+ * @param {string} [userId] - 可选，指定销售人员 ID
+ * @returns {Promise<number>} 返回汇总后的总金额
+ */
 async function getMonthlyAchievedAmount(
     tenantId: string,
     year: number,
@@ -106,6 +116,10 @@ async function getMonthlyAchievedAmount(
 /**
  * 获取销售目标完成率趋势（最近 6 个月）
  * 权限：所有已登录用户（团队视图限 admin/manager/BOSS）
+ * 
+ * @param {string} [userId] - 指定用户 ID，默认为当前登录用户
+ * @returns {Promise<{ success: boolean; data?: MonthlyCompletionPoint[]; error?: string }>}
+ * @throws {Error} 数据库查询异常
  */
 export async function getSalesCompletionTrend(
     userId?: string
@@ -168,12 +182,11 @@ export async function getSalesCompletionTrend(
         );
 
         const points = await getCachedTrend();
-        console.log(`[sales][analytics] getSalesCompletionTrend success, user: ${targetUserId}`);
+        logger.info(`[sales][analytics] getSalesCompletionTrend success, user: ${targetUserId}`);
 
         return { success: true, data: points };
     } catch (error) {
-        console.error('[sales][analytics] Exception in getSalesCompletionTrend:', error);
-        logger.error('getSalesCompletionTrend error:', error);
+        logger.error('[sales][analytics] Exception in getSalesCompletionTrend:', error);
         return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }
@@ -181,6 +194,11 @@ export async function getSalesCompletionTrend(
 /**
  * 获取团队销售排名（当月）
  * 权限：admin/manager/BOSS
+ * 
+ * @param {number} [year] - 指定年份，默认当年
+ * @param {number} [month] - 指定月份，默认当月
+ * @returns {Promise<{ success: boolean; data?: SalesRankingItem[]; error?: string }>}
+ * @throws {Error} 接口鉴权失败或数据库异常
  */
 export async function getSalesRanking(
     year?: number,
@@ -199,7 +217,7 @@ export async function getSalesRanking(
         });
 
         if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-            console.error(`[sales][analytics] Permission denied for getSalesRanking: user ${session.user.id}, role ${currentUser?.role}`);
+            logger.error(`[sales][analytics] Permission denied for getSalesRanking: user ${session.user.id}, role ${currentUser?.role}`);
             return { success: false, error: 'Permission denied' };
         }
 
@@ -269,12 +287,11 @@ export async function getSalesRanking(
         );
 
         const rankingItems = await getCachedRanking();
-        console.log(`[sales][analytics] getSalesRanking success, length: ${rankingItems.length}`);
+        logger.info(`[sales][analytics] getSalesRanking success, length: ${rankingItems.length}`);
 
         return { success: true, data: rankingItems };
     } catch (error) {
-        console.error('[sales][analytics] Exception in getSalesRanking:', error);
-        logger.error('getSalesRanking error:', error);
+        logger.error('[sales][analytics] Exception in getSalesRanking:', error);
         return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }
@@ -283,6 +300,9 @@ export async function getSalesRanking(
  * 获取月中目标达成预警
  * 按照月初到今天的实际进度，线性预测月底完成情况
  * 权限：admin/manager/BOSS
+ * 
+ * @returns {Promise<{ success: boolean; data?: TargetWarning[]; error?: string; }>}
+ * @throws {Error} 鉴权失败或预测逻辑异常
  */
 export async function getSalesTargetWarnings(): Promise<{
     success: boolean;
@@ -302,7 +322,7 @@ export async function getSalesTargetWarnings(): Promise<{
         });
 
         if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-            console.error(`[sales][analytics] Permission denied for getSalesTargetWarnings: user ${session.user.id}, role ${currentUser?.role}`);
+            logger.error(`[sales][analytics] Permission denied for getSalesTargetWarnings: user ${session.user.id}, role ${currentUser?.role}`);
             return { success: false, error: 'Permission denied' };
         }
 
@@ -385,12 +405,11 @@ export async function getSalesTargetWarnings(): Promise<{
         );
 
         const atRiskWarnings = await getCachedWarnings();
-        console.log(`[sales][analytics] getSalesTargetWarnings success, found ${atRiskWarnings.length} warnings`);
+        logger.info(`[sales][analytics] getSalesTargetWarnings success, found ${atRiskWarnings.length} warnings`);
 
         return { success: true, data: atRiskWarnings };
     } catch (error) {
-        console.error('[sales][analytics] Exception in getSalesTargetWarnings:', error);
-        logger.error('getSalesTargetWarnings error:', error);
+        logger.error('[sales][analytics] Exception in getSalesTargetWarnings:', error);
         return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }

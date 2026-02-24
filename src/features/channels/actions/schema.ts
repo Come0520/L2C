@@ -37,7 +37,7 @@ export const channelSchema = z.object({
     // 财务配置
     commissionRate: z.coerce.number().min(0, '返点比例不能小于0').max(100, '返点比例不能超过100'),
     commissionType: z.enum(['FIXED', 'TIERED']).optional(),
-    tieredRates: z.array(tieredRateSchema).optional().superRefine((rates, ctx) => {
+    tieredRates: z.array(tieredRateSchema).max(20, '阶梯不能超过20个').optional().superRefine((rates, ctx) => {
         if (!rates || rates.length === 0) return;
 
         // Sort by minAmount to check for overlaps
@@ -83,7 +83,7 @@ export const channelSchema = z.object({
     priceDiscountRate: z.coerce.number().min(0, '折扣率不能小于0').max(2, '折扣率不能超过2').optional(),
 
     settlementType: z.enum(['PREPAY', 'MONTHLY']),
-    creditLimit: z.coerce.number().min(0).optional(),
+    creditLimit: z.coerce.number().min(0).max(10000000, '信用额度过高').optional(),
     commissionTriggerMode: z.enum(['ORDER_CREATED', 'ORDER_COMPLETED', 'PAYMENT_COMPLETED']).optional(),
     bankInfo: bankInfoSchema,  // 替换 z.any() 为具体类型
 
@@ -131,15 +131,5 @@ export interface AttributionSettings {
     excludeDirectSales: boolean;
 }
 
-// 渠道分析数据类型
-export interface ChannelAnalyticsData {
-    channelId: string;
-    channelName: string;
-    totalLeads: number;
-    convertedLeads: number;
-    conversionRate: number;
-    totalRevenue: number;
-    totalCommission: number;
-    pendingCommission: number;
-    paidCommission: number;
-}
+// Note: ChannelAnalyticsData is moved to action files for better proximity
+

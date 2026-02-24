@@ -40,9 +40,9 @@ export const UNKNOWN_CHANNEL_SCORE = 15;
  * 意向度等级权重
  */
 export const INTENTION_WEIGHTS: Record<string, number> = {
-    HIGH: 35,     // 高意向
+    HIGH: 50,     // 高意向
     MEDIUM: 20,   // 中意向
-    LOW: 10,      // 低意向
+    LOW: 5,       // 低意向
 } as const;
 
 /** 默认意向度分数 */

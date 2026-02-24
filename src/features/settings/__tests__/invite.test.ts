@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     createEmployeeInviteLink,
     createCustomerInviteLink,
@@ -33,6 +33,7 @@ vi.mock('@/shared/lib/invite-token', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
 }));
 
 describe('Invite Actions', () => {

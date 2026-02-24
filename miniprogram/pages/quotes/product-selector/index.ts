@@ -1,7 +1,7 @@
 Page({
     data: {
         roomIndex: -1,
-        products: [] as any[],
+        products: [] as Record<string, any>[],
         loading: false,
         keyword: ''
     },
@@ -51,3 +51,5 @@ Page({
         }
     }
 });
+
+export {};

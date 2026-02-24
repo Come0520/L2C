@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Quotes 模块 Server Actions 集成测试 (CRUD: 创建单头)
  *
  * 覆盖范围：
@@ -62,6 +62,7 @@ vi.mock('@/services/discount-control.service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/api/schema/quotes', () => ({

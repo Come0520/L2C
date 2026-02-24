@@ -10,7 +10,7 @@
  * - UUID 校验：roleId 必须 UUID 格式
  * - 多租户隔离：所有查询带 tenantId
  * - 审计日志：AuditService.log 含 oldValues/newValues
- * - 缓存失效：revalidateTag('roles') + revalidatePath
+ * - 缓存失效：revalidateTag('roles', 'default') + revalidatePath
  */
 
 import { db } from '@/shared/api/db';
@@ -24,6 +24,9 @@ import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
+import { AdminRateLimiter } from '../rate-limiter';
+import { QuotaManager } from '../quota-manager';
+import { PolicyEngine } from '../admin-policy-engine';
 import type { Session } from 'next-auth';
 
 // ========== 安全常量 ==========
@@ -85,7 +88,10 @@ function validatePermissionsWhitelist(permissions: string[]): void {
 
 /**
  * 获取角色列表（带关联用户数统计）
- * 需要 admin.role_manage 权限
+ * 
+ * @param session 当前用户会话
+ * @returns 返回包含角色 DTO 列表的成功响应或错误信息
+ * @throws 权限不足时抛出异常
  */
 export async function getRoles(session: Session): Promise<{
     success: boolean;
@@ -93,7 +99,11 @@ export async function getRoles(session: Session): Promise<{
     error?: string;
 }> {
     try {
-        await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE);
+        if (!(await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE))) {
+            throw new Error('权限不足：无法访问角色列表');
+        }
+
+        logger.info(`[Admin] 用户 ${session.user.id} 正在获取租户 ${session.user.tenantId} 的角色列表`);
 
         const roleList = await db.query.roles.findMany({
             where: eq(roles.tenantId, session.user.tenantId),
@@ -134,16 +144,39 @@ export async function getRoles(session: Session): Promise<{
 // ========== 写入 Action ==========
 
 /**
- * 创建新角色
- * 安全特性：重名检查、权限白名单校验
+ * 创建新角色（内部实现）
+ * 
+ * 安全特性：
+ * 1. 权限白名单校验：防止注入非法权限
+ * 2. 同名检查：防止租户内角色名称冲突
+ * 3. 审计留痕：记录创建者及初始权限
+ * 
+ * @param data 角色创建参数，经过 zod 校验
+ * @param context 包含 session 的上下文对象
  */
 const createRoleInternal = createSafeAction(createRoleSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE))) {
+        throw new Error('权限不足：无法创建新角色');
+    }
+    await AdminRateLimiter.check(session.user.id, 'role_mutation');
+
+    // 策略引擎评估 (ABAC 预留)
+    const decision = await PolicyEngine.evaluate({
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        action: 'CREATE_ROLE',
+        resource: 'roles',
+        timestamp: new Date(),
+    });
+    if (!decision.allowed) throw new Error(decision.reason);
 
     const { name, description, permissions } = data;
 
     // 安全检查 1：权限白名单校验
     validatePermissionsWhitelist(permissions);
+
+    // 安全检查 1.5：资源配额校验
+    await QuotaManager.checkRoleQuota(session.user.tenantId);
 
     // 安全检查 2：同名角色检查
     const existing = await db.query.roles.findFirst({
@@ -178,6 +211,8 @@ const createRoleInternal = createSafeAction(createRoleSchema, async (data, { ses
         newValues: { name, description, permissions },
     });
 
+    logger.info(`[Admin] 用户 ${session.user.id} 成功创建角色: ${name} (${newRole.id}), 权限数: ${permissions.length}`);
+
     // 使 RBAC 缓存失效
     revalidateTag('roles', 'default');
     revalidatePath('/admin/settings/roles');
@@ -191,10 +226,20 @@ export async function createRole(params: z.infer<typeof createRoleSchema>) {
 
 /**
  * 更新角色权限（核心安全操作）
- * 安全特性：系统角色保护、权限白名单校验
+ * 
+ * 安全特性：
+ * 1. 系统角色保护：防止内置核心角色被篡改
+ * 2. 权限白名单校验：确保分配的权限合法
+ * 3. 审计对比：记录权限变更的差异
+ * 
+ * @param data 包含 roleId 和新权限列表的参数
+ * @param context 包含 session 的上下文对象
  */
 const updateRolePermissionsInternal = createSafeAction(updateRolePermissionsSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE))) {
+        throw new Error('权限不足：无法修改角色权限');
+    }
+    await AdminRateLimiter.check(session.user.id, 'role_mutation');
 
     const { roleId, permissions } = data;
 
@@ -240,6 +285,8 @@ const updateRolePermissionsInternal = createSafeAction(updateRolePermissionsSche
         newValues: { permissions },
     });
 
+    logger.info(`[Admin] 用户 ${session.user.id} 更新了角色 ${roleId} 的权限, 旧权限数: ${(oldRole.permissions as string[])?.length || 0}, 新权限数: ${permissions.length}`);
+
     // 使 RBAC 缓存失效
     revalidateTag('roles', 'default');
     revalidatePath('/admin/settings/roles');
@@ -253,10 +300,20 @@ export async function updateRolePermissions(params: z.infer<typeof updateRolePer
 
 /**
  * 删除角色（高风险操作）
- * 安全特性：系统角色不可删、有活跃用户的角色不可删
+ * 
+ * 安全特性：
+ * 1. 系统角色保护：内置角色禁止删除
+ * 2. 活跃用户检查：防止产生孤立角色的活跃用户
+ * 3. 审计留痕：记录被删除角色的名称和权限快照
+ * 
+ * @param data 包含 roleId 的参数
+ * @param context 包含 session 的上下文对象
  */
 const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.ADMIN.ROLE_MANAGE))) {
+        throw new Error('权限不足：无法删除角色');
+    }
+    await AdminRateLimiter.check(session.user.id, 'role_mutation');
 
     const { roleId } = data;
 
@@ -309,6 +366,8 @@ const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { ses
             permissions: targetRole.permissions,
         },
     });
+
+    logger.info(`[Admin] 用户 ${session.user.id} 删除了角色: ${targetRole.name} (${roleId})`);
 
     // 使 RBAC 缓存失效
     revalidateTag('roles', 'default');

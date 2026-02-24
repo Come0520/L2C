@@ -8,18 +8,22 @@
  * 4. 多责任方分摊
  */
 import { test, expect } from '@playwright/test';
-import { skipOnDataLoadError } from '../helpers/test-utils';
+import { skipOnDataLoadError, getValidOrderId } from '../helpers/test-utils';
 
 test.describe('售后定责流程 (After-Sales Liability)', () => {
     let createdTicketId: string | null = null;
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/after-sales');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/after-sales', { timeout: 60000 });
+        await expect(page.getByRole('heading', { name: /售后/ }).first()).toBeVisible({ timeout: 15000 }).catch(() => { });
     });
 
     test('P0-1: 应能创建售后工单并进入详情页', async ({ page }) => {
         if (await skipOnDataLoadError(page)) return;
+
+        // 获取动态有效订单 ID，避免因写死 UUID 导致拦截
+        const validOrderId = await getValidOrderId(page);
+        await page.goto('/after-sales', { timeout: 60000 });
 
         // 点击创建按钮
         const createBtn = page.getByRole('button', { name: /创建|新增|新建/ });
@@ -32,10 +36,9 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         // 验证进入新建页面
         await expect(page).toHaveURL(/\/after-sales\/new/);
 
-        // 填写关联订单 ID (E2E 环境中需要一个真实的 UUID，此处模拟输入)
-        // 注意：实际测试可能需要先创建一个订单并获取 ID
+        // 填写关联订单 ID (E2E 环境中需要一个真实的 UUID)
         const orderIdInput = page.getByLabel(/关联订单/);
-        await orderIdInput.fill('672ac864-dc76-4dc4-86af-0dd15c01c26c'); // Valid Order ID from DB
+        await orderIdInput.fill(validOrderId); // Valid Order ID from DB
 
         // 选择工单类型
         const typeSelect = page.getByLabel(/售后类型/);

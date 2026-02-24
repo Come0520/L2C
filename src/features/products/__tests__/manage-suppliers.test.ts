@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -87,7 +87,8 @@ vi.mock('@/shared/config/permissions', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn()
 }));
 
 import {

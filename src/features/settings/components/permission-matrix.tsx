@@ -3,7 +3,10 @@ import { logger } from '@/shared/lib/logger';
 
 import * as React from 'react';
 import { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronRight, RotateCcw, Save } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { TriStateCheckbox, TriState, TriStateLabel } from '@/shared/ui/tri-state-checkbox';

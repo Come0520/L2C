@@ -11,7 +11,7 @@ import {
     addProductSupplier,
     updateProductSupplier,
     removeProductSupplier
-} from '../actions';
+} from '../actions/manage-suppliers';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
 import {
     Table,
@@ -59,13 +59,22 @@ const addSupplierSchema = z.object({
 
 type AddSupplierFormValues = z.infer<typeof addSupplierSchema>;
 
+/** 产品供应商关联条目的数据结构 */
+interface ProductSupplierItem {
+    id: string;
+    supplierId: string;
+    supplierName: string | null;
+    purchasePrice: string | null;
+    leadTimeDays: number | null;
+    isDefault: boolean | null;
+}
+
 interface ProductSupplierManagerProps {
     productId: string;
 }
 
 export function ProductSupplierManager({ productId }: ProductSupplierManagerProps) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<ProductSupplierItem[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<{ id: string; name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);

@@ -6,7 +6,10 @@ import { getDashboardConfigAction, saveDashboardConfigAction, resetDashboardConf
 import { WidgetConfig, UserDashboardConfig as DashboardLayoutConfig } from '../types';
 import { getDefaultDashboardConfig } from '../utils';
 import { Button } from '@/shared/ui/button';
-import { Settings, RotateCcw, Save, X } from 'lucide-react';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Save from 'lucide-react/dist/esm/icons/save';
+import X from 'lucide-react/dist/esm/icons/x';
 import { toast } from 'sonner';
 
 // Widget 组件导入
@@ -15,7 +18,10 @@ import { ArApSummaryCard } from '@/features/analytics/components/ar-ap-summary-c
 import { DeliveryEfficiencyCard } from '@/features/analytics/components/delivery-efficiency-card';
 import { CustomerSourceChart } from '@/features/analytics/components/customer-source-chart';
 import { SalesFunnelChart } from '@/features/analytics/components/sales-funnel-chart';
-import { DollarSign, Users, ShoppingCart, Percent } from 'lucide-react';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Users from 'lucide-react/dist/esm/icons/users';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import Percent from 'lucide-react/dist/esm/icons/percent';
 
 interface DashboardPageClientProps {
     initialConfig?: DashboardLayoutConfig;

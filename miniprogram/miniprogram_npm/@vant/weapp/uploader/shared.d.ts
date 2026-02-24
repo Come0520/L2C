@@ -59,3 +59,5 @@ export declare const messageFileProps: {
         value: boolean;
     };
 };
+
+export {};

@@ -1,21 +1,30 @@
-import * as simulate from 'miniprogram-simulate';
-import * as path from 'path';
+﻿import '../setup';
 import { authStore } from '../../stores/auth-store';
 
 describe('Workbench Page', () => {
     let container: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         (global as any).resetWX();
+        vi.clearAllMocks();
         authStore.logout();
 
-        // 直接 require 触发 Page() 调用
-        // 注意：jest 有模块缓存，这里需要 clear 或使用 jest.isolateModules
-        jest.isolateModules(() => {
-            require('../../pages/workbench/index');
-        });
+        if (!container) {
+            await import('../../pages/workbench/index');
+            container = (global as any).lastPageContainer;
+        }
 
-        container = (global as any).lastPageContainer;
+        if (container) {
+            container.setData({
+                loading: true,
+                dashboard: {
+                    targetCompletion: 0,
+                    stats: { leads: 0, quotes: 0, orders: 0, cash: 0 },
+                    todos: []
+                }
+            });
+        }
+
         if (!container) throw new Error('Page logic not loaded');
     });
 
@@ -30,7 +39,7 @@ describe('Workbench Page', () => {
         };
         // 修正：在 require 之前注入 wx mock 是安全的，
         // 或者直接通过 getApp().request 注入
-        (global as any).getApp().request = jest.fn().mockResolvedValue(mockData);
+        (global as any).getApp().request = vi.fn().mockResolvedValue(mockData);
 
         await container.instance.onShow();
 
@@ -39,7 +48,7 @@ describe('Workbench Page', () => {
     });
 
     test('加载状态控制', async () => {
-        (global as any).wx.request = jest.fn().mockReturnValue(new Promise(() => { })); // Stuck
+        (global as any).wx.request = vi.fn().mockReturnValue(new Promise(() => { })); // Stuck
 
         container.instance.fetchDashboard();
         expect(container.data.loading).toBe(true);
@@ -52,3 +61,5 @@ describe('Workbench Page', () => {
         }));
     });
 });
+
+export { };

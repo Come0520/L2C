@@ -1,4 +1,4 @@
-
+﻿
 /**
  * PO Actions 权限检查和输入验证测试
  * 测试覆盖安全审计修复后的权限和验证逻辑
@@ -10,6 +10,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 // Mock Modules
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/auth', () => ({

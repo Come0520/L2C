@@ -11,7 +11,7 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { QuoteConfigService } from '@/services/quote-config.service';
 import {
   createQuoteItemSchema,
@@ -19,14 +19,32 @@ import {
   deleteQuoteItemSchema,
   reorderQuoteItemsSchema,
 } from './schema';
-import { calculateSubtotal, updateQuoteTotal } from './shared-helpers';
+import { updateQuoteTotal } from './shared-helpers';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { AccessoryLinkageService } from '../services/accessory-linkage.service';
 import { AuditService } from '@/shared/lib/audit-service';
 import { SizeValidator } from '@/shared/lib/validators';
 import { logger } from '@/shared/lib/logger';
+import Decimal from 'decimal.js';
+
+// --- 内部辅助函数 ---
+const calculateSubtotal = (price: number, quantity: number, processFee: number = 0) => {
+  return Number(new Decimal(price).mul(quantity).add(processFee).toFixed(2));
+};
 
 // ─── 创建行项目 ─────────────────────────────────
+
+/**
+ * 客户端调用：创建报价单行项目 (Create Quote Item)
+ * 支持产品自动填充（ unitPrice, specs ）、损耗逻辑计算、尺寸合理性校验，
+ * 以及自动配件联动（ Accessory Linkage ）。
+ * 
+ * @param params 行项目请求参数，包括所属报价单、产品、尺寸等
+ * @returns 创建的行项目记录（可能包含警告信息及计算明细）
+ */
+export async function createQuoteItem(params: z.infer<typeof createQuoteItemSchema>) {
+  return createQuoteItemActionInternal(params);
+}
 
 /**
  * 内部服务器操作：创建报价单行项目
@@ -196,22 +214,28 @@ const createQuoteItemActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 行项目创建成功', { itemId: newItem.id, quoteId: data.quoteId });
     return newItem;
   }
 );
 
-/**
- * 客户端可调用的无上下文包装方法：创建报价单行项目
- * @param params 行项目请求参数
- * @returns 包装了响应的行项目实例
- */
-export async function createQuoteItem(params: z.infer<typeof createQuoteItemSchema>) {
-  return createQuoteItemActionInternal(params);
-}
 
 // ─── 更新行项目 ─────────────────────────────────
 
+/**
+ * 客户端调用：更新报价单行项目 (Update Quote Item)
+ * 核心逻辑：
+ * 1. 重新执行产品数据自动同步。
+ * 2. 依据最新的计算策略（Curtain/Wallpaper）重新计算用量。
+ * 3. 校验尺寸合理性并更新关联报价单总额。
+ * 
+ * @param params - 包含行项目 ID 及更新字段的对象
+ * @returns 成功状态
+ */
+export async function updateQuoteItemAction(params: z.infer<typeof updateQuoteItemSchema>) {
+  return updateQuoteItem(params);
+}
 /**
  * 更新报价单行项目，重新执行计算逻辑并自动维护关联属性
  * @param data 包含要更新属性的对象（含行项目ID）
@@ -388,11 +412,22 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   });
 
   revalidatePath(`/quotes/${existing.quoteId}`);
+  revalidateTag('quotes', 'default');
   return { success: true };
 });
 
 // ─── 删除行项目 ─────────────────────────────────
 
+/**
+ * 客户端调用：删除报价单行项目 (Delete Quote Item)
+ * 包含：行项目归属校验、物理删除（及总额自动更新）、审计日志记录。
+ * 
+ * @param params - 包含行项目 ID 的对象
+ * @returns 成功状态
+ */
+export async function deleteQuoteItemAction(params: z.infer<typeof deleteQuoteItemSchema>) {
+  return deleteQuoteItem(params);
+}
 /**
  * 软删除指定的报价单行项目，并更新所属报价单的总金额
  * @param data 包含行项目ID的对象
@@ -423,11 +458,22 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
   await updateQuoteTotal(existing.quoteId, userTenantId);
 
   revalidatePath(`/quotes/${existing.quoteId}`);
+  revalidateTag('quotes', 'default');
   return { success: true };
 });
 
 // ─── 排序行项目 ─────────────────────────────────
 
+/**
+ * 客户端调用：对报价单内的行项目进行批量排序 (Reorder Items)
+ * 逻辑：在数据库事务中批量更新 `sortOrder` 字段。
+ * 
+ * @param params - 包含报价单 ID 及重新排序的项目列表
+ * @returns 操作结果
+ */
+export async function reorderQuoteItemsAction(params: z.infer<typeof reorderQuoteItemsSchema>) {
+  return reorderQuoteItems(params);
+}
 /**
  * 批量更新行项目的显示顺位信息
  * @param data 包含报价单ID及需重新排序的行项目ID和新排序号的列表
@@ -470,6 +516,7 @@ export const reorderQuoteItems = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 行项目排序完成', { quoteId: data.quoteId });
     return { success: true };
   }

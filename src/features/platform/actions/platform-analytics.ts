@@ -19,37 +19,48 @@ import { unstable_cache } from 'next/cache';
 
 // ============ 类型定义 ============
 
-/** 平台仪表盘概览数据 */
+/** 平台仪表盘概览数据结构 */
 export interface PlatformOverview {
-    /** 活跃租户数 */
+    /** 活跃中的租户总数 */
     activeCount: number;
-    /** 待审批租户数 */
+    /** 等待管理员审批的租户申请数 */
     pendingCount: number;
-    /** 已暂停租户数 */
+    /** 因违规或过期被暂停服务的租户数 */
     suspendedCount: number;
-    /** 已拒绝租户数 */
+    /** 申请被明确驳回的租户数 */
     rejectedCount: number;
-    /** 租户总数 */
+    /** 系统中记录的租户总数（包含所有状态） */
     totalCount: number;
-    /** 认证统计 */
+    /** 企业实名认证统计信息 */
     verification: {
+        /** 已完成实名认证的租户数 */
         verified: number;
+        /** 提交了认证申请但尚未审核的租户数 */
         pending: number;
+        /** 认证申请被驳回的租户数 */
         rejected: number;
     };
 }
 
-/** 注册趋势数据点 */
+/** 每日注册趋势数据项 */
 export interface RegistrationTrendItem {
+    /** 统计日期 (YYYY-MM-DD) */
     date: string;
+    /** 该日期的注册申请数量 */
     count: number;
 }
 
 // ============ 权限验证 ============
 
 /**
- * 验证当前用户是否为平台管理员
- * @throws Error 如果用户未登录或无权限
+ * 验证当前用户是否具备平台超级管理权限
+ * 
+ * 鉴权流程：
+ * 1. 检查 Session 是否存在
+ * 2. 查询数据库确认该用户的 `isPlatformAdmin` 字段为 true
+ * 
+ * @returns {Promise<string>} 返回当前管理员的用户 ID
+ * @throws {Error} 未登录或权限不足时抛出异常
  */
 async function requirePlatformAdmin(): Promise<string> {
     const session = await auth();
@@ -72,7 +83,14 @@ async function requirePlatformAdmin(): Promise<string> {
 // ============ Server Actions ============
 
 /**
- * 获取平台概览统计（含缓存，5分钟 revalidate）
+ * 获取平台全局概览统计数据
+ * 
+ * 性能优化：
+ * - 聚合查询租户状态分布和认证状态分布
+ * - 使用 `unstable_cache` 缓存策略，每 5 分钟 (300s) 自动刷新
+ * - 绑定 `platform-stats` 标签用于手动触发缓存失效
+ * 
+ * @returns {Promise<{success: boolean; data?: PlatformOverview; error?: string;}>} 统计结果对象
  */
 export async function getPlatformOverview(): Promise<{
     success: boolean;
@@ -84,27 +102,26 @@ export async function getPlatformOverview(): Promise<{
 
         const data = await unstable_cache(
             async () => {
-                // 租户状态分布
-                const statusCounts = await db
-                    .select({
+                // 1 & 2. 并查租户和认证状态分布
+                const [statusCounts, verificationCounts] = await Promise.all([
+                    db.select({
                         status: tenants.status,
                         count: sql<number>`COUNT(*)`,
                     })
-                    .from(tenants)
-                    .groupBy(tenants.status);
+                        .from(tenants)
+                        .groupBy(tenants.status),
+
+                    db.select({
+                        status: tenants.verificationStatus,
+                        count: sql<number>`COUNT(*)`,
+                    })
+                        .from(tenants)
+                        .groupBy(tenants.verificationStatus)
+                ]);
 
                 const statusMap = Object.fromEntries(
                     statusCounts.map(r => [r.status, Number(r.count)])
                 );
-
-                // 认证状态分布
-                const verificationCounts = await db
-                    .select({
-                        status: tenants.verificationStatus,
-                        count: sql<number>`COUNT(*)`,
-                    })
-                    .from(tenants)
-                    .groupBy(tenants.verificationStatus);
 
                 const verificationMap = Object.fromEntries(
                     verificationCounts.map(r => [r.status, Number(r.count)])
@@ -126,7 +143,7 @@ export async function getPlatformOverview(): Promise<{
                 };
             },
             ['platform-overview'],
-            { tags: ['platform-stats'], revalidate: 300 } // 5分钟缓存
+            { tags: ['platform-stats'], revalidate: 300 }
         )();
 
         return { success: true, data };
@@ -140,7 +157,13 @@ export async function getPlatformOverview(): Promise<{
 }
 
 /**
- * 获取近 30 天注册趋势（含缓存，5分钟 revalidate）
+ * 获取近 30 天租户注册数量趋势
+ * 
+ * 业务逻辑：
+ * - 仅统计 `createdAt` 在过去 30 天内的租户记录
+ * - 按照日期进行分组统计
+ * 
+ * @returns {Promise<{success: boolean; data?: RegistrationTrendItem[]; error?: string;}>} 趋势序列数据
  */
 export async function getRegistrationTrend(): Promise<{
     success: boolean;
@@ -184,7 +207,14 @@ export async function getRegistrationTrend(): Promise<{
 }
 
 /**
- * 获取平台最近活动日志摘要
+ * 获取平台最近 7 天的运营活动摘要
+ * 
+ * 包含：
+ * - 新通过的审批数
+ * - 驳回的申请数
+ * - 执行的暂停操作数
+ * 
+ * @returns {Promise<{success: boolean; data?: ActivitySummary; error?: string;}>} 活动统计信息
  */
 export async function getRecentPlatformActivity(): Promise<{
     success: boolean;
@@ -202,32 +232,15 @@ export async function getRecentPlatformActivity(): Promise<{
             async () => {
                 const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-                // 近 7 天审批通过
-                const [approved] = await db
-                    .select({ count: sql<number>`COUNT(*)` })
-                    .from(tenants)
-                    .where(and(
-                        eq(tenants.status, 'active'),
-                        gte(tenants.reviewedAt, sevenDaysAgo),
-                    ));
-
-                // 近 7 天拒绝
-                const [rejected] = await db
-                    .select({ count: sql<number>`COUNT(*)` })
-                    .from(tenants)
-                    .where(and(
-                        eq(tenants.status, 'rejected'),
-                        gte(tenants.reviewedAt, sevenDaysAgo),
-                    ));
-
-                // 近 7 天暂停
-                const [suspended] = await db
-                    .select({ count: sql<number>`COUNT(*)` })
-                    .from(tenants)
-                    .where(and(
-                        eq(tenants.status, 'suspended'),
-                        gte(tenants.updatedAt, sevenDaysAgo),
-                    ));
+                // 统计近 7 天激活、拒绝、暂停租户
+                const [[approved], [rejected], [suspended]] = await Promise.all([
+                    db.select({ count: sql<number>`COUNT(*)` }).from(tenants)
+                        .where(and(eq(tenants.status, 'active'), gte(tenants.reviewedAt, sevenDaysAgo))),
+                    db.select({ count: sql<number>`COUNT(*)` }).from(tenants)
+                        .where(and(eq(tenants.status, 'rejected'), gte(tenants.reviewedAt, sevenDaysAgo))),
+                    db.select({ count: sql<number>`COUNT(*)` }).from(tenants)
+                        .where(and(eq(tenants.status, 'suspended'), gte(tenants.updatedAt, sevenDaysAgo)))
+                ]);
 
                 return {
                     recentApprovals: Number(approved?.count || 0),

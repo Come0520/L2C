@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     auth: vi.fn(),
@@ -11,7 +11,9 @@ vi.mock('@/shared/lib/auth', () => ({
     auth: mocks.auth,
     checkPermission: mocks.checkPermission,
 }));
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
+}));
 vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { log: mocks.logAudit },
 }));

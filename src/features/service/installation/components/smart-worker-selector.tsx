@@ -8,32 +8,30 @@ import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/shared/utils';
 import { getInstallWorkersAction } from '../actions';
 
-/**
- * 智能安装师选择器
- * 
- * 功能：
- * - 从 API 动态加载可用安装师列表
- * - 显示当前工作负载
- * - 支持选中状态
- */
-
-interface Worker {
+/** 安装师傅数据类型 */
+interface InstallWorker {
     id: string;
     name: string | null;
-    workload?: number;
+    workload: number;
 }
 
+/** 智能安装师选择器属性 */
 interface SmartWorkerSelectorProps {
-    /** 当前选中的安装师 ID */
     value?: string;
-    /** 选择回调 */
-    onSelect: (id: string) => void;
-    /** 可选：指定日期查询工作负载 */
+    onSelect: (workerId: string) => void;
     scheduledDate?: Date;
 }
 
+/**
+ * 智能安装师选择器
+ * 
+ * 核心功能：
+ * 1. 自动从服务端加载具备安装资质的师傅列表。
+ * 2. 实时显示师傅当前的工作负载（待集成详细负载算法）。
+ * 3. 提供直观的选中交互体验。
+ */
 export function SmartWorkerSelector({ value, onSelect, scheduledDate: _scheduledDate }: SmartWorkerSelectorProps) {
-    const [workers, setWorkers] = useState<Worker[]>([]);
+    const [workers, setWorkers] = useState<InstallWorker[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 

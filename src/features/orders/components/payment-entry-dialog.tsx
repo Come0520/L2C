@@ -14,7 +14,7 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { createOrderPayment } from '@/features/orders/actions/order-actions';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import Image from 'next/image';
 import { UploadButton } from '@/shared/components/upload-button';
 

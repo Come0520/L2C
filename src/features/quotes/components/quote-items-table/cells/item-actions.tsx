@@ -3,7 +3,11 @@
 import { memo } from 'react';
 import { TableCell } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Plus, Settings, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import { cn } from '@/shared/lib/utils';
 
 interface ItemActionsCellProps {

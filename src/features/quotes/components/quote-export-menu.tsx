@@ -1,7 +1,9 @@
 'use client';
 
 import { Button } from '@/shared/ui/button';
-import { Download, FileSpreadsheet, Image } from 'lucide-react';
+import Download from 'lucide-react/dist/esm/icons/download';
+import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet';
+import Image from 'lucide-react/dist/esm/icons/image';
 import {
     DropdownMenu,
     DropdownMenuContent,

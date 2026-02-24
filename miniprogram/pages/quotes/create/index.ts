@@ -522,7 +522,7 @@ Page({
             return;
         }
 
-        if (!this.data.rooms.some(r => r.items.length > 0)) {
+        if (!this.data.rooms.some((r: any) => r.items.length > 0)) {
             wx.showToast({ title: '请至少添加一个商品', icon: 'none' });
             return;
         }
@@ -565,3 +565,5 @@ Page({
         }
     }
 });
+
+export { };

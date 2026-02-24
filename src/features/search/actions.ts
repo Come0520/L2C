@@ -9,9 +9,10 @@ import {
     products,
     afterSalesTickets,
     channels,
-    arStatements
+    arStatements,
+    roles
 } from '@/shared/api/schema';
-import { eq, and, or, ilike } from 'drizzle-orm';
+import { eq, and, or, ilike, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
@@ -21,6 +22,10 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 
 /**
  * 辅助函数：生成高亮文本
+ * 
+ * @param text 待高亮的原始文本
+ * @param query 搜索关键词
+ * @returns 带有 <mark> 标签的高亮字符串
  */
 function highlightText(text: string | null, query: string): string {
     if (!text) return '';
@@ -35,38 +40,62 @@ function highlightText(text: string | null, query: string): string {
 
 /**
  * 全局搜索 Schema
- * 限制查询长度和结果数量，防止滥用
+ * 限制查询长度和结果数量，防止滥用。
+ * 包含对 SQL 通配符的过滤以增强安全性。
  */
 const globalSearchSchema = z.object({
-    query: z.string().max(100, '搜索关键词过长').optional().default(''),
+    query: z.string()
+        .max(100, '搜索关键词过长')
+        .transform(val => val.replace(/[%_]/g, '')) // 安全过滤：剔除 SQL 通配符 % 和 _
+        .optional()
+        .default(''),
     limit: z.number().min(1).max(50).default(5), // 每类数据降低为 5 条
     scope: z.enum(['all', 'customers', 'orders', 'leads']).default('all'),
 });
 
 // 在返回结果的 type 中扩展所有支持搜索的模块
+/**
+ * 搜索结果项接口
+ * 用于在 UI 组件中统一展示不同模块的搜索结果
+ */
 type SearchResultItem = {
+    /** 结果类型，决定了 UI 上的图标和跳转链接 */
     type: 'customer' | 'lead' | 'order' | 'quote' | 'product' | 'ticket' | 'channel' | 'finance' | 'history';
+    /** 实体 ID 或历史记录 Key */
     id: string;
+    /** 主要显示标题（如客户姓名、单号） */
     label: string | null;
+    /** 次要显示描述（如手机号、状态信息） */
     sub: string | null;
+    /** 命中关键词的高亮 HTML 字符串 */
     highlight?: {
         label: string;
         sub: string;
     };
 };
 
+/**
+ * 数据库查询结果基础类型定义
+ */
 type DbCustomerResult = { id: string; name: string | null; phone: string | null };
 type DbLeadResult = { id: string; customerName: string | null; customerPhone: string | null };
 type DbOrderResult = { id: string; orderNo: string; status: string | null };
 type DbQuoteResult = { id: string; quoteNo: string; status: string | null };
 type DbProductResult = { id: string; name: string; sku: string | null };
 type DbTicketResult = { id: string; ticketNo: string; status: string | null };
-type DbChannelResult = { id: string; name: string; code: string | null };
+type DbChannelResult = { id: string; name: string };
 type DbFinanceResult = { id: string; statementNo: string; status: string | null };
 
 /**
  * 从数据库执行实际搜索，并应用缓存
- * 现在我们通过 Promise.all() 并发拥有权限的请求
+ * 通过 Promise.all() 并发执行具有权限的请求。
+ * 
+ * @param tenantId 租户 ID，用于数据隔离
+ * @param query 搜索关键词（已被 Zod 净化）
+ * @param limit 每类结果的最大数量
+ * @param scope 搜索范围
+ * @param permissions 用户拥有的权限列表
+ * @returns 包含各类搜索结果的对象
  */
 async function performDbSearch(tenantId: string, query: string, limit: number, scope: string, permissions: string[]) {
     const searchPattern = `%${query}%`;
@@ -142,7 +171,7 @@ async function performDbSearch(tenantId: string, query: string, limit: number, s
             }
 
             // 搜索产品
-            if (doAll && hasPerm(PERMISSIONS.PRODUCT.VIEW)) {
+            if (doAll && hasPerm(PERMISSIONS.PRODUCTS.VIEW)) {
                 searchPromises.push(
                     db.query.products.findMany({
                         where: and(
@@ -161,9 +190,9 @@ async function performDbSearch(tenantId: string, query: string, limit: number, s
                     db.query.channels.findMany({
                         where: and(
                             eq(channels.tenantId, tenantId),
-                            or(ilike(channels.name, searchPattern), ilike(channels.code, searchPattern))
+                            ilike(channels.name, searchPattern)
                         ),
-                        columns: { id: true, name: true, code: true },
+                        columns: { id: true, name: true },
                         limit,
                     }).then(res => { results.channels = res; })
                 );
@@ -203,7 +232,11 @@ async function performDbSearch(tenantId: string, query: string, limit: number, s
 
 /**
  * 全局搜索 Action
- * 扩展版：支持通过用户权限并行的全量模块搜索检索
+ * 扩展版：支持通过用户权限并行的全量模块搜索检索。
+ * 包含搜索历史记录（Redis）和多模块并发查询。
+ * 
+ * @param params 搜索参数，详见 globalSearchSchema
+ * @returns 格式化后的按类别分组的搜索结果
  */
 const globalSearchActionInternal = createSafeAction(globalSearchSchema, async ({ query, limit, scope }, { session }) => {
     const tenantId = session.user.tenantId;
@@ -239,8 +272,13 @@ const globalSearchActionInternal = createSafeAction(globalSearchSchema, async ({
             }
         }
 
-        const userPerms = session.user.permissions || [];
-        const results = await performDbSearch(tenantId, query, limit, scope, userPerms);
+        const userRoles = session.user.roles || [];
+        const roleRecords = await db.query.roles.findMany({
+            where: and(inArray(roles.code, userRoles), eq(roles.tenantId, tenantId)),
+            columns: { permissions: true }
+        });
+        const userPerms = [...new Set(roleRecords.flatMap(r => r.permissions || []))] as string[];
+        const results = await performDbSearch(tenantId, query.trim(), limit, scope, userPerms);
 
         return {
             customers: results.customers.map((c: DbCustomerResult) => ({
@@ -262,7 +300,7 @@ const globalSearchActionInternal = createSafeAction(globalSearchSchema, async ({
                 type: 'ticket' as const, id: t.id, label: t.ticketNo, sub: t.status, highlight: { label: highlightText(t.ticketNo, query), sub: highlightText(t.status, query), },
             })),
             channels: results.channels.map((ch: DbChannelResult) => ({
-                type: 'channel' as const, id: ch.id, label: ch.name, sub: ch.code, highlight: { label: highlightText(ch.name, query), sub: highlightText(ch.code, query), },
+                type: 'channel' as const, id: ch.id, label: ch.name, sub: null, highlight: { label: highlightText(ch.name, query), sub: highlightText(null, query), },
             })),
             finances: results.finances.map((f: DbFinanceResult) => ({
                 type: 'finance' as const, id: f.id, label: f.statementNo, sub: f.status, highlight: { label: highlightText(f.statementNo, query), sub: highlightText(f.status, query), },
@@ -270,11 +308,23 @@ const globalSearchActionInternal = createSafeAction(globalSearchSchema, async ({
             history: [],
         };
     } catch (error) {
-        logger.error('全局搜索失败:', error);
+        logger.error('全局搜索失败:', {
+            query,
+            scope,
+            tenantId,
+            userId,
+            error: error instanceof Error ? error.message : String(error)
+        });
         throw error;
     }
 });
 
+/**
+ * 全局搜索外层接口
+ * 
+ * @param params 原始搜索输入
+ * @returns 经过校验和权限过滤的搜索结果
+ */
 export async function globalSearch(params: z.input<typeof globalSearchSchema>) {
     return globalSearchActionInternal(params as z.infer<typeof globalSearchSchema>);
 }

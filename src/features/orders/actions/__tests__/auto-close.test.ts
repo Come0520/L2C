@@ -25,7 +25,8 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Auto-close Action', () => {

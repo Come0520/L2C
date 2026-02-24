@@ -26,40 +26,42 @@ const getCachedQualityAnalytics = unstable_cache(
             dateConditions.push(sql`${liabilityNotices.confirmedAt} <= ${new Date(endDate)}`);
         }
 
-        // 1. 按责任方类型统计定责单
-        const liabilityByParty = await db
-            .select({
-                liablePartyType: liabilityNotices.liablePartyType,
-                count: count(liabilityNotices.id),
-                totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
-            })
-            .from(liabilityNotices)
-            .where(and(
-                eq(liabilityNotices.tenantId, tenantId),
-                eq(liabilityNotices.status, 'CONFIRMED'),
-                ...dateConditions
-            ))
-            .groupBy(liabilityNotices.liablePartyType);
+        const [liabilityByParty, ticketsByType, ticketsByStatus] = await Promise.all([
+            // 1. 按责任方类型统计定责单
+            db
+                .select({
+                    liablePartyType: liabilityNotices.liablePartyType,
+                    count: count(liabilityNotices.id),
+                    totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
+                })
+                .from(liabilityNotices)
+                .where(and(
+                    eq(liabilityNotices.tenantId, tenantId),
+                    eq(liabilityNotices.status, 'CONFIRMED'),
+                    ...dateConditions
+                ))
+                .groupBy(liabilityNotices.liablePartyType),
 
-        // 2. 按工单类型统计
-        const ticketsByType = await db
-            .select({
-                type: afterSalesTickets.type,
-                count: count(afterSalesTickets.id),
-            })
-            .from(afterSalesTickets)
-            .where(eq(afterSalesTickets.tenantId, tenantId))
-            .groupBy(afterSalesTickets.type);
+            // 2. 按工单类型统计
+            db
+                .select({
+                    type: afterSalesTickets.type,
+                    count: count(afterSalesTickets.id),
+                })
+                .from(afterSalesTickets)
+                .where(eq(afterSalesTickets.tenantId, tenantId))
+                .groupBy(afterSalesTickets.type),
 
-        // 3. 按状态统计
-        const ticketsByStatus = await db
-            .select({
-                status: afterSalesTickets.status,
-                count: count(afterSalesTickets.id),
-            })
-            .from(afterSalesTickets)
-            .where(eq(afterSalesTickets.tenantId, tenantId))
-            .groupBy(afterSalesTickets.status);
+            // 3. 按状态统计
+            db
+                .select({
+                    status: afterSalesTickets.status,
+                    count: count(afterSalesTickets.id),
+                })
+                .from(afterSalesTickets)
+                .where(eq(afterSalesTickets.tenantId, tenantId))
+                .groupBy(afterSalesTickets.status)
+        ]);
 
         return {
             liabilityByParty,

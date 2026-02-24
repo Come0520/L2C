@@ -68,7 +68,6 @@ export async function getChannelGradeDiscounts(): Promise<ChannelGradeDiscounts>
  * @returns {Promise<{success: boolean, error?: string}>} 返回操作结果与可能的异常消息
  */
 export async function updateChannelGradeDiscounts(discounts: ChannelGradeDiscounts) {
-    console.log('[channels] 更新渠道等级折扣配置:', discounts);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };

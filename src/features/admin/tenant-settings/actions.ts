@@ -16,6 +16,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
+import { AdminRateLimiter } from '../rate-limiter';
 import type { Session } from 'next-auth';
 
 // ========== Zod Schema ==========
@@ -64,6 +65,10 @@ export interface MfaConfigDTO {
 
 /**
  * 获取租户基本信息
+ * 
+ * @param session 当前用户会话
+ * @returns 返回租户信息 DTO 或错误信息
+ * @throws 权限不足时抛出异常
  */
 export async function getTenantInfo(session: Session): Promise<{
     success: boolean;
@@ -71,7 +76,11 @@ export async function getTenantInfo(session: Session): Promise<{
     error?: string;
 }> {
     try {
-        await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS);
+        if (!(await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS))) {
+            throw new Error('权限不足：无法访问租户信息');
+        }
+
+        logger.info(`[Admin] 用户 ${session.user.id} 正在查询租户 ${session.user.tenantId} 的基本信息`);
 
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, session.user.tenantId),
@@ -103,6 +112,9 @@ export async function getTenantInfo(session: Session): Promise<{
 
 /**
  * 获取 MFA 配置（从 settings jsonb 读取）
+ * 
+ * @param session 当前用户会话
+ * @returns 返回 MFA 配置 DTO 或错误信息
  */
 export async function getMfaConfig(session: Session): Promise<{
     success: boolean;
@@ -110,7 +122,11 @@ export async function getMfaConfig(session: Session): Promise<{
     error?: string;
 }> {
     try {
-        await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS);
+        if (!(await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS))) {
+            throw new Error('权限不足：无法访问 MFA 配置');
+        }
+
+        logger.info(`[Admin] 用户 ${session.user.id} 正在查询租户 ${session.user.tenantId} 的 MFA 安全配置`);
 
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, session.user.tenantId),
@@ -141,10 +157,21 @@ export async function getMfaConfig(session: Session): Promise<{
 // ========== 写入 Action ==========
 
 /**
- * 更新租户基本信息
+ * 更新租户基本信息（内部实现）
+ * 
+ * 安全特性：
+ * 1. 租户隔离：仅允许修改当前会话所属租户
+ * 2. 字段校验：严格验证名称、联系方式、URL 等格式
+ * 3. 审计留痕：同步记录旧值与新值的变更描述
+ * 
+ * @param data 更新参数，符合 updateTenantInfoSchema
+ * @param context 包含 session 的上下文对象
  */
 const updateTenantInfoInternal = createSafeAction(updateTenantInfoSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.ADMIN.TENANT_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.ADMIN.TENANT_MANAGE))) {
+        throw new Error('权限不足：无法更新租户基本信息');
+    }
+    await AdminRateLimiter.check(session.user.id, 'tenant_mutation');
 
     // 查询旧值
     const oldTenant = await db.query.tenants.findFirst({
@@ -176,6 +203,8 @@ const updateTenantInfoInternal = createSafeAction(updateTenantInfoSchema, async 
         newValues: data as Record<string, unknown>,
     });
 
+    logger.info(`[Admin] 用户 ${session.user.id} 更新了租户 ${session.user.tenantId} 的基本信息: ${Object.keys(data).join(', ')}`);
+
     revalidatePath('/admin/settings');
     return { success: true, data: updated };
 });
@@ -185,10 +214,20 @@ export async function updateTenantInfo(params: z.infer<typeof updateTenantInfoSc
 }
 
 /**
- * 更新 MFA 配置（写入 settings.mfa jsonb）
+ * 更新 MFA 配置（内部实现）
+ * 
+ * 安全特性：
+ * 1. JSONB 合并：确保只修改 settings 下的 mfa 路径
+ * 2. 审计留痕：记录安全配置的开关状态及分级管理策略
+ * 
+ * @param data MFA 配置参数
+ * @param context 包含 session 的上下文对象
  */
 const updateMfaConfigInternal = createSafeAction(updateMfaConfigSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS);
+    if (!(await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS))) {
+        throw new Error('权限不足：无法更新 MFA 设置');
+    }
+    await AdminRateLimiter.check(session.user.id, 'tenant_mutation');
 
     // 查询当前 settings
     const tenant = await db.query.tenants.findFirst({
@@ -231,6 +270,8 @@ const updateMfaConfigInternal = createSafeAction(updateMfaConfigSchema, async (d
         oldValues: { mfa: oldMfa },
         newValues: { mfa: mfaConfig },
     });
+
+    logger.info(`[Admin] 用户 ${session.user.id} 修改了租户 ${session.user.tenantId} 的 MFA 配置, 状态: ${mfaConfig.enabled ? '启用' : '禁用'}, 方式: ${mfaConfig.method}`);
 
     revalidatePath('/admin/settings/security');
     return { success: true, data: updated };

@@ -9,16 +9,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import {
-    TrendingUp,
-    ChevronDown,
-    ChevronRight,
-    Building2,
-    User
-} from 'lucide-react';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Building2 from 'lucide-react/dist/esm/icons/building';
+import User from 'lucide-react/dist/esm/icons/user';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ChannelStats } from '../actions/channel-stats';
 
 /**
@@ -78,14 +77,22 @@ export function ChannelRanking({ data, loading, currentPeriod = 'month' }: Chann
 
     if (loading) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">渠道排行榜</CardTitle>
+            <Card className="animate-in fade-in duration-500">
+                <CardHeader className="flex flex-row items-center justify-between py-4">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-8 w-24" />
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />
+                    <div className="space-y-4">
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="flex items-center gap-4">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <div className="space-y-2 flex-1">
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-3 w-60" />
+                                </div>
+                                <Skeleton className="h-8 w-16" />
+                            </div>
                         ))}
                     </div>
                 </CardContent>
@@ -114,8 +121,12 @@ export function ChannelRanking({ data, loading, currentPeriod = 'month' }: Chann
             </CardHeader>
             <CardContent>
                 {data.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                        暂无渠道数据
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <div className="p-3 bg-muted rounded-full mb-3">
+                            <Building2 className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-medium">暂无排行榜数据</p>
+                        <p className="text-xs text-center px-4">尝试调整时间范围或在渠道管理中激活更多渠道</p>
                     </div>
                 ) : (
                     <div className="space-y-2">

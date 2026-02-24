@@ -1,6 +1,6 @@
 'use server';
 
-import { db, type Transaction, type DB } from '@/shared/api/db';
+import { db, type DbTransaction, type DB } from '@/shared/api/db';
 import { systemSettings } from '@/shared/api/schema/system-settings';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
@@ -22,12 +22,12 @@ import { logger } from '@/shared/lib/logger';
  * @throws Error 未授权访问时抛出
  */
 export async function getReminderRules(
-  tx?: Transaction
+  tx?: DbTransaction
 ): Promise<Array<z.infer<typeof reminderRuleSchema> & { id: string }>> {
   const session = await auth();
   if (!session?.user?.tenantId) return [];
 
-  const runner: DB | Transaction = tx || db;
+  const runner: DB | DbTransaction = tx || db;
   const setting = await runner.query.systemSettings.findFirst({
     where: and(
       eq(systemSettings.tenantId, session.user.tenantId),
@@ -46,10 +46,10 @@ export async function getReminderRules(
 /**
  * 保存提醒规则 (内部方法)
  */
-async function saveReminderRulesInternal(session: Session, rules: unknown[], tx?: Transaction) {
+async function saveReminderRulesInternal(session: Session, rules: unknown[], tx?: DbTransaction) {
   const tenantId = session.user.tenantId;
   const userId = session.user.id;
-  const runner: DB | Transaction = tx || db;
+  const runner: DB | DbTransaction = tx || db;
 
   const existing = await runner.query.systemSettings.findFirst({
     where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, 'REMINDER_RULES')),

@@ -89,7 +89,8 @@ import {
     updateNotificationPreference,
     getNotificationPreferencesAction,
     batchUpdateNotificationPreferences,
-    runSLACheck
+    runSLACheck,
+    getUnreadCount
 } from '../actions';
 import { db } from '@/shared/api/db';
 
@@ -212,6 +213,18 @@ describe('Notification Server Actions', () => {
 
             expect(result.success).toBe(true);
             expect(db.update).toHaveBeenCalled();
+        });
+    });
+
+    describe('getUnreadCount', () => {
+        it('should return the count of unread notifications', async () => {
+            // Mock getUnreadCount 返回 5
+            vi.mocked(db.select).mockReturnValue(hoisted.createDrizzleMock([{ count: 5 }]));
+
+            const result = await getUnreadCount();
+
+            expect(result.success).toBe(true);
+            expect(result.data?.data?.count).toBe(5);
         });
     });
 

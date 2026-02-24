@@ -1,20 +1,29 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Button } from '@/shared/ui/button';
-import { ApprovalNode, NodeType } from '../schema';
+import { ApprovalNode } from '../schema';
 
+/**
+ * 节点配置面板属性
+ */
 interface NodeConfigPanelProps {
+    /** 当前选中的节点对象 */
     selectedNode: ApprovalNode | null;
+    /** 选定节点数据更新时的回调函数 */
     onUpdate: (id: string, data: Partial<ApprovalNode['data']>) => void;
+    /** 关闭配置面板的回调函数 */
     onClose: () => void;
 }
 
+/**
+ * 节点配置面板组件
+ * 用于编辑审批流程中各个节点的详细属性，如审批人类型、审批方式或条件表达式
+ */
 export function NodeConfigPanel({ selectedNode, onUpdate, onClose }: NodeConfigPanelProps) {
     if (!selectedNode) return null;
 

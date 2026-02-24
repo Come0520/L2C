@@ -1,4 +1,4 @@
-import { db, type Transaction } from "@/shared/api/db";
+import { db, type DbTransaction } from "@/shared/api/db";
 import { afterSalesTickets, liabilityNotices } from "@/shared/api/schema/after-sales";
 import { orderItems } from "@/shared/api/schema/orders";
 import { purchaseOrders, purchaseOrderItems, suppliers } from "@/shared/api/schema/supply-chain";
@@ -58,7 +58,7 @@ export class AfterSalesService {
      * 创建售后补件采购单
      */
     private static async createRestockPO(
-        tx: Transaction,
+        tx: DbTransaction,
         ticket: InferSelectModel<typeof afterSalesTickets>,
         productId: string,
         tenantId: string,

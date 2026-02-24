@@ -23,7 +23,9 @@ import {
 import { Badge } from '@/shared/ui/badge';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import { toast } from 'sonner';
-import { Ruler, Save, X } from 'lucide-react';
+import Ruler from 'lucide-react/dist/esm/icons/ruler';
+import Save from 'lucide-react/dist/esm/icons/save';
+import X from 'lucide-react/dist/esm/icons/x';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { cn } from '@/shared/lib/utils';
 import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
@@ -50,7 +52,8 @@ import {
 } from './quote-category-tabs';
 import { QuoteSummaryTab } from './quote-summary-tab';
 import { QuoteExportMenu } from './quote-export-menu';
-import { Download, Layout } from 'lucide-react';
+import Download from 'lucide-react/dist/esm/icons/download';
+import Layout from 'lucide-react/dist/esm/icons/layout';
 import { DropdownMenuItem } from '@/shared/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
 

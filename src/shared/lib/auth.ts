@@ -11,6 +11,15 @@ import { logger } from './logger';
 import { checkLoginRateLimit, resetLoginRateLimit } from './auth-rate-limit';
 import { AuditService } from '@/shared/services/audit-service';
 
+/**
+ * NextAuth 核心配置与导出
+ * 
+ * 包含：
+ * - handlers: 认证路由处理器
+ * - auth: 用于获取服务端会话的函数 (await auth())
+ * - signIn: 服务端/客户端登录函数
+ * - signOut: 服务端/客户端注销函数
+ */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -18,6 +27,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
+      /**
+       * 自定义身份验证逻辑
+       * @param credentials - 登录凭证 (用户名/手机号/邮箱 + 密码)
+       * @returns 验证成功返回用户信息，失败返回 null
+       */
       authorize: async (credentials) => {
         const schema = z.object({
           username: z.string().min(1),
@@ -107,6 +121,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         '/api/auth/callback/wechat&response_type=code&scope=snsapi_login#wechat_redirect',
       token: 'https://api.weixin.qq.com/sns/oauth2/access_token',
       userinfo: 'https://api.weixin.qq.com/sns/userinfo',
+      /**
+       * 微信用户信息映射
+       * @param profile - 微信原始用户信息
+       * @returns 映射后的用户对象
+       */
+      /**
+       * 微信用户信息映射
+       * 
+       * @description 将微信服务器返回的原始 profile 数据（如 openid, nickname）映射到系统内部用户模型。
+       * 
+       * @param profile - 微信原始用户信息
+       * @returns 映射后的用户对象，包含 id, name, email, image 等字段
+       */
       profile(profile) {
         // 微信登录用户默认无租户归属，需通过邀请链接确定
         // 员工：管理员分享的员工邀请二维码
@@ -128,6 +155,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: '/login',
   },
   callbacks: {
+    /**
+     * 会话回调，用于将用户信息注入到客户端 Session 中
+     */
+    /**
+     * 会话回调 (Session Callback)
+     * 
+     * @description
+     * 每当检测到会话被查询时调用。此回调负责将 JWT 中的自定义载荷（如 id, role, tenantId）
+     *注入到客户端可见的 Session 对象中。
+     */
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
@@ -138,6 +175,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
+    /**
+     * JWT 回调，用于处理令牌内容
+     */
+    /**
+     * 令牌回调 (JWT Callback)
+     * 
+     * @description
+     * 每当创建或更新 JWT 时调用。用于将数据库中的持久化字段存入令牌，
+     * 减少后续在服务端各模块中查询数据库的次数。
+     */
     async jwt({ token, user }) {
       if (user) {
         token.tenantId = user.tenantId;
@@ -152,34 +199,62 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 /**
- * 权限检查函数 (RBAC via DB)
- * @param session - 会话对象
- * @param permissionName - 权限名称
- * @param options - 可选配置
- *   - audit: 是否记录审计日志
- *   - action: 审计日志中的操作描述
- *   - resourceType: 资源类型
- *   - resourceId: 资源 ID
+ * 权限检查配置项
  */
-
 export interface CheckPermissionOptions {
+  /** 是否记录审计日志 */
   audit?: boolean;
+  /** 审计日志中的操作描述 */
   action?: string;
+  /** 资源类型 */
   resourceType?: string;
+  /** 资源 ID */
   resourceId?: string;
 }
 
+/**
+ * 核心权限检查函数 (RBAC via DB)
+ * 
+ * 校验逻辑：
+ * 1. 检查是否存在有效的会话和角色。
+ * 2. 如果是超级管理员 (ADMIN 角色) 直接通过。
+ * 3. 调用 checkRolePermission 进行细粒度的权限位校验。
+ * 4. 如果启用了 audit，记录审计日志到数据库。
+ * 
+ * @param session - 会话对象
+ * @param permissionName - 权限名称 (如: 'order.edit')
+ * @param options - 可选配置 (审计记录等)
+ * @returns 是否拥有权限
+ */
 export const checkPermission = async (
   session: Session | null,
   permissionName: string,
   options?: CheckPermissionOptions
 ) => {
   if (!session?.user?.roles || session.user.roles.length === 0) {
+    logger.warn('权限检查失败：未找到有效会话或用户角色', {
+      userId: session?.user?.id,
+      permission: permissionName
+    });
     return false;
   }
 
   const hasPermission =
     session.user.roles.includes('ADMIN') || (await checkRolePermission(session, permissionName));
+
+  if (!hasPermission) {
+    logger.warn('[Auth:Security] 权限检查未通过：用户尝试越权访问', {
+      userId: session.user.id,
+      userName: session.user.name,
+      roles: session.user.roles,
+      permission: permissionName,
+      tenantId: session.user.tenantId,
+      path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+    });
+  } else {
+    // 仅在调试或高安全场景下记录成功日志，避免日志爆炸
+    // logger.debug('[Auth:Security] 权限检查通过', { userId: session.user.id, permission: permissionName });
+  }
 
   // 如果需要审计日志记录
   if (options?.audit && session.user.tenantId) {

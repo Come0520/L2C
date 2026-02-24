@@ -6,7 +6,8 @@ import { createLogger } from "@/shared/lib/logger";
 
 const logger = createLogger('ArAgingWidget');
 import { toast } from "sonner";
-import { Loader2, AlertCircle } from "lucide-react";
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from "@/shared/utils";
 import useSWR from 'swr';
 import { fetcher } from '@/shared/lib/fetcher';
@@ -29,7 +30,7 @@ const AGING_COLORS = {
     '0-30天': '#10b981', // Green
     '31-60天': '#f59e0b', // Amber
     '61-90天': '#f97316', // Orange
-    '90+天': '#ef4444',   // Red
+    '90天以上': '#ef4444',   // Red
 };
 
 interface ARAgingData {

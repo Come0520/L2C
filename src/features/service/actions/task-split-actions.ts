@@ -3,7 +3,9 @@
 import { db } from '@/shared/api/db';
 import { workerSkills, quoteItems } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 任务拆分推荐逻辑
@@ -78,26 +80,33 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
             categoryGroups.get(skillCategory)!.push(item);
         }
 
-        // 3. 生成拆分建议
-        const suggestions: SplitSuggestion[] = [];
+        // 3. 生成拆分建议 (优化 N+1)
+        const categories = Array.from(categoryGroups.keys());
+        const skillTypesToSearch = categories.map(c => `INSTALL_${c}` as typeof workerSkills.$inferSelect['skillType']);
 
-        for (const [category, categoryItems] of categoryGroups) {
-            // 查询该品类有多少师傅可接单
-            const matchingSkills = await db.query.workerSkills.findMany({
+        let allMatchingSkills: typeof workerSkills.$inferSelect[] = [];
+        if (skillTypesToSearch.length > 0) {
+            allMatchingSkills = await db.query.workerSkills.findMany({
                 where: and(
                     eq(workerSkills.tenantId, session.user.tenantId),
-                    eq(workerSkills.skillType, `INSTALL_${category}` as typeof workerSkills.$inferSelect['skillType'])
+                    inArray(workerSkills.skillType, skillTypesToSearch)
                 ),
             });
+        }
 
-            suggestions.push({
+        const suggestions: SplitSuggestion[] = categories.map((category) => {
+            const categoryItems = categoryGroups.get(category)!;
+            const targetSkill = `INSTALL_${category}`;
+            const matchingCount = allMatchingSkills.filter(s => s.skillType === targetSkill).length;
+
+            return {
                 category,
                 categoryLabel: getCategoryLabel(category),
                 itemCount: categoryItems.length,
-                recommendedSkill: `INSTALL_${category}`,
-                matchingWorkerCount: matchingSkills.length,
-            });
-        }
+                recommendedSkill: targetSkill,
+                matchingWorkerCount: matchingCount,
+            };
+        });
 
         return { success: true, data: suggestions };
     } catch (error) {
@@ -106,8 +115,6 @@ export async function suggestTaskSplit(quoteId: string): Promise<{
     }
 }
 
-import { unstable_cache } from 'next/cache';
-import { logger } from '@/shared/lib/logger';
 
 const getCachedAvailableWorkers = unstable_cache(
     async (tenantId: string, skillType: string) => {
@@ -127,7 +134,7 @@ const getCachedAvailableWorkers = unstable_cache(
         }));
     },
     ['available-workers-by-skill'],
-    { tags: ['worker-skills'] }
+    { tags: ['worker-skills'] } // 标签设为静态，tenantId/skillType 是函数参数不可在此处引用
 );
 
 /**

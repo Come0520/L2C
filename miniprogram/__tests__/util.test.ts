@@ -1,3 +1,4 @@
+import './setup';
 import { formatTime } from '../utils/util';
 
 describe('utils/util', () => {
@@ -15,3 +16,6 @@ describe('utils/util', () => {
         expect(formatted).toBe('2026/01/02 03:04:05');
     });
 });
+
+
+export {};

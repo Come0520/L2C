@@ -45,7 +45,9 @@ export const inventoryLogs = pgTable('inventory_logs', {
     productId: uuid('product_id').references(() => products.id).notNull(),
     type: inventoryLogTypeEnum('type').notNull(),
     quantity: integer('quantity').notNull(), // 正数入库，负数出库
-    balanceAfter: integer('balance_after').notNull(),
+    // SC-16 修复：补充 balanceBefore 字段，确保库存流水可完整还原事件序列（财务流水完整性原则）
+    balanceBefore: integer('balance_before').notNull().default(0), // 变动前库存量
+    balanceAfter: integer('balance_after').notNull(),              // 变动后库存量
     reason: text('reason'),
     referenceType: text('reference_type'), // PO, ORDER, RETURN, ADJUST
     referenceId: uuid('reference_id'), // 关联单据 ID

@@ -8,7 +8,6 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { ArrowRight, ChevronDown, Maximize2 } from 'lucide-react';
-import { format } from 'date-fns';
 
 /**
  * 图表钻取组件
@@ -84,7 +83,7 @@ export function ChartDrilldown({
         <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
             {levels.map((level, index) => (
                 <div key={level.id} className="flex items-center gap-1">
-                    {index > 0 && <ChevronDown className="h-3 w-3 rotate-[-90deg]" />}
+                    {index > 0 && <ChevronDown className="h-3 w-3 -rotate-90" />}
                     <button
                         onClick={() => handleBreadcrumbClick(index)}
                         className={`hover:text-primary transition-colors ${index === levels.length - 1 ? 'text-foreground font-medium' : ''

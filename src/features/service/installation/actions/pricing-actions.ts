@@ -1,11 +1,11 @@
 'use server';
 
-import { db, type Transaction } from '@/shared/api/db';
+import { db, type DbTransaction } from '@/shared/api/db';
 import { laborRates } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/lib/audit-service';
 import { logger } from '@/shared/lib/logger';
 
@@ -86,7 +86,7 @@ export async function getTenantLaborRates() {
  * 内部逻辑：更新或创建劳务工费规则 (支持事务)
  */
 async function upsertLaborRateInternal(
-    tx: Transaction,
+    tx: DbTransaction,
     tenantId: string,
     validated: z.infer<typeof upsertLaborRateSchema>
 ) {
@@ -150,7 +150,7 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
             }, tx);
         });
 
-        revalidatePath('/settings/labor-pricing');
+        revalidateTag('labor-rate', 'default');
         return { success: true };
     } catch (error: unknown) {
         logger.error('保存工费规则失败:', error);
@@ -205,7 +205,7 @@ export async function batchUpsertTenantLaborRates(
             }, tx);
         });
 
-        revalidatePath('/settings/labor-pricing');
+        revalidateTag('labor-rate', 'default');
         return { success: true };
     } catch (error: unknown) {
         logger.error('批量保存工费规则失败:', error);

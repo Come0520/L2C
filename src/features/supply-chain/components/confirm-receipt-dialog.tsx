@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { confirmPoReceipt, confirmReceiptSchema } from '../actions/po-actions';
+import { confirmPoReceipt } from '../actions/po-actions';
+import { confirmReceiptSchema } from '../schemas';
 import { getWarehouses } from '../actions/inventory-actions';
 import { Button } from '@/shared/ui/button';
 import {
@@ -101,7 +102,9 @@ export function ConfirmReceiptDialog({
                     if (res.success && res.data) {
                         setWarehouses(res.data);
                         if (res.data.length > 0) {
-                            setValue('warehouseId', res.data[0].id);
+                            setTimeout(() => {
+                                setValue('warehouseId', res.data[0].id);
+                            }, 0);
                         }
                     }
                 } finally {

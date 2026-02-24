@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { createOrderFromQuote } from '@/features/orders/actions';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import {
     Dialog,
     DialogClose,

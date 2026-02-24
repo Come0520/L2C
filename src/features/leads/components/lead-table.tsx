@@ -2,7 +2,7 @@
 
 import { logger } from "@/shared/lib/logger";
 import React, { useCallback, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import {
     Table,
     TableBody,
@@ -24,17 +24,15 @@ import { zhCN } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getLeads } from '@/features/leads/actions/queries';
-import {
-    MoreHorizontal,
-    Phone,
-    MessageSquare,
-    FileText,
-    Calendar,
-    UserPlus,
-    XCircle,
-    RotateCcw,
-    Eye
-} from 'lucide-react';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Eye from 'lucide-react/dist/esm/icons/eye';
 import { z } from 'zod';
 import { followUpTypeEnum } from '../schemas';
 import { AssignLeadDialog } from './dialogs/assign-lead-dialog';
@@ -153,7 +151,13 @@ const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleA
     const tags = lead.tags || [];
 
     return (
-        <TableRow style={style} className={cn("hover:bg-muted/30 transition-colors", className)}>
+        <TableRow
+            style={style}
+            className={cn(
+                "hover:bg-muted/50 transition-all duration-200 group active:scale-[0.99]",
+                className
+            )}
+        >
             <TableCell className="font-medium">
                 <Link href={`/leads/${lead.id}`} className="hover:underline text-primary">
                     {lead.leadNo}
@@ -162,15 +166,15 @@ const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleA
 
             <TableCell>
                 <div className="flex flex-col">
-                    <span className="font-medium">{lead.customerName}</span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="font-medium truncate max-w-[120px]">{lead.customerName}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 sm:text-xs">
                         <Phone className="h-3 w-3" />
                         {lead.customerPhone}
                     </span>
                 </div>
             </TableCell>
 
-            <TableCell>
+            <TableCell className="hidden md:flex items-center">
                 {intentionConfig ? (
                     <Badge variant="outline" className={cn("font-medium", intentionConfig.className)}>
                         {intentionConfig.label}
@@ -180,13 +184,13 @@ const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleA
                 )}
             </TableCell>
 
-            <TableCell>
-                <Badge variant={statusConfig.variant} className="font-normal">
+            <TableCell className="flex items-center">
+                <Badge variant={statusConfig.variant} className="font-normal px-1.5 h-6 sm:px-2">
                     {statusConfig.label}
                 </Badge>
             </TableCell>
 
-            <TableCell>
+            <TableCell className="hidden lg:flex items-center">
                 <div className="flex flex-wrap gap-1">
                     {tags.length > 0 ? (
                         tags.slice(0, 3).map((tag) => {
@@ -212,17 +216,17 @@ const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleA
                 </div>
             </TableCell>
 
-            <TableCell className="truncate max-w-[100px]">
+            <TableCell className="hidden xl:flex items-center truncate max-w-[100px]">
                 {lead.sourceChannel?.name || '-'}
             </TableCell>
 
-            <TableCell>
+            <TableCell className="hidden sm:flex items-center">
                 {lead.assignedSales?.name || (
                     <span className="text-muted-foreground italic text-xs">未分配</span>
                 )}
             </TableCell>
 
-            <TableCell>
+            <TableCell className="hidden md:flex items-center">
                 {lead.lastActivityAt ? (
                     <span className="text-xs text-muted-foreground" title={new Date(lead.lastActivityAt).toLocaleString()}>
                         {formatDistanceToNow(new Date(lead.lastActivityAt), {
@@ -235,21 +239,21 @@ const LeadTableRow = React.memo(function LeadTableRow({ lead, isManager, handleA
                 )}
             </TableCell>
 
-            <TableCell className="text-right">
+            <TableCell className="text-right flex items-center justify-end">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted-foreground/10">
                             <MoreHorizontal className="h-4 w-4" />
                             <span className="sr-only">操作菜单</span>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[160px]">
+                    <DropdownMenuContent align="end" className="w-[160px] animate-in fade-in zoom-in-95 duration-200">
                         {actions.map((action) => (
                             <DropdownMenuItem
                                 key={action.key}
                                 onClick={() => handleAction(action.key, lead.id)}
                                 className={cn(
-                                    "cursor-pointer",
+                                    "cursor-pointer transition-colors",
                                     action.variant === 'destructive' && 'text-destructive focus:text-destructive'
                                 )}
                             >
@@ -286,6 +290,10 @@ export const LeadTable = React.memo(function LeadTable({
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
     const [currentAssignedId, setCurrentAssignedId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
+
+    // 响应式布局列定义
+    // Tailwind breakpoint: sm(640), md(768), lg(1024), xl(1280)
+    const gridColsBasis = "grid-cols-[100px_1fr_80px_50px] sm:grid-cols-[100px_1fr_80px_80px_50px] md:grid-cols-[130px_150px_60px_80px_80px_100px_50px] lg:grid-cols-[130px_150px_60px_80px_160px_80px_100px_50px] xl:grid-cols-[130px_150px_60px_80px_160px_100px_80px_100px_50px]";
 
     /**
      * 处理线索相关的业务动作
@@ -370,50 +378,51 @@ export const LeadTable = React.memo(function LeadTable({
         <div className="space-y-4 relative">
             {/* 全局加载遮罩 */}
             {isPending && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-[2px] transition-all duration-200">
-                    <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <span className="text-sm font-medium">加载中...</span>
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xs transition-all duration-300 animate-in fade-in">
+                    <div className="flex flex-col items-center gap-3 bg-card p-6 rounded-xl shadow-xl border animate-in zoom-in-95">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        <span className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">正在同步数据...</span>
                     </div>
                 </div>
             )}
 
             <div
                 ref={parentRef}
-                className="rounded-md border overflow-auto"
+                className="rounded-md border overflow-x-hidden overflow-y-auto bg-card"
                 style={{ height: '600px', position: 'relative' }}
             >
-                <Table style={{ display: 'grid' }}>
-                    <TableHeader className="sticky top-0 bg-background z-10 shadow-sm" style={{ display: 'grid' }}>
-                        <TableRow style={{ display: 'grid', gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr', alignItems: 'center' }}>
-                            <TableHead className="flex items-center">线索编号</TableHead>
-                            <TableHead className="flex items-center">客户信息</TableHead>
-                            <TableHead className="flex items-center">意向</TableHead>
-                            <TableHead className="flex items-center">状态</TableHead>
-                            <TableHead className="flex items-center">标签</TableHead>
-                            <TableHead className="flex items-center">来源</TableHead>
-                            <TableHead className="flex items-center">跟进销售</TableHead>
-                            <TableHead className="flex items-center">最后活动</TableHead>
-                            <TableHead className="flex items-center justify-end">操作</TableHead>
+                <Table className="grid min-w-full">
+                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 shadow-sm border-b" style={{ display: 'grid' }}>
+                        <TableRow className={cn("grid auto-cols-min items-center hover:bg-transparent", gridColsBasis)}>
+                            <TableHead className="flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">线索编号</TableHead>
+                            <TableHead className="flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">客户信息</TableHead>
+                            <TableHead className="hidden md:flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">意向</TableHead>
+                            <TableHead className="flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">状态</TableHead>
+                            <TableHead className="hidden lg:flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">标签</TableHead>
+                            <TableHead className="hidden xl:flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">来源</TableHead>
+                            <TableHead className="hidden sm:flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">销售</TableHead>
+                            <TableHead className="hidden md:flex items-center text-[11px] font-bold uppercase tracking-wider sm:text-xs">活动</TableHead>
+                            <TableHead className="flex items-center justify-end text-[11px] font-bold uppercase tracking-wider sm:text-xs">操作</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody
+                        className="grid"
                         style={{
                             height: `${rowVirtualizer.getTotalSize()}px`,
                             position: 'relative',
-                            display: 'grid'
                         }}
                     >
                         {data.length === 0 ? (
-                            <TableRow className="border-none hover:bg-transparent">
-                                <TableCell colSpan={9} className="h-[500px] flex items-center justify-center">
-                                    <div className="flex flex-col items-center">
+                            <TableRow className="border-none hover:bg-transparent absolute inset-0">
+                                <TableCell className="h-[500px] w-full flex items-center justify-center">
+                                    <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                                         <EmptyUI message="暂无符合条件的线索数据" />
                                         <div className="mt-4">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => router.push('/leads')}
+                                                className="rounded-full shadow-sm hover:shadow-md transition-all"
                                             >
                                                 重置筛选条件
                                             </Button>
@@ -430,6 +439,7 @@ export const LeadTable = React.memo(function LeadTable({
                                         lead={lead}
                                         isManager={isManager}
                                         handleAction={handleAction}
+                                        className={gridColsBasis}
                                         style={{
                                             position: 'absolute',
                                             top: 0,
@@ -438,7 +448,6 @@ export const LeadTable = React.memo(function LeadTable({
                                             height: `${virtualRow.size}px`,
                                             transform: `translateY(${virtualRow.start}px)`,
                                             display: 'grid',
-                                            gridTemplateColumns: '130px 150px 60px 80px 160px 100px 80px 100px 1fr'
                                         }}
                                     />
                                 );

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 客户模块安全性与隐私测试
  * 
  * 覆盖范围：
@@ -13,6 +13,36 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    // unstable_cache：直接执行传入的函数，不做缓存
+    unstable_cache: vi.fn((fn: (...args: unknown[]) => unknown) => fn),
+}));
+
+vi.mock('@/shared/lib/errors', () => ({
+    AppError: class AppError extends Error {
+        code: string;
+        statusCode: number;
+        constructor(msg: string, code: string, statusCode: number) {
+            super(msg);
+            this.code = code;
+            this.statusCode = statusCode;
+        }
+    },
+    ERROR_CODES: {
+        PERMISSION_DENIED: 'PERMISSION_DENIED',
+        CUSTOMER_NOT_FOUND: 'CUSTOMER_NOT_FOUND',
+        INVALID_OPERATION: 'INVALID_OPERATION',
+    },
+}));
+
+vi.mock('@/shared/lib/server-action', () => ({
+    createSafeAction: vi.fn((schema: unknown, fn: (...args: unknown[]) => unknown) => fn),
+}));
+
+vi.mock('@/shared/config/permissions', () => ({
+    PERMISSIONS: {
+        CUSTOMER: { LIST: 'CUSTOMER.LIST', VIEW: 'CUSTOMER.VIEW', CREATE: 'CUSTOMER.CREATE', EDIT: 'CUSTOMER.EDIT', DELETE: 'CUSTOMER.DELETE' },
+    },
 }));
 
 vi.mock('@/shared/api/db', () => ({

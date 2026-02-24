@@ -1,10 +1,9 @@
 import { IAppOption } from "../../../app";
-import { formatTime } from "../../../utils/util";
 
 Page({
     data: {
         orderId: '',
-        order: null as any,
+        order: null as unknown as Record<string, any>,
         loading: true,
         statusMap: {
             'PENDING_PAYMENT': '待付款',
@@ -152,3 +151,5 @@ Page({
         });
     }
 });
+
+export { };

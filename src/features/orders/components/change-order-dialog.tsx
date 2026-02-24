@@ -20,7 +20,7 @@ import {
 } from '@/shared/ui/select';
 import { toast } from 'sonner';
 import { createChangeRequestAction } from '../actions/change-order';
-import { FileEdit } from 'lucide-react';
+import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
 
 interface ChangeOrderDialogProps {
     orderId: string;

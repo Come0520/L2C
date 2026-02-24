@@ -10,14 +10,26 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quoteRooms, quoteItems, quotes } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createQuoteRoomSchema, updateQuoteRoomSchema } from './schema';
 import { updateQuoteTotal } from './shared-helpers';
+/**
+ * 报价单房间 CRUD 操作 Actions
+ * 处理空间信息的增删改，并同步触发报价单总额重新计算与缓存失效。
+ */
 import { AuditService } from '@/shared/lib/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 // ─── 创建房间 ───────────────────────────────────
 
+/**
+ * 创建新房间 (Create Room)
+ * 流程：校验报价单 -> 插入房间记录 -> 记录审计日志 -> 失效缓存。
+ * 
+ * @param data - 包含报价单 ID、名称及可选测量空间 ID 的对象
+ * @param context - 执行上下文
+ * @returns 创建成功的房间记录
+ */
 export const createRoomActionInternal = createSafeAction(
   createQuoteRoomSchema,
   async (data, context) => {
@@ -51,17 +63,33 @@ export const createRoomActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 房间创建成功', { roomId: newRoom.id, quoteId: data.quoteId });
     return newRoom;
   }
 );
 
+/**
+ * 客户端调用：在报价单中创建一个新房间 (Create Quote Room)
+ * 场景：用户需要在报价单内按房间（如：主卧、客厅）组织行项目。
+ * 
+ * @param params - 符合 createQuoteRoomSchema 的参数（quoteId, name 等）
+ * @returns 创建的房间记录
+ */
 export async function createRoom(params: z.infer<typeof createQuoteRoomSchema>) {
   return createRoomActionInternal(params);
 }
 
 // ─── 更新房间 ───────────────────────────────────
 
+/**
+ * 更新房间信息 (Update Room)
+ * 支持修改房间名称、测量空间关联等。
+ * 
+ * @param data - 包含房间 ID 及更新字段的对象
+ * @param context - 执行上下文
+ * @returns 更新后的房间记录
+ */
 export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, context) => {
   const { id, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
@@ -91,12 +119,22 @@ export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, c
   });
 
   revalidatePath(`/quotes/${updated.quoteId}`);
+  revalidateTag('quotes', 'default');
   logger.info('[quotes] 房间更新成功', { roomId: updated.id });
   return updated;
 });
 
 // ─── 删除房间 ───────────────────────────────────
 
+/**
+ * 删除房间 (Delete Room)
+ * 注意：由于外键约束或业务逻辑，通常会先清空该房间下的所有行项目。
+ * 流程：删除行项目 -> 删除房间 -> 重新计算总额 -> 记录审计 -> 失效缓存。
+ * 
+ * @param data - 包含待删除房间 ID 的对象
+ * @param context - 执行上下文
+ * @returns 成功状态
+ */
 export const deleteRoom = createSafeAction(
   z.object({ id: z.string().uuid() }),
   async (data, context) => {
@@ -131,6 +169,7 @@ export const deleteRoom = createSafeAction(
     });
 
     revalidatePath(`/quotes/${existing.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 房间删除成功', { roomId: data.id });
     return { success: true };
   }

@@ -1,4 +1,4 @@
-import { db, type Transaction } from "@/shared/api/db";
+import { db, type DbTransaction } from "@/shared/api/db";
 import {
     paymentSchedules,
     orders,
@@ -300,7 +300,7 @@ export class FinanceService {
         });
     }
 
-    private static async calculateCommission(tx: Transaction, statement: InferSelectModel<typeof arStatements> & { channel?: InferSelectModel<typeof marketChannels> | null }, tenantId: string) {
+    private static async calculateCommission(tx: DbTransaction, statement: InferSelectModel<typeof arStatements> & { channel?: InferSelectModel<typeof marketChannels> | null }, tenantId: string) {
         if (!statement.channelId || !statement.channel) return;
 
         const mode = statement.channel.cooperationMode || 'REBATE';

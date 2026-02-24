@@ -1,6 +1,7 @@
 import { logger } from "@/shared/lib/logger";
 
 import { leads } from '@/shared/api/schema';
+import { INTENTION_WEIGHTS } from '../config/scoring-config';
 
 type LeadInput = Partial<typeof leads.$inferInsert>;
 
@@ -11,14 +12,9 @@ type LeadInput = Partial<typeof leads.$inferInsert>;
 export function calculateLeadScore(lead: LeadInput): number {
     let score = 0;
 
-    // 1. Intention Level (Max 40)
-    if (lead.intentionLevel === 'HIGH') {
-        score += 40;
-    } else if (lead.intentionLevel === 'MEDIUM') {
-        score += 20;
-    } else if (lead.intentionLevel === 'LOW') {
-        score += 10;
-    }
+    // 1. Intention Level (Max 50)
+    const intentionScore = lead.intentionLevel ? (INTENTION_WEIGHTS[lead.intentionLevel] || 0) : 0;
+    score += intentionScore;
 
     // 2. Contact Info (Max 30)
     if (lead.customerPhone && lead.customerPhone.length === 11) {

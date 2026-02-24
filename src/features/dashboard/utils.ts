@@ -23,7 +23,7 @@ export function getDefaultDashboardConfig(role: string): UserDashboardConfig {
             { id: 'w4', type: 'sales-avg-order', title: '我的客单价', x: 0, y: 1, w: 1, h: 1, visible: true },
             { id: 'w5', type: 'pending-approval', title: '待审批', x: 1, y: 1, w: 1, h: 1, visible: true },
         ];
-    } else if (role === 'MANAGER' || role === 'ADMIN') {
+    } else if (role === 'MANAGER' || role === 'ADMIN' || role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') {
         baseConfig.widgets = [
             { id: 'w1', type: 'team-sales', title: '团队销售额', x: 0, y: 0, w: 1, h: 1, visible: true },
             { id: 'w2', type: 'team-target', title: '团队目标完成率', x: 1, y: 0, w: 1, h: 1, visible: true },

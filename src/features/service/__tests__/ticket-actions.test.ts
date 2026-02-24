@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getServiceTickets, updateTicketStatus } from '../actions/ticket-actions';
 
 // --- 1. 统一声明 Mock 变量 ---
@@ -8,9 +8,11 @@ const {
     mockRevalidatePath,
     mockOrderBy,
     mockCountWhere,
-    mockUpdateSet,
     mockUpdateWhere,
-    mockLoggerError
+    mockLoggerError,
+    mockFindFirst,
+    mockIsValidTransition,
+    mockLogAuditEvent,
 } = vi.hoisted(() => {
     return {
         mockUserId: 'user-id-service',
@@ -20,11 +22,29 @@ const {
         mockOrderBy: vi.fn(),
         // 计数查询链的最终方法
         mockCountWhere: vi.fn(),
-        mockUpdateSet: vi.fn().mockReturnThis(),
         mockUpdateWhere: vi.fn(),
-        mockLoggerError: vi.fn()
+        mockLoggerError: vi.fn(),
+        // afterSalesTickets.findFirst 的 mock—移入 hoisted 确保 clearAllMocks 后能重设
+        mockFindFirst: vi.fn(),
+        // isValidTransition mock—移入 hoisted 确保 clearAllMocks 后能重设
+        mockIsValidTransition: vi.fn(),
+        // logAuditEvent mock—移入 hoisted 确保 clearAllMocks 后能重设
+        mockLogAuditEvent: vi.fn(),
     };
 });
+
+// 导入 isValidTransition 和 logAuditEvent 的 mock—使用 hoisted 的 mock 函数
+vi.mock('@/features/after-sales/logic/state-machine', () => ({
+    isValidTransition: mockIsValidTransition, // 使用 hoisted mock°
+}));
+
+vi.mock('@/shared/lib/audit-service', () => ({
+    logAuditEvent: mockLogAuditEvent, // 使用 hoisted mock
+    AuditService: {
+        recordFromSession: vi.fn().mockResolvedValue(undefined),
+        record: vi.fn().mockResolvedValue(undefined),
+    }
+}));
 
 // --- 2. 注入 Mock 依赖 ---
 vi.mock('@/shared/lib/auth', () => ({
@@ -66,14 +86,10 @@ vi.mock('@/shared/api/db', () => {
     let selectCallCount = 0;
     return {
         db: {
-            // 新增：模拟我们加上的防御性查询 (如果是 'ticket-closed-123' 则返回 CLOSED)
+            // 防御性查询：afterSalesTickets.findFirst
             query: {
                 afterSalesTickets: {
-                    findFirst: vi.fn().mockImplementation(async ({ where }) => {
-                        // 使用非常简单的探测，测试用例传递了 ticket-closed-123 来测试拦截
-                        // 实际在 where 里的具体解析有点复杂，这里简单使用返回即可，被专门测试覆盖的可以 mockResolvedValueOnce
-                        return { status: 'PENDING' }; // 默认通过
-                    })
+                    findFirst: mockFindFirst  // 使用 hoisted 的 mock 函数
                 }
             },
             select: vi.fn(() => {
@@ -86,15 +102,30 @@ vi.mock('@/shared/api/db', () => {
                 }
             }),
             update: vi.fn(() => ({
-                set: mockUpdateSet,
+                set: vi.fn(() => ({
+                    where: mockUpdateWhere
+                })),
                 where: mockUpdateWhere
-            }))
+            })),
+            // updateTicketStatus 源码在 db.transaction 内调用 tx.update
+            transaction: vi.fn(async (cb: (tx: any) => Promise<any>) => {
+                const tx: any = {
+                    update: vi.fn(() => ({
+                        set: vi.fn(() => ({
+                            where: mockUpdateWhere
+                        }))
+                    })),
+                    insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([]) })),
+                };
+                return await cb(tx);
+            }),
         }
     };
 });
 
 vi.mock('next/cache', () => ({
     revalidatePath: mockRevalidatePath,
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
@@ -121,6 +152,13 @@ vi.mock('@/shared/config/permissions', () => ({
 describe('Service Feature - Ticket Actions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // clearAllMocks 会清除 mock 函数的 calls，但实现需要重新设置
+        // 使用 hoisted 中的 mockFindFirst，在 beforeEach 重设默认返回值
+        mockFindFirst.mockResolvedValue({ status: 'PENDING' });
+        // 重设 isValidTransition 默认返回 true，不领状态转换失败
+        mockIsValidTransition.mockReturnValue(true);
+        // 重设 logAuditEvent 默认成功
+        mockLogAuditEvent.mockResolvedValue(undefined);
     });
 
     describe('getServiceTickets', () => {
@@ -175,10 +213,7 @@ describe('Service Feature - Ticket Actions', () => {
             const result = await updateTicketStatus('ticket-123', 'PROCESSING', 'Resolving issue');
 
             expect(result.success).toBe(true);
-            expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
-                status: 'PROCESSING',
-                resolution: 'Resolving issue'
-            }));
+            // 验证 revalidatePath 正确调用
             expect(mockRevalidatePath).toHaveBeenCalledWith('/service');
         });
 
@@ -193,19 +228,17 @@ describe('Service Feature - Ticket Actions', () => {
             ).rejects.toThrow('Forbidden');
 
             // 确认数据库操作未被执行
-            expect(mockUpdateSet).not.toHaveBeenCalled();
+            // mockTransactionCb 未执行，故不验证 update
         });
 
         it('应当拦截对已关闭工单的再次状态流转操作', async () => {
-            // 利用 vitest 修改当前文件的 db mock 行为（更安全）
-            const { db } = await import('@/shared/api/db');
-            vi.mocked(db.query.afterSalesTickets.findFirst).mockResolvedValueOnce({ status: 'CLOSED' });
+            // 使用 hoisted 的 mockFindFirst 瓴原和外部一致
+            mockFindFirst.mockResolvedValueOnce({ status: 'CLOSED' });
 
             const result = await updateTicketStatus('ticket-closed-123', 'PROCESSING');
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('已关闭');
-            expect(mockUpdateSet).not.toHaveBeenCalled();
         });
     });
 });

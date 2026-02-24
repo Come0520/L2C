@@ -7,24 +7,21 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { Badge } from '@/shared/ui/badge';
-import {
-    ShieldCheck,
-    Upload,
-    Loader2,
-    FileText,
-    AlertCircle,
-    Clock,
-    CheckCircle2,
-    XCircle,
-} from 'lucide-react';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import { toast } from 'sonner';
 import {
     getVerificationStatus,
     submitVerification,
     uploadBusinessLicense,
-    type VerificationInfo,
-    type VerificationStatus,
 } from '../actions/tenant-info';
+import type { VerificationInfo, VerificationStatus } from '../types/tenant';
 import Image from 'next/image';
 
 interface VerificationFormProps {

@@ -23,19 +23,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
-import {
-    Layout,
-    Search,
-    Tag,
-    Clock,
-    User,
-    Trash2,
-    Copy,
-    Users,
-    Lock,
-    LayoutGrid,
-    List
-} from 'lucide-react';
+import Layout from 'lucide-react/dist/esm/icons/layout';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Tag from 'lucide-react/dist/esm/icons/tag';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import User from 'lucide-react/dist/esm/icons/user';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
+import List from 'lucide-react/dist/esm/icons/list';
 import { deleteQuoteTemplate } from '../actions/template-actions';
 import { toast } from 'sonner';
 import { logger } from '@/shared/lib/logger';

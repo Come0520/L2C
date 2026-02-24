@@ -7,17 +7,15 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
-import {
-    AlertTriangle,
-    Bell,
-    CheckCircle2,
-    XCircle,
-    Clock,
-    ChevronDown,
-    RefreshCw,
-    Loader2,
-    Truck,
-} from "lucide-react";
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Truck from 'lucide-react/dist/esm/icons/truck';
 import type {
     AlertsResponse,
     AlertCategory,

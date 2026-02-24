@@ -31,6 +31,7 @@
     "l2c-check": "tsx scripts/l2c-check.ts",
     "deploy:check": "pnpm lint && pnpm type-check",
     "deploy:verify": "tsx scripts/verify-deployment.ts",
+    "audit:internal": "tsx scripts/security-audit.ts",
     "prepare": "husky"
   },
   "lint-staged": {

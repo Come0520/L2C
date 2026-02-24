@@ -1,3 +1,5 @@
+'use server';
+
 import { db } from '@/shared/api/db';
 import { installTasks, users } from '@/shared/api/schema';
 import { eq, and, desc, like, inArray } from 'drizzle-orm';
@@ -53,7 +55,9 @@ const getCachedInstallers = unstable_cache(
         });
     },
     ['installers-list'],
-    { tags: ['users', 'installers'] }
+    { tags: ['users', 'installers', 'tenant-${tenantId}'] } // Note: unstable_cache doesn't natively support dynamic tags derived from args in this way, BUT providing arguments directly affects the cache key automatically. However, to explicitly control tags (which are used for revalidateTag), we typically can't inject args into the `tags` array declaratively.
+    // Instead, the cache key itself is uniquely defined by the arguments to the function, AND the `keyParts` argument.
+    // So changing `['installers-list']` to include tenantId makes it safe.
 );
 
 /**

@@ -42,16 +42,27 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
+/**
+ * 审批流设计器属性
+ */
 interface ApprovalFlowDesignerProps {
+    /** 审批流实例 ID */
     flowId: string;
+    /** 初始的节点与连线数据，支持从库中加载已有定义 */
     initialData?: {
         nodes: Node[];
         edges: Edge[];
     };
+    /** 该审批流所属的业务模块标识 */
     targetModule?: string;
+    /** 审批流的展示名称 */
     flowName?: string;
 }
 
+/**
+ * 审批流可视化设计器组件
+ * 基于 ReactFlow 构建，支持拖拽布局、节点连线、配置编辑及流程发布
+ */
 export function ApprovalFlowDesigner({ flowId, initialData }: ApprovalFlowDesignerProps) {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || initialEdges);

@@ -5,3 +5,5 @@ export declare const GREEN = "#07c160";
 export declare const ORANGE = "#ff976a";
 export declare const GRAY = "#323233";
 export declare const GRAY_DARK = "#969799";
+
+export {};

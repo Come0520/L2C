@@ -6,16 +6,11 @@ import { LeadService } from '@/services/lead.service';
 import { leadSchema } from '@/features/leads/schemas';
 import { z } from 'zod';
 import { createLogger } from '@/shared/lib/logger';
+import { maskPhone } from '@/shared/lib/utils';
 
 const log = createLogger('mobile/leads/[id]');
 
-/**
- * 手机号脱敏
- */
-function maskPhone(phone: string | null): string {
-    if (!phone || phone.length < 7) return phone || '';
-    return phone.slice(0, 3) + '****' + phone.slice(-4);
-}
+// maskPhone 已从 @/shared/lib/utils 导入，消除重复定义
 
 /*
  * GET /api/mobile/leads/[id]
@@ -52,10 +47,10 @@ export async function GET(
 
         return apiSuccess({
             ...lead,
-            customerPhone: maskPhone(lead.customerPhone),
+            customerPhone: maskPhone(lead.customerPhone || ''),
             customer: lead.customer ? {
                 ...lead.customer,
-                phone: maskPhone(lead.customer?.phone || null)
+                phone: maskPhone(lead.customer?.phone || '')
             } : null
         });
     } catch (error) {

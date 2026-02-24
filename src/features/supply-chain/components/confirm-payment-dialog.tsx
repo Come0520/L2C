@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { confirmPoPayment, confirmPaymentSchema } from '../actions/po-actions';
+import { confirmPoPayment } from '../actions/po-actions';
+import { confirmPaymentSchema } from '../schemas';
 import { Button } from '@/shared/ui/button';
 import {
     Dialog,

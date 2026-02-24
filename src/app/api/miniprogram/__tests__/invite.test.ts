@@ -46,6 +46,13 @@ vi.mock('@/shared/services/audit-service', () => ({
     }
 }));
 
+// Mock Security Service (RateLimiter)
+vi.mock('@/shared/services/miniprogram/security.service', () => ({
+    RateLimiter: {
+        allow: vi.fn().mockReturnValue(true),
+    }
+}));
+
 // Mock jose (避免真实 JWT 签名和验证)
 vi.mock('jose', () => {
     class MockSignJWT {

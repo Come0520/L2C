@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { InferSelectModel } from 'drizzle-orm';
 import {
     receiptBills,

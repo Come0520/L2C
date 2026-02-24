@@ -4,7 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/ui/card";
 import { getChannelAnalytics, ChannelAnalyticsData } from '../actions/analytics';
 import { StatCard } from '@/features/analytics/components/stat-card';
-import { ArrowUpRight, Users, ShoppingCart, DollarSign } from 'lucide-react';
+import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right';
+import Users from 'lucide-react/dist/esm/icons/users';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/shared/lib/utils';
@@ -29,13 +32,36 @@ export function ChannelAnalytics() {
     }, []);
 
     if (loading) {
-        return <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Skeleton className="h-32" /><Skeleton className="h-32" />
-                <Skeleton className="h-32" /><Skeleton className="h-32" />
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                                <Skeleton className="h-4 w-24" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-8 w-16 mb-1" />
+                                <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <Skeleton key={i} className="h-12 w-full" />
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-            <Skeleton className="h-[400px]" />
-        </div>;
+        );
     }
 
     // Aggregates
@@ -120,8 +146,14 @@ export function ChannelAnalytics() {
                             ))}
                             {data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
-                                        暂无数据
+                                    <TableCell colSpan={8} className="text-center py-20">
+                                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                            <div className="p-4 bg-muted rounded-full mb-4">
+                                                <DollarSign className="h-8 w-8" />
+                                            </div>
+                                            <p className="text-lg font-medium">暂无渠道分析数据</p>
+                                            <p className="text-sm">当前时间范围内未产生相应的佣金或成交记录</p>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )}

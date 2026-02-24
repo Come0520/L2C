@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
-import { Button } from '@/shared/ui/button';
+// import { Button } from '@/shared/ui/button';
 
 interface AdditionalFee {
     type: 'HIGH_ALTITUDE' | 'LONG_DISTANCE' | 'SPECIAL_WALL' | 'OTHER';
@@ -23,6 +23,13 @@ interface FeeBreakdownFormProps {
     onChange: (breakdown: FeeBreakdown) => void;
 }
 
+/**
+ * 工费明细表单组件
+ * 用于在创建或修改任务时，计算基础工费及各种加项费用（高空、路费、打孔等）
+ * 
+ * @param {FeeBreakdown} value - 费用的初始值或受控值
+ * @param {(breakdown: FeeBreakdown) => void} onChange - 费用变动时的回调
+ */
 export function FeeBreakdownForm({ value, onChange }: FeeBreakdownFormProps) {
     const [baseFee, setBaseFee] = useState(value?.baseFee || 0);
     const [enableHighAltitude, setEnableHighAltitude] = useState(false);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 import { mergeCustomersAction } from '../mutations';
 
@@ -48,7 +48,7 @@ const {
         mockTxUpdate: updateChain,
         mockTxInsert: insertChain,
         mockTx: tx,
-        mockDbTransaction: vi.fn(async (cb: any) => cb(tx))
+        mockDbTransaction: vi.fn(async (cb: (tx: any) => Promise<any>) => cb(tx))
     };
 });
 
@@ -72,6 +72,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({
@@ -127,7 +128,7 @@ describe('mergeCustomersAction (合并客户测试)', () => {
         });
         const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
 
-        mockDbTransaction.mockImplementationOnce(async (cb: any) => {
+        mockDbTransaction.mockImplementationOnce(async (cb: (tx: any) => Promise<any>) => {
             return cb({
                 update: updateMock,
                 insert: insertMock,
@@ -142,7 +143,7 @@ describe('mergeCustomersAction (合并客户测试)', () => {
             fieldPriority: 'PRIMARY' as const,
         };
 
-        const result = await mergeCustomersAction(input as any, mockUserId);
+        const result = await mergeCustomersAction(input, mockUserId);
 
         expect(mockDbTransaction).toHaveBeenCalled();
 
@@ -184,7 +185,7 @@ describe('mergeCustomersAction (合并客户测试)', () => {
             fieldPriority: 'PRIMARY' as const,
         };
 
-        await expect(mergeCustomersAction(input as any, mockUserId)).rejects.toThrow(
+        await expect(mergeCustomersAction(input, mockUserId)).rejects.toThrow(
             new AppError('数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409)
         );
 
@@ -205,7 +206,7 @@ describe('mergeCustomersAction (合并客户测试)', () => {
             values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'dummy' }]) })
         });
 
-        mockDbTransaction.mockImplementationOnce(async (cb: any) => {
+        mockDbTransaction.mockImplementationOnce(async (cb: (tx: any) => Promise<any>) => {
             return cb({
                 update: updateMock,
                 insert: insertMock,
@@ -220,7 +221,7 @@ describe('mergeCustomersAction (合并客户测试)', () => {
             fieldPriority: 'PRIMARY' as const,
         };
 
-        await expect(mergeCustomersAction(input as any, mockUserId)).rejects.toThrow(
+        await expect(mergeCustomersAction(input, mockUserId)).rejects.toThrow(
             new AppError('并发合并失败，数据已被修改', ERROR_CODES.CONCURRENCY_CONFLICT, 409)
         );
     });

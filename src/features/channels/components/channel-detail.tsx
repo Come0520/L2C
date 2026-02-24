@@ -3,15 +3,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import {
-    Building2,
-    User,
-    Phone,
-    TrendingUp,
-    DollarSign,
-    Users,
-    PieChart,
-} from 'lucide-react';
+import Building2 from 'lucide-react/dist/esm/icons/building';
+import User from 'lucide-react/dist/esm/icons/user';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Users from 'lucide-react/dist/esm/icons/users';
+import PieChart from 'lucide-react/dist/esm/icons/pie-chart';
 import { formatDate } from '@/shared/lib/utils';
 
 // 渠道详情数据类型

@@ -5,7 +5,8 @@ import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { createActivity } from '@/features/customers/actions/activities';
 import { toast } from 'sonner';
-import { Loader2, Send } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Send from 'lucide-react/dist/esm/icons/send';
 import { cn } from '@/shared/lib/utils';
 
 interface Props {

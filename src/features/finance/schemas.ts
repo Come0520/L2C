@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 /**
  * 财务模块 Zod Schema 定义
  */

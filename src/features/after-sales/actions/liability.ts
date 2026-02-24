@@ -8,6 +8,7 @@ import { eq, and, sql, sum } from 'drizzle-orm';
 import { afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
 import { generateNoticeNo } from '../utils';
 import { AuditService } from '@/shared/lib/audit-service';
+import { Decimal } from 'decimal.js';
 import {
     createLiabilitySchema,
     confirmLiabilitySchema,
@@ -134,14 +135,30 @@ const confirmLiabilityNoticeAction = createSafeAction(confirmLiabilitySchema, as
                 eq(liabilityNotices.status, 'CONFIRMED')
             ));
 
-        const totalDeduction = Number(aggr?.total || 0);
+        const totalDeduction = new Decimal(aggr?.total || 0);
 
         await tx.update(afterSalesTickets)
             .set({
-                actualDeduction: totalDeduction.toFixed(2),
+                actualDeduction: totalDeduction.toString(), // AS-D-01 防止舍入问题
                 updatedAt: new Date(),
             })
-            .where(eq(afterSalesTickets.id, notice.afterSalesId));
+            .where(and(
+                eq(afterSalesTickets.id, notice.afterSalesId),
+                eq(afterSalesTickets.tenantId, tenantId) // AS-S-04 防跨越并发写
+            ));
+
+        // P1 FIX (AS-R-01): 定责确认时自动计入欠款账本
+        if (Number(notice.amount) > 0) {
+            const { recordDebtLedger } = await import('../logic/deduction-safety');
+            await recordDebtLedger({
+                tenantId: tenantId,
+                liablePartyType: notice.liablePartyType as any, // 确保类型收窄
+                liablePartyId: notice.liablePartyId || "",
+                originalAfterSalesId: notice.afterSalesId,
+                originalLiabilityNoticeId: notice.id,
+                amount: Number(notice.amount),
+            }, tx);
+        }
 
         return {
             success: true,

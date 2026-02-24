@@ -47,7 +47,11 @@ export async function getRolesAction() {
 
 /**
  * 同步系统预设角色到数据库
- * 将代码中的各角色配置（名称、描述、默认权限）写入数据库
+ *
+ * @description 将代码中定义的预设角色（ROLES）同步至数据库。
+ * 如果角色已存在则更新配置，不存在则创建。此操作仅限具有设置管理权限的用户。
+ *
+ * @returns Promise<{ success: boolean; message: string; details?: string[] }> 同步结果
  */
 export async function syncSystemRoles() {
   const session = await auth();
@@ -63,6 +67,9 @@ export async function syncSystemRoles() {
   }
 
   const tenantId = session.user.tenantId;
+  const userId = session.user.id;
+
+  logger.info(`用户 ${userId} 正在启动系统角色同步`, { tenantId });
 
   try {
     // 使用事务确保原子性
@@ -179,6 +186,9 @@ export async function createRole(data: {
   }
 
   const tenantId = session.user.tenantId;
+  const userId = session.user.id;
+
+  logger.info(`用户 ${userId} 正在创建自定义角色: ${data.code}`, { tenantId, name: data.name });
 
   try {
     await db.transaction(async (tx) => {
@@ -316,6 +326,8 @@ export async function updateRole(
       changedFields: updateData,
     });
 
+    logger.info(`用户 ${session.user.id} 成功更新角色: ${id}`, { tenantId, name: validated.data.name });
+
     revalidatePath('/settings/roles');
     return { success: true, message: '角色更新成功' };
   } catch (error) {
@@ -326,7 +338,11 @@ export async function updateRole(
 
 /**
  * 删除角色
- * 仅允许删除非系统角色
+ *
+ * @description 仅允许删除非系统预设的自定义角色。删除前会检查是否有用户正在使用该角色。
+ *
+ * @param id - 待删除角色的 ID
+ * @returns Promise<{ success: boolean; message: string }> 删除结果
  */
 export async function deleteRole(id: string) {
   const session = await auth();
@@ -342,6 +358,9 @@ export async function deleteRole(id: string) {
   }
 
   const tenantId = session.user.tenantId;
+  const userId = session.user.id;
+
+  logger.info(`用户 ${userId} 正在尝试删除角色: ${id}`, { tenantId });
 
   try {
     await db.transaction(async (tx) => {

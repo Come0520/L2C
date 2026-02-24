@@ -5,7 +5,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
 import { OrderService } from '@/services/order.service';
 import { OrderStateMachine } from '../../logic/order-state-machine';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -51,7 +51,8 @@ vi.mock('../../logic/order-state-machine', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 const mockSession = {
@@ -88,7 +89,7 @@ describe('Order Mutations Actions', () => {
             expect(result.success).toBe(true);
             expect(db.update).toHaveBeenCalled();
             expect(AuditService.record).toHaveBeenCalled();
-            expect(revalidatePath).toHaveBeenCalled();
+            expect(revalidateTag).toHaveBeenCalled();
         });
 
         it('should return error when transition is invalid', async () => {

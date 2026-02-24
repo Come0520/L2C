@@ -1,6 +1,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Skeleton } from "@/shared/ui/skeleton";
 
+/**
+ * 安装任务列表骨架屏
+ * 
+ * 用于在数据加载时展示占位样式，遵循 L5 级的页面加载体验规范。
+ */
 export function InstallTaskSkeleton() {
     return (
         <div className="space-y-4">

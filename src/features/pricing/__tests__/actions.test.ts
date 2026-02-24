@@ -13,6 +13,23 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn(),
 }));
 
+vi.mock('next/cache', () => ({
+    unstable_cache: (fn: any) => fn,
+    revalidateTag: vi.fn(),
+}));
+
+/**
+ * 模拟 Drizzle 查询链接口
+ */
+interface MockQueryChain {
+    from: (table: any) => MockQueryChain;
+    innerJoin: (table: any, condition: any) => MockQueryChain;
+    where: (condition: any) => MockQueryChain;
+    groupBy: (columns: any) => MockQueryChain;
+    orderBy: (columns: any) => MockQueryChain;
+    then: (resolve: (data: Record<string, unknown>[]) => void) => void;
+}
+
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
@@ -29,13 +46,13 @@ vi.mock('@/shared/api/db', () => ({
             },
         },
         select: vi.fn(() => {
-            const chain: any = {
+            const chain: MockQueryChain = {
                 from: vi.fn(() => chain),
                 innerJoin: vi.fn(() => chain),
                 where: vi.fn(() => chain),
                 groupBy: vi.fn(() => chain),
                 orderBy: vi.fn(() => chain),
-                then: (resolve: any) => resolve([{
+                then: (resolve) => resolve([{
                     minPrice: '150', maxPrice: '250', avgPrice: '200',
                     totalSold: 10, lastPrice: '210', count: 5,
                     avgQuotePrice: '190', quoteCount: 3,
@@ -52,7 +69,7 @@ vi.mock('@/shared/lib/logger', () => ({
 }));
 
 vi.mock('react', () => ({
-    cache: (fn: any) => fn,
+    cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
 }));
 
 // ===== 常量 =====

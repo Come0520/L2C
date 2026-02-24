@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     getTenantInfo,
     canEditTenantInfo,
@@ -29,6 +29,7 @@ vi.mock('@/shared/lib/auth', () => ({
 // Mock next/cache
 vi.mock('next/cache', () => ({
     revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
 }));
 
 // Mock audit service

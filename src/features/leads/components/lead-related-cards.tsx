@@ -6,7 +6,11 @@ import { eq, desc, and } from "drizzle-orm";
 import { format } from "date-fns";
 import { Badge } from "@/shared/ui/badge";
 import Link from "next/link";
-import { Ruler, FileText, Calendar, User, ArrowRight } from "lucide-react";
+import Ruler from 'lucide-react/dist/esm/icons/ruler';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import User from 'lucide-react/dist/esm/icons/user';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 
 interface LeadRelatedCardsProps {
     leadId: string;
@@ -109,7 +113,7 @@ export async function LeadRelatedCards({ leadId, tenantId }: LeadRelatedCardsPro
                                             </span>
                                         </div>
                                     </div>
-                                    {/* Link to measurement details (Assuming route exists or placeholder) */}
+                                    {/* 测量详情链接 */}
                                     <Link href={`/measurements/${task.id}`} className="p-2 hover:bg-primary/10 rounded-full transition-colors">
                                         <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-primary" />
                                     </Link>

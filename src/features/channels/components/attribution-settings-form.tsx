@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
 import { toast } from 'sonner';
 import { getAttributionSettings, updateAttributionSettingsAction } from '../actions/settings';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 
 type AttributionModel = 'FIRST_TOUCH' | 'LAST_TOUCH';
 

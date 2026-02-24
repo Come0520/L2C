@@ -129,17 +129,22 @@ export function SalesRankingTable({
                 <EmptyState />
             ) : (
                 <div className="divide-y">
-                    {data.map((item) => {
+                    {data.map((item, index) => {
                         const isCurrentUser = item.userId === currentUserId;
                         return (
                             <div
                                 key={item.userId}
                                 className={cn(
-                                    'flex items-center gap-3 px-4 py-3 transition-colors',
+                                    'flex items-center gap-3 px-4 py-3 transition-all duration-300',
+                                    'animate-in fade-in slide-in-from-bottom-2',
                                     isCurrentUser
-                                        ? 'bg-blue-50'
+                                        ? 'bg-blue-50/50 hover:bg-blue-50'
                                         : 'hover:bg-gray-50'
                                 )}
+                                style={{
+                                    animationFillMode: 'both',
+                                    animationDelay: `${index * 50}ms`,
+                                }}
                             >
                                 {/* 排名标识 */}
                                 <div

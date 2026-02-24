@@ -40,7 +40,11 @@ export default function MobileApprovalsPage() {
             if (!isAuthenticated) return;
 
             setIsLoading(true);
-            const response = await mobileGet<any>('/approvals');
+            interface ApprovalsResponse {
+                items: ApprovalTask[];
+                total: number;
+            }
+            const response = await mobileGet<ApprovalsResponse>('/approvals');
             if (response.success && response.data) {
                 // 后端返回的是分页对象 { items, total, ... }
                 setTasks(response.data.items || []);

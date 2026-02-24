@@ -108,3 +108,5 @@ Component({
         }
     }
 });
+
+export {};

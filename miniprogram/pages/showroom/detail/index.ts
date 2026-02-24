@@ -2,7 +2,7 @@
 Page({
     data: {
         id: '',
-        product: null as any,
+        product: null as unknown as Record<string, any>,
         loading: true
     },
 
@@ -56,3 +56,5 @@ Page({
         };
     }
 });
+
+export {};

@@ -1,5 +1,5 @@
 
-import { authStore } from '../../../stores/auth-store';
+// 引用 app 实例
 
 const app = getApp<IAppOption>();
 
@@ -7,7 +7,7 @@ Page({
     data: {
         activeTab: 'mine', // mine | pool
         keyword: '',
-        list: [] as any[],
+        list: [] as Record<string, any>[],
         page: 1,
         pageSize: 20,
         total: 0,
@@ -96,3 +96,5 @@ Page({
         wx.navigateTo({ url: '/pages/leads/create/index' });
     }
 });
+
+export { };

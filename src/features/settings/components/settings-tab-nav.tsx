@@ -3,17 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/utils';
-import {
-    Building2,
-    Users,
-    FileText,
-    Wallet,
-    Package,
-    Megaphone,
-    Shield,
-    ChevronDown,
-    HardHat,
-} from 'lucide-react';
+import Building2 from 'lucide-react/dist/esm/icons/building';
+import Users from 'lucide-react/dist/esm/icons/users';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Wallet from 'lucide-react/dist/esm/icons/wallet';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Megaphone from 'lucide-react/dist/esm/icons/megaphone';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import HardHat from 'lucide-react/dist/esm/icons/hard-hat';
 import {
     DropdownMenu,
     DropdownMenuContent,

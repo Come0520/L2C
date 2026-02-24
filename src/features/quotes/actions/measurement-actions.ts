@@ -1,14 +1,20 @@
-'use server';
+"use server";
+
+/**
+ * 测量与安装相关集成 Actions
+ * 包含：创建测量任务、查询测量进度等
+ */
 
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { QuoteService, type ImportAction } from '@/services/quote.service';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
 import { eq, and, desc } from 'drizzle-orm';
 import { updateQuoteTotal } from './shared-helpers';
+import { logger } from '@/shared/lib/logger';
 // customers, leads 导入已移除（未使用）
 
 // Schema Definitions
@@ -35,9 +41,11 @@ const executeImportSchema = z.object({
 });
 
 /**
- * 获取指定报价单关联客户的已完成可导入测量任务列表
- * @param quoteId 报价单ID
- * @returns 包含测量任务列表的成功或失败响应
+ * 获取指定报价单关联客户的已完成可导入测量任务列表。
+ * 【租户隔离】通过报价单 ID 确认当前用户是否有权访问该客户的测量数据。
+ * 
+ * @param quoteId - 报价单 ID
+ * @returns 包含测量任务列表或错误信息的响应对象
  */
 export async function getImportableMeasureTasks(quoteId: string) {
     const session = await auth();
@@ -108,6 +116,8 @@ const executeMeasurementImportActionInternal = createSafeAction(executeImportSch
     await updateQuoteTotal(data.quoteId, session.user.tenantId);
 
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
+    logger.info('[quotes] 测量数据成功导入报价单', { quoteId: data.quoteId, actionCount: data.actions.length });
     return result;
 });
 

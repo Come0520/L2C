@@ -1,3 +1,4 @@
+﻿import './setup';
 import { authStore, UserInfo } from '../stores/auth-store';
 
 describe('AuthStore', () => {
@@ -12,21 +13,20 @@ describe('AuthStore', () => {
     beforeEach(() => {
         (global as any).resetWX();
         authStore.logout();
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    test('初始化时应从存储中加载数据', () => {
+    test('初始化时应从存储中加载数据', async () => {
         // 重新实例化以测试构造函数
-        (wx.getStorageSync as jest.Mock).mockReturnValueOnce(mockUser);
-        (wx.getStorageSync as jest.Mock).mockReturnValueOnce(mockToken);
+        (wx.getStorageSync as any).mockReturnValueOnce(mockUser);
+        (wx.getStorageSync as any).mockReturnValueOnce(mockToken);
 
-        // 我们需要重新 require 因为 authStore 是单例
-        jest.isolateModules(() => {
-            const { authStore: newStore } = require('../stores/auth-store');
-            expect(newStore.isLoggedIn).toBe(true);
-            expect(newStore.token).toBe(mockToken);
-            expect(newStore.userInfo).toEqual(mockUser);
-        });
+        // 我们需要重新加载因为 authStore 是单例
+        vi.resetModules();
+        const { authStore: newStore } = await import('../stores/auth-store');
+        expect(newStore.isLoggedIn).toBe(true);
+        expect(newStore.token).toBe(mockToken);
+        expect(newStore.userInfo).toEqual(mockUser);
     });
 
     test('setLogin 应更新状态并持久化', () => {
@@ -61,7 +61,7 @@ describe('AuthStore', () => {
     });
 
     test('subscribe 应在状态变更时通知', () => {
-        const listener = jest.fn();
+        const listener = vi.fn();
         const unsubscribe = authStore.subscribe(listener);
 
         authStore.setLogin(mockToken, mockUser);
@@ -74,3 +74,5 @@ describe('AuthStore', () => {
         expect(listener).not.toHaveBeenCalled();
     });
 });
+
+export {};

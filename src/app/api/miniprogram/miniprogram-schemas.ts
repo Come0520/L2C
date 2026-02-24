@@ -192,7 +192,7 @@ export const TaskCheckInSchema = z.object({
 
 /** 
  * 上传测量工录入的复尺测绘明细
- * @property {any[]} rooms - 多个房间的各类窗体测算表
+ * @property {MeasureRoom[]} rooms - 多个房间的各类窗体测算表（每个房间包含房间名和窗户测量数组）
  * @property {string[]} [images] - 房屋现场毛坯实拍参考
  * @property {string} [remark] - 测量特殊备注或要求
  */

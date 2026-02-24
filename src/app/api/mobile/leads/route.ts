@@ -1,14 +1,20 @@
 /**
- * 销售端 - 客户列表 API
- * GET /api/mobile/leads
- * 
- * 支持查询：我的客户 / 公海客户
+ * 销售端 - 客户列表查询
+ *
+ * @route GET /api/mobile/leads
+ * @auth JWT Token (销售角色)
+ * @query {string} [type='mine'] - 查询类型：mine (我的客户) | pool (公海客户)
+ * @query {number} [page=1] - 页码
+ * @query {number} [pageSize=20] - 每页条数
+ * @query {string} [keyword] - 搜索关键词（客户姓名/手机号）
+ * @returns {PaginatedResponse<LeadItem>} 分页客户信息
  */
 
 import { NextRequest } from 'next/server';
 import { apiError, apiPaginated, apiSuccess } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
+import { maskPhone } from '@/shared/lib/utils';
 import { LeadService } from '@/services/lead.service';
 import { createLeadSchema } from '@/features/leads/schemas';
 import { AuditService } from '@/shared/services/audit-service';
@@ -37,8 +43,8 @@ export async function GET(request: NextRequest) {
     if (type !== 'mine' && type !== 'pool') {
         return apiError('无效的查询类型', 400);
     }
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    const page = Math.max(parseInt(searchParams.get('page') || '1') || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(searchParams.get('pageSize') || '20') || 20, 1), 100);
     const keyword = searchParams.get('keyword');
 
     try {
@@ -57,7 +63,7 @@ export async function GET(request: NextRequest) {
             id: lead.id,
             leadNo: lead.leadNo,
             name: lead.customerName,
-            phone: maskPhone(lead.customerPhone),
+            phone: maskPhone(lead.customerPhone || ''),
             address: lead.address,
             status: lead.status,
             statusText: getStatusText(LeadStatusMap, lead.status),
@@ -79,13 +85,13 @@ export async function GET(request: NextRequest) {
 
 
 /**
- * 创建线索接口
- * 
- * @description 移动端创建新线索。集成 AuditService 业务审计。
- * 必须具有 SALES 权限。
- * 
- * @param {NextRequest} request - JSON body 包含线索详细信息
- * @returns {Promise<NextResponse>} 返回新创建的线索 ID
+ * 销售端 - 创建线索
+ *
+ * @route POST /api/mobile/leads
+ * @auth JWT Token (销售角色)
+ * @body {CreateLeadInput} body - 线索详细信息，符合 createLeadSchema
+ * @returns {ApiResponse<Lead>} 创建成功的线索详情
+ * @throws {409} 手机号或地址重复时返回冲突 ID
  */
 export async function POST(request: NextRequest) {
     // 1. 认证
@@ -125,14 +131,14 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // 5. 记录审计日志
+        // 5. 记录审计日志（排除 PII 敏感字段）
         await AuditService.log(db, {
             tableName: 'leads',
             recordId: result.lead.id,
             action: 'CREATE_MOBILE',
             userId: session.userId,
             tenantId: session.tenantId,
-            newValues: result.lead,
+            newValues: { leadNo: result.lead.leadNo, status: result.lead.status },
         });
 
         return apiSuccess(result.lead);
@@ -143,10 +149,4 @@ export async function POST(request: NextRequest) {
     }
 }
 
-/**
- * 手机号脱敏
- */
-function maskPhone(phone: string | null): string {
-    if (!phone || phone.length < 7) return phone || '';
-    return phone.slice(0, 3) + '****' + phone.slice(-4);
-}
+// maskPhone 已从 @/shared/lib/utils 导入，消除重复定义

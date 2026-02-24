@@ -1,23 +1,35 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+﻿import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { getAfterSalesHealth } from '../after-sales-health';
 import { checkPermission, auth } from '@/shared/lib/auth';
-import { db } from '@/shared/api/db';
 
-const queryBuilder: any = {
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    leftJoin: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
-    groupBy: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-};
 let mockResults: any[] = [];
-queryBuilder.then = vi.fn((resolve) => resolve(mockResults.shift() || []));
+
+/**
+ * 工厂函数：每次 db.select() 调用时创建一个新的 promise-based query builder。
+ * 这样 .catch() 能正确透传 resolve 值（而不是截断为空数组），
+ * 与源码中 db.select(...).from(...).where(...).catch(fallback) 的模式一致。
+ */
+function createQueryPromise(data: any) {
+    const p = Promise.resolve(data);
+    const builder: any = {};
+    builder.from = vi.fn(() => builder);
+    builder.where = vi.fn(() => builder);
+    builder.leftJoin = vi.fn(() => builder);
+    builder.innerJoin = vi.fn(() => builder);
+    builder.groupBy = vi.fn(() => builder);
+    builder.orderBy = vi.fn(() => builder);
+    builder.limit = vi.fn(() => builder);
+    // 实现真正的 Promise 接口：.catch() 在 resolve 时不会触发 onRejected
+    builder.then = (onFulfilled: any, onRejected?: any) => p.then(onFulfilled, onRejected);
+    builder.catch = (onRejected: any) => p.catch(onRejected);
+    builder.finally = (onFinally: any) => p.finally(onFinally);
+    return builder;
+}
 
 vi.mock('@/shared/api/db', () => ({
     db: {
-        select: vi.fn(() => queryBuilder),
+        // 每次 select 调用消耗 mockResults 队列的下一项
+        select: vi.fn(() => createQueryPromise(mockResults.shift() || [])),
     }
 }));
 
@@ -28,15 +40,19 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: vi.fn((cb) => cb),
+    revalidateTag: vi.fn(),
 }));
 
 describe('After Sales Health Action', () => {
     const VALID_TENANT_ID = 'tenant-1';
     const VALID_USER_ID = 'user-1';
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         mockResults = [];
+        // vi.clearAllMocks 后需要重新设置 db.select 的实现
+        const { db } = await import('@/shared/api/db');
+        (db.select as ReturnType<typeof vi.fn>).mockImplementation(() => createQueryPromise(mockResults.shift() || []));
     });
 
     it('should return error when not logged in (auth fails)', async () => {

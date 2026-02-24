@@ -18,7 +18,7 @@ import {
 import { Input } from '@/shared/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { ChannelGradeDiscounts, updateChannelGradeDiscounts } from '../actions/channel-config';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 
 // 使用 number() 而非 coerce.number() 以避免类型推断问题
 const formSchema = z.object({

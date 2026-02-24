@@ -32,7 +32,7 @@ import {
 import { addLeadFollowupSchema, followUpTypeEnum } from '../../schemas';
 import { addFollowup } from '../../actions/mutations';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { z } from 'zod';
 
 interface FollowUpDialogProps {

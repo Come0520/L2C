@@ -2,18 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import {
-    ClipboardCheck,
-    Wrench,
-    Calendar,
-    CreditCard,
-    Truck,
-    TrendingUp,
-    Loader2
-} from 'lucide-react';
+import ClipboardCheck from 'lucide-react/dist/esm/icons/clipboard-check';
+import Wrench from 'lucide-react/dist/esm/icons/wrench';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 
 /**
- * 待派测量 Widget
+ * 待派测量任务 Widget
+ * 该组件用于展示当前系统中等待派发给测量师傅的测量任务数量。
+ * 供派单员或相关管理人员快速查看待处理工作量。
+ *
+ * @component
+ * @returns {JSX.Element} 待派测量任务统计卡片组件
  */
 export function PendingMeasureWidget() {
     const [count, setCount] = useState<number | null>(null);
@@ -56,7 +59,12 @@ export function PendingMeasureWidget() {
 }
 
 /**
- * 待派安装 Widget
+ * 待派安装任务 Widget
+ * 该组件用于展示当前系统中等待派发给安装师傅的安装任务数量。
+ * 供派单员或相关管理人员快速查看待处理工作量。
+ *
+ * @component
+ * @returns {JSX.Element} 待派安装任务统计卡片组件
  */
 export function PendingInstallWidget() {
     const [count, setCount] = useState<number | null>(null);
@@ -99,7 +107,12 @@ export function PendingInstallWidget() {
 }
 
 /**
- * 今日排班 Widget
+ * 今日排班概览 Widget
+ * 该组件用于展示服务人员（如测量师、安装师）当天的排班计划情况。
+ * 包含已分配任务、时间段拥堵情况等（目前排班功能在开发中）。
+ *
+ * @component
+ * @returns {JSX.Element} 今日排班图示卡片组件
  */
 export function TodayScheduleWidget() {
     const [loading, setLoading] = useState(true);
@@ -140,7 +153,12 @@ export function TodayScheduleWidget() {
 }
 
 /**
- * 待收款 (AR) Widget
+ * 待收款概览 Widget (Accounts Receivable)
+ * 该组件用于展示当前需要向客户收取的尾款或各类款项总额及总笔数。
+ * 供财务人员或管理层快速掌握待回笼资金情况。
+ *
+ * @component
+ * @returns {JSX.Element} 待收款金额统计卡片组件
  */
 export function ARSummaryWidget() {
     const [data, setData] = useState<{ amount: number; count: number } | null>(null);
@@ -185,7 +203,12 @@ export function ARSummaryWidget() {
 }
 
 /**
- * 待付款 (AP) Widget
+ * 待付款概览 Widget (Accounts Payable)
+ * 该组件用于展示当前需要向供应商、合作方等支付的总金额及总笔数。
+ * 供财务人员直观掌控短期的资金流出压力。
+ *
+ * @component
+ * @returns {JSX.Element} 待付款金额统计卡片组件
  */
 export function APSummaryWidget() {
     const [data, setData] = useState<{ amount: number; count: number } | null>(null);
@@ -230,7 +253,12 @@ export function APSummaryWidget() {
 }
 
 /**
- * 现金流 Widget
+ * 现金流图表 Widget
+ * 该组件以图表形式展示特定时间段内的现金流入与流出净额趋势。
+ * （目前图表功能正在开发中）。
+ *
+ * @component
+ * @returns {JSX.Element} 现金流趋势卡片组件
  */
 export function CashFlowWidget() {
     const [loading, setLoading] = useState(true);
@@ -271,7 +299,12 @@ export function CashFlowWidget() {
 }
 
 /**
- * 销售漏斗 Widget
+ * 销售漏斗分析 Widget
+ * 该组件用于可视化展示从“线索 -> 意向 -> 报价 -> 成交”整个流程的转化情况，
+ * 直观反映各阶段的流失率，辅助管理层和销售分析转化瓶颈。
+ *
+ * @component
+ * @returns {JSX.Element} 销售漏斗图表卡片组件
  */
 export function ConversionFunnelWidget() {
     const [loading, setLoading] = useState(true);

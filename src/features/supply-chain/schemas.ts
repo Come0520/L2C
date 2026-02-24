@@ -115,3 +115,33 @@ export const shipmentTrackingSchema = z.object({
         description: z.string().describe('事件描述'),
     })).describe('物流跟踪事件列表'),
 });
+
+/**
+ * 确认付款 Schema
+ */
+export const confirmPaymentSchema = z.object({
+    poId: z.string(),
+    paymentMethod: z.enum(['CASH', 'WECHAT', 'ALIPAY', 'BANK']),
+    paymentAmount: z.number().min(0.01, "付款金额必须大于0"),
+    paymentTime: z.string(),
+    paymentVoucherImg: z.string().optional(),
+    remark: z.string().optional(),
+});
+
+/**
+ * 确认收货 Schema
+ * 支持部分收货：每个商品可以指定本次收货数量
+ */
+export const confirmReceiptSchema = z.object({
+    poId: z.string().uuid(),
+    warehouseId: z.string().uuid(),
+    receivedDate: z.string().refine((val) => !isNaN(Date.parse(val)), "无效的日期"),
+    remark: z.string().max(500).optional(),
+    items: z.array(z.object({
+        /** 采购单明细 ID，用于幂等性校验 */
+        poItemId: z.string().uuid(),
+        productId: z.string(),
+        /** 本次收货数量 */
+        quantity: z.number().min(0),
+    })),
+});

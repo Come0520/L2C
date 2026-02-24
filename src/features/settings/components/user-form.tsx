@@ -10,7 +10,7 @@ import { Switch } from '@/shared/ui/switch';
 import { RoleSelector } from './role-selector';
 import { updateUser } from '@/features/settings/actions/user-actions';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { toast } from 'sonner';
 
 interface UserFormProps {

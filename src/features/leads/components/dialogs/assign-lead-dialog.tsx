@@ -14,7 +14,7 @@ import { AssignLeadDialogProps, SalesUser } from '../../types';
 import { getSalesUsers } from '../../actions/queries';
 import { assignLead } from '../../actions/mutations';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import {
     Select,
     SelectContent,

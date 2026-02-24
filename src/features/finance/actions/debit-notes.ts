@@ -16,7 +16,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { generateBusinessNo } from '@/shared/lib/generate-no';
 
@@ -94,7 +94,7 @@ export async function createDebitNote(input: z.infer<typeof createDebitNoteSchem
             details: { debitNoteNo: debitNote.debitNoteNo, amount: data.amount }
         });
 
-        revalidatePath('/finance/debit-notes');
+        revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
 
         return {
             success: true,
@@ -207,8 +207,8 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
                 });
             });
 
-            revalidatePath('/finance/debit-notes');
-            revalidatePath('/finance/ap');
+            revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
+            revalidateTag(`finance-ap-${tenantId}`, 'default');
 
             return { success: true, message: '借项通知单已审批通过并生效' };
         } else {
@@ -237,7 +237,7 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
                 details: { debitNoteNo: debitNote.debitNoteNo, approved: false, reason: rejectReason }
             });
 
-            revalidatePath('/finance/debit-notes');
+            revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
 
             return { success: true, message: '借项通知单已拒绝' };
         }

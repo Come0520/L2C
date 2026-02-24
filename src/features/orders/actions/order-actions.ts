@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { orders, paymentSchedules } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
 import Decimal from 'decimal.js';
@@ -130,8 +130,8 @@ export async function createOrderPayment(data: {
 
             logger.info('[orders] 创建订单付款记录成功:', { orderId, scheduleId, tenantId, amount: actualAmount });
 
-            revalidatePath(`/orders/${orderId}`);
-            revalidatePath(`/orders`);
+            revalidateTag(`order-${orderId}`, 'default');
+            revalidateTag(`orders`, 'default');
 
             return { success: true };
         });

@@ -11,6 +11,13 @@ interface CreateInstallTaskDialogProps {
     onSuccess?: () => void;
 }
 
+/**
+ * 新建安装任务对话框组件
+ * 用于手动为订单创建新的安装单
+ * 
+ * @param {React.ReactNode} trigger - 自定义触发元素
+ * @param {() => void} onSuccess - 创建成功后的回调
+ */
 export function CreateInstallTaskDialog({ trigger, onSuccess }: CreateInstallTaskDialogProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);

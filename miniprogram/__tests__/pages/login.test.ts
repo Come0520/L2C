@@ -1,17 +1,28 @@
+﻿import '../setup';
 import { authStore } from '../../stores/auth-store';
 
 describe('Login Page', () => {
     let container: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         (global as any).resetWX();
+        vi.clearAllMocks();
         authStore.logout();
 
-        jest.isolateModules(() => {
-            require('../../pages/login/login');
-        });
+        if (!container) {
+            await import('../../pages/login/login');
+            container = (global as any).lastPageContainer;
+        }
 
-        container = (global as any).lastPageContainer;
+        if (container) {
+            container.setData({
+                account: '',
+                password: '',
+                loggingIn: false,
+                errorMsg: ''
+            });
+        }
+
         if (!container) throw new Error('Login logic not loaded');
     });
 
@@ -42,7 +53,7 @@ describe('Login Page', () => {
                 tenantStatus: 'active'
             }
         };
-        (global as any).getApp().request = jest.fn().mockResolvedValue(mockData);
+        (global as any).getApp().request = vi.fn().mockResolvedValue(mockData);
 
         container.setData({
             account: 'admin',
@@ -57,7 +68,7 @@ describe('Login Page', () => {
     });
 
     test('登录失败后的错误显示', async () => {
-        (global as any).getApp().request = jest.fn().mockResolvedValue({
+        (global as any).getApp().request = vi.fn().mockResolvedValue({
             success: false,
             error: '账号或密码错误'
         });
@@ -73,3 +84,5 @@ describe('Login Page', () => {
         expect(container.data.loggingIn).toBe(false);
     });
 });
+
+export {};

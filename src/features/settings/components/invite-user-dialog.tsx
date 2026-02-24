@@ -14,7 +14,10 @@ import {
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { RoleSelector } from './role-selector';
-import { Loader2, Copy, Check, UserPlus } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Check from 'lucide-react/dist/esm/icons/check';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
 import { createEmployeeInviteLink } from '@/features/settings/actions/invite';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
 

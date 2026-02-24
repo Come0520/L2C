@@ -853,5 +853,224 @@ export class QuoteService {
             status: quote.status ?? 'DRAFT'
         };
     }
+
+    /**
+     * 从报价模板创建新报价 (Create Quote from Template)
+     * 基于 quoteTemplates/quoteTemplateRooms/quoteTemplateItems 表创建全新报价
+     * 
+     * @param templateQuoteId - 模板 ID (quoteTemplates.id)
+     * @param customerId - 目标客户 ID
+     * @param tenantId - 租户 ID
+     * @param userId - 创建者用户 ID
+     * @param validDays - 报价有效期天数（默认 7 天）
+     * @returns 新创建的报价对象
+     */
+    static async createFromTemplate(
+        templateQuoteId: string,
+        customerId: string,
+        tenantId: string,
+        userId: string,
+        validDays: number = 7
+    ) {
+        const { quoteTemplates, quoteTemplateRooms, quoteTemplateItems } = await import('@/shared/api/schema/quotes');
+
+        return await db.transaction(async (tx) => {
+            // 1. 获取模板及其 rooms/items
+            const template = await tx.query.quoteTemplates.findFirst({
+                where: and(
+                    eq(quoteTemplates.id, templateQuoteId),
+                    eq(quoteTemplates.tenantId, tenantId),
+                    eq(quoteTemplates.isActive, true)
+                ),
+                with: {
+                    rooms: { with: { items: true } },
+                    items: true
+                }
+            });
+
+            if (!template) throw new Error('模板不存在或已停用');
+
+            // 2. 创建新报价单
+            const newQuoteNo = `QT${Date.now()}`;
+            const validUntil = new Date();
+            validUntil.setDate(validUntil.getDate() + validDays);
+
+            const [newQuote] = await tx.insert(quotes).values({
+                tenantId,
+                customerId,
+                quoteNo: newQuoteNo,
+                version: 1,
+                totalAmount: '0',
+                finalAmount: '0',
+                discountAmount: '0',
+                status: 'DRAFT' as const,
+                isActive: true,
+                validUntil,
+                title: template.name,
+                notes: `[从模板创建] ${template.name}${template.description ? ` - ${template.description}` : ''}`,
+                createdBy: userId,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }).returning();
+
+            // 3. 设置 rootQuoteId 为自身
+            await tx.update(quotes)
+                .set({ rootQuoteId: newQuote.id })
+                .where(eq(quotes.id, newQuote.id));
+
+            // 4. 复制模板空间 → 报价空间
+            const roomIdMap = new Map<string, string>();
+            const templateRooms = template.rooms || [];
+            for (const tRoom of templateRooms) {
+                const [newRoom] = await tx.insert(quoteRooms).values({
+                    tenantId,
+                    quoteId: newQuote.id,
+                    name: tRoom.name,
+                    sortOrder: tRoom.sortOrder,
+                    createdAt: new Date()
+                }).returning();
+                roomIdMap.set(tRoom.id, newRoom.id);
+            }
+
+            // 5. 复制模板商品项 → 报价商品项
+            const allItems = [
+                ...(template.items || []),
+                ...templateRooms.flatMap(r => (r as { items?: typeof template.items }).items || [])
+            ];
+
+            const itemIdMap = new Map<string, string>();
+            // 先处理主项（parentId 为 null），再处理附件
+            const sortedItems = [...allItems].sort((a, b) => {
+                if (!a.parentId && b.parentId) return -1;
+                if (a.parentId && !b.parentId) return 1;
+                return 0;
+            });
+
+            for (const tItem of sortedItems) {
+                const mappedRoomId = tItem.roomId ? roomIdMap.get(tItem.roomId) : null;
+                const mappedParentId = tItem.parentId ? itemIdMap.get(tItem.parentId) : null;
+
+                const [newItem] = await tx.insert(quoteItems).values({
+                    tenantId,
+                    quoteId: newQuote.id,
+                    roomId: mappedRoomId ?? null,
+                    parentId: mappedParentId ?? null,
+                    category: tItem.category,
+                    productId: tItem.productId,
+                    productName: tItem.productName,
+                    unitPrice: tItem.unitPrice?.toString() || '0',
+                    quantity: '1',
+                    width: tItem.defaultWidth?.toString() || null,
+                    height: tItem.defaultHeight?.toString() || null,
+                    foldRatio: tItem.defaultFoldRatio?.toString() || null,
+                    subtotal: tItem.unitPrice?.toString() || '0',
+                    attributes: tItem.attributes || {},
+                    sortOrder: tItem.sortOrder,
+                    createdAt: new Date()
+                }).returning();
+                itemIdMap.set(tItem.id, newItem.id);
+            }
+
+            // 6. 更新报价总额
+            await updateQuoteTotal(newQuote.id, tenantId);
+
+            return { ...newQuote, rootQuoteId: newQuote.id };
+        });
+    }
+
+    /**
+     * 将报价保存为可复用模板 (Save Quote as Template)
+     * 将报价的 rooms/items 复制到 quoteTemplates/quoteTemplateRooms/quoteTemplateItems 表
+     * 
+     * @param quoteId - 源报价 ID
+     * @param tenantId - 租户 ID
+     * @param userId - 操作者 ID
+     * @param templateName - 模板名称
+     * @param description - 模板描述（可选）
+     * @returns 新创建的模板对象
+     */
+    static async saveAsTemplate(
+        quoteId: string,
+        tenantId: string,
+        userId: string,
+        templateName: string,
+        description?: string
+    ) {
+        const { quoteTemplates, quoteTemplateRooms, quoteTemplateItems } = await import('@/shared/api/schema/quotes');
+
+        return await db.transaction(async (tx) => {
+            // 1. 获取源报价及其所有部件
+            const sourceQuote = await tx.query.quotes.findFirst({
+                where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
+                with: {
+                    rooms: true,
+                    items: true
+                }
+            });
+
+            if (!sourceQuote) throw new Error('报价单不存在');
+
+            // 2. 创建模板主记录
+            const [template] = await tx.insert(quoteTemplates).values({
+                tenantId,
+                name: templateName,
+                description: description || `来自报价 ${sourceQuote.quoteNo}`,
+                category: sourceQuote.items?.[0]?.category || 'MIXED',
+                tags: [],
+                sourceQuoteId: quoteId,
+                isPublic: false,
+                isActive: true,
+                createdBy: userId,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }).returning();
+
+            // 3. 复制报价空间 → 模板空间
+            const roomIdMap = new Map<string, string>();
+            for (const room of sourceQuote.rooms) {
+                const [tRoom] = await tx.insert(quoteTemplateRooms).values({
+                    tenantId,
+                    templateId: template.id,
+                    name: room.name,
+                    sortOrder: room.sortOrder,
+                    createdAt: new Date()
+                }).returning();
+                roomIdMap.set(room.id, tRoom.id);
+            }
+
+            // 4. 复制报价商品项 → 模板商品项
+            const itemIdMap = new Map<string, string>();
+            const sortedItems = [...sourceQuote.items].sort((a, b) => {
+                if (!a.parentId && b.parentId) return -1;
+                if (a.parentId && !b.parentId) return 1;
+                return 0;
+            });
+
+            for (const item of sortedItems) {
+                const mappedRoomId = item.roomId ? roomIdMap.get(item.roomId) : null;
+                const mappedParentId = item.parentId ? itemIdMap.get(item.parentId) : null;
+
+                const [tItem] = await tx.insert(quoteTemplateItems).values({
+                    tenantId,
+                    templateId: template.id,
+                    roomId: mappedRoomId ?? null,
+                    parentId: mappedParentId ?? null,
+                    category: item.category,
+                    productId: item.productId,
+                    productName: item.productName,
+                    unitPrice: item.unitPrice?.toString() || null,
+                    defaultWidth: item.width?.toString() || null,
+                    defaultHeight: item.height?.toString() || null,
+                    defaultFoldRatio: item.foldRatio?.toString() || null,
+                    attributes: item.attributes || {},
+                    sortOrder: item.sortOrder,
+                    createdAt: new Date()
+                }).returning();
+                itemIdMap.set(item.id, tItem.id);
+            }
+
+            return template;
+        });
+    }
 }
 

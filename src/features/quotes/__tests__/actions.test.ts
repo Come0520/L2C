@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 报价单 Actions 集成测试
  * 覆盖关键场景：创建报价、折扣审批、删除行项目、租户隔离
  */
@@ -63,6 +63,7 @@ vi.mock('drizzle-orm', async (importOriginal) => {
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({

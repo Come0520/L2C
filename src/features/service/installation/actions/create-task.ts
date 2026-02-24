@@ -50,24 +50,25 @@ const generateInstallTasksFromOrderActionInternal = createSafeAction(
 
         return await db.transaction(async (tx) => {
             // P0 修复：订单查询必须验证租户归属
-            const order = await tx.query.orders.findFirst({
-                where: and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId)  // 租户验证
-                ),
-                with: { items: true }
-            });
+            const [order, existingTasks] = await Promise.all([
+                tx.query.orders.findFirst({
+                    where: and(
+                        eq(orders.id, orderId),
+                        eq(orders.tenantId, tenantId)  // 租户验证
+                    ),
+                    with: { items: true }
+                }),
+                tx.query.installTasks.findMany({
+                    where: and(
+                        eq(installTasks.orderId, orderId),
+                        eq(installTasks.tenantId, tenantId)
+                    )
+                })
+            ]);
 
             if (!order) {
                 return { success: false, error: '订单不存在或无权访问' };
             }
-
-            const existingTasks = await tx.query.installTasks.findMany({
-                where: and(
-                    eq(installTasks.orderId, orderId),
-                    eq(installTasks.tenantId, tenantId)
-                )
-            });
 
             if (existingTasks.length > 0) {
                 return { success: false, error: 'Install tasks already exist for this order' };

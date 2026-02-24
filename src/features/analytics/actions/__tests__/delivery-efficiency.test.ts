@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+﻿import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { getDeliveryEfficiency } from '../delivery-efficiency';
 import { checkPermission, auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
@@ -19,6 +19,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: vi.fn((cb) => cb),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Delivery Efficiency Action', () => {

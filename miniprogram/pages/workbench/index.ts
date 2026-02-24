@@ -1,10 +1,10 @@
-import { authStore } from '../../stores/auth-store';
+import { authStore, UserInfo } from '../../stores/auth-store';
 
 Page({
     data: {
-        userInfo: null,
-        dashboard: null as any,
-        loading: true,
+        userInfo: null as UserInfo | null,
+        dashboard: null as unknown as Record<string, any>,
+        loading: false,
         today: ''
     },
 
@@ -104,7 +104,7 @@ Page({
         }
     },
 
-    handleCardTap(e: any) {
+    handleCardTap() {
         // Handle quick actions or stats tap
     },
 
@@ -113,3 +113,5 @@ Page({
         wx.navigateTo({ url: `/pages/quotes/detail?id=${id}` });
     }
 });
+
+export {};

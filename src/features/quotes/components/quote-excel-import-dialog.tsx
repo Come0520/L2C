@@ -8,7 +8,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/shared/ui/dialog';
-import { FileDown, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import FileDown from 'lucide-react/dist/esm/icons/file-down';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { batchImportQuoteItems } from '@/features/quotes/actions/import-actions';

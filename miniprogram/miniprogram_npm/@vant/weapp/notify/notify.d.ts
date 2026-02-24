@@ -20,3 +20,5 @@ declare namespace Notify {
     var resetDefaultOptions: () => void;
 }
 export default Notify;
+
+export {};

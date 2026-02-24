@@ -160,7 +160,8 @@ Page({
      * 分享给好友
      */
     onShareAppMessage() {
-        const { inviteCode, inviteLink, selectedRole } = this.data;
+        const { inviteCode, selectedRole } = this.data;
+        // const inviteLink = `/pages/invite/invite?inviterId=${this.data.userInfo.id}`;
         const roleName = selectedRole.label || '员工';
 
         // 默认分享路径：跳转到注册页并携带邀请码
@@ -174,3 +175,5 @@ Page({
         };
     }
 });
+
+export { };

@@ -5,9 +5,11 @@ import { Card, CardHeader, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Truck, RefreshCw, PenLine } from 'lucide-react';
+import Truck from 'lucide-react/dist/esm/icons/truck';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import PenLine from 'lucide-react/dist/esm/icons/pen-line';
 import { toast } from 'sonner';
-import { updateLogistics } from '@/features/orders/actions/orders';
+import { updateLogistics } from '@/features/orders/actions';
 import { format } from 'date-fns';
 
 interface LogisticsTrace {

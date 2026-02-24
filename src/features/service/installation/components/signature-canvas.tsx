@@ -9,9 +9,15 @@ import Check from 'lucide-react/dist/esm/icons/check';
 import X from 'lucide-react/dist/esm/icons/x';
 import type SignatureCanvasLib from 'react-signature-canvas';
 
+/**
+ * 签名画布组件属性
+ */
 interface SignatureCanvasProps {
+    /** 确认签名时的回调，返回签名图片的 Blob 对象 */
     onConfirm: (blob: Blob) => void;
+    /** 取消签名的回调 */
     onCancel: () => void;
+    /** 自定义样式类名 */
     className?: string;
 }
 
@@ -20,6 +26,12 @@ const ReactSignatureCanvas = dynamic(() => import('react-signature-canvas'), {
     loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
 });
 
+/**
+ * 基础签名画布组件
+ * 
+ * 提供手写签名功能，基于 `react-signature-canvas` 实现。
+ * 支持响应式尺寸调整，并自动处理 SSR 环境兼容性。
+ */
 export function SignatureCanvas({ onConfirm, onCancel, className }: SignatureCanvasProps) {
     const sigCanvas = useRef<SignatureCanvasLib>(null);
     const containerRef = useRef<HTMLDivElement>(null);

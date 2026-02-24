@@ -8,8 +8,10 @@ import { revalidatePath } from 'next/cache';
 import { channelSchema, channelContactSchema, ChannelInput, ChannelContactInput } from './schema';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
+import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 
 /**
@@ -21,16 +23,17 @@ import { z } from 'zod';
  * 安全检查：需要 CHANNEL.CREATE 权限
  * 
  * @param {ChannelInput} input - 创建渠道的输入参数
- * @returns {Promise<any>} 返回新创建的渠道对象
+ * @returns {Promise<{ success: boolean, channelId: string }>} 返回新创建的渠道结果
  * @throws {Error} 未授权、没有权限、渠道名/编码重复等将抛出异常
  */
 export async function createChannel(input: ChannelInput) {
-    console.log('[channels] 开始创建渠道:', { name: input.name, channelNo: input.channelNo });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
     // 权限检查：需要渠道创建权限
     await checkPermission(session, PERMISSIONS.CHANNEL.CREATE);
+
+    logger.info('Creating channel', { userId: session.user.id, tenantId: session.user.tenantId, name: input.name });
 
     const tenantId = session.user.tenantId;
     const validated = channelSchema.parse(input);
@@ -96,7 +99,9 @@ export async function createChannel(input: ChannelInput) {
         });
 
         revalidatePath('/channels');
-        return newChannel;
+
+        logger.info('Channel created successfully', { channelId: newChannel.id, tenantId });
+        return { success: true, channelId: newChannel.id };
     });
 }
 
@@ -109,11 +114,10 @@ export async function createChannel(input: ChannelInput) {
  * 
  * @param {string} id - 需要更新的渠道ID
  * @param {Partial<ChannelInput>} input - 包含更新字段的对象
- * @returns {Promise<any>} 包含更新后渠道信息的对象
+ * @returns {Promise<ChannelInput>} 包含更新后渠道信息的对象
  * @throws {Error} 操作未授权，数据冲突或循环引用时将抛出异常
  */
 export async function updateChannel(id: string, input: Partial<ChannelInput>) {
-    console.log('[channels] 开始更新渠道:', { id, updates: Object.keys(input) });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -122,6 +126,8 @@ export async function updateChannel(id: string, input: Partial<ChannelInput>) {
 
     // 权限检查：需要渠道编辑权限
     await checkPermission(session, PERMISSIONS.CHANNEL.EDIT);
+
+    logger.info('Updating channel', { channelId: id, userId: session.user.id });
 
     const tenantId = session.user.tenantId;
 
@@ -243,7 +249,8 @@ export async function updateChannel(id: string, input: Partial<ChannelInput>) {
 
     revalidatePath('/channels');
     revalidatePath(`/channels/${id}`);
-    return updated;
+    logger.info('Channel updated successfully', { channelId: id, tenantId });
+    return updated as unknown as ChannelInput; // Safer cast than any
 }
 
 /**
@@ -254,10 +261,9 @@ export async function updateChannel(id: string, input: Partial<ChannelInput>) {
  * 安全检查：需要 CHANNEL.EDIT 权限
  * 
  * @param {ChannelContactInput} input - 渠道联系人输入参数
- * @returns {Promise<any>} 返回新添加的联系人信息
+ * @returns {Promise<{ id: string; name: string; phone: string }>} 返回新添加的联系人信息
  */
 export async function addChannelContact(input: ChannelContactInput) {
-    console.log('[channels] 开始添加渠道联系人:', { channelId: input.channelId, phone: input.phone });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -310,7 +316,6 @@ export async function addChannelContact(input: ChannelContactInput) {
  * @throws {Error} 如果渠道包含子渠道或关联数据则抛出异常
  */
 export async function deleteChannel(id: string) {
-    console.log('[channels] 开始删除渠道:', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -319,6 +324,8 @@ export async function deleteChannel(id: string) {
 
     // 权限检查：需要渠道删除权限
     await checkPermission(session, PERMISSIONS.CHANNEL.DELETE);
+
+    logger.warn('Deleting channel', { channelId: id, userId: session.user.id });
 
     const tenantId = session.user.tenantId;
 
@@ -359,6 +366,7 @@ export async function deleteChannel(id: string) {
     });
 
     revalidatePath('/channels');
+    logger.info('Channel deleted successfully', { channelId: id, tenantId });
 }
 
 /**
@@ -373,7 +381,6 @@ export async function deleteChannel(id: string) {
  * @returns {Promise<void>} 无返回值
  */
 export async function toggleContactMain(channelId: string, contactId: string) {
-    console.log('[channels] 开始切换主要联系人:', { channelId, contactId });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

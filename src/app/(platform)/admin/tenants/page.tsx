@@ -8,9 +8,21 @@ import { getPendingTenants, getAllTenants } from '@/features/platform/actions/ad
 import { TenantApprovalList } from './tenant-approval-list';
 import { PageHeader } from '@/components/ui/page-header';
 
-export default async function TenantManagementPage() {
+export default async function TenantManagementPage(
+  props: {
+    searchParams?: Promise<{
+      search?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const search = searchParams?.search || '';
+
   // 获取待审批和所有租户列表
-  const [pendingResult, allResult] = await Promise.all([getPendingTenants(), getAllTenants()]);
+  const [pendingResult, allResult] = await Promise.all([
+    getPendingTenants({ search }),
+    getAllTenants({ search })
+  ]);
 
   return (
     <div className="space-y-6">

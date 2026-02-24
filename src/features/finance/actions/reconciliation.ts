@@ -9,7 +9,7 @@ import { reconciliations, arStatements, receiptBills } from '@/shared/api/schema
 import { eq, desc, and, inArray, gte, lte, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
-import { revalidatePath, unstable_cache, revalidateTag } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { Decimal } from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -32,7 +32,7 @@ export async function getReconciliations() {
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取对账单列表', { tenantId });
+            logger.info('[finance] [CACHE_MISS] 获取对账单列表', { tenantId });
             try {
                 return await db.query.reconciliations.findMany({
                     where: eq(reconciliations.tenantId, tenantId),
@@ -71,7 +71,7 @@ export async function getReconciliation(id: string) {
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取单条对账单详情', { id, tenantId });
+            logger.info('[finance] [CACHE_MISS] 获取单条对账单详情', { id, tenantId });
             try {
                 return await db.query.reconciliations.findFirst({
                     where: and(
@@ -106,7 +106,7 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
     const { customerIds, startDate, endDate, title } = params;
     const tenantId = session.user.tenantId;
 
-    console.log('[finance] 开始生成汇总对账单', { customerIdsCount: customerIds?.length, startDate, endDate });
+    logger.info('[finance] 开始生成汇总对账单', { customerIdsCount: customerIds?.length, startDate, endDate });
 
     const conditions = [
         eq(arStatements.tenantId, tenantId),
@@ -124,7 +124,7 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
     });
 
     if (statements.length === 0) {
-        console.log('[finance] 未找到符合条件的对账单', { params });
+        logger.info('[finance] 未找到符合条件的对账单', { params });
         return { error: '没有找到符合条件的账单' };
     }
 
@@ -160,9 +160,9 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
 
     const periodTitle = title || `${startDate.slice(0, 10)} 至 ${endDate.slice(0, 10)} 对账汇总`;
 
-    console.log('[finance] 汇总对账单生成成功', { customerCount: Object.keys(customerSummary).length });
+    logger.info('[finance] 汇总对账单生成成功', { customerCount: Object.keys(customerSummary).length });
 
-    revalidatePath('/finance/reconciliation');
+    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, 'default');
 
     return {
         success: true,
@@ -189,12 +189,12 @@ export async function generateAggregatedStatement(params: z.infer<typeof aggrega
     if (!session?.user?.tenantId) throw new Error('未授权');
     if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
-    console.log('[finance] generateAggregatedStatement 入口', { params });
+    logger.info('[finance] generateAggregatedStatement 入口', { params });
 
     try {
         return generateAggregatedStatementActionInternal(params);
     } catch (error) {
-        console.log('[finance] generateAggregatedStatement 失败', { error, params });
+        logger.info('[finance] generateAggregatedStatement 失败', { error, params });
         logger.error('❌ generateAggregatedStatement Error:', error);
         throw error;
     }
@@ -209,7 +209,7 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
     const { period, baseDate } = params;
     const tenantId = session.user.tenantId;
 
-    console.log('[finance] 开始生成周期对账单', { period, baseDate });
+    logger.info('[finance] 开始生成周期对账单', { period, baseDate });
 
     const now = baseDate ? new Date(baseDate) : new Date();
     let startDate: Date;
@@ -244,7 +244,7 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
         with: { customer: true }
     });
 
-    console.log('[finance] 周期对账单查询完成', { count: pendingStatements.length });
+    logger.info('[finance] 周期对账单查询完成', { count: pendingStatements.length });
 
     const periodLabel = { WEEKLY: '周', BIWEEKLY: '双周', MONTHLY: '月度' }[period];
 
@@ -272,12 +272,12 @@ export async function generatePeriodStatements(params: z.infer<typeof generatePe
     if (!session?.user?.tenantId) throw new Error('未授权');
     if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
-    console.log('[finance] generatePeriodStatements 入口', { params });
+    logger.info('[finance] generatePeriodStatements 入口', { params });
 
     try {
         return generatePeriodStatementsActionInternal(params);
     } catch (error) {
-        console.log('[finance] generatePeriodStatements 失败', { error, params });
+        logger.info('[finance] generatePeriodStatements 失败', { error, params });
         logger.error('❌ generatePeriodStatements Error:', error);
         throw error;
     }
@@ -298,7 +298,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
     const tenantId = session.user.tenantId;
     const userId = session.user.id!;
 
-    console.log('[finance] 开始批量核销分析', { receiptId, statementIdsCount: statementIds.length });
+    logger.info('[finance] 开始批量核销分析', { receiptId, statementIdsCount: statementIds.length });
 
     return await db.transaction(async (tx) => {
         // 1. 获取并校验收款单 (Receipt Bill Verification)
@@ -310,12 +310,12 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
         });
 
         if (!receipt) {
-            console.log('[finance] 批量核销失败：收款单不存在', { receiptId });
+            logger.info('[finance] 批量核销失败：收款单不存在', { receiptId });
             return { error: '收款单不存在' };
         }
 
         if (receipt.status !== 'VERIFIED' && receipt.status !== 'PARTIAL_USED') {
-            console.log('[finance] 批量核销失败：收款单状态不可用', { receiptNo: receipt.receiptNo, status: receipt.status });
+            logger.info('[finance] 批量核销失败：收款单状态不可用', { receiptNo: receipt.receiptNo, status: receipt.status });
             return { error: `收款单当前状态为 ${receipt.status}，不可核销。请确保已核实。` };
         }
 
@@ -328,13 +328,13 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
         });
 
         if (statements.length === 0) {
-            console.log('[finance] 批量核销失败：待核销账单不存在', { statementIds });
+            logger.info('[finance] 批量核销失败：待核销账单不存在', { statementIds });
             return { error: '没有找到要核销的账单' };
         }
 
         const invalidStatements = statements.filter(s => s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'BAD_DEBT');
         if (invalidStatements.length > 0) {
-            console.log('[finance] 批量核销失败：部分账单不可核销', { invalidStatements: invalidStatements.map(s => s.statementNo) });
+            logger.info('[finance] 批量核销失败：部分账单不可核销', { invalidStatements: invalidStatements.map(s => s.statementNo) });
             return { error: `部分账单已结清或不可核销: ${invalidStatements.map(s => s.statementNo).join(', ')}` };
         }
 
@@ -343,7 +343,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
         const availableAmount = receiptAmount.minus(usedAmountBefore);
 
         if (availableAmount.lte(0)) {
-            console.log('[finance] 批量核销失败：收款单可用金额不足', { receiptNo: receipt.receiptNo, availableAmount: availableAmount.toFixed(2) });
+            logger.info('[finance] 批量核销失败：收款单可用金额不足', { receiptNo: receipt.receiptNo, availableAmount: availableAmount.toFixed(2) });
             return { error: '收款单可用余额不足' };
         }
 
@@ -361,7 +361,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
                 amount: new Decimal(a.amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP),
                 statementNo: statements.find(s => s.id === a.statementId)?.statementNo || '',
             }));
-            console.log('[finance] 批量核销使用指定分配', { totalAllocated: totalAllocated.toFixed(2) });
+            logger.info('[finance] 批量核销使用指定分配', { totalAllocated: totalAllocated.toFixed(2) });
         } else {
             let remainingToAlloc = availableAmount.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             for (const stmt of statements) {
@@ -377,7 +377,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
                     remainingToAlloc = remainingToAlloc.minus(allocAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
                 }
             }
-            console.log('[finance] 批量核销使用自动分配', { allocationsCount: finalAllocations.length });
+            logger.info('[finance] 批量核销使用自动分配', { allocationsCount: finalAllocations.length });
         }
 
         // 4. 执行核销逻辑 (Execution)
@@ -451,11 +451,9 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
             details: { writeOffCount: writeOffResults.length, totalAmount: totalWrittenOff.toFixed(2, Decimal.ROUND_HALF_UP) }
         });
 
-        console.log('[finance] 批量核销执行完成', { totalWrittenOff: totalWrittenOff.toFixed(2) });
+        logger.info('[finance] 批量核销执行完成', { totalWrittenOff: totalWrittenOff.toFixed(2) });
 
-        revalidateTag(`finance-reconciliation-${tenantId}`);
-        revalidatePath('/finance/reconciliation');
-        revalidatePath('/finance/receipt');
+        revalidateTag(`finance-reconciliation-${tenantId}`, 'default');
 
         return {
             success: true,
@@ -473,12 +471,12 @@ export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>)
     if (!session?.user?.tenantId) throw new Error('未授权');
     if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
-    console.log('[finance] batchWriteOff 入口', { params });
+    logger.info('[finance] batchWriteOff 入口', { params });
 
     try {
         return batchWriteOffActionInternal(params);
     } catch (error) {
-        console.log('[finance] batchWriteOff 失败', { error, params });
+        logger.info('[finance] batchWriteOff 失败', { error, params });
         logger.error('❌ batchWriteOff Error:', error);
         throw error;
     }
@@ -495,7 +493,7 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
     const { originalStartDate, originalEndDate, newEndDate, customerId } = params;
     const tenantId = session.user.tenantId;
 
-    console.log('[finance] 开始跨期对账处理', { originalStartDate, originalEndDate, newEndDate });
+    logger.info('[finance] 开始跨期对账处理', { originalStartDate, originalEndDate, newEndDate });
 
     const conditions = [
         eq(arStatements.tenantId, tenantId),
@@ -517,7 +515,7 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
     });
 
     if (pendingStatements.length === 0) {
-        console.log('[finance] 跨期对账：此期间无未结清账单');
+        logger.info('[finance] 跨期对账：此期间无未结清账单');
         return { success: true, message: '该账期内无未结清账单', movedCount: 0 };
     }
 
@@ -537,9 +535,9 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
         summary.customerBreakdown.set(cid, existing);
     }
 
-    console.log('[finance] 跨期对账分析完成', { movedCount: summary.movedCount });
+    logger.info('[finance] 跨期对账分析完成', { movedCount: summary.movedCount });
 
-    revalidatePath('/finance/reconciliation');
+    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, 'default');
 
     return {
         success: true,
@@ -558,7 +556,7 @@ export async function crossPeriodReconciliation(params: z.infer<typeof crossPeri
     if (!session?.user?.tenantId) throw new Error('未授权');
     if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
 
-    console.log('[finance] crossPeriodReconciliation 入口', { params });
+    logger.info('[finance] crossPeriodReconciliation 入口', { params });
 
     return crossPeriodReconciliationActionInternal(params);
 }

@@ -96,7 +96,8 @@ vi.mock('@/shared/config/permissions', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidateTag: vi.fn(),
+    revalidateTag: vi.fn()
 }));
 
 import {

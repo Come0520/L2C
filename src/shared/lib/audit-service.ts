@@ -1,4 +1,4 @@
-import { db, type Transaction } from '@/shared/api/db';
+import { db, type DbTransaction } from '@/shared/api/db';
 import { auditLogs } from '@/shared/api/schema';
 
 /**
@@ -21,7 +21,7 @@ export class AuditService {
         changedFields?: Record<string, unknown>;
         oldValues?: Record<string, unknown>;
         newValues?: Record<string, unknown>;
-    }, tx?: Transaction) { // 使用可选的 tx 参数
+    }, tx?: DbTransaction) { // 使用可选的 tx 参数
         try {
             const runner = tx || db;
             await runner.insert(auditLogs).values({
@@ -53,7 +53,7 @@ export class AuditService {
             new?: Record<string, unknown>;
             changed?: Record<string, unknown>;
         },
-        tx?: Transaction
+        tx?: DbTransaction
     ) {
         if (!session?.user?.tenantId) return;
 
@@ -67,5 +67,42 @@ export class AuditService {
             newValues: diff?.new,
             changedFields: diff?.changed,
         }, tx);
+    }
+}
+
+/**
+ * 便捷函数：在事务或常规 DB 中记录审计日志
+ * 兼容 ticket-actions 等调用方的 logAuditEvent(tx, params) 签名
+ * @param txOrDb - 事务或数据库连接
+ * @param params - 审计日志参数
+ */
+export async function logAuditEvent(
+    txOrDb: any,
+    params: {
+        tenantId: string;
+        userId?: string;
+        action: string;
+        resourceType?: string;
+        resourceId?: string;
+        tableName?: string;
+        details?: Record<string, unknown>;
+        oldValues?: Record<string, unknown>;
+        newValues?: Record<string, unknown>;
+    }
+): Promise<void> {
+    try {
+        await txOrDb.insert(auditLogs).values({
+            tenantId: params.tenantId,
+            userId: params.userId,
+            tableName: params.tableName || params.resourceType || 'unknown',
+            recordId: params.resourceId || 'unknown',
+            action: params.action,
+            newValues: params.details || params.newValues,
+            oldValues: params.oldValues,
+            createdAt: new Date(),
+        });
+    } catch (error) {
+        // 审计日志失败不应阻断主业务流程
+        console.error('logAuditEvent failed:', error);
     }
 }

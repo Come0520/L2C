@@ -20,7 +20,9 @@ import {
 } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { Label } from '@/shared/ui/label';
-import { XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { toast } from 'sonner';
 import { requestCancelOrder } from '../actions/cancel';
 import { CANCEL_REASONS, CANCELABLE_STATUSES } from '../action-schemas';

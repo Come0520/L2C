@@ -60,7 +60,10 @@ const updateUserPlanSchema = z.object({
 });
 
 /**
- * 获取当前用户的报价单配置
+ * 获取当前用户的报价单配置 (Get Current User Config)
+ * 逻辑：自动获取会话信息 -> 合并租户配置、用户个人配置与系统默认值。
+ * 
+ * @returns 深度合并后的 QuoteConfig 对象
  */
 export async function getMyQuoteConfig() {
     const session = await auth();
@@ -83,6 +86,13 @@ const toggleQuoteModeActionInternal = createSafeAction(updateModeSchema, async (
     return { success: true };
 });
 
+/**
+ * 客户端调用：切换当前用户的报价模式 (Toggle View Mode)
+ * 支持模式：'simple' (精简模式) | 'advanced' (高级/工厂模式)。
+ * 
+ * @param params - 包含目标模式的对象
+ * @returns 操作结果成功状态
+ */
 export async function toggleQuoteMode(params: z.infer<typeof updateModeSchema>) {
     return toggleQuoteModeActionInternal(params);
 }
@@ -124,6 +134,14 @@ const updateGlobalQuoteConfigActionInternal = createSafeAction(updateGlobalConfi
     return { success: true };
 });
 
+/**
+ * 客户端调用：更新租户级别的全局报价配置 (Update Tenant Global Config)
+ * 【权限校验】仅管理员 (ADMIN) 角色可执行此操作。
+ * 包含：默认损耗系数、方案毛利、可见字段、折扣控制等。
+ * 
+ * @param params - 符合 updateGlobalConfigSchema 的配置对象
+ * @returns 操作结果成功状态
+ */
 export async function updateGlobalQuoteConfig(params: z.infer<typeof updateGlobalConfigSchema>) {
     return updateGlobalQuoteConfigActionInternal(params);
 }
@@ -140,12 +158,21 @@ const updateUserPlanActionInternal = createSafeAction(updateUserPlanSchema, asyn
     return { success: true };
 });
 
+/**
+ * 客户端调用：更新当前用户默认选中的报价方案 (Update User Default Plan)
+ * @param params - 方案类型：'ECONOMIC' | 'COMFORT' | 'LUXURY'
+ * @returns 操作结果成功状态
+ */
 export async function updateUserPlan(params: z.infer<typeof updateUserPlanSchema>) {
     return updateUserPlanActionInternal(params);
 }
 
 /**
- * 获取特定方案的设置
+ * 获取特定报价方案的详细配置 (Fetch Plan Specific Settings)
+ * 返回该方案下的毛利加价率 (markup)、品质描述及功能配置。
+ * 
+ * @param plan - 方案类型
+ * @returns 方案配置详情
  */
 export async function getPlanSettings(plan: 'ECONOMIC' | 'COMFORT' | 'LUXURY') {
     const session = await auth();

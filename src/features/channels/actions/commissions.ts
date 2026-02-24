@@ -10,6 +10,19 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { Decimal } from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
+import { logger } from '@/shared/lib/logger';
+
+/**
+ * 佣金记录查询参数
+ */
+export interface GetChannelCommissionsParams {
+    channelId?: string;
+    status?: 'PENDING' | 'SETTLED' | 'PAID' | 'VOID';
+    startDate?: Date;
+    endDate?: Date;
+    page?: number;
+    pageSize?: number;
+}
 
 // ==================== 佣金记录 Actions ====================
 
@@ -25,7 +38,7 @@ import { z } from 'zod';
  * @param {string} params.channelId - 渠道ID
  * @param {string} [params.leadId] - 关联的线索ID (可选)
  * @param {string} params.orderId - 订单ID
- * @returns {Promise<any>} 返回新生成的佣金记录
+ * @returns {Promise<import('@/shared/api/schema/channels').ChannelCommission>} 返回新生成的佣金记录
  * @throws {Error} 订单/渠道校验失败，或重复生成佣金则抛出异常
  */
 export async function createCommissionRecord(params: {
@@ -33,7 +46,7 @@ export async function createCommissionRecord(params: {
     leadId?: string;
     orderId: string;
 }) {
-    console.log('[channels] 开始手动生成佣金记录:', params);
+    logger.info('[channels] 开始手动生成佣金记录', { params });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -48,31 +61,28 @@ export async function createCommissionRecord(params: {
     z.string().uuid().parse(orderId);
     if (leadId) z.string().uuid().parse(leadId);
 
-    // 验证渠道属于当前租户
-    const channel = await db.query.channels.findFirst({
-        where: and(eq(channels.id, channelId), eq(channels.tenantId, tenantId))
-    });
+    const [channel, order, existing] = await Promise.all([
+        db.query.channels.findFirst({
+            where: and(eq(channels.id, channelId), eq(channels.tenantId, tenantId))
+        }),
+        db.query.orders.findFirst({
+            where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+            with: {
+                // Need items for BASE_PRICE mode calculation
+                items: true
+            }
+        }),
+        db.query.channelCommissions.findFirst({
+            where: and(
+                eq(channelCommissions.orderId, orderId),
+                eq(channelCommissions.tenantId, tenantId),
+                ne(channelCommissions.status, 'VOID')
+            )
+        })
+    ]);
+
     if (!channel) throw new Error('渠道不存在或无权操作');
-
-    // P0 Fix: 获取订单信息
-    const order = await db.query.orders.findFirst({
-        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
-        with: {
-            // Need items for BASE_PRICE mode calculation
-            items: true
-        }
-    });
     if (!order) throw new Error('订单不存在');
-
-    // H-05 Fix: Add Idempotency Check BEFORE Calculation
-    const existing = await db.query.channelCommissions.findFirst({
-        where: and(
-            eq(channelCommissions.orderId, orderId),
-            eq(channelCommissions.tenantId, tenantId),
-            ne(channelCommissions.status, 'VOID')
-        )
-    });
-
     if (existing) {
         throw new Error('该订单已存在有效的佣金记录，无法重复创建');
     }
@@ -128,23 +138,11 @@ export async function createCommissionRecord(params: {
  * 
  * 安全检查：自动从 session 获取 tenantId
  * 
- * @param {Object} params - 查询参数集
- * @param {string} [params.channelId] - 渠道ID过滤
- * @param {'PENDING' | 'SETTLED' | 'PAID' | 'VOID'} [params.status] - 状态过滤
- * @param {Date} [params.startDate] - 开始日期查询
- * @param {Date} [params.endDate] - 结束日期查询
- * @param {number} [params.page] - 页码
- * @param {number} [params.pageSize] - 每页条数
- * @returns {Promise<any>} 返回包含分页数据的佣金记录列表
+ * @param {GetChannelCommissionsParams} params - 查询参数集
+ * @returns {Promise<{ data: import('@/shared/api/schema/channels').ChannelCommission[], totalItems: number, totalPages: number, currentPage: number }>} 返回包含分页数据的佣金记录列表
  */
-export async function getChannelCommissions(params: {
-    channelId?: string;
-    status?: 'PENDING' | 'SETTLED' | 'PAID' | 'VOID';
-    startDate?: Date;
-    endDate?: Date;
-    page?: number;
-    pageSize?: number;
-}) {
+export async function getChannelCommissions(params: GetChannelCommissionsParams) {
+    logger.info('[channels] Fetching channel commissions', { params });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -173,18 +171,18 @@ export async function getChannelCommissions(params: {
 
     const offset = (page - 1) * limit;
 
-    const data = await db.query.channelCommissions.findMany({
-        where: whereClause,
-        limit: limit,
-        offset,
-        orderBy: [desc(channelCommissions.createdAt)],
-        with: {
-            channel: true,
-        }
-    });
-
-    // 获取总数
-    const totalItems = await db.$count(channelCommissions, whereClause);
+    const [data, totalItems] = await Promise.all([
+        db.query.channelCommissions.findMany({
+            where: whereClause,
+            limit: limit,
+            offset,
+            orderBy: [desc(channelCommissions.createdAt)],
+            with: {
+                channel: true,
+            }
+        }),
+        db.$count(channelCommissions, whereClause)
+    ]);
 
     return {
         data,
@@ -208,6 +206,8 @@ export async function getPendingCommissionSummary() {
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
     const tenantId = session.user.tenantId;
+
+    logger.info('[channels] Fetching pending commission summary', { userId: session.user.id });
 
     const result = await db
         .select({
@@ -252,11 +252,11 @@ export async function getPendingCommissionSummary() {
  * 
  * @param {string} id - 佣金记录ID
  * @param {string} reason - 作废理由备注
- * @returns {Promise<any>} 返回被作废的记录
+ * @returns {Promise<import('@/shared/api/schema/channels').ChannelCommission>} 返回被作废的记录
  * @throws {Error} 未处于 PENDING 状态抛出异常
  */
 export async function voidCommission(id: string, reason: string) {
-    console.log('[channels] 开始作废佣金记录:', { commissionId: id, reason });
+    logger.info('[channels] 开始作废佣金记录', { commissionId: id, reason });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

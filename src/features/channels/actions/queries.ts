@@ -6,6 +6,19 @@ import { eq, and, desc, or, ilike, isNull } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { unstable_cache } from 'next/cache';
+import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
+
+/**
+ * 渠道查询参数
+ */
+export interface GetChannelsParams {
+    query?: string;
+    type?: string;
+    parentId?: string | null;
+    page?: number;
+    pageSize?: number;
+}
 
 /**
  * 获取渠道列表（支持分页、搜索、类型过滤、层级过滤）
@@ -13,13 +26,7 @@ import { unstable_cache } from 'next/cache';
  * 安全检查：自动从 session 获取 tenantId
  * 安全防护：强制限制 pageSize 最大为 100，防止深分页恶意击穿数据库
  */
-export async function getChannels(params: {
-    query?: string,
-    type?: string,
-    parentId?: string | null,  // 支持层级过滤，null 表示查顶级
-    page?: number,
-    pageSize?: number
-}) {
+export async function getChannels(params: GetChannelsParams) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -27,6 +34,33 @@ export async function getChannels(params: {
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
     const tenantId = session.user.tenantId;
+
+    logger.info('[channels] Fetching channels list', { userId: session.user.id, params });
+
+    // P1 Fix: Audit log
+    await AuditService.log(db, {
+        tableName: 'channels',
+        recordId: 'LIST',
+        action: 'VIEW',
+        userId: session.user.id,
+        tenantId,
+        details: { params }
+    });
+
+    // P8 Fix: Cache channel list
+    const getCachedChannels = unstable_cache(
+        async (p: GetChannelsParams, tid: string) => _getChannelsInternal(p, tid),
+        [`channels-list-${tenantId}`],
+        { revalidate: 3600, tags: ['channels-list'] }
+    );
+
+    return getCachedChannels(params, tenantId);
+}
+
+/**
+ * 内部查询逻辑
+ */
+async function _getChannelsInternal(params: GetChannelsParams, tenantId: string) {
     const { query, type, parentId, page = 1, pageSize = 20 } = params;
 
     // P3 Fix: Enforce pagination limits
@@ -70,21 +104,21 @@ export async function getChannels(params: {
     const offsetValue = (page - 1) * safePageSize;
 
 
-    const data = await db.query.channels.findMany({
-        where: whereClause,
-        limit: safePageSize,
-        offset: offsetValue,
-        orderBy: [desc(channels.createdAt)],
-        with: {
-            contacts: true,
-            channelCategory: true,     // 关联渠道类型
-            parent: true,       // 关联父级渠道
-            children: true,     // 关联子级渠道
-        }
-    });
-
-    // 获取总数
-    const totalItems = await db.$count(channels, whereClause);
+    const [data, totalItems] = await Promise.all([
+        db.query.channels.findMany({
+            where: whereClause,
+            limit: safePageSize,
+            offset: offsetValue,
+            orderBy: [desc(channels.createdAt)],
+            with: {
+                contacts: true,
+                channelCategory: true,     // 关联渠道类型
+                parent: true,       // 关联父级渠道
+                children: true,     // 关联子级渠道
+            }
+        }),
+        db.$count(channels, whereClause)
+    ]);
     const totalPages = Math.ceil(totalItems / safePageSize);
 
     return {
@@ -155,6 +189,8 @@ export async function getChannelTree() {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
+    logger.info('[channels] Fetching channel tree', { userId: session.user.id });
+
     // P2 Fix: Add Permission Check
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
@@ -169,6 +205,8 @@ export async function getChannelTree() {
 export async function getChannelById(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
+
+    logger.info('[channels] Fetching channel by id', { userId: session.user.id, channelId: id });
 
     // P2 Fix: Add Permission Check
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);

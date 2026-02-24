@@ -13,6 +13,11 @@ vi.mock('@/shared/api/db', () => ({
             afterSalesTickets: { findFirst: vi.fn(), findMany: vi.fn() },
             orders: { findFirst: vi.fn() },
         },
+        select: vi.fn(() => ({
+            from: vi.fn(() => ({
+                where: vi.fn(() => Promise.resolve([{ count: 1 }]))
+            }))
+        })),
         insert: vi.fn(() => ({
             values: vi.fn(() => ({
                 returning: vi.fn(() => Promise.resolve([{ id: 'mock-ticket-id', ticketNo: 'AS12345' }]))
@@ -49,6 +54,7 @@ vi.mock('@/shared/lib/audit-service', () => ({
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
+    cache: vi.fn((fn) => fn),
 }));
 
 // Mock ticket utils

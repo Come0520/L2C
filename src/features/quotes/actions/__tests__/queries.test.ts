@@ -10,6 +10,24 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock next/cache - 防止 unstable_cache 在测试环境报 incrementalCache missing
+vi.mock('next/cache', () => ({
+    unstable_cache: vi.fn((fn) => fn),
+    revalidateTag: vi.fn(),
+    revalidatePath: vi.fn(),
+}));
+
+// Mock drizzle-orm
+vi.mock('drizzle-orm', () => ({
+    eq: vi.fn((a, b) => ({ type: 'eq', a, b })),
+    and: vi.fn((...args) => ({ type: 'and', args })),
+    or: vi.fn((...args) => ({ type: 'or', args })),
+    desc: vi.fn((a) => ({ type: 'desc', a })),
+    asc: vi.fn((a) => ({ type: 'asc', a })),
+    count: vi.fn(() => 'count'),
+    sql: vi.fn((parts, ...args) => ({ type: 'sql', parts, args })),
+}));
+
 import { createMockDb } from '@/shared/tests/mock-db';
 import { createMockSession } from '@/shared/tests/mock-factory';
 

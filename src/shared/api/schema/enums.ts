@@ -263,6 +263,13 @@ export const liabilityReasonCategoryEnum = pgEnum('liability_reason_category', [
   'CUSTOMER_REASON',
 ]);
 
+// [NEW] 欠款账本状态枚举
+export const debtStatusEnum = pgEnum('debt_status', [
+  'ACTIVE', // 活跃（未结清）
+  'PARTIALLY_SETTLED', // 部分已结清
+  'FULLY_SETTLED', // 已结清
+]);
+
 // [NEW] Enums from Schema RFC
 export const decorationProgressEnum = pgEnum('decoration_progress', [
   'WATER_ELECTRIC',

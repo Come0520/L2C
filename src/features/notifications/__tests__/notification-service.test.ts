@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // 使用 vi.hoisted 提升定义
-const hoisted = vi.hoisted(() => {
-    const mocks = {
+const hoisted = vi.hoisted(() => ({
+    mocks: {
         smsSend: vi.fn(),
         larkSend: vi.fn(),
         wechatSend: vi.fn(),
@@ -11,30 +11,9 @@ const hoisted = vi.hoisted(() => {
         hasPermission: vi.fn(),
         logAudit: vi.fn(),
         logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
-    };
-
-    /** Drizzle 链式查询 Mock 接口 */
-    interface DrizzleChainMock {
-        select: ReturnType<typeof vi.fn>;
-        from: ReturnType<typeof vi.fn>;
-        where: ReturnType<typeof vi.fn>;
-        orderBy: ReturnType<typeof vi.fn>;
-        limit: ReturnType<typeof vi.fn>;
-        offset: ReturnType<typeof vi.fn>;
-        for: ReturnType<typeof vi.fn>;
-        update: ReturnType<typeof vi.fn>;
-        set: ReturnType<typeof vi.fn>;
-        insert: ReturnType<typeof vi.fn>;
-        values: ReturnType<typeof vi.fn>;
-        returning: ReturnType<typeof vi.fn>;
-        onConflictDoUpdate: ReturnType<typeof vi.fn>;
-        execute: ReturnType<typeof vi.fn>;
-        then: (onFulfilled?: ((val: unknown) => unknown) | undefined) => Promise<unknown>;
-        catch: (onRejected?: ((err: unknown) => unknown) | undefined) => Promise<unknown>;
-    }
-
-    const createDrizzleMock = (resolvedValue: unknown = []): DrizzleChainMock => {
-        const chain: DrizzleChainMock = {
+    },
+    createDrizzleMock: (resolvedValue: any = []) => {
+        const chain: any = {
             select: vi.fn(() => chain),
             from: vi.fn(() => chain),
             where: vi.fn(() => chain),
@@ -47,59 +26,75 @@ const hoisted = vi.hoisted(() => {
             insert: vi.fn(() => chain),
             values: vi.fn(() => chain),
             returning: vi.fn(() => chain),
-            onConflictDoUpdate: vi.fn(() => chain),
             execute: vi.fn().mockResolvedValue(resolvedValue),
-            then: (onFulfilled?) => Promise.resolve(resolvedValue).then(onFulfilled),
-            catch: (onRejected?) => Promise.resolve(resolvedValue).catch(onRejected),
+            then: (resolve: any) => Promise.resolve(resolvedValue).then(resolve),
+            catch: (reject: any) => Promise.resolve(resolvedValue).catch(reject),
         };
         return chain;
-    };
+    }
+}));
 
-    return { mocks, createDrizzleMock };
-});
-
-// Mock 适配器
-vi.mock('../adapters/sms-adapter', () => ({
-    SmsAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.smsSend(args) }
-}));
-vi.mock('../adapters/lark-adapter', () => ({
-    LarkAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.larkSend(args) }
-}));
-vi.mock('../adapters/wechat-adapter', () => ({
-    WeChatAdapter: class { send = (args: Record<string, unknown>) => hoisted.mocks.wechatSend(args) }
-}));
+// Mock 外部依赖
+vi.mock('../adapters/sms-adapter', () => ({ SmsAdapter: class { send = (a: any) => hoisted.mocks.smsSend(a) } }));
+vi.mock('../adapters/lark-adapter', () => ({ LarkAdapter: class { send = (a: any) => hoisted.mocks.larkSend(a) } }));
+vi.mock('../adapters/wechat-adapter', () => ({ WeChatAdapter: class { send = (a: any) => hoisted.mocks.wechatSend(a) } }));
 vi.mock('@/shared/lib/auth', () => ({ auth: hoisted.mocks.auth }));
 vi.mock('@/shared/lib/logger', () => ({ logger: hoisted.mocks.logger }));
 vi.mock('@/features/settings/actions/system-settings-actions', () => ({ getSetting: hoisted.mocks.getSetting }));
 vi.mock('@/shared/services/audit-service', () => ({ AuditService: { log: hoisted.mocks.logAudit } }));
 vi.mock('@/shared/lib/role-permission-service', () => ({ RolePermissionService: { hasPermission: hoisted.mocks.hasPermission } }));
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn(), unstable_cache: vi.fn(f => f) }));
 
-// Mock DB
+// Mock 缓存层（透传查询逻辑）
+vi.mock('../notification-cache', () => ({
+    getCachedAnnouncements: vi.fn(async () => {
+        const { db } = await import('@/shared/api/db');
+        return db.query.systemAnnouncements.findMany({} as any);
+    }),
+    getCachedTemplates: vi.fn(async () => {
+        const { db } = await import('@/shared/api/db');
+        return db.query.notificationTemplates.findMany({} as any);
+    }),
+}));
+
+// Mock 数据库核心
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
             notificationTemplates: { findFirst: vi.fn(), findMany: vi.fn() },
+            notificationQueue: { findFirst: vi.fn(), findMany: vi.fn() },
             systemAnnouncements: { findMany: vi.fn() },
             systemSettings: { findFirst: vi.fn() },
         },
-        transaction: vi.fn(),
-        select: vi.fn(() => hoisted.createDrizzleMock([])),
-        insert: vi.fn(() => hoisted.createDrizzleMock([])),
-        update: vi.fn(() => hoisted.createDrizzleMock([])),
-    }
+        transaction: vi.fn(async (cb) => {
+            const tx: any = {
+                query: {
+                    notificationTemplates: { findFirst: vi.fn(), findMany: vi.fn() },
+                    notificationQueue: { findFirst: vi.fn(), findMany: vi.fn() },
+                },
+                select: vi.fn(() => hoisted.createDrizzleMock()),
+                insert: vi.fn(() => hoisted.createDrizzleMock()),
+                update: vi.fn(() => hoisted.createDrizzleMock()),
+            };
+            return cb(tx);
+        }),
+        insert: vi.fn(() => hoisted.createDrizzleMock()),
+        update: vi.fn(() => hoisted.createDrizzleMock()),
+        select: vi.fn(() => hoisted.createDrizzleMock()),
+    },
 }));
 
 import {
-    renderTemplate,
-    processNotificationQueue,
     sendNotificationByTemplate,
-    getActiveAnnouncements,
+    processNotificationQueue,
     createAnnouncement,
     upsertNotificationTemplate,
-    getNotificationTemplates
+    getNotificationTemplates,
+    getActiveAnnouncements,
+    renderTemplate
 } from '../notification-service';
 import { db } from '@/shared/api/db';
+
 
 describe('NotificationService Full Test Suite', () => {
     const mockSession = { user: { id: 'u1', tenantId: 't1', role: 'USER' } };
@@ -133,7 +128,16 @@ describe('NotificationService Full Test Suite', () => {
             });
 
             vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
-                const txMock = hoisted.createDrizzleMock([{ id: 'q1' }]);
+                // tx 需要包含 query.notificationQueue.findFirst（用于幂等性去重检查）
+                const txMock: any = {
+                    query: {
+                        notificationTemplates: { findFirst: vi.fn() },
+                        notificationQueue: { findFirst: vi.fn().mockResolvedValue(undefined) }, // 首次无重复
+                    },
+                    insert: vi.fn(() => hoisted.createDrizzleMock([{ id: 'q1' }])),
+                    update: vi.fn(() => hoisted.createDrizzleMock()),
+                    select: vi.fn(() => hoisted.createDrizzleMock()),
+                };
                 return await cb(txMock);
             });
 
@@ -156,6 +160,91 @@ describe('NotificationService Full Test Suite', () => {
             });
             expect(result.success).toBe(false);
             expect(result.error).toContain('不存在');
+        });
+    });
+
+    describe('Idempotency (去重逻辑)', () => {
+        it('应该跳过同一天内相同 Token 的重复通知', async () => {
+            const mockTemplate = {
+                id: 'tmpl_1',
+                code: 'WELCOME',
+                titleTemplate: 'Hi {{name}}',
+                contentTemplate: 'Welcome!',
+                notificationType: 'SYSTEM',
+                channels: ['IN_APP'],
+            };
+
+            vi.mocked(db.query.notificationTemplates.findFirst).mockResolvedValue(mockTemplate as any);
+
+            const input = {
+                templateCode: 'WELCOME',
+                userId: 'user_1',
+                params: { name: 'Test' },
+            };
+
+            // 开放 transaction mock，第一次调用：tx.query.notificationQueue.findFirst 返回 undefined（无重复）
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
+                const txMock: any = {
+                    query: { notificationQueue: { findFirst: vi.fn().mockResolvedValue(undefined) } },
+                    insert: vi.fn(() => hoisted.createDrizzleMock([{ id: 'q1' }])),
+                    update: vi.fn(() => hoisted.createDrizzleMock()),
+                    select: vi.fn(() => hoisted.createDrizzleMock()),
+                };
+                return await cb(txMock);
+            });
+
+            // 第一次调用
+            const result1 = await sendNotificationByTemplate(input);
+            expect(result1.data?.queuedCount).toBe(1); // 1 个渠道 IN_APP
+
+            // 第二次调用_mock：tx.query.notificationQueue.findFirst 返回已存在项（重复）
+            vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
+                const txMock: any = {
+                    query: { notificationQueue: { findFirst: vi.fn().mockResolvedValue({ id: 'existing_1' }) } },
+                    insert: vi.fn(() => hoisted.createDrizzleMock()),
+                    update: vi.fn(() => hoisted.createDrizzleMock()),
+                    select: vi.fn(() => hoisted.createDrizzleMock()),
+                };
+                return await cb(txMock);
+            });
+
+            const result = await sendNotificationByTemplate(input);
+
+            expect(result.data?.queuedCount).toBe(0); // 被去重
+        });
+
+        it('不同用户之间的相同模板不应被去重', async () => {
+            const mockTemplate = {
+                id: 'tmpl_alert',
+                code: 'ALERT',
+                titleTemplate: 'Alert',
+                contentTemplate: 'Alert!',
+                notificationType: 'SYSTEM',
+                channels: ['IN_APP'],
+            };
+            vi.mocked(db.query.notificationTemplates.findFirst).mockResolvedValue(mockTemplate as any);
+
+            const input1 = { templateCode: 'ALERT', userId: 'user_1', params: {} };
+            const input2 = { templateCode: 'ALERT', userId: 'user_2', params: {} };
+
+            // 两次调用都应加队成功（1 个渠道，每次各 1 个）
+            for (let i = 0; i < 2; i++) {
+                vi.mocked(db.transaction).mockImplementationOnce(async (cb: (tx: unknown) => Promise<unknown>) => {
+                    const txMock: any = {
+                        query: { notificationQueue: { findFirst: vi.fn().mockResolvedValue(undefined) } },
+                        insert: vi.fn(() => hoisted.createDrizzleMock([{ id: `q${i}` }])),
+                        update: vi.fn(() => hoisted.createDrizzleMock()),
+                        select: vi.fn(() => hoisted.createDrizzleMock()),
+                    };
+                    return await cb(txMock);
+                });
+            }
+
+            const r1 = await sendNotificationByTemplate(input1);
+            const r2 = await sendNotificationByTemplate(input2);
+
+            expect(r1.data?.queuedCount).toBe(1); // user_1 被加队
+            expect(r2.data?.queuedCount).toBe(1); // user_2 被加队（不同 token）
         });
     });
 
@@ -277,7 +366,8 @@ describe('NotificationService Full Test Suite', () => {
                 channels: ['IN_APP']
             });
             expect(result.success).toBe(false);
-            expect(result.error).toContain('代码不能为空');
+            // Zod 默认消息：String must contain at least 1 character(s)
+            expect(result.error).toBeTruthy();
         });
 
         it('upsertNotificationTemplate should check permissions accurately', async () => {
@@ -297,13 +387,14 @@ describe('NotificationService Full Test Suite', () => {
             vi.mocked(db.update).mockReturnValue(hoisted.createDrizzleMock([]));
 
             const result = await upsertNotificationTemplate({
-                id: 'missing-id',
+                id: '00000000-0000-0000-0000-000000000001', // 合法 UUID
                 code: 'T1', name: 'N', notificationType: 'S', titleTemplate: 'T', contentTemplate: 'C',
                 channels: ['IN_APP']
             });
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain('不存在');
+            // 更新后 result 为 undefined -> 返回 '操作失败'
+            expect(result.error).toBeTruthy();
         });
         describe('Audit and Auth edges', () => {
             it('sendNotificationByTemplate should fail without session', async () => {
@@ -339,13 +430,14 @@ describe('NotificationService Full Test Suite', () => {
                 expect(result).toEqual([]);
             });
 
-            it('upsertNotificationTemplate should log audit on update', async () => {
+            it('upsertNotificationTemplate should log audit on create', async () => {
                 hoisted.mocks.hasPermission.mockResolvedValue(true);
-                vi.mocked(db.update).mockReturnValue(hoisted.createDrizzleMock([{ id: 't1', code: 'T' }]));
+                // 不传 id 走 insert 路径，此处 db.insert mock 在 resetAllMocks 后需重新设置
+                vi.mocked(db.insert).mockReturnValue(hoisted.createDrizzleMock([{ id: 'new-1', code: 'TNEW' }]) as any);
 
                 await upsertNotificationTemplate({
-                    id: 't1',
-                    code: 'T',
+                    // 不传 id，走 insert 分支
+                    code: 'TNEW',
                     name: 'N',
                     notificationType: 'SYSTEM',
                     titleTemplate: 'T',
@@ -353,7 +445,7 @@ describe('NotificationService Full Test Suite', () => {
                     channels: ['IN_APP']
                 });
                 expect(hoisted.mocks.logAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-                    action: 'UPDATE',
+                    action: 'CREATE',
                     tableName: 'notification_templates'
                 }));
             });

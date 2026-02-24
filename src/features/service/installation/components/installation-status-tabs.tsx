@@ -14,7 +14,11 @@ const INSTALL_STATUS_TABS = [
 
 /**
  * 安装任务状态筛选 Tabs
- * 使用 URL 参数持久化状态
+ * 
+ * 核心功能：
+ * 1. 提供“全部”、“待分配”、“待上门”等核心状态的快速切换。
+ * 2. 使用 URL 参数 `status` 进行状态持久化。
+ * 3. 切换状态时自动重置页码到第 1 页。
  */
 export function InstallationStatusTabs() {
     const router = useRouter();

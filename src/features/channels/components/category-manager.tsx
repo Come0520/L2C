@@ -23,7 +23,10 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { toast } from 'sonner';
 import {
     createChannelCategory,

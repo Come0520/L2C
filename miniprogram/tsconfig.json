@@ -3,19 +3,34 @@
     "target": "ES2017",
     "module": "ESNext",
     "moduleResolution": "Node",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
     "rootDir": ".",
     "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
     "lib": [
-      "ES2017"
+      "ESNext",
+      "DOM"
     ],
+    "isolatedModules": true,
     "types": [
       "jest",
-      "node"
+      "node",
+      "miniprogram-api-typings"
     ]
   },
   "include": [

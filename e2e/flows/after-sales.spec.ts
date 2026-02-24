@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getValidOrderId } from '../helpers/test-utils';
 
 test.describe('After-sales Management', () => {
     test.beforeEach(async ({ page }) => {
@@ -15,6 +16,10 @@ test.describe('After-sales Management', () => {
     });
 
     test('should create a new after-sales ticket', async ({ page }) => {
+        // 动态获取有效订单
+        const validOrderId = await getValidOrderId(page);
+        await page.goto('/after-sales');
+
         // 点击创建按钮
         await page.getByRole('button', { name: /创建|新增|新建/ }).click();
 
@@ -24,7 +29,7 @@ test.describe('After-sales Management', () => {
         // 填写表单
         // 填写关联订单 ID
         const orderIdInput = page.getByLabel(/关联订单/);
-        await orderIdInput.fill('672ac864-dc76-4dc4-86af-0dd15c01c26c');
+        await orderIdInput.fill(validOrderId);
 
         // 选择售后类型
         const typeSelect = page.getByLabel(/售后类型/);
@@ -67,12 +72,15 @@ test.describe('After-sales Management', () => {
         // 如果没有链接（列表可能为空），则先创建一条
         if (!(await detailLink.isVisible())) {
             console.log('列表为空，尝试创建工单以测试跳转...');
+            const validOrderId = await getValidOrderId(page);
+            await page.goto('/after-sales');
+
             await page.getByRole('button', { name: /创建|新增|新建/ }).click();
             await expect(page).toHaveURL(/\/after-sales\/new/);
 
             // 快速填表
             const orderIdInput = page.getByLabel(/关联订单/);
-            await orderIdInput.fill('672ac864-dc76-4dc4-86af-0dd15c01c26c');
+            await orderIdInput.fill(validOrderId);
 
             await page.getByLabel(/描述/).fill('Auto Ticket for Detail Test');
             await page.getByRole('button', { name: /创建工单/ }).click();

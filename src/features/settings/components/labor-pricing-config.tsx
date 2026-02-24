@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
 import {
     Table,
     TableBody,
@@ -69,17 +70,25 @@ export function LaborPricingConfig({ entityType = 'TENANT', entityId }: LaborPri
             try {
                 const result = await getTenantLaborRates();
                 if (result.success && 'data' in result && result.data) {
+                    // 定义从数据库获取的费率数据接口
+                    interface LaborRateRecord {
+                        category: string;
+                        unitPrice: string | number | null;
+                        baseFee: string | number | null;
+                        unitType: string | null;
+                    }
+
                     // 将数据库数据映射为表格行
-                    const existingRates = new Map<string, any>(
-                        result.data.map((r: any) => [r.category, r])
+                    const existingRates = new Map<string, LaborRateRecord>(
+                        (result.data as LaborRateRecord[]).map((r) => [r.category, r])
                     );
 
                     const initialRates: RateRow[] = CATEGORIES.map((cat) => {
                         const existing = existingRates.get(cat.key);
                         return {
                             category: cat.key,
-                            unitPrice: existing && existing.unitPrice ? parseFloat(existing.unitPrice.toString() || '0') : 0,
-                            baseFee: existing && existing.baseFee ? parseFloat(existing.baseFee.toString() || '0') : 0,
+                            unitPrice: existing?.unitPrice ? parseFloat(existing.unitPrice.toString()) : 0,
+                            baseFee: existing?.baseFee ? parseFloat(existing.baseFee.toString()) : 0,
                             unitType: (existing?.unitType || cat.defaultUnit) as RateRow['unitType'],
                         };
                     });

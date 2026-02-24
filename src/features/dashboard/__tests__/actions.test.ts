@@ -8,6 +8,12 @@ vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
 }));
 
+// Mock next/cache
+vi.mock('next/cache', () => ({
+    unstable_cache: vi.fn((cb) => cb),
+    revalidateTag: vi.fn(),
+}));
+
 // Mock db
 vi.mock('@/shared/api/db', () => ({
     db: {

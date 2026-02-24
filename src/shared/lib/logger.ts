@@ -4,6 +4,7 @@
  */
 
 import type { MobileSession } from '@/shared/middleware/mobile-auth';
+import { v4 as uuidv4 } from 'uuid';
 
 // 结构化日志上下文
 export interface LogContext {
@@ -108,3 +109,34 @@ export const logger = {
  * 审计日志 (专用)
  */
 export const auditLogger = createLogger('AUDIT');
+
+/**
+ * Server Action 性能追踪包装器
+ * 自动计算并输出方法的执行时间并携带独立 traceId
+ * @param actionName Action 名称，如 'User.login'
+ * @param context 补充上下文
+ * @param actionFn 要执行的回调函数
+ */
+export async function withTracing<T>(
+    actionName: string,
+    actionFn: (traceId: string) => Promise<T>,
+    context?: LogContext
+): Promise<T> {
+    const traceId = uuidv4();
+    const startTime = Date.now();
+    const tracingLogger = createLogger(`Trace:${actionName}`);
+
+    tracingLogger.info('Action Tracking Started', { ...context, traceId });
+
+    try {
+        const result = await actionFn(traceId);
+        const duration = Date.now() - startTime;
+
+        tracingLogger.info('Action Tracking Completed', { ...context, traceId, duration: `${duration}ms` });
+        return result;
+    } catch (error) {
+        const duration = Date.now() - startTime;
+        tracingLogger.error('Action Tracking Failed', { ...context, traceId, duration: `${duration}ms` }, error);
+        throw error;
+    }
+}

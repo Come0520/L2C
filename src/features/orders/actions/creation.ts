@@ -1,3 +1,4 @@
+'use server';
 
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
@@ -59,7 +60,6 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
         });
 
         logger.info('[orders] 订单从报价单转化成功:', { orderId: order.id, tenantId, quoteId });
-        console.log('[orders] 订单从报价单转化成功:', { orderId: order.id, tenantId, quoteId });
 
         // 4. 异步处理佣金逻辑 (不阻塞订单创建)
         checkAndGenerateCommission(order.id, 'ORDER_CREATED').catch((e: Error) => {
@@ -69,7 +69,7 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
         return order;
     } catch (e: unknown) {
         const error = e as Error;
-        console.log('[orders] 订单转化失败:', { quoteId, error: error.message });
+        logger.error('[orders] 订单转化失败:', { quoteId, error: error.message });
         throw new Error(error.message || '订单创建失败');
     }
 }

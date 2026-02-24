@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 拆单路由规则 (Split Route Rules) 单元测试
  *
  * 覆盖场景：
@@ -27,6 +27,7 @@ vi.mock('../helpers', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
@@ -133,7 +134,7 @@ describe('拆单路由规则 (Split Route Rules)', () => {
 
     describe('updateSplitRule - 更新规则', () => {
         it('成功更新已存在的规则', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
                 id: 'r-1',
                 tenantId: 'tenant-1',
@@ -155,7 +156,7 @@ describe('拆单路由规则 (Split Route Rules)', () => {
         });
 
         it('规则不存在时应抛出异常', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
 
             const input = {
@@ -172,7 +173,7 @@ describe('拆单路由规则 (Split Route Rules)', () => {
 
     describe('deleteSplitRule - 删除规则', () => {
         it('成功删除已存在的规则', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
                 id: 'r-1',
                 tenantId: 'tenant-1',
@@ -185,7 +186,7 @@ describe('拆单路由规则 (Split Route Rules)', () => {
         });
 
         it('删除不存在的规则应抛出异常', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
 
             await expect(deleteSplitRule('non-existent')).rejects.toThrow('规则不存在或无权操作');

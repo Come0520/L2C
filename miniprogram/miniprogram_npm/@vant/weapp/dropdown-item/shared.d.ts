@@ -3,3 +3,5 @@ export interface Option {
     value: string | number;
     icon: string;
 }
+
+export {};

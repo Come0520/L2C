@@ -12,7 +12,7 @@ import { AuditService } from '@/shared/lib/audit-service';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and, sql } from 'drizzle-orm';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { QuoteService } from '@/services/quote.service';
 import { DiscountControlService } from '@/services/discount-control.service';
 import Decimal from 'decimal.js';
@@ -65,6 +65,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价套餐创建成功', { bundleId: newBundle.id, quoteNo: newBundle.quoteNo });
     return newBundle;
   }
@@ -85,7 +86,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
  * @returns 创建的报价单实例（自动设为根版本并可选择关联套餐）
  * @throws 缺少租户信息时抛出错误
  */
-const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
+export const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
   const tenantId = context.session.user.tenantId;
   if (!tenantId) {
     logger.error('未授权访问：缺少租户信息');
@@ -127,14 +128,24 @@ const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (dat
   });
 
   revalidatePath('/quotes');
+  revalidateTag('quotes', 'default');
   logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
   return newQuote;
 });
 
 /**
- * 客户端可调用的无上下文包装方法：创建报价单
+ * 客户端调用：创建报价单套餐 (Create Quote Bundle)
+ * @param params 套餐请求参数
+ * @returns 响应对象
+ */
+export async function createQuoteBundle(params: z.infer<typeof createQuoteBundleSchema>) {
+  return createQuoteBundleActionInternal(params);
+}
+
+/**
+ * 客户端调用：创建单个报价单 (Create Single Quote)
  * @param params 报价单请求参数
- * @returns 包装了响应的报价单实例
+ * @returns 响应对象
  */
 export async function createQuote(params: z.infer<typeof createQuoteSchema>) {
   return createQuoteActionInternal(params);
@@ -143,11 +154,31 @@ export async function createQuote(params: z.infer<typeof createQuoteSchema>) {
 // ─── 更新报价单 ─────────────────────────────────
 
 /**
- * 更新报价单，包含自动重新计算折扣和最终金额的校验逻辑
- * 【乐观锁】传入 version 时启用并发冲突检测，版本不匹配将抛出 CONCURRENCY_CONFLICT
- * @param data 包含要更新属性的对象（含报价单ID 和可选的版本号）
- * @param context 执行上下文，用于安全检查和审计日志
- * @returns 包含成功状态的响应
+ * 客户端调用：更新报价单详情 (Update Quote Details)
+ * 支持更新折扣率、固定折扣金额、备注、外部单号等。
+ * 包含：折扣审批预检查、自动重新计算最终金额、乐观锁冲突检测。
+ *
+ * @param params - 包含报价单 ID、版本号及待更新字段的参数
+ * @returns 修改成功状态
+ */
+export async function updateQuoteAction(params: z.infer<typeof updateQuoteSchema>) {
+  return updateQuote(params);
+}
+
+/**
+ * 内部服务器操作：更新报价单。
+ * 支持更新报价单的各种属性，包括折扣率、固定折扣金额、备注、外部单号等。
+ * 包含以下核心逻辑：
+ * - 安全检查：验证报价单归属当前租户。
+ * - 折扣计算：使用 Decimal.js 确保精确计算折扣和最终金额。
+ * - 审批预检查：根据折扣率判断是否需要审批。
+ * - 乐观锁：通过 `version` 字段进行并发冲突检测，防止数据覆盖。
+ *
+ * @param data - 包含报价单 ID、可选的版本号 (`version`) 以及待更新字段的对象。
+ * @param context - 执行上下文，包含当前用户的会话信息，用于身份验证、安全检查和审计日志。
+ * @returns 包含成功状态的对象 `{ success: true }`。
+ * @throws {Error} 如果报价单不存在或无权操作。
+ * @throws {AppError} 如果发生乐观锁冲突（`ERROR_CODES.CONCURRENCY_CONFLICT`）。
  */
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
   const { id, version, ...updateData } = data;
@@ -216,6 +247,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
+  revalidateTag('quotes', 'default');
   logger.info('[quotes] 报价单更新成功', { quoteId: id });
   return { success: true };
 });
@@ -261,6 +293,7 @@ export const copyQuote = createSafeAction(
     });
 
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单复制成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
     return newQuote;
   }

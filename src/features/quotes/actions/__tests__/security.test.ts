@@ -77,6 +77,13 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn(),
 }));
 
+// Mock next/cache 防止 unstable_cache 在测试环境中报错
+vi.mock('next/cache', () => ({
+    unstable_cache: vi.fn((fn) => fn),
+    revalidateTag: vi.fn(),
+    revalidatePath: vi.fn(),
+}));
+
 vi.mock('@/shared/lib/audit-service', () => ({
     AuditService: {
         record: vi.fn(),

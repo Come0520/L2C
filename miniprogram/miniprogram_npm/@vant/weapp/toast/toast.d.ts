@@ -26,3 +26,5 @@ declare namespace Toast {
     var resetDefaultOptions: () => void;
 }
 export default Toast;
+
+export {};

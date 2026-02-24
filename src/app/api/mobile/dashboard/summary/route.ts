@@ -1,6 +1,9 @@
 /**
- * 老板端 - 仪表盘核心指标 API
- * GET /api/mobile/dashboard/summary
+ * 老板端 - 仪表盘指标核心摘要
+ *
+ * @route GET /api/mobile/dashboard/summary
+ * @auth JWT Token (老板角色)
+ * @returns {ApiResponse<DashboardSummary>} 包含订单、付款、线索的今日对比昨日数据
  */
 
 import { NextRequest } from 'next/server';

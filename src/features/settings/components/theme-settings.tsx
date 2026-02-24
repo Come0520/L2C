@@ -5,7 +5,13 @@ import { useSyncExternalStore } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Label } from '@/shared/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/shared/ui/radio-group';
-import { Sun, Moon, Monitor, Sparkles, Scroll, Palette, Heart } from 'lucide-react';
+import Sun from 'lucide-react/dist/esm/icons/sun';
+import Moon from 'lucide-react/dist/esm/icons/moon';
+import Monitor from 'lucide-react/dist/esm/icons/monitor';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
+import Scroll from 'lucide-react/dist/esm/icons/scroll';
+import Palette from 'lucide-react/dist/esm/icons/palette';
+import Heart from 'lucide-react/dist/esm/icons/heart';
 import { useStyle, type VisualStyle } from '@/shared/providers/style-provider';
 import { Separator } from '@/shared/ui/separator';
 

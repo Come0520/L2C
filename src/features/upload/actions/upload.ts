@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { auditLogs } from '@/shared/api/schema';
+import { auth } from '@/shared/lib/auth';
 
 /**
  * 允许的文件 MIME 类型白名单
@@ -25,18 +26,24 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 /**
- * 单文件最大允许大小：10MB (10 × 1024 × 1024 字节)
+ * 单文件最大配置容量：限定为 10MB，换算为 Byte 需表示为 `10 * 1024 * 1024` Byte。
  *
- * @remarks 由 Zod Schema 在元数据校验阶段强制拦截超限文件
+ * @remarks 由 Zod Schema 在元数据校验阶段使用，如超出会做校验拦截告警。
  */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 /**
- * Zod Schema：文件上传元数据校验
+ * Zod Schema：文件上传元数据验证规范核心验证器
+ *
+ * 专门校验参数中的各元信息（大小字节、名称、对应 MIME 类型）。
+ * @remarks
+ * 涉及安全性检查：
+ * - fileSize：上限受制于 `MAX_FILE_SIZE` 字节大小配置（此处为 10MB = 10485760 Byte）
+ * - mimeType：只能在 `ALLOWED_MIME_TYPES` 配置之内上传
  */
 const uploadMetadataSchema = z.object({
-    fileName: z.string().min(1).max(255),
-    fileSize: z.number().min(1).max(MAX_FILE_SIZE, '文件大小不能超过 10MB'),
+    fileName: z.string().min(1, '文件名不能为空').max(255, '文件名不能超过 255 个字符'),
+    fileSize: z.number().min(1, '文件不能为空').max(MAX_FILE_SIZE, '文件大小不能超过 10MB'),
     mimeType: z.string().refine(
         (type) => ALLOWED_MIME_TYPES.includes(type),
         '不支持的文件类型',
@@ -107,7 +114,6 @@ export async function validateUpload(params: z.infer<typeof uploadMetadataSchema
  */
 export async function uploadFileAction(formData: FormData) {
     // createSafeAction 不直接支持 FormData，手动进行 auth/校验
-    const { auth } = await import('@/shared/lib/auth');
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权访问' };
@@ -126,6 +132,10 @@ export async function uploadFileAction(formData: FormData) {
     });
 
     if (!validation.success) {
+        // [D7 可运维性] 根据安全规范，拦截恶意或超常规请求时，应当触发告警预备介入检查
+        logger.warn(
+            `[安全拦截] 文件校验违规阻止上传: tenantId=${session.user.tenantId}, userId=${session.user.id}, fileName=${file.name}, size=${file.size}, type=${file.type}, error=${validation.error.issues[0]?.message}`
+        );
         return { success: false, error: validation.error.issues[0]?.message || '文件校验失败' };
     }
 

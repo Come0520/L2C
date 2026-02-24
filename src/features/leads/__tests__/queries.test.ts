@@ -1,4 +1,4 @@
-
+﻿
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getLeadFunnelStats } from '../actions/queries';
 import { db } from '@/shared/api/db';
@@ -17,6 +17,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: vi.fn((fn) => fn),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Leads Queries', () => {

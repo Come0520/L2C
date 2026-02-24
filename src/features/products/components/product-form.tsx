@@ -2,7 +2,7 @@ import { logger } from '@/shared/lib/logger';
 import { ProductSupplierManager } from './product-supplier-manager';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createProductSchema, updateProductSchema } from '../schema';
 import { z } from 'zod';
@@ -48,9 +48,8 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
 
     const form = useForm<ProductFormValues, unknown, ProductFormValues>({
         // zodResolver 接受 union schema（createProductSchema | updateProductSchema）时
-        // 第三泛型无法自动收窄，使用 as 断言确保 Control 类型一致
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as any,
+        // 第三泛型无法自动收窄，使用 Resolver 断言确保 Control 类型一致
+        resolver: zodResolver(initialData?.id ? updateProductSchema : createProductSchema) as Resolver<ProductFormValues>,
         defaultValues: initialData ? {
             ...initialData,
             attributes: initialData.specs || {},

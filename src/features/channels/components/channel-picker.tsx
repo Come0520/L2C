@@ -1,7 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Check, ChevronsUpDown, ChevronRight, Hash } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Hash from 'lucide-react/dist/esm/icons/hash';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import {

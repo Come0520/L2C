@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Supply Chain 模块 Server Actions 集成测试 - 发货管理 (Shipment)
  *
  * 覆盖范围：
@@ -43,6 +43,7 @@ vi.mock('../../helpers', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({

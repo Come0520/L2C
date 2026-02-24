@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Supply Chain 模块 Server Actions 集成测试 - 套件管理 (Product Bundles)
  *
  * 覆盖范围：
@@ -25,6 +25,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({

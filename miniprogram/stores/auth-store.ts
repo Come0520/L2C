@@ -11,6 +11,8 @@ export interface UserInfo {
     role: UserRole;
     tenantId?: string;
     tenantName?: string;
+    phone?: string;
+    tenantStatus?: string;
 }
 
 class AuthStore {
@@ -79,3 +81,5 @@ class AuthStore {
 }
 
 export const authStore = new AuthStore();
+
+export { };

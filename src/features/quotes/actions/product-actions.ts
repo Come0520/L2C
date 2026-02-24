@@ -19,13 +19,17 @@ export interface ProductSearchResult {
 }
 
 /**
- * 商品搜索函数
- * 支持：中文模糊匹配、拼音首字母搜索、完整拼音搜索
+ * 商品搜索函数 (Search Products)
+ * 基于租户隔离检索商品，支持：
+ * 1. 中文模糊匹配、拼音首字母搜索、完整拼音搜索（利用 Pinyin 库）。
+ * 2. 多级过滤：单一品类或多品类集合（allowedCategories 优先）。
+ * 3. 智能权重：最近使用的商品 (recentProductIds) 自动置顶。
  * 
  * @param query - 搜索词（支持中文、拼音首字母、完整拼音）
- * @param category - 商品品类筛选（单一品类）
- * @param recentProductIds - 最近使用的商品ID列表（用于优先排序）
- * @param allowedCategories - 允许的品类列表（多品类过滤，优先于 category）
+ * @param category - 商品品类筛选（单一品类，如 'CURTAIN'）
+ * @param recentProductIds - 最近使用的商品 ID 列表，用于权重排序
+ * @param allowedCategories - 允许的品类列表（数组形式，用于更复杂的过滤逻辑）
+ * @returns 经过权重排序和截断后的搜索结果列表（最多 15 条）
  */
 export async function searchProducts(
     query: string,

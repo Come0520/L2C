@@ -6,6 +6,12 @@ import { Button } from '@/shared/ui/button';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 
+/**
+ * 安装日程日历视图
+ * 
+ * 提供月度维度的安装任务分布展示。
+ * 注意：目前处于系统恢复模式，日历视图仅提供基础排期展示，高级拖拽功能暂不可用。
+ */
 export function ScheduleCalendarView() {
     const [currentDate, setCurrentDate] = useState(() => new Date());
 
@@ -29,13 +35,13 @@ export function ScheduleCalendarView() {
     return (
         <Card className="w-full">
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Installation Schedule</CardTitle>
+                <CardTitle>安装日程排期</CardTitle>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={handlePrevMonth}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm font-medium">
-                        {currentDate.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                        {currentDate.toLocaleDateString('zh-CN', { month: 'long', year: 'numeric' })}
                     </span>
                     <Button variant="outline" size="icon" onClick={handleNextMonth}>
                         <ChevronRight className="h-4 w-4" />
@@ -44,7 +50,7 @@ export function ScheduleCalendarView() {
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-7 gap-px bg-muted rounded-lg overflow-hidden border">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    {['周日', '周一', '周二', '周三', '周四', '周五', '周六'].map(day => (
                         <div key={day} className="bg-background py-2 text-center text-xs font-medium text-muted-foreground">
                             {day}
                         </div>
@@ -55,7 +61,7 @@ export function ScheduleCalendarView() {
                             <div className="mt-2 space-y-1">
                                 {i === 15 && (
                                     <div className="text-[10px] bg-primary/10 text-primary p-1 rounded">
-                                        Installation Task #123
+                                        安装任务 #123
                                     </div>
                                 )}
                             </div>
@@ -63,7 +69,7 @@ export function ScheduleCalendarView() {
                     ))}
                 </div>
                 <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Calendar view is simplified in recovery mode.
+                    系统恢复模式下日历视图已简化。
                 </div>
             </CardContent>
         </Card>

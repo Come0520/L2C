@@ -21,7 +21,11 @@ Component({
             const query = this.createSelectorQuery();
             query.select('#signature-canvas')
                 .fields({ node: true, size: true })
-                .exec((res) => {
+                .exec((res: any) => {
+                    if (!res || !res[0] || !res[0].node) {
+                        console.error('Canvas not found or invalid result:', res);
+                        return;
+                    }
                     const canvas = res[0].node;
                     const ctx = canvas.getContext('2d');
                     const dpr = wx.getSystemInfoSync().pixelRatio;
@@ -101,10 +105,12 @@ Component({
             return new Promise((resolve, reject) => {
                 wx.canvasToTempFilePath({
                     canvas: this.canvas, // Pass canvas instance for 2d type
-                    success: (res) => resolve(res.tempFilePath),
+                    success: (res: any) => resolve(res.tempFilePath),
                     fail: (err) => reject(err)
                 });
             });
         }
     }
 });
+
+export { };

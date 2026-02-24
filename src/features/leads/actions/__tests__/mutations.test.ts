@@ -41,7 +41,21 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/shared/api/db', () => ({
-    db: {}
+    db: {
+        insert: vi.fn(() => ({
+            values: vi.fn().mockResolvedValue([]),
+        })),
+        update: vi.fn(() => ({
+            set: vi.fn(() => ({
+                where: vi.fn().mockResolvedValue([]),
+            })),
+        })),
+        select: vi.fn(() => ({
+            from: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            execute: vi.fn().mockResolvedValue([]),
+        })),
+    }
 }));
 
 vi.mock('@/shared/config/permissions', () => ({
@@ -125,7 +139,9 @@ describe('Lead Mutations (L5)', () => {
             expect(mockLeadService.updateLead).toHaveBeenCalledWith(
                 MOCK_LEAD_ID,
                 expect.objectContaining({ customerName: '李四' }),
-                MOCK_TENANT_ID
+                MOCK_TENANT_ID,
+                MOCK_USER_ID,
+                undefined
             );
         });
     });

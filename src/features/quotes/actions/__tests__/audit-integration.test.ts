@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 报价模块审计日志集成测试
  * 
  * 验证核心 Action 操作是否正确触发 AuditService.recordFromSession
@@ -92,7 +92,8 @@ vi.mock('@/shared/lib/server-action', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn()
 }));
 
 vi.mock('@/features/quotes/actions/shared-helpers', () => ({

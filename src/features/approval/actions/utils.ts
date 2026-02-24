@@ -1,4 +1,4 @@
-import { db, type Transaction } from '@/shared/api/db';
+import { db, type DbTransaction } from '@/shared/api/db';
 import { notifications } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { type NotificationParams, ApprovalStep, ApprovalInstance } from '../schema';
@@ -32,12 +32,20 @@ export function findApproversByRole(
     approverRole: string
 ): string[] {
     const targetRole = (APPROVAL_CONSTANTS.ROLE_MAP[approverRole] || approverRole) as string;
-    return allTenantUsers
+    const res = allTenantUsers
         .filter(u => {
-            const userRoles = (u.roles as string[]) || (u.role ? [u.role] : []);
+            let userRoles: string[] = [];
+            if (Array.isArray(u.roles) && u.roles.length > 0) {
+                userRoles = [...u.roles as string[]];
+            }
+            if (u.role && typeof u.role === 'string') {
+                userRoles.push(u.role);
+            }
             return userRoles.includes(targetRole);
         })
         .map(u => u.id);
+
+    return res;
 }
 
 /**
@@ -49,7 +57,7 @@ export function findApproversByRole(
 export async function notifyApplicant(
     instance: ApprovalInstance,
     params: NotificationParams,
-    tx?: Transaction
+    tx?: DbTransaction
 ) {
     const { title, content } = params;
     const dbClient = tx || db;
@@ -73,7 +81,7 @@ export async function notifyApplicant(
  * 统一处理实体状态回退（驳回/撤回/超时驳回时调用）
  */
 export async function revertEntityStatus(
-    tx: Transaction,
+    tx: DbTransaction,
     entityType: string,
     entityId: string,
     tenantId: string,
@@ -138,7 +146,7 @@ export async function revertEntityStatus(
  * 统一处理实体状态完成（审批通过时调用）
  */
 export async function completeEntityStatus(
-    tx: Transaction,
+    tx: DbTransaction,
     entityType: string,
     entityId: string,
     tenantId: string

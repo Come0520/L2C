@@ -12,7 +12,7 @@ export default function SettingsLayout({
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
             {/* 顶部Tab导航 */}
-            <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm px-6 py-4">
+            <div className="shrink-0 pb-6">
                 <SettingsTabNav />
             </div>
             {/* 内容区域 */}

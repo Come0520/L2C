@@ -2,7 +2,8 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import RefreshCcw from 'lucide-react/dist/esm/icons/refresh-ccw';
 import { Button } from "@/shared/ui/button";
 import { createLogger } from "@/shared/lib/logger";
 

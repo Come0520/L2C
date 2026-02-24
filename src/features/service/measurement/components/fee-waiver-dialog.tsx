@@ -27,11 +27,21 @@ import {
 import { Textarea } from '@/shared/ui/textarea';
 import { toast } from 'sonner';
 
+/**
+ * 费用豁免申请对话框属性
+ */
 interface FeeWaiverDialogProps {
+    /** 测量任务 ID */
     taskId: string;
+    /** 自定义触发元素 */
     trigger?: React.ReactNode;
 }
 
+/**
+ * 测量费用豁免申请对话框
+ * 
+ * 用于发起免收测量费的审批申请。审批通过后，任务会自动进入后续状态。
+ */
 export function FeeWaiverDialog({ taskId, trigger }: FeeWaiverDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();

@@ -34,11 +34,20 @@ const mocks = vi.hoisted(() => ({
     sendEmail: vi.fn(),
     hash: vi.fn(),
     nanoid: vi.fn(),
+    checkRateLimit: vi.fn(),
 }));
 
 /** ─────────── 全局 Mock 配置 ─────────── */
 
 vi.mock('@/shared/lib/auth', () => ({ auth: mocks.auth }));
+vi.mock('next/headers', () => ({
+    headers: vi.fn().mockResolvedValue({
+        get: vi.fn().mockReturnValue('127.0.0.1'),
+    }),
+}));
+vi.mock('@/shared/middleware/rate-limit', () => ({
+    checkRateLimit: mocks.checkRateLimit,
+}));
 
 // DB mock - 支持事务
 const txChain = () => ({
@@ -111,6 +120,7 @@ describe('Platform Actions - L4 升级测试', () => {
         mocks.dbQueryTenantsFindMany.mockResolvedValue([]);
         mocks.dbQueryUsersFindMany.mockResolvedValue([]);
         mocks.dbExecute.mockResolvedValue([{ count: 0 }]);
+        mocks.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 5, limit: 5, source: 'memory', resetAt: new Date() });
     });
 
     // ═══════════════════════════════════════════
@@ -224,6 +234,54 @@ describe('Platform Actions - L4 升级测试', () => {
     // ═══════════════════════════════════════════
     //  tenant-registration.ts 测试
     // ═══════════════════════════════════════════
+
+    describe('submitTenantApplication - 分布式限流 (L5 增强)', () => {
+        beforeEach(() => {
+            // 提交申请时，findFirst(users) 用于检查手机号/邮箱唯一性，需返回 null 表示未占用
+            mocks.dbQueryUsersFindFirst.mockResolvedValue(null);
+            mocks.dbQueryTenantsFindMany.mockResolvedValue([]);
+        });
+
+        it('当 IP 限流触发时 (allowed: false) 应拒绝注册', async () => {
+            mocks.checkRateLimit.mockResolvedValue({
+                allowed: false,
+                remaining: 0,
+                limit: 5,
+                source: 'memory',
+                resetAt: new Date(),
+            });
+
+            const { submitTenantApplication } = await import('../actions/tenant-registration');
+            const result = await submitTenantApplication({
+                companyName: '被限流企业',
+                applicantName: '张三',
+                phone: '13811112222',
+                email: 'rl@test.com',
+                password: 'Pass1234',
+                region: '北京',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('频繁');
+        });
+
+        it('当限流检查异常时应降级放行 (Resilience)', async () => {
+            mocks.checkRateLimit.mockRejectedValue(new Error('Redis Down'));
+
+            const { submitTenantApplication } = await import('../actions/tenant-registration');
+            const result = await submitTenantApplication({
+                companyName: '降级放行企业',
+                applicantName: '李四',
+                phone: '13833334444',
+                email: 'resilience@test.com',
+                password: 'Pass1234',
+                region: '上海',
+            });
+
+            // 如果报错后正常走后面流程返回成功，说明降级逻辑生效（不应让限流组件的异常导致业务中断）
+            expect(result.success).toBe(true);
+        });
+    });
 
     describe('submitTenantApplication - 注册频率限制', () => {
         it('24小时内超过3次申请应被拒绝', async () => {
@@ -470,7 +528,7 @@ describe('Platform Actions - L4 升级测试', () => {
 // ═══════════════════════════════════════════
 
 vi.mock('next/cache', () => ({
-    unstable_cache: vi.fn((fn: Function) => fn),
+    unstable_cache: vi.fn((fn: (...args: any[]) => any) => fn),
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
 }));

@@ -36,6 +36,7 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
 
     logger.info('[leads] 获取渠道 ROI 统计开始:', { tenantId, range });
 
+    const start = Date.now();
     return unstable_cache(
         async (r) => {
             logger.info('[leads] 执行渠道 ROI 统计缓存查询:', { tenantId, params: r });
@@ -60,9 +61,11 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
                 .where(and(...whereConditions))
                 .groupBy(leads.sourceChannelId, marketChannels.name);
 
-            logger.info('[leads] 执行渠道 ROI 统计缓存查询成功:', { resultCount: results.length, tenantId });
+            const durationMs = Date.now() - start;
+            logger.info(`getLeadChannelROIStats 执行耗时: ${durationMs}ms`, { resultCount: results.length, tenantId });
 
             return results.map(row => {
+                // ... (保持 Map 逻辑不变)
                 const leadCount = Number(row.leadCount || 0);
                 const orderCount = Number(row.orderCount || 0);
                 const totalAmount = Number(row.totalAmount || 0);
@@ -82,7 +85,7 @@ export async function getLeadChannelROIStats(input?: z.infer<typeof analyticsDat
         },
         [`leads-roi-${tenantId}-${JSON.stringify(range)}`],
         {
-            tags: [`leads-${tenantId}`, 'leads', 'quotes', 'orders'],
+            tags: [`leads-analytics-${tenantId}`, `leads-${tenantId}`, 'leads', 'quotes', 'orders'],
             revalidate: 300, // 5 minutes
         }
     )(range);

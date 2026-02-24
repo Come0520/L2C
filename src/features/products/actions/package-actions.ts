@@ -20,7 +20,7 @@ import { AuditService } from '@/shared/services/audit-service';
 // Schema 定义
 // =============================================
 
-export const createPackageSchema = z.object({
+const createPackageSchema = z.object({
     packageNo: z.string().min(1, '套餐编号不能为空'),
     packageName: z.string().min(1, '套餐名称不能为空'),
     packageType: z.enum(['QUANTITY', 'COMBO', 'CATEGORY', 'TIME_LIMITED']),
@@ -59,6 +59,11 @@ async function getTenantIdFromSession() {
 
 /**
  * 获取套餐列表
+ *
+ * @description 获取当前租户下的所有套餐，支持分页和基础信息展示。
+ *
+ * @returns 包含套餐列表的数组
+ * @throws 抛出未授权错误或数据库查询异常
  */
 export async function getPackages() {
     try {
@@ -79,6 +84,12 @@ export async function getPackages() {
 
 /**
  * 获取套餐详情
+ *
+ * @description 根据套餐 ID 获取完整的套餐信息，包括关联的商品列表。
+ *
+ * @param id - 套餐的唯一标识 UUID
+ * @returns 完整的套餐详情对象，包含明细
+ * @throws 抛出套餐不存在或数据库查询异常
  */
 export async function getPackageById(id: string) {
     try {
@@ -123,6 +134,12 @@ export async function getPackageById(id: string) {
 
 /**
  * 创建套餐
+ *
+ * @description 创建一个新的套餐规则，校验同名套餐是否存在后写入数据库。
+ *
+ * @param input - 符合 `createPackageSchema` 的新建套餐数据
+ * @returns 包含新创建套餐 ID 的对象
+ * @throws 当前租户下同名套餐已存在时抛出错误
  */
 export async function createPackage(input: z.infer<typeof createPackageSchema>) {
     try {
@@ -170,6 +187,13 @@ export async function createPackage(input: z.infer<typeof createPackageSchema>) 
 
 /**
  * 更新套餐
+ *
+ * @description 局部更新指定套餐的信息，记录审计日志。
+ *
+ * @param id - 套餐 ID
+ * @param input - 符合 `updatePackageSchema` 的部分套餐数据
+ * @returns 包含目标套餐 ID 的对象
+ * @throws 抛出数据库更新异常
  */
 export async function updatePackage(id: string, input: z.infer<typeof updatePackageSchema>) {
     try {
@@ -221,6 +245,12 @@ export async function updatePackage(id: string, input: z.infer<typeof updatePack
 
 /**
  * 删除套餐
+ *
+ * @description 硬删除套餐及其关联的商品条目，并写入审计日志。
+ *
+ * @param id - 套餐 ID
+ * @returns 删除结果布尔值
+ * @throws 抛出数据库删除异常
  */
 export async function deletePackage(id: string) {
     try {
@@ -260,6 +290,12 @@ export async function deletePackage(id: string) {
 
 /**
  * 切换套餐状态（启用/禁用）
+ *
+ * @description 快捷调整套餐的 `isActive` 状态，并写入操作类型的审计日志。
+ *
+ * @param id - 套餐 ID
+ * @param isActive - 欲更新的目标状态
+ * @returns 更新结果对象
  */
 export async function togglePackageStatus(id: string, isActive: boolean) {
     try {
@@ -299,6 +335,11 @@ export async function togglePackageStatus(id: string, isActive: boolean) {
 
 /**
  * 获取套餐商品列表
+ *
+ * @description 拉取指定套餐的所有关联商品信息，包含产品的基本信息以供展示。
+ *
+ * @param packageId - 套餐 ID
+ * @returns 套餐对应的商品记录列表
  */
 export async function getPackageProducts(packageId: string) {
     try {
@@ -330,6 +371,13 @@ export async function getPackageProducts(packageId: string) {
 
 /**
  * 添加套餐商品
+ *
+ * @description 向指定套餐中追加关联商品，并配置数量下限上限与是否必选。
+ *
+ * @param packageId - 套餐 ID
+ * @param input - 商品关联规则记录
+ * @returns 添加成功后的记录对象
+ * @throws 同一商品重复添加时抛出异常
  */
 export async function addPackageProduct(packageId: string, input: z.infer<typeof packageProductSchema>) {
     try {
@@ -370,6 +418,12 @@ export async function addPackageProduct(packageId: string, input: z.infer<typeof
 
 /**
  * 移除套餐商品
+ *
+ * @description 从指定套餐中硬删除特定商品条目的关联关系。
+ *
+ * @param packageId - 套餐 ID
+ * @param productId - 目标商品 ID
+ * @returns 删除操作成功结果
  */
 export async function removePackageProduct(packageId: string, productId: string) {
     try {
@@ -412,8 +466,12 @@ interface PackageItem {
 
 /**
  * 计算套餐价格
- * 
- * 根据套餐规则计算最终价格，包括超出处理
+ *
+ * @description 根据套餐规则计算最终价格，包括基础金额和超出范围的处理运算（固定单价超补或折扣率补发）。
+ *
+ * @param packageId - 套餐 ID
+ * @param items - 用户实际配置的商品与数量数组
+ * @returns 计算过后的原价、套餐价和折扣明细等综合信息对象
  */
 export async function calculatePackagePrice(packageId: string, items: PackageItem[]) {
     try {

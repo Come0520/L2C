@@ -17,7 +17,7 @@ import { type SystemSession } from "../schema";
 /**
  * 审批处理逻辑核心 (支持事务内递归调用)
  */
-import { Transaction } from "@/shared/api/db";
+import { DbTransaction } from "@/shared/api/db";
 import { revertEntityStatus, completeEntityStatus, findApproversByRole } from "./utils";
 import { logger } from "@/shared/lib/logger";
 import { SYSTEM_USER_ID } from "../constants";
@@ -34,7 +34,7 @@ interface PendingNotification {
  * 审批处理逻辑核心 (支持事务内递归调用)
  */
 export async function _processApprovalLogic(
-    tx: Transaction,
+    tx: DbTransaction,
     payload: {
         taskId: string;
         action: 'APPROVE' | 'REJECT';
@@ -66,6 +66,7 @@ export async function _processApprovalLogic(
     });
 
     if (!task || !task.approval || !task.node) {
+        logger.error(`[Approval] Task not found or invalid: ${payload.taskId}, tenant: ${session.user.tenantId}`);
         return { success: false, error: '审批任务不存在' };
     }
 
@@ -78,6 +79,7 @@ export async function _processApprovalLogic(
     });
 
     if (!currentTask || currentTask.status !== 'PENDING') {
+        logger.warn(`[Approval] Task ${payload.taskId} already processed or canceled. Current status: ${currentTask?.status}`);
         return { success: false, error: '任务已被并行处理或状态已变更' };
     }
 
@@ -85,9 +87,12 @@ export async function _processApprovalLogic(
     const isSystemCall = session.user.id === SYSTEM_USER_ID;
     if (!isSystemCall) {
         if (task.approverId && task.approverId !== session.user.id) {
+            logger.warn(`[Approval] Unauthorized access to task ${payload.taskId} by user ${session.user.id}`);
             return { success: false, error: '无权处理此任务' };
         }
     }
+
+    logger.info(`[Approval] Processing task ${payload.taskId}, action: ${payload.action}, user: ${session.user.id}`);
 
     // 2. Update Task
     await tx.update(approvalTasks)
@@ -147,7 +152,13 @@ export async function _processApprovalLogic(
             });
 
             // Business Callback (Unified)
-            await revertEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId, 'REJECTED');
+            try {
+                await revertEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId, 'REJECTED');
+                logger.info(`[Approval] Flow ${task.approvalId} REJECTED, entity ${task.approval.entityType}:${task.approval.entityId} reverted.`);
+            } catch (err) {
+                logger.error(`[Approval] Failed to revert entity status for ${task.approvalId}`, err);
+                throw err; // Re-throw to rollback DbTransaction
+            }
         }
 
     } else {
@@ -227,7 +238,10 @@ export async function _processApprovalLogic(
                             eq(users.isActive, true)
                         )
                     });
-                    nextApprovers = findApproversByRole(allTenantUsers, nextNode.approverRole!);
+                    nextApprovers = findApproversByRole(allTenantUsers, nextNode.approverRole);
+                    if (nextApprovers.length === 0) {
+                        logger.error(`[Approval-NextNode] No active users found representing role: ${nextNode.approverRole}`);
+                    }
                 }
 
                 // Check Auto-Approval Condition:
@@ -286,7 +300,13 @@ export async function _processApprovalLogic(
                 });
 
                 // Business Callback
-                await completeEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId);
+                try {
+                    await completeEntityStatus(tx, task.approval.entityType, task.approval.entityId, task.tenantId);
+                    logger.info(`[Approval] Flow ${task.approvalId} fully APPROVED, entity ${task.approval.entityType}:${task.approval.entityId} completed.`);
+                } catch (err) {
+                    logger.error(`[Approval] Failed to complete entity status for ${task.approvalId}`, err);
+                    throw err;
+                }
             }
         } else {
             return { success: true, message: '已批准，等待其他人审批', pendingNotifications: notifications };
@@ -309,13 +329,20 @@ export async function _processApprovalLogic(
     return { success: true, message: '处理成功', pendingNotifications: notifications };
 }
 
+import { processApprovalSchema, addApproverSchema } from "../schema";
+
 /**
  * 处理审批任务（通过或驳回）
- *
- * @param payload - 处理参数
- * @param payload.taskId - 审批任务 ID
- * @param payload.action - 操作：'APPROVE' 或 'REJECT'
- * @param payload.comment - 审批备注
+ * 
+ * L5 改进点：
+ * 1. 强制 Zod 校验输入
+ * 2. 结构化日志记录处理尝试与结果
+ * 3. 页面与数据缓存自动刷新
+ * 
+ * @param payload - 审批参数
+ * @param payload.taskId - 待处理的任务 ID
+ * @param payload.action - 审批动作：APPROVE (通过) 或 REJECT (驳回)
+ * @param payload.comment - 审批意见
  * @returns 处理结果
  */
 export async function processApproval(payload: {
@@ -323,9 +350,22 @@ export async function processApproval(payload: {
     action: 'APPROVE' | 'REJECT';
     comment?: string;
 }) {
-    const session = await auth();
-    if (!session?.user?.tenantId) return { success: false, error: 'Unauthorized' };
+    // 1. Zod 输入校验
+    const parsed = processApprovalSchema.safeParse(payload);
+    if (!parsed.success) {
+        return { success: false, error: '参数校验失败', details: parsed.error.format() };
+    }
 
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        logger.warn(`[Approval-Process] Unauthorized attempt for task ${payload.taskId}`);
+        return { success: false, error: 'Unauthorized' };
+    }
+
+    logger.info(`[Approval-Process] User ${session.user.id} attempting ${payload.action} for task ${payload.taskId}`, {
+        tenantId: session.user.tenantId,
+        comment: payload.comment
+    });
     return db.transaction(async (tx) => {
         const result = await _processApprovalLogic(tx, payload, session);
         if (result.success) {
@@ -345,32 +385,47 @@ export async function processApproval(payload: {
                     });
                 });
             }
+            logger.info(`[Approval-Process] Successfully processed task ${payload.taskId} (${payload.action})`);
             revalidatePath('/approval');
+        } else {
+            logger.warn(`[Approval-Process] Failed to process task ${payload.taskId}: ${result.error}`);
         }
         return result;
     });
 }
 
 /**
- * 加签 (Add Approver)
- */
-/**
- * 为指定任务添加额外审批人（动态加签）
- *
+ * 动态加签审批人
+ * 
+ * L5 改进点：
+ * 1. 强制 Zod 校验
+ * 2. 权限与状态多重保护
+ * 3. 详细审计日志追踪
+ * 
  * @param payload - 加签参数
  * @param payload.taskId - 当前任务 ID
- * @param payload.targetUserId - 被加签用户 ID
- * @param payload.comment - 加签备注
- * @returns 操作结果
+ * @param payload.targetUserId - 被加签的目标用户 ID
+ * @param payload.comment - 加签缘由
+ * @returns 加签结果
  */
 export async function addApprover(payload: {
     taskId: string;
     targetUserId: string;
     comment?: string;
 }) {
-    const session = await auth();
-    if (!session?.user?.id || !session.user.tenantId) return { success: false, error: 'Unauthorized' };
+    // 1. Zod 输入校验
+    const parsed = addApproverSchema.safeParse(payload);
+    if (!parsed.success) {
+        return { success: false, error: '参数校验失败', details: parsed.error.format() };
+    }
 
+    const session = await auth();
+    if (!session?.user?.id || !session.user.tenantId) {
+        logger.warn(`[Approval-AddApprover] Unauthorized attempt for task ${payload.taskId}`);
+        return { success: false, error: 'Unauthorized' };
+    }
+
+    logger.info(`[Approval-AddApprover] User ${session.user.id} adding approver ${payload.targetUserId} for task ${payload.taskId}`);
     return await db.transaction(async (tx) => {
         const task = await tx.query.approvalTasks.findFirst({
             where: and(
@@ -383,10 +438,12 @@ export async function addApprover(payload: {
         });
 
         if (!task || task.status !== 'PENDING') {
+            logger.warn(`[Approval-AddApprover] Task ${payload.taskId} invalid or not pending`);
             return { success: false, error: '任务无效或已处理' };
         }
 
         if (task.approverId !== session.user.id) {
+            logger.warn(`[Approval-AddApprover] User ${session.user.id} unauthorized to add approver to task ${task.id}`);
             return { success: false, error: '仅当前审批人可加签' };
         }
 

@@ -11,7 +11,7 @@ import { QuoteConfig } from '@/services/quote-config.service';
 import { updateGlobalQuoteConfig, toggleQuoteMode, updateUserPlan } from '@/features/quotes/actions/config-actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Settings2 } from 'lucide-react';
+import Settings2 from 'lucide-react/dist/esm/icons/settings2';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { logger } from '@/shared/lib/logger';

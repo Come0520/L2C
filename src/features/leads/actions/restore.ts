@@ -13,7 +13,17 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
 
 // 线索状态类型（与 schema 中的 leadStatusEnum 保持一致）
-type LeadStatus = 'PENDING_ASSIGNMENT' | 'PENDING_FOLLOWUP' | 'FOLLOWING_UP' | 'WON' | 'INVALID';
+type LeadStatus =
+    | 'PENDING_ASSIGNMENT'
+    | 'PENDING_FOLLOWUP'
+    | 'FOLLOWING_UP'
+    | 'WON'
+    | 'INVALID'
+    | 'PENDING_APPROVAL'
+    | 'MEASUREMENT_SCHEDULED'
+    | 'QUOTED'
+    | 'LOST'
+    | 'PENDING_REVIEW';
 
 /**
  * 恢复已作废的线索
@@ -84,8 +94,9 @@ export async function restoreLeadAction(
                     logger.info('[leads] 恢复作废线索进入审批流程:', { leadId: id, tenantId });
                     return { success: true, error: undefined, targetStatus: '审批中' };
                 } else {
-                    logger.error('[leads] 恢复作废线索审批提交失败:', { error: result.error, leadId: id, tenantId });
-                    return { success: false, error: 'error' in result && typeof result.error === 'string' ? result.error : '审批提交失败' };
+                    const errorMsg = 'error' in result && typeof result.error === 'string' ? result.error : '审批提交失败';
+                    logger.error('[leads] 恢复作废线索审批提交失败:', { error: errorMsg, leadId: id, tenantId });
+                    return { success: false, error: errorMsg };
                 }
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : '审批提交失败';

@@ -9,7 +9,8 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
 import { Badge } from '@/shared/ui/badge';
 
 /** 渠道列表项类型 */

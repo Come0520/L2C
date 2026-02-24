@@ -113,3 +113,36 @@ export const liabilityNotices = pgTable('liability_notices', {
     tenantStatusConfirmedIdx: index('idx_ln_tenant_status_confirmed').on(table.tenantId, table.status, table.confirmedAt),
 }));
 
+/**
+ * 欠款账本表 (Debt Ledger)
+ * 记录售后定责后，扣款金额大于责任方当期待结算金额而产生的历史按批次欠款。
+ */
+export const debtLedgers = pgTable('debt_ledgers', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    debtNo: varchar('debt_no', { length: 50 }).unique().notNull(), // 欠款单号 DT2026...
+
+    // 责任主体
+    liablePartyType: liablePartyTypeEnum('liable_party_type').notNull(),
+    liablePartyId: uuid('liable_party_id').notNull(), // 供应商或师傅ID
+
+    // 朔源关联
+    originalAfterSalesId: uuid('original_after_sales_id').references(() => afterSalesTickets.id).notNull(), // 引发的原售后工单
+    originalLiabilityNoticeId: uuid('original_liability_notice_id').references(() => liabilityNotices.id).notNull(), // 引发的原定责单
+
+    // 金融属性
+    originalDeductionAmount: decimal('original_deduction_amount', { precision: 12, scale: 2 }).notNull(), // 定责单初始总金额
+    actualDeductedAmount: decimal('actual_deducted_amount', { precision: 12, scale: 2 }).default('0.00').notNull(), // 已还款/已随账期抵扣金额
+    remainingDebt: decimal('remaining_debt', { precision: 12, scale: 2 }).notNull(), // 剩余欠款金额 (应等于 originalDeductionAmount - actualDeductedAmount)
+
+    // 状态
+    debtStatus: varchar('debt_status', { length: 20 }).default('ACTIVE').notNull(), // ACTIVE, PARTIALLY_SETTLED, FULLY_SETTLED
+
+    // 时间
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    settledAt: timestamp('settled_at', { withTimezone: true }), // 完全结清的时间点
+}, (table) => ({
+    tenantPartyIdx: index('idx_dl_tenant_party').on(table.tenantId, table.liablePartyType, table.liablePartyId),
+    statusIdx: index('idx_dl_status').on(table.debtStatus),
+}));

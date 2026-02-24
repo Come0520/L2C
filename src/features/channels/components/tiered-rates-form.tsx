@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
 
 interface TieredRatesFormProps {
     form: UseFormReturn<ChannelInput>;

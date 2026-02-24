@@ -63,6 +63,13 @@
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 
+  /* Liquid Glass Ultra - 95% 不透明白色磨砂（弹窗专用） */
+  --glass-bg-liquid: rgba(255, 255, 255, 0.95);
+  --glass-blur-liquid: 40px;
+  --glass-saturate-liquid: 180%;
+  --glass-border-liquid: rgba(0, 0, 0, 0.08);
+  --glass-shadow-liquid: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+
   /* Liquid Glass - Dark Mode (Cyber Frosted) */
   --glass-bg-dark: rgba(15, 23, 42, 0.7);
   --glass-border-dark: rgba(255, 255, 255, 0.12);
@@ -225,6 +232,26 @@
       background-position: 0% 50%;
     }
   }
+
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    20%,
+    60% {
+      transform: translateX(-4px);
+    }
+
+    40%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
+
+  --animate-shake: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 /* Claymorphism Color Muting - Reduce contrast for a harmonious look */
@@ -476,12 +503,10 @@
   color: var(--parchment-ink);
   font-family: var(--font-parchment);
   /* Clean subtle parchment gradient - no noise */
-  background-image: linear-gradient(
-    180deg,
-    rgba(251, 250, 245, 1) 0%,
-    rgba(248, 245, 235, 1) 50%,
-    rgba(245, 240, 228, 1) 100%
-  );
+  background-image: linear-gradient(180deg,
+      rgba(251, 250, 245, 1) 0%,
+      rgba(248, 245, 235, 1) 50%,
+      rgba(245, 240, 228, 1) 100%);
   background-attachment: fixed;
 }
 
@@ -508,13 +533,11 @@
 [data-style='parchment'] .glass-popover,
 [data-style='parchment'] .card {
   background:
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(0, 0, 0, 0.05) 0%,
       transparent 5%,
       transparent 95%,
-      rgba(0, 0, 0, 0.05) 100%
-    ),
+      rgba(0, 0, 0, 0.05) 100%),
     var(--parchment-bg);
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow:
@@ -579,11 +602,9 @@
 }
 
 [data-style='cute'] .tab-active-bg {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 133, 161, 0.2),
-    rgba(255, 182, 193, 0.35)
-  ) !important;
+  background: linear-gradient(135deg,
+      rgba(255, 133, 161, 0.2),
+      rgba(255, 182, 193, 0.35)) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   box-shadow: 0 4px 12px rgba(255, 133, 161, 0.1) !important;
   border-radius: 9999px !important;
@@ -654,14 +675,12 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
 }
 
 .aurora-animate {
-  background: linear-gradient(
-    135deg,
-    #6366f1 0%,
-    #a855f7 25%,
-    #ec4899 50%,
-    #3b82f6 75%,
-    #6366f1 100%
-  );
+  background: linear-gradient(135deg,
+      #6366f1 0%,
+      #a855f7 25%,
+      #ec4899 50%,
+      #3b82f6 75%,
+      #6366f1 100%);
   background-size: 400% 400%;
   animation: var(--animate-aurora-flow);
   filter: blur(40px);
@@ -688,8 +707,10 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
 
 /* ==================== Base Styles ==================== */
 @layer base {
+
   /* Reduced Motion Accessibility - WCAG 2.1 Success Criterion 2.3.3 */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -821,6 +842,7 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
 
 /* ==================== Utility Classes ==================== */
 @layer utilities {
+
   /* 文本截断 */
   .truncate-2 {
     display: -webkit-box;
@@ -841,6 +863,7 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
 
 /* ==================== Component Base ==================== */
 @layer components {
+
   /* 卡片基础 */
   .card {
     background-color: white;
@@ -979,12 +1002,10 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
   .dark .glass-table::before,
   .dark .glass-empty-state::before,
   .dark .glass-popover::before {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0) 50%,
-      rgba(255, 255, 255, 0.08) 100%
-    );
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.08) 100%);
     opacity: 1;
   }
 
@@ -1018,23 +1039,18 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.6) 0%,
-      rgba(255, 255, 255, 0) 50%,
-      rgba(255, 255, 255, 0.3) 100%
-    );
+    /* 极简高光：仅顶部微弱渐变，不干扰纯白底色 */
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        transparent 30%);
     pointer-events: none;
     z-index: -1;
   }
 
   .dark .glass-liquid-ultra::before {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0) 50%,
-      rgba(255, 255, 255, 0.05) 100%
-    );
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        transparent 30%);
   }
 
   /* Interactive morphing (respects reduced-motion) */
@@ -1266,7 +1282,7 @@ div[className*='flex-row items-center justify-start [perspective:1000px]'] {
     padding-right: 0.5rem;
   }
 
-  [cmdk-group]:not([hidden]) ~ [cmdk-group] {
+  [cmdk-group]:not([hidden])~[cmdk-group] {
     padding-top: 0;
   }
 

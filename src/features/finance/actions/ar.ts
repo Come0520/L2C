@@ -42,7 +42,7 @@ export async function getARStatements(params?: { limit?: number; offset?: number
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取应收对账单列表', { tenantId, limit, offset });
+            logger.info('[finance] [CACHE_MISS] 获取应收对账单列表', { tenantId, limit, offset });
             return await db
                 .select()
                 .from(arStatements)
@@ -75,7 +75,7 @@ export async function getARStatement(id: string) {
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取单条应收对账单详情', { id, tenantId });
+            logger.info('[finance] [CACHE_MISS] ', { id, tenantId });
             return await db.query.arStatements.findFirst({
                 where: and(
                     eq(arStatements.id, id),
@@ -114,8 +114,7 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     // 权限检查：创建收付款
     if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
 
-    console.log('[finance] 创建收款单', { data });
-
+    logger.info('[finance] 开始创建收款单', { data });
     const validatedData = createPaymentOrderSchema.parse(data);
     const { items, ...orderData } = validatedData;
 
@@ -138,8 +137,8 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     };
 
     const result = await FinanceService.createPaymentOrder(serviceData, session.user.tenantId, session.user.id!);
-    revalidateTag(`finance-ar-${session.user.tenantId}`);
-    console.log('[finance] createPaymentOrder 执行成功', { serviceData });
+    revalidateTag(`finance-ar-${session.user.tenantId}`, 'default');
+    logger.info('[finance] createPaymentOrder 执行成功', { result });
     return result;
 }
 
@@ -160,7 +159,7 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
     // 权限检查：审批财务
     if (!await checkPermission(session, PERMISSIONS.FINANCE.APPROVE)) throw new Error('权限不足：需要财务审批权限');
 
-    console.log('[finance] 审核收款单', { data });
+    logger.info('[finance] 审核收款单', { data });
 
     const { id, status, remark } = verifyPaymentOrderSchema.parse(data);
 
@@ -172,9 +171,9 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
         session.user.id!,
         remark
     );
-    revalidateTag(`finance-ar-${session.user.tenantId}`);
-    revalidateTag(`finance-ar-detail-${id}`);
-    console.log('[finance] verifyPaymentOrder 执行成功', { id, status });
+    revalidateTag(`finance-ar-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-ar-detail-${id}`, 'default');
+    logger.info('[finance] verifyPaymentOrder 执行成功', { paymentOrderId: id });
     return result;
 }
 
@@ -216,7 +215,7 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
         const tenantId = session.user.tenantId;
         const _userId = session.user.id!;
 
-        console.log('[finance] 创建退款对账单', { input });
+        logger.info('[finance] 开始创建退款对账单', { data });
 
         return await db.transaction(async (tx) => {
             // 1. 获取原对账单
@@ -332,9 +331,9 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
                 );
             }
 
-            revalidateTag(`finance-ar-${tenantId}`);
-            revalidateTag(`finance-ar-detail-${originalStatement.id}`);
-            console.log('[finance] createRefundStatement 执行成功', { refundNo });
+            revalidateTag(`finance-ar-${tenantId}`, 'default');
+            revalidateTag(`finance-ar-detail-${originalStatement.id}`, 'default');
+            logger.info('[finance] createRefundStatement 执行成功', { refundNo });
 
             return {
                 success: true,
@@ -349,7 +348,7 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
 
         });
     } catch (error) {
-        console.log('[finance] 创建退款对账单失败', { error, input });
+        logger.error('[finance] 创建退款对账单失败', { error, input });
         logger.error('创建退款对账单失败:', error);
         return {
             success: false,

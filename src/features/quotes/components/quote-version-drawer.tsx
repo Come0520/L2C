@@ -13,7 +13,14 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { ScrollArea } from '@/shared/ui/scroll-area';
-import { History, Plus, Clock, Check, FileText, ArrowRight, Copy, X } from 'lucide-react';
+import History from 'lucide-react/dist/esm/icons/history';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Check from 'lucide-react/dist/esm/icons/check';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import X from 'lucide-react/dist/esm/icons/x';
 import { createNextVersion } from '../actions/mutations';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';

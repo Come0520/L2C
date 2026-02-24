@@ -4,7 +4,11 @@ import { useState, useCallback, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { ChevronDown, ChevronUp, Trash2, GripVertical, Plus } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import {
     AlertDialog,
     AlertDialogAction,

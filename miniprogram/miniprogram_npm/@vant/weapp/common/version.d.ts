@@ -13,3 +13,5 @@ export declare function canIUseNextTick(): boolean;
 export declare function canIUseCanvas2d(): boolean;
 export declare function canIUseGetUserProfile(): boolean;
 export {};
+
+export {};

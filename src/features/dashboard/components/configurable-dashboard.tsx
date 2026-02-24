@@ -2,7 +2,9 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { GripVertical, X, Plus } from 'lucide-react';
+import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
+import X from 'lucide-react/dist/esm/icons/x';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { Button } from '@/shared/ui/button';
 import {
     DropdownMenu,

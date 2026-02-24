@@ -4,7 +4,7 @@ import React from 'react';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 
 /**
  * 订单筛选条件类型

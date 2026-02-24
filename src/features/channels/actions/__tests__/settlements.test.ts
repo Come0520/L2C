@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     createSettlement,
     submitSettlementForApproval,
@@ -25,6 +25,7 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 const mockQueryFindFirst = vi.fn();
@@ -38,14 +39,14 @@ const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
 vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
-            channels: { findFirst: (...args: any[]) => mockQueryFindFirst(...args) },
+            channels: { findFirst: (...args: unknown[]) => mockQueryFindFirst(...args) },
             channelSettlements: {
-                findFirst: (...args: any[]) => mockQueryFindFirst(...args),
-                findMany: (...args: any[]) => mockQueryFindMany(...args)
+                findFirst: (...args: unknown[]) => mockQueryFindFirst(...args),
+                findMany: (...args: unknown[]) => mockQueryFindMany(...args)
             },
         },
-        update: (...args: any[]) => mockUpdate(...args),
-        transaction: vi.fn(async (cb) => {
+        update: (...args: unknown[]) => mockUpdate(...args),
+        transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
             return await cb({
                 query: {
                     channelCommissions: { findMany: mockQueryFindMany },
@@ -64,8 +65,8 @@ describe('Channel Settlements Actions', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (auth as any).mockResolvedValue({ user: { id: VALID_USER_ID, tenantId: VALID_TENANT_ID } });
-        (checkPermission as any).mockResolvedValue(true);
+        vi.mocked(auth).mockResolvedValue({ user: { id: VALID_USER_ID, tenantId: VALID_TENANT_ID } } as any);
+        vi.mocked(checkPermission).mockResolvedValue(true);
     });
 
     describe('createSettlement', () => {

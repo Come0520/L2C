@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sales 模块安全测试
  * 覆盖 Auth 保护、TenantId 隔离
  */
@@ -43,6 +43,7 @@ vi.mock('@/shared/lib/logger', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
     unstable_cache: vi.fn((fn) => fn),
 }));
 

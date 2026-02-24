@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { TrendingUp, Loader2 } from "lucide-react";
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { DashboardEditor } from "./dashboard-editor";
 
 /**

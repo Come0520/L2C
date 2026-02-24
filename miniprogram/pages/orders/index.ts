@@ -1,5 +1,5 @@
-import { IAppOption } from "../../../app";
-import { formatTime } from "../../../utils/util";
+import { IAppOption } from '../../app';
+import { formatTime } from '../../utils/util';
 
 Page({
     data: {
@@ -66,3 +66,5 @@ Page({
         });
     }
 });
+
+export { };

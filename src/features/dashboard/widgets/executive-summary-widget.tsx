@@ -3,7 +3,13 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, TrendingDown, AlertCircle, Wallet, DollarSign, Percent } from "lucide-react";
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Wallet from 'lucide-react/dist/esm/icons/wallet';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Percent from 'lucide-react/dist/esm/icons/percent';
 import { cn } from "@/shared/utils";
 import { createLogger } from "@/shared/lib/logger";
 import useSWR from 'swr';

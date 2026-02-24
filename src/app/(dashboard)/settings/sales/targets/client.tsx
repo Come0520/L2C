@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { SalesTargetDTO, updateSalesTarget } from '@/features/sales/actions/targets';
+import { updateSalesTarget } from '@/features/sales/actions/targets';
+import { SalesTargetDTO } from '@/features/sales/types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Card, CardContent } from '@/shared/ui/card';

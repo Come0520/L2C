@@ -29,11 +29,22 @@ function getStatusOrder(status: string): number {
     return step?.order ?? 0;
 }
 
+/**
+ * 安装状态进度条组件属性
+ */
 interface InstallStatusProgressProps {
+    /** 当前任务状态 */
     currentStatus: string;
+    /** 自定义样式类 */
     className?: string;
 }
 
+/**
+ * 安装任务状态进度条
+ * 
+ * 可视化展示安装任务从“待分配”到“已完成”的完整生命周期进度。
+ * 支持取消状态（红色显示）。
+ */
 export function InstallStatusProgress({ currentStatus, className }: InstallStatusProgressProps) {
     const currentOrder = getStatusOrder(currentStatus);
     const isCancelled = currentStatus === 'CANCELLED';

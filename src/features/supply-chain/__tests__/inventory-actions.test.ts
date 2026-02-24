@@ -1,4 +1,4 @@
-
+﻿
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
@@ -7,6 +7,7 @@ import { adjustInventory, transferInventory } from '../actions/inventory-actions
 // Mock Modules
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
@@ -26,6 +27,7 @@ const mockTx = {
             returning: vi.fn().mockResolvedValue([{ id: 'log-1' }])
         })
     }),
+    execute: vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 100 }]),
     query: {
         inventory: {
             findFirst: vi.fn().mockResolvedValue({

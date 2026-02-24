@@ -79,3 +79,5 @@ Page({
         this.fetchData();
     }
 });
+
+export {};

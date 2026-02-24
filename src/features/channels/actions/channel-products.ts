@@ -8,17 +8,20 @@ import { eq, and, isNotNull, gt, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 获取已设置渠道底价的商品列表
  * 
- * @returns {Promise<{success: boolean, data: any[], error?: string}>} 返回包含数据的商品列表响应
+ * @returns {Promise<{success: boolean, data: Array<{id: string, name: string, sku: string, channelPrice: string | null}>, error?: string}>} 返回包含数据的商品列表响应
  */
 export async function getChannelProducts() {
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权', data: [] };
     }
+
+    logger.info('[channels] Fetching channel products', { userId: session.user.id });
 
     // P2 Fix: Add permission check
     try {
@@ -55,7 +58,7 @@ export async function getChannelProducts() {
  * 
  * 获取当前租户下活跃的且没有特定渠道价格约束的通用商品。
  * 
- * @returns {Promise<{success: boolean, data: any[], error?: string}>} 结构包含通用商品池的内容
+ * @returns {Promise<{success: boolean, data: Array<{id: string, name: string, sku: string, channelPrice: string | null}>, error?: string}>} 结构包含通用商品池的内容
  */
 export async function getAvailableProducts() {
     const session = await auth();
@@ -86,6 +89,8 @@ export async function getAvailableProducts() {
         orderBy: [desc(products.updatedAt)],
     });
 
+    logger.info('[channels] Fetching available products for channel pool', { userId: session.user.id });
+
     return { success: true, data };
 }
 
@@ -103,7 +108,6 @@ const updateChannelPriceSchema = z.object({
  * @returns {Promise<{success: boolean, error?: string}>} 更新事务的结果
  */
 export async function updateProductChannelPrice(input: z.infer<typeof updateChannelPriceSchema>) {
-    console.log('[channels] 开始更新商品渠道底价:', input);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
@@ -176,7 +180,6 @@ const batchUpdateSchema = z.object({
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function batchUpdateChannelPrices(input: z.infer<typeof batchUpdateSchema>) {
-    console.log('[channels] 批量更新商品渠道底价，条数:', input?.updates?.length);
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };
@@ -236,7 +239,6 @@ export async function batchUpdateChannelPrices(input: z.infer<typeof batchUpdate
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function removeFromChannelPool(productId: string) {
-    console.log('[channels] 从选品池移除商品底价:', { productId });
     const session = await auth();
     if (!session?.user?.tenantId) {
         return { success: false, error: '未授权' };

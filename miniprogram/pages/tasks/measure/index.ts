@@ -76,7 +76,7 @@ Page({
      */
     removeItem(e: any) {
         const { index } = e.currentTarget.dataset;
-        const items = this.data.items.filter((_, i) => i !== index);
+        const items = this.data.items.filter((_: any, i: number) => i !== index);
         this.setData({ items });
     },
 
@@ -118,7 +118,7 @@ Page({
         const { index, field } = e.currentTarget.dataset;
         const { value } = e.detail;
         const items = [...this.data.items];
-        (items[index] as any)[field] = value;
+        (items[index] as Record<string, any>)[field] = value;
         this.setData({ items });
     },
 
@@ -129,7 +129,7 @@ Page({
         const { index, field, options } = e.currentTarget.dataset;
         const pickerIndex = e.detail.value;
         const items = [...this.data.items];
-        (items[index] as any)[field] = options[pickerIndex].value;
+        (items[index] as Record<string, any>)[field] = options[pickerIndex].value;
         this.setData({ items });
     },
 
@@ -140,7 +140,7 @@ Page({
         const { index, field } = e.currentTarget.dataset;
         const { value } = e.detail;
         const items = [...this.data.items];
-        (items[index] as any)[field] = value;
+        (items[index] as Record<string, any>)[field] = value;
         this.setData({ items });
     },
 
@@ -168,7 +168,7 @@ Page({
      */
     removePhoto(e: any) {
         const { index } = e.currentTarget.dataset;
-        const photos = this.data.photos.filter((_, i) => i !== index);
+        const photos = this.data.photos.filter((_: any, i: number) => i !== index);
         this.setData({ photos });
     },
 
@@ -214,7 +214,7 @@ Page({
                     round: this.data.currentRound,
                     variant: this.data.activeVariant,
                     sitePhotos,
-                    items: this.data.items.map(item => ({
+                    items: this.data.items.map((item: any) => ({
                         roomName: item.roomName,
                         windowType: item.windowType,
                         width: parseFloat(item.width),
@@ -246,3 +246,5 @@ Page({
         }
     },
 });
+
+export { };

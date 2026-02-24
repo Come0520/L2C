@@ -1,5 +1,5 @@
 import { getShowroomItems } from '@/features/showroom/actions';
-import { ShowroomClientPage } from './components/showroom-client-page';
+import { ShowroomClientPage } from '@/features/showroom/components/showroom-client-page';
 import { showroomItemTypeEnum } from '@/shared/api/schema/showroom';
 
 export default async function ShowroomPage(props: {

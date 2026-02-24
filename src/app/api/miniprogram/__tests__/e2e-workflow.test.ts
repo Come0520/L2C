@@ -8,7 +8,7 @@ import { IdempotencyGuard, RateLimiter } from '@/shared/services/miniprogram/sec
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
 import * as authUtils from '../auth-utils';
 
-function createReq(url: string, body?: any, method = 'POST'): NextRequest {
+function createReq(url: string, body?: unknown, method = 'POST'): NextRequest {
     return new NextRequest(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -31,7 +31,7 @@ vi.mock('@/shared/api/db', () => ({
             from: function () { return this; },
             where: function () { return this; },
             groupBy: function () { return this; },
-            then: function (resolve: any) {
+            then: function (resolve: (value: unknown) => void) {
                 // 提供通用的 fallback 返回
                 resolve([{ total: '1000', count: 10, status: 'WON' }]);
             }
@@ -120,7 +120,7 @@ describe('军工级联调与破坏性用例 (E2E & Chaos)', () => {
             RateLimiter.reset('create_order_u1');
 
             // 增加 DB 事务操作延迟，以诱导并发时可能发生的漏网竞态条件
-            vi.mocked(db.transaction).mockImplementation(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
                 await new Promise(resolve => setTimeout(resolve, 50)); // 人工延迟放大竞争缺口
                 const tx = {
                     insert: vi.fn(() => ({
@@ -173,11 +173,11 @@ describe('军工级联调与破坏性用例 (E2E & Chaos)', () => {
                 from: function () { return this; },
                 where: function () { return this; },
                 groupBy: function () { return this; },
-                then: function (resolve: (val: any) => void) {
+                then: function (resolve: (val: unknown) => void) {
                     // 人为制造 20 毫秒的 SQL 响应延迟供 LRU Cache 断言检测
                     setTimeout(() => resolve([{ status: 'WON', count: 10 }]), 20);
                 }
-            } as any);
+            } as never);
 
             const req = new NextRequest('http://localhost/api/dashboard', { method: 'GET' });
 

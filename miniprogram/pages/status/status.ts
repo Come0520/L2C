@@ -6,7 +6,7 @@ const app = getApp<IAppOption>();
 Page({
     data: {
         status: '', // pending_approval | active | rejected | ''
-        tenantInfo: null as any,
+        tenantInfo: null as unknown as Record<string, any>,
         submitTime: '',
         reviewTime: '',
         rejectReason: '',
@@ -128,3 +128,5 @@ Page({
         });
     },
 });
+
+export {};

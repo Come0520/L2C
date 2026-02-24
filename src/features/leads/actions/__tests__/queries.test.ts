@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Leads 模块 Server Actions 集成测试 (Queries)
  *
  * 覆盖范围：
@@ -43,6 +43,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: vi.fn((cb) => cb), // 穿透 cache 直接执行回调
+    revalidateTag: vi.fn(),
 }));
 
 // ── 测试套件 ──

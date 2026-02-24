@@ -8,7 +8,9 @@ import { Card } from '@/shared/ui/card';
 import { getQuote } from '../actions/queries';
 import { Badge } from '@/shared/ui/badge';
 import { ScrollArea } from '@/shared/ui/scroll-area';
-import { Loader2, ArrowRightLeft, ArrowRight } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import ArrowRightLeft from 'lucide-react/dist/esm/icons/arrow-right-left';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import { cn } from '@/shared/lib/utils';
 import { toast } from 'sonner';
 

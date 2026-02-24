@@ -7,7 +7,10 @@ import { suppliers } from '@/shared/api/schema/supply-chain';
 import { customers } from '@/shared/api/schema/customers';
 import { users } from '@/shared/api/schema/infrastructure';
 import { purchaseOrders } from '@/shared/api/schema/supply-chain';
+import { debtLedgers } from '@/shared/api/schema/after-sales';
 import { eq, and, sql, sum } from 'drizzle-orm';
+import type { DbTransaction } from '@/shared/api/db';
+import { generateDebtNo } from '../utils';
 
 /**
  * 扣款安全水位逻辑
@@ -99,21 +102,22 @@ export async function getDeductionLedger(
     let maxAllowed: number = DEDUCTION_SAFETY_CONFIG.DEFAULT_MAX_DEDUCTION;
 
     if (partyType === 'FACTORY') {
-        const supplier = await db.query.suppliers.findFirst({
-            where: and(eq(suppliers.id, partyId), eq(suppliers.tenantId, tenantId)),
-            columns: { name: true }
-        });
-        partyName = supplier?.name || '未知供应商';
+        const [supplier, [poSummary]] = await Promise.all([
+            db.query.suppliers.findFirst({
+                where: and(eq(suppliers.id, partyId), eq(suppliers.tenantId, tenantId)),
+                columns: { name: true }
+            }),
+            db
+                .select({ total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`) })
+                .from(purchaseOrders)
+                .where(and(
+                    eq(purchaseOrders.supplierId, partyId),
+                    eq(purchaseOrders.tenantId, tenantId),
+                    sql`${purchaseOrders.status} != 'CANCELED'`
+                ))
+        ]);
 
-        // P1 FIX (AS-11): 动态计算供应商限额 = 历史采购总额 * 10%
-        const [poSummary] = await db
-            .select({ total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`) })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.supplierId, partyId),
-                eq(purchaseOrders.tenantId, tenantId),
-                sql`${purchaseOrders.status} != 'CANCELED'`
-            ));
+        partyName = supplier?.name || '未知供应商';
 
         const historicalPurchaseAmount = Number(poSummary?.total || 0);
         maxAllowed = Math.max(
@@ -286,65 +290,70 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
     const nameMap: Record<string, string> = {};
 
     // 工厂 (供应商)
-    if (partyGroups['FACTORY']?.length) {
-        const factoryData = await db.query.suppliers.findMany({
-            where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['FACTORY']}`),
-            columns: { id: true, name: true }
-        });
-        factoryData.forEach(d => nameMap[`FACTORY:${d.id}`] = d.name);
-    }
-
-    // 安装工 & 测量员 (用户)
     const userIds = [...(partyGroups['INSTALLER'] || []), ...(partyGroups['MEASURER'] || [])];
-    if (userIds.length) {
-        const userData = await db.query.users.findMany({
-            where: and(eq(users.tenantId, tenantId), sql`${users.id} IN ${userIds}`),
-            columns: { id: true, name: true }
-        });
-        userData.forEach(d => {
-            if (partyGroups['INSTALLER']?.includes(d.id)) nameMap[`INSTALLER:${d.id}`] = d.name ?? '未知';
-            if (partyGroups['MEASURER']?.includes(d.id)) nameMap[`MEASURER:${d.id}`] = d.name ?? '未知';
-        });
-    }
-
-    // 物流
-    if (partyGroups['LOGISTICS']?.length) {
-        const logisticsData = await db.query.suppliers.findMany({
-            where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['LOGISTICS']}`),
-            columns: { id: true, name: true }
-        });
-        logisticsData.forEach(d => nameMap[`LOGISTICS:${d.id}`] = d.name ?? '未知');
-    }
-
-    // 客户
-    if (partyGroups['CUSTOMER']?.length) {
-        const customerData = await db.query.customers.findMany({
-            where: and(eq(customers.tenantId, tenantId), sql`${customers.id} IN ${partyGroups['CUSTOMER']}`),
-            columns: { id: true, name: true }
-        });
-        customerData.forEach(d => nameMap[`CUSTOMER:${d.id}`] = d.name ?? '未知');
-    }
-
-    // 3. 批量拉取供应商采购历史 (用于动态限额)
     const poHistoryMap: Record<string, number> = {};
-    if (partyGroups['FACTORY']?.length) {
-        const poSummaries = await db
-            .select({
-                supplierId: purchaseOrders.supplierId,
-                total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`)
-            })
-            .from(purchaseOrders)
-            .where(and(
-                eq(purchaseOrders.tenantId, tenantId),
-                sql`${purchaseOrders.supplierId} IN ${partyGroups['FACTORY']}`,
-                sql`${purchaseOrders.status} != 'CANCELED'`
-            ))
-            .groupBy(purchaseOrders.supplierId);
 
-        poSummaries.forEach(s => {
-            if (s.supplierId) poHistoryMap[s.supplierId] = Number(s.total || 0);
-        });
-    }
+    await Promise.all([
+        (async () => {
+            if (partyGroups['FACTORY']?.length) {
+                const factoryData = await db.query.suppliers.findMany({
+                    where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['FACTORY']}`),
+                    columns: { id: true, name: true }
+                });
+                factoryData.forEach(d => nameMap[`FACTORY:${d.id}`] = d.name);
+            }
+        })(),
+        (async () => {
+            if (userIds.length) {
+                const userData = await db.query.users.findMany({
+                    where: and(eq(users.tenantId, tenantId), sql`${users.id} IN ${userIds}`),
+                    columns: { id: true, name: true }
+                });
+                userData.forEach(d => {
+                    if (partyGroups['INSTALLER']?.includes(d.id)) nameMap[`INSTALLER:${d.id}`] = d.name ?? '未知';
+                    if (partyGroups['MEASURER']?.includes(d.id)) nameMap[`MEASURER:${d.id}`] = d.name ?? '未知';
+                });
+            }
+        })(),
+        (async () => {
+            if (partyGroups['LOGISTICS']?.length) {
+                const logisticsData = await db.query.suppliers.findMany({
+                    where: and(eq(suppliers.tenantId, tenantId), sql`${suppliers.id} IN ${partyGroups['LOGISTICS']}`),
+                    columns: { id: true, name: true }
+                });
+                logisticsData.forEach(d => nameMap[`LOGISTICS:${d.id}`] = d.name ?? '未知');
+            }
+        })(),
+        (async () => {
+            if (partyGroups['CUSTOMER']?.length) {
+                const customerData = await db.query.customers.findMany({
+                    where: and(eq(customers.tenantId, tenantId), sql`${customers.id} IN ${partyGroups['CUSTOMER']}`),
+                    columns: { id: true, name: true }
+                });
+                customerData.forEach(d => nameMap[`CUSTOMER:${d.id}`] = d.name ?? '未知');
+            }
+        })(),
+        (async () => {
+            if (partyGroups['FACTORY']?.length) {
+                const poSummaries = await db
+                    .select({
+                        supplierId: purchaseOrders.supplierId,
+                        total: sum(sql`CAST(${purchaseOrders.totalAmount} AS DECIMAL)`)
+                    })
+                    .from(purchaseOrders)
+                    .where(and(
+                        eq(purchaseOrders.tenantId, tenantId),
+                        sql`${purchaseOrders.supplierId} IN ${partyGroups['FACTORY']}`,
+                        sql`${purchaseOrders.status} != 'CANCELED'`
+                    ))
+                    .groupBy(purchaseOrders.supplierId);
+
+                poSummaries.forEach(s => {
+                    if (s.supplierId) poHistoryMap[s.supplierId] = Number(s.total || 0);
+                });
+            }
+        })()
+    ]);
 
     // 4. 组装最终结果
     for (const r of result) {
@@ -388,4 +397,44 @@ export async function getAllDeductionLedgers(): Promise<DeductionLedger[]> {
     }
 
     return ledgers;
+}
+
+/**
+ * 记录进入欠款账本 (Server Action / Transaction bound)
+ * 在定责确认或其他扣款不足额时，需要自动生成 DEBT 单据进入欠款池
+ * 
+ * @param params 欠款构造参数
+ * @param tx 事务对象
+ */
+export async function recordDebtLedger(params: {
+    tenantId: string;
+    liablePartyType: LiablePartyType;
+    liablePartyId: string;
+    originalAfterSalesId: string;
+    originalLiabilityNoticeId: string;
+    amount: number;
+}, tx?: DbTransaction) {
+    const executor = tx || db;
+    if (params.amount <= 0) return { success: false, message: '欠款金额应大于0' };
+
+    try {
+        const debtNo = await generateDebtNo(params.tenantId, tx);
+
+        const [newDebt] = await executor.insert(debtLedgers).values({
+            tenantId: params.tenantId,
+            debtNo: debtNo,
+            liablePartyType: params.liablePartyType as (typeof debtLedgers.$inferInsert.liablePartyType),
+            liablePartyId: params.liablePartyId,
+            originalAfterSalesId: params.originalAfterSalesId,
+            originalLiabilityNoticeId: params.originalLiabilityNoticeId,
+            originalDeductionAmount: params.amount.toString(),
+            actualDeductedAmount: '0', // 初始阶段实际抵扣为 0
+            remainingDebt: params.amount.toString(),
+            debtStatus: 'UNPAID',
+        }).returning();
+
+        return { success: true, data: newDebt };
+    } catch (err) {
+        return { success: false, error: err };
+    }
 }

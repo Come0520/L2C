@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type Transaction } from '@/shared/api/db';
+import { type DbTransaction } from '@/shared/api/db';
 
 // ==================== Types ====================
 
@@ -89,7 +89,7 @@ export interface ApprovalInstance {
     entityType: string;
     /** 业务实体 ID */
     entityId: string;
-    /** 实例状态: PENDING, APPROVED, REJECTED 等 */
+    /** 实例状态: PENDING, APPROVED, REJECTED, CANCELED */
     status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | null;
     /** 发起人 ID */
     requesterId: string;
@@ -162,7 +162,7 @@ export interface NotificationParams {
     /** 附加元数据 */
     metadata?: Record<string, unknown>;
     /** 可选的事务上下文 */
-    tx?: Transaction;
+    tx?: DbTransaction;
 }
 
 /**
@@ -184,26 +184,62 @@ export interface SystemSession {
  * 提交审批的输入校验 Schema
  */
 export const submitApprovalSchema = z.object({
-    /** 流程定义 ID */
-    flowId: z.string(),
+    /** 流程定义编码 */
+    flowCode: z.string().min(1, '流程编码不能为空'),
+    /** 业务实体类型 */
+    entityType: z.enum(['QUOTE', 'ORDER', 'PAYMENT_BILL', 'RECEIPT_BILL', 'MEASURE_TASK', 'ORDER_CHANGE', 'LEAD_RESTORE', 'ORDER_CANCEL']),
     /** 业务实体 ID */
-    entityId: z.string(),
-    /** 业务实体类型编码 */
-    entityType: z.string(),
-    /** 申请人 ID（默认为当前会话用户） */
-    applicantId: z.string().optional(),
-});
+    entityId: z.string().uuid('无效的实体 ID'),
+    /** 业务关联金额 */
+    amount: z.union([z.string(), z.number()]).optional(),
+    /** 申请备注 */
+    comment: z.string().optional(),
+    /** 租户 ID (可选，通常从 Session 获取) */
+    tenantId: z.string().uuid().optional(),
+    /** 发起人 ID (可选，通常从 Session 获取) */
+    requesterId: z.string().uuid().optional(),
+}).passthrough(); // 允许额外的条件字段
 
 /**
- * 处理审批任务的输入校验 Schema
+ * 处理审批任务的输入校验 Schema (processApproval)
  */
 export const processApprovalSchema = z.object({
-    /** 审批实例 ID */
-    instanceId: z.string(),
+    /** 审批任务 ID (approval_tasks.id) */
+    taskId: z.string().uuid('无效的任务 ID'),
     /** 执行操作：通过、驳回 */
     action: z.enum(['APPROVE', 'REJECT']),
     /** 审批意见评论 */
     comment: z.string().optional(),
+});
+
+/**
+ * 审批加签输入校验 Schema
+ */
+export const addApproverSchema = z.object({
+    /** 当前任务 ID */
+    taskId: z.string().uuid('无效的任务 ID'),
+    /** 目标加签用户 ID */
+    targetUserId: z.string().uuid('无效的目标用户 ID'),
+    /** 加签说明 */
+    comment: z.string().optional(),
+});
+
+/**
+ * 撤回审批实例的输入校验 Schema (withdrawApproval)
+ */
+export const withdrawApprovalSchema = z.object({
+    /** 审批实例 ID */
+    instanceId: z.string().uuid('无效的实例 ID'),
+    /** 撤回原因评论 */
+    reason: z.string().optional(),
+});
+
+/**
+ * 撤销审批动作的输入校验 Schema (revokeApprovalAction)
+ */
+export const revokeApprovalSchema = z.object({
+    /** 审批实例 ID */
+    approvalId: z.string().uuid('无效的审批 ID'),
 });
 
 // ==================== Zod Schemas for Flow ====================

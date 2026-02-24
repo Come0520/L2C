@@ -10,18 +10,32 @@ import { updateInstallItemStatusAction } from '../actions';
 import { toast } from 'sonner';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
+/**
+ * 安装明细项接口定义
+ */
 interface InstallItem {
     id: string;
+    /** 产品名称 */
     productName: string;
+    /** 所属房间/空间名称 */
     roomName: string | null;
-    quantity: string; // decimal string
+    /** 应装数量 (Decimal 字符串) */
+    quantity: string;
+    /** 实装数量 (Decimal 字符串) */
     actualInstalledQuantity: string | null;
+    /** 是否已安装 */
     isInstalled: boolean;
+    /** 异常类别：无、缺件、破损、尺寸不符 */
     issueCategory: 'NONE' | 'MISSING' | 'DAMAGED' | 'WRONG_SIZE' | null;
 }
 
+/**
+ * 安装明细表格组件属性
+ */
 interface InstallItemsTableProps {
+    /** 安装明细列表 */
     items: InstallItem[];
+    /** 是否允许编辑（通常在待上门或待验收状态允许） */
     allowEdit: boolean;
 }
 
@@ -32,6 +46,12 @@ const ISSUE_Category_MAP = {
     WRONG_SIZE: '尺寸不符',
 } as const;
 
+/**
+ * 安装明细表格组件
+ * 
+ * 展示安装任务下的所有产品名称、空间、数量。
+ * 在编辑模式下，安装师傅可以勾选完成状态并标记安装异常。
+ */
 export function InstallItemsTable({ items, allowEdit }: InstallItemsTableProps) {
     const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 

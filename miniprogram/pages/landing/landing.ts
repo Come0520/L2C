@@ -122,14 +122,14 @@ Page({
         const mockUser = {
             id: 'dev-user-001',
             name: '开发测试员',
-            role: 'admin',
+            role: 'admin' as const,
             tenantId: 'dev-tenant-001',
             tenantName: '测试企业',
             avatarUrl: ''
         };
         const mockToken = 'dev-mock-token-' + Date.now();
 
-        authStore.setLogin(mockToken, mockUser as any);
+        authStore.setLogin(mockToken, mockUser);
 
         wx.showToast({ title: '开发模式登录', icon: 'success' });
         setTimeout(() => {
@@ -137,3 +137,5 @@ Page({
         }, 500);
     }
 });
+
+export { };

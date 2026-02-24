@@ -39,6 +39,12 @@ const getProductSuppliersSchema = z.object({
 
 /**
  * 查询产品的关联供应商列表
+ *
+ * @description 通过 `leftJoin` 关联 `suppliers` 表获取供应商名称等信息。
+ *   已包含租户隔离条件。
+ *
+ * @param params - 包含 `productId` 的查询参数
+ * @returns 供应商关联记录数组（含供应商名称、采购价、货期、默认状态）
  */
 const getProductSuppliersActionInternal = createSafeAction(getProductSuppliersSchema, async ({ productId }, { session }) => {
     // Permission check: View products or supply chain
@@ -71,6 +77,15 @@ export async function getProductSuppliers(params: z.infer<typeof getProductSuppl
 
 /**
  * 添加供应商关联
+ *
+ * @description 将供应商与产品进行关联，若设置为默认供应商，
+ *   则先取消该产品其他供应商的默认状态。
+ *   操作后写入审计日志。
+ *
+ * @param data - 包含 `productId`、`supplierId`、`purchasePrice`、`leadTimeDays`、`isDefault`
+ * @returns `{ success: true }`
+ * @throws 当供应商已关联此产品时抛出 `该供应商已关联此产品` 错误
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const addProductSupplierActionInternal = createSafeAction(addProductSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -128,6 +143,15 @@ export async function addProductSupplier(params: z.infer<typeof addProductSuppli
 
 /**
  * 更新供应商关联信息 (价格, 货期, 默认状态)
+ *
+ * @description 支持部分更新，若将当前供应商设为默认，
+ *   会自动取消同产品下其他供应商的默认标志。
+ *   已包含租户隔离校验 (P0 级安全修复)。
+ *
+ * @param data - 包含 `id` 及可选的 `purchasePrice`、`leadTimeDays`、`isDefault`
+ * @returns `{ success: true }`
+ * @throws 当关联记录不存在或无权访问时抛出 `关联记录不存在或无权访问`
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const updateProductSupplierActionInternal = createSafeAction(updateProductSupplierSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -186,6 +210,13 @@ export async function updateProductSupplier(params: z.infer<typeof updateProduct
 
 /**
  * 移除供应商关联
+ *
+ * @description 硬删除产品与供应商的关联记录，
+ *   已包含租户隔离条件。
+ *
+ * @param params - 包含 `id`（关联记录 ID）和 `productId`
+ * @returns `{ success: true }`
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const removeProductSupplierActionInternal = createSafeAction(removeProductSupplierSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -225,7 +256,12 @@ const compareSupplierPricesSchema = z.object({
 
 /**
  * 比较产品的多个供应商价格
- * 返回价格排序、价差分析、推荐供应商
+ *
+ * @description 返回价格排序、价差分析、推荐供应商等综合比价信息。
+ *   推荐策略：最低价且货期合理（≤ 平均货期）。
+ *
+ * @param params - 包含 `productId`
+ * @returns `{ suppliers[], comparison }` 比价结果对象
  */
 const compareSupplierPricesActionInternal = createSafeAction(compareSupplierPricesSchema, async ({ productId }, { session }) => {
     const result = await db
@@ -307,7 +343,17 @@ const autoSwitchDefaultSupplierSchema = z.object({
 
 /**
  * 自动切换到最优供应商
- * 策略：LOWEST_PRICE (最低价), SHORTEST_LEAD_TIME (最短货期), BALANCED (综合考虑)
+ *
+ * @description 支持三种策略：
+ *   - `LOWEST_PRICE`: 纯价格最低优先
+ *   - `SHORTEST_LEAD_TIME`: 纯货期最短优先
+ *   - `BALANCED`: 价格 60% + 货期 40% 加权综合评分
+ *   切换后写入审计日志，记录策略与结果。
+ *
+ * @param params - 包含 `productId` 和 `strategy`
+ * @returns `{ success, newDefaultId, newDefaultName, strategy }`
+ * @throws 当该产品没有关联供应商时抛出 `该产品没有关联供应商`
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const autoSwitchDefaultSupplierActionInternal = createSafeAction(autoSwitchDefaultSupplierSchema, async ({ productId, strategy }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);

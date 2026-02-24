@@ -1,3 +1,11 @@
+/**
+ * 销售端 - 销售额与订单量趋势
+ *
+ * @route GET /api/mobile/dashboard/trends
+ * @auth JWT Token (销售角色)
+ * @query {string} [range='30d'] - 时间范围：7d | 30d | 90d
+ * @returns {ApiResponse<TrendItem[]>} 按日分组的销售趋势数据
+ */
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';

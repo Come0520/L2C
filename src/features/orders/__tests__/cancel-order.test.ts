@@ -45,7 +45,8 @@ vi.mock('@/shared/lib/audit-service', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Order Cancellation', () => {

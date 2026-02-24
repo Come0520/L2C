@@ -17,7 +17,6 @@ import { financeAccounts, accountTransactions, internalTransfers } from '@/share
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
 import { generateBusinessNo } from '@/shared/lib/generate-no';
@@ -57,7 +56,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
         // 权限检查
         if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
 
-        console.log('[finance] 创建内部调拨', { input });
+        logger.info('[finance] 开始创建内部调拨', { input });
         const validatedData = createTransferSchema.parse(input);
         const userId = session.user.id;
 
@@ -200,11 +199,9 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 })
                 .where(eq(internalTransfers.id, transfer.id));
 
-            revalidateTag(`finance-transfer-${tenantId}`);
-            revalidatePath('/finance');
-            revalidatePath('/finance/accounts');
+            revalidateTag(`finance-transfer-${tenantId}`, 'default');
 
-            console.log('[finance] createInternalTransfer 执行成功', { transferNo });
+            logger.info('[finance] createInternalTransfer 执行成功', { transferNo });
 
             return {
                 success: true,
@@ -219,7 +216,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
             };
         });
     } catch (error) {
-        console.log('[finance] 资金调拨失败', { error, input });
+        logger.error('[finance] 资金调拨失败', { error, input });
         logger.error('资金调拨失败:', error);
         return {
             success: false,
@@ -256,7 +253,7 @@ export async function getInternalTransfers(params?: { limit?: number; offset?: n
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取内部调拨记录', { tenantId, limit, offset });
+            logger.info('[finance] [CACHE_MISS] 获取内转列表', { tenantId, limit, offset });
             const transfers = await db.query.internalTransfers.findMany({
                 where: eq(internalTransfers.tenantId, tenantId),
                 with: {
@@ -313,7 +310,7 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
-        console.log('[finance] 取消内部调拨', { transferId, reason });
+        logger.info('[finance] 取消内部调拨', { transferId, reason });
 
         return await db.transaction(async (tx) => {
 
@@ -459,12 +456,10 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
                 })
                 .where(eq(internalTransfers.id, transferId));
 
-            revalidateTag(`finance-transfer-${tenantId}`);
-            revalidateTag(`finance-transfer-detail-${transfer.id}`);
-            revalidatePath('/finance');
-            revalidatePath('/finance/transfers');
+            revalidateTag(`finance-transfer-${tenantId}`, 'default');
+            revalidateTag(`finance-transfer-detail-${transfer.id}`, 'default');
 
-            console.log('[finance] cancelInternalTransfer 执行成功', { transferNo: transfer.transferNo });
+            logger.info('[finance] cancelInternalTransfer 执行成功', { transferNo: transfer.transferNo });
 
             return {
                 success: true,
@@ -476,7 +471,7 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             };
         });
     } catch (error) {
-        console.log('[finance] 取消调拨失败', { error, transferId });
+        logger.info('[finance] 取消调拨失败', { error, transferId });
         logger.error('冲销调拨失败:', error);
         return {
             success: false,
@@ -507,7 +502,7 @@ export async function getInternalTransfer(id: string) {
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取单条资金调拨详情', { id, tenantId });
+            logger.info('[finance] [CACHE_MISS] ', { id, tenantId });
             const transfer = await db.query.internalTransfers.findFirst({
                 where: and(
                     eq(internalTransfers.id, id),

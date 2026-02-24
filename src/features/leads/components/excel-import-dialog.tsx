@@ -10,7 +10,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/shared/ui/dialog';
-import { Upload, FileDown, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import FileDown from 'lucide-react/dist/esm/icons/file-down';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 // import * as XLSX from 'xlsx'; // Dynamically imported - Removed
 import { toast } from 'sonner';
 import { importLeads } from '../actions';

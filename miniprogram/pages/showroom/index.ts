@@ -4,7 +4,7 @@ Page({
     data: {
         activeTab: 'featured',
         searchQuery: '',
-        resources: [] as any[],
+        resources: [] as Record<string, any>[],
         loading: false,
 
         // Selection Mode
@@ -55,7 +55,7 @@ Page({
         const filters = this.data.activeFilters;
 
         setTimeout(() => {
-            const rawData = (this.data.mockData as any)[tab] || [];
+            const rawData = (this.data.mockData as Record<string, any>)[tab] || [];
 
             // Apply Filtering
             const filteredData = rawData.filter((item: any) => {
@@ -92,7 +92,7 @@ Page({
 
     selectFilterOption(e: any) {
         const { key, value } = e.currentTarget.dataset;
-        const currentVal = (this.data.activeFilters as any)[key];
+        const currentVal = (this.data.activeFilters as Record<string, any>)[key];
         const newVal = currentVal === value ? '' : value; // Toggle
 
         this.setData({
@@ -157,7 +157,7 @@ Page({
     },
 
     updateResourceSelection(selectedIds: string[]) {
-        const resources = this.data.resources.map(item => ({
+        const resources = this.data.resources.map((item: any) => ({
             ...item,
             selected: selectedIds.includes(String(item.id))
         }));

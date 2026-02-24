@@ -3,7 +3,7 @@
 import React from "react";
 import { SalesFunnelChart } from "@/features/analytics/components/sales-funnel-chart";
 import { Card, CardContent } from "@/shared/ui/card";
-import { Loader2 } from "lucide-react";
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { cn } from "@/shared/utils";
 import { createLogger } from "@/shared/lib/logger";
 import useSWR from 'swr';

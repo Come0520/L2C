@@ -21,6 +21,8 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { AuditService } from '@/shared/services/audit-service';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
+import { AdminRateLimiter } from '../rate-limiter';
 import type { Session } from 'next-auth';
 
 // ========== 常量 ==========
@@ -81,12 +83,21 @@ const SAFE_WORKER_COLUMNS = {
 /**
  * 获取师傅列表（分页+搜索）
  * 安全特性：分页上限防护、tenantId 隔离、敏感字段排除
+ * 
+ * @param params 分页和搜索参数
+ * @param session 当前用户会话
+ * @returns 返回师傅列表及总数
+ * @throws 参数校验失败或权限不足时抛出异常
  */
 export async function getWorkers(
     params: { page: number; pageSize: number; search?: string },
     session: Session
 ) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE))) {
+        throw new Error('权限不足：无法访问师傅列表');
+    }
+
+    logger.info(`[Admin] 用户 ${session.user.id} 正在查询师傅列表, 页码: ${params.page}, 关键词: ${params.search || '无'}`);
 
     // Zod 校验分页参数
     const parsed = getWorkersParamsSchema.safeParse(params);
@@ -108,18 +119,18 @@ export async function getWorkers(
 
     const whereClause = and(...conditions);
 
-    const data = await db.query.users.findMany({
-        where: whereClause,
-        orderBy: [desc(users.createdAt)],
-        limit: pageSize,
-        offset: offset,
-        columns: SAFE_WORKER_COLUMNS,
-    });
-
-    const [countResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(whereClause);
+    const [data, [countResult]] = await Promise.all([
+        db.query.users.findMany({
+            where: whereClause,
+            orderBy: [desc(users.createdAt)],
+            limit: pageSize,
+            offset: offset,
+            columns: SAFE_WORKER_COLUMNS,
+        }),
+        db.select({ count: sql<number>`count(*)` })
+            .from(users)
+            .where(whereClause)
+    ]);
 
     return {
         data,
@@ -130,9 +141,18 @@ export async function getWorkers(
 /**
  * 获取师傅详情
  * 安全特性：tenantId 双重过滤、敏感字段排除（不返回 passwordHash）
+ * 
+ * @param id 师傅用户 ID (UUID)
+ * @param session 当前用户会话
+ * @returns 返回师傅详情 DTO
+ * @throws 未找到师傅或权限不足时抛出异常
  */
 export async function getWorkerById(id: string, session: Session) {
-    await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE))) {
+        throw new Error('权限不足：无法访问师傅详情');
+    }
+
+    logger.info(`[Admin] 用户 ${session.user.id} 正在查询师傅详情 ID: ${id}`);
 
     const worker = await db.query.users.findFirst({
         where: and(
@@ -152,8 +172,22 @@ export async function getWorkerById(id: string, session: Session) {
 
 // ========== 写入 Action ==========
 
+/**
+ * 更新师傅信息（脚本管理核心操作）
+ * 
+ * 安全特性：
+ * 1. 自禁保护：禁止禁用当前在线管理员账号
+ * 2. 租户隔离：确保只能操作本租户下的师傅
+ * 3. 审计留痕：记录姓名、手机号、活跃状态等变更
+ * 
+ * @param data 更新参数，符合 updateWorkerSchema
+ * @param context 包含 session 的上下文对象
+ */
 const updateWorkerActionInternal = createSafeAction(updateWorkerSchema, async (data, { session }) => {
-    await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE);
+    if (!(await checkPermission(session, PERMISSIONS.SETTINGS.USER_MANAGE))) {
+        throw new Error('权限不足：无法更新师傅信息');
+    }
+    await AdminRateLimiter.check(session.user.id, 'worker_mutation');
 
     const { id, ...updates } = data;
 
@@ -194,6 +228,8 @@ const updateWorkerActionInternal = createSafeAction(updateWorkerSchema, async (d
         oldValues: oldWorker as Record<string, unknown>,
         newValues: updates as Record<string, unknown>,
     });
+
+    logger.info(`[Admin] 用户 ${session.user.id} 更新了师傅 ${id} 的信息: ${Object.keys(updates).join(', ')}`);
 
     revalidatePath('/admin/settings/workers');
     return { success: true, data: updated };

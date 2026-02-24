@@ -13,7 +13,10 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { toast } from 'sonner';
-import { Search, AlertTriangle, ArrowRight, UserCheck } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import { mergeCustomersAction, previewMergeAction } from '../actions/mutations';
 import { getCustomers } from '../actions/queries';
 import { Input } from '@/shared/ui/input';

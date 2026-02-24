@@ -1,16 +1,15 @@
 'use server';
 
-import { logger } from "@/shared/lib/logger";
-
 import { db } from '@/shared/api/db';
 import { leads, leadActivities, leadStatusHistory, marketChannels, users } from '@/shared/api/schema';
-import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count } from 'drizzle-orm';
+import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count, SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { leadFilterSchema, getLeadTimelineLogsSchema, analyticsDateRangeSchema } from '../schemas';
 import { unstable_cache } from 'next/cache';
 
 import { auth } from '@/shared/lib/auth';
 import { escapeSqlLike } from '@/shared/lib/utils';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 以分页形式获取线索列表
@@ -29,9 +28,14 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
     const tenantId = session.user.tenantId;
     const filters = leadFilterSchema.parse(input);
 
+    // 使用稳定排序的缓存键，避免属性顺序不同导致缓存未命中
+    const cacheKey = JSON.stringify(filters, Object.keys(filters).sort());
+
     return unstable_cache(
         async (f: z.infer<typeof leadFilterSchema>) => {
-            const whereConditions = [];
+            const start = Date.now();
+            logger.info('[leads] getLeads 执行开始', { tenantId, filters: f });
+            const whereConditions: (SQL | undefined)[] = [];
             whereConditions.push(eq(leads.tenantId, tenantId));
 
             if (f.status && f.status.length > 0) {
@@ -80,14 +84,12 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
 
             const whereClause = and(...whereConditions);
 
-            const [totalResult] = await db
+            const countPromise = db
                 .select({ value: sql<number>`count(*)`.mapWith(Number) })
                 .from(leads)
                 .where(whereClause);
 
-            const totalCount = totalResult?.value || 0;
-
-            const rows = await db.query.leads.findMany({
+            const rowsPromise = db.query.leads.findMany({
                 where: whereClause,
                 with: {
                     assignedSales: true,
@@ -100,6 +102,12 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
                 offset: (f.page - 1) * f.pageSize,
             });
 
+            const [[totalResult], rows] = await Promise.all([countPromise, rowsPromise]);
+
+            const totalCount = totalResult?.value || 0;
+            const durationMs = Date.now() - start;
+            logger.info('[leads] getLeads 执行完成', { durationMs, resultCount: rows.length, tenantId });
+
             return {
                 data: rows,
                 total: totalCount,
@@ -108,9 +116,9 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
                 totalPages: Math.ceil(totalCount / f.pageSize),
             };
         },
-        [`leads-${tenantId}-${JSON.stringify(filters)}`],
+        [`leads-list-${tenantId}-${cacheKey}`],
         {
-            tags: [`leads-${tenantId}`, 'leads'],
+            tags: [`leads-list-${tenantId}`, `leads-${tenantId}`, 'leads'],
             revalidate: 30, // 30 seconds for lead list
         }
     )(filters);
@@ -157,9 +165,13 @@ export async function getLeadById({ id }: { id: string }) {
     }
     const tenantId = session.user.tenantId;
 
+    const start = Date.now();
     const lead = await unstable_cache(
         async (lId: string, tId: string) => {
-            return await getLeadDetailInternal(lId, tId);
+            logger.info('[leads] getLeadById 执行开始', { id: lId, tenantId: tId });
+            const result = await getLeadDetailInternal(lId, tId);
+            logger.info('[leads] getLeadById 执行完成', { durationMs: Date.now() - start, id: lId, tenantId: tId });
+            return result;
         },
         [`lead-${tenantId}-${id}`],
         {
@@ -190,20 +202,22 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
     const tenantId = session.user.tenantId;
     const { leadId } = input;
 
+    // 先验证线索归属（在缓存外执行，避免缓存 miss 时双查询）
+    const lead = await db.query.leads.findFirst({
+        where: and(
+            eq(leads.id, leadId),
+            eq(leads.tenantId, tenantId)
+        ),
+        columns: { id: true }
+    });
+    if (!lead) {
+        throw new Error('Lead not found or access denied');
+    }
+
     return unstable_cache(
         async (lId: string) => {
-            // 验证线索属于当前租户
-            const lead = await db.query.leads.findFirst({
-                where: and(
-                    eq(leads.id, lId),
-                    eq(leads.tenantId, tenantId)
-                ),
-                columns: { id: true }
-            });
-
-            if (!lead) {
-                throw new Error('Lead not found or access denied');
-            }
+            const start = Date.now();
+            logger.info('[leads] getLeadTimeline 执行开始', { leadId: lId, tenantId });
 
             const activities = await db.query.leadActivities.findMany({
                 where: eq(leadActivities.leadId, lId),
@@ -213,6 +227,7 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
                 orderBy: [desc(leadActivities.createdAt)],
             });
 
+            logger.info('[leads] getLeadTimeline 执行完成', { durationMs: Date.now() - start, leadId: lId, count: activities.length });
             return activities;
         },
         [`lead-timeline-${tenantId}-${leadId}`],
@@ -239,8 +254,10 @@ export async function getChannels(parentId?: string) {
     }
     const tenantId = session.user.tenantId;
 
+    const start = Date.now();
     return unstable_cache(
         async (pId?: string) => {
+            logger.info('[leads] getChannels 执行开始', { parentId: pId, tenantId });
             const where = pId
                 ? eq(marketChannels.parentId, pId)
                 : sql`${marketChannels.parentId} IS NULL`;
@@ -253,6 +270,7 @@ export async function getChannels(parentId?: string) {
                 ),
                 orderBy: [desc(marketChannels.sortOrder)],
             });
+            logger.info('[leads] getChannels 执行完成', { durationMs: Date.now() - start, count: rows.length, tenantId });
             return rows;
         },
         [`channels-${tenantId}-${parentId || 'root'}`],
@@ -278,8 +296,10 @@ export async function getSalesUsers() {
     }
     const tenantId = session.user.tenantId;
 
+    const start = Date.now();
     return unstable_cache(
         async () => {
+            logger.info('[leads] getSalesUsers 执行开始', { tenantId });
             const salesUsers = await db.query.users.findMany({
                 where: and(
                     eq(users.tenantId, tenantId),
@@ -292,10 +312,12 @@ export async function getSalesUsers() {
                 },
             });
 
-            return salesUsers.map(user => ({
+            const result = salesUsers.map(user => ({
                 ...user,
                 name: user.name || 'Unknown User'
             }));
+            logger.info('[leads] getSalesUsers 执行完成', { durationMs: Date.now() - start, count: result.length, tenantId });
+            return result;
         },
         [`sales-users-${tenantId}`],
         {
@@ -322,8 +344,10 @@ export async function getLeadFunnelStats(input?: z.infer<typeof analyticsDateRan
     const tenantId = session.user.tenantId;
     const range = input ? analyticsDateRangeSchema.parse(input) : {};
 
+    const start = Date.now();
     return unstable_cache(
         async (r) => {
+            logger.info('[leads] getLeadFunnelStats 执行开始', { tenantId, range: r });
             const whereConditions = [eq(leadStatusHistory.tenantId, tenantId)];
             if (r.from) whereConditions.push(gte(leadStatusHistory.changedAt, r.from));
             if (r.to) whereConditions.push(lte(leadStatusHistory.changedAt, r.to));
@@ -339,6 +363,7 @@ export async function getLeadFunnelStats(input?: z.infer<typeof analyticsDateRan
                 .where(and(...whereConditions))
                 .groupBy(leadStatusHistory.newStatus);
 
+            logger.info('[leads] getLeadFunnelStats 执行完成', { durationMs: Date.now() - start, resultCount: stats.length, tenantId });
             return stats;
         },
         [`leads-funnel-${tenantId}-${JSON.stringify(range)}`],

@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import { RefreshCw, Plus, Loader2, ChevronDown } from 'lucide-react';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import { toast } from 'sonner';
 import { syncSystemRoles, createRole } from '@/features/settings/actions/roles-management';
 import {

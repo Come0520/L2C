@@ -13,3 +13,5 @@ export declare function useChildren(name: string, onEffect?: (this: TrivialInsta
     mixin: string;
 };
 export {};
+
+export {};

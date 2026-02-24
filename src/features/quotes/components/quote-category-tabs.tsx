@@ -3,7 +3,7 @@
 import { cn } from '@/shared/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Button } from '@/shared/ui/button';
-import { ArrowLeftRight } from 'lucide-react';
+import ArrowLeftRight from 'lucide-react/dist/esm/icons/arrow-left-right';
 
 /**
  * 报价单支持的品类类型（SUMMARY 为汇总页）

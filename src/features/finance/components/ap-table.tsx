@@ -11,6 +11,11 @@ import {
     TableRow,
 } from '@/shared/ui/table';
 
+/**
+ * 基础应付账款表格 (AP Table)
+ * 
+ * @note 目前处于恢复模式，核心逻辑由 APStatementTable 提供。
+ */
 export function APTable() {
     return (
         <div className="rounded-md border">

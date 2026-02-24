@@ -5,6 +5,11 @@ import { Button } from '@/shared/ui/button';
 import Search from 'lucide-react/dist/esm/icons/search';
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
 
+/**
+ * 安装列表筛选条组件
+ * 
+ * 提供关键词搜索和高级筛选触发入口，通常位于表格上方。
+ */
 export function InstallationFilterBar() {
     return (
         <div className="flex flex-col md:flex-row gap-4 mb-6">

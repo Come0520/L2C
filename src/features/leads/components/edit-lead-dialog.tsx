@@ -34,7 +34,6 @@ export function EditLeadDialog({ lead, trigger, channels, tenantId }: EditLeadDi
                 </DialogHeader>
                 <LeadForm
                     initialData={lead}
-                    channels={channels}
                     onSuccess={() => setOpen(false)}
                     tenantId={tenantId}
                 />

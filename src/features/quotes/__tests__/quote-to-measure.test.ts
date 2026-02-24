@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 报价优先模式测试
  * 验证从报价单创建测量任务的流程 (createMeasureFromQuote)
  */
@@ -40,6 +40,7 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/auth', () => ({

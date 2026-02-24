@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getProducts } from '@/features/products/actions/queries';
 import { createQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
-import { Check, ChevronsUpDown, AlertTriangle, XCircle } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import { cn } from '@/shared/lib/utils';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/shared/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom'; // Import jest-dom matchers
 import { PurchaseOrderPreviewDialog } from '../../components/purchase-order-preview-dialog';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockPO = {
     id: 'po-1',
     poNo: 'PO20231027001',

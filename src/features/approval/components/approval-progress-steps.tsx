@@ -3,15 +3,34 @@
 import { Check, Clock, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
+/**
+ * 审批进度步骤组件属性
+ */
 interface ApprovalProgressStepsProps {
+    /** 审批流程中的定义节点列表 */
     nodes: Array<{ id: string; name: string; sortOrder: number | null }>;
+    /** 已创建的审批任务列表，用于展示每个节点的完成情况 */
     tasks: Array<{ id: string; nodeId: string | null; status: string | null; approver?: { name: string | null } | null; actionAt?: Date | null; comment?: string | null }>;
+    /** 当前审批流停留的节点 ID */
     currentNodeId: string | null;
 }
 
+/**
+ * 审批进度步骤组件
+ * 展示整个审批流程的节点状态、审批人信息及审批意见
+ */
 export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalProgressStepsProps) {
     // Sort nodes by order
     const sortedNodes = [...nodes].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    if (sortedNodes.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/30 rounded-lg border-2 border-dashed">
+                <Clock className="w-8 h-8 mb-2 opacity-50" />
+                <p className="text-sm">暂无审批流程信息</p>
+            </div>
+        );
+    }
 
     return (
         <div className="relative flex flex-col space-y-8 py-4">

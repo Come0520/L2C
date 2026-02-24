@@ -88,9 +88,9 @@ export async function getPendingPurchaseItems(
     const tenantId = getTenantId(session);
     await checkPermission(session, PERMISSIONS.ORDER.VIEW);
 
-    console.warn('[supply-chain] getPendingPurchaseItems 开始执行:', { itemType, productType, supplierId, orderId, page });
     const validated = getPendingItemsSchema.parse(input);
     const { page, pageSize, itemType, productType, supplierId, orderId } = validated;
+    console.warn('[supply-chain] getPendingPurchaseItems 开始执行:', { itemType, productType, supplierId, orderId, page });
     const offset = (page - 1) * pageSize;
 
     // 1. 查询 DRAFT PO 列表（含明细数量）

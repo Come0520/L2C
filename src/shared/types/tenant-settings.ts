@@ -15,7 +15,24 @@ export interface QuoteConfig {
     minProfitMargin?: number;
 }
 
+/**
+ * 多因素认证 (MFA) 配置
+ * 控制租户级别的 MFA 策略，包括启用状态、适用角色和认证方式
+ */
+export interface MfaConfig {
+    /** 是否启用 MFA */
+    enabled: boolean;
+    /** 需要 MFA 的角色列表（如 BOSS, SALES, WORKER） */
+    roles?: string[];
+    /** MFA 适用角色（管理后台侧的命名） */
+    applicableRoles?: string[];
+    /** 认证方式：短信验证码 或 TOTP 动态码 */
+    method?: 'sms' | 'totp';
+}
+
 export interface TenantSettings {
     quoteConfig?: QuoteConfig;
+    /** 多因素认证配置 */
+    mfa?: MfaConfig;
     [key: string]: unknown;
 }

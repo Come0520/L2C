@@ -1,8 +1,8 @@
 import { ChannelAdapter, NotificationPayload } from '../types';
+import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { users } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { logger } from '@/shared/lib/logger';
 
 /**
  * 微信通知适配器
@@ -61,7 +61,10 @@ export class WeChatAdapter implements ChannelAdapter {
 
     /**
      * 发送通知（统一入口）
-     * 根据 metadata.channel 决定使用小程序还是服务号
+     * 
+     * 根据 metadata.channel 决定使用小程序还是服务号。
+     * @param payload 统一格式的通知有效载荷
+     * @returns boolean 返回 true 表示调用微信 API 发送成功并得到 errcode === 0，其余情况或抛出异常均返回 false
      */
     async send(payload: NotificationPayload): Promise<boolean> {
         const { userId, metadata } = payload;
@@ -85,7 +88,12 @@ export class WeChatAdapter implements ChannelAdapter {
      * 发送微信服务号模板消息
      * [Notify-03] 核心实现
      * 
+     * 将 L2C 标准的 NotificationPayload 转换为符合微信 API 要求的模板消息格式并发送。
+     * 当 AccessToken 过期时会自动尝试刷新。
      * API 文档：https://developers.weixin.qq.com/doc/offiaccount/Message_Management/Template_Message_Interface.html
+     * @param openId 用户的微信 OpenID
+     * @param payload 统一格式的通知有效载荷
+     * @returns boolean
      */
     async sendOfficialAccountMessage(openId: string, payload: NotificationPayload): Promise<boolean> {
         const { title, content, metadata } = payload;
@@ -144,7 +152,12 @@ export class WeChatAdapter implements ChannelAdapter {
             if (result.errcode === 0) {
                 return true;
             } else {
-                logger.error(`[WeChat Official] Send failed: ${result.errcode} - ${result.errmsg}`);
+                // [D7 可运维性] - 记录微信官方 API 错误
+                logger.error(`[WeChat Official] Send failed: ${result.errcode} - ${result.errmsg}`, {
+                    tenantId: payload.tenantId,
+                    userId: payload.userId,
+                    openId
+                });
                 // 如果是 Token 过期，清除缓存
                 if (result.errcode === 40001 || result.errcode === 42001) {
                     officialAccountTokenCache = null;
@@ -152,14 +165,25 @@ export class WeChatAdapter implements ChannelAdapter {
                 return false;
             }
         } catch (error) {
-            logger.error('[WeChat Official] Send error:', { error });
+            // [D7 可运维性] - 捕获网络层或运行时错误
+            logger.error('[WeChat Official] Send error:', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                tenantId: payload.tenantId,
+                userId: payload.userId,
+                openId
+            });
             return false;
         }
     }
 
     /**
      * 发送微信小程序订阅消息
+     * 
+     * 将 L2C 标准的 NotificationPayload 指定到小程序模板中下发。
      * API 文档：https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/mp-message-management/subscribe-message/sendMessage.html
+     * @param openId 用户的微信 OpenID
+     * @param payload 统一格式的通知有效载荷
+     * @returns boolean
      */
     async sendMiniProgramMessage(openId: string, payload: NotificationPayload): Promise<boolean> {
         const { title, content, metadata } = payload;
@@ -207,14 +231,25 @@ export class WeChatAdapter implements ChannelAdapter {
             if (result.errcode === 0) {
                 return true;
             } else {
-                logger.error(`[WeChat Mini] Send failed: ${result.errcode} - ${result.errmsg}`);
+                // [D7 可运维性] - 记录小程序订阅 API 层面失败
+                logger.error(`[WeChat Mini] Send failed: ${result.errcode} - ${result.errmsg}`, {
+                    tenantId: payload.tenantId,
+                    userId: payload.userId,
+                    openId
+                });
                 if (result.errcode === 40001 || result.errcode === 42001) {
                     miniProgramTokenCache = null;
                 }
                 return false;
             }
         } catch (error) {
-            logger.error('[WeChat Mini] Send error:', { error });
+            // [D7 可运维性] - 捕获网络或运行时错误
+            logger.error('[WeChat Mini] Send error:', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                tenantId: payload.tenantId,
+                userId: payload.userId,
+                openId
+            });
             return false;
         }
     }

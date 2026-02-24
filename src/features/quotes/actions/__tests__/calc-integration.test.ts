@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockSession } from '@/shared/tests/mock-factory';
 import { recalculateQuote } from '../calc-actions';
 
@@ -26,7 +26,8 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn()
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn()
 }));
 
 vi.mock('@/shared/lib/auth', () => ({

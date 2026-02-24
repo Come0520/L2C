@@ -16,7 +16,8 @@ import { Label } from '@/shared/ui/label';
 import { toast } from 'sonner';
 import { customerRejectAction } from '../actions/orders';
 import { useRouter } from 'next/navigation';
-import { Loader2, XCircle } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 
 interface RejectOrderDialogProps {
     orderId: string;

@@ -2,11 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { DollarSign, Target, Award, ClipboardCheck, TrendingUp, Loader2 } from 'lucide-react';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Target from 'lucide-react/dist/esm/icons/target';
+import Award from 'lucide-react/dist/esm/icons/award';
+import ClipboardCheck from 'lucide-react/dist/esm/icons/clipboard-check';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { cn } from '@/shared/lib/utils';
 
 /**
- * 团队销售额 Widget
+ * 团队销售额统计 Widget
+ * 该组件展示整个团队在本月累计完成的销售额。
+ *
+ * @component
+ * @returns {JSX.Element} 团队销售总额卡片组件
  */
 export function TeamSalesWidget() {
   const [amount, setAmount] = useState<number | null>(null);
@@ -46,6 +55,11 @@ export function TeamSalesWidget() {
 
 /**
  * 团队目标完成率 Widget
+ * 该组件展示团队当前的整体目标进度、已完成金额和百分比。
+ * 根据完成率不同（>=80%, >=50%, <50%）会显示不同的进度条颜色。
+ *
+ * @component
+ * @returns {JSX.Element} 团队目标完成率卡片组件
  */
 export function TeamTargetWidget() {
   const [data, setData] = useState<{
@@ -105,13 +119,18 @@ export function TeamTargetWidget() {
 
 /**
  * 销售排行榜 Widget
+ * 该组件列出团队中表现最优异的销售人员（目前展示前5名），
+ * 并以排行榜形式显示他们的销售额和进度条对比。
+ *
+ * @component
+ * @returns {JSX.Element} 销售业绩排行榜卡片组件
  */
 export function TeamLeaderboardWidget() {
   const [leaders, setLeaders] = useState<
     | {
-        name: string;
-        amount: number;
-      }[]
+      name: string;
+      amount: number;
+    }[]
     | null
   >(null);
   const [loading, setLoading] = useState(true);
@@ -185,7 +204,12 @@ export function TeamLeaderboardWidget() {
 }
 
 /**
- * 待审批 Widget (通用)
+ * 通用待审批事项 Widget
+ * 该组件用于展示当前登录用户（管理层/财务）需要处理的待审批事项数量。
+ * 提供直观的数字提示和点击跳转指引。
+ *
+ * @component
+ * @returns {JSX.Element} 待审批事项统计卡片组件
  */
 export function PendingApprovalWidget() {
   const [count, setCount] = useState<number | null>(null);
@@ -224,7 +248,12 @@ export function PendingApprovalWidget() {
 }
 
 /**
- * 销售趋势 Widget
+ * 销售趋势折线图 Widget
+ * 该组件用于展示历史销售数据的趋势变化。
+ * （目前作为占位符，图表功能正在开发中）
+ *
+ * @component
+ * @returns {JSX.Element} 销售趋势图表卡片组件
  */
 export function SalesTrendWidget() {
   const [loading, setLoading] = useState(true);

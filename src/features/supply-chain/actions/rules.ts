@@ -1,5 +1,6 @@
 'use server';
 
+import { splitRuleSchema, type SplitRuleInput } from './rules.schema';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { splitRouteRules, suppliers } from '@/shared/api/schema';
@@ -9,8 +10,7 @@ import { AuditService } from '@/shared/lib/audit-service';
 import { requireAuth, requireManagePermission, requireViewPermission } from '../helpers';
 import { SUPPLY_CHAIN_PATHS } from '../constants';
 
-import { splitRuleSchema, type SplitRuleInput } from './rules.schema';
-export type { SplitRuleInput };
+
 
 // 移除本地 requireUser，使用 helpers.ts 中的 requireAuth
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 产品套件 (Product Bundles) 单元测试
  *
  * 覆盖场景：
@@ -25,6 +25,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
@@ -97,7 +98,7 @@ describe('产品套件 (Product Bundles)', () => {
     describe('createProductBundle - 创建套件', () => {
         it('成功创建包含子项的套件', async () => {
             // 模拟 SKU 不重复
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).productBundles.findFirst.mockResolvedValue(null);
 
             const input = {
@@ -121,7 +122,7 @@ describe('产品套件 (Product Bundles)', () => {
 
         it('SKU 已存在时应返回错误', async () => {
             // 模拟 SKU 重复
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).productBundles.findFirst.mockResolvedValue({
                 id: 'existing-bundle',
                 bundleSku: 'BDL-001',

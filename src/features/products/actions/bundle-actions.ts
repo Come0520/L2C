@@ -54,6 +54,9 @@ const bundleItemSchema = z.object({
  *
  * @description 使用 unstable_cache 按 tenantId 缓存，tag: packages / packages-{tenantId}
  * 套餐列表数据稳定，适合缓存。修改时通过 revalidateTag 失效。
+ *
+ * @param tenantId - 当前租户 ID
+ * @returns 当前租户的套餐组合对象组集
  */
 const getCachedBundles = (tenantId: string) =>
     unstable_cache(
@@ -71,7 +74,9 @@ const getCachedBundles = (tenantId: string) =>
 /**
  * 获取组合商品列表
  *
- * @description 已使用 unstable_cache 缓存，tag: packages / packages-{tenantId}
+ * @description 拉取目前归属于租户内可见所有绑定套餐列表组合汇总状态（已使用 unstable_cache 缓存）。
+ *
+ * @returns 全部目前活跃待配的组合款项的清单对象
  */
 export async function getBundles() {
     try {
@@ -88,6 +93,12 @@ export async function getBundles() {
 
 /**
  * 获取组合商品详情
+ *
+ * @description 单独检视某一打包组合详情包括内嵌组件产品规格配置与单件具体包含数目等聚合状态。
+ *
+ * @param id - 需要单独取出的目标套餐唯一标识 UUID 码
+ * @returns 结合了具体商品信息（包括各组分原始产品表关联）构成的复杂组合详情模型
+ * @throws 取不到或者此特定方案并未建立
  */
 export async function getBundleById(id: string) {
     try {
@@ -134,6 +145,12 @@ export async function getBundleById(id: string) {
 
 /**
  * 创建组合商品
+ *
+ * @description 将各单个的单品聚合成固定的一组SKU绑定来打包发行出货。保证其内建 SKU 编码具备在租户范围内具有唯一的区分度并加以新增日志追踪标定。
+ *
+ * @param input - 完全对应的由多个字段聚合的 `createBundleSchema` 创建载体
+ * @returns 建新生成的唯一凭条 `id`
+ * @throws SKU 重复预警错误
  */
 export async function createBundle(input: z.infer<typeof createBundleSchema>) {
     try {
@@ -176,6 +193,12 @@ export async function createBundle(input: z.infer<typeof createBundleSchema>) {
 
 /**
  * 更新组合商品
+ *
+ * @description 更新现有此套装组合当中的基础图文和状态详情描述。保存历史记录备查。
+ *
+ * @param id - 修改指定的那一个 ID 锁定条条目
+ * @param input - 符合于 `updateBundleSchema` 修改模型输入约束项体
+ * @returns `success` 是与否真假命题结果返回
  */
 export async function updateBundle(id: string, input: z.infer<typeof updateBundleSchema>) {
     try {
@@ -223,6 +246,11 @@ export async function updateBundle(id: string, input: z.infer<typeof updateBundl
 
 /**
  * 删除组合商品
+ *
+ * @description 一笔注销某打包特组并彻底删掉挂在下面随之对应的主从表连接组合项映射键值表，保持外键结构统一清空留审计回查纪录。
+ *
+ * @param id - 即将面临被抛弃清理的组合套件识别名
+ * @returns 清理行为完结是否顺畅
  */
 export async function deleteBundle(id: string) {
     try {
@@ -271,6 +299,12 @@ export async function deleteBundle(id: string) {
 
 /**
  * 更新组合商品明细（批量替换）
+ *
+ * @description 完全抹掉此对应原有的明细挂载方案重写一版目前新的结构成分构成与分发配置挂载表。
+ *
+ * @param bundleId - 母件套装身份编号
+ * @param items - 单品组件聚合罗列的装配构成物表征对象集和数组项
+ * @returns 是否操作批量完成生效指示器
  */
 export async function updateBundleItems(bundleId: string, items: z.infer<typeof bundleItemSchema>[]) {
     try {
@@ -318,6 +352,11 @@ export async function updateBundleItems(bundleId: string, items: z.infer<typeof 
 
 /**
  * 计算组合商品成本和建议售价
+ *
+ * @description 遍览提取本套装底下辖属商品关联最新报价（最高采购底线等）来折叠相加总合生成一套具有参考指导含义的进价汇总同标准售卖价格（原价）。
+ *
+ * @param bundleId - 主套餐核准码
+ * @returns 生成 `totalCost` 成本核算总量与 `suggestedPrice` 推荐面市基础建议两项关键财务数值的结果类
  */
 export async function calculateBundleCost(bundleId: string) {
     try {

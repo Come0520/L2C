@@ -78,6 +78,9 @@ export const RATE_LIMIT_PRESETS: Record<string, RateLimitConfig> = {
 
     // 上传接口
     upload: { max: 10, windowMs: 60 * 1000, keyType: 'user', prefix: 'ratelimit:upload' },     // 10次/分钟
+
+    // 租户注册申请：严格防刷
+    registration: { max: 5, windowMs: 10 * 60 * 1000, keyType: 'ip', prefix: 'ratelimit:registration' },  // 5次/10分钟
 };
 
 // ============================================================

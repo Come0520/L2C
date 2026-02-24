@@ -16,6 +16,8 @@ import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Loader2, Building2, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { submitTenantApplication } from '@/features/platform/actions/tenant-registration';
+import { logger } from '@/shared/lib/logger';
+
 
 // 中国省份列表
 const REGIONS = [
@@ -80,6 +82,16 @@ export default function TenantRegisterPage() {
   };
 
   // 计算密码强度
+  /**
+   * 业务级密码强度算法
+   * 
+   * @description
+   * 评分规则：
+   * 0 分：空或不符合基本格式
+   * 1 分：长度 >= 8
+   * 2 分：包含字母 + 数字组合（入门级要求）
+   * 3 分：包含特殊字符或长度 >= 12（企业级安全要求）
+   */
   const calculateStrength = (pwd: string) => {
     if (!pwd) return 0;
     let score = 0;
@@ -97,6 +109,14 @@ export default function TenantRegisterPage() {
   const strengthColorText =
     strengthScore === 0 ? 'text-transparent' : strengthScore === 1 ? 'text-red-500' : strengthScore === 2 ? 'text-yellow-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500';
 
+  /**
+   * 提交注册申请逻辑
+   * 
+   * @description
+   * 1. 客户端校验：二次密码验证、基本长度及复杂度 (Zod 可选)。
+   * 2. 调用 Server Action: `submitTenantApplication` 写入 DB。
+   * 3. 状态变更：成功后切至提示页面，失败则渲染 Alert 提示。
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -124,6 +144,11 @@ export default function TenantRegisterPage() {
     setSubmitting(true);
     setError(null);
 
+    logger.info('[Auth:Registration] 开始提交租户注册申请', {
+      companyName: formData.companyName,
+      applicant: formData.applicantName
+    });
+
     try {
       const result = await submitTenantApplication({
         companyName: formData.companyName,
@@ -137,15 +162,29 @@ export default function TenantRegisterPage() {
 
       if (result.success) {
         setSuccess(true);
+        logger.info('[Auth:Registration] 租户注册申请提交成功', {
+          tenantId: result.tenantId,
+          companyName: formData.companyName
+        });
       } else {
         setError(result.error || '提交失败，请稍后重试');
+        logger.warn('[Auth:Registration] 租户注册申请被拒', {
+          reason: result.error,
+          companyName: formData.companyName
+        });
       }
-    } catch {
-      setError('提交失败，请稍后重试');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : '提交申请时发生意外错误';
+      setError(errorMsg);
+      logger.error('[Auth:Registration] 租户注册请求崩溃', {
+        error: errorMsg,
+        companyName: formData.companyName
+      });
     } finally {
       setSubmitting(false);
     }
   };
+
 
   // 提交成功页面
   if (success) {

@@ -1,4 +1,6 @@
 'use server';
+import { logger } from '@/shared/lib/logger';
+import { revalidateTag } from 'next/cache';
 
 /**
  * 快速报价 Actions
@@ -14,11 +16,26 @@ import { revalidatePath } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { createQuickQuoteSchema } from './schema';
 import { updateQuoteTotal } from './shared-helpers';
+/**
+ * 快速报价 Actions (Quick Quote Actions)
+ * 提供从线索直接生成基于预定义套餐的报价单的能力。
+ */
 import { leads } from '@/shared/api/schema/leads';
 import { fetchQuotePlans } from '../lib/plan-loader';
 
 // ─── 快速报价 ───────────────────────────────────
 
+/**
+ * 客户端调用：执行快速报价 (Create Quick Quote)
+ * 场景：销售在沟通初期通过少量核心参数（宽、高、单价）迅速生成一份报价草案。
+ * 逻辑：
+ * 1. 自动创建默认客户（若未指定）。
+ * 2. 创建报价单记录。
+ * 3. 依据所选分类（窗帘/墙纸等）调用工厂逻辑计算首行明细。
+ * 
+ * @param params - 包含客户、产品及计算核心参数的对象
+ * @returns 新建的快速报价单对象
+ */
 export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (data, context) => {
   const { leadId, planType, rooms } = data;
   const tenantId = context.session.user.tenantId;
@@ -157,5 +174,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
   await updateQuoteTotal(newQuote.id, tenantId);
 
   revalidatePath('/quotes');
+  revalidateTag('quotes', 'default');
+  logger.info('[quotes] 快速报价单创建成功', { quoteId: newQuote.id, quoteNo, leadId: data.leadId });
   return { id: newQuote.id, quoteNo };
 });

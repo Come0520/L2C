@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
 
-export function InstallationCompletionForm({ taskId }: { taskId: string }) {
+/**
+ * 安装完工表单组件
+ * 用于师傅提交安装任务的最终完工信息（如照片、签名等）
+ * 
+ * @param {string} _taskId - 安装任务 ID (暂未集成完工存盘逻辑)
+ */
+export function InstallationCompletionForm({ taskId: _taskId }: { taskId: string }) {
     const [submitting, setSubmitting] = useState(false);
 
     const handleSubmit = async () => {

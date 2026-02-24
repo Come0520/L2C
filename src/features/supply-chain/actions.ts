@@ -1,4 +1,3 @@
-'use server';
 export * from './actions/po-actions';
 export * from './actions/supplier-actions';
 export * from './actions/shipment-actions';

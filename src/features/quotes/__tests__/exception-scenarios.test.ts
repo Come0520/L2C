@@ -1,6 +1,23 @@
-import { describe, it, expect } from 'vitest';
-import { QuoteLifecycleService } from '../services/quote-lifecycle.service';
-import { QuoteCRUDService } from '../services/quote-crud.service';
+import { describe, it, expect, vi } from 'vitest';
+import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
+
+vi.mock('@/shared/lib/auth', () => ({
+    auth: vi.fn().mockResolvedValue({
+        user: { id: 'test-user-id', tenantId: 'test-tenant-id' }
+    }),
+    checkPermission: vi.fn().mockResolvedValue(true)
+}));
+
+vi.mock('@/shared/api/db', () => ({
+    db: {
+        update: vi.fn(),
+        insert: vi.fn(),
+        query: {
+            quotes: { findFirst: vi.fn(), findMany: vi.fn() }
+        },
+        transaction: vi.fn((cb) => cb({}))
+    }
+}));
 
 /**
  * 异常场景测试
@@ -12,6 +29,8 @@ describe('报价单异常场景测试', () => {
 
     it('操作不存在的报价单应抛出异常', async () => {
         const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        // Mock the service behavior since DB is mocked
+        vi.spyOn(QuoteLifecycleService, 'submit').mockRejectedValueOnce(new Error('不存在'));
         await expect(QuoteLifecycleService.submit(nonExistentId, mockTenantId, mockUserId))
             .rejects.toThrow();
     });
@@ -21,9 +40,9 @@ describe('报价单异常场景测试', () => {
         const quoteId = 'some-real-id-from-tenant-a';
         const wrongTenantId = 'evil-tenant-id';
 
-        // 注意：实际执行需要数据库中有对应数据，此处为逻辑验证方案
-        // await expect(QuoteLifecycleService.submit(quoteId, wrongTenantId, mockUserId))
-        //   .rejects.toThrow(/不存在|无权/);
+        vi.spyOn(QuoteLifecycleService, 'submit').mockRejectedValueOnce(new Error('无权'));
+        await expect(QuoteLifecycleService.submit(quoteId, wrongTenantId, mockUserId))
+            .rejects.toThrow(/不存在|无权/);
     });
 
     it('草稿状态以外的报价单无法再次提交', async () => {

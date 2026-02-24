@@ -2,7 +2,7 @@
  * 线索管理页面
  */
 import { Suspense } from 'react';
-import { getLeads, getChannels, getSalesUsers } from '@/features/leads/actions';
+import { getLeads, getSalesUsers } from '@/features/leads/actions';
 import { LeadsFilterBar } from '@/features/leads/components/leads-filter-bar';
 import { LeadsToolbar } from '@/features/leads/components/leads-toolbar';
 import { LeadTable } from '@/features/leads/components/lead-table';
@@ -66,7 +66,7 @@ export default async function LeadsPage({
         }
         : undefined;
 
-    const [leadsResult, channels, salesList] = await Promise.all([
+    const [leadsResult, salesList] = await Promise.all([
       getLeads({
         page,
         pageSize: 10,
@@ -77,7 +77,6 @@ export default async function LeadsPage({
         sourceCategoryId: channelId,
         dateRange,
       }),
-      getChannels(),
       getSalesUsers(),
     ]);
 
@@ -91,7 +90,7 @@ export default async function LeadsPage({
             </div>
             <div className="flex items-center gap-2 mb-4">
               <ExcelImportDialog />
-              <CreateLeadDialog channels={channels} tenantId={tenantId} />
+              <CreateLeadDialog tenantId={tenantId} />
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 发货管理 (Shipment Actions) 单元测试
  *
  * 覆盖场景：
@@ -28,6 +28,7 @@ vi.mock('../helpers', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
@@ -164,7 +165,7 @@ describe('发货管理 (Shipment Actions)', () => {
 
     describe('updateShipment - 更新发货记录', () => {
         it('成功更新已存在的发货记录', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).poShipments.findFirst.mockResolvedValue({
                 id: 'shipment-1',
                 logisticsCompany: '顺丰速运',
@@ -180,7 +181,7 @@ describe('发货管理 (Shipment Actions)', () => {
         });
 
         it('更新不存在的发货记录应返回错误', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).poShipments.findFirst.mockResolvedValue(null);
 
             const result = await updateShipment('non-existent-id', {
@@ -194,9 +195,9 @@ describe('发货管理 (Shipment Actions)', () => {
 
     describe('getShipments - 查询发货记录', () => {
         it('成功返回指定 PO 的发货记录列表', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).purchaseOrders.findFirst.mockResolvedValue({ id: 'po-1' });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).poShipments.findMany.mockResolvedValue([
                 { id: 'ship-1', logisticsNo: 'SF001' },
                 { id: 'ship-2', logisticsNo: 'SF002' },
@@ -209,7 +210,7 @@ describe('发货管理 (Shipment Actions)', () => {
         });
 
         it('PO 不存在时返回空列表', async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             (db.query as any).purchaseOrders.findFirst.mockResolvedValue(null);
 
             const result = await getShipments({ poId: 'non-existent' });

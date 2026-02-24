@@ -4,3 +4,5 @@ export interface Day {
     text: number;
     bottomInfo?: string;
 }
+
+export {};

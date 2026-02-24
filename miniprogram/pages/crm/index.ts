@@ -7,7 +7,7 @@ import { authStore } from '../../stores/auth-store';
 Page({
     data: {
         keyword: '',
-        list: [] as any[],
+        list: [] as Record<string, any>[],
         loading: false,
         refreshing: false,
         loadingMore: false,
@@ -109,3 +109,5 @@ Page({
         });
     }
 });
+
+export {};

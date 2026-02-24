@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { z } from 'zod';
 
 // ==================== 基础配置 (Base Config) ====================

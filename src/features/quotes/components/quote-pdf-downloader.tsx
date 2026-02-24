@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { Button } from '@/shared/ui/button';
-import { Download } from 'lucide-react';
+import Download from 'lucide-react/dist/esm/icons/download';
 // import type { QuotePdfDocument } from './quote-pdf'; // Type-only import removed to avoid lint error if unused
 
 // Dynamically import the PDF document component

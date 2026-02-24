@@ -84,6 +84,7 @@ export const quotes = pgTable(
       .where(sql`is_active = true`),
     // Performance Optimization (R3)
     quoteTenantStatusIdx: index('idx_quotes_tenant_status').on(table.tenantId, table.status),
+    quoteTenantCustomerIdx: index('idx_quotes_tenant_customer').on(table.tenantId, table.customerId),
     quoteTenantCreatedIdx: index('idx_quotes_tenant_created').on(table.tenantId, table.createdAt),
   })
 );

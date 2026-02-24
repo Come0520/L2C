@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { formatDate } from '@/shared/lib/utils';
 import { PaymentEntryDialog } from './payment-entry-dialog';
 import Link from 'next/link';
-import { ChevronLeft, Printer, ShoppingBag } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import Printer from 'lucide-react/dist/esm/icons/printer';
+import ShoppingBag from 'lucide-react/dist/esm/icons/shopping-bag';
 
 export interface OrderItem {
   id: string;

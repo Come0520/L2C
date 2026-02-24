@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
 
 // 使用 vi.hoisted 提升 mock 定义
@@ -19,7 +19,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/shared/lib/auth', () => ({
     auth: mocks.auth,
 }));
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock('next/cache', () => ({
+    revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
+}));
 vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { log: mocks.logAudit },
 }));
@@ -99,9 +102,10 @@ describe('ProfileActions', () => {
         };
 
         it('应成功更新个人信息并记录审计', async () => {
-            // 模拟手机号不冲突
-            mocks.dbFindFirst.mockResolvedValueOnce(null) // findFirst for phone check
-                .mockResolvedValueOnce({ id: mockUserId, name: 'Old Name' }); // findFirst for audit
+            // Promise.all: 先调 currentUser（users.id），再调 existingUser（phone check）
+            mocks.dbFindFirst
+                .mockResolvedValueOnce({ id: mockUserId, name: 'Old Name' }) // currentUser
+                .mockResolvedValueOnce(null); // existingUser phone check（null = 无冲突）
 
             const result = await updateProfile(updateData);
 
@@ -111,7 +115,10 @@ describe('ProfileActions', () => {
         });
 
         it('手机号冲突时应返回错误', async () => {
-            mocks.dbFindFirst.mockResolvedValueOnce({ id: 'other-user', phone: '13800138000' });
+            // currentUser 需要先存在，然后 existingUser（phone check）返回冲突用户
+            mocks.dbFindFirst
+                .mockResolvedValueOnce({ id: mockUserId, name: 'Old Name' }) // currentUser
+                .mockResolvedValueOnce({ id: 'other-user', phone: '13800138000' }); // phone conflict
 
             const result = await updateProfile(updateData);
 

@@ -283,3 +283,5 @@ Page({
         wx.navigateBack();
     },
 });
+
+export {};

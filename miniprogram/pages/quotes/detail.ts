@@ -1,8 +1,8 @@
 Page({
     data: {
         quoteId: '',
-        quote: null as any,
-        paymentConfig: null as any,
+        quote: null as unknown as Record<string, any>,
+        paymentConfig: null as unknown as Record<string, any>,
         loading: true,
         signatureWidth: 300,
         signatureHeight: 180
@@ -181,3 +181,5 @@ Page({
         });
     }
 });
+
+export {};

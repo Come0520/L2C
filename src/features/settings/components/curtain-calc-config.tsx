@@ -9,7 +9,8 @@ import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { toast } from 'sonner';
 import { updateGlobalQuoteConfig } from '@/features/quotes/actions/config-actions';
-import { Save, RotateCcw } from 'lucide-react';
+import Save from 'lucide-react/dist/esm/icons/save';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 
 /**
  * 窗帘计算参数配置项

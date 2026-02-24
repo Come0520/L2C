@@ -6,7 +6,7 @@ import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Button } from '@/shared/ui/button';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 
 // interface CustomersToolbarProps {}
 

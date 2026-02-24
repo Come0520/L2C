@@ -12,12 +12,25 @@ interface InstallChecklistProps {
     initialStatus: { items?: ChecklistItem[] } | null;
 }
 
+/**
+ * 安装清单项接口定义
+ */
 interface ChecklistItem {
     id: string;
     label: string;
     isChecked: boolean;
     photoUrl?: string;
     required: boolean;
+}
+
+/**
+ * 安装清单组件属性
+ */
+interface InstallChecklistProps {
+    /** 任务 ID */
+    taskId: string;
+    /** 初始状态（包含清单项列表） */
+    initialStatus: { items?: ChecklistItem[] } | null;
 }
 
 const DEFAULT_ITEMS: ChecklistItem[] = [
@@ -27,6 +40,12 @@ const DEFAULT_ITEMS: ChecklistItem[] = [
     { id: 'clean_up', label: '现场垃圾是否已清理并带走', isChecked: false, required: true },
 ];
 
+/**
+ * 标准化作业清单组件
+ * 
+ * 允许安装师傅在现场逐项勾选标准化作业要求，支持保存进度。
+ * 注意：照片上传功能目前仅预留交互，后端逻辑待集成。
+ */
 export function InstallChecklist({ taskId, initialStatus }: InstallChecklistProps) {
     const [items, setItems] = useState<ChecklistItem[]>(() => {
         if (initialStatus?.items && initialStatus.items.length > 0) {
@@ -37,7 +56,7 @@ export function InstallChecklist({ taskId, initialStatus }: InstallChecklistProp
     const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
-        // Sync with server if initialStatus changes significantly (e.g. loaded later)
+        // 当初始状态显著变化时同步（例如组件延迟加载）
         if (initialStatus?.items && initialStatus.items.length > 0) {
             // eslint-disable-next-line
             setItems(initialStatus.items);
@@ -64,11 +83,8 @@ export function InstallChecklist({ taskId, initialStatus }: InstallChecklistProp
         });
     };
 
-    // Note: Photo upload logic simplifies here for brevity. 
-    // Real implementation needs file input and OSS upload.
     const handlePhotoUpload = async (_id: string, _file: File) => {
-        // Mock upload for now or implement real OSS logic
-        // NOTE: Implement Real OSS Upload
+        // TODO: 待系统 OSS 模块重构完成后集成真实图片上传逻辑
         toast.info("上传功能集成中...");
     };
 

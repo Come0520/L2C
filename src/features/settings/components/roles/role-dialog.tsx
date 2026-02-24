@@ -30,7 +30,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { createRole, updateRole } from '@/features/settings/actions/roles-management';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { PERMISSION_GROUPS, PERMISSION_LABELS } from '@/shared/config/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/ui/accordion';
 

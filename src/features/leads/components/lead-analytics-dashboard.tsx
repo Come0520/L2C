@@ -9,7 +9,12 @@ import { getLeadChannelROIStats, LeadChannelROIStats } from '../actions/analytic
 import { SalesFunnelChart, FunnelStage } from '@/features/analytics/components/sales-funnel-chart';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import { Loader2, RefreshCw, TrendingUp, Users, Target, BarChart3 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Target from 'lucide-react/dist/esm/icons/target';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { exportToExcel, ExportColumn } from '@/shared/lib/export-utils';

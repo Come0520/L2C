@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Supply Chain 模块 Server Actions 集成测试 - 商品关联供应商 (Product Supplier)
  *
  * 覆盖范围：
@@ -53,6 +53,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({

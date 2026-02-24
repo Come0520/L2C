@@ -88,6 +88,7 @@ Page({
         } catch (err: unknown) {
             console.error(err);
             wx.showToast({ title: '加载失败', icon: 'none' });
+            return Promise.resolve();
         } finally {
             wx.hideNavigationBarLoading();
         }
@@ -138,9 +139,9 @@ Page({
     async onSubmitFollowup() {
         const { id, followupForm } = this.data;
         if (!followupForm.content.trim()) {
-            return wx.showToast({ title: '请输入跟进内容', icon: 'none' });
+            wx.showToast({ title: '请输入跟进内容', icon: 'none' });
+            return Promise.resolve();
         }
-
         wx.showLoading({ title: '提交中...' });
         try {
             const res = await app.request(`/leads/${id}/followup`, {
@@ -180,6 +181,7 @@ Page({
                 }
             }
         });
+        return Promise.resolve(); // Added to fix TS7030
     },
 
     async doConvert() {
@@ -224,9 +226,9 @@ Page({
 
     async onSubmitVoid() {
         if (!this.data.voidReason.trim()) {
-            return wx.showToast({ title: '请输入作废原因', icon: 'none' });
+            wx.showToast({ title: '请输入作废原因', icon: 'none' });
+            return Promise.resolve();
         }
-
         wx.showLoading({ title: '提交中...' });
         try {
             const res = await app.request(`/leads/${this.data.id}/void`, {
@@ -258,3 +260,5 @@ Page({
         }
     }
 });
+
+export { };

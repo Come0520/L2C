@@ -18,10 +18,18 @@ export interface ApprovalFlow {
     definition: unknown | null;
 }
 
+/**
+ * 审批流配置组件属性
+ */
 interface ApprovalSettingsContentProps {
+    /** 初始加载的审批流列表数据 */
     initialFlows: ApprovalFlow[];
 }
 
+/**
+ * 审批流配置管理内容组件
+ * 提供审批流的列表展示、状态切换以及进入设计器进行可视化编辑的入口
+ */
 export function ApprovalSettingsContent({ initialFlows }: ApprovalSettingsContentProps) {
     const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
     const [flows] = useState<ApprovalFlow[]>(initialFlows);

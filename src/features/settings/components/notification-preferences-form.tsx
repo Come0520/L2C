@@ -6,7 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Label } from '@/shared/ui/label';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { toast } from 'sonner';
-import { Loader2, Bell, Mail, MessageSquare, Send, Smartphone } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import Send from 'lucide-react/dist/esm/icons/send';
+import Smartphone from 'lucide-react/dist/esm/icons/smartphone';
 import {
     getNotificationPreferencesAction,
     updateNotificationPreferenceAction

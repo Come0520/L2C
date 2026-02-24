@@ -393,3 +393,82 @@ describe('告警规则管理 (alert-rules)', () => {
         });
     });
 });
+
+// ===== T3: 速率限制器 (Rate Limiter) 测试 =====
+
+import { resetRateLimiterForTest } from '../actions/alert-rules';
+
+describe('告警风暴速率限制保护', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockAuth.mockResolvedValue(makeSession() as never);
+        mockCheckPermission.mockImplementation(() => undefined as never);
+        resetRateLimiterForTest();
+    });
+
+    it('在限额内的调用应能成功通过', async () => {
+        const result = await sendBulkNotification({
+            targetRoles: ['ADMIN'],
+            title: '通知',
+            content: '内容',
+            type: 'INFO',
+        });
+        expect(result.success).toBe(true);
+    });
+
+    it('短时间超过 100 次调用应触发限流被拒绝', async () => {
+        // 前 100 次应成功
+        for (let i = 0; i < 100; i++) {
+            const res = await sendBulkNotification({
+                targetRoles: ['ADMIN'],
+                title: `通知${i}`,
+                content: '内容',
+                type: 'INFO',
+            });
+            expect(res.success).toBe(true);
+        }
+
+        // 第 101 次应失败
+        const failRes = await sendBulkNotification({
+            targetRoles: ['ADMIN'],
+            title: '爆表通知',
+            content: '内容',
+            type: 'INFO',
+        });
+        expect(failRes.success).toBe(false);
+        expect(failRes.error).toContain('请稍后再试');
+    });
+
+    it('重置限流器后应恢复可用', async () => {
+        // 耗尽限额
+        for (let i = 0; i < 100; i++) {
+            await sendBulkNotification({
+                targetRoles: ['ADMIN'],
+                title: 't',
+                content: 'c',
+                type: 'INFO'
+            });
+        }
+
+        // 验证已限流
+        const failRes = await sendBulkNotification({
+            targetRoles: ['ADMIN'],
+            title: 'fail',
+            content: 'c',
+            type: 'INFO'
+        });
+        expect(failRes.success).toBe(false);
+
+        // 手动重置（模拟窗口期过后或管理员干预）
+        resetRateLimiterForTest();
+
+        // 再次调用应成功
+        const successRes = await sendBulkNotification({
+            targetRoles: ['ADMIN'],
+            title: '重置后的通知',
+            content: '内容',
+            type: 'INFO',
+        });
+        expect(successRes.success).toBe(true);
+    });
+});

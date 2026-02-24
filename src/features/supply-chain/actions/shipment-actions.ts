@@ -1,4 +1,6 @@
 'use server';
+import { logger } from '@/shared/lib/logger';
+
 
 import { z } from 'zod';
 import { requireAuth, requirePOManagePermission, requireViewPermission } from '../helpers';
@@ -67,12 +69,13 @@ export async function createShipment(input: z.infer<typeof createShipmentSchema>
 
     const validated = createShipmentSchema.safeParse(input);
     if (!validated.success) {
-        console.warn('[supply-chain] createShipment 输入校验失败:', validated.error.issues);
+        logger.info('[supply-chain] createShipment 输入校验失败:', validated.error.issues);
         return { success: false, error: validated.error.issues[0].message };
     }
+
     const data = validated.data;
 
-    console.warn('[supply-chain] createShipment 开始创建:', { poId: data.poId });
+    logger.info('[supply-chain] createShipment 开始创建:', { poId: data.poId });
     try {
         return await db.transaction(async (tx) => {
             // 1. 验证采购单存在且属于当前租户
@@ -85,15 +88,16 @@ export async function createShipment(input: z.infer<typeof createShipmentSchema>
             });
 
             if (!po) {
-                console.error('[supply-chain] createShipment 采购单不存在:', data.poId);
+                logger.error('[supply-chain] createShipment 采购单不存在:', data.poId);
                 return { success: false, error: '采购单不存在' };
             }
 
             // 2. 使用状态转换矩阵校验是否允许发货
             if (!isValidPoTransition(po.status!, 'SHIPPED')) {
-                console.error('[supply-chain] createShipment 状态非法:', po.status);
+                logger.error('[supply-chain] createShipment 状态非法:', po.status);
                 return { success: false, error: `当前状态「${po.status}」不允许发货` };
             }
+
 
             // 3. 插入物流记录到独立表
             const [shipment] = await tx.insert(poShipments).values({
@@ -119,6 +123,8 @@ export async function createShipment(input: z.infer<typeof createShipmentSchema>
                     eq(purchaseOrders.tenantId, session.user.tenantId)
                 ));
 
+            logger.info(`[supply-chain] createShipment 采购单 ${data.poId} 状态已流转至: SHIPPED`);
+
             // 5. 记录审计日志
             await AuditService.recordFromSession(session, 'poShipments', shipment.id, 'CREATE', {
                 new: {
@@ -129,12 +135,12 @@ export async function createShipment(input: z.infer<typeof createShipmentSchema>
                 }
             }, tx);
 
-            console.warn('[supply-chain] createShipment 创建成功:', shipment.id);
+            logger.info('[supply-chain] createShipment 创建发货记录成功:', shipment.id);
             revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
             return { success: true, data: { id: shipment.id }, message: '发货信息已录入' };
         });
     } catch (error) {
-        console.error('[supply-chain] createShipment 内部错误:', error);
+        logger.error('[supply-chain] createShipment 内部错误:', error);
         return { success: false, error: error instanceof Error ? error.message : '创建发货记录失败' };
     }
 }
@@ -157,12 +163,14 @@ export async function updateShipment(shipmentId: string, input: z.infer<typeof u
 
     const validated = updateShipmentSchema.safeParse(input);
     if (!validated.success) {
-        console.warn('[supply-chain] updateShipment 输入校验失败:', validated.error.issues);
+        logger.info('[supply-chain] updateShipment 输入校验失败:', validated.error.issues);
         return { success: false, error: validated.error.issues[0].message };
     }
+
     const data = validated.data;
 
-    console.warn('[supply-chain] updateShipment 开始更新:', { shipmentId });
+    logger.info('[supply-chain] updateShipment 开始更新:', { shipmentId });
+
     try {
         // ... (保持原有逻辑)
         // 验证记录存在且属于当前租户
@@ -174,9 +182,10 @@ export async function updateShipment(shipmentId: string, input: z.infer<typeof u
         });
 
         if (!existing) {
-            console.error('[supply-chain] updateShipment 记录不存在:', shipmentId);
+            logger.error('[supply-chain] updateShipment 记录不存在:', shipmentId);
             return { success: false, error: '物流记录不存在' };
         }
+
 
         await db.update(poShipments)
             .set({
@@ -199,13 +208,15 @@ export async function updateShipment(shipmentId: string, input: z.infer<typeof u
             new: data
         });
 
-        console.warn('[supply-chain] updateShipment 更新成功');
+        logger.info('[supply-chain] updateShipment 更新成功');
+
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] updateShipment 更新失败:', error);
+        logger.error('[supply-chain] updateShipment 更新失败:', error);
         return { success: false, error: '更新发货记录失败' };
     }
+
 }
 
 /**
@@ -213,10 +224,10 @@ export async function updateShipment(shipmentId: string, input: z.infer<typeof u
  *
  * @description 查询指定采购单关联的所有物流详情记录。
  * @param params 包含 `poId` (string) 采购单 ID 的查询参数对象
- * @returns {Promise<{success: boolean, data: any[]}>} 返回包含发货详情的数组包装结果
+ * @returns {Promise<{success: boolean, data: (typeof poShipments.$inferSelect)[], error?: string}>} 返回包含发货详情的数组包装结果
  */
 export async function getShipments(params: { poId: string }) {
-    console.warn('[supply-chain] getShipments 查询参数:', params);
+    logger.info('[supply-chain] getShipments 查询参数:', params);
     const authResult = await requireAuth();
     // ... (保持原有逻辑)
     if (!authResult.success) return { success: false, error: authResult.error, data: [] };

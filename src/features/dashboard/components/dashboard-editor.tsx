@@ -22,7 +22,12 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { Settings, Plus, RotateCcw, Save, Loader2, X } from 'lucide-react';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import X from 'lucide-react/dist/esm/icons/x';
 import { toast } from 'sonner';
 import {
     getDashboardConfigAction,

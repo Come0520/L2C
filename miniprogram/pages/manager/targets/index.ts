@@ -1,4 +1,4 @@
-import { authStore } from '../../../stores/auth-store';
+// 移除 authStore 引入
 
 Page({
     data: {
@@ -9,7 +9,7 @@ Page({
 
         // Dialog
         showDialog: false,
-        currentItem: null as any,
+        currentItem: null as unknown as Record<string, any>,
         tempTarget: '',
         saving: false
     },
@@ -97,3 +97,5 @@ Page({
         }
     }
 });
+
+export { };

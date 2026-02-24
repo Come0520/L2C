@@ -23,12 +23,22 @@ vi.mock('@/shared/lib/logger', () => ({
     logger: {
         error: vi.fn(),
         info: vi.fn(),
+        warn: vi.fn(),
     },
 }));
 
-// Mock unstable_cache to just execute the function directly for testing
+// Mock unstable_cache 以模拟简单的内存缓存
+const cacheMap = new Map();
 vi.mock('next/cache', () => ({
-    unstable_cache: (fn: any) => fn,
+    unstable_cache: (fn: any, keys: string[]) => {
+        return async (...args: any[]) => {
+            const cacheKey = JSON.stringify({ keys, args });
+            if (cacheMap.has(cacheKey)) return cacheMap.get(cacheKey);
+            const result = await fn(...args);
+            cacheMap.set(cacheKey, result);
+            return result;
+        };
+    },
 }));
 
 vi.mock('next-auth', () => ({
@@ -52,6 +62,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        cacheMap.clear();
     });
 
     const createMockSession = (roles: string[], tenantId = 't1') => ({
@@ -150,6 +161,19 @@ describe('RBAC checkRolePermission Core Logic', () => {
         const result = await checkPermission(session as any, 'anything');
         expect(result).toBe(true);
         expect(db.query.roles.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('10. 权限缓存命中验证: 连续两次检查应仅触发一次数据库查询', async () => {
+        vi.mocked(db.query.roles.findFirst).mockResolvedValue({
+            permissions: ['order.view']
+        });
+        const session = createMockSession(['VIEWER']);
+        // 第一次检查
+        await checkPermission(session as any, 'order.view');
+        // 第二次检查（相同角色和租户）
+        await checkPermission(session as any, 'order.view');
+        // 验证 db.query.roles.findFirst 仅被调用一次，说明第二次命中了缓存
+        expect(db.query.roles.findFirst).toHaveBeenCalledTimes(1);
     });
 
 });

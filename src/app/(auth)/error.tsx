@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
+/**
+ * 认证错误页面组件 (客户端路由异常接管)
+ * 
+ * @description
+ * 当 NextAuth 或认证相关的 API 路由抛出异常时，Next.js 会自动渲染此页面。
+ * 提供友好的错误提示、技术支持链接，并允许用户通过 `reset` 重新尝试或返回登录。
+ * 
+ * @param {Error & { digest?: string }} error - 包含错误原始信息及唯一摘要 ID 的对象
+ * @param {() => void} reset - Next.js 提供的重置函数，尝试重新渲染该路由段
+ */
 export default function AuthError({
     error,
     reset,

@@ -53,25 +53,56 @@ const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, asy
 
     const revenue = new Decimal(order.totalAmount || '0');
 
-    // 2. 库存成本估算 (Inventory Cost Estimation)
-    // 策略：通过库存流水关联订单，并按当前采购价估算（若流水中无历史成本记录）
-    /**
-     * @note 业务演进说明 [F-13]
-     * 长期高阶方案建议在 `inventory_logs` 写入阶段直接固化当时的实际出库成本，
-     * 以防止物资采购单价波动导致历史利润测算不精确。当前版本采用产品基准价估算。
-     */
-    const inventoryCostResult = await db
-        .select({
-            totalCost: sql<string>`sum(ABS(${inventoryLogs.quantity}) * ${products.purchasePrice})`
-        })
-        .from(inventoryLogs)
-        .innerJoin(products, eq(inventoryLogs.productId, products.id))
-        .where(and(
-            eq(inventoryLogs.referenceId, orderId),
-            eq(inventoryLogs.referenceType, 'ORDER'),
-            eq(inventoryLogs.tenantId, tenantId),
-            eq(inventoryLogs.type, 'OUT')
-        ));
+    // 2. 独立成本查询并行化 (Parallelizing Independent Cost Queries)
+    const [
+        inventoryCostResult,
+        iTasks,
+        mTasks,
+        commissionResult
+    ] = await Promise.all([
+        db
+            .select({
+                totalCost: sql<string>`sum(ABS(${inventoryLogs.quantity}) * ${products.purchasePrice})`
+            })
+            .from(inventoryLogs)
+            .innerJoin(products, eq(inventoryLogs.productId, products.id))
+            .where(and(
+                eq(inventoryLogs.referenceId, orderId),
+                eq(inventoryLogs.referenceType, 'ORDER'),
+                eq(inventoryLogs.tenantId, tenantId),
+                eq(inventoryLogs.type, 'OUT')
+            )),
+        db.query.installTasks.findMany({
+            where: and(
+                eq(installTasks.orderId, orderId),
+                eq(installTasks.tenantId, tenantId)
+            ),
+            columns: {
+                laborFee: true,
+                actualLaborFee: true
+            }
+        }),
+        order.leadId ? db.query.measureTasks.findMany({
+            where: and(
+                eq(measureTasks.leadId, order.leadId),
+                eq(measureTasks.tenantId, tenantId)
+            ),
+            columns: {
+                laborFee: true,
+                actualLaborFee: true
+            }
+        }) : Promise.resolve([]),
+        db
+            .select({
+                totalAmount: sql<string>`sum(${channelCommissions.amount})`
+            })
+            .from(channelCommissions)
+            .where(and(
+                eq(channelCommissions.orderId, orderId),
+                eq(channelCommissions.tenantId, tenantId),
+                inArray(channelCommissions.status, ['PENDING', 'SETTLED', 'PAID'])
+            ))
+    ]);
 
     const inventoryCost = new Decimal(inventoryCostResult[0]?.totalCost || '0');
 
@@ -120,56 +151,16 @@ const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, asy
     }
 
     // 4. 加工与安装劳务成本 (Labor Cost)
-    // 4.1 安装任务成本
-    const iTasks = await db.query.installTasks.findMany({
-        where: and(
-            eq(installTasks.orderId, orderId),
-            eq(installTasks.tenantId, tenantId)
-        ),
-        columns: {
-            laborFee: true,
-            actualLaborFee: true
-        }
-    });
-
     const installCost = iTasks.reduce((sum, t) => {
         const fee = new Decimal(t.actualLaborFee ?? t.laborFee ?? 0);
         return sum.plus(fee);
     }, new Decimal(0));
 
     // 4.2 量尺任务成本
-    let measureCost = new Decimal(0);
-    if (order.leadId) {
-        const mTasks = await db.query.measureTasks.findMany({
-            where: and(
-                eq(measureTasks.leadId, order.leadId),
-                eq(measureTasks.tenantId, tenantId)
-            ),
-            columns: {
-                laborFee: true,
-                actualLaborFee: true
-            }
-        });
-
-        const mCost = mTasks.reduce((sum, t) => {
-            const fee = new Decimal(t.actualLaborFee ?? t.laborFee ?? 0);
-            return sum.plus(fee);
-        }, new Decimal(0));
-        measureCost = mCost;
-    }
-
-    // 5. 佣金成本 (Commission Cost)
-    // 聚合该订单下所有已结算或待结算的渠道佣金记录
-    const commissionResult = await db
-        .select({
-            totalAmount: sql<string>`sum(${channelCommissions.amount})`
-        })
-        .from(channelCommissions)
-        .where(and(
-            eq(channelCommissions.orderId, orderId),
-            eq(channelCommissions.tenantId, tenantId),
-            inArray(channelCommissions.status, ['PENDING', 'SETTLED', 'PAID'])
-        ));
+    const measureCost = mTasks.reduce((sum, t) => {
+        const fee = new Decimal(t.actualLaborFee ?? t.laborFee ?? 0);
+        return sum.plus(fee);
+    }, new Decimal(0));
 
     const commissionCost = new Decimal(commissionResult[0]?.totalAmount || '0');
 

@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { showroomShares, showroomItems } from '@/shared/api/schema/showroom';
-import { and, desc, eq, inArray, sql, gte } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { createShareLinkSchema, deactivateShareSchema, getShareContentSchema } from './schema';
 import { createHash } from 'crypto';
@@ -11,8 +11,8 @@ import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
-import { revalidatePath } from 'next/cache';
-import { ShowroomShareItemSnapshot, ShowroomAuditData } from '../types';
+import { revalidateTag } from 'next/cache';
+import { ShowroomShareItemSnapshot } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -36,29 +36,38 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-    const itemsSnapshot: ShowroomShareItemSnapshot[] = items;
-    const [shareId] = await db.insert(showroomShares).values({
-        tenantId: session.user.tenantId,
-        salesId: session.user.id,
-        itemsSnapshot: itemsSnapshot,
-        expiresAt: expiresAt,
-        passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
-        maxViews: maxViews || null,
-        isActive: 1,
-    }).returning({ id: showroomShares.id });
+    try {
+        const itemsSnapshot: ShowroomShareItemSnapshot[] = items;
+        const [shareId] = await db.insert(showroomShares).values({
+            tenantId: session.user.tenantId,
+            salesId: session.user.id,
+            itemsSnapshot: itemsSnapshot,
+            expiresAt: expiresAt,
+            passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
+            maxViews: maxViews || null,
+            isActive: 1,
+        }).returning({ id: showroomShares.id });
 
-    // 记录审计日志
-    await AuditService.log(db, {
-        tableName: 'showroom_shares',
-        recordId: shareId.id,
-        action: 'CREATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews } as Record<string, unknown>
-    });
+        // 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'showroom_shares',
+            recordId: shareId.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews } as Record<string, unknown>
+        });
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return { id: shareId.id, url: `${baseUrl}/showroom/share/${shareId.id}` };
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const url = `${baseUrl}/showroom/share/${shareId.id}`;
+
+        logger.info('创建展厅共享链接成功', { shareId: shareId.id, tenantId: session.user.tenantId, salesId: session.user.id });
+
+        return { id: shareId.id, url };
+    } catch (error) {
+        logger.error('创建展厅共享链接失败', { error, input });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -131,26 +140,34 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
             .where(eq(showroomShares.id, shareId));
     }
 
-    // 4. 获取详细素材内容并合并改价逻辑
-    const itemsSnapshot = share.itemsSnapshot as ShowroomShareItemSnapshot[];
-    const itemIds = itemsSnapshot.map(i => i.itemId);
-    const itemDetails = await db.query.showroomItems.findMany({
-        where: inArray(showroomItems.id, itemIds),
-    });
+    try {
+        // 4. 获取详细素材内容并合并改价逻辑
+        const itemsSnapshot = share.itemsSnapshot as ShowroomShareItemSnapshot[];
+        const itemIds = itemsSnapshot.map(i => i.itemId);
+        const itemDetails = await db.query.showroomItems.findMany({
+            where: inArray(showroomItems.id, itemIds),
+        });
 
-    const items = itemsSnapshot.map(snapshot => {
-        const detail = itemDetails.find(d => d.id === snapshot.itemId);
+        const items = itemsSnapshot.map(snapshot => {
+            const detail = itemDetails.find(d => d.id === snapshot.itemId);
+            return {
+                ...detail,
+                overridePrice: snapshot.overridePrice, // 使用分享时的特定定价
+            };
+        });
+
+        logger.info('获取展厅共享内容成功', { shareId });
+
         return {
-            ...detail,
-            overridePrice: snapshot.overridePrice, // 使用分享时的特定定价
+            expired: false,
+            items,
+            sales: share.sales,
         };
-    });
-
-    return {
-        expired: false,
-        items,
-        sales: share.sales,
-    };
+    } catch (error) {
+        if (error instanceof ShowroomError) throw error;
+        logger.error('获取展厅共享内容失败', { error, shareId });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -160,17 +177,24 @@ export async function getMyShareLinks(page = 1, pageSize = 20) {
     const session = await auth();
     if (!session?.user?.id) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-    const result = await db.query.showroomShares.findMany({
-        where: and(
-            eq(showroomShares.tenantId, session.user.tenantId),
-            eq(showroomShares.salesId, session.user.id)
-        ),
-        orderBy: [desc(showroomShares.createdAt)],
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-    });
+    try {
+        const result = await db.query.showroomShares.findMany({
+            where: and(
+                eq(showroomShares.tenantId, session.user.tenantId),
+                eq(showroomShares.salesId, session.user.id)
+            ),
+            orderBy: [desc(showroomShares.createdAt)],
+            limit: pageSize,
+            offset: (page - 1) * pageSize,
+        });
 
-    return result;
+        logger.info('获取我分享的链接列表成功', { tenantId: session.user.tenantId, salesId: session.user.id, page, pageSize });
+
+        return result;
+    } catch (error) {
+        logger.error('获取分享链接列表失败', { error, tenantId: session.user.tenantId });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -182,27 +206,33 @@ export async function deactivateShareLink(input: z.input<typeof deactivateShareS
 
     const { shareId } = deactivateShareSchema.parse(input);
 
-    const [updated] = await db.update(showroomShares)
-        .set({ isActive: 0 })
-        .where(and(
-            eq(showroomShares.id, shareId),
-            eq(showroomShares.tenantId, session.user.tenantId)
-        ))
-        .returning();
+    try {
+        const [updated] = await db.update(showroomShares)
+            .set({ isActive: 0 })
+            .where(and(
+                eq(showroomShares.id, shareId),
+                eq(showroomShares.tenantId, session.user.tenantId)
+            ))
+            .returning();
 
-    if (updated) {
-        await AuditService.log(db, {
-            tableName: 'showroom_shares',
-            recordId: shareId,
-            action: 'UPDATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: { isActive: 0 } as Record<string, unknown>
-        });
-        revalidatePath('/showroom');
+        if (updated) {
+            await AuditService.log(db, {
+                tableName: 'showroom_shares',
+                recordId: shareId,
+                action: 'UPDATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: { isActive: 0 } as Record<string, unknown>
+            });
+            revalidateTag('showroom-list', 'default');
+            logger.info('停用分享链接成功', { shareId, tenantId: session.user.tenantId });
+        }
+
+        return { success: !!updated };
+    } catch (error) {
+        logger.error('停用分享链接失败', { error, shareId });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
     }
-
-    return { success: !!updated };
 }
 
 /**
@@ -230,14 +260,18 @@ export async function getShareDashboardStats() {
         return {
             success: true,
             data: {
+                /** 总分享次数 */
                 totalShares: Number(aggregated[0]?.totalShares || 0),
+                /** 总浏览量 (含 Redis 缓存未持久化部分) */
                 totalViews: Number(aggregated[0]?.totalViews || 0),
+                /** 当前活跃(未停用)的分享数 */
                 activeShares: Number(aggregated[0]?.activeShares || 0),
+                /** 过去 7 天新增的分享数 */
                 recentNewShares: Number(aggregated[0]?.recentShares || 0),
             }
         };
     } catch (err) {
-        logger.error('Failed to get share dashboard stats', { error: err as Error });
+        logger.error('获取分享大盘统计失败', { error: err as Error });
         throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
     }
 }

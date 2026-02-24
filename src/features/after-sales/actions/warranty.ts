@@ -14,30 +14,30 @@ import { checkWarrantySchema } from './schemas';
 const checkWarrantyStatusAction = createSafeAction(checkWarrantySchema, async ({ orderId }, { session }) => {
     const tenantId = session.user.tenantId;
 
-    // 获取订单信息
-    const order = await db.query.orders.findFirst({
-        where: and(
-            eq(orders.id, orderId),
-            eq(orders.tenantId, tenantId)
-        ),
-        columns: {
-            id: true,
-            orderNo: true,
-            status: true,
-            completedAt: true,
-            createdAt: true,
-        }
-    });
+    // 获取订单信息和租户配置
+    const [order, tenant] = await Promise.all([
+        db.query.orders.findFirst({
+            where: and(
+                eq(orders.id, orderId),
+                eq(orders.tenantId, tenantId)
+            ),
+            columns: {
+                id: true,
+                orderNo: true,
+                status: true,
+                completedAt: true,
+                createdAt: true,
+            }
+        }),
+        db.query.tenants.findFirst({
+            where: eq(tenants.id, tenantId),
+            columns: { settings: true }
+        })
+    ]);
 
     if (!order) {
         return { error: '订单不存在' };
     }
-
-    // P1 FIX (AS-12): 从租户配置中读取保修期
-    const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, tenantId),
-        columns: { settings: true }
-    });
 
     // 默认保修期从租户配置读取，缺省为 12 个月
     const tenantSettings = tenant?.settings as { afterSales?: { warrantyMonths?: number } } | null;

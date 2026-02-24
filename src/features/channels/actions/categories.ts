@@ -17,8 +17,8 @@ import { z } from 'zod';
  * 
  * 获取系统配置的渠道分类分页列表。支持可选的类别名称或状态筛选。
  *
- * @param {any} params - 结构化查询参数，支持 page, limit, name, isActive
- * @returns {Promise<{success: boolean, data: any[], total: number, error?: string}>} 带有总数的分类列表对象
+ * @param {Object} params - 结构化查询参数，支持 page, limit, name, isActive
+ * @returns {Promise<Array<typeof channelCategories.$inferSelect>>} 分类列表数组
  */
 export async function getChannelCategories(_params?: {
     page?: number;
@@ -45,7 +45,7 @@ export async function getChannelCategories(_params?: {
  * 
  * 供下拉框、表单选择等场景使用的地方，获取当前处于激活状态的所有渠道分类。
  * 
- * @returns {Promise<{success: boolean, data: any[], error?: string}>} 启用状态的分类数组
+ * @returns {Promise<Array<typeof channelCategories.$inferSelect>>} 启用状态的分类数组
  */
 export async function getActiveChannelCategories() {
     const session = await auth();
@@ -69,7 +69,7 @@ export async function getActiveChannelCategories() {
  * 根据ID获取特定渠道分类名细
  * 
  * @param {string} id - 要查询的目标渠道分类ID
- * @returns {Promise<{success: boolean, data: any, error?: string}>} 包含单条分类详情的实体数据
+ * @returns {Promise<typeof channelCategories.$inferSelect | undefined>} 包含单条分类详情的实体数据
  */
 export async function getChannelCategoryById(id: string) {
     const session = await auth();
@@ -97,10 +97,9 @@ export async function getChannelCategoryById(id: string) {
  * 用于新增针对渠道的管理分类标签，创建时进行名称唯一性校验并生成系统日志。
  * 
  * @param {z.infer<typeof channelCategorySchema>} input - 创建渠道分类所需各项表单输入
- * @returns {Promise<{success: boolean, data?: any, error?: string}>} 处理结果
+ * @returns {Promise<typeof channelCategories.$inferSelect>} 处理结果
  */
 export async function createChannelCategory(input: z.infer<typeof channelCategorySchema>) {
-    console.log('[channels] 开始创建渠道分类:', input);
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -154,10 +153,9 @@ export async function createChannelCategory(input: z.infer<typeof channelCategor
  * 
  * @param {string} id - 更新目标分类的 UUID
  * @param {z.infer<typeof channelCategorySchema>} input - 更新字段载荷
- * @returns {Promise<{success: boolean, data?: any, error?: string}>} 更新事务结果
+ * @returns {Promise<typeof channelCategories.$inferSelect>} 更新事务结果
  */
 export async function updateChannelCategory(id: string, input: z.infer<typeof channelCategorySchema>) {
-    console.log('[channels] 开始更新渠道分类:', { id, updates: input });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -239,7 +237,6 @@ export async function updateChannelCategory(id: string, input: z.infer<typeof ch
  * @returns {Promise<{success: boolean, error?: string}>} 处理反馈信息
  */
 export async function deleteChannelCategory(id: string) {
-    console.log('[channels] 开始删除渠道分类:', { id });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -295,8 +292,7 @@ export async function deleteChannelCategory(id: string) {
  * @param {boolean} isActive - 即将设定的在线状态预设值
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function toggleChannelCategoryActive(id: string, isActive: boolean) {
-    console.log('[channels] 切换分类激活状态:', { id, isActive });
+export async function toggleChannelCategoryActive(id: string, _isActive: boolean) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

@@ -23,6 +23,35 @@ export async function skipOnDataLoadError(page: Page): Promise<boolean> {
 }
 
 /**
+ * 动态获取最近一条工单/订单的关联订单ID
+ */
+export async function getValidOrderId(page: Page): Promise<string> {
+    const defaultFallback = '672ac864-dc76-4dc4-86af-0dd15c01c26c';
+
+    await page.goto('/sales/orders');
+    await page.waitForLoadState('networkidle');
+
+    // 由于可能是 /orders 或 /sales/orders 路由，先查验当前是否有数据
+    const firstLink = page.locator('table tbody tr a').first();
+    if (await firstLink.isVisible({ timeout: 3000 })) {
+        const href = await firstLink.getAttribute('href');
+        const exactId = href?.split('/').pop();
+        if (exactId && exactId.length > 20) return exactId; // 基础的 UUID 长度过滤
+    }
+
+    await page.goto('/orders');
+    await page.waitForLoadState('networkidle');
+    const alterLink = page.locator('table tbody tr a').first();
+    if (await alterLink.isVisible({ timeout: 3000 })) {
+        const href = await alterLink.getAttribute('href');
+        const exactId = href?.split('/').pop();
+        if (exactId && exactId.length > 20) return exactId;
+    }
+
+    return defaultFallback;
+}
+
+/**
  * 安全等待页面加载完成
  * @param page Playwright Page 对象
  * @param options 可选配置

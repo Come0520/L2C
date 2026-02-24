@@ -1,0 +1,37 @@
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # 每周日午夜运行一次
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 9.15.0
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Run npm audit (via pnpm)
+      # 专门检查关键、高危漏洞
+      run: pnpm audit --audit-level=high
+
+    - name: Custom Security Lint
+      # 调用自建的防任何/遗留安全扫瞄脚本
+      run: pnpm run audit:internal
+      continue-on-error: true # 作为警告不绝对阻塞

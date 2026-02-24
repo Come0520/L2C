@@ -2,7 +2,8 @@
 
 import { Checkbox } from "@/shared/ui/checkbox";
 import { PERMISSION_GROUPS, PERMISSION_LABELS } from '@/shared/config/permissions';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 

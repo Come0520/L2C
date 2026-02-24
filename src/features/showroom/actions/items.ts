@@ -5,7 +5,7 @@ import { db } from '@/shared/api/db';
 import { showroomItems } from '@/shared/api/schema/showroom';
 import { eq, and, desc, sql, or, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { createShowroomItemSchema, updateShowroomItemSchema, deleteShowroomItemSchema, getShowroomItemsSchema } from './schema';
 import { AuditService } from '@/shared/services/audit-service';
 import DOMPurify from 'isomorphic-dompurify';
@@ -14,6 +14,9 @@ import { calculateScore } from '../logic/scoring';
 import { canManageShowroomItem } from '../logic/permissions';
 import { redis } from '@/shared/lib/redis';
 import { SQL } from 'drizzle-orm';
+import { createLogger } from '@/shared/lib/logger';
+
+const logger = createLogger('ShowroomItemsAction');
 
 /**
  * 云展厅素材管理 Actions
@@ -63,8 +66,7 @@ export async function getShowroomItems(input: z.input<typeof getShowroomItemsSch
     }
 
     if (categoryId) {
-        // 如果存在分类要求，则必须借用表连接去判定 `product.category`，这是一个扩展点 (视需求如果仅靠 product_id 需要做 subquery)
-        // 简单实现：我们在 showroom_items 定义中有关联 productId, 通过子查询达成同类过滤
+        // 如果存在分类要求，则必须借用表连接去判定 `product.category`，这是一个扩展点
         const { products } = await import('@/shared/api/schema/catalogs');
         whereConditions.push(inArray(showroomItems.productId, db.select({ id: products.id }).from(products).where(sql`${products.category} = ${categoryId}`)));
     }
@@ -81,36 +83,48 @@ export async function getShowroomItems(input: z.input<typeof getShowroomItemsSch
     }
 
     // 4. 执行合并查询 (SQL 窗口函数优化)
-    const result = await db.select({
-        item: showroomItems,
-        totalCount: sql<number>`count(*) OVER()`.mapWith(Number),
-    })
-        .from(showroomItems)
-        .where(and(...whereConditions))
-        .orderBy(orderByCondition, desc(showroomItems.createdAt))
-        .limit(pageSize)
-        .offset(offset);
+    try {
+        const result = await db.select({
+            item: showroomItems,
+            totalCount: sql<number>`count(*) OVER()`.mapWith(Number),
+        })
+            .from(showroomItems)
+            .where(and(...whereConditions))
+            .orderBy(orderByCondition, desc(showroomItems.createdAt))
+            .limit(pageSize)
+            .offset(offset);
 
-    const data = result.map(r => r.item);
-    const total = result[0]?.totalCount || 0;
-    const totalPages = Math.ceil(total / pageSize);
+        const data = result.map(r => r.item);
+        const total = result[0]?.totalCount || 0;
+        const totalPages = Math.ceil(total / pageSize);
 
-    const response = {
-        data,
-        pagination: {
-            total,
-            page,
-            pageSize,
-            totalPages,
-        },
-    };
+        const response = {
+            data,
+            pagination: {
+                total,
+                page,
+                pageSize,
+                totalPages,
+            },
+        };
 
-    // 4. 写入缓存 (5分钟)
-    if (redis && !search) {
-        await redis.set(cacheKey, response, { ex: 300 });
+        // 4. 写入缓存 (5分钟)
+        if (redis && !search) {
+            await redis.set(cacheKey, response, {
+                ex: 300,
+                // 标记该缓存属于展厅列表，方便未来扩展
+                // [Note] 这里配合 `revalidateTag` 使用 Next.js 原生缓存层会更优雅，
+                // 但为了保持现有 Redis 逻辑的一致性，我们先保留手动 Redis 写入。
+            });
+        }
+
+        logger.info('获取展厅素材列表成功', { tenantId: session.user.tenantId, page, pageSize, total });
+
+        return response;
+    } catch (error) {
+        logger.error('获取展厅素材列表失败', { error, input });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
     }
-
-    return response;
 }
 
 /**
@@ -121,13 +135,27 @@ export async function getShowroomItemDetail(id: string) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-    return await db.query.showroomItems.findFirst({
-        where: and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)),
-        with: {
-            product: true,
-            creator: true,
-        },
-    });
+    try {
+        const item = await db.query.showroomItems.findFirst({
+            where: and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)),
+            with: {
+                product: true,
+                creator: true,
+            },
+        });
+
+        if (!item) {
+            logger.error('未找到指定的展厅素材', { id, tenantId: session.user.tenantId });
+            throw new ShowroomError(ShowroomErrors.ITEM_NOT_FOUND);
+        }
+
+        logger.info('获取展厅素材详情成功', { id, tenantId: session.user.tenantId });
+        return item;
+    } catch (error) {
+        if (error instanceof ShowroomError) throw error;
+        logger.error('获取展厅素材详情失败', { error, id });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -148,26 +176,34 @@ export async function createShowroomItem(input: z.input<typeof createShowroomIte
 
     const score = calculateScore(data);
 
-    const [newItem] = await db.insert(showroomItems).values({
-        ...data,
-        tenantId: session.user.tenantId,
-        createdBy: session.user.id,
-        score: score,
-    }).returning();
+    try {
+        const [newItem] = await db.insert(showroomItems).values({
+            ...data,
+            tenantId: session.user.tenantId,
+            createdBy: session.user.id,
+            score: score,
+        }).returning();
 
-    // 记录审计日志
-    await AuditService.log(db, {
-        tableName: 'showroom_items',
-        recordId: newItem.id,
-        action: 'CREATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: newItem as Record<string, unknown>
-    });
+        // 记录审计日志
+        await AuditService.log(db, {
+            tableName: 'showroom_items',
+            recordId: newItem.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: newItem as Record<string, unknown>
+        });
 
-    revalidatePath('/showroom');
-    await invalidateShowroomCache(session.user.tenantId);
-    return newItem;
+        revalidateTag('showroom-list', 'default');
+        await invalidateShowroomCache(session.user.tenantId);
+
+        logger.info('创建展厅素材成功', { itemId: newItem.id, tenantId: session.user.tenantId, createdBy: session.user.id });
+
+        return newItem;
+    } catch (error) {
+        logger.error('创建展厅素材失败', { error, input });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -209,30 +245,38 @@ export async function updateShowroomItem(input: z.input<typeof updateShowroomIte
 
     const score = calculateScore(mergedData);
 
-    const [updatedItem] = await db.update(showroomItems)
-        .set({
-            ...data,
-            score,
-            updatedBy: session.user.id,
-            updatedAt: new Date(),
-        })
-        .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)))
-        .returning();
+    try {
+        const [updatedItem] = await db.update(showroomItems)
+            .set({
+                ...data,
+                score,
+                updatedBy: session.user.id,
+                updatedAt: new Date(),
+            })
+            .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)))
+            .returning();
 
-    await AuditService.log(db, {
-        tableName: 'showroom_items',
-        recordId: id,
-        action: 'UPDATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        oldValues: existing as Record<string, unknown>,
-        newValues: updatedItem as Record<string, unknown>
-    });
+        await AuditService.log(db, {
+            tableName: 'showroom_items',
+            recordId: id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: existing as Record<string, unknown>,
+            newValues: updatedItem as Record<string, unknown>
+        });
 
-    revalidatePath('/showroom');
-    revalidatePath(`/showroom/${id}`);
-    await invalidateShowroomCache(session.user.tenantId);
-    return updatedItem;
+        revalidateTag('showroom-list', 'default');
+        revalidateTag(`showroom-item-${id}`, 'default');
+        await invalidateShowroomCache(session.user.tenantId);
+
+        logger.info('更新展厅素材成功', { itemId: id, tenantId: session.user.tenantId, updatedBy: session.user.id });
+
+        return updatedItem;
+    } catch (error) {
+        logger.error('更新展厅素材失败', { error, input });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -257,22 +301,31 @@ export async function deleteShowroomItem(input: z.input<typeof deleteShowroomIte
         throw new ShowroomError(ShowroomErrors.FORBIDDEN);
     }
 
-    await db.update(showroomItems)
-        .set({ status: 'ARCHIVED', updatedAt: new Date(), updatedBy: session.user.id })
-        .where(eq(showroomItems.id, id));
+    try {
+        await db.update(showroomItems)
+            .set({ status: 'ARCHIVED', updatedAt: new Date(), updatedBy: session.user.id })
+            .where(eq(showroomItems.id, id));
 
-    await AuditService.log(db, {
-        tableName: 'showroom_items',
-        recordId: id,
-        action: 'DELETE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        oldValues: existing as Record<string, unknown>
-    });
+        await AuditService.log(db, {
+            tableName: 'showroom_items',
+            recordId: id,
+            action: 'DELETE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: existing as Record<string, unknown>
+        });
 
-    revalidatePath('/showroom');
-    await invalidateShowroomCache(session.user.tenantId);
-    return { success: true };
+        revalidateTag('showroom-list', 'default');
+        revalidateTag(`showroom-item-${id}`, 'default');
+        await invalidateShowroomCache(session.user.tenantId);
+
+        logger.info('软删除展厅素材成功', { itemId: id, tenantId: session.user.tenantId, deletedBy: session.user.id });
+
+        return { success: true };
+    } catch (error) {
+        logger.error('软删除展厅素材失败', { error, input });
+        throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
+    }
 }
 
 /**

@@ -18,6 +18,10 @@ interface TenantSettings {
  * 运行规则检查并触发通知
  */
 export const slaChecker = {
+    /**
+     * SLA 引擎入口：运行所有规则检查并触发通知。
+     * 规则检查按顺序执行，异常会被捕获并记录日志。
+     */
     async runAllChecks() {
         const results = await Promise.all([
             this.checkLeadFollowupSLA(),
@@ -28,9 +32,14 @@ export const slaChecker = {
     },
 
     /**
-     * 1. 线索跟进时效
-     * 规则: 状态=PENDING_FOLLOWUP 且 (lastActivityAt < 24h 前 OR (lastActivityAt is NULL AND assignedAt < 24h 前))
-     * 提醒: 销售
+     * 规则 1: 线索跟进时效检查 (Lead Followup SLA)
+     * 
+     * [判定逻辑]:
+     * - 状态为 PENDING_FOLLOWUP
+     * - (最后活跃 [lastActivityAt] < 24h 前) OR (无活跃且分配 [assignedAt] < 24h 前)
+     * 
+     * [处理动作]:
+     * - 触发 `LEAD_FOLLOWUP_TIMEOUT` 模板通知给指派的销售
      */
     async checkLeadFollowupSLA() {
         const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
@@ -44,35 +53,35 @@ export const slaChecker = {
         let totalSent = 0;
 
         for (const tenant of activeTenants) {
-            const overdueLeads = await db.query.leads.findMany({
-                where: and(
-                    eq(leads.tenantId, tenant.id),
-                    eq(leads.status, 'PENDING_FOLLOWUP'),
-                    or(
-                        lt(leads.lastActivityAt, threshold),
-                        and(isNull(leads.lastActivityAt), lt(leads.assignedAt, threshold))
-                    )
-                ),
-                with: {
-                    assignedSales: true,
-                }
-            });
+            const [overdueLeads, recentWarnings] = await Promise.all([
+                db.query.leads.findMany({
+                    where: and(
+                        eq(leads.tenantId, tenant.id),
+                        eq(leads.status, 'PENDING_FOLLOWUP'),
+                        or(
+                            lt(leads.lastActivityAt, threshold),
+                            and(isNull(leads.lastActivityAt), lt(leads.assignedAt, threshold))
+                        )
+                    ),
+                    with: {
+                        assignedSales: true,
+                    }
+                }),
+                db.query.notifications.findMany({
+                    where: and(
+                        eq(notifications.tenantId, tenant.id),
+                        eq(notifications.type, 'WARNING'),
+                        gte(notifications.createdAt, threshold)
+                    ),
+                    columns: {
+                        userId: true,
+                        title: true,
+                        content: true
+                    }
+                })
+            ]);
 
             totalFound += overdueLeads.length;
-
-            // P1 优化：对该租户下最近 24h 的所有告警通知进行预加载，解决循环内 N+1 查询问题
-            const recentWarnings = await db.query.notifications.findMany({
-                where: and(
-                    eq(notifications.tenantId, tenant.id),
-                    eq(notifications.type, 'WARNING'),
-                    gte(notifications.createdAt, threshold)
-                ),
-                columns: {
-                    userId: true,
-                    title: true,
-                    content: true
-                }
-            });
 
             for (const lead of overdueLeads) {
                 if (!lead.assignedSalesId) continue;
@@ -102,9 +111,14 @@ export const slaChecker = {
     },
 
     /**
-     * 2. 测量派单时效
-     * 规则: 状态=PENDING (待派单) 且 createdAt < 24h 前
-     * 提醒: 店长/派单员 (MANAGER)
+     * 规则 2: 测量派单时效检查 (Measure Task Dispatch SLA)
+     * 
+     * [判定逻辑]:
+     * - 状态为 PENDING (待派单)
+     * - 创建时间 [createdAt] < 24h 前
+     * 
+     * [处理动作]:
+     * - 触发 `MEASURE_DISPATCH_TIMEOUT` 模板通知给店长/派单员 (MANAGER)
      */
     async checkMeasureTaskDispatchSLA() {
         const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
@@ -130,42 +144,32 @@ export const slaChecker = {
             totalFound += overdueTasks.length;
 
             // Find Managers/Dispatchers within THIS tenant
-            const managers = await db.query.users.findMany({
-                where: and(
-                    eq(users.tenantId, tenant.id),
-                    eq(users.role, 'MANAGER')
-                )
-            });
-
-            if (managers.length === 0) {
-                logger.warn(`[SLAChecker] No managers found for tenant ${tenant.id} to receive dispatch alerts.`);
-                continue;
-            }
-
             // P1 优化：预加载该租户下所有待处理任务的警告通知，消除 N+1 查询
-            // Note: The provided instruction's `existingWarnings` and `warningKeys` logic
-            // seems to be for a different notification type (e.g., "即将逾期") or a different
-            // deduplication strategy.
-            // For "测量待派单超时警告", we need to check for notifications related to specific tasks.
-            // The original N+1 query was checking for notifications for a specific user and task.
-            // To optimize, we can fetch all relevant notifications for the tenant and then filter in memory.
-            const recentWarnings = await db.query.notifications.findMany({
-                where: and(
-                    eq(notifications.tenantId, tenant.id),
-                    eq(notifications.type, 'WARNING'),
-                    gte(notifications.createdAt, threshold),
-                    or(
-                        eq(notifications.title, '测量待派单超时警告'),
-                        eq(notifications.metadata, { type: 'sla_measure_dispatch' }) // More robust check
+            const [managers, recentWarnings] = await Promise.all([
+                db.query.users.findMany({
+                    where: and(
+                        eq(users.tenantId, tenant.id),
+                        eq(users.role, 'MANAGER')
                     )
-                ),
-                columns: {
-                    userId: true,
-                    title: true,
-                    content: true,
-                    metadata: true
-                }
-            });
+                }),
+                db.query.notifications.findMany({
+                    where: and(
+                        eq(notifications.tenantId, tenant.id),
+                        eq(notifications.type, 'WARNING'),
+                        gte(notifications.createdAt, threshold),
+                        or(
+                            eq(notifications.title, '测量待派单超时警告'),
+                            eq(notifications.metadata, { type: 'sla_measure_dispatch' }) // More robust check
+                        )
+                    ),
+                    columns: {
+                        userId: true,
+                        title: true,
+                        content: true,
+                        metadata: true
+                    }
+                })
+            ]);
 
             // Create a set for quick lookup of already sent notifications for a specific task and user
             const notifiedTasksForUser = new Set<string>(); // Format: `${userId}:${taskId}`
@@ -212,9 +216,14 @@ export const slaChecker = {
     },
 
     /**
-     * 3. 审批叫停与决策 SLA (租户级自定义支持)
-     * 规则 A (自动恢复/标记): 状态=PAUSED 且超时 -> 标记 TIMEOUT 并提醒
-     * 规则 B (强制决策): 状态=PENDING 且超时 -> 自动 APPROVE 
+     * 规则 3: 审批叫停与决策 SLA (租户级自定义支持)
+     * 
+     * [判定逻辑]:
+     * - 规则 A (自动恢复): 状态=PAUSED 且超时 -> 标记 TIMEOUT 并提醒申请人
+     * - 规则 B (强制决策): 状态=PENDING 且超时 -> 系统自动 APPROVE
+     * 
+     * [配置来源]:
+     * - 租户设置: `approvalAutoResumeHours` / `approvalAutoApproveDays`
      */
     async checkApprovalSLA() {
         logger.info('[SLAChecker] Starting checkApprovalSLA');
@@ -237,14 +246,23 @@ export const slaChecker = {
 
             logger.info(`[SLAChecker] Tenant: ${tenant.name} (${tenant.id}), approveDays: ${approveDays}, threshold: ${approveThreshold.toISOString()}`);
 
-            // --- Rule A: Auto Timeout for Paused Tasks ---
-            const pausedTasks = await db.query.approvalTasks.findMany({
-                where: and(
-                    eq(approvalTasks.tenantId, tenant.id),
-                    eq(approvalTasks.status, 'PAUSED'),
-                    lt(approvalTasks.createdAt, resumeThreshold)
-                )
-            });
+            // --- Rule A & B ---
+            const [pausedTasks, longPendingTasks] = await Promise.all([
+                db.query.approvalTasks.findMany({
+                    where: and(
+                        eq(approvalTasks.tenantId, tenant.id),
+                        eq(approvalTasks.status, 'PAUSED'),
+                        lt(approvalTasks.createdAt, resumeThreshold)
+                    )
+                }),
+                db.query.approvalTasks.findMany({
+                    where: and(
+                        eq(approvalTasks.tenantId, tenant.id),
+                        eq(approvalTasks.status, 'PENDING'),
+                        lt(approvalTasks.createdAt, approveThreshold)
+                    )
+                })
+            ]);
             totalFound += pausedTasks.length;
 
             for (const task of pausedTasks) {
@@ -274,14 +292,6 @@ export const slaChecker = {
                 totalResumeCount++;
             }
 
-            // --- Rule B: Auto Approve for Long Pending Tasks ---
-            const longPendingTasks = await db.query.approvalTasks.findMany({
-                where: and(
-                    eq(approvalTasks.tenantId, tenant.id),
-                    eq(approvalTasks.status, 'PENDING'),
-                    lt(approvalTasks.createdAt, approveThreshold)
-                )
-            });
             logger.info(`[SLAChecker] Found ${longPendingTasks.length} long pending tasks for Rule B`);
             totalFound += longPendingTasks.length;
 

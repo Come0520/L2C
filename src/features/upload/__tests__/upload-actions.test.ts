@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Upload 模块 Server Actions 测试
  *
  * 覆盖范围：
@@ -52,12 +52,17 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
-    logger: { info: vi.fn(), error: vi.fn() },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 vi.mock('@/shared/lib/server-action', () => ({
     createSafeAction: (_schema: unknown, handler: (p: unknown, ctx: unknown) => unknown) =>
         (input: unknown) => handler(input, { session: MOCK_SESSION }),
+}));
+
+vi.mock('next/cache', () => ({
+    unstable_cache: (fn: any) => fn,
+    revalidateTag: vi.fn(),
 }));
 
 /** ─────────── 常量 ─────────── */
@@ -162,7 +167,7 @@ describe('Upload Actions (L5)', () => {
             const result = await uploadFileAction(formData);
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain('不支持的文件类型');
+            expect(result.error).toContain('不支持的');
         });
 
         it('JS 脚本文件（text/javascript）应被拒绝', async () => {
@@ -177,6 +182,7 @@ describe('Upload Actions (L5)', () => {
             const result = await uploadFileAction(formData);
 
             expect(result.success).toBe(false);
+            expect(result.error).toContain('不支持的');
         });
 
         it('合法 Word 文档（.docx）应被允许', async () => {
@@ -309,13 +315,20 @@ describe('Upload Actions (L5)', () => {
                 return fd;
             });
 
+            // Seqentially start the first upload to ensure dynamic imports (like next-auth) 
+            // are resolved and mocked properly before we hit them concurrently
+            const firstFd = files.shift()!;
+            const firstResult = await uploadFileAction(firstFd);
+            expect(firstResult.success).toBe(true);
+
+            // Now run the rest concurrently
             const results = await Promise.all(files.map(fd => uploadFileAction(fd)));
 
             results.forEach(r => {
                 expect(r.success).toBe(true);
             });
 
-            // 每次上传都应写入审计日志
+            // 每次上传都应写入审计日志 (1 + 4)
             expect(mockDbInsert).toHaveBeenCalledTimes(5);
         });
     });
@@ -355,6 +368,7 @@ describe('Upload Actions (L5)', () => {
             const result = await uploadFileAction(formData);
 
             expect(result.success).toBe(false);
+            expect(result.error).toContain('文件不能为空');
         });
     });
 
@@ -374,6 +388,7 @@ describe('Upload Actions (L5)', () => {
             const result = await uploadFileAction(formData);
 
             expect(result.success).toBe(false);
+            expect(result.error).toContain('文件名不能超过 255');
         });
     });
 
@@ -392,6 +407,7 @@ describe('Upload Actions (L5)', () => {
             const result = await uploadFileAction(formData);
 
             expect(result.success).toBe(false);
+            expect(result.error).toContain('不支持的');
         });
     });
 

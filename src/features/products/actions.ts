@@ -1,38 +1,27 @@
-'use server';
-
-import { logger } from "@/shared/lib/logger";
 
 /**
  * 产品模块 Server Actions (Barrel File)
  */
 
-import * as queries from './actions/queries';
-import * as mutations from './actions/mutations';
-import * as templates from './actions/templates';
-
-// Re-export queries
-export const {
+export {
     getProducts,
     getProductById
-} = queries;
+} from './actions/queries';
 
-// Re-export mutations
-export const {
+export {
     createProduct,
     updateProduct,
     deleteProduct,
     activateProduct,
     batchCreateProducts
-} = mutations;
+} from './actions/mutations';
 
-// Re-export template actions
-export const {
+export {
     upsertAttributeTemplate,
     getAttributeTemplate
-} = templates;
+} from './actions/templates';
 
-import * as manageSuppliers from './actions/manage-suppliers';
-export const {
+export {
     getProductSuppliers,
     addProductSupplier,
     updateProductSupplier,
@@ -40,11 +29,10 @@ export const {
     // [Product-03] 供应商关联增强
     compareSupplierPrices,
     autoSwitchDefaultSupplier
-} = manageSuppliers;
+} from './actions/manage-suppliers';
 
 // 套餐管理
-import * as packageActions from './actions/package-actions';
-export const {
+export {
     getPackages,
     getPackageById,
     createPackage,
@@ -55,11 +43,10 @@ export const {
     addPackageProduct,
     removePackageProduct,
     calculatePackagePrice
-} = packageActions;
+} from './actions/package-actions';
 
 // 组合商品管理
-import * as bundleActions from './actions/bundle-actions';
-export const {
+export {
     getBundles,
     getBundleById,
     createBundle,
@@ -67,22 +54,20 @@ export const {
     deleteBundle,
     updateBundleItems,
     calculateBundleCost
-} = bundleActions;
+} from './actions/bundle-actions';
 
 // 渠道专属价管理
-import * as channelPriceActions from './actions/channel-price-actions';
-export const {
+export {
     getChannelPrices,
     getAllChannelPrices,
     addChannelPrice,
     updateChannelPrice,
     removeChannelPrice,
     getProductPriceForChannel
-} = channelPriceActions;
+} from './actions/channel-price-actions';
 
 // 渠道等级折扣管理
-import * as channelDiscountActions from './actions/channel-discount-actions';
-export const {
+export {
     getGlobalDiscountConfig,
     updateGlobalDiscountConfig,
     getDiscountOverrides,
@@ -90,5 +75,4 @@ export const {
     updateDiscountOverride,
     deleteDiscountOverride,
     getProductDiscountRate
-} = channelDiscountActions;
-
+} from './actions/channel-discount-actions';

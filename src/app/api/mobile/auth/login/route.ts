@@ -9,6 +9,7 @@ import { compare } from 'bcryptjs';
 import { withRateLimit, getRateLimitKey } from '@/shared/middleware/rate-limiter';
 import { NextRequest } from 'next/server';
 import { createLogger } from '@/shared/lib/logger';
+import type { TenantSettings } from '@/shared/types/tenant-settings';
 
 const log = createLogger('auth:login');
 
@@ -73,7 +74,7 @@ async function loginHandler(request: NextRequest) {
                 mobileRole = 'WORKER';
         }
 
-        // MFA Check
+        // MFA 检查 — 使用类型安全的 TenantSettings
         const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.id, user.tenantId),
             columns: {
@@ -81,7 +82,7 @@ async function loginHandler(request: NextRequest) {
             }
         });
 
-        const settings = tenant?.settings as { mfa?: { enabled: boolean; roles: string[] } } | null;
+        const settings = tenant?.settings as TenantSettings | null;
         const mfaConfig = settings?.mfa;
 
         let mfaRequired = false;

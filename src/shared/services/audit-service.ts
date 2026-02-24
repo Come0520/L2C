@@ -1,5 +1,5 @@
 import { db } from '../api/db';
-import type { DB, Transaction } from '../api/db';
+import type { DB, DbTransaction } from '../api/db';
 import { auditLogs } from '../api/schema/audit';
 import { InferInsertModel } from 'drizzle-orm';
 
@@ -11,17 +11,17 @@ export class AuditService {
      * @param params 审计日志参数
      */
     static async log(
-        db: DB | Transaction,
+        db: DB | DbTransaction,
         params: {
             tableName: string;
             recordId: string;
             action: string;
             userId?: string;
             tenantId?: string; // Optional in params, will fetch if missing
-            changedFields?: Record<string, any>;
-            oldValues?: Record<string, any>;
-            newValues?: Record<string, any>;
-            details?: Record<string, any>;
+            changedFields?: Record<string, unknown>;
+            oldValues?: Record<string, unknown>;
+            newValues?: Record<string, unknown>;
+            details?: Record<string, unknown>;
             traceId?: string;
             userAgent?: string;
             ipAddress?: string;

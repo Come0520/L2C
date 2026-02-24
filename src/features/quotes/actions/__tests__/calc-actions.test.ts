@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Quotes 模块 Server Actions 集成测试 (Calculation Engine)
  *
  * 覆盖范围：
@@ -38,6 +38,7 @@ vi.mock('@/shared/lib/auth', () => ({
 // Mock next/cache
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // Mock Schema
@@ -97,7 +98,7 @@ describe('Calc Actions (L5)', () => {
     });
 
     it('getCalcPreview 应当调用对应的计算策略并返回结果', async () => {
-        const { getCalcPreview } = await import('../calc-actions');
+        const { getCalcPreviewAction: getCalcPreview } = await import('../calc-actions');
         const { StrategyFactory } = await import('../../calc-strategies/strategy-factory');
 
         const params = {
@@ -119,7 +120,7 @@ describe('Calc Actions (L5)', () => {
     });
 
     it('getCalcPreview 缺少登录信息时抛出异常', async () => {
-        const { getCalcPreview } = await import('../calc-actions');
+        const { getCalcPreviewAction: getCalcPreview } = await import('../calc-actions');
         const { auth } = await import('@/shared/lib/auth');
         vi.mocked(auth).mockResolvedValue(null);
 

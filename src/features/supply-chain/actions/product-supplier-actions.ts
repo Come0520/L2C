@@ -6,6 +6,8 @@
  * 管理 productSuppliers 表的 CRUD 操作，
  * 支持设置默认供应商、采购价格、前置期等信息。
  */
+import { logger } from '@/shared/lib/logger';
+
 
 import { db } from '@/shared/api/db';
 import {
@@ -19,6 +21,8 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
+import { ProductSupplierListItem } from '../types';
+
 
 // ============ Schema 定义 ============
 
@@ -47,10 +51,11 @@ const updateProductSupplierSchema = productSupplierSchema.partial().omit({
  *
  * @description 查询关联了该商品的全部供应商列表。内置 ID 关联转换，将数值型价格转为 number 类型。
  * @param productId 商品唯一标识 (UUID)
- * @returns {Promise<{success: boolean, data: any[]}>} 关联明细列表，包含价格、前置期、默认标记等
+ * @returns {Promise<{success: boolean, data: ProductSupplierListItem[], error?: string}>} 关联明细列表，包含价格、前置期、默认标记等
  */
-export async function getProductSuppliers(productId: string) {
-    console.warn('[supply-chain] getProductSuppliers 检索商品 ID:', productId);
+export async function getProductSuppliers(productId: string): Promise<{ success: boolean, data: ProductSupplierListItem[], error?: string }> {
+
+    logger.info('[supply-chain] getProductSuppliers 检索商品 ID:', productId);
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权', data: [] };
@@ -112,7 +117,7 @@ export async function getProductSuppliers(productId: string) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function addProductSupplier(data: z.infer<typeof productSupplierSchema>) {
-    console.warn('[supply-chain] addProductSupplier 开始关联:', { productId: data.productId, supplierId: data.supplierId });
+    logger.info('[supply-chain] addProductSupplier 开始关联:', { productId: data.productId, supplierId: data.supplierId });
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
@@ -143,7 +148,7 @@ export async function addProductSupplier(data: z.infer<typeof productSupplierSch
         .limit(1);
 
     if (existing) {
-        console.error('[supply-chain] addProductSupplier 关联已存在:', { productId, supplierId });
+        logger.error('[supply-chain] addProductSupplier 关联已存在:', { productId, supplierId });
         return { success: false, error: '该供应商已关联此商品' };
     }
 
@@ -213,7 +218,7 @@ export async function updateProductSupplier(
     id: string,
     data: z.infer<typeof updateProductSupplierSchema>
 ) {
-    console.warn('[supply-chain] updateProductSupplier 开始更新:', { id });
+    logger.info('[supply-chain] updateProductSupplier 开始更新:', { id });
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
 
@@ -243,7 +248,7 @@ export async function updateProductSupplier(
         .limit(1);
 
     if (!existing) {
-        console.error('[supply-chain] updateProductSupplier 记录不存在:', id);
+        logger.error('[supply-chain] updateProductSupplier 记录不存在:', id);
         return { success: false, error: '关联记录不存在' };
     }
 
@@ -302,7 +307,7 @@ export async function updateProductSupplier(
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function removeProductSupplier(id: string) {
-    console.warn('[supply-chain] removeProductSupplier 开始移除:', id);
+    logger.info('[supply-chain] removeProductSupplier 开始移除:', id);
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };
@@ -350,7 +355,7 @@ export async function removeProductSupplier(id: string) {
  * @param supplierId 目标供应商 ID
  */
 export async function setDefaultSupplier(productId: string, supplierId: string) {
-    console.warn('[supply-chain] setDefaultSupplier 设置默认:', { productId, supplierId });
+    logger.info('[supply-chain] setDefaultSupplier 设置默认:', { productId, supplierId });
     const session = await auth();
     // ... (保持原有逻辑)
     if (!session?.user?.id) return { success: false, error: '未授权' };

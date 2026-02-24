@@ -10,3 +10,5 @@ export declare function calcDateNum(date: [Date, Date]): number;
 export declare function copyDates(dates: Date | Date[]): Date | Date[];
 export declare function getMonthEndDay(year: number, month: number): number;
 export declare function getMonths(minDate: number, maxDate: number): number[];
+
+export {};

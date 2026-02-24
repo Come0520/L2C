@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sales 模块综合测试
  * 覆盖：targets CRUD + 权限控制 + Zod 校验 + AuditService 审计 + dashboard 视图隔离
  */
@@ -22,6 +22,7 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
     unstable_cache: vi.fn((fn) => fn),
 }));
 

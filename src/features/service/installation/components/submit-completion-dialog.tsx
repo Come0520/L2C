@@ -15,11 +15,24 @@ import { checkOutInstallTaskAction } from '../actions';
 import { toast } from 'sonner';
 import { SignatureCanvas } from './signature-canvas';
 
+/**
+ * 提交完工申请对话框属性
+ */
 interface SubmitInstallCompletionDialogProps {
+    /** 安装任务 ID */
     taskId: string;
+    /** 自定义触发元素 */
     trigger?: React.ReactNode;
 }
 
+/**
+ * 完工申请提交对话框
+ * 
+ * 包含两步流程：
+ * 1. 确认完工：确认所有安装项已就绪。
+ * 2. 客户签字：调用 `SignatureCanvas` 完成客户在线签字验收。
+ * 签字完成后自动调用 `checkOutInstallTaskAction` 提交。
+ */
 export function SubmitInstallCompletionDialog({ taskId, trigger }: SubmitInstallCompletionDialogProps) {
     const [open, setOpen] = useState(false);
     // const [isLoading, setIsLoading] = useState(false);

@@ -17,23 +17,7 @@ import { logger } from '@/shared/lib/logger';
  * 提供查询、更新租户信息和上传 Logo 的功能
  */
 
-// ============ 类型定义 ============
-
-/** 租户联系信息 */
-export interface TenantContactInfo {
-    address: string;
-    phone: string;
-    email: string;
-}
-
-/** 租户完整信息（用于前端显示） */
-export interface TenantInfo {
-    id: string;
-    name: string;
-    code: string;
-    logoUrl: string | null;
-    contact: TenantContactInfo;
-}
+import type { TenantInfo, TenantContactInfo, VerificationStatus, VerificationInfo } from '../types/tenant';
 
 // ============ Zod 校验 Schema ============
 
@@ -278,20 +262,6 @@ export async function uploadTenantLogo(formData: FormData): Promise<{ success: t
 }
 
 // ============ 企业认证相关 Actions ============
-
-/** 认证状态类型 */
-export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
-
-/** 认证信息 */
-export interface VerificationInfo {
-    status: VerificationStatus;
-    businessLicenseUrl: string | null;
-    legalRepName: string | null;
-    registeredCapital: string | null;
-    businessScope: string | null;
-    verifiedAt: Date | null;
-    verificationRejectReason: string | null;
-}
 
 /**
  * 获取当前租户认证状态

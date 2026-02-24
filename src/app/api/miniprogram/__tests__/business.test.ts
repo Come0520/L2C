@@ -23,7 +23,7 @@ vi.mock('@/shared/api/db', () => {
     const mockRes = [{ count: 10, total: '5000', status: 'WON', finalAmount: '1000' }];
 
     // 模拟 Drizzle 链式 Proxy
-    const createChain = (data: any = mockRes) => {
+    const createChain = (data: unknown = mockRes) => {
         const chain = {
             from: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
@@ -33,7 +33,7 @@ vi.mock('@/shared/api/db', () => {
             offset: vi.fn().mockReturnThis(),
             leftJoin: vi.fn().mockReturnThis(),
             innerJoin: vi.fn().mockReturnThis(),
-            then: (resolve: any) => Promise.resolve(data).then(resolve)
+            then: (resolve: (value: unknown) => unknown) => Promise.resolve(data).then(resolve)
         };
         return chain;
     };
@@ -92,7 +92,7 @@ describe('小程序 L5 业务逻辑收官套件 (Total Coverage 30+)', () => {
         vi.mocked(authUtils.getMiniprogramUser).mockResolvedValue(MOCK_USER);
     });
 
-    const createReq = (url: string, method: string = 'GET', body: any = null) => {
+    const createReq = (url: string, method: string = 'GET', body: unknown = null) => {
         return new NextRequest(url, { method, body: body ? JSON.stringify(body) : null });
     };
 
@@ -121,13 +121,13 @@ describe('小程序 L5 业务逻辑收官套件 (Total Coverage 30+)', () => {
         ];
 
         it.each(searches)('搜索关键字验证: "%s"', async (kw) => {
-            vi.mocked(CustomerService.getCustomers).mockResolvedValue({ data: [], total: 0 } as any);
+            vi.mocked(CustomerService.getCustomers).mockResolvedValue({ data: [], total: 0 } as never);
             const res = await getCustomersHandler(createReq(`http://localhost/api/customers?keyword=${kw}`));
             expect(res.status).toBe(200);
         });
 
         it('游标分页透传验证 (精简版)', async () => {
-            vi.mocked(CustomerService.getCustomers).mockResolvedValue({ data: [], total: 0 } as any);
+            vi.mocked(CustomerService.getCustomers).mockResolvedValue({ data: [], total: 0 } as never);
             // 直接通过 URL searchParams 测试，避开 PaginationSchema 的自动纠错逻辑
             const req = createReq('http://localhost/api/customers?cursor=2024-01-01');
             await getCustomersHandler(req);
@@ -166,7 +166,7 @@ describe('小程序 L5 业务逻辑收官套件 (Total Coverage 30+)', () => {
 
         it('AuditService 宕机时，核心创建流程不应被阻断', async () => {
             vi.mocked(AuditService.log).mockRejectedValue(new Error('Audit DB Down'));
-            vi.mocked(CustomerService.createCustomer).mockResolvedValue({ id: 'c1' } as any);
+            vi.mocked(CustomerService.createCustomer).mockResolvedValue({ id: 'c1' } as never);
             const res = await createCustomerHandler(createReq('http://localhost/api/customers', 'POST', { name: 'Resilient' }));
             expect(res.status).toBe(200);
         });
@@ -180,7 +180,7 @@ describe('小程序 L5 业务逻辑收官套件 (Total Coverage 30+)', () => {
 
     describe('5. 类型稳定性验证', () => {
         it('Zod 类型转换验证 (coerce)', async () => {
-            vi.mocked(OrderService.getOrders).mockResolvedValue([] as any);
+            vi.mocked(OrderService.getOrders).mockResolvedValue([] as never);
             const res = await dashboardHandler(createReq('http://localhost/api/dashboard?year=2024&month=05'));
             expect(res.status).toBe(200);
         });

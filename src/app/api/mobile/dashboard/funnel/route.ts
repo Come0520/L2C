@@ -1,3 +1,11 @@
+/**
+ * 销售端 - 转化漏斗数据
+ *
+ * @route GET /api/mobile/dashboard/funnel
+ * @auth JWT Token (销售角色)
+ * @query {string} [range='30d'] - 时间范围：7d | 30d | 90d
+ * @returns {ApiResponse<FunnelData>} 包含线索、报价、订单、成交各阶段及其转化率
+ */
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';

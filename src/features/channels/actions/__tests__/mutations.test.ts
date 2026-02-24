@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 
 // 1. 注册 Mock (完全隔离，不引用外部变量)
@@ -26,6 +26,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({
@@ -36,13 +37,21 @@ vi.mock('@/shared/services/audit-service', () => ({
 import { db } from '@/shared/api/db';
 import { createChannel, updateChannel, deleteChannel } from '../mutations';
 
-const mockDb = db as any;
+type MockDb = typeof db & {
+    transaction: any;
+    insert: any;
+    update: any;
+    delete: any;
+    $count: any;
+};
+
+const mockDb = db as unknown as MockDb;
 
 describe('Channels Mutations (渠道业务测试)', () => {
     const mockChannelId = '11111111-e29b-41d4-a716-446655440000';
     const mockTenantId = '880e8400-e29b-41d4-a716-446655440000';
 
-    const createChain = (returnValue: any) => ({
+    const createChain = (returnValue: unknown) => ({
         set: vi.fn().mockReturnThis(),
         values: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
@@ -52,7 +61,7 @@ describe('Channels Mutations (渠道业务测试)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        mockDb.transaction.mockImplementation(async (cb: any) => cb(mockDb));
+        mockDb.transaction.mockImplementation(async (cb: (tx: MockDb) => Promise<unknown>) => cb(mockDb));
         mockDb.insert.mockImplementation(() => createChain([{ id: mockChannelId }]));
         mockDb.update.mockImplementation(() => createChain([{ id: mockChannelId }]));
         mockDb.delete.mockImplementation(() => ({
@@ -79,7 +88,7 @@ describe('Channels Mutations (渠道业务测试)', () => {
             };
 
             const result = await createChannel(input);
-            expect(result).toEqual({ id: mockChannelId });
+            expect(result).toEqual({ success: true, channelId: mockChannelId });
         });
     });
 
@@ -108,7 +117,7 @@ describe('Channels Mutations (渠道业务测试)', () => {
             // 模拟渠道存在
             mockDb.query.channels.findFirst.mockResolvedValue({ id: mockChannelId, tenantId: mockTenantId });
             // 给特定的查询 count 返回不同的数量
-            mockDb.transaction.mockImplementationOnce(async (cb: any) => {
+            mockDb.transaction.mockImplementationOnce(async (cb: (tx: { $count: any }) => Promise<unknown>) => {
                 return cb({
                     $count: vi.fn().mockResolvedValueOnce(2) // 子渠道有 2 个
                 });

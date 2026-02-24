@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // 使用 vi.hoisted 提升 mock 定义
 const mocks = vi.hoisted(() => ({
@@ -17,7 +17,9 @@ vi.mock('@/shared/lib/auth', () => ({
     auth: mocks.auth,
     checkPermission: mocks.checkPermission,
 }));
-vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath,
+    revalidateTag: vi.fn(),
+}));
 vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { log: mocks.logAudit },
 }));

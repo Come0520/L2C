@@ -8,7 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/shared/ui/form';
 import { toast } from 'sonner';
-import { Loader2, Save, Shield, Sparkles, Bell, FileText, Users, Wallet } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Wallet from 'lucide-react/dist/esm/icons/wallet';
 import { useState } from 'react';
 
 /**

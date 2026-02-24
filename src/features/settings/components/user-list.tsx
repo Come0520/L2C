@@ -3,7 +3,10 @@ import { logger } from '@/shared/lib/logger';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import { Edit, UserX, UserCheck, Trash2 } from 'lucide-react';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import UserX from 'lucide-react/dist/esm/icons/user-x';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 import { useState } from 'react';

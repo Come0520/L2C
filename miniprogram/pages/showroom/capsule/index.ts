@@ -4,7 +4,7 @@ Page({
             name: '金牌顾问',
             avatarUrl: ''
         },
-        items: [] as any[]
+        items: [] as Record<string, any>[]
     },
 
     onLoad(options: any) {
@@ -48,7 +48,7 @@ Page({
         const current = e.currentTarget.dataset.src;
         wx.previewImage({
             current,
-            urls: this.data.items.map(item => item.image)
+            urls: this.data.items.map((item: any) => item.image)
         });
     },
 

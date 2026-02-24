@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 客户模块 Server Actions 集成测试 (Queries + Activities)
  *
  * 覆盖范围：
@@ -51,6 +51,8 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    unstable_cache: vi.fn((fn: any) => fn),
 }));
 
 vi.mock('@/shared/lib/utils', () => ({

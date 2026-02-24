@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getShowroomItemDetail } from '@/features/showroom/actions';
-import { ShowroomDetailClient } from '../components/showroom-detail-client';
+import { ShowroomDetailClient } from '@/features/showroom/components/showroom-detail-client';
 
 /**
  * 云展厅详情页 - Server Component

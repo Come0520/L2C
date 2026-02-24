@@ -4,16 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 
+/**
+ * 现场照片接口定义
+ */
 interface Photo {
     id: string;
+    /** 照片类型：施工前、施工后、细节图 */
     photoType: 'BEFORE' | 'AFTER' | 'DETAIL';
+    /** OSS 访问地址 */
     photoUrl: string;
+    /** 照片备注 */
     remark?: string | null;
+    /** 上传时间 */
     createdAt: Date | null;
 }
 
+/**
+ * 现场照片墙组件属性
+ */
 interface InstallPhotoGalleryProps {
+    /** 照片列表 */
     photos: Photo[];
+    /** 是否允许上传（预留） */
     allowUpload: boolean;
 }
 
@@ -23,6 +35,11 @@ const PHOTO_TYPE_MAP = {
     DETAIL: '细节图',
 };
 
+/**
+ * 现场照片墙组件
+ * 
+ * 分类展示现场施工前、施工后及细节照片。
+ */
 export function InstallPhotoGallery({ photos, allowUpload: _allowUpload }: InstallPhotoGalleryProps) {
     const renderPhotoSection = (type: keyof typeof PHOTO_TYPE_MAP) => {
         const filteredPhotos = photos.filter(p => p.photoType === type);

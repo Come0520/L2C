@@ -6,7 +6,7 @@ Page({
     data: {
         id: '',
         type: '',
-        task: null as any,
+        task: null as unknown as Record<string, any>,
         loading: true,
         error: '',
         statusText: '',
@@ -97,7 +97,7 @@ Page({
     // 更新状态
     async updateStatus(e: any) {
         const status = e.currentTarget.dataset.status;
-        const action = e.currentTarget.dataset.action;
+        // const action = e.currentTarget.dataset.action;
 
         wx.showLoading({ title: '处理中...' });
         try {
@@ -151,3 +151,5 @@ Page({
     }
 
 });
+
+export { };

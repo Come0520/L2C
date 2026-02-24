@@ -6,19 +6,36 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { auth } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
 
+import { logger } from "@/shared/lib/logger";
+import { AuditService } from "@/shared/services/audit-service";
+import { revokeApprovalSchema } from "../schema";
+
 /**
  * 撤销审批动作或撤回申请
  * 
- * 逻辑规则：
- * 1. 发起人：申请处于 PENDING 且在 24 小时内。
- * 2. 审批人：已通过的节点在 30 分钟内且下游节点未处理。
+ * L5 升级点：
+ * 1. 结构化日志输出。
+ * 2. 审计日志追踪。
+ * 3. Zod 输入校验。
+ * 4. 修复类型安全隐患。
  * 
  * @param approvalId - 审批实例 ID
  * @returns 撤销结果
  */
 export async function revokeApprovalAction(approvalId: string) {
+    // 1. Zod 输入校验
+    const parsed = revokeApprovalSchema.safeParse({ approvalId });
+    if (!parsed.success) {
+        return { success: false, error: '参数校验失败', details: parsed.error.format() };
+    }
+
     const session = await auth();
-    if (!session?.user?.id || !session.user.tenantId) return { success: false, error: 'Unauthorized' };
+    if (!session?.user?.id || !session.user.tenantId) {
+        logger.warn(`[Approval-Revoke] Unauthorized attempt for approval ${approvalId}`);
+        return { success: false, error: 'Unauthorized' };
+    }
+
+    logger.info(`[Approval-Revoke] User ${session.user.id} attempting to revoke action for ${approvalId}`);
 
     return db.transaction(async (tx) => {
         const approval = await tx.query.approvals.findFirst({
@@ -31,12 +48,16 @@ export async function revokeApprovalAction(approvalId: string) {
             }
         });
 
-        if (!approval) return { success: false, error: "审批不存在" };
+        if (!approval) {
+            logger.warn(`[Approval-Revoke] Approval ${approvalId} not found for tenant ${session.user.tenantId}`);
+            return { success: false, error: "审批不存在" };
+        }
 
         const isInitiator = approval.requesterId === session.user.id;
         const isApprover = approval.tasks.some(t => t.approverId === session.user.id && t.status === 'APPROVED');
 
         if (!isInitiator && !isApprover) {
+            logger.warn(`[Approval-Revoke] User ${session.user.id} has no permission to revoke ${approvalId}`);
             return { success: false, error: "无权执行撤回操作" };
         }
 
@@ -53,14 +74,16 @@ export async function revokeApprovalAction(approvalId: string) {
                 return { success: false, error: '已超过24小时撤回期限' };
             }
 
+            logger.info(`[Approval-Revoke] Initiator ${session.user.id} revoking approval ${approvalId}`);
+
             // 执行撤销
             await tx.update(approvals)
-                .set({ status: 'CANCELED', completedAt: now })
+                .set({ status: 'CANCELED', completedAt: now, updatedAt: now })
                 .where(eq(approvals.id, approvalId));
 
             // 取消所有待处理任务
             await tx.update(approvalTasks)
-                .set({ status: 'CANCELED' })
+                .set({ status: 'CANCELED', actionAt: now })
                 .where(and(
                     eq(approvalTasks.approvalId, approvalId),
                     eq(approvalTasks.status, 'PENDING')
@@ -69,6 +92,16 @@ export async function revokeApprovalAction(approvalId: string) {
             // 业务回滚
             const { revertEntityStatus } = await import("./utils");
             await revertEntityStatus(tx, approval.entityType, approval.entityId, approval.tenantId, 'DRAFT');
+
+            // 审计日志
+            await AuditService.log(tx, {
+                tableName: 'approvals',
+                recordId: approvalId,
+                action: 'REVOKE_INITIATOR',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                details: { type: 'withdrawal', originalStatus: approval.status }
+            });
 
             revalidatePath('/approval');
             return { success: true, message: '发起人已成功撤销申请' };
@@ -90,18 +123,21 @@ export async function revokeApprovalAction(approvalId: string) {
 
             const minutesSinceAction = (now.getTime() - lastTask.actionAt.getTime()) / (1000 * 60);
             if (minutesSinceAction > 30) {
-                return { success: false, error: '审批已超过30分钟，无法撤回' };
+                return { success: false, error: '审批已超过30分钟，无法撤销' };
             }
 
             if (approval.status !== 'PENDING') {
                 return { success: false, error: '流程已结束或已驳回，无法撤销审批动作' };
             }
 
-            // P1-4: 检查后续节点是否已经开始处理 (按 sortOrder 判断)
+            // 检查后续节点是否已经开始处理 (按 sortOrder 判断)
             const lastNode = await tx.query.approvalNodes.findFirst({
                 where: eq(approvalNodes.id, lastTask.nodeId!)
             });
-            if (!lastNode) return { success: false, error: '节点数据异常' };
+            if (!lastNode) {
+                logger.error(`[Approval-Revoke] Node ${lastTask.nodeId} not found for task ${lastTask.id}`);
+                return { success: false, error: '节点数据异常' };
+            }
 
             const subsequentActionTasks = await tx.query.approvalTasks.findMany({
                 where: and(
@@ -121,9 +157,11 @@ export async function revokeApprovalAction(approvalId: string) {
                 return { success: false, error: '后续节点已产生审批动作，无法撤回' };
             }
 
+            logger.info(`[Approval-Revoke] Approver ${session.user.id} rolling back task ${lastTask.id} for ${approvalId}`);
+
             // 执行回滚
             await tx.update(approvals)
-                .set({ currentNodeId: lastTask.nodeId })
+                .set({ currentNodeId: lastTask.nodeId, updatedAt: now })
                 .where(eq(approvals.id, approvalId));
 
             await tx.update(approvalTasks)
@@ -153,8 +191,19 @@ export async function revokeApprovalAction(approvalId: string) {
             const { revertEntityStatus } = await import("./utils");
             await revertEntityStatus(tx, approval.entityType, approval.entityId, approval.tenantId, 'PENDING_APPROVAL');
 
+            // 审计日志
+            await AuditService.log(tx, {
+                tableName: 'approvals',
+                recordId: approvalId,
+                action: 'REVOKE_APPROVER',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                details: { taskId: lastTask.id, nodeId: lastTask.nodeId }
+            });
+
             revalidatePath('/approval');
             return { success: true, message: '审批动作已撤回，流程已回退' };
         }
     });
 }
+

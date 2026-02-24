@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getInstallers, dispatchInstallTask, getInstallTasks } from '../actions/install-actions';
 
 // --- 1. 统一在作用域外预声明 Mock 变量 (使用 vi.hoisted 解决提升问题) ---
@@ -52,7 +52,8 @@ vi.mock('@/shared/api/db', () => ({
 vi.mock('next/cache', () => ({
     revalidatePath: mockRevalidatePath,
     // Provide a simple bypass for unstable_cache
-    unstable_cache: (cb: any) => cb
+    unstable_cache: (cb: any) => cb,
+    revalidateTag: vi.fn(),
 }));
 
 describe('Service Feature - Install Actions', () => {

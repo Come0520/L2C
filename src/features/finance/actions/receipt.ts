@@ -1,6 +1,5 @@
 'use server';
 
-import { logger } from "@/shared/lib/logger";
 
 import { db } from '@/shared/api/db';
 import { receiptBills } from '@/shared/api/schema';
@@ -8,7 +7,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { ReceiptService, CreateReceiptBillData } from '@/services/receipt.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 
 
@@ -44,7 +43,7 @@ export async function createAndSubmitReceipt(data: CreateReceiptBillData) {
     const bill = await ReceiptService.createReceiptBill(data, session.user.tenantId, session.user.id);
     const result = await ReceiptService.submitForApproval(bill.id, session.user.tenantId);
 
-    revalidatePath('/finance/receipt');
+    revalidateTag(`finance-receipt-${session.user.tenantId}`, 'default');
     return result;
 }
 
@@ -83,6 +82,6 @@ export async function voidReceiptBill(id: string) {
     });
 
 
-    revalidatePath('/finance/receipt');
+    revalidateTag(`finance-receipt-${session.user.tenantId}`, 'default');
     return { success: true };
 }

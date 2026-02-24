@@ -33,7 +33,7 @@ vi.mock('@/shared/api/db', () => ({
 vi.mock('next/cache', () => ({
     revalidateTag: vi.fn(),
     revalidatePath: vi.fn(),
-    unstable_cache: vi.fn((fn: Function) => fn),
+    unstable_cache: vi.fn((fn: (...args: any[]) => any) => fn),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({

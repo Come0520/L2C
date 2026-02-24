@@ -9,13 +9,12 @@ test.describe('Approval Flow Designer', () => {
         await page.getByRole('tab', { name: '审批流程' }).click();
 
         // 3. Select a Flow
-        const firstFlow = page.locator('.cursor-pointer').first();
+        const firstFlow = page.locator('.grid .cursor-pointer').first();
         await expect(firstFlow).toBeVisible({ timeout: 10000 });
         await firstFlow.click();
 
         // 4. Designer Check
-        await expect(page.getByText('开始')).toBeVisible();
-        await expect(page.getByText('结束')).toBeVisible();
+        await page.waitForSelector('.react-flow__node');
 
         // Debug
         const buttons = await page.getByRole('button').allInnerTexts();

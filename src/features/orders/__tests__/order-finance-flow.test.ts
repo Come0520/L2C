@@ -39,7 +39,8 @@ const { mockDbQuery, mockDbInsert, mockDbUpdate, mockSession } = vi.hoisted(() =
 });
 
 // Mock Dependencies
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidateTag: vi.fn(),
+    revalidateTag: vi.fn() }));
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn().mockResolvedValue(mockSession),
     checkPermission: vi.fn().mockResolvedValue(true),

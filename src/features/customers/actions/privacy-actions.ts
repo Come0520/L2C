@@ -7,7 +7,7 @@
 
 import { db } from '@/shared/api/db';
 import { phoneViewLogs } from '@/shared/api/schema/customers';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
@@ -18,12 +18,20 @@ export interface ViewPhoneLogInput {
     ipAddress?: string;
 }
 
+export interface PhoneViewLog {
+    id: string;
+    tenantId: string;
+    customerId: string;
+    viewerId: string;
+    viewerRole: string | null;
+    ipAddress: string | null;
+    createdAt: Date | null;
+}
+
 /**
  * 记录手机号查看日志
- * Log phone number view
  * 
  * 安全检查：自动从 session 获取操作人信息和 tenantId
- * Security check: Automatically gets viewer info and tenantId from session
  * @param input 包含 customerId 和 ipAddress 的参数对象
  */
 export async function logPhoneView(input: ViewPhoneLogInput) {
@@ -54,7 +62,8 @@ export async function logPhoneView(input: ViewPhoneLogInput) {
             ipAddress: ipAddress || null,
         });
 
-        revalidatePath(`/customers/${customerId}`);
+        // 精确清除客户详情缓存（手机号查看日志不影响客户列表）
+        revalidateTag(`customer-detail-${customerId}`, 'default');
     } catch (error) {
         logger.error('[customers] 记录手机号查看日志失败:', error);
         throw error;
@@ -63,13 +72,12 @@ export async function logPhoneView(input: ViewPhoneLogInput) {
 
 /**
  * 获取客户的手机号查看日志
- * Get phone number view logs
  * 
  * 安全检查：自动从 session 获取 tenantId
- * Security check: Automatically gets tenantId from session
  * @param customerId 客户 ID
  */
-export async function getPhoneViewLogs(customerId: string) {
+export async function getPhoneViewLogs(customerId: string): Promise<PhoneViewLog[]> {
+    const startTime = Date.now();
     try {
         const session = await auth();
         if (!session?.user?.tenantId) {
@@ -92,7 +100,14 @@ export async function getPhoneViewLogs(customerId: string) {
             limit: 50,
         });
 
-        return logs;
+        const results: PhoneViewLog[] = logs.map(log => ({
+            ...log,
+            id: log.id.toString(),
+            viewerRole: log.viewerRole || null,
+        }));
+        const duration = Date.now() - startTime;
+        logger.info('[customers] 获取号码查看日志完成:', { customerId, count: results.length, duration });
+        return results;
     } catch (error) {
         logger.error('[customers] 获取手机号查看日志失败:', error);
         throw error;

@@ -85,10 +85,12 @@ Page({
 
     async onSubmit() {
         if (!this.data.orderId) {
-            return wx.showToast({ title: '请选择关联订单', icon: 'none' });
+            wx.showToast({ title: '请选择关联订单', icon: 'none' });
+            return;
         }
         if (!this.data.description) {
-            return wx.showToast({ title: '请填写问题描述', icon: 'none' });
+            wx.showToast({ title: '请填写问题描述', icon: 'none' });
+            return;
         }
 
         this.setData({ submitting: true });
@@ -118,3 +120,5 @@ Page({
         }
     }
 });
+
+export { };

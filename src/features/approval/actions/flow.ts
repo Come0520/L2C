@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
+import { logger } from '@/shared/lib/logger';
 import { approvalFlows, approvalNodes } from '@/shared/api/schema/approval';
 import { eq, and } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
@@ -100,24 +101,31 @@ const publishApprovalFlowActionInternal = createSafeAction(
         const flatNodes = flattenApprovalGraph(definition.nodes, definition.edges);
 
         await db.transaction(async (tx) => {
+            // 物理删除旧节点（发布即覆盖）
             await tx.delete(approvalNodes)
                 .where(and(eq(approvalNodes.flowId, flowId), eq(approvalNodes.tenantId, tenantId)));
 
             if (flatNodes.length > 0) {
+                const approverRoles = ['STORE_MANAGER', 'ADMIN', 'FINANCE', 'PURCHASING', 'DISPATCHER'] as const;
+
                 await tx.insert(approvalNodes).values(
-                    flatNodes.map(node => ({
-                        tenantId,
-                        flowId,
-                        name: node.name,
-                        // 类型安全：使用 approverRoleEnum 定义的值
-                        approverRole: node.approverType === 'ROLE' ? node.approverValue as 'ADMIN' | 'STORE_MANAGER' | 'FINANCE' | 'PURCHASING' | 'DISPATCHER' : undefined,
-                        approverUserId: node.approverType === 'USER' ? node.approverValue : undefined,
-                        conditions: node.conditions,
-                        sortOrder: node.sortOrder,
-                        nodeType: 'APPROVAL',
-                        approverMode: node.approverMode || 'ANY',
-                        timeoutAction: 'REMIND' as const
-                    }))
+                    flatNodes.map(node => {
+                        // 校验并匹配角色枚举
+                        const matchedRole = approverRoles.find(r => r === node.approverValue);
+
+                        return {
+                            tenantId,
+                            flowId,
+                            name: node.name,
+                            approverRole: node.approverType === 'ROLE' ? (matchedRole || null) : null,
+                            approverUserId: node.approverType === 'USER' ? node.approverValue : null,
+                            conditions: node.conditions,
+                            sortOrder: node.sortOrder,
+                            nodeType: 'APPROVAL',
+                            approverMode: node.approverMode || 'ANY',
+                            timeoutAction: 'REMIND' as const
+                        };
+                    })
                 );
             }
 
@@ -125,6 +133,8 @@ const publishApprovalFlowActionInternal = createSafeAction(
                 .set({ isActive: true, updatedAt: new Date() })
                 .where(eq(approvalFlows.id, flowId));
         });
+
+        logger.info(`[Approval-Flow] Published flow ${flowId} with ${flatNodes.length} active nodes.`);
 
         revalidatePath('/settings/approval');
         return { success: true };

@@ -1,4 +1,6 @@
 'use server';
+import { logger } from "@/shared/lib/logger";
+
 
 import { db } from "@/shared/api/db";
 import {
@@ -15,6 +17,8 @@ import { revalidatePath } from "next/cache";
 import { PERMISSIONS } from "@/shared/config/permissions";
 import { SUPPLY_CHAIN_PATHS } from "../constants";
 import { AuditService } from "@/shared/lib/audit-service";
+import { ProcessingOrderListItem, ProcessingOrderDetail } from "../types";
+
 
 /**
  * 加工单状态枚举
@@ -26,23 +30,29 @@ export type ProcessingOrderStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CA
  * 获取加工单列表
  */
 /**
- * 分页获取加工单列表
- * 
- * @description 结合供应商和订单信息，分页查询加工单。支持状态过滤和单号模糊搜索。
  * @param params 查询参数对象：
  * - `page` (number, optional): 页码，默认 1
  * - `pageSize` (number, optional): 每页数量，默认 20
  * - `status` (string, optional): 加工单状态过滤
  * - `search` (string, optional): 加工单号模糊搜索关键词
- * @returns {Promise<{success: boolean, data: any[], total: number, ...}>} 返回数据列表及分页信息
+ * @returns {Promise<{success: boolean, data: ProcessingOrderListItem[], total: number, page: number, pageSize: number, totalPages: number}>} 返回数据列表及分页信息
  */
 export async function getProcessingOrders(params: {
     page?: number;
     pageSize?: number;
     status?: string;
     search?: string;
-}) {
-    console.warn('[supply-chain] getProcessingOrders 查询参数:', params);
+}): Promise<{
+    success: boolean;
+    data: ProcessingOrderListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    error?: string;
+}> {
+
+    logger.info('[supply-chain] getProcessingOrders 查询参数:', params);
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     // ... (保持原有逻辑)
@@ -69,7 +79,7 @@ export async function getProcessingOrders(params: {
     }
 
     // 基础查询
-    const results = await db.select({
+    const resultsPromise = db.select({
         wo: workOrders,
         supplier: {
             id: suppliers.id,
@@ -89,9 +99,14 @@ export async function getProcessingOrders(params: {
         .offset((page - 1) * pageSize);
 
     // 获取总数
-    const [{ total: totalCount }] = await db.select({ total: count() })
+    const countPromise = db.select({ total: count() })
         .from(workOrders)
         .where(and(...conditions));
+
+    const [results, [{ total: totalCount }]] = await Promise.all([
+        resultsPromise,
+        countPromise
+    ]);
 
     const total = Number(totalCount);
 
@@ -126,10 +141,11 @@ export async function getProcessingOrders(params: {
  * 
  * @description 获取加工单主表数据及其关联的供应商、订单和对应的加工项明细明细。
  * @param params 包含 `id` (string) 加工单 ID 的对象
- * @returns {Promise<{success: boolean, data?: any, error?: string}>} 返回加工单详情对象
+ * @returns {Promise<{success: boolean, data?: ProcessingOrderDetail, error?: string}>} 返回加工单详情对象
  */
-export async function getProcessingOrderById({ id }: { id: string }) {
-    console.warn('[supply-chain] getProcessingOrderById 查询 ID:', id);
+export async function getProcessingOrderById({ id }: { id: string }): Promise<{ success: boolean, data?: ProcessingOrderDetail, error?: string }> {
+
+    logger.info('[supply-chain] getProcessingOrderById 查询 ID:', id);
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: '未授权' };
     // ... (保持原有逻辑)
@@ -170,7 +186,7 @@ export async function getProcessingOrderById({ id }: { id: string }) {
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(eq(workOrderItems.woId, wo.id));
 
-    const mapped = {
+    const mapped: ProcessingOrderDetail = {
         id: wo.id,
         processingNo: wo.woNo,
         status: wo.status,
@@ -183,12 +199,12 @@ export async function getProcessingOrderById({ id }: { id: string }) {
             id: i.woItem.id,
             productName: i.orderItem?.productName || '未知产品',
             sku: i.product?.sku || '-',
-            quantity: i.orderItem?.quantity || 1,
+            quantity: Number(i.orderItem?.quantity || 1),
             status: i.woItem.status,
         })),
         startedAt: wo.startAt,
         completedAt: wo.completedAt,
-        remark: wo.remark,
+        remark: wo.remark ?? null,
         createdAt: wo.createdAt,
     };
 
@@ -212,11 +228,11 @@ export async function updateProcessingOrderStatus(id: string, status: Processing
     // 权限检查
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.MANAGE);
-    } catch {
+    } catch (_error) {
         return { success: false, error: '无供应链管理权限' };
     }
 
-    console.warn('[supply-chain] updateProcessingOrderStatus 开始更新:', { id, status });
+    logger.info(`[supply-chain] updateProcessingOrderStatus 开始更新加工单 ${id} 状态为: ${status}`);
     try {
         await db.update(workOrders)
             .set({
@@ -235,11 +251,11 @@ export async function updateProcessingOrderStatus(id: string, status: Processing
             new: { status }
         });
 
-        console.warn('[supply-chain] updateProcessingOrderStatus 更新成功');
+        logger.info(`[supply-chain] updateProcessingOrderStatus 更新成功, 状态已流转至: ${status}`);
         revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] updateProcessingOrderStatus 更新失败:', error);
+        logger.error('[supply-chain] updateProcessingOrderStatus 更新失败:', error);
         return { success: false, error: '更新加工单状态失败' };
     }
 }
@@ -284,11 +300,11 @@ export async function createProcessingOrder(data: z.infer<typeof createProcessin
         return { success: false, error: '无供应链管理权限' };
     }
 
-    console.warn('[supply-chain] createProcessingOrder 开始创建:', { orderId: data.orderId, supplierId: data.supplierId });
+    logger.info('[supply-chain] createProcessingOrder 开始创建:', { orderId: data.orderId, supplierId: data.supplierId });
     // 校验输入
     const parsed = createProcessingOrderSchema.safeParse(data);
     if (!parsed.success) {
-        console.warn('[supply-chain] createProcessingOrder 输入校验失败:', parsed.error.issues);
+        logger.info('[supply-chain] createProcessingOrder 输入校验失败:', parsed.error.issues);
         return { success: false, error: parsed.error.issues[0]?.message || '输入校验失败' };
     }
 
@@ -307,7 +323,7 @@ export async function createProcessingOrder(data: z.infer<typeof createProcessin
             .limit(1);
 
         if (!orderRecord) {
-            console.warn('[supply-chain] createProcessingOrder 订单验证未通过:', orderId);
+            logger.info('[supply-chain] createProcessingOrder 订单验证未通过:', orderId);
             return { success: false, error: '关联订单不存在或无权访问' };
         }
 
@@ -352,11 +368,14 @@ export async function createProcessingOrder(data: z.infer<typeof createProcessin
             return wo;
         });
 
-        console.warn('[supply-chain] createProcessingOrder 创建成功:', result.id);
+        if (result.id) {
+            logger.info('[supply-chain] createProcessingOrder 创建成功:', result.id);
+        }
+
         revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
         return { success: true, id: result.id, woNo };
     } catch (error) {
-        console.error('[supply-chain] createProcessingOrder 创建内部错误:', error);
+        logger.error('[supply-chain] createProcessingOrder 创建内部错误:', error);
         return { success: false, error: '创建加工单失败' };
     }
 }
@@ -387,7 +406,7 @@ export async function updateProcessingOrder(id: string, data: z.infer<typeof upd
 
     const tenantId = session.user.tenantId;
 
-    console.warn('[supply-chain] 更新加工单基本信息:', { id, tenantId });
+    logger.info('[supply-chain] 更新加工单基本信息:', { id, tenantId });
     try {
 
         // 检查加工单存在性 + 租户隔离 + 状态
@@ -433,7 +452,7 @@ export async function updateProcessingOrder(id: string, data: z.infer<typeof upd
         revalidatePath(SUPPLY_CHAIN_PATHS.PROCESSING_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 更新加工单基本信息失败:', error);
+        logger.error('[supply-chain] 更新加工单基本信息失败:', error);
         return { success: false, error: '更新加工单失败' };
     }
 }

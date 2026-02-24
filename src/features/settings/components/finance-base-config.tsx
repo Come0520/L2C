@@ -9,7 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { useState } from 'react';
 
 /**

@@ -31,17 +31,47 @@ describe('Pool Recycle Job', () => {
         expect(db.query.leads.findMany).not.toHaveBeenCalled();
     });
 
-    it('should recycle no-contact leads', async () => {
-        vi.mocked(db.query.tenants.findMany).mockResolvedValue([{ id: 't1', settings: {} }] as never); // Default enabled
-        vi.mocked(db.query.tenants.findFirst).mockResolvedValue({ settings: {} } as never);
+    it('应当回收超期未联系的线索 (Status: PENDING_FOLLOWUP)', async () => {
+        const tenantId = 't1';
+        vi.mocked(db.query.tenants.findMany).mockResolvedValue([{ id: tenantId, isActive: true, settings: { leadSla: { autoRecycleEnabled: true, noContactDays: 3 } } }] as any);
 
-        // Mock 1 lead to recycle
-        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([{ id: 'l1', status: 'PENDING_FOLLOWUP' }] as never); // no-contact
-        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([] as never); // no-deal
+        // 模拟 1 条超期线索（第一轮查询：未联系）
+        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([{ id: 'l1', status: 'PENDING_FOLLOWUP', assignedAt: new Date(Date.now() - 4 * 24 * 3600 * 1000) }] as any);
+        // 第二轮查询（未成交）：返回空
+        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([]);
 
         const results = await executePoolRecycleJob();
 
-        expect(results.recycledNoContact).toBe(0); // The API is currently a stub returning 0
-        // expect(db.transaction).toHaveBeenCalled(); // Since it's a stub, it won't call transaction
+        expect(results.totalProcessed).toBe(1);
+        expect(results.recycledNoContact).toBe(1);
+        expect(db.transaction).toHaveBeenCalled();
+    });
+
+    it('应当回收超期未成交的线索 (Status: FOLLOWING_UP)', async () => {
+        const tenantId = 't2';
+        vi.mocked(db.query.tenants.findMany).mockResolvedValue([{ id: tenantId, isActive: true, settings: { leadSla: { autoRecycleEnabled: true, noDealDays: 7 } } }] as any);
+
+        // 第一轮查询（未联系）：返回空
+        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([]);
+        // 第二轮查询（未成交）：返回 1 条超期
+        vi.mocked(db.query.leads.findMany).mockResolvedValueOnce([{ id: 'l2', status: 'FOLLOWING_UP', assignedAt: new Date(Date.now() - 8 * 24 * 3600 * 1000) }] as any);
+
+        const results = await executePoolRecycleJob();
+
+        expect(results.totalProcessed).toBe(1);
+        expect(results.recycledNoDeal).toBe(1);
+    });
+
+    it('不应当回收在 SLA 期限内的线索', async () => {
+        const tenantId = 't3';
+        vi.mocked(db.query.tenants.findMany).mockResolvedValue([{ id: tenantId, isActive: true, settings: { leadSla: { autoRecycleEnabled: true, noContactDays: 3 } } }] as any);
+
+        // 由于代码中 findMany 是带 filter 的，如果 lead 在期限内，DB 实际上会返回空（在单元测试中我们需要模拟这个行为）
+        vi.mocked(db.query.leads.findMany).mockResolvedValue([]);
+
+        const results = await executePoolRecycleJob();
+
+        expect(results.totalProcessed).toBe(0);
+        expect(results.recycledNoContact).toBe(0);
     });
 });

@@ -12,11 +12,6 @@ import { AuditService } from '@/shared/lib/audit-service';
 import { OrderService } from '@/services/order.service';
 import { logger } from '@/shared/lib/logger';
 
-// 导入子模块以进行重导
-export { createOrderFromQuote } from './creation';
-export { confirmOrderProduction, splitOrder } from './production';
-export { requestDelivery, updateLogistics } from './logistics';
-
 // 导入 Schema
 import {
   cancelOrderSchema,

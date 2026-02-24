@@ -133,3 +133,5 @@ Page({
         return `${month}月${day}日 ${hour}:${minute}`;
     },
 });
+
+export {};

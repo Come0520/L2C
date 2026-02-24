@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/lib/utils';
-import { ChevronDown, ChevronUp, LayoutList, Table2 } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import LayoutList from 'lucide-react/dist/esm/icons/layout-list';
+import Table2 from 'lucide-react/dist/esm/icons/table';
 import {
     QuoteSummaryCalculator,
     QuoteSummaryData,

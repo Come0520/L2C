@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { History, Plus } from 'lucide-react';
+import History from 'lucide-react/dist/esm/icons/history';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { createNextVersion } from '../actions/mutations';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';

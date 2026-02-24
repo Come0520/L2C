@@ -100,9 +100,9 @@ describe('scoring-config', () => {
         });
 
         it('意向度权重应包含所有级别', () => {
-            expect(INTENTION_WEIGHTS.HIGH).toBe(35);
+            expect(INTENTION_WEIGHTS.HIGH).toBe(50);
             expect(INTENTION_WEIGHTS.MEDIUM).toBe(20);
-            expect(INTENTION_WEIGHTS.LOW).toBe(10);
+            expect(INTENTION_WEIGHTS.LOW).toBe(5);
         });
     });
 });

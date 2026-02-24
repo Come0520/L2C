@@ -1,23 +1,15 @@
 'use server';
-/* eslint-disable no-console */
 
 import { db } from '@/shared/api/db';
 import { salesTargets, users } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { unstable_cache, revalidatePath } from 'next/cache';
+import { unstable_cache } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 
-export interface SalesTargetDTO {
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  targetId: string | null;
-  targetAmount: number;
-  updatedAt: Date | null;
-}
+import { SalesTargetDTO } from '../types';
 
 /**
  * 获取销售目标列表 Zod Schema
@@ -100,7 +92,11 @@ const getCachedSalesTargets = unstable_cache(
 
 /**
  * 获取销售目标列表
- * 需要 tenantId 隔离，仅返回本租户的销售用户和目标
+ *
+ * @param year 年份
+ * @param month 月份
+ * @returns 包含销售目标 DTO 列表的结果对象
+ * @throws 数据库或授权错误时抛出异常
  */
 export async function getSalesTargets(
   year: number,
@@ -113,7 +109,6 @@ export async function getSalesTargets(
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Zod 校验
     const validation = getSalesTargetsSchema.safeParse({ year, month });
     if (!validation.success) {
       await AuditService.log(db, { action: 'GET_TARGETS_VALIDATION_ERROR', tableName: 'sales_targets', recordId: 'none', details: { issues: validation.error.issues } });
@@ -131,18 +126,24 @@ export async function getSalesTargets(
       updatedAt: r.updatedAt,
     }));
 
+    logger.info(`[sales][targets] Successfully fetched targets for ${year}-${month}, count: ${data.length}`);
     return { success: true, data };
   } catch (error) {
-    console.error('[sales] 获取销售目标列表失败:', error);
-    logger.error('getSalesTargets error:', error);
+    logger.error('[sales][targets] Failed to getSalesTargets:', error);
     await AuditService.log(db, { action: 'GET_TARGETS_ERROR', tableName: 'sales_targets', recordId: 'none', details: { error: String(error) } });
     return { success: false, error: 'Failed to fetch targets' };
   }
 }
 
 /**
- * 更新销售目标（含 Zod 校验 + 审计日志）
- * 仅管理员/店长可操作
+ * 更新或创建销售目标
+ * 仅具有管理权限 (admin/manager/BOSS) 的用户可执行此操作
+ *
+ * @param userId 目标所属用户 ID
+ * @param year 年份
+ * @param month 月份
+ * @param amount 目标金额
+ * @returns 操作结果
  */
 export async function updateSalesTarget(
   userId: string,
@@ -153,34 +154,31 @@ export async function updateSalesTarget(
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
-      console.log('[sales] 创建/更新销售目标失败：未授权访问');
+      logger.warn(`[sales][targets] Unauthorized update target attempt: user ${session?.user?.id}`);
       await AuditService.log(db, { action: 'UPDATE_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
       return { success: false, error: 'Unauthorized' };
     }
 
-    console.log('[sales] 创建/更新销售目标:', { targetId: `${userId}-${year}-${month}`, tenantId: session.user.tenantId, period: `${year}-${month}`, amount });
-
     // Zod 校验
     const validation = updateSalesTargetSchema.safeParse({ userId, year, month, amount });
     if (!validation.success) {
-      console.log('[sales] 创建/更新销售目标失败：参数校验失败', validation.error.issues);
+      logger.error('[sales][targets] Validation failed for updateSalesTarget:', validation.error.issues);
       await AuditService.log(db, { action: 'UPDATE_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
-    // 权限检查：仅管理员/店长
+    // 权限检查
     const currentUser = await db.query.users.findFirst({
       where: eq(users.id, session.user.id),
       columns: { role: true },
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      console.log('[sales] 创建/更新销售目标失败：权限不足');
+      logger.warn(`[sales][targets] Permission denied for updateSalesTarget: user ${session.user.id}`);
       await AuditService.log(db, { action: 'UPDATE_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
       return { success: false, error: 'Permission denied' };
     }
 
-    // 查询旧值（用于审计日志）
     const oldTarget = await db.query.salesTargets.findFirst({
       where: and(
         eq(salesTargets.tenantId, session.user.tenantId),
@@ -190,7 +188,6 @@ export async function updateSalesTarget(
       ),
     });
 
-    // Upsert
     await db
       .insert(salesTargets)
       .values({
@@ -210,9 +207,8 @@ export async function updateSalesTarget(
         },
       });
 
-    // 审计日志
     if (oldTarget) {
-      console.log('[sales] 更新销售目标成功:', { targetId: oldTarget.id, oldAmount: oldTarget.targetAmount, newAmount: amount });
+      logger.info(`[sales][targets] Successfully updated target: ${oldTarget.id}, from ${oldTarget.targetAmount} to ${amount}`);
       await AuditService.log(db, {
         action: 'UPDATE',
         tableName: 'sales_targets',
@@ -223,7 +219,7 @@ export async function updateSalesTarget(
         newValues: { targetAmount: String(amount), userId, year, month },
       });
     } else {
-      console.log('[sales] 创建销售目标成功:', { targetId: `${userId}-${year}-${month}`, newAmount: amount });
+      logger.info(`[sales][targets] Successfully created target for ${userId}, amount: ${amount}`);
       await AuditService.log(db, {
         action: 'CREATE',
         tableName: 'sales_targets',
@@ -234,19 +230,28 @@ export async function updateSalesTarget(
       });
     }
 
-    revalidatePath('/settings/sales/targets');
+    // 批量失效相关缓存
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('sales-targets', 'default');
+    revalidateTag('sales-dashboard', 'default');
+    revalidateTag('sales-analytics', 'default');
+
     return { success: true };
   } catch (error) {
-    console.error('[sales] 创建/更新销售目标出错:', error);
-    logger.error('updateSalesTarget error:', error);
+    logger.error('[sales][targets] Exception in updateSalesTarget:', error);
     await AuditService.log(db, { action: 'UPDATE_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
     return { success: false, error: 'Failed to update target' };
   }
 }
 
 /**
- * 调整目标值（含 Zod 校验 + 审计日志）
- * 仅管理员/店长可操作
+ * 调整现有的销售目标值
+ *
+ * @param userId 销售用户 ID
+ * @param year 年份
+ * @param month 月份
+ * @param adjustAmount 调整金额（正数为增加，负数为减少）
+ * @param reason 调整原因（可选）
  */
 export async function adjustSalesTarget(
   userId: string,
@@ -258,16 +263,14 @@ export async function adjustSalesTarget(
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
-      console.log('[sales] 调整目标值失败：未授权访问');
+      logger.warn(`[sales][targets] Unauthorized adjust target attempt: user ${session?.user?.id}`);
       await AuditService.log(db, { action: 'ADJUST_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
       return { success: false, error: 'Unauthorized' };
     }
 
-    console.log('[sales] 调整目标值:', { targetId: `${userId}-${year}-${month}`, tenantId: session.user.tenantId, adjustAmount, reason });
-
     const validation = adjustSalesTargetSchema.safeParse({ userId, year, month, adjustAmount, reason });
     if (!validation.success) {
-      console.log('[sales] 调整目标值失败：参数校验失败', validation.error.issues);
+      logger.error('[sales][targets] Validation failed for adjustSalesTarget:', validation.error.issues);
       await AuditService.log(db, { action: 'ADJUST_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
@@ -278,7 +281,7 @@ export async function adjustSalesTarget(
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      console.log('[sales] 调整目标值失败：权限不足');
+      logger.warn(`[sales][targets] Permission denied for adjustSalesTarget: user ${session.user.id}`);
       await AuditService.log(db, { action: 'ADJUST_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
       return { success: false, error: 'Permission denied' };
     }
@@ -293,14 +296,14 @@ export async function adjustSalesTarget(
     });
 
     if (!oldTarget) {
-      console.log('[sales] 调整目标值失败：销售目标不存在');
+      logger.error(`[sales][targets] Target not found for adjustment: ${userId}-${year}-${month}`);
       await AuditService.log(db, { action: 'ADJUST_TARGET_NOT_FOUND', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
       return { success: false, error: 'Sales target does not exist' };
     }
 
     const newAmount = Number(oldTarget.targetAmount) + adjustAmount;
     if (newAmount < 0) {
-      console.log('[sales] 调整目标值失败：调整后金额不能为负');
+      logger.warn(`[sales][targets] Invalid adjustment to negative total: ${newAmount}`);
       await AuditService.log(db, { action: 'ADJUST_TARGET_INVALID_AMOUNT', tableName: 'sales_targets', recordId: oldTarget.id, userId: session.user.id });
       return { success: false, error: 'Target amount cannot be negative' };
     }
@@ -314,7 +317,7 @@ export async function adjustSalesTarget(
       })
       .where(eq(salesTargets.id, oldTarget.id));
 
-    console.log('[sales] 调整销售目标成功:', { targetId: oldTarget.id, oldAmount: oldTarget.targetAmount, newAmount, reason });
+    logger.info(`[sales][targets] Successfully adjusted target ${oldTarget.id} by ${adjustAmount}, new total: ${newAmount}`);
     await AuditService.log(db, {
       action: 'ADJUST_TARGET_VALUE',
       tableName: 'sales_targets',
@@ -326,19 +329,26 @@ export async function adjustSalesTarget(
       details: { adjustAmount, reason },
     });
 
-    revalidatePath('/settings/sales/targets');
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('sales-targets', 'default');
+    revalidateTag('sales-dashboard', 'default');
+    revalidateTag('sales-analytics', 'default');
+
     return { success: true };
   } catch (error) {
-    console.error('[sales] 调整目标值出错:', error);
-    logger.error('adjustSalesTarget error:', error);
+    logger.error('[sales][targets] Exception in adjustSalesTarget:', error);
     await AuditService.log(db, { action: 'ADJUST_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
     return { success: false, error: 'Failed to adjust target' };
   }
 }
 
 /**
- * 完成目标确认（含 Zod 校验 + 审计日志）
- * 仅管理员/店长可操作
+ * 确认销售目标
+ *
+ * @param userId 销售用户 ID
+ * @param year 年份
+ * @param month 月份
+ * @param notes 确认说明
  */
 export async function confirmSalesTarget(
   userId: string,
@@ -349,16 +359,14 @@ export async function confirmSalesTarget(
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
-      console.log('[sales] 确认目标失败：未授权访问');
+      logger.warn(`[sales][targets] Unauthorized confirm target attempt: user ${session?.user?.id}`);
       await AuditService.log(db, { action: 'CONFIRM_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
       return { success: false, error: 'Unauthorized' };
     }
 
-    console.log('[sales] 确认目标:', { targetId: `${userId}-${year}-${month}`, tenantId: session.user.tenantId, notes });
-
     const validation = confirmSalesTargetSchema.safeParse({ userId, year, month, notes });
     if (!validation.success) {
-      console.log('[sales] 确认目标失败：参数校验失败', validation.error.issues);
+      logger.error('[sales][targets] Validation failed for confirmSalesTarget:', validation.error.issues);
       await AuditService.log(db, { action: 'CONFIRM_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
@@ -369,7 +377,7 @@ export async function confirmSalesTarget(
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      console.log('[sales] 确认目标失败：权限不足');
+      logger.warn(`[sales][targets] Permission denied for confirmSalesTarget: user ${session.user.id}`);
       await AuditService.log(db, { action: 'CONFIRM_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
       return { success: false, error: 'Permission denied' };
     }
@@ -384,12 +392,12 @@ export async function confirmSalesTarget(
     });
 
     if (!target) {
-      console.log('[sales] 确认目标失败：销售目标不存在');
+      logger.error(`[sales][targets] Target not found for confirmation: ${userId}-${year}-${month}`);
       await AuditService.log(db, { action: 'CONFIRM_TARGET_NOT_FOUND', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
       return { success: false, error: 'Sales target does not exist' };
     }
 
-    console.log('[sales] 完成销售目标确认:', { targetId: target.id, targetAmount: target.targetAmount, notes });
+    logger.info(`[sales][targets] Successfully confirmed target: ${target.id}`);
     await AuditService.log(db, {
       action: 'CONFIRM_TARGET',
       tableName: 'sales_targets',
@@ -403,11 +411,14 @@ export async function confirmSalesTarget(
       },
     });
 
-    revalidatePath('/settings/sales/targets');
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('sales-targets', 'default');
+    revalidateTag('sales-dashboard', 'default');
+    revalidateTag('sales-analytics', 'default');
+
     return { success: true };
   } catch (error) {
-    console.error('[sales] 确认目标出错:', error);
-    logger.error('confirmSalesTarget error:', error);
+    logger.error('[sales][targets] Exception in confirmSalesTarget:', error);
     await AuditService.log(db, { action: 'CONFIRM_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
     return { success: false, error: 'Failed to confirm target' };
   }
@@ -431,6 +442,10 @@ const getCachedMySalesTarget = unstable_cache(
 
 /**
  * 获取当前用户的销售目标
+ *
+ * @param year 年份 (可选，默认当前年)
+ * @param month 月份 (可选，默认当前月)
+ * @returns 包含目标金额的结果
  */
 export async function getMySalesTarget(year?: number, month?: number) {
   try {
@@ -452,6 +467,7 @@ export async function getMySalesTarget(year?: number, month?: number) {
 
     const result = await getCachedMySalesTarget(session.user.tenantId, session.user.id, targetYear, targetMonth);
 
+    logger.info(`[sales][targets] getMySalesTarget success, user: ${session.user.id}, targetYear: ${targetYear}, targetMonth: ${targetMonth}`);
     return {
       success: true,
       data: {
@@ -459,8 +475,7 @@ export async function getMySalesTarget(year?: number, month?: number) {
       },
     };
   } catch (error) {
-    console.error('[sales] 获取我的销售目标出错:', error);
-    logger.error('getMySalesTarget error:', error);
+    logger.error('[sales][targets] Failed in getMySalesTarget:', error);
     await AuditService.log(db, { action: 'GET_MY_TARGET_ERROR', tableName: 'sales_targets', recordId: 'none', details: { error: String(error) } });
     return { success: false, error: 'Failed' };
   }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Quotes 模块 Server Actions 集成测试 (Lifecycle: 生命周期管理)
  *
  * 覆盖范围：
@@ -59,6 +59,7 @@ vi.mock('@/shared/lib/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/api/schema/quotes', () => ({

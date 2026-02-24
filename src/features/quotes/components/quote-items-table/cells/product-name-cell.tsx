@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { TableCell } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { CornerDownRight } from 'lucide-react';
+import CornerDownRight from 'lucide-react/dist/esm/icons/corner-down-right';
 import { ProductAutocomplete } from '../../product-autocomplete';
 import type { QuoteItem } from '../types';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';

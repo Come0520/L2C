@@ -2,7 +2,7 @@
  * 报价单列表页
  * 审计修复: 添加下拉刷新、状态中文映射完善、上拉分页
  */
-import { authStore } from '../../stores/auth-store';
+// import { authStore } from '../../stores/auth-store';
 
 /** 报价单状态中文映射 */
 const STATUS_MAP: Record<string, string> = {
@@ -22,7 +22,7 @@ const STATUS_MAP: Record<string, string> = {
 Page({
     data: {
         keyword: '',
-        list: [] as any[],
+        list: [] as Record<string, any>[],
         loading: false,
         refreshing: false,
         loadingMore: false,
@@ -106,3 +106,5 @@ Page({
         wx.navigateTo({ url: `/pages/quotes/detail?id=${id}` });
     }
 });
+
+export { };

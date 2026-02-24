@@ -10,7 +10,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and, sql } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
 import { QuoteService } from '@/services/quote.service';
 import { rejectQuoteDiscountSchema } from './schema';
@@ -48,6 +48,24 @@ async function preflightVersionCheck(quoteId: string, tenantId: string, version?
 
 // ─── 提交报价单 ─────────────────────────────────
 
+const submitQuoteSchema = z.object({
+  id: z.string().uuid(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：提交报价单 (Submit Quote)
+ * 应用状态机：DRAFT -> SUBMITTED（或根据折扣进入审批中）。
+ * 包含：权限校验、乐观锁版本预检。
+ *
+ * @param params - 报价单 ID 及版本号
+ * @returns 成功状态
+ */
+export async function submitQuoteAction(params: z.infer<typeof submitQuoteSchema>) {
+  return submitQuote(params);
+}
+
 /**
  * 提交报价单进行审批或转换流程
  * 【乐观锁】传入 version 时启用并发冲突检测
@@ -55,11 +73,7 @@ async function preflightVersionCheck(quoteId: string, tenantId: string, version?
  * @param context 执行上下文
  */
 export const submitQuote = createSafeAction(
-  z.object({
-    id: z.string().uuid(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  submitQuoteSchema,
   async (data, context) => {
     // P2-01: 权限校验
     const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
@@ -84,12 +98,32 @@ export const submitQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单提交成功', { quoteId: data.id });
     return { success: true };
   }
 );
 
 // ─── 拒绝报价单 ─────────────────────────────────
+
+const rejectQuoteSchema = z.object({
+  id: z.string().uuid(),
+  rejectReason: z.string().min(1),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：驳回/拒绝报价单 (Reject Quote)
+ * 场景：审批人通过该接口驳回存在问题的报价单，必须提供理由。
+ * 逻辑：状态变更 -> 记录审计 -> revalidate 页面缓存。
+ *
+ * @param params - 包含 ID、拒绝理由及版本号
+ * @returns 成功状态
+ */
+export async function rejectQuoteAction(params: z.infer<typeof rejectQuoteSchema>) {
+  return rejectQuote(params);
+}
 
 /**
  * 拒绝当前报价单，需提供拒绝原因
@@ -98,12 +132,7 @@ export const submitQuote = createSafeAction(
  * @param context 执行上下文
  */
 export const rejectQuote = createSafeAction(
-  z.object({
-    id: z.string().uuid(),
-    rejectReason: z.string().min(1),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  rejectQuoteSchema,
   async (data, context) => {
     // P2-01: 权限校验
     const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
@@ -125,12 +154,28 @@ export const rejectQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单拒绝成功', { quoteId: data.id });
     return { success: true };
   }
 );
 
 // ─── 锁定报价单 ─────────────────────────────────
+
+const lockQuoteSchema = z.object({
+  id: z.string().uuid(),
+  lockedBy: z.string().uuid().optional(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：锁定报价单 (Lock Quote)
+ * 结果：报价单进入只读状态，防止非预期修改。
+ */
+export async function lockQuoteAction(params: z.infer<typeof lockQuoteSchema>) {
+  return lockQuote(params);
+}
 
 /**
  * 锁定报价单以防止进一步编辑，通常用于待审批或最终确定前
@@ -139,12 +184,7 @@ export const rejectQuote = createSafeAction(
  * @param context 执行上下文
  */
 export const lockQuote = createSafeAction(
-  z.object({
-    id: z.string().uuid(),
-    lockedBy: z.string().uuid().optional(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  lockQuoteSchema,
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
 
@@ -195,12 +235,26 @@ export const lockQuote = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.id}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单锁定成功', { quoteId: data.id });
     return updated;
   }
 );
 
 // ─── 解锁报价单 ─────────────────────────────────
+
+const unlockQuoteSchema = z.object({
+  id: z.string().uuid(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：解锁报价单 (Unlock Quote)
+ */
+export async function unlockQuoteAction(params: z.infer<typeof unlockQuoteSchema>) {
+  return unlockQuote(params);
+}
 
 /**
  * 解锁先前锁定的报价单，恢复编辑能力
@@ -209,11 +263,7 @@ export const lockQuote = createSafeAction(
  * @param context 执行上下文
  */
 export const unlockQuote = createSafeAction(
-  z.object({
-    id: z.string().uuid(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  unlockQuoteSchema,
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
 
@@ -260,12 +310,27 @@ export const unlockQuote = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.id}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单解锁成功', { quoteId: data.id });
     return updated;
   }
 );
 
 // ─── 审批报价单 ─────────────────────────────────
+
+const approveQuoteSchema = z.object({
+  id: z.string().uuid(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：审批通过报价单 (Approve Quote)
+ * 【权限校验】仅拥有审批权限的用户可操作。
+ */
+export async function approveQuoteAction(params: z.infer<typeof approveQuoteSchema>) {
+  return approveQuote(params);
+}
 
 /**
  * 审批通过折扣超限的报价单
@@ -274,11 +339,7 @@ export const unlockQuote = createSafeAction(
  * @param context 执行上下文
  */
 export const approveQuote = createSafeAction(
-  z.object({
-    id: z.string().uuid(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  approveQuoteSchema,
   async (data, context) => {
     // P2-01: 权限校验
     const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
@@ -304,6 +365,7 @@ export const approveQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单审批成功', { quoteId: data.id });
     return { success: true };
   }
@@ -337,11 +399,29 @@ export const rejectQuoteDiscount = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
+    revalidateTag('quotes', 'default');
     return { success: true };
   }
 );
 
 // ─── 转订单 ─────────────────────────────────────
+
+const convertQuoteToOrderSchema = z.object({
+  quoteId: z.string().uuid(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：报价转订单 (Convert to Order)
+ * 逻辑：由 LifecycleService 生成正式订单 -> 更新原报价状态。
+ *
+ * @param params - 包含报价单 ID 及版本号
+ * @returns 新建的订单对象
+ */
+export async function convertQuoteToOrderAction(params: z.infer<typeof convertQuoteToOrderSchema>) {
+  return convertQuoteToOrder(params);
+}
 
 /**
  * 将批准的报价单转换为正式订单
@@ -350,11 +430,7 @@ export const rejectQuoteDiscount = createSafeAction(
  * @param context 执行上下文
  */
 export const convertQuoteToOrder = createSafeAction(
-  z.object({
-    quoteId: z.string().uuid(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  convertQuoteToOrderSchema,
   async (data, context) => {
     logger.info('[quotes] 开始转订单', { quoteId: data.quoteId, version: data.version });
     // P2-01: 权限校验 (转订单需要创建订单权限)
@@ -380,12 +456,30 @@ export const convertQuoteToOrder = createSafeAction(
 
     revalidatePath('/orders');
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价转订单成功', { quoteId: data.quoteId, orderId: order?.id });
     return order;
   }
 );
 
 // ─── 创建新版本 ─────────────────────────────────
+
+const createNextVersionSchema = z.object({
+  quoteId: z.string().uuid(),
+  /** 乐观锁版本号 */
+  version: z.number().int().min(0).optional(),
+});
+
+/**
+ * 客户端调用：创建报价单新版本 (Create New Version)
+ * 逻辑：复制当前报价单结构 -> 版本号递增 -> 链接到 rootQuoteId。
+ *
+ * @param params - 包含源报价单 ID 及版本号
+ * @returns 新版本报价单对象
+ */
+export async function createNextVersionAction(params: z.infer<typeof createNextVersionSchema>) {
+  return createNextVersion(params);
+}
 
 /**
  * 根据现有报价单创建一个新版本作为迭代基础
@@ -395,11 +489,7 @@ export const convertQuoteToOrder = createSafeAction(
  * @returns 新版本报价单
  */
 export const createNextVersion = createSafeAction(
-  z.object({
-    quoteId: z.string().uuid(),
-    /** 乐观锁版本号 */
-    version: z.number().int().min(0).optional(),
-  }),
+  createNextVersionSchema,
   async (data, context) => {
     logger.info('[quotes] 开始创建新版本', { quoteId: data.quoteId, version: data.version });
     // P2-01: 权限校验 (创建新版本视为创建报价)
@@ -426,6 +516,7 @@ export const createNextVersion = createSafeAction(
     revalidatePath('/quotes');
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价新版本创建成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
     return newQuote;
   }

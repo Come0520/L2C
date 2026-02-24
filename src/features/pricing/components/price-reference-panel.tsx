@@ -17,9 +17,66 @@ interface PriceReferencePanelProps {
     className?: string;
 }
 
+/**
+ * 定价参考面板数据结构
+ *
+ * 与 getPricingHintsAction 返回的 data 字段严格对齐，
+ * 使用显式接口定义而非 Extract 推导以避免 `never` 类型问题。
+ */
+export interface PricingData {
+    product: {
+        name: string;
+        sku: string;
+        cost: number;
+        floorPrice: number;
+        guidancePrice: number;
+        unit?: string;
+    };
+    stats: {
+        periodDays: number;
+        soldCount: number;
+        totalVolume: number;
+        avgSoldPrice: string;
+        minSoldPrice: string;
+        maxSoldPrice: string;
+        lastSoldPrice: string;
+        quoteCount: number;
+        avgQuotePrice: string;
+    };
+    analysis: {
+        suggestedPrice: string;
+        margin: {
+            guidance: string;
+            actual: string;
+            estimated: string;
+        };
+        competitiveness: string;
+    };
+    trends: Array<{ month: string; avgPrice: string }>;
+    categoryAnalysis: {
+        category: string;
+        minPrice: string;
+        maxPrice: string;
+        avgPrice: string;
+        productCount: number;
+    };
+}
+
+/**
+ * 定价参考面板 (Price Reference Panel)
+ * 
+ * 用于展示特定产品或 SKU 的多维度定价参考数据，包括建议价格、历史趋势和品类对比。
+ * 会根据权限自动展示或隐藏毛利/底价等敏感信息。
+ * 
+ * @example
+ * <PriceReferencePanel productId="p-123" periodDays={90} />
+ * 
+ * @param {PriceReferencePanelProps} props - 组件属性
+ * @returns {JSX.Element} 定价参考卡片
+ */
 export function PriceReferencePanel({ productId, sku, periodDays, className }: PriceReferencePanelProps) {
     const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<any>(null); // Use any for now, or define interface
+    const [data, setData] = useState<PricingData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -35,7 +92,7 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
                     periodDays: periodDays ?? 90
                 });
                 if (res?.data?.success) {
-                    setData(res.data.data);
+                    setData(res.data.data as PricingData);
                 } else {
                     setError('无法获取定价建议');
                 }
@@ -85,7 +142,7 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
     const isBelowFloor = Number(analysis.suggestedPrice) < Number(product.floorPrice);
 
     return (
-        <Card className={cn("w-full shadow-sm", className)}>
+        <Card className={cn("w-full shadow-sm animate-in fade-in duration-500", className)}>
             <CardHeader className="pb-2 border-b bg-muted/10">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -141,8 +198,8 @@ export function PriceReferencePanel({ productId, sku, periodDays, className }: P
                     <div className="space-y-2">
                         <span className="text-xs font-medium text-muted-foreground">近6期价格趋势</span>
                         <div className="flex items-end justify-between h-12 gap-1 px-1">
-                            {trends.map((t: any, i: number) => {
-                                const maxPrice = Math.max(...trends.map((x: any) => Number(x.avgPrice)), 1);
+                            {trends.map((t, i) => {
+                                const maxPrice = Math.max(...trends.map((x) => Number(x.avgPrice)), 1);
                                 const height = `${(Number(t.avgPrice) / maxPrice) * 100}%`;
                                 return (
                                     <div key={i} className="flex flex-col items-center flex-1 group relative">

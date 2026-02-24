@@ -44,7 +44,15 @@ const getTemplateSchemaZod = z.object({
 });
 
 /**
- * 设置或更新品类属性模板
+ * 设置或更新品类属性模板 (Upsert)
+ *
+ * @description 根据品类查找现有模板，若存在则更新，否则创建新模板。
+ *   审计日志记录新旧 templateSchema 差异。
+ *   同时刷新设置页和产品表单的缓存。
+ *
+ * @param data - 包含 `category` 和 `templateSchema`（字段定义数组）的配置对象
+ * @returns `{ success: true }`
+ * @throws 当用户缺少 `ADMIN.SETTINGS` 权限时抛出权限异常
  */
 const upsertAttributeTemplateActionInternal = createSafeAction(templateSchemaZod, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.ADMIN.SETTINGS);
@@ -101,6 +109,14 @@ export async function upsertAttributeTemplate(params: z.infer<typeof templateSch
 
 /**
  * 获取品类属性模板
+ *
+ * @description 根据品类查询对应的属性模板配置。
+ *   若不存在则返回空模板 `{ category, templateSchema: [] }`。
+ *   该接口为只读操作，拥有有效会话即可访问。
+ *
+ * @param params - 包含 `category` 的查询参数
+ * @returns 模板对象，含 `templateSchema` 字段定义数组
+ * @throws 当用户未登录时抛出 `Unauthorized`
  */
 const getAttributeTemplateActionInternal = createSafeAction(getTemplateSchemaZod, async ({ category }, { session }) => {
     // Both ADMIN and PRODUCTS manager can view templates to render forms

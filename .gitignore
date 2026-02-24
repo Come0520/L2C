@@ -13,6 +13,10 @@ miniprogram/node_modules
 
 # testing
 /coverage
+/test-results/
+/test-temp/
+/playwright-report/
+vitest-report.json
 
 # next.js
 /.next/

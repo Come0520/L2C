@@ -9,7 +9,8 @@ import { Switch } from '@/shared/ui/switch';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/shared/ui/form';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { getSettingsByCategory, batchUpdateSettings } from '../actions/system-settings-actions';
 
 /**

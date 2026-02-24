@@ -31,6 +31,11 @@ export interface UserInfo {
 
 /**
  * 检查当前用户是否为管理员（使用权限系统）
+ *
+ * @description 校验会话中的用户是否具有用户管理权限。
+ *
+ * @param session - 当前用户的 Session 对象
+ * @returns Promise<{ isAdmin: boolean; tenantId?: string; currentUserId?: string }> 校验结果及相关 ID
  */
 async function checkAdmin(
   session: Session | null
@@ -48,7 +53,13 @@ async function checkAdmin(
 }
 
 /**
- * 检查是否为最后一个管理员
+ * 检查指定用户是否为租户下最后一个活跃的管理员
+ *
+ * @description 核心安全检查，防止租户失去所有管理员权限。
+ *
+ * @param tenantId - 租户 ID
+ * @param excludeUserId - 要检查（排除）的用户 ID
+ * @returns Promise<boolean> 是否为最后一个管理员
  */
 async function isLastAdmin(tenantId: string, excludeUserId: string): Promise<boolean> {
   const admins = await db.query.users.findMany({
@@ -91,6 +102,8 @@ export async function updateUser(
   if (!validated.success) {
     return { success: false, error: '输入数据格式错误：' + validated.error.issues[0]?.message };
   }
+
+  logger.info(`用户 ${currentUserId} 正在更新用户信息: ${id}`, { tenantId, updateData: data });
 
   try {
     // 获取原始用户数据
@@ -221,6 +234,8 @@ export async function toggleUserActive(userId: string) {
     return { success: false, error: '不能禁用自己的账号' };
   }
 
+  logger.info(`用户 ${currentUserId} 正在切换用户状态: ${userId}`, { tenantId });
+
   try {
     const targetUser = await db.query.users.findFirst({
       where: and(eq(users.id, userId), eq(users.tenantId, tenantId)),
@@ -281,8 +296,11 @@ export async function toggleUserActive(userId: string) {
 
 /**
  * 删除用户（软删除 - 禁用账号）
- * 由于 users 表被 30+ 张表外键引用，物理删除会破坏数据完整性
- * 因此"删除"实际执行的是禁用操作
+ *
+ * @description 实际上执行的是禁用（isActive = false）操作，以维护数据外键完整性。
+ *
+ * @param userId - 目标用户 ID
+ * @returns Promise<{ success: boolean; message?: string; error?: string }> 操作结果
  */
 export async function deleteUser(userId: string) {
   const session = await auth();
@@ -295,6 +313,8 @@ export async function deleteUser(userId: string) {
   if (userId === currentUserId) {
     return { success: false, error: '不能删除自己的账号' };
   }
+
+  logger.info(`用户 ${currentUserId} 正在尝试删除（软删除）用户: ${userId}`, { tenantId });
 
   try {
     const targetUser = await db.query.users.findFirst({

@@ -27,25 +27,25 @@ export const preferencesSchema = z.object({
  * 包含客户的基本信息、联系方式、标签和初始状态
  */
 export const customerSchema = z.object({
-    name: z.string().min(1, '姓名不能为空').max(50, '姓名不能超过50字'),
-    phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'),
-    phoneSecondary: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号').optional().or(z.literal('')),
-    wechat: z.string().max(50).optional(),
-    type: z.enum(customerTypes).optional().default('INDIVIDUAL'),
-    level: z.enum(customerLevels).optional().default('D'),
-    address: z.string().max(200, '地址不能超过200字').optional(),
-    notes: z.string().max(500, '备注不能超过500字').optional(),
-    gender: z.enum(['MALE', 'FEMALE', 'UNKNOWN']).optional(),
-    birthday: z.date().optional(),
-    referrerCustomerId: z.string().optional(),
+    name: z.string().min(1, '姓名不能为空').max(50, '姓名不能超过50字'), // 客户姓名
+    phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'), // 主联系电话
+    phoneSecondary: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号').optional().or(z.literal('')), // 备用电话
+    wechat: z.string().max(50).optional(), // 微信 ID
+    type: z.enum(customerTypes).optional().default('INDIVIDUAL'), // 客户类型
+    level: z.enum(customerLevels).optional().default('D'), // 客户等级 (A/B/C/D)
+    address: z.string().max(200, '地址不能超过200字').optional(), // 详细地址
+    notes: z.string().max(500, '备注不能超过500字').optional(), // 备注信息
+    gender: z.enum(['MALE', 'FEMALE', 'UNKNOWN']).optional(), // 性别
+    birthday: z.date().optional(), // 生日
+    referrerCustomerId: z.string().optional(), // 推荐人客户 ID
     // 渠道来源（如：抖音、小红书、朋友介绍等）
     source: z.string().max(50).optional(),
     // 带单人姓名（当无法关联现有客户时使用）
     referrerName: z.string().max(50).optional(),
-    tags: z.array(z.string().max(20)).optional(),
-    lifecycleStage: z.enum(customerLifecycleStages).optional().default('LEAD'),
-    pipelineStatus: z.enum(customerPipelineStatuses).optional().default('UNASSIGNED'),
-    preferences: preferencesSchema.optional(),
+    tags: z.array(z.string().max(20)).optional(), // 客户标签
+    lifecycleStage: z.enum(customerLifecycleStages).optional().default('LEAD'), // 生命周期阶段
+    pipelineStatus: z.enum(customerPipelineStatuses).optional().default('UNASSIGNED'), // 管道/跟进状态
+    preferences: preferencesSchema.optional(), // 个性化偏好
 });
 
 /**

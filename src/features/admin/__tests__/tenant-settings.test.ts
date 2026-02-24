@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 租户设置模块测试
  *
  * 覆盖 tenant-settings/actions.ts 的全部 4 个导出函数：
@@ -18,10 +18,17 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 
 // ===== Mock 依赖 =====
+import { AdminRateLimiter } from '../rate-limiter';
 
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
     checkPermission: vi.fn(),
+}));
+
+vi.mock('../rate-limiter', () => ({
+    AdminRateLimiter: {
+        check: vi.fn().mockResolvedValue(undefined),
+    },
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({
@@ -57,6 +64,7 @@ vi.mock('@/shared/lib/logger', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // ===== 测试常量 =====
@@ -92,7 +100,7 @@ const mockAuditLog = vi.mocked(AuditService.log);
 describe('Tenant Settings 模块测试', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockCheckPermission.mockResolvedValue(undefined as never);
+        mockCheckPermission.mockResolvedValue(true as never);
         mockDbFindFirstTenants.mockResolvedValue(null);
     });
 

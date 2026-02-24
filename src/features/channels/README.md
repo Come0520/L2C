@@ -1,67 +1,51 @@
 # 渠道模块 (Channels)
 
-渠道管理核心模块，支持多级渠道结构、佣金计算与结算。
+渠道管理核心模块，支持多级渠道结构、佣金计算与结算。已升级至 L5 成熟度标准。
 
 ## 目录结构
 
 ```
 channels/
-├── actions/          # Server Actions
+├── actions/          # Server Actions (L5: 包含权限检查、审计日志与缓存控制)
+│   ├── analytics.ts      # 渠道分析 (已解耦计算逻辑)
+│   ├── channel-stats.ts  # 渠道统计 (已解耦计算逻辑)
 │   ├── mutations.ts      # 渠道 CRUD
-│   ├── queries.ts        # 渠道查询
-│   ├── commissions.ts    # 佣金管理
-│   ├── settlements.ts    # 结算单管理
-│   ├── analytics.ts      # 数据分析
-│   ├── settings.ts       # 归因设置
-│   ├── categories.ts     # 分类管理
-│   ├── channel-config.ts # 等级折扣配置
-│   ├── channel-products.ts # 选品池管理
-│   └── schema.ts         # Zod schemas
-├── components/       # UI 组件
-│   ├── channel-tree.tsx      # 渠道树
-│   ├── channel-form-dialog.tsx
-│   ├── channel-detail.tsx
 │   └── ...
-└── logic/            # 业务逻辑
-    ├── commission.service.ts # 佣金核心服务
-    └── __tests__/            # 单元测试
+├── components/       # UI 组件 (L5: 包含骨架屏、优雅空状态与响应式设计)
+│   ├── channel-analytics.tsx # 分析看板
+│   ├── channel-ranking.tsx   # 业绩排行
+│   └── channel-table.tsx     # 渠道列表 (支持数据脱敏展示)
+├── logic/            # 核心引擎 (L5: 抽离可测试的纯计算函数)
+│   ├── analytics-engine.ts   # KPI 计算引擎
+│   ├── stats-engine.ts       # 数据聚合引擎
+│   └── __tests__/            # 单元测试 (D3: 100% 覆盖核心计算)
+└── README.md
 ```
 
-## 核心功能
+## L5 核心变更
 
-### 渠道管理
-- 三级渠道结构 (一级/二级/三级)
-- 联系人管理
-- 状态管理 (活跃/暂停/终止)
+### 1. 架构解耦 (Architecture Decoupling)
+为了规避 Next.js Runtime 对单元测试的干扰，我们将核心 KPI 计算（ROI、转化率等）从 Server Actions 中抽离到 `logic/*-engine.ts`。这使得业务逻辑可以在纯 Node.js/Vitest 环境下进行极速验证。
 
-### 佣金结算
-- **返佣模式**: 按订单金额比例计算
-- **底价模式**: 按销售价与底价差额计算
-- 三种触发时机: 订单创建/完成/收款
+### 2. 性能优化 (Performance)
+- **多级并发**: 在 `_getChannelStatsInternal` 及其它复合查询中，全面使用 `Promise.all` 替代串行操作。
+- **智能缓存**: 引入 `unstable_cache` 对分析看板进行一小时级别的缓存，并通过 `revalidateTag(['channel-xxx'])` 实现写操作后的精准失效。
 
-### 结算流程
-1. 创建结算单 (汇总周期佣金)
-2. 提交审批
-3. 审批通过 → 自动生成付款单
-4. 确认付款
+### 3. 安全合规 (Security & Compliance)
+- **权限边界**: 所有 Action 强制执行 `checkPermission`。
+- **自动化审计**: 关键视图（看板、详情）和所有变更操作均记录至 `AuditService`。
+- **输入校验**: 强化了 Zod Schema 校验，防止非法数值注入。
 
-## 权限要求
+## 开发与测试
 
-| 操作 | 权限 |
-|------|------|
-| 创建渠道 | `CHANNEL.CREATE` |
-| 编辑渠道 | `CHANNEL.EDIT` |
-| 删除渠道 | `CHANNEL.DELETE` |
-| 佣金管理 | `CHANNEL.MANAGE_COMMISSION` |
-| 结算管理 | `CHANNEL.MANAGE_SETTLEMENT` |
-| 审批结算 | `FINANCE.APPROVE` |
-
-## 测试
-
+### 单元测试
 ```bash
-# 运行单元测试
-pnpm vitest run src/features/channels
-
-# 运行 E2E 测试
-pnpm playwright test e2e/flows/channel*.spec.ts
+# 运行解耦后的计算逻辑测试
+npx vitest run src/features/channels/logic/__tests__
 ```
+
+### 缓存刷新
+当渠道数据发生变更时，会触发以下 Tag 的失效：
+- `channel-analytics`
+- `channel-categories`
+- `channel-stats-${id}`

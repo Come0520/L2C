@@ -2,7 +2,8 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { db } from '@/shared/api/db';
 import { installTasks, installItems, users, customers, orders } from '@/shared/api/schema';
 import { eq, and, desc, asc, or, ilike, count } from 'drizzle-orm';
@@ -111,12 +112,12 @@ const updateInstallItemSchema = z.object({
  * @param {string} [params.status] - 任务状态过滤条件 (如: PENDING_DISPATCH, COMPLETED)
  * @returns {Promise<{success: boolean, data?: any[], pagination?: any, error?: string}>} 返回带分页信息的任务列表或错误信息
  */
-export async function getInstallTasks(params?: {
+export const getInstallTasks = cache(async (params?: {
   page?: number;
   pageSize?: number;
   search?: string;
   status?: string;
-}) {
+}) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -191,7 +192,7 @@ export async function getInstallTasks(params?: {
     logger.error('加载安装任务列表失败:', _error);
     return { success: false, error: `系统错误: ${errorMessage}` };
   }
-}
+});
 
 /**
  * 获取任务详情
@@ -201,26 +202,37 @@ export async function getInstallTaskById(id: string) {
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
   try {
-    const task = await db.query.installTasks.findFirst({
-      where: and(eq(installTasks.id, id), eq(installTasks.tenantId, session.user.tenantId)),
-      with: {
-        order: {
+    const getTask = unstable_cache(
+      async () => {
+        return await db.query.installTasks.findFirst({
+          where: and(eq(installTasks.id, id), eq(installTasks.tenantId, session.user.tenantId)),
           with: {
-            quote: {
+            order: {
               with: {
-                items: true,
+                quote: {
+                  with: {
+                    items: true,
+                  },
+                },
               },
             },
+            customer: true,
+            installer: true,
+            sales: true,
+            dispatcher: true,
+            items: true,
+            photos: true,
           },
-        },
-        customer: true,
-        installer: true,
-        sales: true,
-        dispatcher: true,
-        items: true,
-        photos: true,
+        });
       },
-    });
+      [`install-task-${id}`],
+      {
+        tags: [`install-task-${id}`, 'install-task'],
+        revalidate: 3600, // 1 hour
+      }
+    );
+
+    const task = await getTask();
     return { success: true, data: task };
   } catch (_error: unknown) {
     logger.error('加载任务详情失败:', _error);
@@ -331,7 +343,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
       new: { orderId: data.orderId, customerId: data.customerId, sourceType: data.sourceType },
     });
 
-    revalidatePath('/service/installation');
+    revalidateTag('install-task', 'default');
     return { success: true, message: '安装任务已创建' };
   } catch (_error: unknown) {
     logger.error('创建任务失败:', _error);
@@ -445,10 +457,8 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
         )
       );
 
-    // 记录指派审计日志
     await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
-      new: { status: 'DISPATCHING', installerId: data.installerId, scheduledDate: data.scheduledDate },
-      event: 'DISPATCH_TASK'
+      new: { status: 'DISPATCHING', installerId: data.installerId, scheduledDate: data.scheduledDate, event: 'DISPATCH_TASK' }
     });
 
     logger.info(`[Dispatch] 安装任务指派成功: ${data.id}`);
@@ -475,7 +485,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       new: { action: 'DISPATCH', installerId: data.installerId, scheduledDate: data.scheduledDate?.toISOString() },
     });
 
-    revalidatePath('/service/installation');
+    revalidateTag('install-task', 'default');
     return { success: true, message: '指派成功' };
   } catch (_error: unknown) {
     logger.error('分配失败:', _error);
@@ -572,7 +582,7 @@ const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (da
       new: { action: 'CHECK_IN', location: data.location },
     });
 
-    revalidatePath('/service/installation');
+    revalidateTag('install-task', 'default');
 
     // 构建返回消息
     let message = '签到成功';
@@ -643,7 +653,7 @@ const checkOutInstallTaskInternal = createSafeAction(checkOutTaskSchema, async (
       new: { action: 'CHECK_OUT' },
     });
 
-    revalidatePath('/service/installation');
+    revalidateTag('install-task', 'default');
     return { success: true, message: '已提交完工申请，待销售验收' };
   } catch (_error: unknown) {
     logger.error('提交签退异常:', _error);
@@ -726,7 +736,7 @@ const confirmInstallationInternal = createSafeAction(
         new: { action: 'CONFIRM', actualLaborFee: data.actualLaborFee, rating: data.rating },
       });
 
-      revalidatePath('/service/installation');
+      revalidateTag('install-task', 'default');
       return { success: true, message: '验收通过，安装完成' };
     });
   }
@@ -789,7 +799,7 @@ const rejectInstallationInternal = createSafeAction(
       new: { action: 'REJECT', rejectReason: data.reason },
     });
 
-    revalidatePath('/service/installation');
+    revalidateTag('install-task', 'default');
     return { success: true, message: '已驳回任务' };
   }
 );
@@ -831,8 +841,8 @@ const updateInstallItemStatusInternal = createSafeAction(
         new: { isInstalled: data.isInstalled, issueCategory: data.issueCategory },
       });
 
-      revalidatePath('/service/installation');
-      return { success: true, message: '状态已更新' };
+      revalidateTag('install-task', 'default');
+      return { success: true, message: '详情已记录' };
     } catch (_error: unknown) {
       logger.error('更新安装项状态失败:', _error);
       return { success: false, error: '更新失败' };
@@ -892,7 +902,7 @@ const updateInstallChecklistInternal = createSafeAction(
         new: { action: 'UPDATE_CHECKLIST', allCompleted },
       });
 
-      revalidatePath('/service/installation');
+      revalidateTag('install-task', 'default');
       return { success: true, message: '清单状态已更新' };
     } catch (_error: unknown) {
       logger.error('更新清单失败:', _error);
@@ -918,13 +928,24 @@ export async function getInstallWorkersAction() {
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
   try {
-    const workers = await db.query.users.findMany({
-      where: and(
-        eq(users.tenantId, session.user.tenantId),
-        eq(users.role, 'WORKER') // 注意：此处根据 schema 可能为 WORKER 或 INSTALLER，审计报告建议专门区分
-      ),
-      orderBy: [asc(users.name)],
-    });
+    const getWorkers = unstable_cache(
+      async () => {
+        return await db.query.users.findMany({
+          where: and(
+            eq(users.tenantId, session.user.tenantId),
+            eq(users.role, 'WORKER')
+          ),
+          orderBy: [asc(users.name)],
+        });
+      },
+      [`install-workers-${session.user.tenantId}`],
+      {
+        tags: [`install-workers-${session.user.tenantId}`, 'install-workers'],
+        revalidate: 3600, // 1 hour
+      }
+    );
+
+    const workers = await getWorkers();
     return { success: true, data: workers };
   } catch (_error: unknown) {
     logger.error('获取师傅列表失败:', _error);

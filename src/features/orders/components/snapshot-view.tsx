@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
-import { AlertCircle } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 interface SnapshotItem {
     productName: string;

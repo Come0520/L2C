@@ -2,7 +2,7 @@
  * 编辑个人资料
  */
 import { authStore } from '../../../stores/auth-store';
-const app = getApp<IAppOption>();
+// const app = getApp<IAppOption>();
 
 Page({
     data: {
@@ -20,7 +20,7 @@ Page({
             this.setData({
                 userInfo: {
                     name: user.name || '',
-                    phone: (user as any).phone || '', // Assuming phone exists in user object
+                    phone: user.phone || '', // Assuming phone exists in user object
                     avatarUrl: user.avatarUrl || ''
                 }
             });
@@ -72,7 +72,7 @@ Page({
             // const res = await app.request('/users/profile', { method: 'PUT', data: { name, avatarUrl: finalAvatarUrl } });
 
             // MOCK Update Success
-            const updatedUser = { ...authStore.userInfo, name, avatarUrl: finalAvatarUrl } as any;
+            const updatedUser = { ...authStore.userInfo, name, avatarUrl: finalAvatarUrl } as NonNullable<typeof authStore.userInfo>;
             authStore.setLogin(authStore.token, updatedUser);
 
             wx.showToast({ title: '保存成功', icon: 'success' });
@@ -88,3 +88,5 @@ Page({
         }
     }
 });
+
+export { };

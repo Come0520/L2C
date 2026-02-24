@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { suggestTaskSplit, updateWorkerSkills, getAvailableWorkers, getWorkerSkills } from '../actions/task-split-actions';
 
 const {
@@ -41,7 +41,8 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 vi.mock('next/cache', () => ({
-    unstable_cache: (cb: any) => cb
+    unstable_cache: (cb: any) => cb,
+    revalidateTag: vi.fn(),
 }));
 
 describe('Service Feature - Task Split Actions', () => {
@@ -68,10 +69,14 @@ describe('Service Feature - Task Split Actions', () => {
             ];
             mockQuoteItemsExecute.mockResolvedValueOnce(mockItems);
 
-            // Mock worker skills to simulate finding matching workers
-            mockWorkerSkillsExecute.mockResolvedValueOnce([{ workerId: 'w1' }]); // For CURTAIN
-            mockWorkerSkillsExecute.mockResolvedValueOnce([{ workerId: 'w2' }, { workerId: 'w3' }]); // For WALLCLOTH (from WALLPAPER)
-            mockWorkerSkillsExecute.mockResolvedValueOnce([]); // For OTHER
+            // 源码第 89 行用批量 findMany（一次查询所有 skills），不是 N+1 查询
+            // 所以这里只 mock 一次 findMany，返回所有品类的 skills
+            mockWorkerSkillsExecute.mockResolvedValueOnce([
+                { workerId: 'w1', skillType: 'INSTALL_CURTAIN' },      // CURTAIN: 1 人
+                { workerId: 'w2', skillType: 'INSTALL_WALLCLOTH' },    // WALLCLOTH: 2 人
+                { workerId: 'w3', skillType: 'INSTALL_WALLCLOTH' },
+                // INSTALL_OTHER: 0 人
+            ]);
 
             const result = await suggestTaskSplit('quote-123');
 

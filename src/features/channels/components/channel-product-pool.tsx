@@ -22,7 +22,11 @@ import {
     DialogTrigger,
 } from '@/shared/ui/dialog';
 import { Badge } from '@/shared/ui/badge';
-import { Loader2, Plus, Trash2, Save, Search } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Search from 'lucide-react/dist/esm/icons/search';
 import {
     updateProductChannelPrice,
     removeFromChannelPool,

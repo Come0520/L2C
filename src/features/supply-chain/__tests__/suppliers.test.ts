@@ -24,7 +24,7 @@ vi.mock('@/shared/lib/auth', () => {
 vi.mock('@/shared/lib/utils', async (importOriginal) => {
     const actual = await importOriginal();
     return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         ...(actual as any),
         generateDocNo: vi.fn().mockResolvedValue('SUP-001'),
     };

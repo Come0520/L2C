@@ -10,7 +10,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
+/**
+ * 安装模块统计卡片组件属性
+ */
 interface InstallationStatsProps {
+    /** 统计数据数组：包含状态及其对应的任务数量 */
     stats: Array<{ status: string; count: number }>;
 }
 

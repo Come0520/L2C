@@ -7,3 +7,5 @@ export declare function isNumber(value: string): boolean;
 export declare function isBoolean(value: unknown): value is boolean;
 export declare function isImageUrl(url: string): boolean;
 export declare function isVideoUrl(url: string): boolean;
+
+export {};

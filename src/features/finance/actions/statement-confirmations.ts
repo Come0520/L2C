@@ -14,7 +14,7 @@ import { statementConfirmations, statementConfirmationDetails, arStatements, apS
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
@@ -59,7 +59,7 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
             return { success: false, error: '权限不足：需要对账权限' };
         }
 
-        console.log('[finance] 生成对账确认单', { type: data.type, targetId: data.targetId, periodStart: data.periodStart, periodEnd: data.periodEnd });
+        logger.info('[finance] 开始生成对账确认单', { type: data.type, targetId: data.targetId, periodStart: data.periodStart, periodEnd: data.periodEnd });
 
         const tenantId = session.user.tenantId;
         const userId = session.user.id;
@@ -162,9 +162,9 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
                 }
             });
 
-            revalidateTag(`finance-confirmation-${tenantId}`);
-            revalidatePath('/finance/confirmations');
-            console.log('[finance] generateStatementConfirmation 执行成功', { confirmationNo: confirmation.confirmationNo });
+            revalidateTag(`finance-confirmation-${tenantId}`, 'default');
+
+            logger.info('[finance] generateStatementConfirmation 执行成功', { confirmationNo: confirmation.confirmationNo });
 
             return {
                 success: true,
@@ -206,7 +206,7 @@ export async function confirmStatement(
             return { success: false, error: '权限不足：需要对账权限' };
         }
 
-        console.log('[finance] 确认对账单', { confirmationId, confirmedBy, hasDisputes: disputedItems && disputedItems.length > 0 });
+        logger.info('[finance] 确认对账单', { confirmationId, confirmedBy, hasDisputes: !!(disputedItems && disputedItems.length > 0) });
 
         const tenantId = session.user.tenantId;
 
@@ -285,9 +285,9 @@ export async function confirmStatement(
                 details: { confirmedBy }
             });
 
-            revalidateTag(`finance-confirmation-${tenantId}`);
-            revalidatePath('/finance/confirmations');
-            console.log('[finance] confirmStatement 执行成功', { confirmationId });
+            revalidateTag(`finance-confirmation-${tenantId}`, 'default');
+
+            logger.info('[finance] confirmStatement 执行成功', { confirmationId });
 
             return {
                 success: true,
@@ -322,7 +322,7 @@ export async function getStatementConfirmations(page = 1, pageSize = 20) {
 
     return unstable_cache(
         async () => {
-            console.log('[finance] [CACHE_MISS] 获取对账确认单列表', { tenantId, page, pageSize });
+            logger.info('[finance] [CACHE_MISS] 获取对账确认单列表', { tenantId, page, pageSize });
             const confirmations = await db.query.statementConfirmations.findMany({
                 where: eq(statementConfirmations.tenantId, tenantId),
                 limit: pageSize,

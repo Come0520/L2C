@@ -11,6 +11,7 @@ vi.mock('@/shared/api/db', () => ({
             approvalFlows: { findFirst: vi.fn() }
         },
         update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue({}) })) })),
+        insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue({}) })),
         transaction: vi.fn((cb) => cb({
             query: {
                 leads: { findFirst: vi.fn() },
@@ -134,7 +135,7 @@ describe('Lead Restore Actions', () => {
             vi.mocked(db.query.leadStatusHistory.findFirst).mockResolvedValue({ oldStatus: 'FOLLOWING_UP' } as never);
 
             // Mock transaction to ensure the callback is executed correctly
-            vi.mocked(db.transaction).mockImplementation(async (cb: any) => {
+            vi.mocked(db.transaction).mockImplementation(async (cb: (tx: any) => Promise<any>) => {
                 // 使用完整的事务 Mock（包含 select 链以支持行锁）
                 return await cb({
                     query: {

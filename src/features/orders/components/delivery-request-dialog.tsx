@@ -15,8 +15,8 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import { requestDelivery } from '../actions/orders';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import { requestDelivery } from '../actions';
 import { useRouter } from 'next/navigation';
 
 interface DeliveryRequestDialogProps {

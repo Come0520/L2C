@@ -12,8 +12,9 @@ import {
     systemAnnouncements
 } from '@/shared/api/schema/notifications';
 import { eq, and, sql, gte, lte, isNull, or, desc, inArray } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { getCachedAnnouncements, getCachedTemplates } from './notification-cache';
 import { getSetting } from "@/features/settings/actions/system-settings-actions";
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
@@ -78,6 +79,15 @@ interface SendNotificationParams {
 
 /**
  * 基于模板发送通知
+ * 
+ * @param input - 发送参数，包含模板代码、目标用户 ID、模板变量等
+ * @returns 发送结果通知，包含加入队列的数量和生效的通道
+ * 
+ * [渠道优先级说明]:
+ * 1. 优先使用调用方指定的 `channels` 参数
+ * 2. 其次读取模板配置 `template.channels`
+ * 3. 兜底查询系统设置 `NOTIFICATION_CHANNELS`
+ * 4. 最终回退到 `['IN_APP']` (站内信)
  */
 export async function sendNotificationByTemplate(input: SendNotificationParams) {
     const session = await auth();
@@ -117,9 +127,27 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
     // 4. 为每个渠道创建队列记录 (事务处理)
     const queueItems = await db.transaction(async (tx) => {
         const items = [];
+        const today = new Date().toISOString().split('T')[0];
 
         for (const channel of channels) {
             const isInApp = channel === 'IN_APP';
+
+            // 生成幂等 Token (模板+用户+渠道+日期)，防止同一天重复触发相同的 SLA 或通知
+            // 注意：如果业务需要更细粒度的控制，可以在 params 中传入自定义 dedupeKey
+            const idempotencyToken = `IDEMP_${input.templateCode}_${input.userId}_${channel}_${today}`;
+
+            // L5 增强：防重检查 (去重逻辑)
+            const existingItem = await tx.query.notificationQueue.findFirst({
+                where: and(
+                    eq(notificationQueue.tenantId, tenantId),
+                    eq(notificationQueue.idempotencyToken, idempotencyToken)
+                )
+            });
+
+            if (existingItem) {
+                logger.info(`[Notification] Skip duplicate notification: ${idempotencyToken}`);
+                continue;
+            }
 
             // 插入队列
             // 如果是 IN_APP，直接标记为 SENT，因为接下来会立即写入 notifications 表
@@ -134,6 +162,7 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
                 status: isInApp ? 'SENT' : 'PENDING',
                 priority: template.priority || 'NORMAL',
                 scheduledAt: input.scheduledAt,
+                idempotencyToken: idempotencyToken,
                 // IN_APP 被视为立即处理
                 processedAt: isInApp ? new Date() : null,
             }).returning();
@@ -168,7 +197,16 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
 // ==================== 队列处理 ====================
 
 /**
- * 处理通知队列（由 Cron Job 调用）
+ * 处理通知队列（由 Cron Job 定时任务调用）
+ * 
+ * @param batchSize - 单次处理的批量大小，默认 50
+ * @returns 处理统计结果（成功、失败、处理总数）
+ * 
+ * [回退策略 (Fallback Strategy)]:
+ * - 消息状态流转: PENDING -> PROCESSING -> SENT (成功) 或 PENDING (失败回退)
+ * - 失败重试: 单次发送失败后，状态回退为 PENDING 并递增 `retryCount`
+ * - 断头台机制: 超过 3 次重试后标记为 FAILED 并记录 `lastError`
+ * - 并发保护: 使用 `skipLocked: true` 确保多实例并行时不会重复处理同一条记录
  */
 export async function processNotificationQueue(batchSize: number = 50) {
     // P1 优化：将事务拆分，避免外部 API I/O 导致队列表行锁过久
@@ -306,32 +344,7 @@ export async function getActiveAnnouncements(userRole?: string) {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
 
-    const tenantId = session.user.tenantId;
-    const now = new Date();
-
-    return await db.query.systemAnnouncements.findMany({
-        where: and(
-            or(
-                eq(systemAnnouncements.tenantId, tenantId),
-                isNull(systemAnnouncements.tenantId) // 全平台公告
-            ),
-            lte(systemAnnouncements.startAt, now),
-            or(
-                isNull(systemAnnouncements.endAt),
-                gte(systemAnnouncements.endAt, now)
-            ),
-            // P1 修复: 角色过滤参数化，防御 SQL 注入
-            or(
-                isNull(systemAnnouncements.targetRoles),
-                userRole ? sql`${systemAnnouncements.targetRoles} @> ${sql.param(JSON.stringify([userRole]))}::jsonb` : undefined
-            )
-        ),
-        orderBy: [
-            desc(systemAnnouncements.isPinned),
-            desc(systemAnnouncements.createdAt)
-        ],
-        limit: 10,
-    });
+    return await getCachedAnnouncements(session.user.tenantId, userRole);
 }
 
 /**
@@ -380,6 +393,8 @@ export async function createAnnouncement(input: z.infer<typeof createAnnouncemen
         newValues: announcement,
     });
 
+    // P4 优化：失效相关缓存
+    revalidateTag('announcements', 'default');
     revalidatePath('/');
 
     return { success: true, data: announcement };
@@ -394,33 +409,28 @@ export async function getNotificationTemplates() {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
 
-    return await db.query.notificationTemplates.findMany({
-        where: or(
-            eq(notificationTemplates.tenantId, session.user.tenantId),
-            isNull(notificationTemplates.tenantId)
-        ),
-        orderBy: [notificationTemplates.notificationType, notificationTemplates.code],
-    });
+    return await getCachedTemplates(session.user.tenantId);
 }
 
-/**
- * 通知模板校验 Schema
- */
+// upsertTemplateSchema: 更新或插入通知模板的参数定义
 const upsertTemplateSchema = z.object({
-    id: z.string().optional(),
-    code: z.string().min(1, '代码不能为空').max(50, '代码不能超过50字符'),
-    name: z.string().min(1, '名称不能为空').max(100, '名称不能超过100字符'),
-    notificationType: z.string().min(1, '类型不能为空'),
-    titleTemplate: z.string().min(1, '标题模板不能为空').max(200, '标题模板不能超过200字符'),
-    contentTemplate: z.string().min(1, '内容模板不能为空').max(5000, '内容模板不能超过5000字符'),
-    smsTemplate: z.string().max(500, '短信模板不能超过500字符').optional(),
-    channels: z.array(z.string()).default(['IN_APP']),
+    id: z.string().uuid().optional(),
+    code: z.string().min(1),
+    name: z.string().min(1),
+    titleTemplate: z.string().min(1),
+    contentTemplate: z.string().min(1),
+    type: z.string().optional(),
+    channels: z.array(z.string()).optional(),
+    priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+    isActive: z.boolean().optional(),
+    notificationType: z.string().default('SYSTEM'),
+    smsTemplate: z.string().optional(),
     paramMapping: z.array(z.object({
         key: z.string(),
         label: z.string(),
         source: z.string(),
-        defaultValue: z.string().optional()
-    })).optional()
+        defaultValue: z.string().optional(),
+    })).optional(),
 });
 
 /**
@@ -446,13 +456,14 @@ export async function upsertNotificationTemplate(input: z.infer<typeof upsertTem
         return { success: false, error: '权限不足' };
     }
 
+    let result;
     if (data.id) {
         // 更新
         const [updated] = await db.update(notificationTemplates)
             .set({
                 code: data.code,
                 name: data.name,
-                notificationType: data.notificationType,
+                notificationType: data.notificationType ?? 'SYSTEM',
                 titleTemplate: data.titleTemplate,
                 contentTemplate: data.contentTemplate,
                 smsTemplate: data.smsTemplate,
@@ -465,46 +476,39 @@ export async function upsertNotificationTemplate(input: z.infer<typeof upsertTem
                 eq(notificationTemplates.tenantId, tenantId)
             ))
             .returning();
-
-        if (!updated) {
-            return { success: false, error: '模板不存在或无权限修改' };
-        }
-
-        // P2: 添加审计日志
-        await AuditService.log(db, {
-            tableName: 'notification_templates',
-            recordId: updated.id,
-            action: 'UPDATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: updated,
-        });
-
-        return { success: true, data: updated };
+        result = updated;
     } else {
         // 新建
         const [created] = await db.insert(notificationTemplates).values({
             tenantId,
             code: data.code,
             name: data.name,
-            notificationType: data.notificationType,
+            notificationType: data.notificationType ?? 'SYSTEM',
             titleTemplate: data.titleTemplate,
             contentTemplate: data.contentTemplate,
             smsTemplate: data.smsTemplate,
             channels: data.channels,
             paramMapping: data.paramMapping,
         }).returning();
-
-        // P2: 添加审计日志
-        await AuditService.log(db, {
-            tableName: 'notification_templates',
-            recordId: created.id,
-            action: 'CREATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: created,
-        });
-
-        return { success: true, data: created };
+        result = created;
     }
+
+    if (!result) {
+        return { success: false, error: '操作失败' };
+    }
+
+    // P2: 添加审计日志
+    await AuditService.log(db, {
+        tableName: 'notification_templates',
+        recordId: result.id,
+        action: data.id ? 'UPDATE' : 'CREATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: result,
+    });
+
+    // P4 优化：失效相关缓存
+    revalidateTag('notification-templates', 'default');
+
+    return { success: true, data: result };
 }

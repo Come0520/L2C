@@ -1,9 +1,9 @@
-import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
+﻿import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { InferSelectModel } from 'drizzle-orm';
 
 // 1. 使用 vi.hoisted 提前注入环境变量，避免模块加载时取不到
 vi.hoisted(() => {
-    process.env.DATABASE_URL = 'postgresql://l2c_user:password@localhost:5434/l2c_test';
+    process.env.DATABASE_URL = 'postgresql://l2c_user:password@127.0.0.1:5435/l2c_dev';
     process.env.AUTH_SECRET = 'test_secret_for_integration_tests';
 });
 
@@ -16,6 +16,11 @@ import * as processingActions from '../actions/processing';
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
     checkPermission: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('next/cache', () => ({
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 type Tenant = InferSelectModel<typeof schema.tenants>;
@@ -48,7 +53,8 @@ describe('Approval Integration Tests', () => {
             email: `user_${Date.now()}@test.com`,
             name: 'Test Requester',
             role: 'USER',
-            passwordHash: 'hash'
+            passwordHash: 'hash',
+            phone: '13800000000'
         }).returning() as User[];
         userId = user.id;
 
@@ -57,7 +63,8 @@ describe('Approval Integration Tests', () => {
             email: `admin_${Date.now()}@test.com`,
             name: 'Test Admin',
             role: 'ADMIN',
-            passwordHash: 'hash'
+            passwordHash: 'hash',
+            phone: '13800000000'
         }).returning() as User[];
         adminId = admin.id;
 
@@ -112,8 +119,7 @@ describe('Approval Integration Tests', () => {
     });
 
     it('should allow adding an approver (addApprover)', async () => {
-        // @ts-expect-error — 仅 mock 测试需要的用户信息及租户部分字段
-        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' });
+        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' } as any);
 
         const res = await processingActions.addApprover({
             taskId: taskId,
@@ -126,7 +132,7 @@ describe('Approval Integration Tests', () => {
 
     it('should process approval (processApproval)', async () => {
         // @ts-expect-error — 仅 mock 测试需要的用户信息及租户部分字段
-        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' });
+        vi.mocked(auth).mockResolvedValue({ user: { id: userId, tenantId, name: 'Test Requester' }, expires: '' } as any);
 
         const res = await processingActions.processApproval({
             taskId: taskId,
@@ -137,7 +143,7 @@ describe('Approval Integration Tests', () => {
         expect(res.success).toBe(true);
 
         const task = await db.query.approvalTasks.findFirst({
-            where: (t, { eq }) => eq(t.id, taskId)
+            where: (t: any, { eq }: any) => eq(t.id, taskId)
         });
         expect(task?.status).toBe('APPROVED');
     });

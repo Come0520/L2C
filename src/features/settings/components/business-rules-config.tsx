@@ -9,7 +9,8 @@ import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { getMyQuoteConfig, updateGlobalQuoteConfig } from '@/features/quotes/actions/config-actions';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/shared/ui/skeleton';
 

@@ -40,7 +40,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
     const data = createLeadSchema.parse(input);
 
     try {
-        logger.info('[leads] 创建线索开始:', { tenantId, userId, leadData: data });
+        logger.info('[leads] 创建线索开始:', { tenantId, userId, customerName: data.customerName, community: data.community });
         // 构造 LeadService 输入：转换字段名和处理可选值
         const result = await LeadService.createLead({
             ...data,
@@ -106,7 +106,7 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
     const { id, ...data } = updateLeadSchema.parse(input);
 
     try {
-        logger.info('[leads] 更新线索开始:', { leadId: id, tenantId: session.user.tenantId, userId: session.user.id, updateData: data });
+        logger.info('[leads] 更新线索开始:', { leadId: id, tenantId: session.user.tenantId, userId: session.user.id });
         const updated = await LeadService.updateLead(id, {
             customerName: data.customerName,
             customerPhone: data.customerPhone,
@@ -123,7 +123,7 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
             channelContactId: data.channelContactId,
             notes: data.remark ?? null,
             tags: data.tags ?? null,
-        }, session.user.tenantId);
+        }, session.user.tenantId, session.user.id, data.version);
 
         logger.info('[leads] 更新线索成功:', { leadId: id, tenantId: session.user.tenantId });
 
@@ -446,58 +446,63 @@ export async function importLeads(data: unknown[]) {
     let successCount = 0;
     const errors: { row: number, error: string }[] = [];
 
-    logger.info('[leads] 批量导入线索开始:', { dataLength: data.length, tenantId, userId });
+    const importBatchId = `import_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const concurrency = 10;
 
-    // Batch processing
-    for (let i = 0; i < data.length; i++) {
-        const row = data[i];
+    // 分块并发处理以提升性能
+    for (let i = 0; i < data.length; i += concurrency) {
+        const chunk = data.slice(i, i + concurrency);
 
-        // Basic Transformation if needed
-        const parseResult = createLeadSchema.safeParse(row);
+        await Promise.all(chunk.map(async (row, index) => {
+            const rowIndex = i + index;
+            const parseResult = createLeadSchema.safeParse(row);
 
-        if (!parseResult.success) {
-            errors.push({
-                row: i + 1,
-                error: parseResult.error.issues.map(iss => `${iss.path.join('.')}: ${iss.message}`).join('; ')
-            });
-            continue;
-        }
-
-        const validData = parseResult.data;
-
-        try {
-            const result = await LeadService.createLead({
-                ...validData,
-                customerName: validData.customerName,
-                customerPhone: validData.customerPhone,
-                customerWechat: validData.customerWechat ?? null,
-                community: validData.community ?? null,
-                houseType: validData.houseType ?? null,
-                address: validData.address ?? null,
-                sourceChannelId: validData.sourceChannelId ?? null,
-                sourceSubId: validData.sourceSubId ?? null,
-                sourceDetail: validData.sourceDetail ?? null,
-                intentionLevel: validData.intentionLevel ?? null,
-                estimatedAmount: validData.estimatedAmount ? String(validData.estimatedAmount) : null,
-                channelId: validData.channelId ?? null,
-                channelContactId: validData.channelContactId ?? null,
-                notes: validData.remark ?? null,
-                tags: validData.tags ?? null,
-            }, tenantId, userId);
-
-            if (result.isDuplicate) {
+            if (!parseResult.success) {
                 errors.push({
-                    row: i + 1,
-                    error: `重复线索: ${result.duplicateReason === 'PHONE' ? '手机号重复' : '地址重复'} (与现有活跃线索冲突)`
+                    row: rowIndex + 1,
+                    error: parseResult.error.issues.map(iss => `${iss.path.join('.')}: ${iss.message}`).join('; ')
                 });
-            } else {
-                successCount++;
+                return;
             }
-        } catch (err: unknown) {
-            logger.error('[leads] 处理单条线索导入失败:', { error: err, row: i + 1, dataRow: validData, tenantId });
-            const errMsg = err instanceof Error ? err.message : 'Unknown error';
-            errors.push({ row: i + 1, error: errMsg });
-        }
+
+            const validData = parseResult.data;
+
+            try {
+                const result = await LeadService.createLead({
+                    ...validData,
+                    customerName: validData.customerName,
+                    customerPhone: validData.customerPhone,
+                    customerWechat: validData.customerWechat ?? null,
+                    community: validData.community ?? null,
+                    houseType: validData.houseType ?? null,
+                    address: validData.address ?? null,
+                    sourceChannelId: validData.sourceChannelId ?? null,
+                    sourceSubId: validData.sourceSubId ?? null,
+                    sourceDetail: validData.sourceDetail ?? null,
+                    intentionLevel: validData.intentionLevel ?? null,
+                    estimatedAmount: validData.estimatedAmount ? String(validData.estimatedAmount) : null,
+                    channelId: validData.channelId ?? null,
+                    channelContactId: validData.channelContactId ?? null,
+                    notes: validData.remark ?? null,
+                    tags: validData.tags ?? null,
+                    importBatchId: importBatchId,
+                    rawData: row as any,
+                }, tenantId, userId);
+
+                if (result.isDuplicate) {
+                    errors.push({
+                        row: rowIndex + 1,
+                        error: `重复线索: ${result.duplicateReason === 'PHONE' ? '手机号重复' : '地址重复'} (与现有活跃线索冲突)`
+                    });
+                } else {
+                    successCount++;
+                }
+            } catch (err: unknown) {
+                logger.error('[leads] 处理单条线索导入失败:', { error: err, row: rowIndex + 1, tenantId });
+                const errMsg = err instanceof Error ? err.message : 'Unknown error';
+                errors.push({ row: rowIndex + 1, error: errMsg });
+            }
+        }));
     }
 
     logger.info('[leads] 批量导入线索结束:', { successCount, errorCount: errors.length, tenantId, userId });
@@ -506,9 +511,9 @@ export async function importLeads(data: unknown[]) {
         tenantId: tenantId,
         userId: userId,
         tableName: 'leads',
-        recordId: 'BATCH_IMPORT',
+        recordId: importBatchId,
         action: 'CREATE',
-        newValues: { successCount, errorCount: errors.length }
+        newValues: { successCount, errorCount: errors.length, importBatchId }
     });
 
     revalidatePath('/leads');

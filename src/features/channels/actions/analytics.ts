@@ -5,6 +5,19 @@ import { channels, channelCommissions } from '@/shared/api/schema';
 import { eq, sql, desc, and, inArray } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
+import { unstable_cache } from 'next/cache';
+import { computeChannelAnalytics } from '../logic/analytics-engine';
+import { logger } from '@/shared/lib/logger';
+
+/**
+ * 渠道分析查询参数
+ */
+export interface GetChannelAnalyticsParams {
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+}
 
 // 类型定义（导出供组件使用）
 export interface ChannelAnalyticsData {
@@ -25,11 +38,7 @@ export interface ChannelAnalyticsData {
  * 安全检查：自动从 session 获取 tenantId
  */
 
-export async function getChannelAnalytics(params?: {
-    startDate?: Date;
-    endDate?: Date;
-    limit?: number;
-}): Promise<ChannelAnalyticsData[]> {
+export async function getChannelAnalytics(params?: GetChannelAnalyticsParams): Promise<ChannelAnalyticsData[]> {
     const session = await auth();
     if (!session?.user?.tenantId) return [];
 
@@ -37,7 +46,38 @@ export async function getChannelAnalytics(params?: {
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
     const tenantId = session.user.tenantId;
-    const { startDate, endDate, limit: rawLimit = 50 } = params || {};
+
+    logger.info('[channels] Fetching channel analytics', { userId: session.user.id, params });
+
+    // P1 Fix: Add audit log (Action: VIEW)
+    await AuditService.log(db, {
+        tableName: 'channels',
+        recordId: 'ANALYTICS',
+        action: 'VIEW',
+        userId: session.user.id,
+        tenantId,
+        details: { params }
+    });
+
+    // P8 Fix: Cache analytics
+    const getCachedAnalytics = unstable_cache(
+        async (p: GetChannelAnalyticsParams | undefined, tid: string) => _getChannelAnalyticsInternal(p, tid),
+        [`channel-analytics-${tenantId}`],
+        { revalidate: 3600, tags: ['channel-analytics'] }
+    );
+
+    return getCachedAnalytics(params, tenantId);
+}
+
+/**
+ * 内部分析逻辑 (导出供测试使用)
+ */
+export async function _getChannelAnalyticsInternal(
+    params: GetChannelAnalyticsParams | undefined,
+    tenantId: string
+): Promise<ChannelAnalyticsData[]> {
+
+    const { startDate, endDate, limit: rawLimit = 10 } = params || {};
 
     // P3 Fix: 限制最大查询数量
     const limit = Math.min(Math.max(rawLimit, 1), 100);
@@ -95,34 +135,18 @@ export async function getChannelAnalytics(params?: {
         });
     });
 
-    // 3. Merge and Compute KPIs
-    const results: ChannelAnalyticsData[] = topChannels.map(ch => {
-        const commData = commissionMap.get(ch.id) || { cost: 0, orders: 0 };
-        const totalDealAmount = Number(ch.totalDealAmount || 0);
-        const totalLeads = ch.totalLeads || 0;
-
-        // Note: With date filter, totalDealAmount/totalLeads from channel table are inaccurate (they are lifetime totals).
-        // A full analytics solution would aggregate these from source tables too.
-        // For this refactor, we stick to existing logic but optimize cost query.
-
-        const totalOrders = commData.orders;
-        const conversionRate = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
-        const cost = commData.cost;
-        const roi = cost > 0 ? ((totalDealAmount - cost) / cost) * 100 : 0;
-        const avgTransactionValue = totalOrders > 0 ? totalDealAmount / totalOrders : 0;
-
-        return {
+    // 3. Merge and Compute KPIs (Using decoupled logic)
+    return computeChannelAnalytics(
+        topChannels.map(ch => ({
             id: ch.id,
             name: ch.name,
-            totalLeads,
-            totalOrders,
-            totalDealAmount,
-            commissionAmount: cost,
-            conversionRate: parseFloat(conversionRate.toFixed(2)),
-            roi: parseFloat(roi.toFixed(2)),
-            avgTransactionValue: parseFloat(avgTransactionValue.toFixed(2)),
-        };
-    });
-
-    return results.sort((a, b) => b.totalDealAmount - a.totalDealAmount);
+            totalLeads: ch.totalLeads || 0,
+            totalDealAmount: ch.totalDealAmount || 0
+        })),
+        commissions.map(c => ({
+            channelId: c.channelId,
+            totalCommission: c.totalCommission,
+            orderCount: c.orderCount
+        }))
+    );
 }

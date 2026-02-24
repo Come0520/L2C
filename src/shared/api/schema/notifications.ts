@@ -112,11 +112,14 @@ export const notificationQueue = pgTable('notification_queue', {
     // 时间
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }), // 延迟发送
     processedAt: timestamp('processed_at', { withTimezone: true }),
+    idempotencyToken: varchar('idempotency_token', { length: 200 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     queueStatusIdx: index('idx_notif_queue_status').on(table.status),
     queueScheduledIdx: index('idx_notif_queue_scheduled').on(table.scheduledAt),
     queueUserIdx: index('idx_notif_queue_user').on(table.userId),
+    // 幂等性唯一索引：同一租户下相同 token 不能重复
+    queueIdempotencyIdx: unique('unq_notif_queue_idempotency').on(table.tenantId, table.idempotencyToken),
 }));
 
 // ==================== 系统公告表 ====================

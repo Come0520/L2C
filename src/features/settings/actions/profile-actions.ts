@@ -33,23 +33,22 @@ export const updateProfile = createSafeAction(
         const userId = session.user.id;
 
         try {
-            // 1. 检查手机号唯一性 (如果修改了手机号)
-            if (data.phone) {
-                const existingUser = await db.query.users.findFirst({
+            // 1. 获取旧数据用于审计 & 检查手机号唯一性
+            const [currentUser, existingUser] = await Promise.all([
+                db.query.users.findFirst({
+                    where: eq(users.id, userId),
+                }),
+                data.phone ? db.query.users.findFirst({
                     where: and(
                         eq(users.phone, data.phone),
                         ne(users.id, userId) // 排除自己
                     ),
-                });
-                if (existingUser) {
-                    return { success: false, error: '手机号已被其他用户使用' };
-                }
-            }
+                }) : Promise.resolve(null)
+            ]);
 
-            // 2. 获取旧数据用于审计
-            const currentUser = await db.query.users.findFirst({
-                where: eq(users.id, userId),
-            });
+            if (existingUser) {
+                return { success: false, error: '手机号已被其他用户使用' };
+            }
 
             if (!currentUser) {
                 return { success: false, error: '用户不存在' };

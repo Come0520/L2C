@@ -27,3 +27,5 @@ export type VantComponentOptions<Data extends WechatMiniprogram.Component.DataOp
     value: any;
 } & Record<string, any>, Props, Methods> & Record<string, any>>;
 export {};
+
+export {};

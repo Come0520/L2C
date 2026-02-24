@@ -7,6 +7,25 @@ import { orders } from '@/shared/api/schema/orders';
 import { eq, and, sql, desc, inArray, gte, isNull, isNotNull } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
+import { unstable_cache } from 'next/cache';
+import { logger } from '@/shared/lib/logger';
+
+/**
+ * 渠道排名查询参数
+ */
+export interface GetChannelRankingOptions {
+    limit?: number;
+    period?: 'month' | 'quarter' | 'year' | 'all';
+}
+
+/**
+ * 渠道趋势查询参数
+ */
+export interface GetChannelTrendOptions {
+    months?: number;
+    channelId?: string;
+}
 
 /**
  * 渠道统计结果类型
@@ -44,7 +63,7 @@ export interface ChannelStatsOverview {
  * 会分别统计总计数据和当月数据。
  * 
  * @param {string} channelId - 目标渠道ID
- * @returns {Promise<{success: boolean, data: any, error?: string}>} 统计聚合数据响应结果
+ * @returns {Promise<ChannelStats | null>} 统计聚合数据响应结果
  */
 export async function getChannelStats(channelId: string): Promise<ChannelStats | null> {
     const session = await auth();
@@ -53,7 +72,26 @@ export async function getChannelStats(channelId: string): Promise<ChannelStats |
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
     const tenantId = session.user.tenantId;
 
-    return _getChannelStatsInternal(channelId, tenantId);
+    logger.info('[channels] Fetching channel stats', { channelId, userId: session.user.id });
+
+    // P1 Fix: Audit log
+    await AuditService.log(db, {
+        tableName: 'channels',
+        recordId: channelId,
+        action: 'VIEW',
+        userId: session.user.id,
+        tenantId,
+        details: { type: 'channel_details_stats' }
+    });
+
+    // P8 Fix: Use cache for stats
+    const getCachedStats = unstable_cache(
+        async (cid: string, tid: string) => _getChannelStatsInternal(cid, tid),
+        [`channel-stats-${channelId}`],
+        { revalidate: 3600, tags: [`channel-stats-${channelId}`] }
+    );
+
+    return getCachedStats(channelId, tenantId);
 }
 
 /**
@@ -71,55 +109,58 @@ async function _getChannelStatsInternal(channelId: string, tenantId: string): Pr
     const allChannelIds = await getAllDescendantIds(channelId, tenantId);
     allChannelIds.push(channelId);
 
-    // 统计线索数量
-    const leadStats = await db
-        .select({
-            count: sql<number>`count(*)::int`,
-        })
-        .from(leads)
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            inArray(leads.channelId, allChannelIds)
-        ));
-
-    // 统计成交订单（通过线索关联）
-    const orderStats = await db
-        .select({
-            count: sql<number>`count(*)::int`,
-            total: sql<number>`COALESCE(sum(${orders.totalAmount}), 0)::numeric`,
-        })
-        .from(orders)
-        .innerJoin(leads, eq(orders.leadId, leads.id))
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            inArray(leads.channelId, allChannelIds),
-            eq(orders.status, 'COMPLETED')
-        ));
-
-    // 统计佣金
-    const commissionStats = await db
-        .select({
-            total: sql<number>`COALESCE(sum(${channelCommissions.amount}), 0)::numeric`,
-        })
-        .from(channelCommissions)
-        .where(and(
-            eq(channelCommissions.tenantId, tenantId),
-            inArray(channelCommissions.channelId, allChannelIds)
-        ));
-
-    // 检查30天内是否有新订单（活跃度）
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentOrders = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(orders)
-        .innerJoin(leads, eq(orders.leadId, leads.id))
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            inArray(leads.channelId, allChannelIds),
-            gte(orders.createdAt, thirtyDaysAgo)
-        ));
+    // P8 Fix: Concurrent execution
+    const [leadStats, orderStats, commissionStats, recentOrders] = await Promise.all([
+        // 统计线索数量
+        db
+            .select({
+                count: sql<number>`count(*)::int`,
+            })
+            .from(leads)
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                inArray(leads.channelId, allChannelIds)
+            )),
+
+        // 统计成交订单（通过线索关联）
+        db
+            .select({
+                count: sql<number>`count(*)::int`,
+                total: sql<number>`COALESCE(sum(${orders.totalAmount}), 0)::numeric`,
+            })
+            .from(orders)
+            .innerJoin(leads, eq(orders.leadId, leads.id))
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                inArray(leads.channelId, allChannelIds),
+                eq(orders.status, 'COMPLETED')
+            )),
+
+        // 统计佣金
+        db
+            .select({
+                total: sql<number>`COALESCE(sum(${channelCommissions.amount}), 0)::numeric`,
+            })
+            .from(channelCommissions)
+            .where(and(
+                eq(channelCommissions.tenantId, tenantId),
+                inArray(channelCommissions.channelId, allChannelIds)
+            )),
+
+        // 检查30天内是否有新订单（活跃度）
+        db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(orders)
+            .innerJoin(leads, eq(orders.leadId, leads.id))
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                inArray(leads.channelId, allChannelIds),
+                gte(orders.createdAt, thirtyDaysAgo)
+            ))
+    ]);
 
     const leadCount = leadStats[0]?.count || 0;
     const dealCount = orderStats[0]?.count || 0;
@@ -146,7 +187,7 @@ async function _getChannelStatsInternal(channelId: string, tenantId: string): Pr
  * 
  * 聚合统计所有渠道产生的总客户数、总订单数、总业绩金额与已发佣金等全局概览信息。
  * 
- * @returns {Promise<{success: boolean, data: any, error?: string}>} 汇总的渠道概览数据响应
+ * @returns {Promise<ChannelStatsOverview>} 汇总的渠道概览数据响应
  */
 export async function getChannelStatsOverview(): Promise<ChannelStatsOverview> {
     const session = await auth();
@@ -155,70 +196,74 @@ export async function getChannelStatsOverview(): Promise<ChannelStatsOverview> {
     await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
     const tenantId = session.user.tenantId;
 
-    // 计算本月起始时间
+    logger.info('[channels] Fetching company channel overview', { userId: session.user.id });
+
+    // Calculate start of current month and 30 days ago
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // 统计活跃渠道数（30天内有新订单的渠道）
-    const activeChannels = await db
-        .select({
-            count: sql<number>`count(distinct ${leads.channelId})::int`,
-        })
-        .from(orders)
-        .innerJoin(leads, eq(orders.leadId, leads.id))
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            gte(orders.createdAt, thirtyDaysAgo)
-        ));
+    // 1. Fetch raw data
+    const [activeChannelsResult, monthlyStatsResult, monthlyLeadsResult, pendingCommissionResult] = await Promise.all([
+        // Active channels count (channels with new orders in last 30 days)
+        db.select({ count: sql<number>`count(distinct ${leads.channelId})::int` })
+            .from(orders)
+            .innerJoin(leads, eq(orders.leadId, leads.id))
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                gte(orders.createdAt, thirtyDaysAgo)
+            )),
 
-    // 本月带单总额
-    const monthlyStats = await db
-        .select({
+        // Monthly deal amount and count
+        db.select({
             total: sql<number>`COALESCE(sum(${orders.totalAmount}), 0)::numeric`,
             count: sql<number>`count(*)::int`,
         })
-        .from(orders)
-        .innerJoin(leads, eq(orders.leadId, leads.id))
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            gte(orders.createdAt, monthStart),
-            eq(orders.status, 'COMPLETED')
-        ));
+            .from(orders)
+            .innerJoin(leads, eq(orders.leadId, leads.id))
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                gte(orders.createdAt, monthStart),
+                eq(orders.status, 'COMPLETED')
+            )),
 
-    // 本月线索数
-    const monthlyLeads = await db
-        .select({
-            count: sql<number>`count(*)::int`,
-        })
-        .from(leads)
-        .where(and(
-            eq(leads.tenantId, tenantId),
-            gte(leads.createdAt, monthStart),
-            sql`${leads.channelId} IS NOT NULL`
-        ));
+        // Monthly lead count
+        db.select({ count: sql<number>`count(*)::int` })
+            .from(leads)
+            .where(and(
+                eq(leads.tenantId, tenantId),
+                gte(leads.createdAt, monthStart),
+                sql`${leads.channelId} IS NOT NULL`
+            )),
 
-    // 待结算佣金
-    const pendingCommission = await db
-        .select({
-            total: sql<number>`COALESCE(sum(${channelCommissions.amount}), 0)::numeric`,
-        })
-        .from(channelCommissions)
-        .where(and(
-            eq(channelCommissions.tenantId, tenantId),
-            eq(channelCommissions.status, 'PENDING')
-        ));
+        // Pending commission
+        db.select({ total: sql<number>`COALESCE(sum(${channelCommissions.amount}), 0)::numeric` })
+            .from(channelCommissions)
+            .where(and(
+                eq(channelCommissions.tenantId, tenantId),
+                eq(channelCommissions.status, 'PENDING')
+            ))
+    ]);
 
-    const dealCount = monthlyStats[0]?.count || 0;
-    const leadCount = monthlyLeads[0]?.count || 0;
+    // 2. Format raw data for stats engine
+    const overviewData = {
+        activeChannelCount: activeChannelsResult[0]?.count || 0,
+        monthlyDealAmount: Number(monthlyStatsResult[0]?.total) || 0,
+        monthlyDealCount: monthlyStatsResult[0]?.count || 0,
+        monthlyLeadCount: monthlyLeadsResult[0]?.count || 0,
+        pendingCommission: Number(pendingCommissionResult[0]?.total) || 0,
+    };
 
+    // 3. Compute results directly since the interface has changed
     return {
-        activeChannelCount: activeChannels[0]?.count || 0,
-        totalDealAmount: Number(monthlyStats[0]?.total) || 0,
-        totalLeadCount: leadCount,
-        avgConversionRate: leadCount > 0 ? (dealCount / leadCount) * 100 : 0,
-        pendingCommission: Number(pendingCommission[0]?.total) || 0,
+        activeChannelCount: overviewData.activeChannelCount,
+        totalDealAmount: overviewData.monthlyDealAmount,
+        totalLeadCount: overviewData.monthlyLeadCount,
+        avgConversionRate: overviewData.monthlyLeadCount > 0
+            ? Number(((overviewData.monthlyDealCount / overviewData.monthlyLeadCount) * 100).toFixed(2))
+            : 0,
+        pendingCommission: overviewData.pendingCommission,
     };
 }
 
@@ -229,12 +274,10 @@ export async function getChannelStatsOverview(): Promise<ChannelStatsOverview> {
  * 常用于首页仪表盘展示业绩排名。
  * 
  * @param {number} limit - 返回的排行榜记录数量限制，默认 10 
- * @returns {Promise<{success: boolean, data: any[], error?: string}>} 渠道排行数据
+ * @returns {Promise<ChannelStats[]>} 渠道排行数据
  */
-export async function getChannelRanking(options?: {
-    limit?: number;
-    period?: 'month' | 'quarter' | 'year' | 'all';
-}): Promise<ChannelStats[]> {
+export async function getChannelRanking(options?: GetChannelRankingOptions): Promise<ChannelStats[]> {
+    logger.info('[channels] Fetching channel ranking', { options });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -389,12 +432,10 @@ export async function getChannelRanking(options?: {
  * 用于图表展示趋势变化。
  * 
  * @param {number} days - 需要统计的回溯天数，默认 30 天
- * @returns {Promise<{success: boolean, data: any[], error?: string}>} 按天聚合的趋势数据列表
+ * @returns {Promise<{ month: string; dealAmount: number; dealCount: number }[]>} 按天聚合的趋势数据列表
  */
-export async function getChannelTrend(options?: {
-    months?: number;
-    channelId?: string;
-}): Promise<{ month: string; dealAmount: number; dealCount: number }[]> {
+export async function getChannelTrend(options?: GetChannelTrendOptions): Promise<{ month: string; dealAmount: number; dealCount: number }[]> {
+    logger.info('[channels] Fetching channel trend', { options });
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('Unauthorized');
 

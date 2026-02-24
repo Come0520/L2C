@@ -45,6 +45,11 @@ const updateChannelPriceSchema = z.object({
 
 /**
  * 获取商品的渠道专属价列表
+ *
+ * @description 获取针对某一款商品的全部特定渠道覆盖定价列表。
+ *
+ * @param productId - 所查询商品的 ID
+ * @returns 该商品所有配置了特殊价格的渠道记录数组
  */
 export async function getChannelPrices(productId: string) {
     try {
@@ -82,6 +87,10 @@ export async function getChannelPrices(productId: string) {
 
 /**
  * 获取所有渠道专属价列表（用于设置页面）
+ *
+ * @description 拉取租户下所有的渠道专供价格设置网络，用于全局面板的预览和管理。
+ *
+ * @returns 所有活动状态商品的渠道专属价配置全集
  */
 export async function getAllChannelPrices() {
     try {
@@ -123,6 +132,13 @@ export async function getAllChannelPrices() {
 
 /**
  * 添加渠道专属价
+ *
+ * @description 往指定商品上添加对应的渠道价格特例映射。
+ *
+ * @param productId - 商品 ID
+ * @param input - 包含渠道 ID 和特殊价格的输入模型
+ * @returns 添加成功后生成的专有渠道记录 ID
+ * @throws 尝试重复绑定同一渠道特殊价格时抛错
  */
 export async function addChannelPrice(productId: string, input: z.infer<typeof channelPriceSchema>) {
     try {
@@ -175,6 +191,12 @@ export async function addChannelPrice(productId: string, input: z.infer<typeof c
 
 /**
  * 更新渠道专属价
+ *
+ * @description 修正特例渠道价格或切换活越状态，并留下完整审计痕迹。
+ *
+ * @param id - 需要操作的特例价格记录 ID
+ * @param input - 新的更新后参数
+ * @returns 被更改的记录 ID
  */
 export async function updateChannelPrice(id: string, input: z.infer<typeof updateChannelPriceSchema>) {
     try {
@@ -216,6 +238,11 @@ export async function updateChannelPrice(id: string, input: z.infer<typeof updat
 
 /**
  * 删除渠道专属价
+ *
+ * @description 硬删除此前的专属关联价，回退该渠道至通用商品规则。
+ *
+ * @param id - 拟删除目标记录 ID
+ * @returns 布尔值反映持久化清空状况
  */
 export async function removeChannelPrice(id: string) {
     try {
@@ -253,6 +280,12 @@ export async function removeChannelPrice(id: string) {
 
 /**
  * 获取商品的最终价格（考虑渠道专属价）
+ *
+ * @description 动态结算过程的核心计价管线入口，判断当前渠道是否有针对该商品的专属价。如果有则命中最高优先级的专属价格，若没有则回落到默认主价模式。
+ *
+ * @param productId - 目标商品 ID
+ * @param channelId - 查询触发的门店或渠道商 ID
+ * @returns 获取最终有效销售单价数值与计算类型标识（专用/通用）
  */
 export async function getProductPriceForChannel(productId: string, channelId?: string) {
     try {

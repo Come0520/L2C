@@ -12,7 +12,15 @@ import {
     ShowroomSettingsConfig,
 } from './system-settings-index';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { Users, Share2, CreditCard, Ruler, Package, CheckCircle, Bell, BarChart3, LayoutTemplate } from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Share2 from 'lucide-react/dist/esm/icons/share';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Ruler from 'lucide-react/dist/esm/icons/ruler';
+import Package from 'lucide-react/dist/esm/icons/package';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart';
+import LayoutTemplate from 'lucide-react/dist/esm/icons/layout-template';
 
 /**
  * 系统设置主组件

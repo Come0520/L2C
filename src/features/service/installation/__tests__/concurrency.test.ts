@@ -4,7 +4,7 @@ import { confirmInstallationAction } from '../actions';
 // Mock DB and Auth
 const { mockDb, mockAuth } = vi.hoisted(() => ({
     mockDb: {
-        transaction: vi.fn(async (cb) => cb({
+        transaction: vi.fn(async (cb: (tx: any) => Promise<unknown>) => cb({
             query: {
                 installTasks: {
                     findFirst: vi.fn(),
@@ -31,8 +31,15 @@ vi.mock('@/shared/lib/audit-service', () => ({
     AuditService: { recordFromSession: vi.fn().mockResolvedValue({}) }
 }));
 
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 
+/**
+ * 安装并发与防护测试
+ *
+ * 注意：confirmInstallationAction 经 createSafeAction 包装，
+ * handler 的返回值在 result.data 内，外层 result.success 总为 true。
+ * 因此业务错误需通过 result.data.success / result.data.error 断言。
+ */
 describe('Installation Concurrency & Protection', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -46,27 +53,30 @@ describe('Installation Concurrency & Protection', () => {
         }));
 
         const result = await confirmInstallationAction({
-            taskId: '550e8400-e29b-41d4-a716-446655440099', // 有效UUID，DB查询返回null触发错误
+            taskId: '550e8400-e29b-41d4-a716-446655440099',
             actualLaborFee: 100
         });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('任务信息不完整');
+        // createSafeAction 包装后，业务结果在 result.data 中
+        const inner = (result as any).data ?? result;
+        expect(inner.success).toBe(false);
+        expect(inner.error).toContain('任务信息不完整');
     });
 
     it('应该防止重复确认逻辑（业务层模拟）', async () => {
-        // 在实际业务代码中，confirmInstallationInternal 已经在事务中检查了状态
-        // 我们通过模拟任务已被指派但缺少 installerId 来触发由于某种并发或异常导致的信息缺失错误
+        // 模拟任务已被指派但缺少 installerId 来触发信息缺失错误
         (mockDb.transaction as any).mockImplementationOnce(async (cb: (tx: any) => Promise<unknown>) => cb({
             query: { installTasks: { findFirst: vi.fn().mockResolvedValue({ id: 't1', installerId: null }) } }
         }));
 
         const result = await confirmInstallationAction({
-            taskId: '660e8400-e29b-41d4-a716-446655440001', // 有效UUID，DB返回 installerId:null
+            taskId: '660e8400-e29b-41d4-a716-446655440001',
             actualLaborFee: 100
         });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('未指派师傅');
+        // createSafeAction 包装后，业务结果在 result.data 中
+        const inner = (result as any).data ?? result;
+        expect(inner.success).toBe(false);
+        expect(inner.error).toContain('未指派师傅');
     });
 });

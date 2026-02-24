@@ -36,6 +36,7 @@ vi.mock('@/shared/lib/generate-no', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 describe('Finance Note Actions - Credit & Debit', () => {
@@ -82,7 +83,8 @@ describe('Finance Note Actions - Credit & Debit', () => {
                 id: 'mock-credit-note-id',
                 status: 'PENDING',
                 amount: '100',
-                arStatementId: 'mock-statement-id'
+                arStatementId: 'mock-statement-id',
+                createdBy: 'other-user'
             };
 
             const mockTx = {
@@ -131,7 +133,8 @@ describe('Finance Note Actions - Credit & Debit', () => {
                 id: 'mock-debit-note-id',
                 status: 'PENDING',
                 amount: '200',
-                apStatementId: 'mock-ap-statement-id'
+                apStatementId: 'mock-ap-statement-id',
+                createdBy: 'other-user'
             };
 
             const mockTx = {

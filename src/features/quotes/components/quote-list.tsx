@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { getQuotes } from '@/features/quotes/actions/queries';
-import { createQuote } from '@/features/quotes/actions/mutations';
+import { createQuoteActionInternal as createQuote } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Layout from 'lucide-react/dist/esm/icons/layout';

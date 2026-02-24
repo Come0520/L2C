@@ -15,27 +15,55 @@ import { eq, or, and, gte } from 'drizzle-orm';
 import { sendEmail } from '@/shared/lib/email';
 import { formatDate } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
+import { checkRateLimit } from '@/shared/middleware/rate-limit';
+import { headers } from 'next/headers';
 
 // ============ 类型定义 ============
 
+/**
+ * 租户申请数据接口
+ */
 export interface TenantApplicationData {
+  /** 企业全称：必须与营业执照保持一致 */
   companyName: string;
+  /** 申请联系人姓名 */
   applicantName: string;
+  /** 联系电话：将作为该租户 BOSS 账号的登录标识 */
   phone: string;
+  /** 联系邮箱：用于接收系统审批状态通知 */
   email: string;
+  /** 初始管理员密码：审批通过后用于登录系统 */
   password: string;
+  /** 企业所属地区 (省份)：用于区域化数据管理 */
   region: string;
+  /** 业务主营方向简介 (选填)：辅助平台管理员快速了解企业背景 */
   businessDescription?: string;
 }
 
+/**
+ * 租户申请处理结果接口
+ */
 export interface TenantApplicationResult {
+  /** 是否处理成功：仅表示提交申请是否持久化成功 */
   success: boolean;
+  /** 新生成的租户 ID：持久化后生成的 UUID */
   tenantId?: string;
+  /** 错误信息：提交失败时的友好错误提示 */
   error?: string;
 }
 
 // ============ 验证 Schema ============
 
+/**
+ * 租户入驻申请表单校验模式
+ * 
+ * 校验规则：
+ * - 企业名称：2-100字符
+ * - 联系人：2-100字符
+ * - 手机号：严格中国大陆手机号正则
+ * - 密码：至少8位，且必须包含字母和数字
+ */
 const tenantApplicationSchema = z.object({
   companyName: z.string().min(2, '企业名称至少2个字符').max(100, '企业名称最多100个字符'),
   applicantName: z.string().min(2, '联系人姓名至少2个字符').max(100, '联系人姓名最多100个字符'),
@@ -52,13 +80,18 @@ const tenantApplicationSchema = z.object({
 // ============ Server Actions ============
 
 /**
- * 提交租户入驻申请
+ * 提交租户入驻申请 (核心流程)
  *
- * 流程：
- * 1. 验证输入数据
- * 2. 检查手机号/邮箱是否已存在
- * 3. 创建待审批租户记录
- * 4. 创建待激活的 BOSS 用户
+ * 业务流程：
+ * 1. 【校验】执行 Zod 全量表单合法性校验。
+ * 2. 【防爬/限流】检查该手机号在 24 小时内的提交次数（最多 3 次），缓解垃圾申请风险。
+ * 3. 【唯一性】检查手机号和邮箱是否在全系统中已被占用。
+ * 4. 【标识】使用 nanoid 生成 8 位大写的唯一租户代码 (Tenant Code)。
+ * 5. 【持久化】在数据库事务中创建租户记录（状态：pending_approval）及对应的 BOSS 管理员账号（状态：未激活）。
+ * 6. 【通知】异步向所有平台管理员发送入驻申请邮件，内含快速审批链接。
+ * 
+ * @param {TenantApplicationData} data - 入驻申请表单数据
+ * @returns {Promise<TenantApplicationResult>} 处理结果
  */
 export async function submitTenantApplication(
   data: TenantApplicationData
@@ -73,24 +106,42 @@ export async function submitTenantApplication(
       };
     }
 
-    // 2. 注册频率限制：同一手机号 24 小时内最多提交 3 次申请
+    // 2. 分布式防刷限流 (L5 增强)：基于 IP 的强拦截
+    try {
+      const headersList = await headers();
+      const clientIP = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+      const rateLimitResult = await checkRateLimit(clientIP, 'registration');
+
+      if (!rateLimitResult.allowed) {
+        logger.warn('租户注册被限流拦截 (IP)', { ip: clientIP, remaining: rateLimitResult.remaining });
+        return {
+          success: false,
+          error: '操作过于频繁，请稍后再试',
+        };
+      }
+    } catch (error) {
+      // 限流服务异常，走降级逻辑，记录日志并放行
+      logger.error('限流检查服务异常 (降级处理)', { error });
+    }
+
+    // 3 & 4. 注册频率限制 & 手机邮箱唯一性检查 (DB 级限流)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentApplications = await db.query.tenants.findMany({
-      where: and(
-        eq(tenants.applicantPhone, data.phone),
-        gte(tenants.createdAt, oneDayAgo),
-      ),
-      columns: { id: true },
-    });
+    const [recentApplications, existingUser] = await Promise.all([
+      db.query.tenants.findMany({
+        where: and(
+          eq(tenants.applicantPhone, data.phone),
+          gte(tenants.createdAt, oneDayAgo),
+        ),
+        columns: { id: true },
+      }),
+      db.query.users.findFirst({
+        where: or(eq(users.phone, data.phone), eq(users.email, data.email)),
+      })
+    ]);
 
     if (recentApplications.length >= 3) {
       return { success: false, error: '提交过于频繁，请24小时后再试' };
     }
-
-    // 3. 检查手机号/邮箱是否已存在（已激活的用户）
-    const existingUser = await db.query.users.findFirst({
-      where: or(eq(users.phone, data.phone), eq(users.email, data.email)),
-    });
 
     if (existingUser) {
       return { success: false, error: '该手机号或邮箱已被注册' };
@@ -131,6 +182,31 @@ export async function submitTenantApplication(
       });
 
       return newTenant;
+    });
+
+    // 审计：记录新租户申请入驻
+    try {
+      await AuditService.log(db, {
+        tableName: 'tenants',
+        recordId: result.id,
+        action: 'TENANT_APPLICATION_SUBMITTED',
+        userId: 'system', // 此时用户尚未激活
+        tenantId: result.id,
+        details: {
+          companyName: data.companyName,
+          applicantName: data.applicantName,
+          phone: data.phone,
+          region: data.region,
+          method: 'self_registration'
+        }
+      });
+    } catch (auditErr) {
+      logger.error('记录租户注册审计日志失败:', auditErr);
+    }
+
+    logger.info('新租户入驻申请提交成功', {
+      tenantId: result.id,
+      companyName: data.companyName
     });
 
     // 5. 异步发送管理员通知 (增加简单重试机制以提高可靠性)

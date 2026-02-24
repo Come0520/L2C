@@ -1,5 +1,5 @@
-import { db, type Transaction } from "@/shared/api/db";
-import { afterSalesTickets, liabilityNotices } from "@/shared/api/schema/after-sales";
+import { db, type DbTransaction } from "@/shared/api/db";
+import { afterSalesTickets, liabilityNotices, debtLedgers } from "@/shared/api/schema/after-sales";
 import { sql, and, eq, desc } from 'drizzle-orm';
 
 /**
@@ -7,7 +7,7 @@ import { sql, and, eq, desc } from 'drizzle-orm';
  * @param tenantId 租户ID
  * @param tx 可选的数据库事务对象
  */
-export async function generateTicketNo(tenantId: string, tx?: Transaction): Promise<string> {
+export async function generateTicketNo(tenantId: string, tx?: DbTransaction): Promise<string> {
     const executor = tx || db;
     const today = new Date();
     const year = today.getFullYear();
@@ -34,11 +34,42 @@ export async function generateTicketNo(tenantId: string, tx?: Transaction): Prom
 }
 
 /**
+ * 生成欠款单编号 (DT + YYYYMMDD + 4位顺序号)
+ * @param tenantId 租户ID
+ * @param tx 可选的数据库事务对象
+ */
+export async function generateDebtNo(tenantId: string, tx?: DbTransaction): Promise<string> {
+    const executor = tx || db;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const prefix = `DT${year}${month}${day}`;
+
+    const [latest] = await executor.select({ debtNo: debtLedgers.debtNo })
+        .from(debtLedgers)
+        .where(and(
+            eq(debtLedgers.tenantId, tenantId),
+            sql`${debtLedgers.debtNo} LIKE ${prefix + '%'}`
+        ))
+        .orderBy(desc(debtLedgers.debtNo))
+        .limit(1);
+
+    if (latest && latest.debtNo) {
+        const currentSeq = parseInt(latest.debtNo.slice(-4));
+        const nextSeq = String(currentSeq + 1).padStart(4, '0');
+        return `${prefix}${nextSeq}`;
+    }
+
+    return `${prefix}0001`;
+}
+
+/**
  * 生成定责单编号 (LN + YYYYMMDD + 4位顺序号)
  * @param tenantId 租户ID
  * @param tx 可选的数据库事务对象
  */
-export async function generateNoticeNo(tenantId: string, tx?: Transaction): Promise<string> {
+export async function generateNoticeNo(tenantId: string, tx?: DbTransaction): Promise<string> {
     const executor = tx || db;
     const today = new Date();
     const year = today.getFullYear();

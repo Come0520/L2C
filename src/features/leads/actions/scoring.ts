@@ -92,7 +92,7 @@ const calculateLeadScoreInternal = createSafeAction(calculateLeadScoreSchema, as
  * 依据来源、意向级别和预算信息打分，并返回星级和处理优先级。
  *
  * @param {z.infer<typeof calculateLeadScoreSchema>} data - 包含线索 ID 的输入负载
- * @returns {Promise<any>}
+ * @returns {Promise<import('../types').LeadScoreResult | {error: string}>} 评分结果或错误信息
  */
 export async function calculateLeadScore(data: z.infer<typeof calculateLeadScoreSchema>) {
     return calculateLeadScoreInternal(data);

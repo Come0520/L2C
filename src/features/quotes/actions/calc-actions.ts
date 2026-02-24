@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import type { QuoteItemAttributes } from '@/shared/api/types/quote-types';
 import { auth } from '@/shared/lib/auth';
 import { and, eq } from 'drizzle-orm';
@@ -22,7 +22,15 @@ interface CalcPreviewParams {
     [key: string]: unknown; // 允许扩展参数
 }
 
-// 重新计算报价 - 现在实现真实逻辑
+/**
+ * 重新计算整个报价单的所有行项目金额。
+ * 会遍历报价单下的所有明细，基于当前关联的产品参数和损耗配置重新运行计算策略。
+ * 【租户隔离】强制校验当前用户的租户归属。
+ * 【缓存失效】成功执行后会触发 'quotes' 标签的缓存失效。
+ * 
+ * @param quoteId - 报价单 ID (UUID)
+ * @returns 包含操作结果和提示信息的对象
+ */
 export async function recalculateQuote(quoteId: string) {
     // 🔒 安全校验：添加认证和租户隔离
     const session = await auth();
@@ -110,10 +118,30 @@ export async function recalculateQuote(quoteId: string) {
         .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
     revalidatePath(`/quotes/${quoteId}`);
+    revalidateTag('quotes', 'default');
     return { success: true, message: 'Recalculated successfully' };
 }
 
-export async function getCalcPreview(params: CalcPreviewParams) {
+/**
+ * 客户端调用：重新计算整个报价单的所有行项目金额 (Recalculate All Items)
+ * 应用场景：损耗系数调整、方案切换（如：经济型转舒适型）后同步更新全单。
+ * 核心逻辑：遍历行项目 -> 根据 category 匹配策略 -> 重新入参 calculate -> 累加 subtotal。
+ * 
+ * @param quoteId - 报价单 ID
+ * @returns 操作结果及消息
+ */
+export async function recalculateQuoteAction(quoteId: string) {
+    return recalculateQuote(quoteId);
+}
+
+/**
+ * 客户端调用：获取算价预览结果（模拟计算，不写入数据库） (Get Calc Preview)
+ * 主要用于：配置器 (Configurator) 在用户输入长宽、工艺时实时呈现预估金额。
+ * 
+ * @param params - 包含分类、尺寸及工艺的核心算价参数
+ * @returns 包含用量 (usage) 及金额明细的 Data 对象
+ */
+export async function getCalcPreviewAction(params: CalcPreviewParams) {
     // 🔒 安全校验
     const session = await auth();
     if (!session?.user?.tenantId) {

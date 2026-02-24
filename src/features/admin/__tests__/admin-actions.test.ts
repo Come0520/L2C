@@ -1,11 +1,3 @@
-/**
- * Admin 模块 L5 综合安全测试
- *
- * 覆盖：
- * - worker-management: 分页防护、Zod 严格校验、敏感字段排除、自禁保护、AuditService
- * - role-management: 系统角色保护、权限白名单、角色删除保护
- * - 跨租户隔离
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ========== worker-management 导入 ==========
@@ -22,12 +14,19 @@ import {
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 import { getAllPermissions } from '@/shared/config/permissions';
+import type { Session } from 'next-auth';
 
 // ===== Mock 依赖 =====
 
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
     checkPermission: vi.fn(),
+}));
+
+vi.mock('../rate-limiter', () => ({
+    AdminRateLimiter: {
+        check: vi.fn().mockResolvedValue(undefined),
+    },
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({
@@ -56,12 +55,12 @@ vi.mock('@/shared/api/db', () => ({
     db: {
         query: {
             users: {
-                findMany: (...args: any[]) => mockDbFindManyUsers(...args),
-                findFirst: (...args: any[]) => mockDbFindFirstUsers(...args),
+                findMany: (...args: unknown[]) => mockDbFindManyUsers(...args),
+                findFirst: (...args: unknown[]) => mockDbFindFirstUsers(...args),
             },
             roles: {
-                findMany: (...args: any[]) => mockDbFindManyRoles(...args),
-                findFirst: (...args: any[]) => mockDbFindFirstRoles(...args),
+                findMany: (...args: unknown[]) => mockDbFindManyRoles(...args),
+                findFirst: (...args: unknown[]) => mockDbFindFirstRoles(...args),
             },
         },
         select: vi.fn(() => ({
@@ -105,8 +104,17 @@ const WORKER_ID = '44444444-4444-4444-a444-444444444444';
 const ROLE_ID = '55555555-5555-4555-a555-555555555555';
 const INVALID_UUID = 'not-a-uuid';
 
-const makeSession = (role = 'ADMIN', tenantId = TENANT_A, userId = ADMIN_ID) => ({
-    user: { id: userId, role, tenantId, name: '管理员', permissions: ['settings.user', 'settings.role', 'admin.settings'] },
+const makeSession = (role = 'ADMIN', tenantId = TENANT_A, userId = ADMIN_ID): Session => ({
+    user: {
+        id: userId,
+        role,
+        roles: [role],
+        tenantId,
+        name: '管理员',
+        permissions: ['settings.user', 'settings.role', 'admin.settings'],
+        isPlatformAdmin: role === 'ADMIN_PLATFORM',
+    } as any,
+    expires: new Date(Date.now() + 3600 * 1000).toISOString(),
 });
 
 const mockAuth = vi.mocked(auth);
@@ -120,7 +128,7 @@ const mockAuditLog = vi.mocked(AuditService.log);
 describe('Admin 模块 L5 安全测试', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockCheckPermission.mockResolvedValue(undefined as never);
+        vi.mocked(checkPermission).mockResolvedValue(true);
         mockDbFindFirstUsers.mockResolvedValue(null);
         mockDbFindFirstRoles.mockResolvedValue(null);
     });
@@ -131,28 +139,28 @@ describe('Admin 模块 L5 安全测试', () => {
     describe('getWorkers 分页安全', () => {
         it('正常分页参数应成功', async () => {
             const session = makeSession();
-            const result = await getWorkers({ page: 1, pageSize: 10 }, session as never);
+            const result = await getWorkers({ page: 1, pageSize: 10 }, session);
             expect(result.data).toBeDefined();
         });
 
         it('pageSize 超过 100 应抛出校验错误', async () => {
             const session = makeSession();
             await expect(
-                getWorkers({ page: 1, pageSize: 999 }, session as never)
+                getWorkers({ page: 1, pageSize: 999 }, session)
             ).rejects.toThrow();
         });
 
         it('pageSize 为 0 应抛出校验错误', async () => {
             const session = makeSession();
             await expect(
-                getWorkers({ page: 1, pageSize: 0 }, session as never)
+                getWorkers({ page: 1, pageSize: 0 }, session)
             ).rejects.toThrow();
         });
 
         it('page 为 0 应抛出校验错误', async () => {
             const session = makeSession();
             await expect(
-                getWorkers({ page: 0, pageSize: 10 }, session as never)
+                getWorkers({ page: 0, pageSize: 10 }, session)
             ).rejects.toThrow();
         });
 
@@ -160,7 +168,7 @@ describe('Admin 模块 L5 安全测试', () => {
             mockCheckPermission.mockRejectedValue(new Error('权限不足'));
             const session = makeSession('sales');
             await expect(
-                getWorkers({ page: 1, pageSize: 10 }, session as never)
+                getWorkers({ page: 1, pageSize: 10 }, session)
             ).rejects.toThrow('权限不足');
         });
     });
@@ -172,7 +180,7 @@ describe('Admin 模块 L5 安全测试', () => {
         it('不存在的师傅应抛出错误', async () => {
             const session = makeSession();
             await expect(
-                getWorkerById('non-existent-id', session as never)
+                getWorkerById('non-existent-id', session)
             ).rejects.toThrow('未找到该师傅');
         });
 
@@ -184,7 +192,7 @@ describe('Admin 模块 L5 安全测试', () => {
                 email: null, permissions: [],
             });
             const session = makeSession();
-            const result = await getWorkerById(WORKER_ID, session as never);
+            const result = await getWorkerById(WORKER_ID, session);
             // 确认返回的对象中没有 passwordHash
             expect(result).not.toHaveProperty('passwordHash');
             expect(result.id).toBe(WORKER_ID);
@@ -196,7 +204,7 @@ describe('Admin 模块 L5 安全测试', () => {
     // ==========================================
     describe('updateWorker Zod 严格校验', () => {
         it('未登录应返回 success: false', async () => {
-            mockAuth.mockResolvedValue(null as never);
+            mockAuth.mockResolvedValue(null);
             const result = await updateWorker({ id: WORKER_ID, name: '新名字' });
             expect(result.success).toBe(false);
         });
@@ -246,14 +254,14 @@ describe('Admin 模块 L5 安全测试', () => {
     // ==========================================
     describe('updateWorker 安全防护', () => {
         it('自禁保护 - 禁用自己应返回错误', async () => {
-            mockAuth.mockResolvedValue(makeSession('ADMIN', TENANT_A, ADMIN_ID) as never);
+            mockAuth.mockResolvedValue(makeSession('ADMIN', TENANT_A, ADMIN_ID));
             const result = await updateWorker({ id: ADMIN_ID, isActive: false });
             expect(result.success).toBe(false);
             expect(result.error).toContain('不能禁用自己的账号');
         });
 
         it('禁用其他用户应成功', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstUsers.mockResolvedValue({ name: '张师傅', phone: '13800138000', isActive: true, avatarUrl: null });
             mockDbUpdateReturning.mockResolvedValue([{ id: WORKER_ID, isActive: false }]);
             const result = await updateWorker({ id: WORKER_ID, isActive: false });
@@ -302,7 +310,7 @@ describe('Admin 模块 L5 安全测试', () => {
     // ==========================================
     describe('createRole 安全', () => {
         it('未登录应返回 success: false', async () => {
-            mockAuth.mockResolvedValue(null as never);
+            mockAuth.mockResolvedValue(null);
             const result = await createRole({ name: '测试', permissions: ['settings.user'] });
             expect(result.success).toBe(false);
         });
@@ -358,7 +366,7 @@ describe('Admin 模块 L5 安全测试', () => {
         });
 
         it('非系统角色应可修改权限', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstRoles.mockResolvedValue({
                 id: ROLE_ID, name: 'CUSTOM', isSystem: false,
                 permissions: ['lead.view'], tenantId: TENANT_A
@@ -372,7 +380,7 @@ describe('Admin 模块 L5 安全测试', () => {
         });
 
         it('无效 roleId 格式应被拒绝', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             const result = await updateRolePermissions({
                 roleId: INVALID_UUID,
                 permissions: ['settings.user'],
@@ -386,7 +394,7 @@ describe('Admin 模块 L5 安全测试', () => {
     // ==========================================
     describe('deleteRole 安全', () => {
         it('系统角色不可删除', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstRoles.mockResolvedValue({
                 id: ROLE_ID, name: 'ADMIN', isSystem: true,
                 tenantId: TENANT_A
@@ -397,7 +405,7 @@ describe('Admin 模块 L5 安全测试', () => {
         });
 
         it('有活跃用户的角色不可删除', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstRoles.mockResolvedValue({
                 id: ROLE_ID, name: 'CUSTOM', isSystem: false,
                 tenantId: TENANT_A, permissions: ['lead.view']
@@ -410,7 +418,7 @@ describe('Admin 模块 L5 安全测试', () => {
         });
 
         it('无活跃用户的非系统角色应可删除', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstRoles.mockResolvedValue({
                 id: ROLE_ID, name: 'CUSTOM', isSystem: false,
                 tenantId: TENANT_A, permissions: ['lead.view']
@@ -421,7 +429,7 @@ describe('Admin 模块 L5 安全测试', () => {
         });
 
         it('删除角色时应记录审计日志', async () => {
-            mockAuth.mockResolvedValue(makeSession() as never);
+            mockAuth.mockResolvedValue(makeSession());
             mockDbFindFirstRoles.mockResolvedValue({
                 id: ROLE_ID, name: '待删除角色', isSystem: false,
                 tenantId: TENANT_A, permissions: ['lead.view']

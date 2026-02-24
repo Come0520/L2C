@@ -19,7 +19,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Trash2, Shield, Plus } from 'lucide-react';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { RoleDialog } from './role-dialog';
 import { getRolesAction, deleteRole } from '@/features/settings/actions/roles-management';
 import { toast } from 'sonner';

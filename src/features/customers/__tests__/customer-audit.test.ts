@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 客户模块审计日志集成测试
  * 验证 P0 阶段的审计日志埋点是否生效
  */
@@ -54,6 +54,7 @@ vi.mock('@/shared/lib/auth', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 // ── 测试套件 ────────────────────────────
@@ -61,6 +62,14 @@ vi.mock('next/cache', () => ({
 describe('客户模块 Audit Actions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // 彻底清空 mock 数据结构，防止其他文件留存的污染
+        mockDbInsert.mockReset();
+        mockDbUpdate.mockReset();
+        mockDbDelete.mockReset();
+        mockDbQuery.customers.findFirst.mockReset();
+        mockDbQuery.customerAddresses.findFirst.mockReset();
+        mockDbQuery.customerActivities.findFirst.mockReset();
 
         // 默认 DB Mock 返回值
         mockDbInsert.mockImplementation(() => ({
@@ -96,11 +105,21 @@ describe('客户模块 Audit Actions', () => {
         it('应在创建地址后记录审计日志', async () => {
             const { addCustomerAddress } = await import('../actions/mutations');
 
-            await addCustomerAddress({
-                customerId: 'cust-1',
+            const validUuid = '123e4567-e89b-12d3-a456-426614174000';
+            mockDbQuery.customers.findFirst.mockResolvedValue({ id: validUuid, tenantId: 'test-tenant-id' });
+
+            const result = await addCustomerAddress({
+                customerId: validUuid,
+                label: '公司',
+                province: '北京',
+                city: '北京',
+                district: '朝阳区',
+                community: 'CBD',
                 address: 'Test Address',
                 isDefault: true,
             });
+
+            expect(result).toBeDefined();
 
             expect(AuditService.log).toHaveBeenCalledWith(
                 expect.anything(), // tx
@@ -108,7 +127,7 @@ describe('客户模块 Audit Actions', () => {
                     tableName: 'customer_addresses',
                     action: 'CREATE',
                     userId: 'test-user-id',
-                    details: expect.objectContaining({ customerId: 'cust-1' }),
+                    details: expect.objectContaining({ customerId: validUuid }),
                 })
             );
         });

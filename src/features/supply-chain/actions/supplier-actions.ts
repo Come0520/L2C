@@ -18,11 +18,18 @@ import {
     deleteSupplierSchema
 } from '../schemas';
 import { SUPPLY_CHAIN_PATHS } from '../constants';
+import { ActionState } from '@/shared/lib/server-action';
+import {
+    SupplierRating,
+    SupplierRanking
+} from '../types';
+import { logger } from '@/shared/lib/logger';
+
 
 const createSupplierActionInternal = createSafeAction(createSupplierSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
-        console.warn('[supply-chain] 创建供应商:', { name: data.name, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 创建供应商:', { name: data.name, tenantId: session.user.tenantId });
 
         const existing = await db.query.suppliers.findFirst({
             where: and(
@@ -58,7 +65,7 @@ const createSupplierActionInternal = createSafeAction(createSupplierSchema, asyn
             createdBy: session.user.id,
         }).returning();
 
-        console.warn('[supply-chain] createSupplier 创建成功:', supplier.id);
+        logger.info('[supply-chain] createSupplier 创建成功:', supplier.id);
         revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
 
         // 添加审计日志
@@ -72,7 +79,7 @@ const createSupplierActionInternal = createSafeAction(createSupplierSchema, asyn
 
         return { id: supplier.id };
     } catch (error) {
-        console.error('[supply-chain] 创建供应商失败:', error);
+        logger.error('[supply-chain] 创建供应商失败:', error);
         throw error;
     }
 });
@@ -89,7 +96,7 @@ const createSupplierActionInternal = createSafeAction(createSupplierSchema, asyn
  * @returns {Promise<{id: string}>} 创建成功的供应商 ID
  */
 export async function createSupplier(params: z.infer<typeof createSupplierSchema>) {
-    console.warn('[supply-chain] createSupplier 开始执行:', { name: params.name });
+    logger.info('[supply-chain] createSupplier 开始执行:', { name: params.name });
     return createSupplierActionInternal(params);
 }
 
@@ -114,17 +121,19 @@ const getSuppliersActionInternal = createSafeAction(getSuppliersSchema, async (p
 
     const whereClause = and(...conditions);
 
-    const data = await db.query.suppliers.findMany({
+    const dataPromise = db.query.suppliers.findMany({
         where: whereClause,
         orderBy: [desc(suppliers.createdAt)],
         limit: params.pageSize,
         offset: offset,
     });
 
-    const totalResult = await db
+    const totalResultPromise = db
         .select({ count: sql<number>`count(*)` })
         .from(suppliers)
         .where(whereClause);
+
+    const [data, totalResult] = await Promise.all([dataPromise, totalResultPromise]);
 
     const total = Number(totalResult[0]?.count || 0);
 
@@ -146,10 +155,10 @@ const getSuppliersActionInternal = createSafeAction(getSuppliersSchema, async (p
  * - `pageSize` (number): 每页条数
  * - `query` (string, optional): 名称或编号搜索词
  * - `type` ('SUPPLIER' | 'PROCESSOR' | 'BOTH', optional): 列表按类型过滤
- * @returns {Promise<{data: any[], total: number, ...}>} 分页后的供应商数据集
+ * @returns {Promise<{data: (typeof suppliers.$inferSelect)[], total: number, page: number, pageSize: number, totalPages: number}>} 分页后的供应商数据集
  */
 export async function getSuppliers(params: z.infer<typeof getSuppliersSchema>) {
-    console.warn('[supply-chain] getSuppliers 查询参数:', params);
+    logger.info('[supply-chain] getSuppliers 查询参数:', params);
     return getSuppliersActionInternal(params);
 }
 
@@ -173,10 +182,10 @@ const getSupplierByIdActionInternal = createSafeAction(getSupplierByIdSchema, as
  * 
  * @description 包含租户隔离校验。获取单个供应商的全部注册字段信息。
  * @param params 包含 `id` (string) 供应商 ID 的对象
- * @returns {Promise<any>} 完整的供应商数据行对象
+ * @returns {Promise<typeof suppliers.$inferSelect>} 完整的供应商数据行对象
  */
 export async function getSupplierById(params: z.infer<typeof getSupplierByIdSchema>) {
-    console.warn('[supply-chain] getSupplierById 查询 ID:', params.id);
+    logger.info('[supply-chain] getSupplierById 查询 ID:', params.id);
     return getSupplierByIdActionInternal(params);
 }
 
@@ -184,7 +193,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
         const { id, ...updates } = data;
-        console.warn('[supply-chain] 更新供应商:', { id, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 更新供应商:', { id, tenantId: session.user.tenantId });
 
         const [supplier] = await db.update(suppliers)
             .set({
@@ -208,7 +217,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
         revalidateTag(`supplier-rating-${id}`, 'default');
         return { id: supplier.id };
     } catch (error) {
-        console.error('[supply-chain] 更新供应商失败:', error);
+        logger.error('[supply-chain] 更新供应商失败:', error);
         throw error;
     }
 });
@@ -221,7 +230,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
  * @returns {Promise<{id: string}>} 更新后的记录 ID
  */
 export async function updateSupplier(params: z.infer<typeof updateSupplierSchema>) {
-    console.warn('[supply-chain] updateSupplier 开始更新:', { id: params.id });
+    logger.info('[supply-chain] updateSupplier 开始更新:', { id: params.id });
     return updateSupplierActionInternal(params);
 }
 
@@ -261,7 +270,7 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
     // 1. 交期准时率
     // P1-06 修复：覆盖 DELIVERED、COMPLETED、PARTIALLY_RECEIVED 状态
     const completedStatuses = ['DELIVERED', 'COMPLETED', 'PARTIALLY_RECEIVED'] as const;
-    const allDeliveredPOs = await db.query.purchaseOrders.findMany({
+    const allDeliveredPOsPromise = db.query.purchaseOrders.findMany({
         where: and(
             eq(purchaseOrders.supplierId, supplierId),
             eq(purchaseOrders.tenantId, tenantId),
@@ -276,6 +285,24 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
             createdAt: true,
         }
     });
+
+    // 2. 质量合格率
+    // P1-02 修复（2/3）：通过 liablePartyId 关联当前供应商，避免所有供应商共享同一质量数据
+    const qualityIssuesPromise = db
+        .select({ count: count(liabilityNotices.id) })
+        .from(liabilityNotices)
+        .innerJoin(afterSalesTickets, eq(liabilityNotices.afterSalesId, afterSalesTickets.id))
+        .where(and(
+            eq(afterSalesTickets.tenantId, tenantId),
+            eq(liabilityNotices.liablePartyType, 'FACTORY'),
+            eq(liabilityNotices.liablePartyId, supplierId),
+            eq(liabilityNotices.status, 'CONFIRMED'),
+        ));
+
+    const [allDeliveredPOs, qualityIssues] = await Promise.all([
+        allDeliveredPOsPromise,
+        qualityIssuesPromise
+    ]);
 
     const totalDelivered = allDeliveredPOs.length;
     // P1-02 修复（1/3）：使用 expectedDate 作为交期基准，回退到 createdAt + 7天
@@ -294,19 +321,6 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
     }).length;
 
     const onTimeRate = totalDelivered > 0 ? Math.round((onTimeCount / totalDelivered) * 100) : null;
-
-    // 2. 质量合格率
-    // P1-02 修复（2/3）：通过 liablePartyId 关联当前供应商，避免所有供应商共享同一质量数据
-    const qualityIssues = await db
-        .select({ count: count(liabilityNotices.id) })
-        .from(liabilityNotices)
-        .innerJoin(afterSalesTickets, eq(liabilityNotices.afterSalesId, afterSalesTickets.id))
-        .where(and(
-            eq(afterSalesTickets.tenantId, tenantId),
-            eq(liabilityNotices.liablePartyType, 'FACTORY'),
-            eq(liabilityNotices.liablePartyId, supplierId),
-            eq(liabilityNotices.status, 'CONFIRMED'),
-        ));
 
     const issueCount = Number(qualityIssues[0]?.count || 0);
     const qualityRate = totalDelivered > 0
@@ -344,14 +358,15 @@ const getSupplierRatingActionInternal = createSafeAction(getSupplierRatingSchema
  * 3. 综合星级: 依据加权分判定 1-5 星等级。
  * 缓存策略：有效期 300 秒，通过 `supplier-rating-${supplierId}` 标签联动刷新。
  * @param params 包含 `supplierId` 及可选 `startDate`, `endDate`
- * @returns {Promise<{metrics: any, details: any, ...}>} 详细的评价报告
+ * @returns {Promise<SupplierRating>} 详细的供应商绩效评价报告
  */
-export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>) {
+export async function getSupplierRating(params: z.infer<typeof getSupplierRatingSchema>): Promise<ActionState<SupplierRating>> {
     const session = await auth();
+
     if (!session?.user?.id) throw new Error('未授权');
 
     const { supplierId, startDate = '', endDate = '' } = params;
-    console.warn('[supply-chain] getSupplierRating 获取评分:', { supplierId, period: `${startDate} ~ ${endDate}` });
+    logger.info('[supply-chain] getSupplierRating 获取评分:', { supplierId, period: `${startDate} ~ ${endDate}` });
 
     return unstable_cache(
         async () => getSupplierRatingActionInternal(params),
@@ -369,12 +384,12 @@ const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSc
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
     const tenantId = session.user.tenantId;
 
-    const allSuppliers = await db.query.suppliers.findMany({
+    const allSuppliersPromise = db.query.suppliers.findMany({
         where: eq(suppliers.tenantId, tenantId),
         columns: { id: true, name: true, supplierNo: true }
     });
 
-    const poStats = await db
+    const poStatsPromise = db
         .select({
             supplierId: purchaseOrders.supplierId,
             totalCount: count(purchaseOrders.id),
@@ -385,6 +400,8 @@ const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSc
             eq(purchaseOrders.status, 'DELIVERED')
         ))
         .groupBy(purchaseOrders.supplierId);
+
+    const [allSuppliers, poStats] = await Promise.all([allSuppliersPromise, poStatsPromise]);
 
     const statsMap = new Map(poStats.map(s => [s.supplierId, Number(s.totalCount)]));
 
@@ -401,7 +418,7 @@ const getSupplierRankingsActionInternal = createSafeAction(getSupplierRankingsSc
 const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, async ({ id }, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.SUPPLIER_MANAGE);
-        console.warn('[supply-chain] 删除供应商:', { id, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 删除供应商:', { id, tenantId: session.user.tenantId });
 
         // 检查是否有依赖数据（如采购单等）
         const poExists = await db.query.purchaseOrders.findFirst({
@@ -426,7 +443,7 @@ const deleteSupplierActionInternal = createSafeAction(deleteSupplierSchema, asyn
         revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 删除供应商失败:', error);
+        logger.error('[supply-chain] 删除供应商失败:', error);
         throw error;
     }
 });
@@ -446,9 +463,10 @@ export async function deleteSupplier(params: z.infer<typeof deleteSupplierSchema
  * 获取供应商交付量排名
  * 
  * @description 统计所有已交付 (DELIVERED) 的历史采购单总量进行排名，用于大盘数据展示。
- * @returns {Promise<{rankings: any[], total: number}>} 排序后的供应商榜单
+ * @returns {Promise<{rankings: SupplierRanking[], total: number}>} 排序后的供应商榜单
  */
-export async function getSupplierRankings() {
-    console.warn('[supply-chain] getSupplierRankings 开始统计排行');
+export async function getSupplierRankings(): Promise<ActionState<{ rankings: SupplierRanking[], total: number }>> {
+    logger.info('[supply-chain] getSupplierRankings 开始统计排行');
     return getSupplierRankingsActionInternal({});
 }
+

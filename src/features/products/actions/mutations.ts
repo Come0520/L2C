@@ -18,6 +18,14 @@ import {
 
 /**
  * 创建产品
+ *
+ * @description 校验 SKU 在当前租户下的唯一性后插入新产品记录，
+ *   同时写入审计日志并刷新产品列表缓存路径。
+ *
+ * @param data - 符合 `createProductSchema` 的完整产品数据
+ * @returns 包含新创建产品 ID 的对象 `{ id: string }`
+ * @throws 当 SKU 已存在时抛出 `SKU 已存在` 错误
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const createProductActionInternal = createSafeAction(createProductSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -81,6 +89,14 @@ export async function createProduct(params: z.infer<typeof createProductSchema>)
 
 /**
  * 更新产品
+ *
+ * @description 根据产品 ID 与租户 ID 定位目标记录并执行局部更新，
+ *   同时写入审计日志（含新旧值）并刷新缓存。
+ *
+ * @param data - 符合 `updateProductSchema` 的部分更新数据（必含 id）
+ * @returns 包含更新后产品 ID 的对象 `{ id: string }`
+ * @throws 当产品未找到时抛出 `更新失败，产品未找到` 错误
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const updateProductActionInternal = createSafeAction(updateProductSchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -142,6 +158,13 @@ export async function updateProduct(params: z.infer<typeof updateProductSchema>)
 
 /**
  * 删除产品
+ *
+ * @description 根据产品 ID 与租户 ID 执行硬删除操作，
+ *   同时写入审计日志并刷新缓存。
+ *
+ * @param params - 包含产品 `id` 的删除参数
+ * @returns `{ success: true }`
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const deleteProductActionInternal = createSafeAction(deleteProductSchema, async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -171,6 +194,13 @@ export async function deleteProduct(params: z.infer<typeof deleteProductSchema>)
 
 /**
  * 上架/下架产品
+ *
+ * @description 切换产品的 `isActive` 状态（上架/下架），
+ *   审计日志中会记录具体的操作类型 (ACTIVATE / DEACTIVATE)。
+ *
+ * @param params - 包含产品 `id` 和目标 `isActive` 布尔值
+ * @returns `{ success: true }`
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const activateProductActionInternal = createSafeAction(activateProductSchema, async ({ id, isActive }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
@@ -202,6 +232,14 @@ export async function activateProduct(params: z.infer<typeof activateProductSche
 
 /**
  * 批量创建产品
+ *
+ * @description 接收产品数组，逐条执行 SKU 唯一性校验与插入操作。
+ *   每条成功均写入审计日志，失败则归集到错误列表中。
+ *   适用于 Excel 批量导入场景。
+ *
+ * @param items - `createProductSchema` 数组
+ * @returns `{ successCount, errorCount, errors[] }` 汇总对象
+ * @throws 当用户缺少 `PRODUCTS.MANAGE` 权限时抛出权限异常
  */
 const batchCreateProductsSchema = z.array(createProductSchema);
 

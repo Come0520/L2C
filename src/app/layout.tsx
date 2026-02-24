@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { cn } from '@/shared/utils';
 import { AuthProvider } from '@/shared/providers/auth-provider';
 import { ThemeProvider } from '@/shared/providers/theme-provider';
@@ -11,8 +10,7 @@ import { Toaster } from '@/shared/ui/sonner';
 import './globals.css';
 import '@/lib/zod-i18n';
 import { VersionLogger } from '@/shared/components/version-logger';
-
-const inter = Inter({ subsets: ['latin'] });
+import { WebVitals } from '@/shared/components/web-vitals';
 
 export const metadata: Metadata = {
   title: 'L2C - 销售管理系统',
@@ -30,7 +28,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="zh-CN" suppressHydrationWarning>
       <body
         className={cn(
-          inter.className,
           'selection:bg-primary/20 min-h-screen font-sans antialiased'
         )}
         suppressHydrationWarning
@@ -55,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </StyleProvider>
         </AuthProvider>
         <VersionLogger />
+        <WebVitals />
       </body>
     </html>
   );

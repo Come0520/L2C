@@ -3,7 +3,7 @@ import { formatTime } from '../../../utils/util';
 Page({
     data: {
         id: '',
-        customer: null as any,
+        customer: null as unknown as Record<string, any>,
         loading: true
     },
 
@@ -99,3 +99,5 @@ Page({
         });
     }
 });
+
+export {};

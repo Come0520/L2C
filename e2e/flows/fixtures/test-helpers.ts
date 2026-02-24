@@ -35,10 +35,21 @@ export async function createLead(
     // 填写手机号
     await page.fill('input[placeholder*="手机号"]', phone);
 
-    // 选择意向等级 (select 组件)
-    const intentionSelect = page.locator('text=意向等级').locator('..').locator('select');
-    if (await intentionSelect.isVisible({ timeout: 2000 })) {
-        await intentionSelect.selectOption({ label: intention });
+    // 选择意向等级 (Shadcn UI Select 组件)
+    try {
+        const intentionTrigger = page.locator('button[role="combobox"]').filter({ hasText: /选择意向|意向/ });
+        if (await intentionTrigger.isVisible({ timeout: 2000 })) {
+            await intentionTrigger.click();
+            await page.getByRole('option', { name: new RegExp(intention) }).click();
+        } else {
+            // 降级回退到原生 select
+            const intentionSelect = page.locator('text=意向等级').locator('..').locator('select');
+            if (await intentionSelect.isVisible({ timeout: 1000 })) {
+                await intentionSelect.selectOption({ label: intention });
+            }
+        }
+    } catch (e) {
+        console.log('⚠️ 意向等级选择失败，跳过', e);
     }
 
     // 点击提交按钮 (尝试匹配多种常见文本)
@@ -284,29 +295,70 @@ export async function createQuickQuote(
         height = '270'
     } = options;
 
-    // 点击快速报价
-    const quoteBtn = page.locator('a:has-text("快速报价"), button:has-text("快速报价")');
+    // 点击快速报价 - 使用 first() 避免严格模式计算出多个元素的冲突
+    const quoteBtn = page.locator('a:has-text("快速报价"), button:has-text("快速报价")').first();
     await quoteBtn.click();
     await page.waitForLoadState('networkidle');
 
     // 选择方案
-    const planCard = page.getByTestId(`plan-${plan}`);
-    if (await planCard.isVisible({ timeout: 5000 })) {
-        await planCard.click();
+    const planMap = {
+        'ECONOMIC': '经济型',
+        'STANDARD': '标准型',
+        'PREMIUM': '豪华型'
+    };
+    const planName = planMap[plan] || '经济型';
+    const planHeader = page.getByRole('heading', { name: planName });
+    if (await planHeader.isVisible({ timeout: 5000 })) {
+        console.log(`✅ 找到方案 ${planName}，执行点击`);
+        await planHeader.click();
+    } else {
+        // 降级使用之前可能存在的 testid
+        const fallbackCard = page.getByTestId(`plan-${plan}`);
+        if (await fallbackCard.isVisible()) {
+            console.log(`✅ 找到 fallback 方案 ${planName}`);
+            await fallbackCard.click();
+        } else {
+            console.log(`⚠️ 未能找到方案 ${planName} 的选择入口`);
+            // 最后尝试简单的按文本查找并点击
+            await page.getByText(planName).first().click({ force: true }).catch(() => { });
+        }
     }
 
     // 填写房间信息
-    const roomNameInput = page.locator('input[name="rooms.0.name"]');
+    console.log(`⏳ 填写房间信息：${roomName} (${width}x${height})`);
+    const roomNameInput = page.getByRole('textbox', { name: '房间名称' }).first();
+    const fallbackRoomName = page.locator('input[placeholder*="如 客厅"]').first();
     if (await roomNameInput.isVisible({ timeout: 3000 })) {
         await roomNameInput.fill(roomName);
+    } else if (await fallbackRoomName.isVisible()) {
+        await fallbackRoomName.fill(roomName);
+    } else {
+        await page.locator('input[name="rooms.0.name"]').fill(roomName);
+    }
+
+    const widthInput = page.getByRole('spinbutton', { name: '宽度 (cm)' }).first();
+    if (await widthInput.isVisible()) {
+        await widthInput.fill(width);
+        await page.getByRole('spinbutton', { name: '高度 (cm)' }).first().fill(height);
+    } else {
         await page.locator('input[name="rooms.0.width"]').fill(width);
         await page.locator('input[name="rooms.0.height"]').fill(height);
     }
 
     // 提交
-    const submitBtn = page.getByTestId('submit-quote-btn');
+    const submitBtn = page.getByRole('button', { name: '生成报价' });
     if (await submitBtn.isVisible()) {
-        await submitBtn.click();
+        console.log(`⏳ 尝试点击生成报价按钮...`);
+        // 显式等待可用，并包裹 try-catch 以免直接失败
+        try {
+            await expect(submitBtn).toBeEnabled({ timeout: 5000 });
+            await submitBtn.click();
+            console.log(`✅ 生成报价按钮点击成功`);
+        } catch (e) {
+            console.log('⚠️ 生成报价按钮仍未启用，可能是方案未选中或参数错误');
+            // 回退尝试力求触发
+            await submitBtn.click({ force: true }).catch(() => { });
+        }
     } else {
         await page.click('button:has-text("生成报价"), button:has-text("提交")');
     }

@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * 报价单 Action 共享辅助函数
  * 从 mutations.ts 中提取的计算和更新工具
@@ -9,29 +7,32 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
 import { DiscountControlService } from '@/services/discount-control.service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
- * 计算行项目小计
+ * 计算行项目小计 (Calculate Item Subtotal)
+ * 采用 Decimal.js 确保浮点数计算精度。
+ * 公式：(单价 * 数量) + 加工费
+ * 
  * @param price - 单价
  * @param quantity - 数量
- * @param processFee - 加工费（可选）
+ * @param processFee - 加工费（可选，默认为 0）
+ * @returns 保留两位小数的小计金额
  */
 import Decimal from 'decimal.js';
 
-/**
- * 计算行项目小计
- * @param price - 单价
- * @param quantity - 数量
- * @param processFee - 加工费（可选）
- */
-export const calculateSubtotal = (price: number, quantity: number, processFee: number = 0) => {
-  return Number(new Decimal(price).mul(quantity).add(processFee).toFixed(2));
-};
+
 
 /**
- * 更新报价单总金额
- * 重新汇总所有行项目，应用折扣后更新总额和最终金额
+ * 更新报价单总金额 (Update Quote Total)
+ * 核心逻辑：
+ * 1. 汇总所有行项目小计。
+ * 2. 应用报价单级别的折扣率 (discountRate) 和折减金额 (discountAmount)。
+ * 3. 检查折扣是否触发审批流。
+ * 4. 持久化总额数据，并同步更新所属套餐 (Bundle) 的金额。
+ * 
+ * @param quoteId - 报价单 ID
+ * @param tenantId - 租户 ID（用于隔离）
  */
 export const updateQuoteTotal = async (quoteId: string, tenantId: string) => {
   // 1. 获取报价单当前折扣设置
@@ -86,8 +87,11 @@ export const updateQuoteTotal = async (quoteId: string, tenantId: string) => {
 };
 
 /**
- * 更新套餐报价总金额
- * 汇总套餐下所有子报价的最终金额
+ * 更新套餐报价总金额 (Update Bundle Total)
+ * 汇总套餐下所有子报价单的金额数据（总额、折减、最终金额）。
+ * 
+ * @param bundleId - 套餐报价单 ID
+ * @param tenantId - 租户 ID
  */
 export const updateBundleTotal = async (bundleId: string, tenantId: string) => {
   const subQuotes = await db.query.quotes.findMany({
@@ -117,4 +121,5 @@ export const updateBundleTotal = async (bundleId: string, tenantId: string) => {
 
   revalidatePath(`/quotes/${bundleId}`);
   revalidatePath('/quotes');
+  revalidateTag('quotes', 'default');
 };

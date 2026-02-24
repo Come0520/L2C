@@ -72,7 +72,7 @@ vi.mock('@/shared/lib/auth', () => ({
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
-    unstable_cache: vi.fn((fn: Function) => fn),
+    unstable_cache: vi.fn((fn: (...args: any[]) => any) => fn),
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({

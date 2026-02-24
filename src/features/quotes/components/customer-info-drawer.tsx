@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { ChevronDown, ChevronUp, Phone, MapPin, User } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import User from 'lucide-react/dist/esm/icons/user';
 
 interface CustomerInfo {
     id: string;

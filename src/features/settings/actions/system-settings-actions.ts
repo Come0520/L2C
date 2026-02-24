@@ -77,7 +77,14 @@ export async function getSettingsByCategory(category: string) {
 }
 
 /**
- * 获取单个配置值 (供内部服务层调用，不导出为 Server Action)
+ * 内部获取单个配置值
+ *
+ * @description 供服务端内部逻辑调用，根据租户 ID 获取指定的配置项。
+ * 如果配置项不存在，则尝试返回系统预设的默认值。
+ *
+ * @param key - 配置键名
+ * @param tenantId - 租户 ID
+ * @returns Promise<unknown> 解析后的配置值
  */
 export async function getSettingInternal(key: string, tenantId: string): Promise<unknown> {
   try {
@@ -107,7 +114,12 @@ export async function getSettingInternal(key: string, tenantId: string): Promise
 }
 
 /**
- * 获取当前租户的配置值 (导出为 Server Action)
+ * 获取当前租户的配置值
+ *
+ * @description 导出为 Server Action，获取当前登录用户所属租户的指定配置项。
+ *
+ * @param key - 配置键名
+ * @returns Promise<unknown> 解析后的配置值
  */
 export async function getSetting(key: string): Promise<unknown> {
   const session = await auth();
@@ -119,7 +131,15 @@ export async function getSetting(key: string): Promise<unknown> {
 }
 
 /**
- * 更新单个配置 Internal (用于事务内调用)
+ * 内部更新单个配置
+ *
+ * @description 用于数据库事务内调用，执行配置值的类型校验、历史记录留存及更新操作。
+ *
+ * @param tx - Drizzle 事务对象
+ * @param key - 配置键名
+ * @param value - 新值
+ * @param tenantId - 租户 ID
+ * @param userId - 操作人 ID
  */
 async function updateSettingInternal(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -164,7 +184,14 @@ async function updateSettingInternal(
 }
 
 /**
- * 更新单个配置
+ * 更新单个系统配置
+ *
+ * @description 权限受控的操作，更新指定配置项并记录操作日志及变更历史。
+ * 执行后会触发相关的缓存失效（Tag: all-settings）。
+ *
+ * @param key - 配置键名
+ * @param value - 新的值
+ * @returns Promise<{ success: boolean }> 操作结果
  */
 export async function updateSetting(key: string, value: unknown) {
   const parsed = settingKeySchema.safeParse(key);
@@ -177,6 +204,8 @@ export async function updateSetting(key: string, value: unknown) {
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;
+
+  logger.info(`用户 ${userId} 正在更新配置项: ${key}`, { tenantId, value });
 
   await db.transaction(async (tx) => {
     await updateSettingInternal(tx, key, value, tenantId, userId);
@@ -209,6 +238,11 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;
+
+  logger.info(`用户 ${userId} 执行批量配置更新，条数: ${Object.keys(settings).length}`, {
+    tenantId,
+    keys: Object.keys(settings)
+  });
 
   await db.transaction(async (tx) => {
     for (const [key, value] of Object.entries(settings)) {

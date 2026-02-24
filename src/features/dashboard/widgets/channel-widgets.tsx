@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { TrendingUp, Users, DollarSign, ArrowRight, Loader2, Wallet } from 'lucide-react';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Users from 'lucide-react/dist/esm/icons/users';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Wallet from 'lucide-react/dist/esm/icons/wallet';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher } from '@/shared/lib/fetcher';

@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { customerActivities, customers } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { activitySchema } from '../schemas';
 import { trimInput } from '@/shared/lib/utils';
@@ -23,18 +23,22 @@ export interface ActivityDTO {
         avatarUrl: string | null;
     };
     location?: string | null;
-    images?: string[];
+    images: string[] | null;
 }
 
 /**
  * 获取客户的动态/活动记录
- * Get customer activities
  * 
  * 安全检查：自动从 session 获取 tenantId 并校验 CUSTOMER.VIEW 权限
- * Security check: Automatically gets tenantId and checks CUSTOMER.VIEW permission
  * @param customerId 客户 ID
  */
-export async function getActivities(customerId: string): Promise<{ success: boolean; data?: ActivityDTO[]; error?: string }> {
+/**
+ * 获取客户的动态/活动记录（支持分页限制）
+ * @param customerId 客户 ID
+ * @param limit 最大返回记录数，默认 50
+ */
+export async function getActivities(customerId: string, limit: number = 50): Promise<{ success: boolean; data?: ActivityDTO[]; error?: string }> {
+    const startTime = Date.now();
     try {
         const session = await auth();
         if (!session?.user?.id || !session?.user?.tenantId) {
@@ -53,6 +57,7 @@ export async function getActivities(customerId: string): Promise<{ success: bool
                 eq(customerActivities.tenantId, session.user.tenantId)
             ),
             orderBy: [desc(customerActivities.createdAt)],
+            limit,
             with: {
                 creator: {
                     columns: { id: true, name: true, avatarUrl: true }
@@ -60,7 +65,23 @@ export async function getActivities(customerId: string): Promise<{ success: bool
             }
         });
 
-        return { success: true, data: list as ActivityDTO[] };
+        const results: ActivityDTO[] = list.map(item => ({
+            ...item,
+            id: item.id.toString(),
+            createdAt: item.createdAt || new Date(),
+            location: typeof item.location === 'string' ? item.location : null,
+            images: item.images,
+            creator: {
+                id: (item as any).creator?.id || 'system',
+                name: (item as any).creator?.name || '系统',
+                avatarUrl: (item as any).creator?.avatarUrl || null
+            }
+        }));
+
+        const duration = Date.now() - startTime;
+        logger.info('[customers] 获取活动列表完成:', { customerId, count: results.length, duration });
+
+        return { success: true, data: results };
 
     } catch (error) {
         logger.error('[customers] 获取客户动态失败:', error);
@@ -70,15 +91,13 @@ export async function getActivities(customerId: string): Promise<{ success: bool
 
 /**
  * 创建客户动态/活动记录
- * Create customer activity
  * 
  * 安全检查：自动从 session 获取 tenantId 并校验 CUSTOMER.EDIT 权限
- * Security check: Automatically gets tenantId and checks CUSTOMER.EDIT permission
  * @param input 活动表单数据
  */
 export async function createActivity(
     input: z.infer<typeof activitySchema>
-): Promise<{ success: boolean; data?: unknown; error?: string }> {
+): Promise<{ success: boolean; data?: ActivityDTO; error?: string }> {
     try {
         const session = await auth();
         if (!session?.user?.id || !session?.user?.tenantId) {
@@ -127,8 +146,24 @@ export async function createActivity(
             });
         }
 
-        revalidatePath(`/customers/${data.customerId}`);
-        return { success: true, data: newActivity };
+        // 精确清除客户详情缓存
+        revalidateTag(`customer-detail-${data.customerId}`, 'default');
+
+        const returnData: ActivityDTO = {
+            id: newActivity['id']?.toString() || '',
+            type: newActivity.type,
+            description: newActivity.description || '',
+            createdAt: newActivity.createdAt || new Date(),
+            creator: {
+                id: session.user.id,
+                name: session.user.name || '',
+                avatarUrl: null
+            },
+            location: typeof newActivity.location === 'string' ? newActivity.location : null,
+            images: newActivity.images as string[] | null,
+        };
+
+        return { success: true, data: returnData };
 
     } catch (error) {
         logger.error('[customers] 创建客户动态失败:', error);

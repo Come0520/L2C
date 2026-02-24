@@ -15,15 +15,27 @@ const MOCK_SESSION = {
     user: { id: 'test-user-id', role: 'SALES', tenantId: TENANT_A, name: '测试用户' },
 };
 
+/**
+ * 模拟 Drizzle 查询链接口
+ */
+interface MockQueryChain {
+    from: (table: any) => MockQueryChain;
+    innerJoin: (table: any, condition: any) => MockQueryChain;
+    where: (condition: any) => MockQueryChain;
+    groupBy: (columns: any) => MockQueryChain; groupOrderBy?: (columns: any) => MockQueryChain;
+    orderBy: (columns: any) => MockQueryChain;
+    then: (resolve: (data: Record<string, unknown>[]) => void) => void;
+}
+
 // 工具：用于生产可无限链式调用并 await 解析出指定 data 的 mock 对象
-const createMockChain = (mockData: any) => {
-    const chain: any = {
+const createMockChain = (mockData: Record<string, unknown>[]) => {
+    const chain: MockQueryChain = {
         from: vi.fn(() => chain),
         innerJoin: vi.fn(() => chain),
         where: vi.fn(() => chain),
         groupBy: vi.fn(() => chain),
         orderBy: vi.fn(() => chain),
-        then: (resolve: any) => resolve(mockData),
+        then: (resolve) => resolve(mockData),
     };
     return chain;
 };
@@ -44,13 +56,18 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: vi.fn(),
 }));
 
+vi.mock('next/cache', () => ({
+    unstable_cache: (fn: any) => fn,
+    revalidateTag: vi.fn(),
+}));
+
 vi.mock('react', () => ({
     cache: vi.fn((cb) => cb),
 }));
 
 // 模拟 server-action wrapper 包装器
 vi.mock('@/shared/lib/server-action', () => ({
-    createSafeAction: (schema: any, handler: any) => {
+    createSafeAction: (schema: { parse: (input: unknown) => unknown }, handler: (input: any, context: { session: typeof MOCK_SESSION }) => Promise<unknown>) => {
         return async (input: any) => {
             if (schema) schema.parse(input);
             return handler(input, { session: MOCK_SESSION });
@@ -59,7 +76,7 @@ vi.mock('@/shared/lib/server-action', () => ({
 }));
 
 describe('Pricing Actions (L5)', () => {
-    let getPricingHints: any;
+    let getPricingHints: typeof import('../actions/pricing-hints').getPricingHints;
 
     beforeEach(async () => {
         vi.clearAllMocks();

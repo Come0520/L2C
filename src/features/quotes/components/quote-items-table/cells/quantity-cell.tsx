@@ -5,7 +5,7 @@ import { TableCell } from '@/shared/ui/table';
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { Info } from 'lucide-react';
+import Info from 'lucide-react/dist/esm/icons/info';
 import type { QuoteItem } from '../types';
 
 interface QuantityCellProps {

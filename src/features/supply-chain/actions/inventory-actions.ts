@@ -6,10 +6,20 @@ import { eq, and, inArray, desc, count } from 'drizzle-orm';
 import { SUPPLY_CHAIN_PATHS } from '../constants';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { unstable_cache, revalidateTag, revalidatePath } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
+import { cache } from 'react';
+import { logger } from '@/shared/lib/logger';
+import { sql } from 'drizzle-orm';
+import {
+    InventoryListItem,
+    InventoryAlert,
+    RestockSuggestion
+} from '../types';
+
+
 
 // --- Schemas ---
 
@@ -37,12 +47,26 @@ const getInventorySchema = z.object({
     pageSize: z.number().min(10).max(100).default(20),
 });
 
+// --- 缓存配置 ---
+const INVENTORY_CACHE_TAG = 'supply-chain-inventory';
+const INVENTORY_ALERTS_TAG = 'supply-chain-inventory-alerts';
+
 // --- Actions ---
 
+
+/**
+ * 调整库层数量 (内部逻辑)
+ * 
+ * @description 用于库存盘点、损耗报废等场景下的手动库存调整。支持事务锁以保证并发安全。
+ * @param data 包含 productId, warehouseId, adjustment (变化量), reason
+ * @returns 调整后的库存详情
+ */
 const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, async (data, { session }) => {
+
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
-        console.warn('[supply-chain] 调整库存:', { warehouseId: data.warehouseId, productId: data.productId, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 调整库存:', { warehouseId: data.warehouseId, productId: data.productId, tenantId: session.user.tenantId });
+
 
         // 校验仓库是否属于当前租户
         const warehouse = await db.query.warehouses.findFirst({
@@ -56,12 +80,15 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
         }
 
         return await db.transaction(async (tx) => {
-            const currentStock = await tx.query.inventory.findFirst({
-                where: and(
-                    eq(inventory.warehouseId, data.warehouseId),
-                    eq(inventory.productId, data.productId)
-                ),
-            });
+            // [L5 优化] 引入 FOR UPDATE 原子锁
+            const stockResult = await tx.execute(sql`
+                SELECT id, quantity FROM inventory 
+                WHERE warehouse_id = ${data.warehouseId} 
+                AND product_id = ${data.productId} 
+                FOR UPDATE
+            `);
+            const currentStock = (stockResult as unknown as { id: string, quantity: number }[])[0];
+
 
             const currentQty = currentStock?.quantity || 0;
             const newQty = currentQty + data.quantity;
@@ -94,6 +121,8 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
                 productId: data.productId,
                 type: 'ADJUST',
                 quantity: data.quantity,
+                // SC-16: 同时记录变动前后库存量，确保流水可完整还原
+                balanceBefore: currentQty,
                 balanceAfter: newQty,
                 costPrice: product?.purchasePrice || '0', // 记录当前成本
                 reason: data.reason || 'Manual Adjustment',
@@ -101,7 +130,10 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
                 description: `手动调整: ${data.quantity > 0 ? '+' : ''}${data.quantity}`,
             });
 
+            revalidateTag(INVENTORY_CACHE_TAG, 'default');
+            revalidateTag(INVENTORY_ALERTS_TAG, 'default');
             revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
 
             // 添加审计日志
             await AuditService.recordFromSession(session, 'inventory', currentStock?.id || 'new', 'UPDATE', {
@@ -116,10 +148,11 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
             return { success: true };
         });
     } catch (error) {
-        console.error('[supply-chain] 调整库存失败:', error);
+        logger.error('[supply-chain] 调整库存失败:', error);
         throw error;
     }
 });
+
 
 /**
  * 调整库存数量
@@ -134,25 +167,35 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
  * @throws {Error} 未授权、仓库不存在或库存不足时抛出异常
  */
 export async function adjustInventory(params: z.infer<typeof adjustInventorySchema>) {
-    console.warn('[supply-chain] adjustInventory 开始执行:', {
+    logger.info('[supply-chain] adjustInventory 开始执行:', {
         warehouseId: params.warehouseId,
         productId: params.productId,
         quantity: params.quantity
     });
     try {
         const result = await adjustInventoryActionInternal(params);
-        console.warn('[supply-chain] adjustInventory 执行成功');
+        logger.info('[supply-chain] adjustInventory 执行成功');
         return result;
     } catch (error) {
-        console.error('[supply-chain] adjustInventory 执行失败:', error);
+        logger.error('[supply-chain] adjustInventory 执行失败:', error);
         throw error;
     }
 }
 
+
+/**
+ * 库存调拨 (内部逻辑)
+ * 
+ * @description 将库存从一个仓库转移到另一个仓库。涉及两个仓库的原子性库存更新。
+ * @param data 包含 productId, fromWarehouseId, toWarehouseId, quantity, reason
+ * @returns 调拨成功的详情
+ */
 const transferInventoryActionInternal = createSafeAction(transferInventorySchema, async (data, { session }) => {
+
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
-        console.warn('[supply-chain] 调拨库存:', { fromWarehouseId: data.fromWarehouseId, toWarehouseId: data.toWarehouseId, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 调拨库存:', { fromWarehouseId: data.fromWarehouseId, toWarehouseId: data.toWarehouseId, tenantId: session.user.tenantId });
+
 
         // 校验源仓库和目标仓库是否属于当前租户
         const [sourceWarehouse, targetWarehouse] = await Promise.all([
@@ -178,12 +221,15 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
 
         return await db.transaction(async (tx) => {
             for (const item of data.items) {
-                const sourceStock = await tx.query.inventory.findFirst({
-                    where: and(
-                        eq(inventory.warehouseId, data.fromWarehouseId),
-                        eq(inventory.productId, item.productId)
-                    ),
-                });
+                // [L5 优化] 引入 FOR UPDATE 原子锁
+                const sourceStockResult = await tx.execute(sql`
+                    SELECT id, quantity FROM inventory 
+                    WHERE warehouse_id = ${data.fromWarehouseId} 
+                    AND product_id = ${item.productId} 
+                    FOR UPDATE
+                `);
+                const sourceStock = (sourceStockResult as unknown as { id: string, quantity: number }[])[0];
+
 
                 if (!sourceStock || sourceStock.quantity < item.quantity) {
                     throw new Error(`源仓库产品 ${item.productId} 库存不足`);
@@ -205,6 +251,8 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                     productId: item.productId,
                     type: 'TRANSFER',
                     quantity: -item.quantity,
+                    // SC-16: 记录调拨出库前后库存量
+                    balanceBefore: sourceStock.quantity,
                     balanceAfter: newSourceQty,
                     costPrice: product?.purchasePrice || '0',
                     reason: data.reason,
@@ -212,12 +260,14 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                     operatorId: session.user.id,
                 });
 
-                const targetStock = await tx.query.inventory.findFirst({
-                    where: and(
-                        eq(inventory.warehouseId, data.toWarehouseId),
-                        eq(inventory.productId, item.productId)
-                    ),
-                });
+                const targetStockResult = await tx.execute(sql`
+                    SELECT id, quantity FROM inventory 
+                    WHERE warehouse_id = ${data.toWarehouseId} 
+                    AND product_id = ${item.productId} 
+                    FOR UPDATE
+                `);
+                const targetStock = (targetStockResult as unknown as { id: string, quantity: number }[])[0];
+
 
                 const currentTargetQty = targetStock?.quantity || 0;
                 const newTargetQty = currentTargetQty + item.quantity;
@@ -241,6 +291,8 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                     productId: item.productId,
                     type: 'TRANSFER',
                     quantity: item.quantity,
+                    // SC-16: 记录调拨入库前后库存量
+                    balanceBefore: currentTargetQty,
                     balanceAfter: newTargetQty,
                     costPrice: product?.purchasePrice || '0',
                     reason: data.reason,
@@ -249,7 +301,10 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                 });
             }
 
+            revalidateTag(INVENTORY_CACHE_TAG, 'default');
+            revalidateTag(INVENTORY_ALERTS_TAG, 'default');
             revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
 
             // 添加审计日志 (调拨汇总日志)
             await AuditService.recordFromSession(session, 'inventory', 'multiple', 'UPDATE', {
@@ -263,10 +318,11 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
             return { success: true };
         });
     } catch (error) {
-        console.error('[supply-chain] 调拨库存失败:', error);
+        logger.error('[supply-chain] 调拨库存失败:', error);
         throw error;
     }
 });
+
 
 /**
  * 跨仓库调拨库存
@@ -281,20 +337,21 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
  * @throws {Error} 未授权、仓库不存在或任一产品库存不足时抛出异常
  */
 export async function transferInventory(params: z.infer<typeof transferInventorySchema>) {
-    console.warn('[supply-chain] transferInventory 开始执行:', {
+    logger.info('[supply-chain] transferInventory 开始执行:', {
         from: params.fromWarehouseId,
         to: params.toWarehouseId,
         itemCount: params.items.length
     });
     try {
         const result = await transferInventoryActionInternal(params);
-        console.warn('[supply-chain] transferInventory 执行成功');
+        logger.info('[supply-chain] transferInventory 执行成功');
         return result;
     } catch (error) {
-        console.error('[supply-chain] transferInventory 执行失败:', error);
+        logger.error('[supply-chain] transferInventory 执行失败:', error);
         throw error;
     }
 }
+
 
 const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, async (data, { session }) => {
     await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
@@ -309,7 +366,7 @@ const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, as
 
     const offset = (data.page - 1) * data.pageSize;
 
-    const results = await db.select({
+    const resultsPromise = db.select({
         id: inventory.id,
         warehouseId: inventory.warehouseId,
         warehouseName: warehouses.name,
@@ -326,13 +383,15 @@ const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, as
         .offset(offset)
         .orderBy(desc(inventory.updatedAt));
 
-    const [{ total }] = await db
+    const totalPromise = db
         .select({ total: count() })
         .from(inventory)
         .where(and(...filters));
 
+    const [results, [{ total }]] = await Promise.all([resultsPromise, totalPromise]);
+
     return {
-        data: results,
+        data: results as InventoryListItem[],
         pagination: {
             page: data.page,
             pageSize: data.pageSize,
@@ -341,6 +400,8 @@ const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, as
         }
     };
 });
+
+
 
 /**
  * 获取库存水平列表
@@ -351,8 +412,9 @@ const getInventoryLevelsActionInternal = createSafeAction(getInventorySchema, as
  * - `productIds` (string[], optional): 产品 ID 数组过滤
  * - `page` (number): 页码
  * - `pageSize` (number): 每页条数
- * @returns {Promise<{data: any[], pagination: any}>} 返回包含库存数据和分页信息的 Promise
+ * @returns {Promise<{data: InventoryListItem[], pagination: { page: number, pageSize: number, total: number, totalPages: number }}>} 返回包含库存数据和分页信息的 Promise
  */
+
 export async function getInventoryLevels(params: z.infer<typeof getInventorySchema>) {
     return getInventoryLevelsActionInternal(params);
 }
@@ -420,23 +482,30 @@ const checkInventoryAlertsActionInternal = createSafeAction(checkInventoryAlerts
             criticalCount: alerts.filter(a => a.level === 'CRITICAL').length,
             warningCount: alerts.filter(a => a.level === 'WARNING').length,
         },
-        alerts: alerts.slice(0, 50),
+        alerts: alerts.slice(0, 50) as InventoryAlert[],
     };
 });
 
+
 /**
- * 执行库存预警检查
- * 
- * @description 对比当前库存与安全库存 (minStock) 阈值。
- * 分为 CRITICAL (缺货或低于 50% minStock) 和 WARNING (低于 minStock) 两个级别。
- * @param params 包含以下属性的对象：
- * - `warehouseId` (string, optional): 仓库 ID 过滤
- * - `alertThreshold` (number): 缺省安全库存阈值
- * @returns {Promise<{success: boolean, summary: any, alerts: any[]}>} 返回预警汇总和明细列表
+ * 执行库存预警检查 (带 30s 缓存)
  */
-export async function checkInventoryAlerts(params: z.infer<typeof checkInventoryAlertsSchema>) {
-    return checkInventoryAlertsActionInternal(params);
-}
+export const checkInventoryAlerts = cache(async (params: z.infer<typeof checkInventoryAlertsSchema>): Promise<{ success: boolean, summary: { total: number, criticalCount?: number, warningCount?: number }, alerts: InventoryAlert[] }> => {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, summary: { total: 0 }, alerts: [] };
+
+    return (await unstable_cache(
+        async () => {
+            logger.info('[supply-chain] checkInventoryAlerts 执行预警计算:', params);
+            return checkInventoryAlertsActionInternal(params);
+        },
+        [JSON.stringify(params), session.user.tenantId],
+        { tags: [INVENTORY_ALERTS_TAG], revalidate: 30 }
+    )()) as { success: boolean, summary: { total: number, criticalCount: number, warningCount: number }, alerts: InventoryAlert[] };
+
+});
+
+
 
 const setminStockSchema = z.object({
     productId: z.string(),
@@ -444,10 +513,19 @@ const setminStockSchema = z.object({
     minStock: z.number().min(0),
 });
 
+/**
+ * 设置产品的最小安全库存 (内部逻辑)
+ * 
+ * @description 更新指定仓库中指定产品的安全库存阈值。
+ * @param data 包含 productId, warehouseId, minStock
+ * @returns 成功或错误信息
+ */
 const setminStockActionInternal = createSafeAction(setminStockSchema, async (data, { session }) => {
+
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
-        console.warn('[supply-chain] 设置安全库存:', { warehouseId: data.warehouseId, productId: data.productId, minStock: data.minStock, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 设置安全库存:', { warehouseId: data.warehouseId, productId: data.productId, minStock: data.minStock, tenantId: session.user.tenantId });
+
 
         const existing = await db.query.inventory.findFirst({
             where: and(
@@ -471,7 +549,9 @@ const setminStockActionInternal = createSafeAction(setminStockSchema, async (dat
             });
         }
 
+        revalidateTag(INVENTORY_ALERTS_TAG, 'default');
         revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
+
 
         // 添加审计日志
         await AuditService.recordFromSession(session, 'inventory', existing?.id || 'new', 'UPDATE', {
@@ -481,10 +561,11 @@ const setminStockActionInternal = createSafeAction(setminStockSchema, async (dat
 
         return { success: true, message: `安全库存已设置为 ${data.minStock}` };
     } catch (error) {
-        console.error('[supply-chain] 设置安全库存失败:', error);
+        logger.error('[supply-chain] 设置安全库存失败:', error);
         throw error;
     }
 });
+
 
 /**
  * 设置产品在特定仓库的安全库存阈值
@@ -498,20 +579,21 @@ const setminStockActionInternal = createSafeAction(setminStockSchema, async (dat
  * @throws {Error} 无供应链管理权限或数据库更新失败时抛出异常
  */
 export async function setminStock(params: z.infer<typeof setminStockSchema>) {
-    console.warn('[supply-chain] setminStock 开始执行:', {
+    logger.info('[supply-chain] setminStock 开始执行:', {
         productId: params.productId,
         warehouseId: params.warehouseId,
         minStock: params.minStock
     });
     try {
         const result = await setminStockActionInternal(params);
-        console.warn('[supply-chain] setminStock 执行成功');
+        logger.info('[supply-chain] setminStock 执行成功');
         return result;
     } catch (error) {
-        console.error('[supply-chain] setminStock 执行失败:', error);
+        logger.error('[supply-chain] setminStock 执行失败:', error);
         throw error;
     }
 }
+
 
 /**
  * 获取补货建议清单
@@ -526,11 +608,12 @@ export async function getRestockSuggestions(warehouseId?: string) {
         alertThreshold: 10
     });
 
-    const data = res?.data;
+    const data = res.alerts;
     if (!data) return [];
 
+
     // 只返回需要补货的（预警状态）
-    return data.alerts
+    return data
         .filter(a => a.level !== 'OK')
         .map(a => ({
             productId: a.item.productId,
@@ -541,8 +624,9 @@ export async function getRestockSuggestions(warehouseId?: string) {
             minStock: a.item.minStock,
             suggestedRestock: a.shortage + 5, // 建议补货量 = 缺货量 + 缓冲
             level: a.level,
-        }));
+        })) as RestockSuggestion[];
 }
+
 
 
 

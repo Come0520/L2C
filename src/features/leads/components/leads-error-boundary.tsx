@@ -2,7 +2,8 @@
 
 import { logger } from "@/shared/lib/logger";
 import React from 'react';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import RefreshCcw from 'lucide-react/dist/esm/icons/refresh-ccw';
 import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 

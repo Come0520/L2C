@@ -22,3 +22,5 @@ export declare function chooseFile({ accept, multiple, capture, compressed, maxD
     mediaType: any;
     extension: any;
 }): Promise<File | File[]>;
+
+export {};

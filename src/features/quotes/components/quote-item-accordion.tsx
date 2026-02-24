@@ -4,7 +4,11 @@ import { useState, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { ChevronDown, ChevronUp, Plus, Trash2, CornerDownRight } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import CornerDownRight from 'lucide-react/dist/esm/icons/corner-down-right';
 
 /**
  * 商品项数据结构

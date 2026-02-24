@@ -1,3 +1,5 @@
+﻿import { vi } from 'vitest';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // 增强逻辑容器：模拟 setData 和基础数据流
@@ -16,6 +18,15 @@ class MockPageContainer {
                 this.instance[key] = options[key].bind(this.instance);
             }
         });
+
+        // 绑定 Component特有的 methods
+        if (options.methods) {
+            Object.keys(options.methods).forEach(key => {
+                if (typeof options.methods[key] === 'function') {
+                    this.instance[key] = options.methods[key].bind(this.instance);
+                }
+            });
+        }
 
         this.instance.data = this.data;
         const setData = (newData: any) => {
@@ -38,20 +49,34 @@ class MockPageContainer {
 };
 (global as any).App = (opt: any) => { (global as any).lastAppOptions = opt; };
 
-// 模拟微信 API
+// 增强模拟微信 API：实现真实的存储逻辑映射
+const mockStorage: Record<string, any> = {};
+
 (global as any).wx = {
-    login: jest.fn(),
-    showToast: jest.fn(),
-    showLoading: jest.fn(),
-    hideLoading: jest.fn(),
-    getStorageSync: jest.fn(),
-    setStorageSync: jest.fn(),
-    removeStorageSync: jest.fn(),
-    request: jest.fn(),
-    switchTab: jest.fn(),
-    navigateTo: jest.fn(),
-    reLaunch: jest.fn(),
-    getSystemInfoSync: jest.fn(() => ({})),
+    login: vi.fn(),
+    showToast: vi.fn(),
+    showLoading: vi.fn(),
+    hideLoading: vi.fn(),
+    getStorageSync: vi.fn((key: string) => mockStorage[key]),
+    setStorageSync: vi.fn((key: string, value: any) => {
+        mockStorage[key] = value;
+    }),
+    removeStorageSync: vi.fn((key: string) => {
+        delete mockStorage[key];
+    }),
+    clearStorageSync: vi.fn(() => {
+        Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
+    }),
+    request: vi.fn(),
+    switchTab: vi.fn(),
+    navigateTo: vi.fn(),
+    reLaunch: vi.fn(),
+    getSystemInfoSync: vi.fn(() => ({})),
+};
+
+// 暴露清理存储的方法
+(global as any).clearMockStorage = () => {
+    Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
 };
 
 const appInstance: any = {
@@ -63,7 +88,7 @@ const appInstance: any = {
 };
 (global as any).getApp = () => appInstance;
 
-(global as any).getCurrentPages = jest.fn(() => []) as any;
+(global as any).getCurrentPages = vi.fn(() => []) as any;
 
 (global as any).resetWX = () => {
     Object.keys((global as any).wx).forEach(key => {
@@ -72,3 +97,5 @@ const appInstance: any = {
         }
     });
 };
+
+export { };

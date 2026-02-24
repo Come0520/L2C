@@ -71,7 +71,10 @@ async function getTenantIdFromSession(): Promise<string> {
  *
  * @description 使用 unstable_cache 按 tenantId 缓存，tag: global-discount / global-discount-{tenantId}
  * 全局折扣是计算报价的基础读取，变动周期长，适合缓存。
- * 修改配置时通过 revalidateTag('global-discount') 失效。
+ * 修改配置时通过 revalidateTag('global-discount', 'default') 失效。
+ *
+ * @param tenantId - 当前租户 ID
+ * @returns 对应租户的全局级别折扣计算规则及参数配置
  */
 const getCachedGlobalDiscountConfig = (tenantId: string) =>
     unstable_cache(
@@ -103,7 +106,10 @@ const getCachedGlobalDiscountConfig = (tenantId: string) =>
 /**
  * 获取全局渠道折扣配置
  *
- * @description 已使用 unstable_cache 缓存，tag: global-discount / global-discount-{tenantId}
+ * @description 获取当前租户全局生效的渠道级别折扣配比（已使用 unstable_cache 缓存）。
+ *
+ * @returns 全局通道预没的折扣规则和等级梯次折率
+ * @throws 当无有效租户时报错
  */
 export async function getGlobalDiscountConfig() {
     try {
@@ -116,6 +122,11 @@ export async function getGlobalDiscountConfig() {
 
 /**
  * 更新全局渠道折扣配置
+ *
+ * @description 调整租户视角下对整体折扣架构梯度的预设数值。持久化进入 settings 的 JSON 之中，同时吊销过往配置缓存。
+ *
+ * @param input - 符合 `globalDiscountSchema` 的完整渠道结构配置模型
+ * @returns 修改确认对象内容
  */
 export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDiscountSchema>) {
     try {
@@ -171,6 +182,10 @@ export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDis
 
 /**
  * 获取所有覆盖规则
+ *
+ * @description 读取当前租户的所有特例打折规则，含限定于局部商品或特定品类的降价逻辑。
+ *
+ * @returns 折扣特例覆写表完整清单
  */
 export async function getDiscountOverrides() {
     try {
@@ -189,6 +204,11 @@ export async function getDiscountOverrides() {
 
 /**
  * 创建覆盖规则
+ *
+ * @description 新增针对单一品类或专门某个商品的通道覆盖型打折预案，记录新增活动日志。
+ *
+ * @param input - 符合 `overrideSchema` 结构的新建入参模型
+ * @returns 被插入库的记录对象和分配的独立标识
  */
 export async function createDiscountOverride(input: z.infer<typeof overrideSchema>) {
     try {
@@ -239,6 +259,13 @@ export async function createDiscountOverride(input: z.infer<typeof overrideSchem
 
 /**
  * 更新覆盖规则
+ *
+ * @description 修改现存的不适用大众标准计价时的特殊覆盖折扣规则档位，并同时记录变更前与变更后数据。
+ *
+ * @param id - 需要编辑调整的特此覆盖规则的标志代码
+ * @param input - 更新的通道和规则集合
+ * @returns 是否变更成功的状态标定
+ * @throws 指定标号或特例规章在库当中并不存在的情况
  */
 export async function updateDiscountOverride(
     id: string,
@@ -290,6 +317,11 @@ export async function updateDiscountOverride(
 
 /**
  * 删除覆盖规则
+ *
+ * @description 废除此特例覆盖规则、执行物理级删除动作并作审计保留。该主体及其类别的所有打折通道计算都将折返为全局基础默认打折力度。
+ *
+ * @param id - 准予抹除的该覆盖条则序列主键
+ * @returns 硬性消除记录结果的布尔型输出标识
  */
 export async function deleteDiscountOverride(id: string) {
     try {
@@ -332,12 +364,13 @@ export async function deleteDiscountOverride(id: string) {
 
 /**
  * 获取商品的最终折扣率
- * 
- * 优先级：商品级覆盖 > 品类级覆盖 > 全局默认
- * 
- * @param productId 商品ID
- * @param category 商品品类
- * @param channelLevel 渠道等级 (S/A/B/C)
+ *
+ * @description 遵循特定优于普通的业务决策优先链路，优先级：商品级覆盖 > 品类级覆盖 > 全局默认
+ *
+ * @param productId - 所需定夺商品 ID
+ * @param category - 该商品附随所属类目（用于查阅品类层覆盖规制）
+ * @param channelLevel - 通道对应登记标度 ('S' | 'A' | 'B' | 'C')
+ * @returns 实时的、最终作用定夺此款商品的精确算率结果。找不到返回缺位占位默认值（100表示不打折全价）。
  */
 export async function getProductDiscountRate(
     productId: string,

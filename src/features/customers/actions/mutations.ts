@@ -6,7 +6,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { customerSchema, updateCustomerSchema, mergeCustomersSchema } from '../schemas';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -36,13 +36,10 @@ const updateAddressSchema = addressSchema.partial().extend({
 });
 
 /**
- * Create a new customer
- * 创建客户
- *
- * @param input - Customer form data (客户表单数据)
- * @param userId - ID of the user performing the action (操作用户 ID)
- * @param tenantId - Tenant ID (租户 ID)
- * @returns The newly created customer (新创建的客户)
+ * 创建新客户
+ * 
+ * @param input - 客户表单数据
+ * @returns 新创建的客户信息
  */
 export async function createCustomer(
   input: z.input<typeof customerSchema>
@@ -88,7 +85,8 @@ export async function createCustomer(
       throw new AppError(`手机号 ${data.phone} 已存在 (客户编号: ${result.customer.customerNo})`, ERROR_CODES.INVALID_OPERATION, 400);
     }
 
-    revalidatePath('/customers');
+    // 精确清除客户列表缓存
+    revalidateTag(`customers-list-${tenantId}`, 'default');
     return result.customer;
   } catch (e: unknown) {
     logger.error('[customers] 创建客户失败:', e);
@@ -97,12 +95,10 @@ export async function createCustomer(
 }
 
 /**
- * Update existing customer information
- * 更新客户信息
+ * 更新现有客户信息
  * 
- * Permission required: CUSTOMER.EDIT (权限检查：需要 CUSTOMER.EDIT 权限)
- * Logic details: Uses Service logic, including tenant check, downgrade validation, and audit logs 
- * (逻辑说明：使用 Service 处理业务逻辑，包含租户检查、降级校验和审计日志)
+ * 权限要求：CUSTOMER.EDIT
+ * 逻辑详情：使用 Service 层处理，包含租户校验、降级校验和审计日志记录
  */
 export async function updateCustomer(input: z.input<typeof updateCustomerSchema>) {
   const session = await auth();
@@ -134,10 +130,9 @@ export async function updateCustomer(input: z.input<typeof updateCustomerSchema>
 }
 
 /**
- * Soft delete a customer
- * 删除客户 (软删除)
+ * 软删除客户
  * 
- * Permission required: CUSTOMER.DELETE (权限检查：需要 CUSTOMER.DELETE 权限)
+ * 权限要求：CUSTOMER.DELETE
  */
 export async function deleteCustomer(id: string) {
   const session = await auth();
@@ -157,7 +152,8 @@ export async function deleteCustomer(id: string) {
       session.user.id
     );
 
-    revalidatePath('/customers');
+    // 精确清除客户列表缓存
+    revalidateTag(`customers-list-${session.user.tenantId}`, 'default');
   } catch (error) {
     logger.error('[customers] 删除客户失败:', error);
     throw error;
@@ -165,10 +161,9 @@ export async function deleteCustomer(id: string) {
 }
 
 /**
- * Add a new customer address
  * 添加客户地址
- *
- * Security check: Requires CUSTOMER.EDIT permission (安全检查：需要 CUSTOMER.EDIT 权限)
+ * 
+ * 安全检查：需要 CUSTOMER.EDIT 权限
  */
 export async function addCustomerAddress(input: z.infer<typeof createAddressSchema>) {
   const session = await auth();
@@ -230,20 +225,24 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
         return newAddr;
       })
       .then((res) => {
-        revalidatePath(`/customers/${data.customerId}`);
+        revalidateTag(`customer-detail-${data.customerId}`, 'default');
         return res;
       });
   } catch (error) {
-    logger.error('[customers] 添加客户地址失败:', error);
+    logger.error('[customers] 添加客户地址失败:', {
+      error,
+      customerId: data.customerId,
+      userId: session.user.id,
+      tenantId: session.user.tenantId
+    });
     throw error;
   }
 }
 
 /**
- * Update customer address
  * 更新客户地址
  * 
- * Permission required: CUSTOMER.EDIT (权限检查：需要 CUSTOMER.EDIT 权限)
+ * 权限要求：CUSTOMER.EDIT
  */
 export async function updateCustomerAddress(input: z.infer<typeof updateAddressSchema>) {
   const session = await auth();
@@ -315,16 +314,20 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
         return res;
       });
   } catch (error) {
-    logger.error('[customers] 更新客户地址失败:', error);
+    logger.error('[customers] 更新客户地址失败:', {
+      error,
+      addressId: id,
+      userId: session.user.id,
+      tenantId: session.user.tenantId
+    });
     throw error;
   }
 }
 
 /**
- * Delete customer address
  * 删除客户地址
  * 
- * Permission required: CUSTOMER.EDIT (权限检查：需要 CUSTOMER.EDIT 权限)
+ * 权限要求：CUSTOMER.EDIT
  */
 export async function deleteCustomerAddress(id: string, version?: number) {
   const session = await auth();
@@ -372,16 +375,20 @@ export async function deleteCustomerAddress(id: string, version?: number) {
       tenantId: session.user.tenantId
     });
   } catch (error) {
-    logger.error('[customers] 删除客户地址失败:', error);
+    logger.error('[customers] 删除客户地址失败:', {
+      error,
+      addressId: id,
+      userId: session.user.id,
+      tenantId: session.user.tenantId
+    });
     throw error;
   }
 }
 
 /**
- * Set a default address for customer
- * 设置默认地址
- *
- * Security check: Requires CUSTOMER.EDIT permission (安全检查：需要 CUSTOMER.EDIT 权限)
+ * 设置客户的默认地址
+ * 
+ * 安全检查：需要 CUSTOMER.EDIT 权限
  */
 export async function setDefaultAddress(id: string, customerId: string, version?: number) {
   const session = await auth();
@@ -440,20 +447,24 @@ export async function setDefaultAddress(id: string, customerId: string, version?
         tenantId
       });
     });
-    revalidatePath(`/customers/${customerId}`);
+    revalidateTag(`customer-detail-${customerId}`, 'default');
   } catch (error) {
-    logger.error('[customers] 设置客户默认地址失败:', error);
+    logger.error('[customers] 设置默认地址失败:', {
+      error,
+      addressId: id,
+      customerId,
+      userId: session.user.id,
+      tenantId
+    });
     throw error;
   }
 }
 
 /**
- * Merge customers
  * 合并客户
- * Merge data from multiple source customers into a target customer, and soft-delete the sources.
- * (将多个源客户的数据合并到目标客户，并逻辑删除源客户)
+ * 将多个源客户的数据合并到目标客户，并逻辑删除源客户。
  * 
- * Permission required: CUSTOMER.MANAGE (权限检查：需要 CUSTOMER.MANAGE 权限)
+ * 权限要求：CUSTOMER.MANAGE
  */
 export async function mergeCustomersAction(
   input: z.infer<typeof mergeCustomersSchema>,
@@ -481,11 +492,12 @@ export async function mergeCustomersAction(
       data.targetCustomerVersion
     );
 
-    revalidatePath('/customers');
-    revalidatePath(`/customers/${data.targetCustomerId}`);
-    data.sourceCustomerIds.forEach((id) => {
-      revalidatePath(`/customers/${id}`);
-    });
+    // 精确清除客户列表及相关详情缓存
+    revalidateTag(`customers-list-${tenantId}`, 'default');
+    revalidateTag(`customer-detail-${data.targetCustomerId}`, 'default');
+    for (const id of data.sourceCustomerIds) {
+      revalidateTag(`customer-detail-${id}`, 'default');
+    }
 
     return result;
   } catch (error) {
@@ -495,12 +507,10 @@ export async function mergeCustomersAction(
 }
 
 /**
- * Preview merge results
  * 预览合并结果
- * Calculate the resulting customer data preview without making actual changes.
- * (计算合并后的客户数据预览，不进行实际修改)
+ * 计算合并后的客户数据预览，不进行实际修改。
  * 
- * Permission required: CUSTOMER.MANAGE (权限检查：需要 CUSTOMER.MANAGE 权限)
+ * 权限要求：CUSTOMER.MANAGE
  */
 export async function previewMergeAction(sourceId: string, targetId: string) {
   const session = await auth();

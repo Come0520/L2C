@@ -26,7 +26,7 @@ vi.mock('@/shared/api/db', () => ({
             },
         },
         execute: vi.fn().mockResolvedValue([{ count: 0 }]),
-        transaction: vi.fn(async (fn: Function) => fn({
+        transaction: vi.fn(async (fn: (...args: any[]) => any) => fn({
             query: { tenants: { findFirst: vi.fn().mockResolvedValue({ status: 'pending_approval' }) } },
             update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
             insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([{ id: 'tenant-1' }]) })) })),

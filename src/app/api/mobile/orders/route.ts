@@ -1,12 +1,17 @@
 /**
- * 客户端 - 订单列表 API
- * GET /api/mobile/orders
+ * 客户端 - 订单列表查询
+ *
+ * @route GET /api/mobile/orders
+ * @auth JWT Token (客户角色)
+ * @query {number} [page=1] - 页码
+ * @query {number} [pageSize=20] - 每页条数
+ * @returns {PaginatedResponse<OrderItem>} 分页订单列表
  */
 
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, customers } from '@/shared/api/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { OrderStatusMap, getStatusText } from '@/shared/lib/status-maps';
@@ -65,12 +70,11 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // 6. 统计总数
-        const allOrders = await db.query.orders.findMany({
-            where: eq(orders.customerId, customer.id),
-            columns: { id: true }
-        });
-        const total = allOrders.length;
+        // 6. 统计总数 - Phase 3.1 优化：使用聚合查询替代 findMany().length
+        const [{ count: total }] = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(orders)
+            .where(eq(orders.customerId, customer.id));
 
         // 7. 格式化响应
         const items = orderList.map(order => ({

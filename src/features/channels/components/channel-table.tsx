@@ -8,11 +8,10 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Edit2, Eye } from 'lucide-react';
+import { Edit2, Eye, Package2 } from 'lucide-react';
 import Link from 'next/link';
 import { MaskedPhone } from '@/shared/components/masked-phone';
 import { logPhoneView } from '@/features/customers/actions/privacy-actions';
-
 interface Channel {
     id: string;
     name: string;
@@ -125,8 +124,14 @@ export function ChannelTable({ data, currentUser }: ChannelTableProps) {
                     ))}
                     {data.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={9} className="h-24 text-center text-gray-500">
-                                暂无渠道数据
+                            <TableCell colSpan={9} className="h-64 text-center">
+                                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                    <div className="p-4 bg-muted rounded-full mb-4">
+                                        <Package2 className="h-8 w-8" />
+                                    </div>
+                                    <p className="text-lg font-medium">暂无渠道列表数据</p>
+                                    <p className="text-sm">您可以点击上方按钮“新增渠道”来开始您的渠道管理</p>
+                                </div>
                             </TableCell>
                         </TableRow>
                     )}

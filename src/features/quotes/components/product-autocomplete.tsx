@@ -3,7 +3,10 @@
 import { CATEGORY_LABELS, type ProductCategory } from '@/features/quotes/constants';
 
 import * as React from 'react';
-import { Check, ChevronsUpDown, Loader2, Clock } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
+import Loader2 from 'lucide-react/dist/esm/icons/loader';
+import Clock from 'lucide-react/dist/esm/icons/clock';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';

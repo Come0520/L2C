@@ -9,10 +9,8 @@ import { eq, and, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { updateUserManagementSchema } from '../schema';
-import { ROLE_LABELS } from '@/shared/config/roles';
-import { logger } from '@/shared/lib/logger';
 
-export { ROLE_LABELS };
+import { logger } from '@/shared/lib/logger';
 
 // Schema 已转移至 ../schema.ts
 

@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
-import { ROLE_LABELS } from '@/features/settings/actions/user-actions';
+import { ROLE_LABELS } from '@/shared/config/roles';
 import { toast } from 'sonner';
 
 interface UserListProps {

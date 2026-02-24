@@ -105,7 +105,7 @@ stages:
                 # 使用 rsync -aL 解析符号链接，自动跳过断裂的 symlink
                 echo "解析 standalone 中的 pnpm 符号链接..."
                 mkdir -p /tmp/standalone-resolved
-                rsync -aL --ignore-errors .next/standalone/ /tmp/standalone-resolved/
+                rsync -aL --ignore-errors .next/standalone/ /tmp/standalone-resolved/ || true
                 rm -rf .next/standalone
                 mv /tmp/standalone-resolved .next/standalone
                 echo "✅ 符号链接解析完成"

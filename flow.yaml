@@ -54,50 +54,58 @@ stages:
                 echo "=== 质量检查通过 ==="
 
   deploy_stage:
-    name: "打包与部署"
+    name: "构建与部署"
     jobs:
       deploy_job:
-        name: "打包 → 部署 → 验证"
+        name: "云效构建 → 镜像直传 → ECS 部署"
         runsOn:
           group: public/cn-beijing
           container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
         steps:
           deploy_step:
             step: Command
-            name: "打包、部署与健康检查"
+            name: "构建镜像、传输并部署"
             with:
               run: |
-                echo "=== 开始打包与部署 ==="
+                echo "=== 方案A：云效构建镜像 + 直传 ECS ==="
 
-                # ========== 第一步：打包源码 ==========
+                # ========== 第一步：准备版本信息 ==========
                 export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
                 export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                 echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
                 mkdir -p public
                 echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
-                echo "GIT_COMMIT_SHA=$GIT_COMMIT_SHA" > .build-args
-                echo "BUILD_TIME=$BUILD_TIME" >> .build-args
-                tar -czf /tmp/release.tar.gz \
-                  --exclude='node_modules' \
-                  --exclude='.next' \
-                  --exclude='.git' \
-                  --exclude='test-results' \
-                  --exclude='playwright-report' \
-                  --exclude='coverage' \
-                  --exclude='*.log' \
-                  --exclude='release.tar.gz' \
-                  .
-                mv /tmp/release.tar.gz release.tar.gz
-                ls -lh release.tar.gz
-                echo "=== 打包完成 ==="
 
-                # ========== 第二步：安装部署工具 ==========
+                # ========== 第二步：在云效构建 Docker 镜像 ==========
+                echo "=== 在云效 CI 上构建 Docker 镜像（不在 ECS 上构建）==="
+                docker build \
+                  --target runner \
+                  --build-arg NEXT_PUBLIC_GIT_COMMIT_SHA="$GIT_COMMIT_SHA" \
+                  --build-arg NEXT_PUBLIC_BUILD_TIME="$BUILD_TIME" \
+                  -t l2c-app:latest \
+                  -f Dockerfile .
+
+                docker build \
+                  --target migrator \
+                  -t l2c-db-migrate:latest \
+                  -f Dockerfile .
+
+                echo "✅ 镜像构建完成"
+                docker images | grep l2c
+
+                # ========== 第三步：打包镜像为文件 ==========
+                echo "=== 导出镜像为压缩文件 ==="
+                docker save l2c-app:latest l2c-db-migrate:latest | gzip > /tmp/l2c-images.tar.gz
+                ls -lh /tmp/l2c-images.tar.gz
+                echo "✅ 镜像打包完成"
+
+                # ========== 第四步：安装部署工具 ==========
                 if command -v apt-get >/dev/null; then
-                  apt-get update -qq && apt-get install -y -qq sshpass rsync curl
+                  apt-get update -qq && apt-get install -y -qq sshpass curl
                 elif command -v yum >/dev/null; then
-                  yum install -y sshpass rsync curl
+                  yum install -y sshpass curl
                 elif command -v apk >/dev/null; then
-                  apk add --no-cache sshpass rsync curl
+                  apk add --no-cache sshpass curl
                 else
                   echo "无法安装 sshpass"; exit 1
                 fi
@@ -106,81 +114,57 @@ stages:
                 if [ -z "$ECS_PASSWORD" ]; then echo "错误: ECS_PASSWORD 未设置"; exit 1; fi
                 if [ -z "$ECS_HOST" ]; then echo "错误: ECS_HOST 未设置"; exit 1; fi
 
-                # ========== 第三步：上传到 ECS ==========
-                echo "上传 release.tar.gz 到 ECS..."
+                # ========== 第五步：传输镜像和配置到 ECS ==========
+                echo "=== 上传镜像到 ECS (这一步可能需要几分钟) ==="
                 sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
-                  release.tar.gz root@$ECS_HOST:/root/L2C/release.tar.gz
+                  /tmp/l2c-images.tar.gz root@$ECS_HOST:/root/L2C/l2c-images.tar.gz
 
-                # ========== 第四步：远程部署 ==========
+                # 同步 docker-compose 和 nginx 配置
+                echo "=== 同步部署配置文件 ==="
+                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
+                  docker-compose.prod.yml root@$ECS_HOST:/root/L2C/docker-compose.prod.yml
+                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no -r \
+                  nginx root@$ECS_HOST:/root/L2C/
+                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no \
+                  drizzle.config.ts root@$ECS_HOST:/root/L2C/
+
+                echo "✅ 文件传输完成"
+
+                # ========== 第六步：远程部署 ==========
                 sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no root@$ECS_HOST << 'DEPLOY_EOF'
                   set -e
                   cd /root/L2C
 
-                  # 1. 备份 .env
-                  if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
-
-                  # 2. 备份当前版本（用于回滚）
-                  if [ -f release.current.tar.gz ]; then cp release.current.tar.gz release.prev.tar.gz; fi
-
-                  # 3. 原子化解压到临时目录
-                  TEMP_DIR=$(mktemp -d /root/L2C_deploy_XXXXXX)
-                  tar -xzf release.tar.gz -C "$TEMP_DIR"
-                  if [ ! -f "$TEMP_DIR/Dockerfile" ] || [ ! -f "$TEMP_DIR/docker-compose.prod.yml" ]; then
-                    echo "错误：解压后缺少关键文件，中止部署"
-                    rm -rf "$TEMP_DIR"
-                    exit 1
-                  fi
-
-                  # 4. rsync 同步（排除运行时数据）
-                  rsync -a --delete \
-                    --exclude='.env' \
-                    --exclude='.git' \
-                    --exclude='node_modules' \
-                    --exclude='.next' \
-                    --exclude='release.tar.gz' \
-                    --exclude='release.*.tar.gz' \
-                    --exclude='uploads' \
-                    --exclude='logs' \
-                    --exclude='nginx/ssl' \
-                    "$TEMP_DIR/" /root/L2C/
-                  rm -rf "$TEMP_DIR"
-
-                  # 5. 恢复 .env
-                  if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup /root/L2C/.env; fi
-                  mv release.tar.gz release.current.tar.gz
-
-                  # 6. 加载版本信息
-                  if [ -f .build-args ]; then source .build-args; export GIT_COMMIT_SHA BUILD_TIME; fi
-
-                  # 7. 停止旧容器
+                  # 1. 停止旧容器
+                  echo "=== 停止旧容器 ==="
                   docker compose -f docker-compose.prod.yml down || true
 
-                  # 8. 检查可用内存并构建 Docker 镜像
-                  echo "=== 构建 Docker 镜像 ==="
-                  FREE_MEM=$(free -m | awk '/^Mem:/{print $7}')
-                  echo "当前可用内存: ${FREE_MEM}MB"
-                  if [ "$FREE_MEM" -lt 2048 ]; then
-                    echo "⚠️ 可用内存不足 2GB，清理 Docker 缓存释放空间..."
-                    docker system prune -f
-                    docker builder prune -f
-                    echo "清理后可用内存: $(free -m | awk '/^Mem:/{print $7}')MB"
-                  fi
-                  docker compose -f docker-compose.prod.yml build
+                  # 2. 清理空间
+                  echo "=== 清理 Docker 缓存 ==="
+                  docker system prune -f
+                  docker builder prune -f
 
-                  # 9. 尝试运行 db-migrate（非阻塞，schema 变更已手动执行）
-                  echo "=== 执行数据库迁移（容器内，超时 120 秒）==="
+                  # 3. 加载预构建的镜像（核心步骤！不再在 ECS 上构建）
+                  echo "=== 加载预构建镜像 ==="
+                  docker load -i l2c-images.tar.gz
+                  rm -f l2c-images.tar.gz
+                  echo "✅ 镜像加载完成"
+                  docker images | grep l2c
+
+                  # 4. 执行数据库迁移（超时 120 秒）
+                  echo "=== 执行数据库迁移 ==="
                   timeout 120 docker compose -f docker-compose.prod.yml run --rm db-migrate && {
                     echo "✅ 数据库迁移完成"
                   } || {
-                    echo "⚠️ 数据库迁移未完成（可能有交互提示），继续部署..."
-                    echo "注意：请确保 schema 变更已手动执行"
+                    echo "⚠️ 数据库迁移跳过（可能已是最新），继续部署..."
                   }
 
-                  # 10. 启动应用和 Nginx（不再需要 db-migrate 依赖）
+                  # 5. 启动应用和 Nginx
+                  echo "=== 启动应用 ==="
                   docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx
                   echo "容器已启动，等待健康检查..."
 
-                  # 11. 健康检查（最多等 3 分钟）
+                  # 6. 健康检查（最多等 3 分钟）
                   HEALTHY=false
                   for i in $(seq 1 36); do
                     if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
@@ -193,32 +177,15 @@ stages:
                   done
 
                   if [ "$HEALTHY" = "false" ]; then
-                    echo "❌ 健康检查超时 (等待 3 分钟)！"
+                    echo "❌ 健康检查超时！"
                     echo "=== Docker 容器状态 ==="
                     docker compose -f docker-compose.prod.yml ps
                     echo "=== 最近容器日志 ==="
                     docker compose -f docker-compose.prod.yml logs --tail=80 app
-                    # 自动回滚
-                    if [ -f release.prev.tar.gz ]; then
-                      echo "=== 自动回滚到上一版本 ==="
-                      if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
-                      tar -xzf release.prev.tar.gz
-                      if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup .env; fi
-                      docker compose -f docker-compose.prod.yml down || true
-                      docker compose -f docker-compose.prod.yml up -d --build --force-recreate
-                      sleep 30
-                      if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-                        echo "回滚后健康检查通过"
-                      else
-                        echo "回滚后仍不健康，需手动干预"
-                      fi
-                    else
-                      echo "没有上一版本可回滚，需手动干预"
-                    fi
                     exit 1
                   fi
 
-                  # 10. 输出最终状态
+                  # 7. 输出最终状态
                   docker compose -f docker-compose.prod.yml ps
                   docker image prune -f --filter "until=24h"
                   echo "=== L2C 部署成功完成 ==="

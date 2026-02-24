@@ -22,6 +22,12 @@ RUN chown nextjs:nodejs .next
 COPY --chown=nextjs:nodejs .next/standalone ./
 COPY --chown=nextjs:nodejs .next/static ./.next/static
 
+# 补装 Next.js standalone 运行时必须的依赖
+# 原因：pnpm 用符号链接管理 node_modules，CI 打包时部分链接丢失
+# 这几个包体积极小（<2MB），不会 OOM
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+RUN npm install --prefix /app styled-jsx react react-dom
+
 USER nextjs
 
 EXPOSE 3000

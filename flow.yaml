@@ -100,6 +100,14 @@ stages:
 
                 # ========== 第四步：打包预编译产物 ==========
                 echo "=== 打包部署产物 ==="
+
+                # 解析 pnpm 符号链接（pnpm 使用 symlink 管理 node_modules，tar 无法直接打包）
+                echo "解析 standalone 中的 pnpm 符号链接..."
+                cp -rL .next/standalone /tmp/standalone-resolved
+                rm -rf .next/standalone
+                mv /tmp/standalone-resolved .next/standalone
+                echo "✅ 符号链接解析完成"
+
                 tar -czf /tmp/l2c-deploy.tar.gz \
                   .next/standalone/ \
                   .next/static/ \

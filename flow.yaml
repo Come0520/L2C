@@ -156,21 +156,13 @@ stages:
                   # 3. 恢复 .env
                   if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup /root/L2C/.env; fi
 
-                  # 3.5 生成 .dockerignore（覆盖 Docker BuildKit 使用 .gitignore 的行为）
-                  # 必须明确保留 .next/，否则 Docker 会把它排除在构建上下文之外
-                  cat > /root/L2C/.dockerignore << 'DOCKERIGNORE_EOF'
-node_modules
-.git
-.env
-*.log
-DOCKERIGNORE_EOF
+                  # 3.5 生成 .dockerignore（避免 BuildKit 把 .next 排除在构建上下文外）
+                  printf 'node_modules\n.git\n.env\n*.log\n' > /root/L2C/.dockerignore
                   echo "✅ .dockerignore 已生成"
 
-                  # 验证关键文件存在
-                  echo "=== 验证部署产物 ==="
-                  ls -la /root/L2C/.next/ || { echo "❌ .next 目录不存在！"; exit 1; }
-                  ls -la /root/L2C/.next/standalone/ || { echo "❌ .next/standalone 不存在！"; exit 1; }
-                  ls -la /root/L2C/.next/static/ || { echo "❌ .next/static 不存在！"; exit 1; }
+                  # 验证关键产物存在
+                  test -d /root/L2C/.next/standalone || { echo "❌ .next/standalone 不存在"; exit 1; }
+                  test -d /root/L2C/.next/static     || { echo "❌ .next/static 不存在"; exit 1; }
                   echo "✅ 产物验证通过"
 
                   # 4. 停止旧容器

@@ -167,13 +167,12 @@ export function LoginForm() {
 
         {/* 忘记密码链接 */}
         <div className="mb-6 flex justify-end">
-          <button
-            type="button"
-            onClick={() => toast.info('请联系管理员重置密码')}
+          <Link
+            href="/forgot-password"
             className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 text-sm transition-colors"
           >
             忘记密码？
-          </button>
+          </Link>
         </div>
 
         {/* 登录按钮 */}

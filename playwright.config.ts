@@ -88,11 +88,11 @@ export default defineConfig({
         },
     ],
 
-    /* Run your local dev server before starting tests */
+    /* 在测试前自动启动 dev server (已改为手动运行) */
     // webServer: {
-    //     command: 'npm run start',
+    //     command: 'pnpm dev -p 3000',
     //     url: 'http://localhost:3000',
     //     reuseExistingServer: true,
-    //     timeout: 300 * 1000, // 5 minutes for startup
+    //     timeout: 300 * 1000, // 5 分钟启动超时
     // },
 });

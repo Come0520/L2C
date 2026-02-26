@@ -36,14 +36,22 @@ export class RolePermissionService {
       return Array.from(basePermissions);
     }
 
-    const basePermissionsFromDb = (roleDef.permissions as string[]) || [];
+    let basePermissionsArray = (roleDef.permissions as string[]) || [];
+
+    // 兜底逻辑：如果数据库中该角色权限为空，则尝试从系统预设配置中获取
+    if (basePermissionsArray.length === 0) {
+      const staticDef = getRoleDefinition(roleCode);
+      if (staticDef) {
+        basePermissionsArray = staticDef.permissions;
+      }
+    }
 
     // 如果是超级管理员权限，直接返回
-    if (basePermissionsFromDb.includes('**')) {
+    if (basePermissionsArray.includes('**')) {
       return ['**'];
     }
 
-    const basePermissions = new Set(basePermissionsFromDb);
+    const basePermissions = new Set(basePermissionsArray);
 
     // 2. 查询租户覆盖配置
     const override = await db.query.roleOverrides.findFirst({

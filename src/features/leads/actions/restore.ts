@@ -157,8 +157,8 @@ export async function restoreLeadAction(
         // 清除缓存
         revalidatePath('/leads');
         revalidatePath(`/leads/${id}`);
-        revalidateTag(`leads-${tenantId}`, 'default');
-        revalidateTag(`lead-${tenantId}-${id}`, 'default');
+        revalidateTag(`leads-${tenantId}`, {});
+        revalidateTag(`lead-${tenantId}-${id}`, {});
 
         logger.info('[leads] 恢复作废线索成功:', { leadId: id, tenantId, targetStatus: txResult.targetStatus });
 

@@ -122,16 +122,7 @@ export default async function ProcessingOrderDetailPage({
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>操作</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            {/* Actions to update status or edit would go here */}
-                            <Button className="w-full" disabled>登记加工结果 (开发中)</Button>
-                            <Button className="w-full" variant="secondary" disabled>更新状态 (开发中)</Button>
-                        </CardContent>
-                    </Card>
+
                 </div>
             </div>
         </div>

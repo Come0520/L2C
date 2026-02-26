@@ -17,6 +17,7 @@ vi.mock('@/shared/api/db', () => ({
             purchaseOrders: { findMany: vi.fn() },
             productionTasks: { findMany: vi.fn() },
             afterSalesTickets: { findMany: vi.fn() },
+            approvalTasks: { findMany: vi.fn() },
         },
     },
 }));
@@ -30,19 +31,20 @@ describe('WorkbenchService 综合测试', () => {
     });
 
     describe('getUnifiedTodos (Task 1)', () => {
-        it('应该返回所有 5 个待办分类且元数据正确', async () => {
+        it('应该返回所有 6 个待办分类且元数据正确', async () => {
             // 默认 mock 返回
             Object.values(db.query).forEach((model: any) => model.findMany.mockResolvedValue([]));
 
             const result = await WorkbenchService.getUnifiedTodos(tenantId, userId, ['ADMIN']);
 
-            expect(result.categories).toHaveLength(5);
+            expect(result.categories).toHaveLength(6);
             const categories = result.categories.map(c => c.category);
             expect(categories).toContain('LEAD');
             expect(categories).toContain('ORDER');
             expect(categories).toContain('PO');
             expect(categories).toContain('PRODUCTION');
             expect(categories).toContain('AFTER_SALES');
+            expect(categories).toContain('APPROVAL');
         });
 
         it('计数器应该与返回的数据量一致', async () => {
@@ -85,6 +87,7 @@ describe('WorkbenchService 综合测试', () => {
             (db.query.purchaseOrders.findMany as any).mockResolvedValue([]);
             (db.query.productionTasks.findMany as any).mockResolvedValue([]);
             (db.query.afterSalesTickets.findMany as any).mockResolvedValue([]);
+            (db.query.approvalTasks.findMany as any).mockResolvedValue([]);
 
             const result = await WorkbenchService.getUnifiedTodos(tenantId, userId, ['ADMIN']);
             const leadCat = result.categories.find(c => c.category === 'LEAD');

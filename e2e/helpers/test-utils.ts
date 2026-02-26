@@ -28,24 +28,26 @@ export async function skipOnDataLoadError(page: Page): Promise<boolean> {
 export async function getValidOrderId(page: Page): Promise<string> {
     const defaultFallback = '672ac864-dc76-4dc4-86af-0dd15c01c26c';
 
-    await page.goto('/sales/orders');
-    await page.waitForLoadState('networkidle');
+    try {
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    // 由于可能是 /orders 或 /sales/orders 路由，先查验当前是否有数据
-    const firstLink = page.locator('table tbody tr a').first();
-    if (await firstLink.isVisible({ timeout: 3000 })) {
-        const href = await firstLink.getAttribute('href');
-        const exactId = href?.split('/').pop();
-        if (exactId && exactId.length > 20) return exactId; // 基础的 UUID 长度过滤
-    }
+        // 由于可能是 /orders 或 /sales/orders 路由，先查验当前是否有数据
+        const firstLink = page.locator('table tbody tr a').first();
+        if (await firstLink.isVisible({ timeout: 5000 })) {
+            const href = await firstLink.getAttribute('href');
+            const exactId = href?.split('/').pop();
+            if (exactId && exactId.length > 20) return exactId; // 基础的 UUID 长度过滤
+        }
 
-    await page.goto('/orders');
-    await page.waitForLoadState('networkidle');
-    const alterLink = page.locator('table tbody tr a').first();
-    if (await alterLink.isVisible({ timeout: 3000 })) {
-        const href = await alterLink.getAttribute('href');
-        const exactId = href?.split('/').pop();
-        if (exactId && exactId.length > 20) return exactId;
+        await page.goto('/sales/orders', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        const alterLink = page.locator('table tbody tr a').first();
+        if (await alterLink.isVisible({ timeout: 5000 })) {
+            const href = await alterLink.getAttribute('href');
+            const exactId = href?.split('/').pop();
+            if (exactId && exactId.length > 20) return exactId;
+        }
+    } catch (e) {
+        console.log('⚠️ 获取可用订单ID发生超时或错误，回退到默认ID:', e);
     }
 
     return defaultFallback;
@@ -113,8 +115,8 @@ export async function safeExpectVisible(
  * @param page Page 对象
  * @param url 目标 URL
  */
-export async function safeGoto(page: Page, url: string): Promise<boolean> {
-    await page.goto(url);
+export async function safeGoto(page: Page, url: string, options?: { timeout?: number }): Promise<boolean> {
+    await page.goto(url, { timeout: options?.timeout || 120000 });
 
     // 检查是否有数据加载错误
     return !(await skipOnDataLoadError(page));

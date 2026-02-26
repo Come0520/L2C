@@ -7,7 +7,7 @@ setup('authenticate', async ({ page }) => {
     console.log('Navigating to login page...');
     // 访问登录页，可能面临初次编译所以增加容忍时间
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    await page.goto('http://localhost:3000/login', { timeout: 120000 });
+    await page.goto('http://localhost:3000/login', { timeout: 120000, waitUntil: 'domcontentloaded' });
     console.log('Login page loaded');
 
     // 填写登录表单

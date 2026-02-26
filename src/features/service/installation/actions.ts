@@ -343,7 +343,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
       new: { orderId: data.orderId, customerId: data.customerId, sourceType: data.sourceType },
     });
 
-    revalidateTag('install-task', 'default');
+    revalidateTag('install-task', {});
     return { success: true, message: '安装任务已创建' };
   } catch (_error: unknown) {
     logger.error('创建任务失败:', _error);
@@ -485,7 +485,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       new: { action: 'DISPATCH', installerId: data.installerId, scheduledDate: data.scheduledDate?.toISOString() },
     });
 
-    revalidateTag('install-task', 'default');
+    revalidateTag('install-task', {});
     return { success: true, message: '指派成功' };
   } catch (_error: unknown) {
     logger.error('分配失败:', _error);
@@ -582,7 +582,7 @@ const checkInInstallTaskInternal = createSafeAction(checkInTaskSchema, async (da
       new: { action: 'CHECK_IN', location: data.location },
     });
 
-    revalidateTag('install-task', 'default');
+    revalidateTag('install-task', {});
 
     // 构建返回消息
     let message = '签到成功';
@@ -653,7 +653,7 @@ const checkOutInstallTaskInternal = createSafeAction(checkOutTaskSchema, async (
       new: { action: 'CHECK_OUT' },
     });
 
-    revalidateTag('install-task', 'default');
+    revalidateTag('install-task', {});
     return { success: true, message: '已提交完工申请，待销售验收' };
   } catch (_error: unknown) {
     logger.error('提交签退异常:', _error);
@@ -736,7 +736,7 @@ const confirmInstallationInternal = createSafeAction(
         new: { action: 'CONFIRM', actualLaborFee: data.actualLaborFee, rating: data.rating },
       });
 
-      revalidateTag('install-task', 'default');
+      revalidateTag('install-task', {});
       return { success: true, message: '验收通过，安装完成' };
     });
   }
@@ -799,7 +799,7 @@ const rejectInstallationInternal = createSafeAction(
       new: { action: 'REJECT', rejectReason: data.reason },
     });
 
-    revalidateTag('install-task', 'default');
+    revalidateTag('install-task', {});
     return { success: true, message: '已驳回任务' };
   }
 );
@@ -841,7 +841,7 @@ const updateInstallItemStatusInternal = createSafeAction(
         new: { isInstalled: data.isInstalled, issueCategory: data.issueCategory },
       });
 
-      revalidateTag('install-task', 'default');
+      revalidateTag('install-task', {});
       return { success: true, message: '详情已记录' };
     } catch (_error: unknown) {
       logger.error('更新安装项状态失败:', _error);
@@ -902,7 +902,7 @@ const updateInstallChecklistInternal = createSafeAction(
         new: { action: 'UPDATE_CHECKLIST', allCompleted },
       });
 
-      revalidateTag('install-task', 'default');
+      revalidateTag('install-task', {});
       return { success: true, message: '清单状态已更新' };
     } catch (_error: unknown) {
       logger.error('更新清单失败:', _error);

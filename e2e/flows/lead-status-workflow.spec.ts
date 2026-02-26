@@ -70,24 +70,22 @@ test.describe('Lead Status Workflow', () => {
         await page.goto(`/leads/${leadId}`);
         await page.waitForLoadState('networkidle');
 
-        // 验证详情页加载成功 - 检查线索编号文本或导航路径
-        await expect(page.locator('text=/线索编号|线索详情/')).toBeVisible({ timeout: 10000 });
+        // 验证详情页加载成功 - 检查面包屑中的 "线索详情" 文本
+        await expect(page.getByText('线索详情')).toBeVisible({ timeout: 10000 });
 
         // 验证"编辑资料"按钮存在（详情页特有）
-        await expect(page.locator('button:has-text("编辑资料")')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByRole('button', { name: '编辑资料' })).toBeVisible({ timeout: 5000 });
 
         console.log('✅ 线索详情页加载成功');
     });
 
     test('should filter leads by status tabs', async ({ page }) => {
-        // 使用 tab 进行筛选测试
-        const tabs = page.locator('[role="tablist"] [role="tab"]');
-
-        // 验证 tab 列表存在
-        await expect(tabs.first()).toBeVisible();
+        // AnimatedTabs 渲染为 button 元素，使用文本选择器定位
+        // 验证「全部线索」按钮可见（默认激活的 Tab）
+        await expect(page.getByRole('button', { name: '全部线索' })).toBeVisible({ timeout: 10000 });
 
         // 点击公海池 tab
-        const poolTab = page.locator('[role="tab"]:has-text("公海池")');
+        const poolTab = page.getByRole('button', { name: '公海池' });
         if (await poolTab.isVisible()) {
             await poolTab.click();
             await page.waitForLoadState('networkidle');
@@ -95,7 +93,7 @@ test.describe('Lead Status Workflow', () => {
         }
 
         // 点击待跟进 tab
-        const pendingTab = page.locator('[role="tab"]:has-text("待跟进")');
+        const pendingTab = page.getByRole('button', { name: '待跟进' });
         if (await pendingTab.isVisible()) {
             await pendingTab.click();
             await page.waitForLoadState('networkidle');
@@ -103,7 +101,7 @@ test.describe('Lead Status Workflow', () => {
         }
 
         // 点击全部线索 tab
-        const allTab = page.locator('[role="tab"]:has-text("全部线索")');
+        const allTab = page.getByRole('button', { name: '全部线索' });
         if (await allTab.isVisible()) {
             await allTab.click();
             await page.waitForLoadState('networkidle');

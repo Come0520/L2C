@@ -27,6 +27,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
     const dbRoles = await db.query.roles.findMany({
       where: eq(roles.tenantId, session.user.tenantId),
       orderBy: [asc(roles.code)],
+      limit: 500, // [P2防御]
     });
 
     if (dbRoles.length === 0) {
@@ -49,6 +50,7 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
       const initializedRoles = await db.query.roles.findMany({
         where: eq(roles.tenantId, session.user.tenantId),
         orderBy: [asc(roles.code)],
+        limit: 500, // [P2防御]
       });
 
       return initializedRoles.map((r) => ({

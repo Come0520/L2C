@@ -52,7 +52,7 @@ const submitFieldDiscoveryActionInternal = createSafeAction(fieldDiscoverySchema
                 eq(installTasks.tenantId, session.user.tenantId)
             ));
 
-        revalidateTag('install-task', 'default');
+        revalidateTag('install-task', {});
         return { success: true, message: '现场发现已记录' };
     } catch (error) {
         logger.error('Submit field discovery failed:', error);

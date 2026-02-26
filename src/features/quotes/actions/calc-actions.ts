@@ -118,7 +118,7 @@ export async function recalculateQuote(quoteId: string) {
         .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
 
     revalidatePath(`/quotes/${quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     return { success: true, message: 'Recalculated successfully' };
 }
 

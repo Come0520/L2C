@@ -6,7 +6,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { db } from '@/shared/api/db';
 import { reconciliations, arStatements, receiptBills } from '@/shared/api/schema';
-import { eq, desc, and, inArray, gte, lte, isNull, or } from 'drizzle-orm';
+import { eq, desc, and, inArray, gte, lte, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { unstable_cache, revalidateTag } from 'next/cache';
@@ -26,7 +26,7 @@ export async function getReconciliations() {
     if (!session?.user?.tenantId) return [];
 
     // 权限检查：对账
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     const tenantId = session.user.tenantId;
 
@@ -65,7 +65,7 @@ export async function getReconciliation(id: string) {
     if (!session?.user?.tenantId) return null;
 
     // 权限检查：对账
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     const tenantId = session.user.tenantId;
 
@@ -162,7 +162,7 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
 
     logger.info('[finance] 汇总对账单生成成功', { customerCount: Object.keys(customerSummary).length });
 
-    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, {});
 
     return {
         success: true,
@@ -187,7 +187,7 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
 export async function generateAggregatedStatement(params: z.infer<typeof aggregateStatementsSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     logger.info('[finance] generateAggregatedStatement 入口', { params });
 
@@ -270,7 +270,7 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
 export async function generatePeriodStatements(params: z.infer<typeof generatePeriodStatementsSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     logger.info('[finance] generatePeriodStatements 入口', { params });
 
@@ -394,17 +394,24 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
             const newPending = totalStmtAmount.minus(newReceived).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
             const newStatus = newPending.lte(0) ? 'PAID' : 'PARTIAL';
 
-            await tx.update(arStatements)
+            const [updatedStmt] = await tx.update(arStatements)
                 .set({
                     receivedAmount: newReceived.toFixed(2, Decimal.ROUND_HALF_UP),
                     pendingAmount: Decimal.max(0, newPending).toFixed(2, Decimal.ROUND_HALF_UP),
                     status: newStatus,
+                    version: sql`${arStatements.version} + 1`,
                     updatedAt: new Date(),
                 })
                 .where(and(
                     eq(arStatements.id, alloc.statementId),
-                    eq(arStatements.tenantId, tenantId)
-                ));
+                    eq(arStatements.tenantId, tenantId),
+                    eq(arStatements.version, stmt.version)
+                ))
+                .returning({ id: arStatements.id });
+
+            if (!updatedStmt) {
+                throw new Error(`并发冲突：对账单 ${stmt.statementNo} 已被其他人修改，请刷新后重试`);
+            }
 
             await AuditService.log(tx, {
                 tenantId,
@@ -429,16 +436,23 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
         const usedAmountAfter = usedAmountBefore.plus(totalWrittenOff).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
         const newReceiptStatus = usedAmountAfter.gte(receiptAmount) ? 'FULLY_USED' : 'PARTIAL_USED';
 
-        await tx.update(receiptBills)
+        const [updatedReceipt] = await tx.update(receiptBills)
             .set({
                 usedAmount: usedAmountAfter.toFixed(2, Decimal.ROUND_HALF_UP),
                 status: newReceiptStatus,
+                version: sql`${receiptBills.version} + 1`,
                 updatedAt: new Date(),
             })
             .where(and(
                 eq(receiptBills.id, receiptId),
-                eq(receiptBills.tenantId, tenantId)
-            ));
+                eq(receiptBills.tenantId, tenantId),
+                eq(receiptBills.version, receipt.version)
+            ))
+            .returning({ id: receiptBills.id });
+
+        if (!updatedReceipt) {
+            throw new Error(`并发冲突：收款单 ${receipt.receiptNo} 已被其他人修改，请刷新后重试`);
+        }
 
         await AuditService.log(tx, {
             tenantId,
@@ -453,7 +467,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
 
         logger.info('[finance] 批量核销执行完成', { totalWrittenOff: totalWrittenOff.toFixed(2) });
 
-        revalidateTag(`finance-reconciliation-${tenantId}`, 'default');
+        revalidateTag(`finance-reconciliation-${tenantId}`, {});
 
         return {
             success: true,
@@ -469,7 +483,7 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
 export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     logger.info('[finance] batchWriteOff 入口', { params });
 
@@ -537,7 +551,7 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
 
     logger.info('[finance] 跨期对账分析完成', { movedCount: summary.movedCount });
 
-    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-reconciliation-${session.user.tenantId}`, {});
 
     return {
         success: true,
@@ -554,7 +568,7 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
 export async function crossPeriodReconciliation(params: z.infer<typeof crossPeriodReconciliationSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) throw new Error('权限不足：需要对账权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_RECONCILE)) throw new Error('权限不足：需要对账权限');
 
     logger.info('[finance] crossPeriodReconciliation 入口', { params });
 

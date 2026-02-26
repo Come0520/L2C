@@ -218,6 +218,41 @@
       "when": 1771865773571,
       "tag": "0030_lowly_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1772080758527,
+      "tag": "0031_yielding_scream",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1772081477832,
+      "tag": "0032_melodic_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1772084324550,
+      "tag": "0033_unknown_next_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1772086678697,
+      "tag": "0034_brainy_vertigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1772104014380,
+      "tag": "0035_orange_thena",
+      "breakpoints": true
     }
   ]
 }

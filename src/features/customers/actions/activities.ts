@@ -147,7 +147,7 @@ export async function createActivity(
         }
 
         // 精确清除客户详情缓存
-        revalidateTag(`customer-detail-${data.customerId}`, 'default');
+        revalidateTag(`customer-detail-${data.customerId}`, {});
 
         const returnData: ActivityDTO = {
             id: newActivity['id']?.toString() || '',

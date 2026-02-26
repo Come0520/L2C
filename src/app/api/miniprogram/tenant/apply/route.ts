@@ -20,7 +20,7 @@ import { z } from 'zod';
 const RegisterSchema = z.object({
     companyName: z.string().min(2, '公司名称至少2个字符').max(100, '公司名称过长'),
     applicantName: z.string().min(2, '联系人姓名至少2个字符').max(50, '联系人姓名过长'),
-    phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+    phone: z.string().regex(/^\d{8,11}$/, '手机号格式不正确'),
     email: z.string().email('邮箱格式不正确'),
     region: z.string().min(2, '请选择地区'),
     password: z.string().min(8, '密码至少8位').max(32, '密码过长'),

@@ -106,8 +106,8 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
             return { success: false, error: errorMsg || '审批提交失败' };
         }
 
-        revalidateTag('orders', 'default');
-        revalidateTag(`order-${orderId}`, 'default');
+        revalidateTag('orders', {});
+        revalidateTag(`order-${orderId}`, {});
 
         // 记录审计日志
         await AuditService.record({
@@ -182,8 +182,8 @@ async function executeCancelOrder(
                 .where(eq(orderChanges.id, changeRecordId));
         });
 
-        revalidateTag('orders', 'default');
-        revalidateTag(`order-${orderId}`, 'default');
+        revalidateTag('orders', {});
+        revalidateTag(`order-${orderId}`, {});
 
         return {
             success: true,

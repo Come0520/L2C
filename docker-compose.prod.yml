@@ -46,10 +46,10 @@ services:
       - l2c-network
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
-      interval: 30s
+      interval: 15s # 每 15 秒检查一次
       timeout: 10s
-      retries: 3
-      start_period: 90s
+      retries: 20 # 最多等 20 × 15s = 5 分钟
+      start_period: 120s # 冷启动豁免期 2 分钟，期间不计入重试次数
 
   # Nginx 反向代理
   nginx:

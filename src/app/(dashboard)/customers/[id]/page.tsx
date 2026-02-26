@@ -177,7 +177,7 @@ export default async function CustomerDetailPage({
                         <TabsList>
                             <TabsTrigger value="activities">跟进记录</TabsTrigger>
                             <TabsTrigger value="addresses">地址管理</TabsTrigger>
-                            <TabsTrigger value="orders">订单记录</TabsTrigger>
+
                             <TabsTrigger value="referrals">转介绍 ({customer.referrals?.length || 0})</TabsTrigger>
                         </TabsList>
                         <TabsContent value="activities" className="mt-4">
@@ -190,11 +190,7 @@ export default async function CustomerDetailPage({
                                 tenantId={tenantId}
                             />
                         </TabsContent>
-                        <TabsContent value="orders" className="mt-4">
-                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-                                订单记录开发中...
-                            </div>
-                        </TabsContent>
+
                         <TabsContent value="referrals" className="mt-4">
                             <div className="space-y-2">
                                 {(customer.referrals?.length || 0) > 0 ? (

@@ -130,8 +130,8 @@ export async function createOrderPayment(data: {
 
             logger.info('[orders] 创建订单付款记录成功:', { orderId, scheduleId, tenantId, amount: actualAmount });
 
-            revalidateTag(`order-${orderId}`, 'default');
-            revalidateTag(`orders`, 'default');
+            revalidateTag(`order-${orderId}`, {});
+            revalidateTag(`orders`, {});
 
             return { success: true };
         });

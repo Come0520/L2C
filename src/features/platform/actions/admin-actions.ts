@@ -17,7 +17,7 @@ import {
 } from '@/services/wechat-subscribe-message.service';
 import { logger } from '@/shared/lib/logger';
 import { AuditService } from '@/shared/services/audit-service';
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 
 // ============ 验证 Schema ============
 
@@ -303,6 +303,9 @@ export async function approveTenant(tenantId: string): Promise<{
             });
         });
 
+        // 清除租户列表缓存，确保前端 router.refresh() 能立即看到最新状态
+        revalidateTag('platform-tenants', {});
+
         notifyTenantApproved(tenantId).catch(err => {
             logger.error('发送通知失败:', err);
         });
@@ -369,6 +372,9 @@ export async function rejectTenant(
             });
         });
 
+        // 清除租户列表缓存
+        revalidateTag('platform-tenants', {});
+
         notifyTenantRejected(tenantId, reason).catch(err => {
             logger.error('发送通知失败:', err);
         });
@@ -432,6 +438,9 @@ export async function suspendTenant(
                 newValues: { status: 'suspended', isActive: false, reason },
             });
         });
+
+        // 清除租户列表缓存
+        revalidateTag('platform-tenants', {});
 
         return { success: true };
     } catch (error) {
@@ -497,6 +506,9 @@ export async function activateTenant(tenantId: string): Promise<{
                 newValues: { status: 'active', isActive: true },
             });
         });
+
+        // 清除租户列表缓存
+        revalidateTag('platform-tenants', {});
 
         return { success: true };
     } catch (error) {

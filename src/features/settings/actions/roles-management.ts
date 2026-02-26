@@ -40,6 +40,7 @@ export async function getRolesAction() {
   return db.query.roles.findMany({
     where: eq(roles.tenantId, tenantId),
     orderBy: [desc(roles.isSystem), asc(roles.code)],
+    limit: 500, // [P2防御]
   });
 }
 

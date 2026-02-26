@@ -35,8 +35,6 @@
     "userConfirmedBundleSwitch": false,
     "packNpmManually": false,
     "packNpmRelationList": [],
-    "minifyWXSS": true,
-    "showES6CompileOption": false,
     "minifyWXML": true,
     "useCompilerPlugins": ["typescript"],
     "compileWorklet": false,

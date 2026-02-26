@@ -311,7 +311,7 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         if (currentPO?.supplierId) {
             // revalidateTag 不支持多参数，这里修复
-            revalidateTag(`supplier-rating-${currentPO.supplierId}`, 'default');
+            revalidateTag(`supplier-rating-${currentPO.supplierId}`, {});
         }
         return { success: true };
     } catch (error) {
@@ -837,7 +837,7 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
 
             revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
             // revalidateTag 同样修复
-            revalidateTag(`supplier-rating-${po.supplierId}`, 'default');
+            revalidateTag(`supplier-rating-${po.supplierId}`, {});
             return { success: true, data: { status: newStatus, allFullyReceived } };
         });
     } catch (error) {

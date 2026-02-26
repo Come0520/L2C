@@ -63,7 +63,7 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
         const userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
@@ -94,7 +94,7 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
             details: { creditNoteNo: creditNote.creditNoteNo, amount: data.amount }
         });
 
-        revalidateTag(`finance-credit-notes-${tenantId}`, 'default');
+        revalidateTag(`finance-credit-notes-${tenantId}`, {});
 
         return {
             success: true,
@@ -136,7 +136,7 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
         const userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
@@ -206,8 +206,8 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
                 });
             });
 
-            revalidateTag(`finance-credit-notes-${tenantId}`, 'default');
-            revalidateTag(`finance-ar-${tenantId}`, 'default');
+            revalidateTag(`finance-credit-notes-${tenantId}`, {});
+            revalidateTag(`finance-ar-${tenantId}`, {});
 
             return { success: true, message: '贷项通知单已审批通过并生效' };
         } else {
@@ -236,7 +236,7 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
                 details: { creditNoteNo: creditNote.creditNoteNo, approved: false, reason: rejectReason }
             });
 
-            revalidateTag(`finance-credit-notes-${tenantId}`, 'default');
+            revalidateTag(`finance-credit-notes-${tenantId}`, {});
 
             return { success: true, message: '贷项通知单已拒绝' };
         }
@@ -269,7 +269,7 @@ export async function getCreditNotes(page = 1, pageSize = 20) {
     const tenantId = session.user.tenantId;
 
     // 权限检查 F-29
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限', data: [] };
     }
 
@@ -301,7 +301,7 @@ export async function getCreditNote(id: string) {
     }
 
     // 权限检查 F-29
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限' };
     }
 

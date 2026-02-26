@@ -75,7 +75,7 @@ export async function dispatchMeasureTask(input: unknown) {
         }
     );
 
-    revalidateTag('measure-task', 'default');
+    revalidateTag('measure-task', {});
     revalidatePath('/service/measurement');
     return { success: true };
 }
@@ -116,7 +116,7 @@ export async function acceptMeasureTask(id: string) {
             eq(measureTasks.tenantId, session.user.tenantId)
         ));
 
-    revalidateTag('measure-task', 'default');
+    revalidateTag('measure-task', {});
     revalidatePath('/service/measurement');
     return { success: true };
 }
@@ -257,7 +257,7 @@ export async function splitMeasureTask(input: unknown) {
             );
         });
 
-        revalidateTag('measure-task', 'default');
+        revalidateTag('measure-task', {});
         revalidatePath('/service/measurement');
         logger.info(`[MeasureSplit] 任务拆分成功: 原ID ${originalTaskId}, 新任务数: ${createdCount}`);
         return { success: true };
@@ -321,7 +321,7 @@ export async function requestFeeWaiver(input: unknown) {
         }
     );
 
-    revalidateTag('measure-task', 'default');
+    revalidateTag('measure-task', {});
     revalidatePath('/service/measurement');
     return { success: true };
 }

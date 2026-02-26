@@ -143,7 +143,7 @@ const refreshExpiredQuotePricesActionInternal = createSafeAction(refreshPricesSc
     );
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 过期报价单价格刷新成功', { quoteId: data.quoteId });
     return result;
 });
@@ -172,7 +172,7 @@ const batchExpireOverdueQuotesActionInternal = createSafeAction(batchExpireSchem
         session.user.tenantId
     );
 
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 手动批量触发报价单过期检查成功', { tenantId: session.user.tenantId });
     return result;
 });
@@ -215,7 +215,7 @@ const setQuoteValidUntilActionInternal = createSafeAction(setValidUntilSchema, a
     }
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单有效期设置成功', { quoteId: data.quoteId, validUntil });
     return { success: true, validUntil };
 });

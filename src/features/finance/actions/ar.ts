@@ -6,7 +6,7 @@ import { db } from '@/shared/api/db';
 import {
     arStatements,
 } from '@/shared/api/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { FinanceService } from '@/services/finance.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -34,7 +34,7 @@ export async function getARStatements(params?: { limit?: number; offset?: number
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
 
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) throw new Error('权限不足：需要财务查看权限');
 
     const limit = params?.limit || 50;
     const offset = params?.offset || 0;
@@ -112,7 +112,7 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：创建收付款
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)) throw new Error('权限不足：需要财务创建权限');
 
     logger.info('[finance] 开始创建收款单', { data });
     const validatedData = createPaymentOrderSchema.parse(data);
@@ -137,7 +137,7 @@ export async function createPaymentOrder(data: z.infer<typeof createPaymentOrder
     };
 
     const result = await FinanceService.createPaymentOrder(serviceData, session.user.tenantId, session.user.id!);
-    revalidateTag(`finance-ar-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-ar-${session.user.tenantId}`, {});
     logger.info('[finance] createPaymentOrder 执行成功', { result });
     return result;
 }
@@ -171,8 +171,8 @@ export async function verifyPaymentOrder(data: z.infer<typeof verifyPaymentOrder
         session.user.id!,
         remark
     );
-    revalidateTag(`finance-ar-${session.user.tenantId}`, 'default');
-    revalidateTag(`finance-ar-detail-${id}`, 'default');
+    revalidateTag(`finance-ar-${session.user.tenantId}`, {});
+    revalidateTag(`finance-ar-detail-${id}`, {});
     logger.info('[finance] verifyPaymentOrder 执行成功', { paymentOrderId: id });
     return result;
 }
@@ -208,7 +208,7 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
         }
 
         // 权限检查：创建收付款
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)) {
             return { success: false, error: '权限不足：需要财务创建权限' };
         }
 
@@ -289,9 +289,17 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
 
             };
 
-            await tx.update(arStatements)
-                .set(newValues)
-                .where(eq(arStatements.id, data.originalStatementId));
+            const [updatedStmt] = await tx.update(arStatements)
+                .set({ ...newValues, version: sql`${arStatements.version} + 1` })
+                .where(and(
+                    eq(arStatements.id, data.originalStatementId),
+                    eq(arStatements.version, originalStatement.version)
+                ))
+                .returning({ id: arStatements.id });
+
+            if (!updatedStmt) {
+                throw new Error(`并发冲突：对账单已被其他人修改，请刷新后重试`);
+            }
 
             // F-32: 记录原对账单状态变动审计
             await AuditService.log(tx, {
@@ -331,8 +339,8 @@ export async function createRefundStatement(input: z.infer<typeof createRefundSc
                 );
             }
 
-            revalidateTag(`finance-ar-${tenantId}`, 'default');
-            revalidateTag(`finance-ar-detail-${originalStatement.id}`, 'default');
+            revalidateTag(`finance-ar-${tenantId}`, {});
+            revalidateTag(`finance-ar-detail-${originalStatement.id}`, {});
             logger.info('[finance] createRefundStatement 执行成功', { refundNo });
 
             return {

@@ -50,8 +50,8 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
             session.user.id,
             JSON.stringify({ reason: data.reason, remark: data.remark })
         );
-        revalidateTag('orders', 'default');
-        revalidateTag(`order-${data.orderId}`, 'default');
+        revalidateTag('orders', {});
+        revalidateTag(`order-${data.orderId}`, {});
 
         return {
             success: true,
@@ -95,8 +95,8 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
             session.user.id
         );
 
-        revalidateTag('orders', 'default');
-        revalidateTag(`order-${data.orderId}`, 'default');
+        revalidateTag('orders', {});
+        revalidateTag(`order-${data.orderId}`, {});
 
         return {
             success: true,

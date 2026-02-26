@@ -1,0 +1,2 @@
+ALTER TABLE "journal_entries" ADD COLUMN "currency" varchar(3) DEFAULT 'CNY' NOT NULL;--> statement-breakpoint
+ALTER TABLE "journal_entries" ADD COLUMN "exchange_rate" numeric(15, 6) DEFAULT '1.000000' NOT NULL;

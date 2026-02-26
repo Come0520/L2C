@@ -14,7 +14,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
     let createdTicketId: string | null = null;
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/after-sales', { timeout: 60000 });
+        await page.goto('/after-sales', { timeout: 60000, waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('heading', { name: /售后/ }).first()).toBeVisible({ timeout: 15000 }).catch(() => { });
     });
 
@@ -23,7 +23,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
 
         // 获取动态有效订单 ID，避免因写死 UUID 导致拦截
         const validOrderId = await getValidOrderId(page);
-        await page.goto('/after-sales', { timeout: 60000 });
+        await page.goto('/after-sales', { timeout: 60000, waitUntil: 'domcontentloaded' });
 
         // 点击创建按钮
         const createBtn = page.getByRole('button', { name: /创建|新增|新建/ });
@@ -219,7 +219,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
 
 test.describe('定责异议与仲裁 (Liability Dispute)', () => {
     test('P0-6: 责任方应能提出异议', async ({ page }) => {
-        await page.goto('/after-sales');
+        await page.goto('/after-sales', { waitUntil: 'domcontentloaded' });
         if (await skipOnDataLoadError(page)) return;
 
         // 导航到详情页

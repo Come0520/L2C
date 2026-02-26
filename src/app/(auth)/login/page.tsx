@@ -15,7 +15,7 @@ export default async function LoginPage() {
 
     // 已登录，跳转到首页
     if (session) {
-        redirect('/');
+        redirect('/dashboard');
     }
 
     return (

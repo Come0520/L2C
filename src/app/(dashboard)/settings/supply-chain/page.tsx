@@ -1,6 +1,6 @@
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Truck, Package, Users } from 'lucide-react';
+import { Package, Users } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Plus } from 'lucide-react';
 
@@ -56,22 +56,7 @@ export default function SupplyChainSettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Truck className="h-5 w-5" />
-                            物流配置
-                        </CardTitle>
-                        <CardDescription>
-                            配置物流渠道和运费规则
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-center py-8 text-muted-foreground">
-                            物流配置功能开发中...
-                        </div>
-                    </CardContent>
-                </Card>
+
             </div>
         </div>
     );

@@ -62,6 +62,7 @@ async function checkAdmin(
 async function isLastAdmin(tenantId: string, excludeUserId: string): Promise<boolean> {
   const admins = await db.query.users.findMany({
     where: and(eq(users.tenantId, tenantId), eq(users.isActive, true), ne(users.id, excludeUserId)),
+    limit: 500, // [P2防御] 防止异常情况下的数据暴增
   });
   // 检查排除目标用户后，是否还有其他管理员
   const remainingAdmins = admins.filter((u) => {

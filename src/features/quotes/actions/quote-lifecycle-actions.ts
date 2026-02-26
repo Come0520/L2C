@@ -98,7 +98,7 @@ export const submitQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单提交成功', { quoteId: data.id });
     return { success: true };
   }
@@ -154,7 +154,7 @@ export const rejectQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单拒绝成功', { quoteId: data.id });
     return { success: true };
   }
@@ -235,7 +235,7 @@ export const lockQuote = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.id}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单锁定成功', { quoteId: data.id });
     return updated;
   }
@@ -310,7 +310,7 @@ export const unlockQuote = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.id}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单解锁成功', { quoteId: data.id });
     return updated;
   }
@@ -365,7 +365,7 @@ export const approveQuote = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价单审批成功', { quoteId: data.id });
     return { success: true };
   }
@@ -399,7 +399,7 @@ export const rejectQuoteDiscount = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     return { success: true };
   }
 );
@@ -456,7 +456,7 @@ export const convertQuoteToOrder = createSafeAction(
 
     revalidatePath('/orders');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价转订单成功', { quoteId: data.quoteId, orderId: order?.id });
     return order;
   }
@@ -516,7 +516,7 @@ export const createNextVersion = createSafeAction(
     revalidatePath('/quotes');
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 报价新版本创建成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
     return newQuote;
   }

@@ -130,8 +130,8 @@ const adjustInventoryActionInternal = createSafeAction(adjustInventorySchema, as
                 description: `手动调整: ${data.quantity > 0 ? '+' : ''}${data.quantity}`,
             });
 
-            revalidateTag(INVENTORY_CACHE_TAG, 'default');
-            revalidateTag(INVENTORY_ALERTS_TAG, 'default');
+            revalidateTag(INVENTORY_CACHE_TAG, {});
+            revalidateTag(INVENTORY_ALERTS_TAG, {});
             revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
 
 
@@ -301,8 +301,8 @@ const transferInventoryActionInternal = createSafeAction(transferInventorySchema
                 });
             }
 
-            revalidateTag(INVENTORY_CACHE_TAG, 'default');
-            revalidateTag(INVENTORY_ALERTS_TAG, 'default');
+            revalidateTag(INVENTORY_CACHE_TAG, {});
+            revalidateTag(INVENTORY_ALERTS_TAG, {});
             revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
 
 
@@ -549,7 +549,7 @@ const setminStockActionInternal = createSafeAction(setminStockSchema, async (dat
             });
         }
 
-        revalidateTag(INVENTORY_ALERTS_TAG, 'default');
+        revalidateTag(INVENTORY_ALERTS_TAG, {});
         revalidatePath(SUPPLY_CHAIN_PATHS.INVENTORY);
 
 

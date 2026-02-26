@@ -194,7 +194,7 @@ export async function createShowroomItem(input: z.input<typeof createShowroomIte
             newValues: newItem as Record<string, unknown>
         });
 
-        revalidateTag('showroom-list', 'default');
+        revalidateTag('showroom-list', {});
         await invalidateShowroomCache(session.user.tenantId);
 
         logger.info('创建展厅素材成功', { itemId: newItem.id, tenantId: session.user.tenantId, createdBy: session.user.id });
@@ -266,8 +266,8 @@ export async function updateShowroomItem(input: z.input<typeof updateShowroomIte
             newValues: updatedItem as Record<string, unknown>
         });
 
-        revalidateTag('showroom-list', 'default');
-        revalidateTag(`showroom-item-${id}`, 'default');
+        revalidateTag('showroom-list', {});
+        revalidateTag(`showroom-item-${id}`, {});
         await invalidateShowroomCache(session.user.tenantId);
 
         logger.info('更新展厅素材成功', { itemId: id, tenantId: session.user.tenantId, updatedBy: session.user.id });
@@ -315,8 +315,8 @@ export async function deleteShowroomItem(input: z.input<typeof deleteShowroomIte
             oldValues: existing as Record<string, unknown>
         });
 
-        revalidateTag('showroom-list', 'default');
-        revalidateTag(`showroom-item-${id}`, 'default');
+        revalidateTag('showroom-list', {});
+        revalidateTag(`showroom-item-${id}`, {});
         await invalidateShowroomCache(session.user.tenantId);
 
         logger.info('软删除展厅素材成功', { itemId: id, tenantId: session.user.tenantId, deletedBy: session.user.id });

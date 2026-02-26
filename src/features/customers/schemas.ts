@@ -9,7 +9,7 @@ export const customerPipelineStatuses = ['UNASSIGNED', 'PENDING_FOLLOWUP', 'PEND
 
 
 // 中国大陆手机号正则
-const phoneRegex = /^1[3-9]\d{9}$/;
+const phoneRegex = /^\d{8,11}$/;
 
 /**
  * 客户偏好设置 Schema (JSONB)

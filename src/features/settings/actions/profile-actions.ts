@@ -15,7 +15,7 @@ import { logger } from '@/shared/lib/logger';
  */
 const updateProfileSchema = z.object({
     name: z.string().min(2, '姓名至少2个字符').max(20, '姓名最多20个字符'),
-    phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确').optional().or(z.literal('')),
+    phone: z.string().regex(/^\d{8,11}$/, '手机号格式不正确').optional().or(z.literal('')),
     image: z.string().url('头像链接无效').optional().or(z.literal('')),
 });
 

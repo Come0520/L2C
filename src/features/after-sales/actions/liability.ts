@@ -170,7 +170,7 @@ const confirmLiabilityNoticeAction = createSafeAction(confirmLiabilitySchema, as
     if (!result.success) return result;
 
     revalidatePath(`/after-sales/${result.afterSalesId}`);
-    revalidateTag('after-sales-analytics', 'default');
+    revalidateTag('after-sales-analytics', {});
 
     // P0 FIX (R2-04): 财务联动移至事务外部，确保幂等性和副作用一致性
     if (result.notice && result.notice.liablePartyType === 'FACTORY' && result.notice.liablePartyId) {

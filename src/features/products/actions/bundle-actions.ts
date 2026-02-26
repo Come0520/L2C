@@ -181,8 +181,8 @@ export async function createBundle(input: z.infer<typeof createBundleSchema>) {
             newValues: created
         });
 
-        revalidateTag('packages', 'default');
-        revalidateTag(`packages-${tenantId}`, 'default');
+        revalidateTag('packages', {});
+        revalidateTag(`packages-${tenantId}`, {});
         revalidatePath('/products/bundles');
         return { success: true, data: created };
     } catch (error) {
@@ -234,8 +234,8 @@ export async function updateBundle(id: string, input: z.infer<typeof updateBundl
             oldValues: { id }
         });
 
-        revalidateTag('packages', 'default');
-        revalidateTag(`packages-${tenantId}`, 'default');
+        revalidateTag('packages', {});
+        revalidateTag(`packages-${tenantId}`, {});
         revalidatePath('/products/bundles');
         return { success: true, data: updated };
     } catch (error) {
@@ -283,8 +283,8 @@ export async function deleteBundle(id: string) {
             oldValues: { id }
         });
 
-        revalidateTag('packages', 'default');
-        revalidateTag(`packages-${tenantId}`, 'default');
+        revalidateTag('packages', {});
+        revalidateTag(`packages-${tenantId}`, {});
         revalidatePath('/products/bundles');
         return { success: true };
     } catch (error) {

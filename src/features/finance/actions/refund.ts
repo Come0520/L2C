@@ -23,7 +23,7 @@ export async function submitRefundRequest(data: z.infer<typeof createRefundReque
     // 双重防护：入口权限检查
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.CREATE)) throw new Error('权限不足：需要财务创建权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)) throw new Error('权限不足：需要财务创建权限');
 
     // Wrap createPaymentBill with REFUND type
     return createPaymentBill({

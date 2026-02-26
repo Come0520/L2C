@@ -232,9 +232,9 @@ export async function updateSalesTarget(
 
     // 批量失效相关缓存
     const { revalidateTag } = await import('next/cache');
-    revalidateTag('sales-targets', 'default');
-    revalidateTag('sales-dashboard', 'default');
-    revalidateTag('sales-analytics', 'default');
+    revalidateTag('sales-targets', {});
+    revalidateTag('sales-dashboard', {});
+    revalidateTag('sales-analytics', {});
 
     return { success: true };
   } catch (error) {
@@ -330,9 +330,9 @@ export async function adjustSalesTarget(
     });
 
     const { revalidateTag } = await import('next/cache');
-    revalidateTag('sales-targets', 'default');
-    revalidateTag('sales-dashboard', 'default');
-    revalidateTag('sales-analytics', 'default');
+    revalidateTag('sales-targets', {});
+    revalidateTag('sales-dashboard', {});
+    revalidateTag('sales-analytics', {});
 
     return { success: true };
   } catch (error) {
@@ -412,9 +412,9 @@ export async function confirmSalesTarget(
     });
 
     const { revalidateTag } = await import('next/cache');
-    revalidateTag('sales-targets', 'default');
-    revalidateTag('sales-dashboard', 'default');
-    revalidateTag('sales-analytics', 'default');
+    revalidateTag('sales-targets', {});
+    revalidateTag('sales-dashboard', {});
+    revalidateTag('sales-analytics', {});
 
     return { success: true };
   } catch (error) {

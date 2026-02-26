@@ -6,6 +6,10 @@ export const userRoleEnum = pgEnum('user_role', [
   'MANAGER',
   'WORKER',
   'FINANCE',
+  'FINANCE_BOOKKEEPER', // 记账员
+  'FINANCE_REVIEWER',   // 复核员
+  'FINANCE_SUPERVISOR', // 财务主管
+  'FINANCE_READONLY',   // 财务查阅
   'SUPPLY',
 ]);
 
@@ -509,4 +513,50 @@ export const workerSkillTypeEnum = pgEnum('worker_skill_type', [
   'INSTALL_WALLCLOTH', // 安装墙布
   'MEASURE_WALLPANEL', // 测量墙咔
   'INSTALL_WALLPANEL', // 安装墙咔
+]);
+
+// ==================== 会计模块枚举 ====================
+
+// 会计科目分类枚举（五大类）
+export const accountCategoryEnum = pgEnum('account_category', [
+  'ASSET',       // 资产
+  'LIABILITY',   // 负债
+  'EQUITY',      // 所有者权益
+  'INCOME',      // 收入
+  'EXPENSE',     // 费用
+]);
+
+// 凭证状态枚举
+export const journalEntryStatusEnum = pgEnum('journal_entry_status', [
+  'DRAFT',           // 草稿
+  'PENDING_REVIEW',  // 待复核
+  'POSTED',          // 已记账（锁定）
+]);
+
+// 凭证来源类型枚举
+export const journalSourceTypeEnum = pgEnum('journal_source_type', [
+  'MANUAL',        // 手工录入
+  'AUTO_RECEIPT',  // 自动-收款单
+  'AUTO_PAYMENT',  // 自动-付款单
+  'AUTO_ORDER',    // 自动-销售订单
+  'AUTO_PURCHASE', // 自动-采购入库
+  'AUTO_TRANSFER', // 自动-资金转账
+  'AUTO_EXPENSE',  // 自动-费用录入
+  'REVERSAL',      // 红字冲销
+]);
+
+// 账期状态枚举
+export const accountingPeriodStatusEnum = pgEnum('accounting_period_status', [
+  'OPEN',   // 开放（可编辑）
+  'CLOSED', // 已关闭（锁定，不可逆）
+]);
+
+// 财务审计日志操作类型枚举
+export const financeAuditActionEnum = pgEnum('finance_audit_action', [
+  'CREATE',          // 创建
+  'UPDATE',          // 更新（仅限草稿状态）
+  'POST',            // 记账
+  'REVERSE',         // 红字冲销
+  'CLOSE_PERIOD',    // 关闭账期
+  'IMPORT',          // 批量导入
 ]);

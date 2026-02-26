@@ -147,7 +147,7 @@ const createAfterSalesTicketAction = createSafeAction(createTicketSchema, async 
         logger.info(`[After Sales] Successfully created ticket: ${newTicket.id} for order: ${data.orderId}`);
 
         revalidatePath('/after-sales');
-        revalidateTag('after-sales-analytics', 'default');
+        revalidateTag('after-sales-analytics', {});
         return { success: true, data: newTicket, message: "售后工单创建成功" };
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "服务器内部错误";
@@ -276,9 +276,9 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
 
     logger.info(`[After Sales] Ticket ${data.ticketId} status updated to ${data.status} by user ${session.user.id}`);
 
-    revalidateTag(`after-sales-ticket-${data.ticketId}`, 'default');
-    revalidateTag('after-sales-list', 'default');
-    revalidateTag('after-sales-analytics', 'default');
+    revalidateTag(`after-sales-ticket-${data.ticketId}`, {});
+    revalidateTag('after-sales-list', {});
+    revalidateTag('after-sales-analytics', {});
     return { success: true, message: '状态更新成功' };
 });
 
@@ -365,7 +365,7 @@ export async function closeResolutionCostClosure(ticketId: string) {
 
         logger.info(`[After Sales] Ticket ${ticketId} financially closed with internal loss: ${internalLoss}`);
 
-        revalidateTag(`after-sales-ticket-${ticketId}`, 'default');
+        revalidateTag(`after-sales-ticket-${ticketId}`, {});
         return { success: true, message: '成本结案成功' };
     } catch (err) {
         logger.error(`[After Sales] Failed to close cost for ticket ${ticketId}:`, { error: err });

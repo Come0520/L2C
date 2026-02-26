@@ -43,7 +43,7 @@ import { ROLES } from '@/shared/config/roles';
 const navLinks = [
   {
     label: '工作台',
-    href: '/',
+    href: '/dashboard',
     icon: Home,
     requiredPermission: null, // 所有角色可见
   },

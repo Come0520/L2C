@@ -63,7 +63,7 @@ export async function createDebitNote(input: z.infer<typeof createDebitNoteSchem
         const userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
@@ -94,7 +94,7 @@ export async function createDebitNote(input: z.infer<typeof createDebitNoteSchem
             details: { debitNoteNo: debitNote.debitNoteNo, amount: data.amount }
         });
 
-        revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
+        revalidateTag(`finance-debit-notes-${tenantId}`, {});
 
         return {
             success: true,
@@ -136,7 +136,7 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
         const userId = session.user.id;
 
         // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
@@ -207,8 +207,8 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
                 });
             });
 
-            revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
-            revalidateTag(`finance-ap-${tenantId}`, 'default');
+            revalidateTag(`finance-debit-notes-${tenantId}`, {});
+            revalidateTag(`finance-ap-${tenantId}`, {});
 
             return { success: true, message: '借项通知单已审批通过并生效' };
         } else {
@@ -237,7 +237,7 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
                 details: { debitNoteNo: debitNote.debitNoteNo, approved: false, reason: rejectReason }
             });
 
-            revalidateTag(`finance-debit-notes-${tenantId}`, 'default');
+            revalidateTag(`finance-debit-notes-${tenantId}`, {});
 
             return { success: true, message: '借项通知单已拒绝' };
         }
@@ -270,7 +270,7 @@ export async function getDebitNotes(page = 1, pageSize = 20) {
     const tenantId = session.user.tenantId;
 
     // 权限检查 F-29
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限', data: [] };
     }
 
@@ -302,7 +302,7 @@ export async function getDebitNote(id: string) {
     }
 
     // 权限检查 F-29
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限' };
     }
 

@@ -7,14 +7,16 @@ import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Save from 'lucide-react/dist/esm/icons/save';
-import { cn } from '@/shared/lib/utils';
+// Remove unused cn import
 import { Button } from '@/shared/ui/button';
 import { TriStateCheckbox, TriState, TriStateLabel } from '@/shared/ui/tri-state-checkbox';
 import {
     saveAllRoleOverrides,
+    restoreDefaultRoleOverrides,
     type PermissionMatrixData,
     type RoleOverrideData
 } from '@/features/settings/actions/role-override-actions';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 /**
@@ -50,6 +52,13 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
     // 原始状态（用于比较是否修改）
     const originalStates = useMemo(() => buildInitialStates(data.roles), [data.roles]);
+
+    // 监听外部 data 的变化并重置内部状态，以确保在服务器数据更新（例如恢复预设后）界面能同步
+    React.useEffect(() => {
+        setPermissionStates(buildInitialStates(data.roles));
+    }, [data.roles]);
+
+    const router = useRouter();
 
     // 是否有未保存的修改
     const hasChanges = useMemo(() => {
@@ -176,6 +185,28 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
         toast.info('已重置为当前保存的状态');
     };
 
+    // 恢复为推荐系统预设
+    const handleRestoreDefaults = async () => {
+        if (!confirm('确定要恢复所有角色的推荐预设权限吗？这将会清空您所有的自定义修改。')) {
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const result = await restoreDefaultRoleOverrides();
+            if (result.success) {
+                toast.success(result.message);
+                router.refresh();
+            } else {
+                toast.error(result.message);
+            }
+        } catch (error) {
+            logger.error('恢复推荐预设失败:', error);
+            toast.error('操作失败，请重试');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
             {/* 工具栏 */}
@@ -191,11 +222,19 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                     <Button
                         variant="outline"
                         size="sm"
+                        onClick={handleRestoreDefaults}
+                        disabled={isSaving}
+                    >
+                        恢复推荐配置
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleReset}
                         disabled={!hasChanges || isSaving}
                     >
                         <RotateCcw className="w-4 h-4 mr-1" />
-                        重置
+                        放弃更改
                     </Button>
                     <Button
                         size="sm"

@@ -87,8 +87,8 @@ const updateOrderStatusActionInternal = createSafeAction(updateOrderStatusSchema
 
     logger.info('[orders] 订单状态更新成功:', { id: data.id, tenantId: session.user.tenantId, oldStatus: order.status, newStatus: data.status });
 
-    revalidateTag('orders', 'default');
-    revalidateTag(`order-${data.id}`, 'default');
+    revalidateTag('orders', {});
+    revalidateTag(`order-${data.id}`, {});
 
     return { success: true, id: data.id, newStatus: data.status };
 });
@@ -125,8 +125,8 @@ const requestOrderCancellationActionInternal = createSafeAction(requestOrderCanc
         data.reason
     );
 
-    revalidateTag('orders', 'default');
-    revalidateTag(`order-${data.orderId}`, 'default');
+    revalidateTag('orders', {});
+    revalidateTag(`order-${data.orderId}`, {});
 
     logger.info('[orders] 申请取消订单提交成功:', { orderId: data.orderId, tenantId: session.user.tenantId, approvalId: result.approvalId });
 
@@ -167,8 +167,8 @@ const pauseOrderActionInternal = createSafeAction(pauseOrderSchema, async (data,
         newValues: { reason: data.reason },
     });
 
-    revalidateTag('orders', 'default');
-    revalidateTag(`order-${data.orderId}`, 'default');
+    revalidateTag('orders', {});
+    revalidateTag(`order-${data.orderId}`, {});
 
     logger.info('[orders] 订单已被叫停:', { orderId: data.orderId, tenantId: session.user.tenantId, reason: data.reason });
 
@@ -208,8 +208,8 @@ const resumeOrderActionInternal = createSafeAction(resumeOrderSchema, async (dat
         newValues: { remark: data.remark },
     });
 
-    revalidateTag('orders', 'default');
-    revalidateTag(`order-${data.orderId}`, 'default');
+    revalidateTag('orders', {});
+    revalidateTag(`order-${data.orderId}`, {});
 
     logger.info('[orders] 订单已恢复运行:', { orderId: data.orderId, tenantId: session.user.tenantId, remark: data.remark });
 

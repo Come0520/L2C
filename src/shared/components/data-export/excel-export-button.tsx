@@ -19,6 +19,10 @@ interface ExcelExportButtonProps<T> extends Omit<ButtonProps, 'onClick'> {
      * 导出的文件名（不含扩展名）
      */
     filename?: string;
+    /**
+     * 工作表名称
+     */
+    sheetName?: string;
 }
 
 /**

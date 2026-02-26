@@ -95,7 +95,59 @@ function createEnrichedHeaders(request: NextRequest, token: JWT): Headers {
 export default async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  // 1. 公开路由直接放行
+  // ========================================
+  // 0. 页面路由分流：已登录用户访问落地页 → 自动跳转工作台
+  // ========================================
+  if (pathname === '/') {
+    const sessionToken = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+    });
+    if (sessionToken) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    // 未登录用户：放行到 (marketing) 落地页
+    return NextResponse.next();
+  }
+
+  // ========================================
+  // 1. 页面路由认证守卫：未登录用户访问受保护路由 → 重定向到 Landing Page
+  // ========================================
+  if (!pathname.startsWith('/api')) {
+    // 页面路由中的公开路径白名单（无需登录即可访问）
+    const publicPagePaths = [
+      '/login',
+      '/register',
+      '/forgot-password',
+      '/reset-password',
+      '/unbound',
+    ];
+
+    const isPublicPage = publicPagePaths.some(
+      (path) => pathname === path || pathname.startsWith(path + '/')
+    );
+
+    // 公开页面路由：直接放行
+    if (isPublicPage) {
+      return NextResponse.next();
+    }
+
+    // 受保护页面路由：检查登录状态
+    const pageToken = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+    });
+
+    // 未登录 → 重定向到 Landing Page
+    if (!pageToken) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    // 已登录 → 放行
+    return NextResponse.next();
+  }
+
+  // 2. 公开 API 路由直接放行
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
@@ -157,13 +209,29 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
  */
 export const config = {
   matcher: [
-    /*
-     * 匹配所有 /api 路由，但排除以下路径：
-     * - /api/auth (NextAuth.js 内部处理)
-     * - /api/webhooks (使用独立验证)
-     * - /api/health (健康检查无需认证)
-     * - /api/public (公开 API)
-     */
+    // 匹配根路径（用于落地页分流）
+    '/',
+    // 匹配所有 /api 路由（排除公开端点）
     '/api/((?!auth|webhooks|health|public|miniprogram).*)',
+    // 匹配受保护的页面路由（未登录用户将被重定向到 Landing Page）
+    '/dashboard/:path*',
+    '/after-sales/:path*',
+    '/analytics/:path*',
+    '/channels/:path*',
+    '/customers/:path*',
+    '/finance/:path*',
+    '/leads/:path*',
+    '/notifications/:path*',
+    '/orders/:path*',
+    '/profile/:path*',
+    '/projects/:path*',
+    '/quote-bundles/:path*',
+    '/quotes/:path*',
+    '/service/:path*',
+    '/settings/:path*',
+    '/showroom/:path*',
+    '/supply-chain/:path*',
+    '/workbench/:path*',
+    '/workflow/:path*',
   ],
 };

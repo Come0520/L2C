@@ -10,7 +10,7 @@
  * - UUID 校验：roleId 必须 UUID 格式
  * - 多租户隔离：所有查询带 tenantId
  * - 审计日志：AuditService.log 含 oldValues/newValues
- * - 缓存失效：revalidateTag('roles', 'default') + revalidatePath
+ * - 缓存失效：revalidateTag('roles') + revalidatePath
  */
 
 import { db } from '@/shared/api/db';
@@ -214,7 +214,7 @@ const createRoleInternal = createSafeAction(createRoleSchema, async (data, { ses
     logger.info(`[Admin] 用户 ${session.user.id} 成功创建角色: ${name} (${newRole.id}), 权限数: ${permissions.length}`);
 
     // 使 RBAC 缓存失效
-    revalidateTag('roles', 'default');
+    revalidateTag('roles', {});
     revalidatePath('/admin/settings/roles');
 
     return { success: true, data: newRole };
@@ -288,7 +288,7 @@ const updateRolePermissionsInternal = createSafeAction(updateRolePermissionsSche
     logger.info(`[Admin] 用户 ${session.user.id} 更新了角色 ${roleId} 的权限, 旧权限数: ${(oldRole.permissions as string[])?.length || 0}, 新权限数: ${permissions.length}`);
 
     // 使 RBAC 缓存失效
-    revalidateTag('roles', 'default');
+    revalidateTag('roles', {});
     revalidatePath('/admin/settings/roles');
 
     return { success: true, data: updated };
@@ -370,7 +370,7 @@ const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { ses
     logger.info(`[Admin] 用户 ${session.user.id} 删除了角色: ${targetRole.name} (${roleId})`);
 
     // 使 RBAC 缓存失效
-    revalidateTag('roles', 'default');
+    revalidateTag('roles', {});
     revalidatePath('/admin/settings/roles');
 
     return { success: true };

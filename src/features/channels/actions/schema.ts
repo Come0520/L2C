@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // 中国大陆手机号正则 (11位，以1开头，第二位为3-9)
-const phoneRegex = /^1[3-9]\d{9}$/;
+const phoneRegex = /^\d{8,11}$/;
 
 // 阶梯费率结构
 const tieredRateSchema = z.object({

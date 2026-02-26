@@ -116,7 +116,7 @@ const executeMeasurementImportActionInternal = createSafeAction(executeImportSch
     await updateQuoteTotal(data.quoteId, session.user.tenantId);
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 测量数据成功导入报价单', { quoteId: data.quoteId, actionCount: data.actions.length });
     return result;
 });

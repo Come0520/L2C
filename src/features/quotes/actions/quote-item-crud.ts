@@ -214,7 +214,7 @@ const createQuoteItemActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 行项目创建成功', { itemId: newItem.id, quoteId: data.quoteId });
     return newItem;
   }
@@ -412,7 +412,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   });
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', 'default');
+  revalidateTag('quotes', {});
   return { success: true };
 });
 
@@ -458,7 +458,7 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
   await updateQuoteTotal(existing.quoteId, userTenantId);
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', 'default');
+  revalidateTag('quotes', {});
   return { success: true };
 });
 
@@ -516,7 +516,7 @@ export const reorderQuoteItems = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 行项目排序完成', { quoteId: data.quoteId });
     return { success: true };
   }

@@ -252,6 +252,32 @@
   }
 
   --animate-shake: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+
+  /* 落地页弹幕无限滚动 (Marquee) */
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  --animate-marquee: marquee 30s linear infinite;
+
+  /* 落地页定价 Shimmer 扫光 */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-200%) skewX(-15deg);
+    }
+
+    100% {
+      transform: translateX(200%) skewX(-15deg);
+    }
+  }
+
+  --animate-shimmer: shimmer 3s ease-in-out infinite;
 }
 
 /* Claymorphism Color Muting - Reduce contrast for a harmonious look */

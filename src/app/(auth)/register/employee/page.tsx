@@ -71,7 +71,7 @@ function EmployeeRegisterContent() {
     }
 
     // 手机号格式校验
-    if (!/^1[3-9]\d{9}$/.test(formData.phone)) {
+    if (!/^\d{8,11}$/.test(formData.phone)) {
       setError('请输入有效的手机号');
       return;
     }

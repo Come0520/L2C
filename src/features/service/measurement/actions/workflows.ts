@@ -102,7 +102,7 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
             }
         );
 
-        revalidateTag('measure-task', 'default');
+        revalidateTag('measure-task', {});
         revalidatePath('/service/measurement');
         revalidatePath(`/service/measurement/${data.taskId}`);
         return { success: true, data: res };
@@ -202,7 +202,7 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
             }
         );
 
-        revalidateTag('measure-task', 'default');
+        revalidateTag('measure-task', {});
         revalidatePath('/service/measurement');
         revalidatePath(`/service/measurement/${id}`);
         return { success: true };
@@ -297,7 +297,7 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
         }
     );
 
-    revalidateTag('measure-task', 'default');
+    revalidateTag('measure-task', {});
     revalidatePath(`/service/measurement/${taskId}`);
     return { success: true, round: newRound, variant: newVariant };
 }

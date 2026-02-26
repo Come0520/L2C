@@ -28,7 +28,7 @@ const getOrderProfitSchema = z.object({
 
 const getOrderProfitabilityInternal = createSafeAction(getOrderProfitSchema, async ({ orderId }, { session }) => {
     // 权限检查 (Permission check)
-    await checkPermission(session, PERMISSIONS.FINANCE.VIEW);
+    await checkPermission(session, PERMISSIONS.FINANCE.REPORT_VIEW);
     const tenantId = session.user.tenantId;
 
     // 1. 获取订单与营收 (Fetch Order and Revenue)

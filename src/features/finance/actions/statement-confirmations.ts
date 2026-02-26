@@ -55,7 +55,7 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
         }
 
         // 权限检查：对账
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_RECONCILE)) {
             return { success: false, error: '权限不足：需要对账权限' };
         }
 
@@ -162,7 +162,7 @@ export async function generateStatementConfirmation(input: z.infer<typeof genera
                 }
             });
 
-            revalidateTag(`finance-confirmation-${tenantId}`, 'default');
+            revalidateTag(`finance-confirmation-${tenantId}`, {});
 
             logger.info('[finance] generateStatementConfirmation 执行成功', { confirmationNo: confirmation.confirmationNo });
 
@@ -202,7 +202,7 @@ export async function confirmStatement(
         }
 
         // 权限检查：对账
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.RECONCILE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_RECONCILE)) {
             return { success: false, error: '权限不足：需要对账权限' };
         }
 
@@ -285,7 +285,7 @@ export async function confirmStatement(
                 details: { confirmedBy }
             });
 
-            revalidateTag(`finance-confirmation-${tenantId}`, 'default');
+            revalidateTag(`finance-confirmation-${tenantId}`, {});
 
             logger.info('[finance] confirmStatement 执行成功', { confirmationId });
 
@@ -313,7 +313,7 @@ export async function getStatementConfirmations(page = 1, pageSize = 20) {
         return { success: false, error: '未授权', data: [] };
     }
 
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AP_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限', data: [] };
     }
 

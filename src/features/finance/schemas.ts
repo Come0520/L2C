@@ -68,3 +68,29 @@ export const getReceivablesSchema = z.object({
 // Types
 export type CreateReceivableInput = z.infer<typeof createReceivableSchema>;
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
+
+// ==================== 费用录入 Schemas (Phase 6) ====================
+
+export const createExpenseSchema = z.object({
+    accountId: z.string().uuid('请选择有效的费用科目'),
+    amount: z.coerce.number().min(0.01, '金额必须大于0'),
+    expenseDate: z.coerce.date().default(() => new Date()),
+    description: z.string().min(1, '请输入费用摘要').max(500, '摘要过长'),
+    createVoucher: z.boolean().default(false), // 是否自动生成凭证
+});
+
+export const importExpenseRowSchema = z.object({
+    accountCode: z.string().min(1, '科目编码不能为空'),
+    amount: z.coerce.number().min(0.01, '金额必须大于0'),
+    expenseDate: z.coerce.date(),
+    description: z.string().min(1, '摘要不能为空').max(500, '摘要过长'),
+});
+
+export const importExpensesSchema = z.object({
+    rows: z.array(importExpenseRowSchema).min(1, '导入数据不能为空'),
+    createVoucher: z.boolean().default(false), // 是否自动生成凭证
+});
+
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type ImportExpenseRowInput = z.infer<typeof importExpenseRowSchema>;
+export type ImportExpensesInput = z.infer<typeof importExpensesSchema>;

@@ -63,7 +63,7 @@ export const createRoomActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 房间创建成功', { roomId: newRoom.id, quoteId: data.quoteId });
     return newRoom;
   }
@@ -119,7 +119,7 @@ export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, c
   });
 
   revalidatePath(`/quotes/${updated.quoteId}`);
-  revalidateTag('quotes', 'default');
+  revalidateTag('quotes', {});
   logger.info('[quotes] 房间更新成功', { roomId: updated.id });
   return updated;
 });
@@ -169,7 +169,7 @@ export const deleteRoom = createSafeAction(
     });
 
     revalidatePath(`/quotes/${existing.quoteId}`);
-    revalidateTag('quotes', 'default');
+    revalidateTag('quotes', {});
     logger.info('[quotes] 房间删除成功', { roomId: data.id });
     return { success: true };
   }

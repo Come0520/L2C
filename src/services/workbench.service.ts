@@ -3,6 +3,7 @@ import { leads } from "@/shared/api/schema/leads";
 import { orders } from "@/shared/api/schema/orders";
 import { purchaseOrders, productionTasks } from "@/shared/api/schema/supply-chain";
 import { afterSalesTickets } from "@/shared/api/schema/after-sales";
+import { approvalTasks } from "@/shared/api/schema/approval";
 import { eq, and, lt, inArray } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { users } from "@/shared/api/schema";
@@ -16,7 +17,7 @@ const logger = createLogger('WorkbenchService');
 // ============ 待办事项类型定义 ============
 
 /** 待办事项分类 */
-export type TodoCategory = 'LEAD' | 'ORDER' | 'PO' | 'PRODUCTION' | 'AFTER_SALES';
+export type TodoCategory = 'LEAD' | 'ORDER' | 'PO' | 'PRODUCTION' | 'AFTER_SALES' | 'APPROVAL';
 
 /** 待办事项元数据（用于 Accordion 标题行） */
 export interface TodoCategoryMeta {
@@ -80,6 +81,16 @@ export interface AfterSalesTodItem {
     createdAt: Date;
 }
 
+/** 审批待办 */
+export interface ApprovalTodoItem {
+    id: string;
+    approvalId: string;
+    entityType: string | null;
+    status: string | null;
+    createdAt: Date | null;
+    timeoutAt: Date | null;
+}
+
 /** 统一的待办响应 */
 export interface TodosResponse {
     categories: TodoCategoryMeta[];
@@ -88,6 +99,7 @@ export interface TodosResponse {
     purchaseOrders: POTodoItem[];
     productionTasks: ProductionTodoItem[];
     afterSales: AfterSalesTodItem[];
+    approvalTodos: ApprovalTodoItem[];
 }
 
 // ============ 报警类型定义 ============
@@ -146,6 +158,7 @@ export class WorkbenchService {
                         draftPOs,
                         pendingPrd,
                         pendingAS,
+                        pendingApprovals,
                     ] = await Promise.all([
                         // 1. 待跟进线索
                         db.query.leads.findMany({
@@ -227,7 +240,39 @@ export class WorkbenchService {
                             logger.error('查询售后工单失败', { tenantId, error: e });
                             return [];
                         }),
+
+                        // 6. 待审批任务（按当前用户过滤）
+                        db.query.approvalTasks.findMany({
+                            where: and(
+                                eq(approvalTasks.tenantId, tenantId),
+                                eq(approvalTasks.approverId, userId),
+                                eq(approvalTasks.status, 'PENDING')
+                            ),
+                            columns: {
+                                id: true, approvalId: true, status: true,
+                                createdAt: true, timeoutAt: true,
+                            },
+                            with: {
+                                approval: {
+                                    columns: { entityType: true },
+                                },
+                            },
+                            limit: 50,
+                        }).catch(e => {
+                            logger.error('查询审批待办失败', { tenantId, userId, error: e });
+                            return [];
+                        }),
                     ]);
+
+                    // 将关联查询的 entityType 提取到顶层
+                    const normalizedApprovals: ApprovalTodoItem[] = (pendingApprovals as any[]).map(t => ({
+                        id: t.id,
+                        approvalId: t.approvalId,
+                        entityType: t.approval?.entityType ?? null,
+                        status: t.status,
+                        createdAt: t.createdAt,
+                        timeoutAt: t.timeoutAt,
+                    }));
 
                     const categories: TodoCategoryMeta[] = [
                         { category: 'LEAD', label: '待跟进线索', count: pendingLeads.length, icon: 'Users', color: 'blue' },
@@ -235,6 +280,7 @@ export class WorkbenchService {
                         { category: 'PO', label: '草稿采购单', count: draftPOs.length, icon: 'Clipboard', color: 'purple' },
                         { category: 'PRODUCTION', label: '待处理生产', count: pendingPrd.length, icon: 'Factory', color: 'cyan' },
                         { category: 'AFTER_SALES', label: '售后工单', count: pendingAS.length, icon: 'Wrench', color: 'emerald' },
+                        { category: 'APPROVAL', label: '待审批', count: normalizedApprovals.length, icon: 'ClipboardCheck', color: 'orange' },
                     ];
 
                     return {
@@ -244,6 +290,7 @@ export class WorkbenchService {
                         purchaseOrders: draftPOs as POTodoItem[],
                         productionTasks: pendingPrd as ProductionTodoItem[],
                         afterSales: pendingAS as AfterSalesTodItem[],
+                        approvalTodos: normalizedApprovals,
                     };
                 } catch (error) {
                     throw new WorkbenchError(WorkbenchErrors.FETCH_TODOS_FAILED, { tenantId, userId, error });

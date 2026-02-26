@@ -229,6 +229,6 @@ export async function GET(request: NextRequest) {
       logger.error('Dashboard Error Message:', error.message);
       logger.error('Dashboard Error Name:', error.name);
     }
-    return apiError('获取数据失败', 500);
+    return apiError('获取数据失败: ' + (error instanceof Error ? error.stack : String(error)), 500);
   }
 }

@@ -250,18 +250,26 @@ export async function registerEmployeeByInvite(
       }
     }
 
-    // 2. 检查手机号是否在当前租户内已存在
+    // 2. 检查手机号是否在当前租户内已存在（仅检查活跃用户，软删除用户不占用手机号）
     const existingUser = await db.query.users.findFirst({
-      where: and(eq(users.phone, userData.phone), eq(users.tenantId, tenantId)),
+      where: and(
+        eq(users.phone, userData.phone),
+        eq(users.tenantId, tenantId),
+        eq(users.isActive, true) // 软删除用户不阻止重新注册
+      ),
     });
     if (existingUser) {
       return { success: false, error: '该手机号已注册' };
     }
 
-    // 3. 如果用户提供了真实邮箱，检查邮箱在当前租户内的唯一性
+    // 3. 如果用户提供了真实邮箱，检查邮箱在当前租户内的唯一性（仅检查活跃用户）
     if (userData.email) {
       const existingEmail = await db.query.users.findFirst({
-        where: and(eq(users.email, userData.email), eq(users.tenantId, tenantId)),
+        where: and(
+          eq(users.email, userData.email),
+          eq(users.tenantId, tenantId),
+          eq(users.isActive, true) // 软删除用户不阻止重新注册
+        ),
       });
       if (existingEmail) {
         return { success: false, error: '该邮箱已被使用' };
@@ -349,18 +357,24 @@ export async function registerCustomerByInvite(
       return { success: false, error: '客户记录不存在' };
     }
 
-    // 检查手机号是否已存在
+    // 检查手机号是否已存在（仅检查活跃用户，软删除用户不占用手机号）
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.phone, userData.phone),
+      where: and(
+        eq(users.phone, userData.phone),
+        eq(users.isActive, true) // 软删除用户不阻止重新注册
+      ),
     });
     if (existingUser) {
       return { success: false, error: '该手机号已注册' };
     }
 
-    // 如果用户提供了真实邮箱，检查邮箱唯一性
+    // 如果用户提供了真实邮箱，检查邮箱唯一性（仅检查活跃用户）
     if (userData.email) {
       const existingEmail = await db.query.users.findFirst({
-        where: eq(users.email, userData.email),
+        where: and(
+          eq(users.email, userData.email),
+          eq(users.isActive, true) // 软删除用户不阻止重新注册
+        ),
       });
       if (existingEmail) {
         return { success: false, error: '该邮箱已被使用' };

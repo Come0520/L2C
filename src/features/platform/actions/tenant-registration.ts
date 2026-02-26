@@ -18,6 +18,7 @@ import { logger } from '@/shared/lib/logger';
 import { AuditService } from '@/shared/services/audit-service';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
+import { notificationService } from '@/features/notifications/service';
 
 // ============ 类型定义 ============
 
@@ -67,7 +68,7 @@ export interface TenantApplicationResult {
 const tenantApplicationSchema = z.object({
   companyName: z.string().min(2, '企业名称至少2个字符').max(100, '企业名称最多100个字符'),
   applicantName: z.string().min(2, '联系人姓名至少2个字符').max(100, '联系人姓名最多100个字符'),
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入有效的手机号'),
+  phone: z.string().regex(/^\d{8,11}$/, '请输入有效的手机号'),
   email: z.string().email('请输入有效的邮箱地址'),
   password: z
     .string()
@@ -209,21 +210,22 @@ export async function submitTenantApplication(
       companyName: data.companyName
     });
 
-    // 5. 异步发送管理员通知 (增加简单重试机制以提高可靠性)
+    // 5. 异步发送管理员通知（邮件 + 站内通知，增加简单重试机制以提高可靠性）
     (async () => {
       const MAX_RETRIES = 3;
       let attempt = 0;
 
       while (attempt < MAX_RETRIES) {
         try {
-          // 查询所有超级管理员
+          // 查询所有超级管理员（含 id、email、name，用于站内通知和邮件）
           const admins = await db.query.users.findMany({
             where: eq(users.isPlatformAdmin, true),
-            columns: { email: true, name: true },
+            columns: { id: true, email: true, name: true, tenantId: true },
           });
 
           if (admins.length === 0) break;
 
+          // ── 5a. 发送邮件通知 ──
           const adminEmails = admins.map((a) => a.email).filter((e): e is string => Boolean(e));
 
           if (adminEmails.length > 0) {
@@ -250,7 +252,32 @@ export async function submitTenantApplication(
               text: `收到新的企业入驻申请：${data.companyName}，请登录后台审批。`,
             });
           }
-          break; // 发送成功，退出循环
+
+          // ── 5b. 发送站内通知（IN_APP）给每位平台管理员 ──
+          // 平台管理员不属于任何租户，使用其自身 id 作为 tenantId 的占位（通知系统要求必填）
+          // 注意：此处使用 Promise.allSettled 确保单条失败不影响其他管理员
+          const notificationResults = await Promise.allSettled(
+            admins.map((admin) =>
+              notificationService.send({
+                // 平台管理员记录的 tenantId 可能为 null，使用 admin.id 作为兜底
+                tenantId: admin.tenantId ?? admin.id,
+                userId: admin.id,
+                type: 'SYSTEM',
+                title: `新的企业入驻申请：${data.companyName}`,
+                content: `联系人：${data.applicantName}，联系电话：${data.phone}，请前往审批页面处理`,
+                link: '/admin/tenants',
+              })
+            )
+          );
+
+          // 记录站内通知的发送结果
+          notificationResults.forEach((res, idx) => {
+            if (res.status === 'rejected') {
+              logger.error(`向管理员 ${admins[idx]?.id} 发送站内通知失败:`, res.reason);
+            }
+          });
+
+          break; // 邮件和通知均已发送，退出循环
         } catch (err) {
           attempt++;
           logger.error(`发送管理员通知失败 (尝试 ${attempt}/${MAX_RETRIES}):`, err);

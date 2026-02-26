@@ -103,3 +103,22 @@ export const RECONCILIATION_LAYERS = {
 
 export type ReconciliationLayer = keyof typeof RECONCILIATION_LAYERS;
 
+// ==================== 凭证管理 (Journal Entries) ====================
+
+export const createJournalEntrySchema = z.object({
+    periodId: z.string().uuid('无效的账期ID'),
+    entryDate: z.coerce.date(),
+    description: z.string().optional(),
+    lines: z.array(z.object({
+        accountId: z.string().uuid('无效的科目ID'),
+        debitAmount: z.number().min(0),
+        creditAmount: z.number().min(0),
+        description: z.string().optional(),
+    })).min(2, '至少需要两条分录'),
+});
+
+export const updateJournalEntryStatusSchema = z.object({
+    id: z.string().uuid(),
+    status: z.enum(['DRAFT', 'PENDING_REVIEW', 'POSTED']),
+    rejectReason: z.string().optional(), // 用于驳回时的备注
+});

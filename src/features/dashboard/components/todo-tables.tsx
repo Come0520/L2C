@@ -13,6 +13,7 @@ import type {
     POTodoItem,
     ProductionTodoItem,
     AfterSalesTodItem,
+    ApprovalTodoItem,
 } from "@/services/workbench.service";
 import { addLeadFollowup, convertLead } from "@/features/leads/actions";
 import { updateOrderStatus } from "@/features/orders/actions/mutations";
@@ -30,15 +31,17 @@ export const TodoCategoryTable = React.memo(function TodoCategoryTable({
 }) {
     switch (category) {
         case "LEAD":
-            return <LeadTable items={data.leads} actionLoading={actionLoading} onAction={onAction} />;
+            return <LeadTable items={data.leads || []} actionLoading={actionLoading} onAction={onAction} />;
         case "ORDER":
-            return <OrderTable items={data.orders} actionLoading={actionLoading} onAction={onAction} />;
+            return <OrderTable items={data.orders || []} actionLoading={actionLoading} onAction={onAction} />;
         case "PO":
-            return <POTable items={data.purchaseOrders} />;
+            return <POTable items={data.purchaseOrders || []} />;
         case "PRODUCTION":
-            return <ProductionTable items={data.productionTasks} />;
+            return <ProductionTable items={data.productionTasks || []} />;
         case "AFTER_SALES":
-            return <AfterSalesTable items={data.afterSales} />;
+            return <AfterSalesTable items={data.afterSales || []} />;
+        case "APPROVAL":
+            return <ApprovalTable items={data.approvalTodos || []} />;
         default:
             return null;
     }
@@ -297,6 +300,54 @@ function AfterSalesTable({ items }: { items: AfterSalesTodItem[] }) {
                             </td>
                             <td className="p-3 text-muted-foreground text-xs">
                                 {new Date(item.createdAt).toLocaleDateString("zh-CN")}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+/** 审批待办表格 */
+function ApprovalTable({ items }: { items: ApprovalTodoItem[] }) {
+    /** 业务类型中文映射 */
+    const entityTypeLabel: Record<string, string> = {
+        QUOTE: '报价单',
+        ORDER: '订单',
+        PO: '采购单',
+        PRICE_ADJUST: '调价申请',
+        REFUND: '退款申请',
+        FEE_WAIVER: '费用减免',
+    };
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-white/10 text-muted-foreground">
+                        <th className="text-left p-3 font-medium">审批 ID</th>
+                        <th className="text-left p-3 font-medium">业务类型</th>
+                        <th className="text-left p-3 font-medium">状态</th>
+                        <th className="text-left p-3 font-medium">超时时间</th>
+                        <th className="text-left p-3 font-medium">创建时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items.map(item => (
+                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="p-3 font-mono text-xs">{item.approvalId?.slice(0, 8) ?? '-'}...</td>
+                            <td className="p-3 font-medium">
+                                {entityTypeLabel[item.entityType || ''] || item.entityType || '-'}
+                            </td>
+                            <td className="p-3">
+                                <Badge variant="secondary" className="text-xs bg-orange-500/10 text-orange-500">待审批</Badge>
+                            </td>
+                            <td className="p-3 text-muted-foreground text-xs">
+                                {item.timeoutAt ? new Date(item.timeoutAt).toLocaleString('zh-CN') : '-'}
+                            </td>
+                            <td className="p-3 text-muted-foreground text-xs">
+                                {item.createdAt ? new Date(item.createdAt).toLocaleDateString('zh-CN') : '-'}
                             </td>
                         </tr>
                     ))}

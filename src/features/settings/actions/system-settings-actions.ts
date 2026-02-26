@@ -62,6 +62,7 @@ export async function getSettingsByCategory(category: string) {
         eq(systemSettings.tenantId, session.user.tenantId),
         eq(systemSettings.category, category)
       ),
+      limit: 500, // [P2防御]
     });
 
     const result: Record<string, unknown> = {};
@@ -211,8 +212,8 @@ export async function updateSetting(key: string, value: unknown) {
     await updateSettingInternal(tx, key, value, tenantId, userId);
   });
 
-  revalidateTag('all-settings', 'default');
-  revalidateTag(`all-settings-${tenantId}`, 'default');
+  revalidateTag('all-settings', {});
+  revalidateTag(`all-settings-${tenantId}`, {});
   revalidatePath('/settings');
   return { success: true };
 }
@@ -250,8 +251,8 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
     }
   });
 
-  revalidateTag('all-settings', 'default');
-  revalidateTag(`all-settings-${tenantId}`, 'default');
+  revalidateTag('all-settings', {});
+  revalidateTag(`all-settings-${tenantId}`, {});
   revalidatePath('/settings');
   return { success: true };
 }
@@ -307,6 +308,7 @@ const getCachedAllSettings = (tenantId: string) =>
     async () => {
       const allSettings = await db.query.systemSettings.findMany({
         where: eq(systemSettings.tenantId, tenantId),
+        limit: 500, // [P2防御]
       });
 
       const grouped: Record<string, Record<string, unknown>> = {};

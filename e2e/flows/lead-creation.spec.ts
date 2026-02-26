@@ -35,20 +35,19 @@ test.describe('Lead Management', () => {
         await expect(page.getByRole('dialog')).toBeVisible();
 
         // 填写表单
-        await page.getByLabel('客户姓名').fill(randomName);
-        await page.getByLabel('手机号').fill(randomPhone);
+        await page.getByLabel('客户名称').fill(randomName);
+        await page.getByLabel('联系电话').fill(randomPhone);
 
         // 可选字段
-        await page.getByLabel('来源备注').fill('自动化测试');
-        await page.getByLabel('备注/需求').fill('这是一个自动生成的测试需求');
+        await page.getByLabel('备注/详情').fill('这是一个自动生成的测试需求');
 
         // 提交表单 - 监听响应
         page.waitForResponse(resp =>
             resp.url().includes('/leads') && resp.status() === 200
         ).catch(() => null);
 
-        // 使用 data-testid 点击提交 (避免 loading 状态下的文本变化问题)
-        await page.getByTestId('submit-lead-btn').click();
+        // 点击提交
+        await page.getByRole('button', { name: '创建线索' }).click();
 
         // 验证反馈 (增加等待时间)
         // Toast 可能包含 "成功" 或 "Success"

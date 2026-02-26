@@ -5,7 +5,15 @@ import { purchaseOrders, suppliers } from './supply-chain';
 import { customers } from './customers';
 import { marketChannels } from './catalogs';
 import { installTasks } from './service';
-import { arStatementStatusEnum, commissionStatusEnum } from './enums';
+import {
+    arStatementStatusEnum,
+    commissionStatusEnum,
+    accountCategoryEnum,
+    journalEntryStatusEnum,
+    journalSourceTypeEnum,
+    accountingPeriodStatusEnum,
+    financeAuditActionEnum,
+} from './enums';
 
 // ==================== 基础配置表 (Base Configs) ====================
 
@@ -37,6 +45,7 @@ export const financeAccounts = pgTable('finance_accounts', {
     isActive: boolean('is_active').default(true),
     isDefault: boolean('is_default').default(false),
     remark: text('remark'),
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -128,6 +137,7 @@ export const arStatements = pgTable('ar_statements', {
     commissionAmount: decimal('commission_amount', { precision: 12, scale: 2 }),
     commissionStatus: commissionStatusEnum('commission_status'), // 佣金状态
 
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
 }, (table) => ({
@@ -185,6 +195,7 @@ export const receiptBills = pgTable('receipt_bills', {
     verifiedBy: uuid('verified_by').references(() => users.id),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
 
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -321,6 +332,7 @@ export const apSupplierStatements = pgTable('ap_supplier_statements', {
 
     completedAt: timestamp('completed_at', { withTimezone: true }),
     purchaserId: uuid('purchaser_id').references(() => users.id).notNull(),
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
     tenantIdx: index('idx_ap_supplier_statements_tenant').on(table.tenantId),
@@ -358,6 +370,7 @@ export const paymentBills = pgTable('payment_bills', {
     verifiedBy: uuid('verified_by').references(() => users.id),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
 
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -663,4 +676,144 @@ export const statementConfirmationDetails = pgTable('statement_confirmation_deta
 }, (table) => ({
     confirmationIdx: index('idx_statement_confirmation_details_confirmation').on(table.confirmationId),
     documentIdx: index('idx_statement_confirmation_details_doc').on(table.documentId),
+}));
+
+// ==================== 会计模块 (Accounting) ====================
+
+// 会计科目表 (Chart of Accounts)
+export const chartOfAccounts = pgTable('chart_of_accounts', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    code: varchar('code', { length: 20 }).notNull(),           // 科目编码（如 1001, 2001）
+    name: varchar('name', { length: 100 }).notNull(),           // 科目名称
+    category: accountCategoryEnum('category').notNull(),        // 五大类
+    parentId: uuid('parent_id'),                                // 父科目 ID（自引用）
+    level: integer('level').notNull().default(1),               // 层级（1=一级科目）
+    isActive: boolean('is_active').notNull().default(true),     // 是否启用
+    isSystemDefault: boolean('is_system_default').notNull().default(false), // 是否系统内置
+    description: text('description'),                           // 科目说明
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_chart_of_accounts_tenant').on(table.tenantId),
+    codeTenantIdx: uniqueIndex('idx_chart_of_accounts_code_tenant').on(table.code, table.tenantId),
+    categoryIdx: index('idx_chart_of_accounts_category').on(table.category),
+    parentIdx: index('idx_chart_of_accounts_parent').on(table.parentId),
+}));
+
+// 账期管理表 (Accounting Periods)
+export const accountingPeriods = pgTable('accounting_periods', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    year: integer('year').notNull(),                            // 年份
+    month: integer('month').notNull(),                          // 月份 (1-12)
+    quarter: integer('quarter').notNull(),                      // 季度 (1-4)
+    status: accountingPeriodStatusEnum('status').notNull().default('OPEN'),
+    closedBy: uuid('closed_by').references(() => users.id),     // 关账操作人
+    closedAt: timestamp('closed_at', { withTimezone: true }),   // 关账时间
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_accounting_periods_tenant').on(table.tenantId),
+    yearMonthTenantIdx: uniqueIndex('idx_accounting_periods_ym_tenant').on(table.year, table.month, table.tenantId),
+    statusIdx: index('idx_accounting_periods_status').on(table.status),
+}));
+
+// 凭证主表 (Journal Entries)
+export const journalEntries = pgTable('journal_entries', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    voucherNo: varchar('voucher_no', { length: 50 }).notNull(), // 凭证编号（如 PZ-2026-02-001）
+    periodId: uuid('period_id').references(() => accountingPeriods.id).notNull(), // 所属账期
+    entryDate: date('entry_date').notNull(),                    // 凭证日期
+    description: text('description'),                           // 摘要
+    status: journalEntryStatusEnum('status').notNull().default('DRAFT'),
+    sourceType: journalSourceTypeEnum('source_type').notNull().default('MANUAL'), // 来源类型
+    sourceId: uuid('source_id'),                                // 来源单据 ID（如收款单 ID）
+    currency: varchar('currency', { length: 3 }).notNull().default('CNY'), // [优化预留] 多币种架构支持：外币交易币种
+    exchangeRate: decimal('exchange_rate', { precision: 15, scale: 6 }).notNull().default('1.000000'), // [优化预留] 多币种架构支持：记账本位币汇率
+    isReversal: boolean('is_reversal').notNull().default(false), // 是否为红字冲销凭证
+    reversedEntryId: uuid('reversed_entry_id'),                 // 被冲销的原凭证 ID
+    totalDebit: decimal('total_debit', { precision: 15, scale: 2 }).notNull().default('0'), // 借方合计
+    totalCredit: decimal('total_credit', { precision: 15, scale: 2 }).notNull().default('0'), // 贷方合计
+    createdBy: uuid('created_by').references(() => users.id).notNull(), // 制单人
+    reviewedBy: uuid('reviewed_by').references(() => users.id),  // 复核人
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }), // 复核时间
+    postedAt: timestamp('posted_at', { withTimezone: true }),     // 记账时间
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    tenantIdx: index('idx_journal_entries_tenant').on(table.tenantId),
+    voucherNoTenantIdx: uniqueIndex('idx_journal_entries_voucher_tenant').on(table.voucherNo, table.tenantId),
+    periodIdx: index('idx_journal_entries_period').on(table.periodId),
+    statusIdx: index('idx_journal_entries_status').on(table.status),
+    sourceIdx: index('idx_journal_entries_source').on(table.sourceType, table.sourceId),
+    dateIdx: index('idx_journal_entries_date').on(table.entryDate),
+}));
+
+// 凭证明细表 - 借贷分录 (Journal Entry Lines)
+export const journalEntryLines = pgTable('journal_entry_lines', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    entryId: uuid('entry_id').references(() => journalEntries.id).notNull(), // 所属凭证
+    accountId: uuid('account_id').references(() => chartOfAccounts.id).notNull(), // 会计科目
+    debitAmount: decimal('debit_amount', { precision: 15, scale: 2 }).notNull().default('0'),  // 借方金额
+    creditAmount: decimal('credit_amount', { precision: 15, scale: 2 }).notNull().default('0'), // 贷方金额
+    description: text('description'),                           // 行摘要
+    sortOrder: integer('sort_order').notNull().default(0),      // 排序序号
+}, (table) => ({
+    entryIdx: index('idx_journal_entry_lines_entry').on(table.entryId),
+    accountIdx: index('idx_journal_entry_lines_account').on(table.accountId),
+}));
+
+// 费用录入表 (Expense Records)
+export const expenseRecords = pgTable('expense_records', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    periodId: uuid('period_id').references(() => accountingPeriods.id),   // 所属账期
+    accountId: uuid('account_id').references(() => chartOfAccounts.id).notNull(), // 费用科目
+    amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),    // 金额
+    description: text('description').notNull(),                          // 费用说明
+    expenseDate: date('expense_date').notNull(),                         // 费用发生日期
+    importBatchId: varchar('import_batch_id', { length: 50 }),           // Excel 导入批次号
+    journalEntryId: uuid('journal_entry_id'),                            // 关联的凭证 ID
+    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_expense_records_tenant').on(table.tenantId),
+    periodIdx: index('idx_expense_records_period').on(table.periodId),
+    accountIdx: index('idx_expense_records_account').on(table.accountId),
+    dateIdx: index('idx_expense_records_date').on(table.expenseDate),
+}));
+
+// 自动凭证规则配置表 (Voucher Templates)
+export const voucherTemplates = pgTable('voucher_templates', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    sourceType: journalSourceTypeEnum('source_type').notNull(),          // 业务来源类型
+    name: varchar('name', { length: 100 }).notNull(),                   // 规则名称
+    debitAccountId: uuid('debit_account_id').references(() => chartOfAccounts.id).notNull(), // 借方科目
+    creditAccountId: uuid('credit_account_id').references(() => chartOfAccounts.id).notNull(), // 贷方科目
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+    tenantIdx: index('idx_voucher_templates_tenant').on(table.tenantId),
+    sourceTypeTenantIdx: uniqueIndex('idx_voucher_templates_source_tenant').on(table.sourceType, table.tenantId),
+}));
+
+// 财务审计日志表 (Finance Audit Logs)
+export const financeAuditLogs = pgTable('finance_audit_logs', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    userId: uuid('user_id').references(() => users.id).notNull(),       // 操作人
+    action: financeAuditActionEnum('action').notNull(),                  // 操作类型
+    entityType: varchar('entity_type', { length: 50 }).notNull(),       // 实体类型（如 journal_entry, period）
+    entityId: uuid('entity_id').notNull(),                               // 实体 ID
+    beforeData: text('before_data'),                                     // 操作前数据（JSON 字符串）
+    afterData: text('after_data'),                                       // 操作后数据（JSON 字符串）
+    ipAddress: varchar('ip_address', { length: 45 }),                    // 操作 IP
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    tenantIdx: index('idx_finance_audit_logs_tenant').on(table.tenantId),
+    entityIdx: index('idx_finance_audit_logs_entity').on(table.entityType, table.entityId),
+    userIdx: index('idx_finance_audit_logs_user').on(table.userId),
+    dateIdx: index('idx_finance_audit_logs_date').on(table.createdAt),
 }));

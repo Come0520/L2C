@@ -94,7 +94,7 @@ export const saveDashboardConfigAction = createSafeAction(
             });
 
             // 4. 失效缓存
-            revalidateTag(`dashboard-config:${userId}`, 'default');
+            revalidateTag(`dashboard-config:${userId}`, {});
             logger.info('成功保存仪表盘配置', { userId, tenantId });
             return { success: true };
         } catch (error) {
@@ -132,7 +132,7 @@ export const resetDashboardConfigAction = createSafeAction(
             });
 
             // 失效缓存
-            revalidateTag(`dashboard-config:${userId}`, 'default');
+            revalidateTag(`dashboard-config:${userId}`, {});
             logger.info('成功重置仪表盘配置', { userId, tenantId });
             return { success: true };
         } catch (error) {

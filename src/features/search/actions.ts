@@ -210,7 +210,7 @@ async function performDbSearch(tenantId: string, query: string, limit: number, s
             }
 
             // 搜索财务 (应收)
-            if (doAll && hasPerm(PERMISSIONS.FINANCE.VIEW)) {
+            if (doAll && hasPerm(PERMISSIONS.FINANCE.AR_VIEW)) {
                 searchPromises.push(
                     db.query.arStatements.findMany({
                         where: and(eq(arStatements.tenantId, tenantId), ilike(arStatements.statementNo, searchPattern)),

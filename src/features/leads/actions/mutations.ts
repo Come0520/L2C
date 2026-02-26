@@ -74,7 +74,7 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
             newValues: { data }
         });
 
-        revalidateTag(`leads-${tenantId}`, 'default');
+        revalidateTag(`leads-${tenantId}`, {});
         revalidatePath('/leads');
         return { success: true, data: result.lead };
 
@@ -138,8 +138,8 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
 
         revalidatePath('/leads');
         revalidatePath(`/leads/${id}`);
-        revalidateTag(`leads-${session.user.tenantId}`, 'default');
-        revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
+        revalidateTag(`leads-${session.user.tenantId}`, {});
+        revalidateTag(`lead-${session.user.tenantId}-${id}`, {});
         return { success: true as const, data: updated };
     } catch (error: unknown) {
         logger.error('[leads] 更新线索失败:', { error, leadId: id, tenantId: session.user.tenantId, userId: session.user.id });
@@ -184,8 +184,8 @@ export async function assignLead(input: z.infer<typeof assignLeadSchema>) {
         });
 
         revalidatePath('/leads');
-        revalidateTag(`leads-${session.user.tenantId}`, 'default');
-        revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
+        revalidateTag(`leads-${session.user.tenantId}`, {});
+        revalidateTag(`lead-${session.user.tenantId}-${id}`, {});
         return { success: true as const, data: updated };
     } catch (error: unknown) {
         logger.error('[leads] 分配销售失败:', { error, leadId: id, newSalesId: salesId, tenantId: session.user.tenantId, userId: session.user.id });
@@ -232,8 +232,8 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) 
 
         revalidatePath(`/leads/${leadId}`);
         revalidatePath('/leads');
-        revalidateTag(`leads-${tenantId}`, 'default');
-        revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+        revalidateTag(`leads-${tenantId}`, {});
+        revalidateTag(`lead-${tenantId}-${leadId}`, {});
     } catch (error: unknown) {
         logger.error('[leads] 添加跟进记录失败:', { error, leadId, tenantId, userId });
         throw error;
@@ -275,8 +275,8 @@ export async function voidLead(input: z.infer<typeof voidLeadSchema>) {
         });
 
         revalidatePath('/leads');
-        revalidateTag(`leads-${session.user.tenantId}`, 'default');
-        revalidateTag(`lead-${session.user.tenantId}-${id}`, 'default');
+        revalidateTag(`leads-${session.user.tenantId}`, {});
+        revalidateTag(`lead-${session.user.tenantId}-${id}`, {});
         return { success: true as const };
     } catch (error: unknown) {
         logger.error('[leads] 作废线索失败:', { error, leadId: id, tenantId: session.user.tenantId, userId: session.user.id });
@@ -320,8 +320,8 @@ export async function releaseToPool(leadId: string) {
         });
 
         revalidatePath('/leads');
-        revalidateTag(`leads-${session.user.tenantId}`, 'default');
-        revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
+        revalidateTag(`leads-${session.user.tenantId}`, {});
+        revalidateTag(`lead-${session.user.tenantId}-${leadId}`, {});
         return { success: true as const };
     } catch (error: unknown) {
         logger.error('[leads] 释放线索至公海失败:', { error, leadId, tenantId: session.user.tenantId, userId: session.user.id });
@@ -363,8 +363,8 @@ export async function claimFromPool(leadId: string) {
         });
 
         revalidatePath('/leads');
-        revalidateTag(`leads-${session.user.tenantId}`, 'default');
-        revalidateTag(`lead-${session.user.tenantId}-${leadId}`, 'default');
+        revalidateTag(`leads-${session.user.tenantId}`, {});
+        revalidateTag(`lead-${session.user.tenantId}-${leadId}`, {});
         return { success: true as const };
     } catch (error: unknown) {
         logger.error('[leads] 从公海认领线索失败:', { error, leadId, tenantId: session.user.tenantId, userId: session.user.id });
@@ -413,8 +413,8 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
         revalidatePath('/leads');
         // Also revalidate customers list as a new customer might be created
         revalidatePath('/customers');
-        revalidateTag(`leads-${tenantId}`, 'default');
-        revalidateTag(`lead-${tenantId}-${leadId}`, 'default');
+        revalidateTag(`leads-${tenantId}`, {});
+        revalidateTag(`lead-${tenantId}-${leadId}`, {});
 
         return newCustomerId;
     } catch (error: unknown) {
@@ -517,6 +517,6 @@ export async function importLeads(data: unknown[]) {
     });
 
     revalidatePath('/leads');
-    revalidateTag(`leads-${tenantId}`, 'default');
+    revalidateTag(`leads-${tenantId}`, {});
     return { successCount, errors };
 }

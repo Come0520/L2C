@@ -25,7 +25,7 @@ export const MODULES: ModuleConfig[] = [
     { code: 'CUSTOMERS', name: 'Customers', path: '/customers', icon: Users, permissions: [PERMISSIONS.CUSTOMER.VIEW] },
     { code: 'SUPPLY_CHAIN', name: 'Supply Chain', path: '/supply-chain', icon: Truck, permissions: [PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE] },
     { code: 'SERVICE', name: 'Service', path: '/service', icon: Wrench, permissions: [PERMISSIONS.INSTALL.VIEW] },
-    { code: 'FINANCE', name: 'Finance', path: '/finance', icon: Wallet, permissions: [PERMISSIONS.FINANCE.VIEW] },
+    { code: 'FINANCE', name: 'Finance', path: '/finance', icon: Wallet, permissions: [PERMISSIONS.FINANCE.AR_VIEW] },
     { code: 'ADMIN', name: 'Admin', path: '/admin', icon: ShieldCheck, permissions: [] }, // NOTE: Add admin perm
     { code: 'SETTINGS', name: 'Settings', path: '/settings', icon: Settings },
 ];

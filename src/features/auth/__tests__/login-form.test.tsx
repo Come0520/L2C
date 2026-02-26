@@ -92,18 +92,10 @@ describe('LoginForm', () => {
         expect(passwordInput.type).toBe('password');
     });
 
-    it('shows info toast on forgot password click', async () => {
+    it('has a link to forgot password page', () => {
         render(<LoginForm />);
-        const forgotBtn = screen.getByText('忘记密码？', { selector: 'button' });
-
-        const { toast } = await import('sonner');
-        vi.mocked(toast.info).mockClear();
-
-        fireEvent.click(forgotBtn);
-
-        await waitFor(() => {
-            expect(toast.info).toHaveBeenCalledWith('请联系管理员重置密码');
-        });
+        const forgotLink = screen.getByText('忘记密码？', { selector: 'a' });
+        expect(forgotLink.getAttribute('href')).toBe('/forgot-password');
     });
 
     it('submits form and handles successful login', async () => {

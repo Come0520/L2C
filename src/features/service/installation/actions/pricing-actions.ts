@@ -150,7 +150,7 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
             }, tx);
         });
 
-        revalidateTag('labor-rate', 'default');
+        revalidateTag('labor-rate', {});
         return { success: true };
     } catch (error: unknown) {
         logger.error('保存工费规则失败:', error);
@@ -205,7 +205,7 @@ export async function batchUpsertTenantLaborRates(
             }, tx);
         });
 
-        revalidateTag('labor-rate', 'default');
+        revalidateTag('labor-rate', {});
         return { success: true };
     } catch (error: unknown) {
         logger.error('批量保存工费规则失败:', error);

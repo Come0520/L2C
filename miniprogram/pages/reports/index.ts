@@ -21,7 +21,13 @@ Page({
     },
 
     goBack() {
-        wx.navigateBack();
+        // 兜底：如果页面栈只有 1 层（如直接扫码进入），无法 navigateBack，则跳转首页
+        const pages = getCurrentPages();
+        if (pages.length > 1) {
+            wx.navigateBack();
+        } else {
+            wx.switchTab({ url: '/pages/index/index' });
+        }
     },
 
     async fetchData() {
@@ -80,4 +86,4 @@ Page({
     }
 });
 
-export {};
+export { };

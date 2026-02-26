@@ -121,14 +121,32 @@ export const PERMISSIONS = {
 
     // ==================== 财务模块 ====================
     FINANCE: {
-        VIEW: 'finance.view',              // 查看财务数据
-        CREATE: 'finance.create',          // 创建收付款
-        EDIT: 'finance.edit',              // 编辑财务记录
-        DELETE: 'finance.delete',          // 删除财务记录
-        APPROVE: 'finance.approve',        // 审批财务
-        LABOR_VIEW: 'finance.labor_view',  // 查看人工费用
-        RECONCILE: 'finance.reconcile',    // 对账
-        MANAGE: 'finance.manage',          // 财务管理
+        // --- 应收 (AR) ---
+        AR_VIEW: 'finance.ar.view',            // 查看应收对账单、收款记录
+        AR_CREATE: 'finance.ar.create',        // 创建收款单、退款/折让单
+        AR_RECONCILE: 'finance.ar.reconcile',  // 应收核销
+        // --- 应付 (AP) ---
+        AP_VIEW: 'finance.ap.view',            // 查看应付对账单、付款记录
+        AP_CREATE: 'finance.ap.create',        // 创建付款单、扣款/退货单
+        AP_RECONCILE: 'finance.ap.reconcile',  // 应付核销
+        // --- 复核与审批 ---
+        APPROVE: 'finance.approve',            // 审批收付款单据
+        REVIEW: 'finance.review',              // 复核已审批单据（财务二审）
+        // --- 报表 ---
+        REPORT_VIEW: 'finance.report.view',    // 查看财务报表
+        REPORT_EXPORT: 'finance.report.export',// 导出报表 PDF
+        // --- 记账 ---
+        JOURNAL_VIEW: 'finance.journal.view',  // 查看日记账/总账
+        JOURNAL_CREATE: 'finance.journal.create', // 创建日记账凭证
+        // --- 费用 ---
+        EXPENSE_CREATE: 'finance.expense.create', // 录入/导入费用
+        // --- 调拨 ---
+        TRANSFER_VIEW: 'finance.transfer.view',   // 查看资金调拨
+        TRANSFER_CREATE: 'finance.transfer.create',// 创建资金调拨
+        // --- 配置 ---
+        CONFIG_MANAGE: 'finance.config.manage',   // 科目表/会计期间/账户管理
+        // --- 通用/兼容 ---
+        LABOR_VIEW: 'finance.labor_view',       // 查看人工费用
     },
 
     // ==================== 产品模块 ====================
@@ -263,7 +281,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     {
         key: 'FINANCE',
         label: '财务管理',
-        description: '收付款与结算',
+        description: '应收应付、复核审批与财务报表',
         permissions: PERMISSIONS.FINANCE
     },
     {
@@ -355,14 +373,29 @@ export const PERMISSION_LABELS: Record<string, string> = {
     'after_sales.own.edit': '编辑我的售后',
     'after_sales.delete': '删除售后',
     'after_sales.view': '访问售后模块',
-    // 财务
-    'finance.view': '查看财务',
-    'finance.create': '创建收付款',
-    'finance.edit': '编辑财务',
-    'finance.delete': '删除财务',
+    // 财务 - 应收
+    'finance.ar.view': '查看应收',
+    'finance.ar.create': '创建收款/退款',
+    'finance.ar.reconcile': '应收核销',
+    // 财务 - 应付
+    'finance.ap.view': '查看应付',
+    'finance.ap.create': '创建付款/扣款',
+    'finance.ap.reconcile': '应付核销',
+    // 财务 - 复核
     'finance.approve': '审批财务',
+    'finance.review': '财务复核',
+    // 财务 - 报表
+    'finance.report.view': '查看财务报表',
+    'finance.report.export': '导出报表',
+    // 财务 - 记账
+    'finance.journal.view': '查看日记账',
+    'finance.journal.create': '创建凭证',
+    // 财务 - 其他
+    'finance.expense.create': '录入费用',
+    'finance.transfer.view': '查看调拨',
+    'finance.transfer.create': '创建调拨',
+    'finance.config.manage': '财务配置',
     'finance.labor_view': '查看人工费',
-    'finance.reconcile': '对账',
     // 产品
     'products.view': '查看产品',
     'products.create': '创建产品',

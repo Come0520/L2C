@@ -3,10 +3,15 @@
 import { db } from '@/shared/api/db';
 import { roleOverrides } from '@/shared/api/schema/role-overrides';
 import { roles } from '@/shared/api/schema';
-import { PERMISSIONS, getAllPermissions, PERMISSION_GROUPS, PERMISSION_LABELS } from '@/shared/config/permissions';
+import {
+  PERMISSIONS,
+  getAllPermissions,
+  PERMISSION_GROUPS,
+  PERMISSION_LABELS,
+} from '@/shared/config/permissions';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
-import { getRoleLabel } from '@/shared/config/roles';
+import { getRoleLabel, getRoleDefinition } from '@/shared/config/roles';
 import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
@@ -57,6 +62,7 @@ const getCachedPermissionMatrix = (tenantId: string) =>
       const dbRoles = await db.query.roles.findMany({
         where: eq(roles.tenantId, tenantId),
         orderBy: asc(roles.code),
+        limit: 500, // [P2防御]
       });
 
       const rolesData: RoleOverrideData[] = [];
@@ -65,7 +71,14 @@ const getCachedPermissionMatrix = (tenantId: string) =>
         const code = roleDef.code;
         const override = overrides[code] || { added: [], removed: [] };
 
-        const basePermissions = (roleDef.permissions as string[]) || [];
+        let basePermissions = (roleDef.permissions as string[]) || [];
+        // 兜底逻辑：如果在数据库中未发现权限，则从预设角色中读取对应权限
+        if (basePermissions.length === 0) {
+          const staticDef = getRoleDefinition(code);
+          if (staticDef) {
+            basePermissions = staticDef.permissions;
+          }
+        }
 
         const effective = new Set(basePermissions);
         override.added.forEach((p) => effective.add(p));
@@ -139,7 +152,16 @@ export async function getRoleOverride(roleCode: string): Promise<RoleOverrideDat
   // Note: RolePermissionService.getEffectivePermissions might need updates if it uses static config.
   // For now, let's replicate the logic here to be safe and consistent with getPermissionMatrix
 
-  const basePermissions = (roleDef.permissions as string[]) || [];
+  let basePermissions = (roleDef.permissions as string[]) || [];
+
+  // 兜底逻辑：如果在数据库中未发现权限，则从预设角色中读取对应权限
+  if (basePermissions.length === 0) {
+    const staticDef = getRoleDefinition(roleCode);
+    if (staticDef) {
+      basePermissions = staticDef.permissions;
+    }
+  }
+
   const effective = new Set(basePermissions);
   override.added.forEach((p) => effective.add(p));
   override.removed.forEach((p) => effective.delete(p));
@@ -226,20 +248,23 @@ export async function saveRoleOverride(
           tenantId: session.user.tenantId,
           oldValues: {
             addedPermissions: JSON.parse(existing.addedPermissions || '[]'),
-            removedPermissions: JSON.parse(existing.removedPermissions || '[]')
+            removedPermissions: JSON.parse(existing.removedPermissions || '[]'),
           },
           newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
-          changedFields: { roleCode }
+          changedFields: { roleCode },
         });
       } else {
         // 创建新记录
-        const [newOverride] = await tx.insert(roleOverrides).values({
-          tenantId,
-          roleCode,
-          addedPermissions: JSON.stringify(finalAdded),
-          removedPermissions: JSON.stringify(finalRemoved),
-          updatedBy: userId,
-        }).returning({ id: roleOverrides.id });
+        const [newOverride] = await tx
+          .insert(roleOverrides)
+          .values({
+            tenantId,
+            roleCode,
+            addedPermissions: JSON.stringify(finalAdded),
+            removedPermissions: JSON.stringify(finalRemoved),
+            updatedBy: userId,
+          })
+          .returning({ id: roleOverrides.id });
 
         // 记录创建日志
         await AuditService.log(tx, {
@@ -248,13 +273,13 @@ export async function saveRoleOverride(
           action: 'CREATE',
           userId: session.user.id,
           tenantId: session.user.tenantId,
-          newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved }
+          newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved },
         });
       }
     });
 
-    revalidateTag('permission-matrix', 'default');
-    revalidateTag(`permission-matrix-${tenantId}`, 'default');
+    revalidateTag('permission-matrix', {});
+    revalidateTag(`permission-matrix-${tenantId}`, {});
     revalidatePath('/settings/roles');
 
     return {
@@ -292,7 +317,7 @@ export async function resetRoleOverride(
     await db.transaction(async (tx) => {
       // 获取要删除的记录以便记录日志
       const existing = await tx.query.roleOverrides.findFirst({
-        where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode))
+        where: and(eq(roleOverrides.tenantId, tenantId), eq(roleOverrides.roleCode, roleCode)),
       });
 
       if (existing) {
@@ -312,13 +337,13 @@ export async function resetRoleOverride(
             roleCode: existing.roleCode,
             addedPermissions: existing.addedPermissions,
             removedPermissions: existing.removedPermissions,
-          }
+          },
         });
       }
     });
 
-    revalidateTag('permission-matrix', 'default');
-    revalidateTag(`permission-matrix-${tenantId}`, 'default');
+    revalidateTag('permission-matrix', {});
+    revalidateTag(`permission-matrix-${tenantId}`, {});
     revalidatePath('/settings/roles');
 
     const roleLabel = getRoleLabel(roleCode);
@@ -401,16 +426,19 @@ export async function saveAllRoleOverrides(
               removedPermissions: existing.removedPermissions,
             },
             newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
-            changedFields: { roleCode }
+            changedFields: { roleCode },
           });
         } else {
-          const [newOverride] = await tx.insert(roleOverrides).values({
-            tenantId,
-            roleCode,
-            addedPermissions: JSON.stringify(finalAdded),
-            removedPermissions: JSON.stringify(finalRemoved),
-            updatedBy: userId,
-          }).returning({ id: roleOverrides.id });
+          const [newOverride] = await tx
+            .insert(roleOverrides)
+            .values({
+              tenantId,
+              roleCode,
+              addedPermissions: JSON.stringify(finalAdded),
+              removedPermissions: JSON.stringify(finalRemoved),
+              updatedBy: userId,
+            })
+            .returning({ id: roleOverrides.id });
 
           await AuditService.log(tx, {
             tableName: 'role_overrides',
@@ -418,7 +446,7 @@ export async function saveAllRoleOverrides(
             action: 'CREATE',
             userId: session.user.id,
             tenantId: session.user.tenantId,
-            newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved }
+            newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved },
           });
         }
       }
@@ -429,5 +457,70 @@ export async function saveAllRoleOverrides(
   } catch (error) {
     logger.error('批量保存角色覆盖失败:', error);
     return { success: false, message: (error as Error).message || '保存失败，请稍后重试' };
+  }
+}
+
+/**
+ * 恢复所有角色权限为系统推荐默认配置
+ * 删除租户所有的角色权限覆盖记录
+ */
+export async function restoreDefaultRoleOverrides(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, message: '未授权访问' };
+  }
+
+  // 权限校验
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, message: '没有权限执行此操作' };
+  }
+
+  const tenantId = session.user.tenantId;
+
+  try {
+    await db.transaction(async (tx) => {
+      // 获取要删除的记录以便记录日志
+      const existingOverrides = await tx.query.roleOverrides.findMany({
+        where: eq(roleOverrides.tenantId, tenantId),
+      });
+
+      if (existingOverrides.length > 0) {
+        // 删除所有覆盖记录
+        await tx.delete(roleOverrides).where(eq(roleOverrides.tenantId, tenantId));
+
+        // 记录日志
+        for (const existing of existingOverrides) {
+          await AuditService.log(tx, {
+            tableName: 'role_overrides',
+            recordId: existing.id,
+            action: 'DELETE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            oldValues: {
+              roleCode: existing.roleCode,
+              addedPermissions: existing.addedPermissions,
+              removedPermissions: existing.removedPermissions,
+            },
+          });
+        }
+      }
+    });
+
+    revalidateTag('permission-matrix', {});
+    revalidateTag(`permission-matrix-${tenantId}`, {});
+    revalidatePath('/settings/roles');
+
+    return {
+      success: true,
+      message: '已成功恢复为推荐的权限配置',
+    };
+  } catch (error) {
+    logger.error('恢复默认角色权限失败:', error);
+    return { success: false, message: '恢复失败，请稍后重试' };
   }
 }

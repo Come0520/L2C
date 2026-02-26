@@ -71,7 +71,7 @@ async function getTenantIdFromSession(): Promise<string> {
  *
  * @description 使用 unstable_cache 按 tenantId 缓存，tag: global-discount / global-discount-{tenantId}
  * 全局折扣是计算报价的基础读取，变动周期长，适合缓存。
- * 修改配置时通过 revalidateTag('global-discount', 'default') 失效。
+ * 修改配置时通过 revalidateTag('global-discount') 失效。
  *
  * @param tenantId - 当前租户 ID
  * @returns 对应租户的全局级别折扣计算规则及参数配置
@@ -167,8 +167,8 @@ export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDis
         });
 
         // 失效全局折扣缓存
-        revalidateTag('global-discount', 'default');
-        revalidateTag(`global-discount-${tenantId}`, 'default');
+        revalidateTag('global-discount', {});
+        revalidateTag(`global-discount-${tenantId}`, {});
         revalidatePath('/settings/products');
         return { success: true };
     } catch (error) {

@@ -174,7 +174,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
   await updateQuoteTotal(newQuote.id, tenantId);
 
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
+  revalidateTag('quotes', {});
   logger.info('[quotes] 快速报价单创建成功', { quoteId: newQuote.id, quoteNo, leadId: data.leadId });
   return { id: newQuote.id, quoteNo };
 });

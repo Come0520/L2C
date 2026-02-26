@@ -38,12 +38,12 @@ export async function createAndSubmitReceipt(data: CreateReceiptBillData) {
     if (!session?.user?.tenantId || !session.user.id) throw new Error('未授权');
 
     // 权限检查：需要财务管理权限
-    await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+    await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE);
 
     const bill = await ReceiptService.createReceiptBill(data, session.user.tenantId, session.user.id);
     const result = await ReceiptService.submitForApproval(bill.id, session.user.tenantId);
 
-    revalidateTag(`finance-receipt-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-receipt-${session.user.tenantId}`, {});
     return result;
 }
 
@@ -55,7 +55,7 @@ export async function voidReceiptBill(id: string) {
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：需要财务管理权限
-    await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+    await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE);
 
     const bill = await db.query.receiptBills.findFirst({
         where: and(eq(receiptBills.id, id), eq(receiptBills.tenantId, session.user.tenantId))
@@ -82,6 +82,6 @@ export async function voidReceiptBill(id: string) {
     });
 
 
-    revalidateTag(`finance-receipt-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-receipt-${session.user.tenantId}`, {});
     return { success: true };
 }

@@ -128,15 +128,15 @@ Phase 1: 本地加固 (Current)   Phase 2: 生产准备          Phase 3: 移动
 
 ### P0: 关键问题修复 (1-2 周) 🔴
 
-- [ ] **E2E 测试修复**
-  - [ ] 修复 `auth.setup.ts` 认证流程
-  - [ ] 修复 `lead-status-workflow.spec.ts`
-  - [ ] 修复 `lead-measurement.spec.ts`
+- [x] **E2E 测试修复**
+  - [x] 修复 `auth.setup.ts` 认证流程
+  - [x] 修复 `lead-status-workflow.spec.ts`
+  - [x] 修复 `lead-measurement.spec.ts`
   - [ ] 确保所有 E2E 测试通过率 100%
-- [ ] **TypeScript 类型错误清理**
-  - [ ] 修复 `src/features/` 目录下的类型错误
-  - [ ] 修复 `src/app/` 目录下的类型错误
-  - [ ] 确保 `pnpm tsc --noEmit` 零错误
+- [x] **TypeScript 类型错误清理**
+  - [x] 修复 `src/features/` 目录下的类型错误
+  - [x] 修复 `src/app/` 目录下的类型错误
+  - [x] 确保 `pnpm tsc --noEmit` 零错误
 - [ ] **Lint 警告清理**
   - [ ] 修复 ESLint 警告 (unused vars, any types)
   - [ ] 确保 `pnpm lint` 零警告

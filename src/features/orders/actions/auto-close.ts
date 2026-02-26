@@ -75,7 +75,7 @@ export async function autoCloseOrdersAction() {
         }
 
         // 统一清除缓存
-        revalidateTag('orders', 'default');
+        revalidateTag('orders', {});
 
         return {
             success: true,

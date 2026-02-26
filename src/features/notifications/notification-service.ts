@@ -394,7 +394,7 @@ export async function createAnnouncement(input: z.infer<typeof createAnnouncemen
     });
 
     // P4 优化：失效相关缓存
-    revalidateTag('announcements', 'default');
+    revalidateTag('announcements', {});
     revalidatePath('/');
 
     return { success: true, data: announcement };
@@ -508,7 +508,7 @@ export async function upsertNotificationTemplate(input: z.infer<typeof upsertTem
     });
 
     // P4 优化：失效相关缓存
-    revalidateTag('notification-templates', 'default');
+    revalidateTag('notification-templates', {});
 
     return { success: true, data: result };
 }

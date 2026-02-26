@@ -86,7 +86,7 @@ export async function createCustomer(
     }
 
     // 精确清除客户列表缓存
-    revalidateTag(`customers-list-${tenantId}`, 'default');
+    revalidateTag(`customers-list-${tenantId}`, {});
     return result.customer;
   } catch (e: unknown) {
     logger.error('[customers] 创建客户失败:', e);
@@ -153,7 +153,7 @@ export async function deleteCustomer(id: string) {
     );
 
     // 精确清除客户列表缓存
-    revalidateTag(`customers-list-${session.user.tenantId}`, 'default');
+    revalidateTag(`customers-list-${session.user.tenantId}`, {});
   } catch (error) {
     logger.error('[customers] 删除客户失败:', error);
     throw error;
@@ -225,7 +225,7 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
         return newAddr;
       })
       .then((res) => {
-        revalidateTag(`customer-detail-${data.customerId}`, 'default');
+        revalidateTag(`customer-detail-${data.customerId}`, {});
         return res;
       });
   } catch (error) {
@@ -447,7 +447,7 @@ export async function setDefaultAddress(id: string, customerId: string, version?
         tenantId
       });
     });
-    revalidateTag(`customer-detail-${customerId}`, 'default');
+    revalidateTag(`customer-detail-${customerId}`, {});
   } catch (error) {
     logger.error('[customers] 设置默认地址失败:', {
       error,
@@ -493,10 +493,10 @@ export async function mergeCustomersAction(
     );
 
     // 精确清除客户列表及相关详情缓存
-    revalidateTag(`customers-list-${tenantId}`, 'default');
-    revalidateTag(`customer-detail-${data.targetCustomerId}`, 'default');
+    revalidateTag(`customers-list-${tenantId}`, {});
+    revalidateTag(`customer-detail-${data.targetCustomerId}`, {});
     for (const id of data.sourceCustomerIds) {
-      revalidateTag(`customer-detail-${id}`, 'default');
+      revalidateTag(`customer-detail-${id}`, {});
     }
 
     return result;

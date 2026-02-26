@@ -63,7 +63,7 @@ export async function logPhoneView(input: ViewPhoneLogInput) {
         });
 
         // 精确清除客户详情缓存（手机号查看日志不影响客户列表）
-        revalidateTag(`customer-detail-${customerId}`, 'default');
+        revalidateTag(`customer-detail-${customerId}`, {});
     } catch (error) {
         logger.error('[customers] 记录手机号查看日志失败:', error);
         throw error;

@@ -214,7 +214,7 @@ const updateSupplierActionInternal = createSafeAction(updateSupplierSchema, asyn
         });
 
         revalidatePath(SUPPLY_CHAIN_PATHS.SUPPLIERS);
-        revalidateTag(`supplier-rating-${id}`, 'default');
+        revalidateTag(`supplier-rating-${id}`, {});
         return { id: supplier.id };
     } catch (error) {
         logger.error('[supply-chain] 更新供应商失败:', error);

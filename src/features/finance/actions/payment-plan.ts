@@ -29,7 +29,7 @@ const createPaymentPlanSchema = z.object({
 });
 
 const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema, async (params, { session }) => {
-    await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+    await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE);
 
     const { arStatementId, nodes } = params;
     const tenantId = session.user.tenantId;
@@ -108,7 +108,7 @@ const createPaymentPlanActionInternal = createSafeAction(createPaymentPlanSchema
         return nodesToInsert;
     });
 
-    revalidateTag(`finance-ar-${tenantId}`, 'default');
+    revalidateTag(`finance-ar-${tenantId}`, {});
 
     return {
         success: true,
@@ -197,7 +197,7 @@ const submitBadDebtWriteOffSchema = z.object({
 });
 
 const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteOffSchema, async (params, { session }) => {
-    await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+    await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE);
 
     const { arStatementId, writeOffAmount, reason, evidenceUrls } = params;
     const tenantId = session.user.tenantId;
@@ -246,7 +246,7 @@ const submitBadDebtWriteOffActionInternal = createSafeAction(submitBadDebtWriteO
             details: { type: 'BAD_DEBT_SUBMIT', ...writeOffData }
         });
 
-        revalidateTag(`finance-ar-${tenantId}`, 'default');
+        revalidateTag(`finance-ar-${tenantId}`, {});
         return {
             success: true,
             message: '坏账核销申请已提交，等待审批',
@@ -279,7 +279,7 @@ const processBadDebtApprovalSchema = z.object({
 });
 
 const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtApprovalSchema, async (params, { session }) => {
-    await checkPermission(session, PERMISSIONS.FINANCE.MANAGE);
+    await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE);
 
     const { arStatementId, approved, writeOffAmount, remark } = params;
     const tenantId = session.user.tenantId;
@@ -340,7 +340,7 @@ const processBadDebtApprovalActionInternal = createSafeAction(processBadDebtAppr
             details: { writeOffAmount: actualWriteOff.toFixed(2), remark, type: 'BAD_DEBT_APPROVAL' }
         });
 
-        revalidateTag(`finance-ar-${tenantId}`, 'default');
+        revalidateTag(`finance-ar-${tenantId}`, {});
 
         return {
             success: true,

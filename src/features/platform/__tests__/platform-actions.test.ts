@@ -35,6 +35,8 @@ const mocks = vi.hoisted(() => ({
     hash: vi.fn(),
     nanoid: vi.fn(),
     checkRateLimit: vi.fn(),
+    // 站内通知服务 Mock
+    notificationServiceSend: vi.fn(),
 }));
 
 /** ─────────── 全局 Mock 配置 ─────────── */
@@ -97,6 +99,13 @@ vi.mock('@/shared/lib/email', () => ({
     sendEmail: mocks.sendEmail.mockResolvedValue(undefined),
 }));
 
+// 站内通知服务 Mock（直接发送模式）
+vi.mock('@/features/notifications/service', () => ({
+    notificationService: {
+        send: mocks.notificationServiceSend.mockResolvedValue(true),
+    },
+}));
+
 vi.mock('@/shared/lib/utils', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/shared/lib/utils')>();
     return { ...actual, formatDate: vi.fn().mockReturnValue('2026-02-21') };
@@ -134,7 +143,7 @@ describe('Platform Actions - L4 升级测试', () => {
             const result = await approveTenant(TENANT_ID);
             expect(result.success).toBe(false);
             expect(result.error).toContain('未登录');
-        });
+        }, 10000); // 首次模块加载需要更多时间
 
         it('非平台管理员应返回无权限错误', async () => {
             mocks.dbQueryUsersFindFirst.mockResolvedValue({ isPlatformAdmin: false });
@@ -142,7 +151,7 @@ describe('Platform Actions - L4 升级测试', () => {
             const result = await approveTenant(TENANT_ID);
             expect(result.success).toBe(false);
             expect(result.error).toContain('权限');
-        });
+        }, 10000); // 首次模块加载兜底超时
 
         it('租户不存在时应返回错误', async () => {
             mocks.dbQueryTenantsFindFirst.mockResolvedValue(null);
@@ -389,6 +398,40 @@ describe('Platform Actions - L4 升级测试', () => {
 
             expect(result.success).toBe(true);
             expect(result.tenantId).toBe('new-tenant-id');
+        });
+
+        it('注册成功后应向平台管理员发送站内通知', async () => {
+            // 模拟平台管理员存在（需要带 id，供通知服务使用）
+            mocks.dbQueryUsersFindFirst.mockResolvedValue(null);
+            mocks.dbQueryTenantsFindMany.mockResolvedValue([]);
+            mocks.dbQueryUsersFindMany.mockResolvedValue([
+                { id: 'admin-001', email: 'admin@platform.com', name: '平台管理员', tenantId: null },
+            ]);
+
+            const { submitTenantApplication } = await import('../actions/tenant-registration');
+            const result = await submitTenantApplication({
+                companyName: '测试通知企业',
+                applicantName: '赵六',
+                phone: '13700137000',
+                email: 'notify@test.com',
+                password: 'Secure123',
+                region: '北京',
+            });
+
+            expect(result.success).toBe(true);
+
+            // 等待异步通知发送完成（通知在事务提交后异步执行）
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // 验证站内通知服务被调用，且参数中包含正确的通知类型和内容
+            expect(mocks.notificationServiceSend).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 'admin-001',
+                    type: 'SYSTEM',
+                    title: expect.stringContaining('测试通知企业'),
+                    link: '/admin/tenants',
+                })
+            );
         });
     });
 

@@ -24,7 +24,7 @@ export async function getFinanceConfig() {
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：查看财务配置
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) throw new Error('权限不足：需要财务查看权限');
 
     const configs = await db.query.financeConfigs.findMany({
         where: eq(financeConfigs.tenantId, session.user.tenantId),
@@ -53,7 +53,7 @@ export async function updateFinanceConfig(data: z.infer<typeof updateFinanceConf
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：财务管理
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE)) throw new Error('权限不足：需要财务管理权限');
 
     const validatedData = updateFinanceConfigSchema.parse(data);
 
@@ -107,7 +107,7 @@ export async function updateFinanceConfig(data: z.infer<typeof updateFinanceConf
     // 清除配置缓存，确保业务逻辑读取最新值
     clearFinanceConfigCache(session.user.tenantId);
 
-    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-config-${session.user.tenantId}`, {});
     return { success: true };
 }
 
@@ -119,7 +119,7 @@ export async function getFinanceAccounts() {
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：查看财务账户
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) throw new Error('权限不足：需要财务查看权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) throw new Error('权限不足：需要财务查看权限');
 
     return await db.query.financeAccounts.findMany({
         where: eq(financeAccounts.tenantId, session.user.tenantId),
@@ -134,7 +134,7 @@ export async function createFinanceAccount(data: z.infer<typeof createFinanceAcc
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：财务管理
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE)) throw new Error('权限不足：需要财务管理权限');
 
     const validatedData = createFinanceAccountSchema.parse(data);
 
@@ -164,7 +164,7 @@ export async function createFinanceAccount(data: z.infer<typeof createFinanceAcc
         return newAccount;
     });
 
-    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-config-${session.user.tenantId}`, {});
     return account;
 }
 
@@ -176,7 +176,7 @@ export async function updateFinanceAccount(data: z.infer<typeof updateFinanceAcc
     if (!session?.user?.tenantId) throw new Error('未授权');
 
     // 权限检查：财务管理
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE)) throw new Error('权限不足：需要财务管理权限');
 
     const { id, ...updateData } = updateFinanceAccountSchema.parse(data);
 
@@ -220,6 +220,6 @@ export async function updateFinanceAccount(data: z.infer<typeof updateFinanceAcc
         return updatedAccount;
     });
 
-    revalidateTag(`finance-config-${session.user.tenantId}`, 'default');
+    revalidateTag(`finance-config-${session.user.tenantId}`, {});
     return updated;
 }

@@ -14,7 +14,7 @@ import { logger } from "@/shared/lib/logger";
 
 import { db } from '@/shared/api/db';
 import { financeAccounts, accountTransactions, internalTransfers } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
@@ -54,7 +54,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
         const tenantId = session.user.tenantId;
 
         // 权限检查
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) throw new Error('权限不足：需要财务管理权限');
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.TRANSFER_CREATE)) throw new Error('权限不足：需要财务管理权限');
 
         logger.info('[finance] 开始创建内部调拨', { input });
         const validatedData = createTransferSchema.parse(input);
@@ -123,16 +123,22 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
 
             // 4. 扣减源账户余额
             const fromNewBalance = fromBalance.minus(transferAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-            await tx.update(financeAccounts)
+            const [fromUpdated] = await tx.update(financeAccounts)
                 .set({
                     balance: fromNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    version: sql`${financeAccounts.version} + 1`,
                     updatedAt: new Date()
                 })
                 .where(and(
                     eq(financeAccounts.id, validatedData.fromAccountId),
                     eq(financeAccounts.tenantId, tenantId),
-                    eq(financeAccounts.balance, fromBalance.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁检查
-                ));
+                    eq(financeAccounts.version, fromAccount.version)
+                ))
+                .returning({ id: financeAccounts.id });
+
+            if (!fromUpdated) {
+                throw new Error('源账户信息已过期，请重试');
+            }
 
 
             // 5. 创建源账户流水（支出）
@@ -151,15 +157,22 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
 
             // 6. 增加目标账户余额
             const toNewBalance = toBalance.plus(transferAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-            await tx.update(financeAccounts)
+            const [toUpdated] = await tx.update(financeAccounts)
                 .set({
                     balance: toNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    version: sql`${financeAccounts.version} + 1`,
                     updatedAt: new Date()
                 })
                 .where(and(
                     eq(financeAccounts.id, validatedData.toAccountId),
-                    eq(financeAccounts.tenantId, tenantId)
-                ));
+                    eq(financeAccounts.tenantId, tenantId),
+                    eq(financeAccounts.version, toAccount.version)
+                ))
+                .returning({ id: financeAccounts.id });
+
+            if (!toUpdated) {
+                throw new Error('目标账户信息已过期，请重试');
+            }
 
 
             // 7. 创建目标账户流水（收入）
@@ -199,7 +212,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
                 })
                 .where(eq(internalTransfers.id, transfer.id));
 
-            revalidateTag(`finance-transfer-${tenantId}`, 'default');
+            revalidateTag(`finance-transfer-${tenantId}`, {});
 
             logger.info('[finance] createInternalTransfer 执行成功', { transferNo });
 
@@ -243,7 +256,7 @@ export async function getInternalTransfers(params?: { limit?: number; offset?: n
         return { success: false, error: '未授权', data: [] };
     }
 
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.TRANSFER_CREATE)) {
         return { success: false, error: '权限不足：需要财务管理权限', data: [] };
     }
 
@@ -306,7 +319,7 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         const tenantId = session.user.tenantId;
 
         // 权限检查：需要财务管理权限
-        if (!await checkPermission(session, PERMISSIONS.FINANCE.MANAGE)) {
+        if (!await checkPermission(session, PERMISSIONS.FINANCE.TRANSFER_CREATE)) {
             return { success: false, error: '权限不足：需要财务管理权限' };
         }
 
@@ -380,29 +393,42 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
 
             // 3. 恢复源账户余额（加回）
             const fromNewBalance = fromBalance.plus(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-            await tx.update(financeAccounts)
+            const [fromUpdated] = await tx.update(financeAccounts)
                 .set({
                     balance: fromNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    version: sql`${financeAccounts.version} + 1`,
                     updatedAt: new Date()
                 })
                 .where(and(
                     eq(financeAccounts.id, transfer.fromAccountId),
-                    eq(financeAccounts.tenantId, tenantId)
-                ));
+                    eq(financeAccounts.tenantId, tenantId),
+                    eq(financeAccounts.version, fromAccount.version)
+                ))
+                .returning({ id: financeAccounts.id });
+
+            if (!fromUpdated) {
+                throw new Error('源账户信息已过期，请重试');
+            }
 
 
             // 4. 扣减目标账户余额
             const toNewBalance = toBalance.minus(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-            await tx.update(financeAccounts)
+            const [toUpdated] = await tx.update(financeAccounts)
                 .set({
                     balance: toNewBalance.toFixed(2, Decimal.ROUND_HALF_UP),
+                    version: sql`${financeAccounts.version} + 1`,
                     updatedAt: new Date()
                 })
                 .where(and(
                     eq(financeAccounts.id, transfer.toAccountId),
                     eq(financeAccounts.tenantId, tenantId),
-                    eq(financeAccounts.balance, toBalance.toFixed(2, Decimal.ROUND_HALF_UP)) // 乐观锁
-                ));
+                    eq(financeAccounts.version, toAccount.version) // 乐观锁
+                ))
+                .returning({ id: financeAccounts.id });
+
+            if (!toUpdated) {
+                throw new Error('目标账户信息已过期，请重试');
+            }
 
 
             // 5. 创建冲销流水 - 源账户收入
@@ -456,8 +482,8 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
                 })
                 .where(eq(internalTransfers.id, transferId));
 
-            revalidateTag(`finance-transfer-${tenantId}`, 'default');
-            revalidateTag(`finance-transfer-detail-${transfer.id}`, 'default');
+            revalidateTag(`finance-transfer-${tenantId}`, {});
+            revalidateTag(`finance-transfer-detail-${transfer.id}`, {});
 
             logger.info('[finance] cancelInternalTransfer 执行成功', { transferNo: transfer.transferNo });
 
@@ -496,7 +522,7 @@ export async function getInternalTransfer(id: string) {
     }
     const tenantId = session.user.tenantId;
 
-    if (!await checkPermission(session, PERMISSIONS.FINANCE.VIEW)) {
+    if (!await checkPermission(session, PERMISSIONS.FINANCE.TRANSFER_VIEW)) {
         return { success: false, error: '权限不足：需要财务查看权限' };
     }
 

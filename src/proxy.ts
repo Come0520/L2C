@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
@@ -138,9 +137,9 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
       secret: process.env.AUTH_SECRET,
     });
 
-    // 未登录 → 重定向到 Landing Page
+    // 未登录 → 重定向到登录页
     if (!pageToken) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
 
     // 已登录 → 放行

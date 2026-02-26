@@ -194,6 +194,7 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
                             <label className="text-sm text-muted-foreground">供应商确认截图</label>
                             {data.supplierQuoteImg ? (
                                 <div className="mt-2 relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={data.supplierQuoteImg}
                                         alt="供应商确认截图"

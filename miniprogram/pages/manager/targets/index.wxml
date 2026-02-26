@@ -1,6 +1,6 @@
 <!--pages/manager/targets/index.wxml-->
 <view class="container">
-  <view class="header">
+  <view class="card header-card">
     <view class="date-picker">
         <text>{{year}}年{{month}}月</text>
     </view>
@@ -9,7 +9,7 @@
     </view>
   </view>
 
-  <view class="list">
+  <view class="card list-card">
     <view class="list-header">
         <text>销售人员</text>
         <text>目标金额</text>

@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';

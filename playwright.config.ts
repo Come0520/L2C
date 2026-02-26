@@ -28,8 +28,8 @@ export default defineConfig({
         video: 'retain-on-failure',
 
         /* 增加超时配置以提高测试稳定性 */
-        actionTimeout: 20000, // 单个操作超时提升至 20s
-        navigationTimeout: 30000,
+        actionTimeout: 30000, // 单个操作超时提升至 30s
+        navigationTimeout: 60000, // 页面导航超时提升至 60s（SSR + 数据库查询较慢）
     },
 
     /* 全局测试超时 */

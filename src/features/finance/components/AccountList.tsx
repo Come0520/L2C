@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import {
     Table,
     TableBody,
@@ -12,7 +11,6 @@ import {
 import { Button } from '@/shared/ui/button';
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
 import Plus from 'lucide-react/dist/esm/icons/plus';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { useState } from 'react';
 import { AccountDialog } from './AccountDialog';
 import { Badge } from '@/shared/ui/badge';

@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
 import { Textarea } from '@/shared/ui/textarea';
@@ -247,6 +246,7 @@ export function ArbitrationWorkbench({
                                                             className="w-12 h-12 rounded border overflow-hidden hover:ring-2 ring-primary"
                                                             onClick={() => setSelectedEvidence(photo)}
                                                         >
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
                                                             <img src={photo} alt={`证据${i + 1}`} className="w-full h-full object-cover" />
                                                         </button>
                                                     ))}
@@ -277,6 +277,7 @@ export function ArbitrationWorkbench({
                                         }`}
                                     onClick={() => setSelectedEvidence(photo)}
                                 >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={photo} alt={`证据${index + 1}`} className="w-full h-full object-cover" />
                                 </button>
                             ))}

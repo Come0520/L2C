@@ -27,21 +27,25 @@ import { logger } from '@/shared/lib/logger';
  * @param tenantId 租户 ID
  * @param version 客户端传入的版本号（可选）
  */
-async function preflightVersionCheck(quoteId: string, tenantId: string, version?: number): Promise<void> {
+async function preflightVersionCheck(
+  quoteId: string,
+  tenantId: string,
+  version?: number
+): Promise<void> {
   if (version === undefined) return;
 
   const [updated] = await db
     .update(quotes)
     .set({ version: sql`${quotes.version} + 1`, updatedAt: new Date() })
-    .where(and(
-      eq(quotes.id, quoteId),
-      eq(quotes.tenantId, tenantId),
-      eq(quotes.version, version)
-    ))
+    .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId), eq(quotes.version, version)))
     .returning();
 
   if (!updated) {
-    logger.warn('乐观锁冲突：前置检查发现版本号不匹配', { quoteId, tenantId, currentVersion: version });
+    logger.warn('乐观锁冲突：前置检查发现版本号不匹配', {
+      quoteId,
+      tenantId,
+      currentVersion: version,
+    });
     throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
 }
@@ -72,37 +76,34 @@ export async function submitQuoteAction(params: z.infer<typeof submitQuoteSchema
  * @param data 包含报价单 ID 和可选版本号的对象
  * @param context 执行上下文
  */
-export const submitQuote = createSafeAction(
-  submitQuoteSchema,
-  async (data, context) => {
-    // P2-01: 权限校验
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
-    if (!hasPermission) {
-      logger.warn('无权执行此操作：提交报价单', { userId: context.session.user.id });
-      throw new Error('无权执行此操作');
-    }
-
-    // 【乐观锁】前置版本检查
-    await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
-
-    await QuoteLifecycleService.submit(
-      data.id,
-      context.session.user.tenantId,
-      context.session.user.id
-    );
-
-    // 审计日志：记录报价单提交
-    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
-      new: { action: 'SUBMIT' },
-    });
-
-    revalidatePath(`/quotes/${data.id}`);
-    revalidatePath('/quotes');
-    revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单提交成功', { quoteId: data.id });
-    return { success: true };
+export const submitQuote = createSafeAction(submitQuoteSchema, async (data, context) => {
+  // P2-01: 权限校验
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  if (!hasPermission) {
+    logger.warn('无权执行此操作：提交报价单', { userId: context.session.user.id });
+    throw new Error('无权执行此操作');
   }
-);
+
+  // 【乐观锁】前置版本检查
+  await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
+
+  await QuoteLifecycleService.submit(
+    data.id,
+    context.session.user.tenantId,
+    context.session.user.id
+  );
+
+  // 审计日志：记录报价单提交
+  await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+    new: { action: 'SUBMIT' },
+  });
+
+  revalidatePath(`/quotes/${data.id}`);
+  revalidatePath('/quotes');
+  revalidateTag('quotes', {});
+  logger.info('[quotes] 报价单提交成功', { quoteId: data.id });
+  return { success: true };
+});
 
 // ─── 拒绝报价单 ─────────────────────────────────
 
@@ -131,34 +132,31 @@ export async function rejectQuoteAction(params: z.infer<typeof rejectQuoteSchema
  * @param data 包含报价单 ID、拒绝原因和可选版本号的对象
  * @param context 执行上下文
  */
-export const rejectQuote = createSafeAction(
-  rejectQuoteSchema,
-  async (data, context) => {
-    // P2-01: 权限校验
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
-    if (!hasPermission) {
-      logger.warn('无权执行此操作：拒绝报价单', { userId: context.session.user.id });
-      throw new Error('无权执行此操作');
-    }
-
-    // 【乐观锁】前置版本检查
-    await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
-
-    // 🔒 安全修复：传入租户ID以便 Service 层校验归属
-    await QuoteLifecycleService.reject(data.id, data.rejectReason, context.session.user.tenantId);
-
-    // 审计日志：记录报价单拒绝
-    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
-      new: { action: 'REJECT', rejectReason: data.rejectReason },
-    });
-
-    revalidatePath(`/quotes/${data.id}`);
-    revalidatePath('/quotes');
-    revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单拒绝成功', { quoteId: data.id });
-    return { success: true };
+export const rejectQuote = createSafeAction(rejectQuoteSchema, async (data, context) => {
+  // P2-01: 权限校验
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
+  if (!hasPermission) {
+    logger.warn('无权执行此操作：拒绝报价单', { userId: context.session.user.id });
+    throw new Error('无权执行此操作');
   }
-);
+
+  // 【乐观锁】前置版本检查
+  await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
+
+  // 🔒 安全修复：传入租户ID以便 Service 层校验归属
+  await QuoteLifecycleService.reject(data.id, data.rejectReason, context.session.user.tenantId);
+
+  // 审计日志：记录报价单拒绝
+  await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+    new: { action: 'REJECT', rejectReason: data.rejectReason },
+  });
+
+  revalidatePath(`/quotes/${data.id}`);
+  revalidatePath('/quotes');
+  revalidateTag('quotes', {});
+  logger.info('[quotes] 报价单拒绝成功', { quoteId: data.id });
+  return { success: true };
+});
 
 // ─── 锁定报价单 ─────────────────────────────────
 
@@ -183,63 +181,62 @@ export async function lockQuoteAction(params: z.infer<typeof lockQuoteSchema>) {
  * @param data 包含报价单 ID 和可选版本号的对象
  * @param context 执行上下文
  */
-export const lockQuote = createSafeAction(
-  lockQuoteSchema,
-  async (data, context) => {
-    const userTenantId = context.session.user.tenantId;
+export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context) => {
+  const userTenantId = context.session.user.tenantId;
 
-    // P2-01: 权限校验
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
-    if (!hasPermission) {
-      logger.warn('无权执行此操作：锁定报价单', { userId: context.session.user.id });
-      throw new Error('无权执行此操作');
-    }
+  // P2-01: 权限校验
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  if (!hasPermission) {
+    logger.warn('无权执行此操作：锁定报价单', { userId: context.session.user.id });
+    throw new Error('无权执行此操作');
+  }
 
-    const quote = await db.query.quotes.findFirst({
-      where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
-    });
+  const quote = await db.query.quotes.findFirst({
+    where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
+  });
 
-    if (!quote) {
-      logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
-      throw new Error('报价单不存在或无权操作');
-    }
-    if (quote.lockedAt) {
-      logger.warn('试图锁定已经锁定的报价单', { quoteId: data.id });
-      throw new Error('该报价单已锁定');
-    }
+  if (!quote) {
+    logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
+    throw new Error('报价单不存在或无权操作');
+  }
+  if (quote.lockedAt) {
+    logger.warn('试图锁定已经锁定的报价单', { quoteId: data.id });
+    throw new Error('该报价单已锁定');
+  }
 
-    // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
-    const [updated] = await db
-      .update(quotes)
-      .set({
-        lockedAt: new Date(),
-        updatedAt: new Date(),
-        version: sql`${quotes.version} + 1`,
-      })
-      .where(and(
+  // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
+  const [updated] = await db
+    .update(quotes)
+    .set({
+      lockedAt: new Date(),
+      updatedAt: new Date(),
+      version: sql`${quotes.version} + 1`,
+    })
+    .where(
+      and(
         eq(quotes.id, data.id),
         eq(quotes.tenantId, userTenantId),
         data.version !== undefined ? eq(quotes.version, data.version) : undefined
-      ))
-      .returning();
+      )
+    )
+    .returning();
 
-    // 【乐观锁】版本不匹配时抛出并发冲突错误
-    if (!updated && data.version !== undefined) {
-      logger.warn('乐观锁冲突：报价单已被修改 (锁定操作)', { quoteId: data.id });
-      throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
-    }
-
-    // 审计日志：记录报价单锁定
-    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
-      new: { action: 'LOCK', lockedAt: new Date().toISOString() },
-    });
-
-    revalidatePath(`/quotes/${data.id}`);
-    revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单锁定成功', { quoteId: data.id });
-    return updated;
+  // 【乐观锁】版本不匹配时抛出并发冲突错误
+  if (!updated && data.version !== undefined) {
+    logger.warn('乐观锁冲突：报价单已被修改 (锁定操作)', { quoteId: data.id });
+    throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
-);
+
+  // 审计日志：记录报价单锁定
+  await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+    new: { action: 'LOCK', lockedAt: new Date().toISOString() },
+  });
+
+  revalidatePath(`/quotes/${data.id}`);
+  revalidateTag('quotes', {});
+  logger.info('[quotes] 报价单锁定成功', { quoteId: data.id });
+  return updated;
+});
 
 // ─── 解锁报价单 ─────────────────────────────────
 
@@ -262,59 +259,58 @@ export async function unlockQuoteAction(params: z.infer<typeof unlockQuoteSchema
  * @param data 包含报价单 ID 和可选版本号的对象
  * @param context 执行上下文
  */
-export const unlockQuote = createSafeAction(
-  unlockQuoteSchema,
-  async (data, context) => {
-    const userTenantId = context.session.user.tenantId;
+export const unlockQuote = createSafeAction(unlockQuoteSchema, async (data, context) => {
+  const userTenantId = context.session.user.tenantId;
 
-    // P2-01: 权限校验
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
-    if (!hasPermission) {
-      logger.warn('无权执行此操作：解锁报价单', { userId: context.session.user.id });
-      throw new Error('无权执行此操作');
-    }
+  // P2-01: 权限校验
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  if (!hasPermission) {
+    logger.warn('无权执行此操作：解锁报价单', { userId: context.session.user.id });
+    throw new Error('无权执行此操作');
+  }
 
-    const quote = await db.query.quotes.findFirst({
-      where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
-    });
+  const quote = await db.query.quotes.findFirst({
+    where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
+  });
 
-    if (!quote) {
-      logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
-      throw new Error('报价单不存在或无权操作');
-    }
+  if (!quote) {
+    logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
+    throw new Error('报价单不存在或无权操作');
+  }
 
-    // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
-    const [updated] = await db
-      .update(quotes)
-      .set({
-        lockedAt: null,
-        updatedAt: new Date(),
-        version: sql`${quotes.version} + 1`,
-      })
-      .where(and(
+  // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
+  const [updated] = await db
+    .update(quotes)
+    .set({
+      lockedAt: null,
+      updatedAt: new Date(),
+      version: sql`${quotes.version} + 1`,
+    })
+    .where(
+      and(
         eq(quotes.id, data.id),
         eq(quotes.tenantId, userTenantId),
         data.version !== undefined ? eq(quotes.version, data.version) : undefined
-      ))
-      .returning();
+      )
+    )
+    .returning();
 
-    // 【乐观锁】版本不匹配时抛出并发冲突错误
-    if (!updated && data.version !== undefined) {
-      logger.warn('乐观锁冲突：报价单已被修改 (解锁操作)', { quoteId: data.id });
-      throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
-    }
-
-    // 审计日志：记录报价单解锁
-    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
-      new: { action: 'UNLOCK' },
-    });
-
-    revalidatePath(`/quotes/${data.id}`);
-    revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单解锁成功', { quoteId: data.id });
-    return updated;
+  // 【乐观锁】版本不匹配时抛出并发冲突错误
+  if (!updated && data.version !== undefined) {
+    logger.warn('乐观锁冲突：报价单已被修改 (解锁操作)', { quoteId: data.id });
+    throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
-);
+
+  // 审计日志：记录报价单解锁
+  await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+    new: { action: 'UNLOCK' },
+  });
+
+  revalidatePath(`/quotes/${data.id}`);
+  revalidateTag('quotes', {});
+  logger.info('[quotes] 报价单解锁成功', { quoteId: data.id });
+  return updated;
+});
 
 // ─── 审批报价单 ─────────────────────────────────
 
@@ -338,38 +334,35 @@ export async function approveQuoteAction(params: z.infer<typeof approveQuoteSche
  * @param data 包含报价单 ID 和可选版本号的对象
  * @param context 执行上下文
  */
-export const approveQuote = createSafeAction(
-  approveQuoteSchema,
-  async (data, context) => {
-    // P2-01: 权限校验
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
-    if (!hasPermission) {
-      logger.warn('无权执行此操作：审批通过报价单', { userId: context.session.user.id });
-      throw new Error('无权执行此操作');
-    }
-
-    // 【乐观锁】前置版本检查
-    await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
-
-    // 🔒 安全修复：传入租户ID以便 Service 层校验归属
-    await QuoteLifecycleService.approve(
-      data.id,
-      context.session.user.id,
-      context.session.user.tenantId
-    );
-
-    // 审计日志：记录报价单审批
-    await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
-      new: { action: 'APPROVE' },
-    });
-
-    revalidatePath(`/quotes/${data.id}`);
-    revalidatePath('/quotes');
-    revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单审批成功', { quoteId: data.id });
-    return { success: true };
+export const approveQuote = createSafeAction(approveQuoteSchema, async (data, context) => {
+  // P2-01: 权限校验
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
+  if (!hasPermission) {
+    logger.warn('无权执行此操作：审批通过报价单', { userId: context.session.user.id });
+    throw new Error('无权执行此操作');
   }
-);
+
+  // 【乐观锁】前置版本检查
+  await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
+
+  // 🔒 安全修复：传入租户ID以便 Service 层校验归属
+  await QuoteLifecycleService.approve(
+    data.id,
+    context.session.user.id,
+    context.session.user.tenantId
+  );
+
+  // 审计日志：记录报价单审批
+  await AuditService.recordFromSession(context.session, 'quotes', data.id, 'UPDATE', {
+    new: { action: 'APPROVE' },
+  });
+
+  revalidatePath(`/quotes/${data.id}`);
+  revalidatePath('/quotes');
+  revalidateTag('quotes', {});
+  logger.info('[quotes] 报价单审批成功', { quoteId: data.id });
+  return { success: true };
+});
 
 // ─── 拒绝折扣变更 ───────────────────────────────
 
@@ -517,7 +510,10 @@ export const createNextVersion = createSafeAction(
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);
     revalidateTag('quotes', {});
-    logger.info('[quotes] 报价新版本创建成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
+    logger.info('[quotes] 报价新版本创建成功', {
+      sourceQuoteId: data.quoteId,
+      newQuoteId: newQuote.id,
+    });
     return newQuote;
   }
 );

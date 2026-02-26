@@ -9,7 +9,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/shared/ui/select';
-import { Badge } from '@/shared/ui/badge';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 

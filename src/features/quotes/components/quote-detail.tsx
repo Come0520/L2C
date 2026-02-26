@@ -140,7 +140,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
         }
       }
     );
-  }, [quote, quote.items, quote.rooms, quote.finalAmount, quote.totalAmount, config]);
+  }, [quote, config]);
 
   // 创建空间处理函数
   const handleCreateRoom = async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SupplierTable } from '@/features/supply-chain/components/supplier-table';
 import { SupplierDialog } from '@/features/supply-chain/components/supplier-dialog';
 import { getSuppliers, updateSupplier } from '@/features/supply-chain/actions/supplier-actions';
@@ -19,7 +19,7 @@ export default function SuppliersPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const result = await getSuppliers({ page: 1, pageSize: 100, query });
@@ -28,16 +28,16 @@ export default function SuppliersPage() {
                 return;
             }
             setData(result.data?.data || []);
-        } catch (error: unknown) {
+        } catch (_error: unknown) {
             toast.error('获取供应商失败');
         } finally {
             setLoading(false);
         }
-    };
+    }, [query]);
 
     useEffect(() => {
         fetchData();
-    }, [query]);
+    }, [fetchData]);
 
     const handleCreate = () => {
         setSelectedSupplier(null);
@@ -59,7 +59,7 @@ export default function SuppliersPage() {
             }
             toast.success(active ? '供应商已启用' : '供应商已停用');
             fetchData();
-        } catch (error: unknown) {
+        } catch (_error: unknown) {
             toast.error('操作失败');
         }
     };

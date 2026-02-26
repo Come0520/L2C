@@ -38,9 +38,44 @@ const eslintConfig = defineConfig([
   },
   // 脚本文件放宽规则 - CLI 脚本需要 console 输出
   {
-    files: ["src/scripts/**"],
+    files: ["scripts/**", "src/scripts/**"],
     rules: {
       "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    }
+  },
+  // Server Actions - 后端行为文件中允许 console（运维日志）
+  {
+    files: ["src/features/**/actions/**"],
+    rules: {
+      "no-console": "off",
+    }
+  },
+  // 根目录的工具/调试脚本 - 允许 console 和宽松类型
+  {
+    files: [
+      "fix-*.js", "fix-*.ts",
+      "find-*.ts",
+      "get-*.ts",
+      "reproduce_*.mjs",
+      "tmp-*.js",
+      "verify-*.js",
+      "local-https.js",
+    ],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    }
+  },
+  // MCP 服务器代码 - 第三方移植代码放宽规则
+  {
+    files: ["servers/**"],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
     }
   },
   // Logger / 审计相关文件允许使用 console（它们就是 console 的封装层）

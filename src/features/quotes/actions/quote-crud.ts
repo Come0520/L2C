@@ -66,7 +66,10 @@ export const createQuoteBundleActionInternal = createSafeAction(
 
     revalidatePath('/quotes');
     revalidateTag('quotes', {});
-    logger.info('[quotes] 报价套餐创建成功', { bundleId: newBundle.id, quoteNo: newBundle.quoteNo });
+    logger.info('[quotes] 报价套餐创建成功', {
+      bundleId: newBundle.id,
+      quoteNo: newBundle.quoteNo,
+    });
     return newBundle;
   }
 );
@@ -86,52 +89,59 @@ export const createQuoteBundleActionInternal = createSafeAction(
  * @returns 创建的报价单实例（自动设为根版本并可选择关联套餐）
  * @throws 缺少租户信息时抛出错误
  */
-export const createQuoteActionInternal = createSafeAction(createQuoteSchema, async (data, context) => {
-  const tenantId = context.session.user.tenantId;
-  if (!tenantId) {
-    logger.error('未授权访问：缺少租户信息');
-    throw new Error('未授权访问：缺少租户信息');
-  }
+export const createQuoteActionInternal = createSafeAction(
+  createQuoteSchema,
+  async (data, context) => {
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) {
+      logger.error('未授权访问：缺少租户信息');
+      throw new Error('未授权访问：缺少租户信息');
+    }
 
-  const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-  logger.info('[quotes] 开始创建报价单', { customerId: data.customerId, bundleId: data.bundleId, title: data.title });
-
-  const [newQuote] = await db
-    .insert(quotes)
-    .values({
-      quoteNo,
-      tenantId,
+    const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    logger.info('[quotes] 开始创建报价单', {
       customerId: data.customerId,
-      leadId: data.leadId,
-      measureVariantId: data.measureVariantId,
-      title: data.title || '新报价单',
-      status: 'DRAFT',
       bundleId: data.bundleId,
-      createdBy: context.session.user.id,
-    })
-    .returning();
+      title: data.title,
+    });
 
-  // 每个报价单都是自己版本链的根节点（即使是子报价也如此）
-  const rootId = newQuote.id;
-  await db.update(quotes).set({ rootQuoteId: rootId }).where(eq(quotes.id, newQuote.id));
+    const [newQuote] = await db
+      .insert(quotes)
+      .values({
+        quoteNo,
+        tenantId,
+        customerId: data.customerId,
+        leadId: data.leadId,
+        measureVariantId: data.measureVariantId,
+        title: data.title || '新报价单',
+        status: 'DRAFT',
+        bundleId: data.bundleId,
+        createdBy: context.session.user.id,
+      })
+      .returning();
 
-  newQuote.rootQuoteId = rootId;
+    // 每个报价单都是自己版本链的根节点（即使是子报价也如此）
+    const rootId = newQuote.id;
+    await db.update(quotes).set({ rootQuoteId: rootId }).where(eq(quotes.id, newQuote.id));
 
-  // 若加入套餐，更新套餐总额
-  if (data.bundleId) {
-    await updateBundleTotal(data.bundleId, tenantId);
+    newQuote.rootQuoteId = rootId;
+
+    // 若加入套餐，更新套餐总额
+    if (data.bundleId) {
+      await updateBundleTotal(data.bundleId, tenantId);
+    }
+
+    // 审计日志：记录报价单创建
+    await AuditService.recordFromSession(context.session, 'quotes', newQuote.id, 'CREATE', {
+      new: { quoteNo: newQuote.quoteNo, customerId: data.customerId, bundleId: data.bundleId },
+    });
+
+    revalidatePath('/quotes');
+    revalidateTag('quotes', {});
+    logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
+    return newQuote;
   }
-
-  // 审计日志：记录报价单创建
-  await AuditService.recordFromSession(context.session, 'quotes', newQuote.id, 'CREATE', {
-    new: { quoteNo: newQuote.quoteNo, customerId: data.customerId, bundleId: data.bundleId },
-  });
-
-  revalidatePath('/quotes');
-  revalidateTag('quotes', {});
-  logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
-  return newQuote;
-});
+);
 
 /**
  * 客户端调用：创建报价单套餐 (Create Quote Bundle)
@@ -183,7 +193,11 @@ export async function updateQuoteAction(params: z.infer<typeof updateQuoteSchema
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
   const { id, version, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
-  logger.info('[quotes] 开始更新报价单', { quoteId: id, version, updateKeys: Object.keys(updateData) });
+  logger.info('[quotes] 开始更新报价单', {
+    quoteId: id,
+    version,
+    updateKeys: Object.keys(updateData),
+  });
 
   // 安全检查：验证报价单属于当前租户
   const quote = await db.query.quotes.findFirst({
@@ -198,12 +212,12 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   // 折扣逻辑（使用 Decimal.js 保证精度一致性）
   const totalAmountDec = new Decimal(quote.totalAmount || 0);
   const oldRate = new Decimal(quote.discountRate || 1);
-  const newRate = updateData.discountRate !== undefined
-    ? new Decimal(updateData.discountRate)
-    : oldRate;
-  const newDiscountAmountDec = updateData.discountAmount !== undefined
-    ? new Decimal(updateData.discountAmount)
-    : new Decimal(quote.discountAmount || 0);
+  const newRate =
+    updateData.discountRate !== undefined ? new Decimal(updateData.discountRate) : oldRate;
+  const newDiscountAmountDec =
+    updateData.discountAmount !== undefined
+      ? new Decimal(updateData.discountAmount)
+      : new Decimal(quote.discountAmount || 0);
 
   // 审批检查
   const requiresApproval = await DiscountControlService.checkRequiresApproval(
@@ -226,11 +240,13 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
       updatedAt: new Date(),
       version: sql`${quotes.version} + 1`,
     })
-    .where(and(
-      eq(quotes.id, id),
-      eq(quotes.tenantId, userTenantId),
-      version !== undefined ? eq(quotes.version, version) : undefined
-    ))
+    .where(
+      and(
+        eq(quotes.id, id),
+        eq(quotes.tenantId, userTenantId),
+        version !== undefined ? eq(quotes.version, version) : undefined
+      )
+    )
     .returning();
 
   // 【乐观锁】版本不匹配时抛出并发冲突错误
@@ -242,7 +258,11 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   // 审计日志：记录报价单更新
   await AuditService.recordFromSession(context.session, 'quotes', id, 'UPDATE', {
     old: { discountRate: quote.discountRate, discountAmount: quote.discountAmount },
-    new: { discountRate: newRate.toFixed(4), discountAmount: newDiscountAmountDec.toFixed(2), finalAmount: finalAmountDec.toFixed(2) },
+    new: {
+      discountRate: newRate.toFixed(4),
+      discountAmount: newDiscountAmountDec.toFixed(2),
+      finalAmount: finalAmountDec.toFixed(2),
+    },
   });
 
   revalidatePath(`/quotes/${id}`);
@@ -267,7 +287,10 @@ export const copyQuote = createSafeAction(
   }),
   async (data, context) => {
     const userTenantId = context.session.user.tenantId;
-    logger.info('[quotes] 开始复制报价单', { quoteId: data.quoteId, targetCustomerId: data.targetCustomerId });
+    logger.info('[quotes] 开始复制报价单', {
+      quoteId: data.quoteId,
+      targetCustomerId: data.targetCustomerId,
+    });
 
     // 安全检查：验证源报价单归属
     const sourceQuote = await db.query.quotes.findFirst({
@@ -294,7 +317,10 @@ export const copyQuote = createSafeAction(
 
     revalidatePath('/quotes');
     revalidateTag('quotes', {});
-    logger.info('[quotes] 报价单复制成功', { sourceQuoteId: data.quoteId, newQuoteId: newQuote.id });
+    logger.info('[quotes] 报价单复制成功', {
+      sourceQuoteId: data.quoteId,
+      newQuoteId: newQuote.id,
+    });
     return newQuote;
   }
 );

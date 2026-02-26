@@ -57,7 +57,7 @@ export function ChangeOrderDialog({ orderId, trigger }: ChangeOrderDialogProps) 
             } else {
                 toast.error('提交失败: ' + res.error);
             }
-        } catch (e) {
+        } catch (_e) {
             toast.error('提交失败');
         } finally {
             setLoading(false);

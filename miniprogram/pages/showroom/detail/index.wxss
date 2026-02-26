@@ -1,16 +1,15 @@
 /* pages/showroom/detail/index.wxss */
 
-/* Museum Theme */
 .container {
   min-height: 100vh;
-  background-color: var(--obsidian-black);
-  color: #e2e8f0;
+  background-color: var(--bg-page);
+  color: var(--text-body);
   padding-bottom: 200rpx; /* Space for footer */
 }
 
-/* 沉浸式画廊 */
+/* Hero Image */
 .gallery-section {
-  height: 60vh;
+  height: 50vh;
   width: 100%;
   position: relative;
 }
@@ -22,90 +21,46 @@
   top: 0; left: 0;
 }
 
-/* 渐变遮罩 - 底部过渡到黑色 */
 .gallery-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(to bottom, 
-    rgba(0,0,0,0.3) 0%, 
-    transparent 20%, 
-    transparent 60%, 
-    var(--obsidian-black) 100%
+    rgba(0,0,0,0.2) 0%, 
+    transparent 40%, 
+    transparent 80%, 
+    rgba(0,0,0,0.1) 100%
   );
 }
 
-.nav-bar {
-    position: absolute;
-    top: 60rpx; left: 32rpx;
-    z-index: 10;
-}
-
-.back-btn {
-    background: rgba(0,0,0,0.5);
-    border: 1rpx solid rgba(255,255,255,0.2);
-    padding: 12rpx 24rpx;
-    border-radius: 99rpx;
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-}
-
-.back-icon { color: #fff; margin-right: 8rpx; font-size: 24rpx; }
-.back-text { color: #fff; font-size: 20rpx; letter-spacing: 2rpx; }
-
-/* 铭牌信息卡 - 悬浮于图片之上 */
-.info-plaque {
+/* Info Card - Overlapping Hero Image */
+.info-card {
   position: relative;
-  margin: -100rpx 40rpx 0; /* Overlap image */
-  background: #121212;
-  border: 1rpx solid var(--gold-dark);
+  margin: -80rpx 32rpx 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   padding: 40rpx;
-  box-shadow: 0 20rpx 60rpx rgba(0,0,0,0.8);
+  box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.08);
   z-index: 20;
 }
-
-/* 金色拉丝纹理背景 */
-.plaque-content {
-    position: relative;
-    z-index: 2;
-}
-
-/* 装饰角标 */
-.corner {
-    position: absolute;
-    width: 16rpx;
-    height: 16rpx;
-    border: 2rpx solid var(--gold-primary);
-    z-index: 3;
-}
-.tl { top: -2rpx; left: -2rpx; border-right: none; border-bottom: none; }
-.tr { top: -2rpx; right: -2rpx; border-left: none; border-bottom: none; }
-.bl { bottom: -2rpx; left: -2rpx; border-right: none; border-top: none; }
-.br { bottom: -2rpx; right: -2rpx; border-left: none; border-top: none; }
 
 .title {
     font-size: 40rpx;
     font-weight: 900;
-    color: var(--gold-primary);
-    letter-spacing: 4rpx;
-    text-transform: uppercase;
-    text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.5);
+    color: var(--text-heading);
     margin-bottom: 8rpx;
 }
 
 .subtitle {
     font-size: 24rpx;
-    color: #64748b;
+    color: var(--text-muted);
     letter-spacing: 2rpx;
     text-transform: uppercase;
 }
 
-/* 金色分割线 */
-.divider-gold {
+.divider {
     height: 1rpx;
-    background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+    background: var(--border-light);
     margin: 32rpx 0;
-    opacity: 0.3;
 }
 
 .specs {
@@ -119,81 +74,86 @@
     font-size: 26rpx;
 }
 
-.label { color: #94a3b8; font-size: 22rpx; }
-.value { color: #e2e8f0; }
+.label { color: var(--text-muted); font-size: 22rpx; }
+.value { color: var(--text-heading); font-weight: 500; }
 
 .price-box {
     text-align: right;
     margin-top: 20rpx;
 }
 
-.currency { font-size: 32rpx; color: var(--gold-light); margin-right: 4rpx; }
+.currency { font-size: 32rpx; color: var(--brand-primary); margin-right: 4rpx; font-weight: bold; }
 .amount { 
     font-size: 64rpx; 
     font-weight: 700; 
-    color: var(--gold-light); 
+    color: var(--brand-primary); 
     font-family: 'DIN Alternate', sans-serif;
-    text-shadow: 0 0 10rpx rgba(212, 175, 55, 0.3);
 }
-.unit { font-size: 24rpx; color: #94a3b8; margin-left: 8rpx; }
+.unit { font-size: 24rpx; color: var(--text-muted); margin-left: 8rpx; }
 
-/* 详情内容 */
+/* Content Section */
 .detail-content {
-    padding: 60rpx 40rpx;
+    padding: 40rpx 32rpx;
 }
 
 .section-title {
     display: flex;
     align-items: center;
     margin-bottom: 32rpx;
+    position: relative;
+    padding-left: 16rpx;
 }
 
 .section-title text {
-    color: var(--gold-dark);
-    font-size: 28rpx;
-    letter-spacing: 4rpx;
-    margin-right: 20rpx;
+    color: var(--text-heading);
+    font-size: 32rpx;
+    font-weight: bold;
 }
 
-.section-title .line {
-    flex: 1;
-    height: 1rpx;
-    background: #333;
+.section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6rpx;
+    height: 32rpx;
+    background: var(--brand-primary);
+    border-radius: 4rpx;
 }
 
 .desc-text {
     font-size: 28rpx;
     line-height: 1.8;
-    color: #94a3b8;
+    color: var(--text-body);
     margin-bottom: 40rpx;
     text-align: justify;
 }
 
 .image-frame {
-    padding: 16rpx;
-    background: #1a1a1a;
-    border: 1rpx solid #333;
-    margin-bottom: 32rpx;
-    box-shadow: 0 10rpx 30rpx rgba(0,0,0,0.5);
+    margin-bottom: 24rpx;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-section);
 }
 
 .detail-img {
     width: 100%;
     display: block;
-    filter: brightness(0.9); /* 略微压暗，更有质感 */
 }
 
-/* 底部操作栏 */
+/* Action Bar */
 .action-bar {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: #0f0f0f;
-    border-top: 1rpx solid var(--gold-dark);
-    padding: 24rpx 40rpx;
+    background: var(--bg-card);
+    border-top: 1rpx solid var(--border-light);
+    padding: 24rpx 32rpx;
     padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
     display: flex;
     gap: 24rpx;
     z-index: 100;
+    box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05);
 }
 
 .action-btn {
@@ -205,33 +165,40 @@
     background: transparent;
     border: none;
     padding: 0;
-    line-height: 1.2;
-    color: #94a3b8;
+    line-height: 1.4;
+    color: var(--text-muted);
 }
 
 .action-btn::after { border: none; }
 
-.btn-icon { width: 40rpx; height: 40rpx; margin-bottom: 4rpx; }
-
-.action-btn.share, .action-btn.contact {
-    width: 100rpx;
+.btn-icon {
+    font-size: 40rpx;
+    margin-bottom: 4rpx;
 }
 
-.action-btn.primary {
+.action-btn.share, .action-btn.contact {
+    width: 96rpx;
+}
+
+.action-btn-primary {
     flex: 1;
-    background: linear-gradient(135deg, #d4af37 0%, #b48a1e 100%);
-    color: #0f0f0f;
-    border-radius: 4rpx;
+    background: var(--brand-primary);
+    color: #fff;
+    border-radius: 99rpx;
     font-size: 30rpx;
-    font-weight: 700;
-    letter-spacing: 2rpx;
-    flex-direction: row;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 88rpx;
+}
+.action-btn-primary:active {
+    background: var(--brand-hover);
 }
 
 /* Animations */
 .animate-slide-up {
-    animation: slideUp 0.8s ease-out forwards;
+    animation: slideUp 0.6s ease-out forwards;
     opacity: 0;
     transform: translateY(40rpx);
 }

@@ -1,16 +1,18 @@
+/* 自定义标签栏 - 简洁白底风格 */
 .tab-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   height: 48px;
-  background: #141414;
+  background: #FFFFFF;
   display: flex;
   padding-bottom: env(safe-area-inset-bottom);
+  z-index: 999;
 }
 
 .tab-bar-border {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #E5E7EB;
   position: absolute;
   left: 0;
   top: 0;
@@ -26,13 +28,16 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
+  padding-top: 4px;
 }
 
 .tab-icon {
-  width: 27px;
-  height: 27px;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
 }
 
 .tab-text {
   font-size: 10px;
+  line-height: 14px;
 }

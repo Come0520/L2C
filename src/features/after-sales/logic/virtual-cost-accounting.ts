@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { liabilityNotices } from '@/shared/api/schema/after-sales';
-import { eq, and, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 
 /**
  * 虚拟成本核算逻辑

@@ -1,13 +1,12 @@
 <!--pages/status/status.wxml-->
 <view class="container">
-  <!-- 黏土风格背景 -->
   <scroll-view class="content-wrapper" scroll-y="true" enhanced="true" show-scrollbar="false">
     <!-- 状态卡片 -->
-    <view class="glass-card status-card animate-slide-up">
+    <view class="card status-card animate-slide-up">
       <!-- 待审批 -->
       <view wx:if="{{status === 'pending_approval'}}" class="status-content">
-        <view class="status-icon-box orange">
-          <image class="status-icon pending" src="/assets/icons/pending-active.svg" />
+        <view class="status-icon-box status-pending">
+          <image class="status-icon" src="/assets/icons/pending-active.svg" />
         </view>
         <view class="status-title">审批中</view>
         <view class="status-desc">
@@ -34,8 +33,8 @@
 
       <!-- 已通过 -->
       <view wx:elif="{{status === 'active'}}" class="status-content">
-        <view class="status-icon-box green">
-          <image class="status-icon success" src="/assets/icons/success-active.svg" />
+        <view class="status-icon-box status-success">
+          <image class="status-icon" src="/assets/icons/success-active.svg" />
         </view>
         <view class="status-title">审批通过</view>
         <view class="status-desc">
@@ -51,8 +50,8 @@
 
       <!-- 已拒绝 -->
       <view wx:elif="{{status === 'rejected'}}" class="status-content">
-        <view class="status-icon-box red">
-          <image class="status-icon error" src="/assets/icons/error-active.svg" />
+        <view class="status-icon-box status-error">
+          <image class="status-icon" src="/assets/icons/error-active.svg" />
         </view>
         <view class="status-title">审批未通过</view>
         <view class="error-box">
@@ -68,7 +67,7 @@
 
       <!-- 未申请 -->
       <view wx:else class="status-content">
-        <view class="status-icon-box blue">
+        <view class="status-icon-box status-default">
           <image class="status-icon" src="/assets/icons/list-active.svg" />
         </view>
         <view class="status-title">尚未申请</view>
@@ -81,8 +80,8 @@
       </view>
     </view>
 
-    <!-- 企业信息 (Glassmorphism) -->
-    <view wx:if="{{tenantInfo}}" class="glass-card info-card animate-slide-up" style="animation-delay: 0.1s;">
+    <!-- 企业信息 -->
+    <view wx:if="{{tenantInfo}}" class="card info-card animate-slide-up" style="animation-delay: 0.1s;">
       <view class="card-header">
         <view class="header-icon"><image src="/assets/icons/company-active.svg" class="icon-img" /></view>
         <view class="header-title">企业信息</view>
@@ -111,8 +110,8 @@
       </view>
     </view>
 
-    <!-- 订阅提醒 (Glassmorphism) -->
-    <view class="glass-card subscribe-card animate-slide-up" wx:if="{{status === 'pending_approval'}}" style="animation-delay: 0.2s;">
+    <!-- 订阅提醒 -->
+    <view class="card subscribe-card animate-slide-up" wx:if="{{status === 'pending_approval'}}" style="animation-delay: 0.2s;">
       <view class="subscribe-content">
         <view class="subscribe-icon-box">
           <text>🔔</text>
@@ -122,7 +121,7 @@
           <view class="subscribe-desc">审批结果将第一时间推送给您</view>
         </view>
       </view>
-      <button class="small-btn" bindtap="subscribeNotification" hover-class="btn-hover">
+      <button class="small-outline-btn" bindtap="subscribeNotification" hover-class="btn-hover">
         订阅通知
       </button>
     </view>

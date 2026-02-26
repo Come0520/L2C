@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { productCategoryEnum } from '@/shared/api/schema';
 
 export type { ProductCategory } from '@/shared/api/schema';
@@ -58,4 +57,4 @@ export { AttributeTemplateManager } from './components/attribute-template-manage
 export { ChannelPriceManager } from './components/channel-price-manager';
 export { BundleManager } from './components/bundle-manager';
 export { ChannelDiscountManager } from './components/channel-discount-manager';
-
+

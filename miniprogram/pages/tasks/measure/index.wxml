@@ -1,202 +1,222 @@
-<!--
-  测量数据录入页
-  pages/tasks/measure/index.wxml
--->
+<!-- pages/tasks/measure/index.wxml -->
 <view class="container">
-  <!-- 方案 Tab 栏 -->
+  <!-- Variant Tabs -->
   <view class="variant-tabs">
     <scroll-view scroll-x class="tabs-scroll">
-      <view 
-        wx:for="{{variants}}" 
-        wx:key="*this"
-        class="tab-item {{activeVariant === item ? 'active' : ''}}"
-        bindtap="switchVariant"
-        data-variant="{{item}}"
-      >
-        方案 {{item}}
-      </view>
-      <view class="tab-item add-btn" bindtap="addVariant">
-        + 新增方案
+      <view class="tabs-inner">
+        <view 
+          wx:for="{{variants}}" 
+          wx:key="*this"
+          class="tab-item {{activeVariant === item ? 'active' : ''}}"
+          bindtap="switchVariant"
+          data-variant="{{item}}"
+        >
+          方案 {{item}}
+        </view>
+        <view class="tab-item add-btn" bindtap="addVariant">
+          <text class="add-icon">+</text> 新增方案
+        </view>
       </view>
     </scroll-view>
   </view>
 
-  <!-- 窗户列表 -->
+  <!-- Content -->
   <scroll-view class="content" scroll-y>
-    <view wx:if="{{items.length === 0}}" class="empty">
-      <text>暂无窗户数据，点击下方按钮添加</text>
+    <view wx:if="{{items.length === 0}}" class="empty-state">
+      <text class="empty-text">暂无窗户数据，点击下方按钮添加</text>
     </view>
 
-    <view wx:for="{{items}}" wx:key="id" class="item-card {{item.expanded ? 'expanded' : ''}}">
-      <!-- 卡片头部 -->
+    <view wx:for="{{items}}" wx:key="id" class="card item-card {{item.expanded ? 'expanded' : ''}}">
+      <!-- Card Header -->
       <view class="card-header" bindtap="toggleExpand" data-index="{{index}}">
         <view class="header-left">
           <text class="room-name">{{item.roomName || '未命名房间'}}</text>
-          <text class="dimensions">{{item.width}}×{{item.height}}</text>
+          <text class="dimensions" wx:if="{{item.width && item.height}}">{{item.width}}×{{item.height}}</text>
         </view>
         <view class="header-right">
           <text class="expand-icon">{{item.expanded ? '▲' : '▼'}}</text>
         </view>
       </view>
 
-      <!-- 卡片内容（可折叠） -->
+      <!-- Card Content -->
       <view wx:if="{{item.expanded}}" class="card-content">
-        <!-- 房间名称 -->
-        <view class="form-row">
-          <text class="label">房间名称</text>
-          <input 
-            class="input" 
-            placeholder="如：客厅、卧室"
-            value="{{item.roomName}}"
-            bindinput="onFieldChange"
-            data-index="{{index}}"
-            data-field="roomName"
-          />
+        
+        <view class="form-group">
+          <view class="form-item">
+            <text class="form-label">房间名称</text>
+            <input 
+              class="form-input" 
+              placeholder="如：客厅、卧室"
+              value="{{item.roomName}}"
+              bindinput="onFieldChange"
+              data-index="{{index}}"
+              data-field="roomName"
+            />
+          </view>
+
+          <view class="form-item">
+            <text class="form-label">窗户类型</text>
+            <picker 
+              mode="selector"
+              range="{{windowTypes}}"
+              range-key="label"
+              value="{{0}}"
+              bindchange="onPickerChange"
+              data-index="{{index}}"
+              data-field="windowType"
+              data-options="{{windowTypes}}"
+            >
+              <view class="picker-value {{item.windowType ? '' : 'placeholder'}}">
+                {{item.windowType || '请选择'}}
+              </view>
+            </picker>
+          </view>
         </view>
 
-        <!-- 窗户类型 -->
-        <view class="form-row">
-          <text class="label">窗户类型</text>
-          <picker 
-            mode="selector"
-            range="{{windowTypes}}"
-            range-key="label"
-            value="{{0}}"
-            bindchange="onPickerChange"
-            data-index="{{index}}"
-            data-field="windowType"
-            data-options="{{windowTypes}}"
-          >
-            <view class="picker">{{item.windowType || '请选择'}}</view>
-          </picker>
-        </view>
-
-        <!-- 宽度和高度 -->
         <view class="form-row-group">
-          <view class="form-row half">
-            <text class="label">宽度 (mm)</text>
-            <input 
-              class="input" 
-              type="digit"
-              placeholder="宽度"
-              value="{{item.width}}"
-              bindinput="onFieldChange"
+          <view class="form-group half-group">
+            <view class="form-item form-item-vertical">
+              <text class="form-label">宽度 (mm)</text>
+              <input 
+                class="form-input" 
+                type="digit"
+                placeholder="0"
+                value="{{item.width}}"
+                bindinput="onFieldChange"
+                data-index="{{index}}"
+                data-field="width"
+              />
+            </view>
+          </view>
+          <view class="form-group half-group">
+            <view class="form-item form-item-vertical">
+              <text class="form-label">高度 (mm)</text>
+              <input 
+                class="form-input" 
+                type="digit"
+                placeholder="0"
+                value="{{item.height}}"
+                bindinput="onFieldChange"
+                data-index="{{index}}"
+                data-field="height"
+              />
+            </view>
+          </view>
+        </view>
+
+        <view class="form-group">
+          <view class="form-item">
+            <text class="form-label">安装方式</text>
+            <picker 
+              mode="selector"
+              range="{{installTypes}}"
+              range-key="label"
+              bindchange="onPickerChange"
               data-index="{{index}}"
-              data-field="width"
+              data-field="installType"
+              data-options="{{installTypes}}"
+            >
+              <view class="picker-value {{item.installType ? '' : 'placeholder'}}">
+                {{item.installType || '请选择'}}
+              </view>
+            </picker>
+          </view>
+
+          <view class="form-item">
+            <text class="form-label">墙体材质</text>
+            <picker 
+              mode="selector"
+              range="{{wallMaterials}}"
+              range-key="label"
+              bindchange="onPickerChange"
+              data-index="{{index}}"
+              data-field="wallMaterial"
+              data-options="{{wallMaterials}}"
+            >
+              <view class="picker-value {{item.wallMaterial ? '' : 'placeholder'}}">
+                {{item.wallMaterial || '请选择'}}
+              </view>
+            </picker>
+          </view>
+        </view>
+
+        <view class="form-group">
+          <view class="form-item switch-item">
+            <text class="form-label">是否有窗盒</text>
+            <switch 
+              checked="{{item.hasBox}}"
+              bindchange="onSwitchChange"
+              data-index="{{index}}"
+              data-field="hasBox"
+              color="var(--brand-primary)"
             />
           </view>
-          <view class="form-row half">
-            <text class="label">高度 (mm)</text>
-            <input 
-              class="input" 
-              type="digit"
-              placeholder="高度"
-              value="{{item.height}}"
-              bindinput="onFieldChange"
+
+          <view class="form-item switch-item">
+            <text class="form-label">是否电动</text>
+            <switch 
+              checked="{{item.isElectric}}"
+              bindchange="onSwitchChange"
               data-index="{{index}}"
-              data-field="height"
+              data-field="isElectric"
+              color="var(--brand-primary)"
             />
           </view>
         </view>
 
-        <!-- 安装方式 -->
-        <view class="form-row">
-          <text class="label">安装方式</text>
-          <picker 
-            mode="selector"
-            range="{{installTypes}}"
-            range-key="label"
-            bindchange="onPickerChange"
-            data-index="{{index}}"
-            data-field="installType"
-            data-options="{{installTypes}}"
-          >
-            <view class="picker">{{item.installType || '请选择'}}</view>
-          </picker>
+        <view class="form-group">
+          <view class="form-item form-item-vertical">
+            <text class="form-label">备注</text>
+            <textarea 
+              class="form-textarea" 
+              placeholder="其他说明..."
+              value="{{item.remark}}"
+              bindinput="onFieldChange"
+              data-index="{{index}}"
+              data-field="remark"
+            />
+          </view>
         </view>
 
-        <!-- 墙体材质 -->
-        <view class="form-row">
-          <text class="label">墙体材质</text>
-          <picker 
-            mode="selector"
-            range="{{wallMaterials}}"
-            range-key="label"
-            bindchange="onPickerChange"
-            data-index="{{index}}"
-            data-field="wallMaterial"
-            data-options="{{wallMaterials}}"
-          >
-            <view class="picker">{{item.wallMaterial || '请选择'}}</view>
-          </picker>
+        <!-- Delete Button -->
+        <view class="delete-btn-wrap">
+          <view class="btn-delete" bindtap="removeItem" data-index="{{index}}">
+            <icon type="clear" size="14" color="var(--status-danger)" />
+            <text>删除此窗户</text>
+          </view>
         </view>
-
-        <!-- 是否有窗盒 -->
-        <view class="form-row">
-          <text class="label">是否有窗盒</text>
-          <switch 
-            checked="{{item.hasBox}}"
-            bindchange="onSwitchChange"
-            data-index="{{index}}"
-            data-field="hasBox"
-          />
-        </view>
-
-        <!-- 是否电动 -->
-        <view class="form-row">
-          <text class="label">是否电动</text>
-          <switch 
-            checked="{{item.isElectric}}"
-            bindchange="onSwitchChange"
-            data-index="{{index}}"
-            data-field="isElectric"
-          />
-        </view>
-
-        <!-- 备注 -->
-        <view class="form-row">
-          <text class="label">备注</text>
-          <textarea 
-            class="textarea" 
-            placeholder="其他说明"
-            value="{{item.remark}}"
-            bindinput="onFieldChange"
-            data-index="{{index}}"
-            data-field="remark"
-          />
-        </view>
-
-        <!-- 删除按钮 -->
-        <view class="delete-btn" bindtap="removeItem" data-index="{{index}}">
-          删除此窗户
-        </view>
+        
       </view>
     </view>
 
-    <!-- 添加窗户按钮 -->
-    <view class="add-item-btn" bindtap="addItem">
-      + 添加窗户
+    <!-- Add Button -->
+    <view class="add-item-btn" bindtap="addItem" hover-class="add-item-btn-hover">
+      <text class="add-icon">+</text> 添加窗户
     </view>
 
-    <!-- 照片区域 -->
+    <!-- Photos Section -->
     <view class="photo-section">
       <view class="section-title">现场照片</view>
       <view class="photo-grid">
         <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
           <image src="{{item}}" mode="aspectFill" />
-          <view class="remove-icon" bindtap="removePhoto" data-index="{{index}}">×</view>
+          <view class="remove-icon" bindtap="removePhoto" data-index="{{index}}">
+            <icon type="clear" size="16" color="#fff" />
+          </view>
         </view>
         <view wx:if="{{photos.length < 9}}" class="photo-item add-photo" bindtap="choosePhoto">
-          <text>+</text>
+          <text class="add-icon">+</text>
         </view>
       </view>
     </view>
+
+    <view class="footer-spacer"></view>
   </scroll-view>
 
-  <!-- 底部提交按钮 -->
-  <view class="footer">
+  <!-- Footer -->
+  <view class="footer-bar">
     <button 
-      class="submit-btn" 
+      class="btn-primary btn-submit" 
       bindtap="submitData"
       disabled="{{submitting}}"
       loading="{{submitting}}"

@@ -1,7 +1,5 @@
 'use client';
 
-import { logger } from "@/shared/lib/logger";
-
 import React from 'react';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';

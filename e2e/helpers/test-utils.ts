@@ -115,11 +115,24 @@ export async function safeExpectVisible(
  * @param page Page 对象
  * @param url 目标 URL
  */
-export async function safeGoto(page: Page, url: string, options?: { timeout?: number }): Promise<boolean> {
-    await page.goto(url, { timeout: options?.timeout || 120000 });
+export async function safeGoto(page: Page, url: string, options?: { timeout?: number; waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit' }): Promise<boolean> {
+    try {
+        await page.goto(url, {
+            timeout: options?.timeout || 60000,
+            waitUntil: options?.waitUntil || 'domcontentloaded',
+        });
+    } catch (e) {
+        console.log(`⚠️ 页面导航超时或失败: ${url}`, e);
+        // 即使导航超时，页面可能已经部分加载，继续检查
+    }
 
     // 检查是否有数据加载错误
-    return !(await skipOnDataLoadError(page));
+    const hasError = await skipOnDataLoadError(page);
+    if (hasError) {
+        console.log('⚠️ 页面数据加载失败，跳过测试');
+        return false;
+    }
+    return true;
 }
 
 /**

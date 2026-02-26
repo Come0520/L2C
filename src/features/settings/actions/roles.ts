@@ -7,15 +7,12 @@ import { eq, asc } from 'drizzle-orm';
 import { ROLES } from '@/shared/config/roles';
 import { logger } from '@/shared/lib/logger';
 
-
 export type RoleOption = {
   label: string;
   value: string;
   description?: string;
   isSystem: boolean;
 };
-
-
 
 export async function getAvailableRoles(): Promise<RoleOption[]> {
   const session = await auth();

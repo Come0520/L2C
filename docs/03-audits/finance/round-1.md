@@ -9,9 +9,10 @@
 
 ## 1. Executive Summary (执行摘要)
 
-财务模块的核心引擎（基于 `auto-journal-service.ts`、`finance.ts` 的双模模式）在代码组织与边界隔离上已初具 Clean Architecture 雏形。但在针对《需求白皮书 (2026-01-15-finance-module-architecture-design.md)》的**逐字节、脱水映射审计**中，发现**实际交付代码在“收付款闭环”、“对账单自动触发机制”和“财务差额容错流转”等命脉环节上，存在关键逻辑缺失。** 
+财务模块的核心引擎（基于 `auto-journal-service.ts`、`finance.ts` 的双模模式）在代码组织与边界隔离上已初具 Clean Architecture 雏形。但在针对《需求白皮书 (2026-01-15-finance-module-architecture-design.md)》的**逐字节、脱水映射审计**中，发现**实际交付代码在“收付款闭环”、“对账单自动触发机制”和“财务差额容错流转”等命脉环节上，存在关键逻辑缺失。**
 
 **高危风险（红线）：**
+
 1. 智能核销逻辑悬空：缺少 `recommendPaymentMatch` 和 `processDifference`。
 2. 状态扭转中的并发控制缺位（无乐观锁，可能导致脏写重放）。
 3. UI 界面架构杂糅：简易/专业模式在一张视图 (`page.tsx`) 强耦合，违反核心模式隔离法则。
@@ -20,19 +21,19 @@
 
 ## 2. Dimension 1: 需求-代码一致性 (Requirement vs Implementation)
 
-| 需求定则 (Architecture Design) | 当前代码实现 (Implementation) | 偏离度 | 战术建议 |
-| :--- | :--- | :--- | :--- |
-| **自动对账单 (AR/AP Auto-Gen)** | 仅实现了凭证层防重生成。缺失诸如 `onOrderCreated` -> `createARStatement` 这种业务单据事件驱动的对账单自动拉起逻辑。 | 🔴 高危 | 引入基于队列或 EventBus 的事务监听机制。 |
-| **容差处理 (Difference Tolerance)** | 收/付款仅直接更新记录，缺失配置化门槛值判定及小额自动抹零（转营业外收支）。 | 🟡 中度 | 补齐 `finance_differences` 差额表的写入与审核逻辑。 |
-| **收款智能核销 (Payment Match)** | 缺失 `recommendPaymentMatch`。财务出纳无法实现资金与账单的“推荐确认核销”。 | 🔴 高危 | 第一梯队开发：补充应收账款（AR）的智能核销推荐。 |
-| **额度分级审批 (Approval Matrix)** | `page.tsx` 有初步权限拦截（读限制），但核心的资金出入缺乏按金额梯度的多级审批引擎（主管/总监）。 | 🔴 高危 | 在 Server Action 层面实现分级门限，并补充拦截测试。 |
+| 需求定则 (Architecture Design)      | 当前代码实现 (Implementation)                                                                                       | 偏离度  | 战术建议                                            |
+| :---------------------------------- | :------------------------------------------------------------------------------------------------------------------ | :------ | :-------------------------------------------------- |
+| **自动对账单 (AR/AP Auto-Gen)**     | 仅实现了凭证层防重生成。缺失诸如 `onOrderCreated` -> `createARStatement` 这种业务单据事件驱动的对账单自动拉起逻辑。 | 🔴 高危 | 引入基于队列或 EventBus 的事务监听机制。            |
+| **容差处理 (Difference Tolerance)** | 收/付款仅直接更新记录，缺失配置化门槛值判定及小额自动抹零（转营业外收支）。                                         | 🟡 中度 | 补齐 `finance_differences` 差额表的写入与审核逻辑。 |
+| **收款智能核销 (Payment Match)**    | 缺失 `recommendPaymentMatch`。财务出纳无法实现资金与账单的“推荐确认核销”。                                          | 🔴 高危 | 第一梯队开发：补充应收账款（AR）的智能核销推荐。    |
+| **额度分级审批 (Approval Matrix)**  | `page.tsx` 有初步权限拦截（读限制），但核心的资金出入缺乏按金额梯度的多级审批引擎（主管/总监）。                    | 🔴 高危 | 在 Server Action 层面实现分级门限，并补充拦截测试。 |
 
 ---
 
 ## 3. Dimension 2: 业务逻辑与代码质量 (Business Logic & Code Quality)
 
 - **优势：** 自动凭证系统 (`auto-journal-service.ts`) 具备极高的业务健壮性：内置数据库长事务 (`db.transaction`)，支持基于 `idempotencyKey` 的多活防重复发控制，账控期 (`checkAccountingPeriod`) 的拦截严密。
-- **重构遗毒：** 
+- **重构遗毒：**
   - `page.tsx` 文件作为路由入口，过度臃肿。强行通过组件插拔 `SimpleLedgerClient` 融合简易代账模式。
   - **建议：** 按功能域将页面彻底拆解为子路由（例如 `/finance/simple-ledger`, `/finance/receivables` 等），实现物理级别的视图解耦。
 
@@ -85,17 +86,21 @@
 相公，为确保财务模块达到真正的**“无坚不摧”**级别，建议按照以下优先级进行手术，请您批复执行顺序：
 
 ### 🚨 第一梯队：堵住资金与逻辑黑洞 (P0)
+
 - [ ] 补齐 `finance_statements` 及 `finance_transactions` 表中的 `version` 乐观锁防死锁护城河。
 - [ ] 严格照着原始文档，撰写 `recommendPaymentMatch` 闭环核销与尾差处理核心。
 
 ### 🛡️ 第二梯队：视图与性能瘦身 (P1)
+
 - [ ] 修改 `page.tsx`，将模式与业务版块路由化（拆分为真实的物理页面，而不再是客户端组件的拔插）。
 - [ ] 为高频报表增加基于 `status + date` 的复合联合索引。
 - [ ] 为 Schema 补充全部中文底层释义。
 
 ### 🚀 第三梯队：终极全流程拦截与运维增强 (P2)
+
 - [ ] 增加并跑通财务 E2E 完整游走测试链路 (结合 Playwright)。
 - [ ] 将所有的生成异常，挂载至死信库，不漏掉任何一笔可能丢票的记录。
 
---- 
+---
+
 **Prepared by:** Antigravity (智能审计代理) - 等待授权指令...

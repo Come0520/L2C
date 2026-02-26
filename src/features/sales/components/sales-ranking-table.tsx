@@ -163,6 +163,7 @@ export function SalesRankingTable({
 
                                 {/* 头像 */}
                                 {item.userAvatar ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                         src={item.userAvatar}
                                         alt={item.userName}

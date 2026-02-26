@@ -78,13 +78,7 @@ const getCachedSalesTargets = unstable_cache(
           eq(salesTargets.month, month)
         )
       )
-      .where(
-        and(
-          eq(users.tenantId, tenantId),
-          eq(users.role, 'sales'),
-          eq(users.isActive, true)
-        )
-      );
+      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
   },
   ['sales-targets-list'],
   { revalidate: 60, tags: ['sales-targets'] }
@@ -105,13 +99,22 @@ export async function getSalesTargets(
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
-      await AuditService.log(db, { action: 'GET_TARGETS_UNAUTHORIZED', tableName: 'sales_targets', recordId: 'none' });
+      await AuditService.log(db, {
+        action: 'GET_TARGETS_UNAUTHORIZED',
+        tableName: 'sales_targets',
+        recordId: 'none',
+      });
       return { success: false, error: 'Unauthorized' };
     }
 
     const validation = getSalesTargetsSchema.safeParse({ year, month });
     if (!validation.success) {
-      await AuditService.log(db, { action: 'GET_TARGETS_VALIDATION_ERROR', tableName: 'sales_targets', recordId: 'none', details: { issues: validation.error.issues } });
+      await AuditService.log(db, {
+        action: 'GET_TARGETS_VALIDATION_ERROR',
+        tableName: 'sales_targets',
+        recordId: 'none',
+        details: { issues: validation.error.issues },
+      });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
@@ -126,11 +129,18 @@ export async function getSalesTargets(
       updatedAt: r.updatedAt,
     }));
 
-    logger.info(`[sales][targets] Successfully fetched targets for ${year}-${month}, count: ${data.length}`);
+    logger.info(
+      `[sales][targets] Successfully fetched targets for ${year}-${month}, count: ${data.length}`
+    );
     return { success: true, data };
   } catch (error) {
     logger.error('[sales][targets] Failed to getSalesTargets:', error);
-    await AuditService.log(db, { action: 'GET_TARGETS_ERROR', tableName: 'sales_targets', recordId: 'none', details: { error: String(error) } });
+    await AuditService.log(db, {
+      action: 'GET_TARGETS_ERROR',
+      tableName: 'sales_targets',
+      recordId: 'none',
+      details: { error: String(error) },
+    });
     return { success: false, error: 'Failed to fetch targets' };
   }
 }
@@ -155,15 +165,27 @@ export async function updateSalesTarget(
     const session = await auth();
     if (!session?.user?.tenantId) {
       logger.warn(`[sales][targets] Unauthorized update target attempt: user ${session?.user?.id}`);
-      await AuditService.log(db, { action: 'UPDATE_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
+      await AuditService.log(db, {
+        action: 'UPDATE_TARGET_UNAUTHORIZED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+      });
       return { success: false, error: 'Unauthorized' };
     }
 
     // Zod 校验
     const validation = updateSalesTargetSchema.safeParse({ userId, year, month, amount });
     if (!validation.success) {
-      logger.error('[sales][targets] Validation failed for updateSalesTarget:', validation.error.issues);
-      await AuditService.log(db, { action: 'UPDATE_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
+      logger.error(
+        '[sales][targets] Validation failed for updateSalesTarget:',
+        validation.error.issues
+      );
+      await AuditService.log(db, {
+        action: 'UPDATE_TARGET_VALIDATION_ERROR',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        details: { issues: validation.error.issues },
+      });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
@@ -174,8 +196,15 @@ export async function updateSalesTarget(
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      logger.warn(`[sales][targets] Permission denied for updateSalesTarget: user ${session.user.id}`);
-      await AuditService.log(db, { action: 'UPDATE_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
+      logger.warn(
+        `[sales][targets] Permission denied for updateSalesTarget: user ${session.user.id}`
+      );
+      await AuditService.log(db, {
+        action: 'UPDATE_TARGET_PERMISSION_DENIED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Permission denied' };
     }
 
@@ -208,7 +237,9 @@ export async function updateSalesTarget(
       });
 
     if (oldTarget) {
-      logger.info(`[sales][targets] Successfully updated target: ${oldTarget.id}, from ${oldTarget.targetAmount} to ${amount}`);
+      logger.info(
+        `[sales][targets] Successfully updated target: ${oldTarget.id}, from ${oldTarget.targetAmount} to ${amount}`
+      );
       await AuditService.log(db, {
         action: 'UPDATE',
         tableName: 'sales_targets',
@@ -239,7 +270,12 @@ export async function updateSalesTarget(
     return { success: true };
   } catch (error) {
     logger.error('[sales][targets] Exception in updateSalesTarget:', error);
-    await AuditService.log(db, { action: 'UPDATE_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
+    await AuditService.log(db, {
+      action: 'UPDATE_TARGET_ERROR',
+      tableName: 'sales_targets',
+      recordId: `${userId}-${year}-${month}`,
+      details: { error: String(error) },
+    });
     return { success: false, error: 'Failed to update target' };
   }
 }
@@ -264,14 +300,32 @@ export async function adjustSalesTarget(
     const session = await auth();
     if (!session?.user?.tenantId) {
       logger.warn(`[sales][targets] Unauthorized adjust target attempt: user ${session?.user?.id}`);
-      await AuditService.log(db, { action: 'ADJUST_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
+      await AuditService.log(db, {
+        action: 'ADJUST_TARGET_UNAUTHORIZED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+      });
       return { success: false, error: 'Unauthorized' };
     }
 
-    const validation = adjustSalesTargetSchema.safeParse({ userId, year, month, adjustAmount, reason });
+    const validation = adjustSalesTargetSchema.safeParse({
+      userId,
+      year,
+      month,
+      adjustAmount,
+      reason,
+    });
     if (!validation.success) {
-      logger.error('[sales][targets] Validation failed for adjustSalesTarget:', validation.error.issues);
-      await AuditService.log(db, { action: 'ADJUST_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
+      logger.error(
+        '[sales][targets] Validation failed for adjustSalesTarget:',
+        validation.error.issues
+      );
+      await AuditService.log(db, {
+        action: 'ADJUST_TARGET_VALIDATION_ERROR',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        details: { issues: validation.error.issues },
+      });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
@@ -281,8 +335,15 @@ export async function adjustSalesTarget(
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      logger.warn(`[sales][targets] Permission denied for adjustSalesTarget: user ${session.user.id}`);
-      await AuditService.log(db, { action: 'ADJUST_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
+      logger.warn(
+        `[sales][targets] Permission denied for adjustSalesTarget: user ${session.user.id}`
+      );
+      await AuditService.log(db, {
+        action: 'ADJUST_TARGET_PERMISSION_DENIED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Permission denied' };
     }
 
@@ -297,14 +358,24 @@ export async function adjustSalesTarget(
 
     if (!oldTarget) {
       logger.error(`[sales][targets] Target not found for adjustment: ${userId}-${year}-${month}`);
-      await AuditService.log(db, { action: 'ADJUST_TARGET_NOT_FOUND', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
+      await AuditService.log(db, {
+        action: 'ADJUST_TARGET_NOT_FOUND',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Sales target does not exist' };
     }
 
     const newAmount = Number(oldTarget.targetAmount) + adjustAmount;
     if (newAmount < 0) {
       logger.warn(`[sales][targets] Invalid adjustment to negative total: ${newAmount}`);
-      await AuditService.log(db, { action: 'ADJUST_TARGET_INVALID_AMOUNT', tableName: 'sales_targets', recordId: oldTarget.id, userId: session.user.id });
+      await AuditService.log(db, {
+        action: 'ADJUST_TARGET_INVALID_AMOUNT',
+        tableName: 'sales_targets',
+        recordId: oldTarget.id,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Target amount cannot be negative' };
     }
 
@@ -317,7 +388,9 @@ export async function adjustSalesTarget(
       })
       .where(eq(salesTargets.id, oldTarget.id));
 
-    logger.info(`[sales][targets] Successfully adjusted target ${oldTarget.id} by ${adjustAmount}, new total: ${newAmount}`);
+    logger.info(
+      `[sales][targets] Successfully adjusted target ${oldTarget.id} by ${adjustAmount}, new total: ${newAmount}`
+    );
     await AuditService.log(db, {
       action: 'ADJUST_TARGET_VALUE',
       tableName: 'sales_targets',
@@ -337,7 +410,12 @@ export async function adjustSalesTarget(
     return { success: true };
   } catch (error) {
     logger.error('[sales][targets] Exception in adjustSalesTarget:', error);
-    await AuditService.log(db, { action: 'ADJUST_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
+    await AuditService.log(db, {
+      action: 'ADJUST_TARGET_ERROR',
+      tableName: 'sales_targets',
+      recordId: `${userId}-${year}-${month}`,
+      details: { error: String(error) },
+    });
     return { success: false, error: 'Failed to adjust target' };
   }
 }
@@ -359,15 +437,29 @@ export async function confirmSalesTarget(
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
-      logger.warn(`[sales][targets] Unauthorized confirm target attempt: user ${session?.user?.id}`);
-      await AuditService.log(db, { action: 'CONFIRM_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}` });
+      logger.warn(
+        `[sales][targets] Unauthorized confirm target attempt: user ${session?.user?.id}`
+      );
+      await AuditService.log(db, {
+        action: 'CONFIRM_TARGET_UNAUTHORIZED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+      });
       return { success: false, error: 'Unauthorized' };
     }
 
     const validation = confirmSalesTargetSchema.safeParse({ userId, year, month, notes });
     if (!validation.success) {
-      logger.error('[sales][targets] Validation failed for confirmSalesTarget:', validation.error.issues);
-      await AuditService.log(db, { action: 'CONFIRM_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { issues: validation.error.issues } });
+      logger.error(
+        '[sales][targets] Validation failed for confirmSalesTarget:',
+        validation.error.issues
+      );
+      await AuditService.log(db, {
+        action: 'CONFIRM_TARGET_VALIDATION_ERROR',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        details: { issues: validation.error.issues },
+      });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
@@ -377,8 +469,15 @@ export async function confirmSalesTarget(
     });
 
     if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
-      logger.warn(`[sales][targets] Permission denied for confirmSalesTarget: user ${session.user.id}`);
-      await AuditService.log(db, { action: 'CONFIRM_TARGET_PERMISSION_DENIED', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
+      logger.warn(
+        `[sales][targets] Permission denied for confirmSalesTarget: user ${session.user.id}`
+      );
+      await AuditService.log(db, {
+        action: 'CONFIRM_TARGET_PERMISSION_DENIED',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Permission denied' };
     }
 
@@ -392,8 +491,15 @@ export async function confirmSalesTarget(
     });
 
     if (!target) {
-      logger.error(`[sales][targets] Target not found for confirmation: ${userId}-${year}-${month}`);
-      await AuditService.log(db, { action: 'CONFIRM_TARGET_NOT_FOUND', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, userId: session.user.id });
+      logger.error(
+        `[sales][targets] Target not found for confirmation: ${userId}-${year}-${month}`
+      );
+      await AuditService.log(db, {
+        action: 'CONFIRM_TARGET_NOT_FOUND',
+        tableName: 'sales_targets',
+        recordId: `${userId}-${year}-${month}`,
+        userId: session.user.id,
+      });
       return { success: false, error: 'Sales target does not exist' };
     }
 
@@ -407,7 +513,7 @@ export async function confirmSalesTarget(
       details: {
         confirmed: true,
         notes,
-        targetAmount: target.targetAmount
+        targetAmount: target.targetAmount,
       },
     });
 
@@ -419,7 +525,12 @@ export async function confirmSalesTarget(
     return { success: true };
   } catch (error) {
     logger.error('[sales][targets] Exception in confirmSalesTarget:', error);
-    await AuditService.log(db, { action: 'CONFIRM_TARGET_ERROR', tableName: 'sales_targets', recordId: `${userId}-${year}-${month}`, details: { error: String(error) } });
+    await AuditService.log(db, {
+      action: 'CONFIRM_TARGET_ERROR',
+      tableName: 'sales_targets',
+      recordId: `${userId}-${year}-${month}`,
+      details: { error: String(error) },
+    });
     return { success: false, error: 'Failed to confirm target' };
   }
 }
@@ -451,13 +562,22 @@ export async function getMySalesTarget(year?: number, month?: number) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      await AuditService.log(db, { action: 'GET_MY_TARGET_UNAUTHORIZED', tableName: 'sales_targets', recordId: 'none' });
+      await AuditService.log(db, {
+        action: 'GET_MY_TARGET_UNAUTHORIZED',
+        tableName: 'sales_targets',
+        recordId: 'none',
+      });
       return { success: false, error: 'Unauthorized' };
     }
 
     const validation = getMySalesTargetSchema.safeParse({ year, month });
     if (!validation.success) {
-      await AuditService.log(db, { action: 'GET_MY_TARGET_VALIDATION_ERROR', tableName: 'sales_targets', recordId: 'none', details: { issues: validation.error.issues } });
+      await AuditService.log(db, {
+        action: 'GET_MY_TARGET_VALIDATION_ERROR',
+        tableName: 'sales_targets',
+        recordId: 'none',
+        details: { issues: validation.error.issues },
+      });
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
@@ -465,9 +585,16 @@ export async function getMySalesTarget(year?: number, month?: number) {
     const targetYear = year || now.getFullYear();
     const targetMonth = month || now.getMonth() + 1;
 
-    const result = await getCachedMySalesTarget(session.user.tenantId, session.user.id, targetYear, targetMonth);
+    const result = await getCachedMySalesTarget(
+      session.user.tenantId,
+      session.user.id,
+      targetYear,
+      targetMonth
+    );
 
-    logger.info(`[sales][targets] getMySalesTarget success, user: ${session.user.id}, targetYear: ${targetYear}, targetMonth: ${targetMonth}`);
+    logger.info(
+      `[sales][targets] getMySalesTarget success, user: ${session.user.id}, targetYear: ${targetYear}, targetMonth: ${targetMonth}`
+    );
     return {
       success: true,
       data: {
@@ -476,7 +603,12 @@ export async function getMySalesTarget(year?: number, month?: number) {
     };
   } catch (error) {
     logger.error('[sales][targets] Failed in getMySalesTarget:', error);
-    await AuditService.log(db, { action: 'GET_MY_TARGET_ERROR', tableName: 'sales_targets', recordId: 'none', details: { error: String(error) } });
+    await AuditService.log(db, {
+      action: 'GET_MY_TARGET_ERROR',
+      tableName: 'sales_targets',
+      recordId: 'none',
+      details: { error: String(error) },
+    });
     return { success: false, error: 'Failed' };
   }
 }

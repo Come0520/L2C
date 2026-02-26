@@ -63,7 +63,7 @@ export function RolesSettingsActions() {
       } else {
         toast.error(result.message);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('同步失败');
     } finally {
       setSyncing(false);
@@ -88,7 +88,7 @@ export function RolesSettingsActions() {
       } else {
         toast.error(result.message);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('创建失败');
     } finally {
       setCreating(false);

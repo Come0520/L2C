@@ -1,7 +1,6 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
-import { useState, useTransition, useEffect } from 'react';
+import { useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { voidLeadSchema } from '../schemas';
@@ -11,7 +10,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogDescription,
 } from '@/shared/ui/dialog';
 import {

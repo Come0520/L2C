@@ -7,32 +7,32 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 export const metadata = { title: '利润表 - 财务模块' };
 
 export default async function IncomeStatementPage({
-    searchParams,
+  searchParams,
 }: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-    const session = await auth();
-    const tenantId = session?.user?.tenantId;
-    if (!tenantId) redirect('/login');
-    const resolvedSearchParams = await searchParams;
+  const session = await auth();
+  const tenantId = session?.user?.tenantId;
+  if (!tenantId) redirect('/login');
+  const resolvedSearchParams = await searchParams;
 
-    const today = new Date();
-    const defaultStart = format(startOfMonth(today), 'yyyy-MM-dd');
-    const defaultEnd = format(endOfMonth(today), 'yyyy-MM-dd');
+  const today = new Date();
+  const defaultStart = format(startOfMonth(today), 'yyyy-MM-dd');
+  const defaultEnd = format(endOfMonth(today), 'yyyy-MM-dd');
 
-    const rawStart = (resolvedSearchParams?.startDate as string) || defaultStart;
-    const rawEnd = (resolvedSearchParams?.endDate as string) || defaultEnd;
+  const rawStart = (resolvedSearchParams?.startDate as string) || defaultStart;
+  const rawEnd = (resolvedSearchParams?.endDate as string) || defaultEnd;
 
-    const startDate = new Date(rawStart);
-    const endDate = new Date(rawEnd);
+  const startDate = new Date(rawStart);
+  const endDate = new Date(rawEnd);
 
-    // 获取报表数据
-    const data = await getIncomeStatementData(tenantId, startDate, endDate);
+  // 获取报表数据
+  const data = await getIncomeStatementData(tenantId, startDate, endDate);
 
-    return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <h1 className="text-2xl font-bold tracking-tight">财务报表</h1>
-            <IncomeStatementClient data={data} initialStartDate={rawStart} initialEndDate={rawEnd} />
-        </div>
-    );
+  return (
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
+      <h1 className="text-2xl font-bold tracking-tight">财务报表</h1>
+      <IncomeStatementClient data={data} initialStartDate={rawStart} initialEndDate={rawEnd} />
+    </div>
+  );
 }

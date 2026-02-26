@@ -1,118 +1,98 @@
 <!--pages/index/index.wxml-->
-<view class="container">
-  <!-- 液态流体背景 -->
-  <view class="liquid-bg">
-    <view class="blob blob-1"></view>
-    <view class="blob blob-2"></view>
-    <view class="blob blob-3"></view>
-    <!-- 噪点纹理叠加 -->
-    <view class="noise-overlay"></view>
-  </view>
-
-  <view class="content-wrapper">
-    <!-- 顶部欢迎区 -->
-    <view class="header animate-fade-in-down">
-      <view class="logo-box">
-        <image class="logo" src="/assets/logo.png" mode="aspectFit" />
-        <view class="logo-text">
-          <view class="app-name">L2C</view>
-          <view class="app-tag">PRO</view>
-        </view>
-      </view>
-      <view class="header-slogan">
-        <text class="slogan-main">重新定义</text>
-        <text class="slogan-sub">销售管理新体验</text>
+<view class="container index-page">
+  <!-- 顶部品牌 -->
+  <view class="brand-header animate-fade-in">
+    <view class="logo-row">
+      <image class="logo" src="/assets/logo.png" mode="aspectFit" />
+      <view class="brand-text">
+        <text class="brand-name">L2C</text>
+        <text class="brand-tag">PRO</text>
       </view>
     </view>
+  </view>
 
-    <!-- 登录卡片 (Glassmorphism) -->
-    <view wx:if="{{!isLoggedIn}}" class="glass-card login-card animate-slide-up">
-      <view class="welcome-box">
-        <view class="welcome-title">欢迎归来</view>
-        <view class="welcome-desc">登录以访问您的企业工作台</view>
+  <!-- 未登录：登录卡片 -->
+  <view wx:if="{{!isLoggedIn}}" class="login-section animate-slide-up">
+    <view class="card login-card">
+      <view class="login-header">
+        <text class="login-title">欢迎使用 L2C</text>
+        <text class="login-desc">登录以访问您的企业工作台</text>
       </view>
 
       <button 
-        class="login-btn" 
+        class="btn-wechat" 
         open-type="getPhoneNumber" 
         bindgetphonenumber="onGetPhoneNumber"
         loading="{{loading}}"
-        hover-class="login-btn-hover"
       >
-        <view class="btn-inner">
-          <view class="icon-wechat"></view>
-          <text>微信一键登录</text>
-        </view>
-        <view class="btn-glow"></view>
+        <text>微信一键登录</text>
       </button>
 
-      <view class="footer-actions">
-        <text class="action-text">还没有账号？</text>
-        <view class="action-link" bindtap="goToRegister">
-          申请入驻 <text class="arrow">→</text>
+      <view class="login-footer">
+        <text class="footer-text">还没有账号？</text>
+        <view class="footer-link" bindtap="goToRegister">
+          <text>申请入驻 →</text>
         </view>
       </view>
     </view>
+  </view>
 
-    <!-- 用户仪表盘 (Glassmorphism) -->
-    <view wx:else class="dashboard animate-slide-up">
-      <!-- 用户信息卡片 -->
-      <view class="glass-card user-card">
-        <view class="user-profile">
-          <view class="avatar-ring">
-            <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
-          </view>
-          <view class="user-meta">
-            <view class="user-name">{{userInfo.name || '用户'}}</view>
-            <view class="tenant-tag {{tenantStatus === 'active' ? 'active' : ''}}">
-              {{userInfo.tenantName || '未绑定企业'}}
-            </view>
-          </view>
-          <view class="status-indicator {{statusClass}}">
-            <text>{{statusText}}</text>
+  <!-- 已登录：仪表盘 -->
+  <view wx:else class="dashboard animate-slide-up">
+    <!-- 用户信息 -->
+    <view class="card user-summary">
+      <view class="user-row">
+        <view class="avatar-wrap">
+          <image class="user-avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+        </view>
+        <view class="user-info">
+          <text class="user-name">{{userInfo.name || '用户'}}</text>
+          <view class="tenant-badge {{tenantStatus === 'active' ? 'active' : ''}}">
+            {{userInfo.tenantName || '未绑定企业'}}
           </view>
         </view>
-
-        <!-- 状态提醒 -->
-        <view wx:if="{{tenantStatus === 'pending_approval'}}" class="status-alert warning">
-          <view class="alert-icon">⏳</view>
-          <text>企业入驻申请审核中</text>
-        </view>
-        <view wx:elif="{{tenantStatus === 'rejected'}}" class="status-alert error">
-          <view class="alert-icon">⚠️</view>
-          <text>审核未通过: {{rejectReason}}</text>
+        <view class="badge {{tenantStatus === 'active' ? 'badge-success' : 'badge-warning'}}">
+          {{statusText}}
         </view>
       </view>
 
-      <!-- 功能菜单 (Grid) -->
-      <view class="menu-grid">
-        <view class="glass-card menu-item" bindtap="goToStatus" hover-class="card-hover">
-          <view class="menu-icon-box blue">
-            <text class="menu-icon">📋</text>
-          </view>
-          <text class="menu-label">审批进度</text>
-        </view>
+      <!-- 状态提醒 -->
+      <view wx:if="{{tenantStatus === 'pending_approval'}}" class="alert alert-warning">
+        <text>⏳ 企业入驻申请审核中</text>
+      </view>
+      <view wx:elif="{{tenantStatus === 'rejected'}}" class="alert alert-danger">
+        <text>审核未通过: {{rejectReason}}</text>
+      </view>
+    </view>
 
-        <view class="glass-card menu-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}" hover-class="card-hover">
-          <view class="menu-icon-box green">
-            <text class="menu-icon">👥</text>
-          </view>
-          <text class="menu-label">邀请员工</text>
+    <!-- 功能菜单 -->
+    <view class="menu-grid">
+      <view class="card menu-item" bindtap="goToStatus" hover-class="card-hover">
+        <view class="menu-icon-wrap blue">
+          <image class="menu-icon-img" src="/assets/icons/list-active.svg" />
         </view>
+        <text class="menu-name">审批进度</text>
+      </view>
 
-        <view class="glass-card menu-item" bindtap="openNotification" hover-class="card-hover">
-          <view class="menu-icon-box purple">
-            <text class="menu-icon">🔔</text>
-          </view>
-          <text class="menu-label">消息订阅</text>
+      <view class="card menu-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}" hover-class="card-hover">
+        <view class="menu-icon-wrap green">
+          <image class="menu-icon-img" src="/assets/icons/invite-active.svg" />
         </view>
+        <text class="menu-name">邀请员工</text>
+      </view>
 
-        <view class="glass-card menu-item" bindtap="logout" hover-class="card-hover">
-          <view class="menu-icon-box orange">
-            <text class="menu-icon">🚪</text>
-          </view>
-          <text class="menu-label">退出登录</text>
+      <view class="card menu-item" bindtap="openNotification" hover-class="card-hover">
+        <view class="menu-icon-wrap purple">
+          <image class="menu-icon-img" src="/assets/icons/flash-active.svg" />
         </view>
+        <text class="menu-name">消息订阅</text>
+      </view>
+
+      <view class="card menu-item" bindtap="logout" hover-class="card-hover">
+        <view class="menu-icon-wrap gray">
+          <image class="menu-icon-img" src="/assets/icons/support-active.svg" />
+        </view>
+        <text class="menu-name">退出登录</text>
       </view>
     </view>
   </view>

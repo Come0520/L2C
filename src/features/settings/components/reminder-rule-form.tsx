@@ -2,8 +2,6 @@
 
 import { useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { Button } from '@/shared/ui/button';
-import { Form } from '@/shared/ui/form';
 
 /** 提醒规则表单初始数据类型 */
 interface ReminderRuleData {

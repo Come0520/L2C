@@ -26,13 +26,13 @@ const loginSchema = z.object({
 
 /**
  * 登录表单核心组件
- * 
+ *
  * 视觉风格：基于 Aceternity UI 的毛玻璃特效 (Glassmorphism)。
  * 核心功能：
  * 1. 凭证登录：支持手机号/邮箱 + 密码的组合校验。
  * 2. 交互增强：密码明文切换、加载状态反馈、全表单错误提示。
  * 3. 页面导流：关联注册流程 (Tenant Registration) 及忘记密码提示。
- * 
+ *
  * @example
  * ```tsx
  * <LoginForm />
@@ -71,25 +71,26 @@ export function LoginForm() {
         setTimeout(() => setHasError(false), 500);
 
         // 细化错误反馈
-        const errorMsg = result.error === 'CredentialsSignin'
-          ? '登录失败：用户名或密码错误'
-          : `登录失败: ${result.error}`;
+        const errorMsg =
+          result.error === 'CredentialsSignin'
+            ? '登录失败：用户名或密码错误'
+            : `登录失败: ${result.error}`;
 
         logger.warn('[Auth:Login] 登录凭证校验失败', {
           username: username.replace(/(.{3}).*(.{2})/, '$1***$2'),
-          error: result.error
+          error: result.error,
         });
 
         toast.error(errorMsg);
       } else {
         toast.success('登录成功，欢迎回来');
-        router.push('/');
+        router.push('/dashboard');
         router.refresh();
       }
     } catch (_err: unknown) {
       logger.error('[Auth:Login] 登录执行异常', {
         error: _err instanceof Error ? _err.message : String(_err),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       toast.error('网络连接异常，请稍后重试');
     } finally {
@@ -98,10 +99,12 @@ export function LoginForm() {
   };
 
   return (
-    <div className={cn(
-      "shadow-input mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl dark:bg-black/40 transition-all duration-300",
-      hasError && "animate-shake ring-2 ring-red-500/50"
-    )}>
+    <div
+      className={cn(
+        'shadow-input mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl transition-all duration-300 dark:bg-black/40',
+        hasError && 'animate-shake ring-2 ring-red-500/50'
+      )}
+    >
       {/* 标题区域 */}
       <h2 className="text-center text-2xl font-bold text-neutral-800 dark:text-neutral-200">
         欢迎回到 L2C 系统
@@ -118,7 +121,10 @@ export function LoginForm() {
             手机号 / 邮箱
           </Label>
           <div className="relative">
-            <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
+            <Mail
+              className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500"
+              aria-hidden="true"
+            />
             <Input
               id="username"
               type="text"
@@ -139,7 +145,10 @@ export function LoginForm() {
             密码
           </Label>
           <div className="relative">
-            <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
+            <Lock
+              className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-500"
+              aria-hidden="true"
+            />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -160,7 +169,11 @@ export function LoginForm() {
               aria-label={showPassword ? '隐藏密码' : '显示密码'}
               aria-pressed={showPassword}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              )}
             </button>
           </div>
         </LabelInputContainer>
@@ -226,7 +239,7 @@ const BottomGradient = () => {
 
 /**
  * 输入框容器组件
- * 
+ *
  * @description 垂直布局包装容器，统一管理 Label 和 Input 的间距。
  */
 const LabelInputContainer = ({

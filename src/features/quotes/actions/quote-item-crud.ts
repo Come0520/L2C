@@ -38,7 +38,7 @@ const calculateSubtotal = (price: number, quantity: number, processFee: number =
  * 客户端调用：创建报价单行项目 (Create Quote Item)
  * 支持产品自动填充（ unitPrice, specs ）、损耗逻辑计算、尺寸合理性校验，
  * 以及自动配件联动（ Accessory Linkage ）。
- * 
+ *
  * @param params 行项目请求参数，包括所属报价单、产品、尺寸等
  * @returns 创建的行项目记录（可能包含警告信息及计算明细）
  */
@@ -61,7 +61,11 @@ const createQuoteItemActionInternal = createSafeAction(
       logger.error('未授权访问：缺少租户信息');
       throw new Error('未授权访问：缺少租户信息');
     }
-    logger.info('[quotes] 开始创建行项目', { quoteId: data.quoteId, productName: data.productName, category: data.category });
+    logger.info('[quotes] 开始创建行项目', {
+      quoteId: data.quoteId,
+      productName: data.productName,
+      category: data.category,
+    });
 
     // 安全检查：验证关联报价单归属
     const quote = await db.query.quotes.findFirst({
@@ -112,10 +116,17 @@ const createQuoteItemActionInternal = createSafeAction(
     const { presetLoss } = config;
 
     // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
-    if (data.width && data.height && (data.category === 'CURTAIN' || data.category === 'WALLPAPER' || data.category === 'WALLCLOTH')) {
+    if (
+      data.width &&
+      data.height &&
+      (data.category === 'CURTAIN' ||
+        data.category === 'WALLPAPER' ||
+        data.category === 'WALLCLOTH')
+    ) {
       // Common setup
       const strategy = StrategyFactory.getStrategy(data.category);
-      const fabricWidthCm = (attributes.fabricWidth as number) || (data.category === 'CURTAIN' ? 280 : 53);
+      const fabricWidthCm =
+        (attributes.fabricWidth as number) || (data.category === 'CURTAIN' ? 280 : 53);
 
       const calcParams: Record<string, unknown> = {
         measuredWidth: Number(data.width),
@@ -135,7 +146,7 @@ const createQuoteItemActionInternal = createSafeAction(
         patternRepeat: (attributes.patternRepeat as number) || 0,
         widthLoss: (attributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
         cutLoss: (attributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss,
-        calcType: data.category // For WallpaperStrategy (WALLPAPER vs WALLCLOTH)
+        calcType: data.category, // For WallpaperStrategy (WALLPAPER vs WALLCLOTH)
       };
 
       const result = strategy.calculate(calcParams);
@@ -183,11 +194,14 @@ const createQuoteItemActionInternal = createSafeAction(
 
     // 自动配件联动
     if (newItem && (data.category === 'CURTAIN' || data.category === 'WALLPAPER')) {
-      const recommendations = await AccessoryLinkageService.getRecommendedAccessories({
-        category: data.category,
-        width: Number(data.width || 0),
-        height: Number(data.height || 0),
-      }, tenantId);
+      const recommendations = await AccessoryLinkageService.getRecommendedAccessories(
+        {
+          category: data.category,
+          width: Number(data.width || 0),
+          height: Number(data.height || 0),
+        },
+        tenantId
+      );
 
       for (const rec of recommendations) {
         const recPrice = rec.unitPrice ?? 0;
@@ -210,7 +224,12 @@ const createQuoteItemActionInternal = createSafeAction(
 
     // 审计日志：记录行项目创建
     await AuditService.recordFromSession(context.session, 'quoteItems', newItem.id, 'CREATE', {
-      new: { quoteId: data.quoteId, category: data.category, productName: currentProductName, quantity },
+      new: {
+        quoteId: data.quoteId,
+        category: data.category,
+        productName: currentProductName,
+        quantity,
+      },
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
@@ -220,7 +239,6 @@ const createQuoteItemActionInternal = createSafeAction(
   }
 );
 
-
 // ─── 更新行项目 ─────────────────────────────────
 
 /**
@@ -229,7 +247,7 @@ const createQuoteItemActionInternal = createSafeAction(
  * 1. 重新执行产品数据自动同步。
  * 2. 依据最新的计算策略（Curtain/Wallpaper）重新计算用量。
  * 3. 校验尺寸合理性并更新关联报价单总额。
- * 
+ *
  * @param params - 包含行项目 ID 及更新字段的对象
  * @returns 成功状态
  */
@@ -337,9 +355,14 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
 
   // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
-  if (width && height && (category === 'CURTAIN' || category === 'WALLPAPER' || category === 'WALLCLOTH')) {
+  if (
+    width &&
+    height &&
+    (category === 'CURTAIN' || category === 'WALLPAPER' || category === 'WALLCLOTH')
+  ) {
     const strategy = StrategyFactory.getStrategy(category);
-    const fabricWidthCm = (mergedAttributes.fabricWidth as number) || (category === 'CURTAIN' ? 280 : 53);
+    const fabricWidthCm =
+      (mergedAttributes.fabricWidth as number) || (category === 'CURTAIN' ? 280 : 53);
 
     const calcParams: Record<string, unknown> = {
       measuredWidth: Number(width),
@@ -359,7 +382,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
       patternRepeat: (mergedAttributes.patternRepeat as number) || 0,
       widthLoss: (mergedAttributes.widthLoss as number) ?? presetLoss.wallpaper.widthLoss,
       cutLoss: (mergedAttributes.cutLoss as number) ?? presetLoss.wallpaper.cutLoss,
-      calcType: category
+      calcType: category,
     };
 
     const result = strategy.calculate(calcParams);
@@ -421,7 +444,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 /**
  * 客户端调用：删除报价单行项目 (Delete Quote Item)
  * 包含：行项目归属校验、物理删除（及总额自动更新）、审计日志记录。
- * 
+ *
  * @param params - 包含行项目 ID 的对象
  * @returns 成功状态
  */
@@ -449,7 +472,11 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
 
   // 审计日志：记录行项目删除（删除前记录）
   await AuditService.recordFromSession(context.session, 'quoteItems', data.id, 'DELETE', {
-    old: { quoteId: existing.quoteId, productName: existing.productName, quantity: existing.quantity },
+    old: {
+      quoteId: existing.quoteId,
+      productName: existing.productName,
+      quantity: existing.quantity,
+    },
   });
 
   await db
@@ -467,7 +494,7 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
 /**
  * 客户端调用：对报价单内的行项目进行批量排序 (Reorder Items)
  * 逻辑：在数据库事务中批量更新 `sortOrder` 字段。
- * 
+ *
  * @param params - 包含报价单 ID 及重新排序的项目列表
  * @returns 操作结果
  */
@@ -488,7 +515,10 @@ export const reorderQuoteItems = createSafeAction(
       logger.error('未授权访问：缺少租户信息');
       throw new Error('未授权访问：缺少租户信息');
     }
-    logger.info('[quotes] 开始对行项目排序', { quoteId: data.quoteId, itemCount: data.items.length });
+    logger.info('[quotes] 开始对行项目排序', {
+      quoteId: data.quoteId,
+      itemCount: data.items.length,
+    });
 
     // 安全检查：验证报价单归属
     const quote = await db.query.quotes.findFirst({

@@ -1,8 +1,9 @@
 /* pages/tenant/payment-settings/index.wxss */
 .container {
     padding: 32rpx;
-    background-color: #fdfbf7;
+    background-color: var(--bg-page);
     min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .page-header {
@@ -10,23 +11,22 @@
 }
 .title {
     font-size: 40rpx;
-    font-weight: 800;
-    color: #334155;
+    font-weight: bold;
+    color: var(--text-heading);
     display: block;
 }
 .desc {
     font-size: 28rpx;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 8rpx;
+    display: block;
 }
 
 .card {
-    background: #fff;
-    border-radius: 40rpx;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
     padding: 40rpx;
-    box-shadow: 
-        12rpx 12rpx 24rpx rgba(168, 162, 158, 0.1),
-        -12rpx -12rpx 24rpx rgba(255, 255, 255, 0.9);
+    box-shadow: var(--shadow-sm);
     margin-bottom: 32rpx;
 }
 
@@ -43,29 +43,41 @@
 
 .label {
     font-size: 32rpx;
-    font-weight: 700;
-    color: #334155;
+    font-weight: 600;
+    color: var(--text-heading);
 }
 
 .caption {
     font-size: 24rpx;
-    color: #94a3b8;
+    color: var(--text-muted);
+}
+
+.form-label {
+    font-size: 28rpx;
+    font-weight: 500;
+    color: var(--text-body);
+    margin-bottom: 16rpx;
+    display: block;
 }
 
 .input-textarea {
     width: 100%;
     height: 240rpx;
-    background: #fdfbf7;
-    border-radius: 24rpx;
+    background: var(--bg-section);
+    border-radius: var(--radius-md);
     padding: 24rpx;
     box-sizing: border-box;
     font-size: 28rpx;
-    color: #334155;
+    color: var(--text-body);
     line-height: 1.5;
-    /* Inset shadow for input */
-    box-shadow: 
-        inset 4rpx 4rpx 8rpx rgba(168, 162, 158, 0.1),
-        inset -4rpx -4rpx 8rpx rgba(255, 255, 255, 0.8);
+    border: 2rpx solid transparent;
+    transition: all 0.3s;
+}
+
+.input-textarea:focus {
+    border-color: var(--brand-primary);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 4rpx var(--bg-primary-light);
 }
 
 .disabled-section {
@@ -73,13 +85,25 @@
     pointer-events: none;
 }
 
-.btn-save {
-    background: linear-gradient(135deg, #f43f5e, #f97316);
-    color: white;
+.footer-action {
+    margin-top: 48rpx;
+}
+
+.primary-btn {
+    width: 100%;
+    height: 96rpx;
+    background: var(--brand-primary);
     border-radius: 999rpx;
-    font-weight: 700;
-    margin-top: 40rpx;
-    box-shadow: 
-        8rpx 8rpx 16rpx rgba(244, 63, 94, 0.25),
-        -4rpx -4rpx 8rpx rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 32rpx;
+    font-weight: bold;
+    box-shadow: 0 8rpx 24rpx rgba(79, 70, 229, 0.3);
+}
+
+.primary-btn:active {
+    opacity: 0.9;
+    transform: scale(0.98);
 }

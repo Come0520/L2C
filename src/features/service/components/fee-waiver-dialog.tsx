@@ -50,7 +50,7 @@ export function FeeWaiverDialog({ taskId, trigger }: FeeWaiverDialogProps) {
             console.info(`[FeeWaiver] Request submitted for task ${taskId}: ${reason}`);
             toast.success('费用减免申请已提交，等待审核');
             setIsOpen(false);
-        } catch (error) {
+        } catch (_error) {
             toast.error('申请提交失败');
         } finally {
             setIsSubmitting(false);

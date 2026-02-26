@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 /**
  * 财务配置工具函数
  * 这些是纯函数，不涉及数据库操作，可以在客户端和服务端使用
@@ -9,7 +8,6 @@ import { configCache } from './finance-config-types';
 
 // 重新导出供其他模块就近导入
 export { configCache };
-
 
 /**
  * 清除配置缓存（配置更新后调用）

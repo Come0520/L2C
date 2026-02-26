@@ -1,7 +1,8 @@
 /**
  * 测量数据录入页
- * pages/tasks/measure/index.ts
+ * measure/index.ts
  */
+import { throttleTap } from '../../../utils/throttle-tap';
 
 interface MeasureItem {
     id: string;
@@ -47,7 +48,7 @@ Page({
         ],
     },
 
-    onLoad(options: any) {
+    onLoad(options: Record<string, string | undefined>) {
         const { taskId } = options;
         if (taskId) {
             this.setData({ taskId });
@@ -74,16 +75,16 @@ Page({
     /**
      * 删除窗户
      */
-    removeItem(e: any) {
+    removeItem(e: WechatMiniprogram.TouchEvent) {
         const { index } = e.currentTarget.dataset;
-        const items = this.data.items.filter((_: any, i: number) => i !== index);
+        const items = this.data.items.filter((_: unknown, i: number) => i !== index);
         this.setData({ items });
     },
 
     /**
      * 切换展开/折叠
      */
-    toggleExpand(e: any) {
+    toggleExpand(e: WechatMiniprogram.TouchEvent) {
         const { index } = e.currentTarget.dataset;
         const items = [...this.data.items];
         items[index].expanded = !items[index].expanded;
@@ -93,7 +94,7 @@ Page({
     /**
      * 切换方案
      */
-    switchVariant(e: any) {
+    switchVariant(e: WechatMiniprogram.TouchEvent) {
         const { variant } = e.currentTarget.dataset;
         this.setData({ activeVariant: variant });
         // TODO: 加载该方案的数据
@@ -114,33 +115,33 @@ Page({
     /**
      * 表单字段变更
      */
-    onFieldChange(e: any) {
+    onFieldChange(e: WechatMiniprogram.CustomEvent) {
         const { index, field } = e.currentTarget.dataset;
         const { value } = e.detail;
         const items = [...this.data.items];
-        (items[index] as Record<string, any>)[field] = value;
+        (items[index] as Record<string, unknown>)[field] = value;
         this.setData({ items });
     },
 
     /**
      * 选择器变更
      */
-    onPickerChange(e: any) {
+    onPickerChange(e: WechatMiniprogram.CustomEvent) {
         const { index, field, options } = e.currentTarget.dataset;
         const pickerIndex = e.detail.value;
         const items = [...this.data.items];
-        (items[index] as Record<string, any>)[field] = options[pickerIndex].value;
+        (items[index] as Record<string, unknown>)[field] = options[pickerIndex].value;
         this.setData({ items });
     },
 
     /**
      * 开关变更
      */
-    onSwitchChange(e: any) {
+    onSwitchChange(e: WechatMiniprogram.SwitchChange) {
         const { index, field } = e.currentTarget.dataset;
         const { value } = e.detail;
         const items = [...this.data.items];
-        (items[index] as Record<string, any>)[field] = value;
+        (items[index] as Record<string, unknown>)[field] = value;
         this.setData({ items });
     },
 
@@ -166,16 +167,16 @@ Page({
     /**
      * 删除照片
      */
-    removePhoto(e: any) {
+    removePhoto(e: WechatMiniprogram.TouchEvent) {
         const { index } = e.currentTarget.dataset;
-        const photos = this.data.photos.filter((_: any, i: number) => i !== index);
+        const photos = this.data.photos.filter((_: unknown, i: number) => i !== index);
         this.setData({ photos });
     },
 
     /**
      * 提交数据
      */
-    async submitData() {
+    submitData: throttleTap(async function (this: any) {
         // 数据验证
         if (this.data.items.length === 0) {
             wx.showToast({ title: '请至少添加一个窗户', icon: 'none' });
@@ -214,7 +215,7 @@ Page({
                     round: this.data.currentRound,
                     variant: this.data.activeVariant,
                     sitePhotos,
-                    items: this.data.items.map((item: any) => ({
+                    items: this.data.items.map((item: MeasureItem) => ({
                         roomName: item.roomName,
                         windowType: item.windowType,
                         width: parseFloat(item.width),
@@ -238,13 +239,14 @@ Page({
             } else {
                 throw new Error(res.error || '提交失败');
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('[submitData] Error:', err);
-            wx.showToast({ title: err.message || '提交失败', icon: 'none' });
+            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : '提交失败');
+            wx.showToast({ title: errorMessage, icon: 'none' });
         } finally {
             this.setData({ submitting: false });
         }
-    },
+    })
 });
 
 export { };

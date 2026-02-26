@@ -1,7 +1,7 @@
 /* pages/crm/create/create.wxss */
 .container {
     min-height: 100vh;
-    background-color: #f8fafc;
+    background-color: var(--bg-page);
     padding-bottom: 160rpx;
 }
 
@@ -11,23 +11,25 @@
 
 .section-title {
     font-size: 26rpx;
-    color: #64748b;
+    color: var(--text-muted);
     margin-bottom: 16rpx;
     margin-top: 16rpx;
+    padding-left: 8rpx;
 }
 
 .form-card {
-    background: #fff;
-    border-radius: 20rpx;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
     padding: 0 32rpx;
-    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 32rpx;
 }
 
 .form-item {
     display: flex;
     align-items: center;
     padding: 32rpx 0;
-    border-bottom: 1rpx solid #f1f5f9;
+    border-bottom: 1rpx solid var(--border-light);
 }
 
 .form-item:last-child {
@@ -41,64 +43,46 @@
 
 .label {
     font-size: 28rpx;
-    color: #334155;
+    color: var(--text-heading);
     width: 140rpx;
     flex-shrink: 0;
 }
 
 .label.required::before {
     content: '*';
-    color: #ef4444;
+    color: var(--status-danger);
     margin-right: 8rpx;
 }
 
 .input {
     flex: 1;
     font-size: 28rpx;
-    color: #1e293b;
+    color: var(--text-body);
 }
 
 .input::placeholder {
-    color: #cbd5e1;
+    color: var(--text-placeholder);
 }
 
 .input.error {
-    border-bottom: 2rpx solid #ef4444; 
-    /* 由于 input 外面有 form-item 的 border, 我们其实可以直接给 input 加颜色或者给 form-item 加 error 类 */
-    /* 修正策略：form-item 是 border-bottom 的持有者。
-       但这里 input 是 flex:1, 没法直接改 form-item 的 border (需要 wxml 改动传给 parent)。
-       退一步，我们给 input 加一个显眼的 placeholder 颜色变化或者背景色微调？
-       或者直接改 placeholder 颜色为红色？
-       
-       或者直接简单的：如果 input 有 error, 它的 placeholder 变红？
-       
-       这里 .input 是在 form-item 内部。form-item 有 border-bottom。
-       给 input 加 border-bottom 会很怪。
-       
-       Better approach: 让 WXML 里 .form-item 也有 error class?
-       Current WXML: <input class="input {{errors.name ? 'error' : ''}}" ... />
-       
-       Let's stick to simple visual cue on the input itself if possible, or maybe text color?
-       Let's make placeholder red temporarily.
-    */
-    color: #ef4444; 
+    color: var(--status-danger);
 }
 
 .input.error::placeholder {
-    color: #fca5a5;
+    color: rgba(239, 68, 68, 0.5); /* red-500 with opacity */
 }
 
 .textarea {
     width: 100%;
     font-size: 28rpx;
-    color: #1e293b;
+    color: var(--text-body);
     min-height: 120rpx;
     margin-top: 16rpx;
     line-height: 1.6;
 }
 
 .textarea::placeholder {
-    color: #cbd5e1;
+    color: var(--text-placeholder);
 }
 
 .picker-value {
@@ -107,15 +91,15 @@
     justify-content: space-between;
     align-items: center;
     font-size: 28rpx;
-    color: #1e293b;
+    color: var(--text-body);
 }
 
 .picker-value.placeholder {
-    color: #cbd5e1;
+    color: var(--text-placeholder);
 }
 
 .arrow {
-    color: #cbd5e1;
+    color: var(--text-placeholder);
     font-size: 32rpx;
     margin-left: 16rpx;
 }
@@ -128,22 +112,24 @@
     bottom: 0;
     padding: 24rpx 32rpx;
     padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-    background: #fff;
-    box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+    background: var(--bg-card);
+    border-top: 1rpx solid var(--border-light);
+    z-index: 100;
 }
 
 .submit-btn {
     width: 100%;
-    height: 96rpx;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff;
+    height: 88rpx;
+    background: var(--brand-primary);
+    color: #FFFFFF;
     font-size: 32rpx;
     font-weight: 500;
-    border-radius: 48rpx;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
+    box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
 }
 
 .submit-btn.disabled {
@@ -152,6 +138,10 @@
 
 .submit-btn::after {
     border: none;
+}
+
+.submit-btn:active {
+    background: var(--brand-hover);
 }
 
 /* 多级来源选择器弹窗 */
@@ -178,8 +168,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #fff;
-    border-radius: 24rpx 24rpx 0 0;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     transform: translateY(100%);
     transition: transform 0.3s ease;
 }
@@ -193,22 +183,22 @@
     justify-content: space-between;
     align-items: center;
     padding: 32rpx;
-    border-bottom: 1rpx solid #f1f5f9;
+    border-bottom: 1rpx solid var(--border-light);
 }
 
 .picker-cancel {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 28rpx;
 }
 
 .picker-title {
     font-size: 32rpx;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--text-heading);
 }
 
 .picker-confirm {
-    color: #3b82f6;
+    color: var(--brand-primary);
     font-size: 28rpx;
     font-weight: 500;
 }
@@ -221,7 +211,7 @@
 .picker-column {
     flex: 1;
     height: 100%;
-    border-right: 1rpx solid #f1f5f9;
+    border-right: 1rpx solid var(--border-light);
 }
 
 .picker-column:last-child {
@@ -231,19 +221,20 @@
 .picker-item {
     padding: 28rpx 24rpx;
     font-size: 28rpx;
-    color: #475569;
-    border-bottom: 1rpx solid #f8fafc;
+    color: var(--text-body);
+    border-bottom: 1rpx solid var(--border-light);
+    text-align: center;
 }
 
 .picker-item.active {
-    background: #eff6ff;
-    color: #3b82f6;
+    background: var(--brand-light);
+    color: var(--brand-primary);
     font-weight: 500;
 }
 
 .picker-empty {
     padding: 48rpx 24rpx;
     text-align: center;
-    color: #cbd5e1;
+    color: var(--text-placeholder);
     font-size: 26rpx;
 }

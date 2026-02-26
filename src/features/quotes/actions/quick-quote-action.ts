@@ -32,7 +32,7 @@ import { fetchQuotePlans } from '../lib/plan-loader';
  * 1. 自动创建默认客户（若未指定）。
  * 2. 创建报价单记录。
  * 3. 依据所选分类（窗帘/墙纸等）调用工厂逻辑计算首行明细。
- * 
+ *
  * @param params - 包含客户、产品及计算核心参数的对象
  * @returns 新建的快速报价单对象
  */
@@ -142,13 +142,14 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
         foldRatio: p.foldRatio || 2,
         measureUnit: 'cm',
         patternRepeat: 0,
-        ...(p.extraParams || {})
+        ...(p.extraParams || {}),
       });
 
       // P1-04 修复：使用 usage（CalcResult 统一字段名），并修复浮点精度
-      const quantity = (calcResult as { usage?: number; quantity?: number }).usage
-        ?? (calcResult as { usage?: number; quantity?: number }).quantity
-        ?? 0;
+      const quantity =
+        (calcResult as { usage?: number; quantity?: number }).usage ??
+        (calcResult as { usage?: number; quantity?: number }).quantity ??
+        0;
       const subtotal = Math.round(quantity * (p.unitPrice || 0) * 100) / 100;
 
       itemsToInsert.push({
@@ -175,6 +176,10 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
 
   revalidatePath('/quotes');
   revalidateTag('quotes', {});
-  logger.info('[quotes] 快速报价单创建成功', { quoteId: newQuote.id, quoteNo, leadId: data.leadId });
+  logger.info('[quotes] 快速报价单创建成功', {
+    quoteId: newQuote.id,
+    quoteNo,
+    leadId: data.leadId,
+  });
   return { id: newQuote.id, quoteNo };
 });

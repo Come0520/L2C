@@ -1,0 +1,13 @@
+<!-- 
+  空状态组件
+  components/empty-state/index.wxml
+  替代 533KB 的 empty.png，使用轻量 SVG 绘制（< 2KB）
+-->
+<view class="empty-state-wrap">
+  <view class="empty-icon-wrap">
+    <!-- 轻量 SVG 空状态图标 -->
+    <image class="empty-icon" src="/components/empty-state/empty.svg" mode="aspectFit" />
+  </view>
+  <text class="empty-text">{{text || '暂无数据'}}</text>
+  <slot></slot>
+</view>

@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFinanceAccountSchema } from '../actions/schema';

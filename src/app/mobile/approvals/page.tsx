@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMobileAuth } from '@/shared/auth/mobile-auth-context';
 import { mobileGet } from '@/shared/lib/mobile-api-client';
-import { ChevronRight, ClipboardList, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronRight, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { MobileApprovalSkeleton } from '@/shared/ui/skeleton-variants';
 
 interface ApprovalTask {

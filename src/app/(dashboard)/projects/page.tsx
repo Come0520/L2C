@@ -5,7 +5,6 @@ import { getInstallTasks } from '@/features/service/actions/install-actions';
 import { formatDate } from '@/shared/lib/utils';
 import { DispatchDialog } from '@/features/service/components/dispatch-dialog';
 import { Truck, Calendar } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Link from 'next/link';
 
 const STATUS_MAP: Record<string, string> = {

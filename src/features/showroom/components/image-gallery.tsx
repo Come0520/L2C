@@ -154,6 +154,7 @@ export function ImageGallery({ images, alt = '商品图片', className }: ImageG
                                     : 'border-transparent opacity-60 hover:opacity-100'
                             )}
                         >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={img}
                                 alt={`缩略图 ${i + 1}`}

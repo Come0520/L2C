@@ -1,92 +1,95 @@
-<view class="container">
-  <!-- 顶部装饰光效 -->
-  <view class="glow-effect top-right"></view>
-  <view class="glow-effect bottom-left"></view>
-
-  <!-- 黑金名片卡 (新版非对称布局) -->
-  <view class="user-card animate-fade-in">
-    <!-- 左侧：头像区 -->
-    <view class="card-section avatar-section" bindtap="navigateToEdit">
-        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
-    </view>
-
-    <!-- 中间：信息区 (竖排核心) -->
-    <view class="card-section info-section">
-        <view class="vertical-text role-text">{{userInfo.displayRole || '用户'}}</view>
-        <view class="vertical-text name-text">{{userInfo.name || '未登录'}}</view>
-        <view class="tag-pill" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'boss'}}">admin</view>
-    </view>
-
-    <!-- 右侧：操作区 (椭圆轨道) -->
-    <view class="card-section action-section">
-        <view class="orbit-container">
-            <!-- 椭圆背景 -->
-            <view class="orbit-bg"></view>
-            <!-- 核心：分享按钮 -->
-            <button class="share-btn-center" open-type="share">
-                <image class="share-icon" src="/assets/icons/share-active.svg" />
-            </button>
-            <!-- 卫星：编辑图标 (悬浮) -->
-            <view class="edit-satellite" bindtap="navigateToEdit">
-                <text class="edit-icon-text">✎</text>
-            </view>
+<!-- 个人中心 -->
+<view class="container profile-page">
+  <!-- 用户信息卡片 -->
+  <view class="card user-card animate-fade-in">
+    <view class="user-info" bindtap="navigateToEdit">
+      <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+      <view class="user-meta">
+        <view class="user-name">{{userInfo.name || '未登录'}}</view>
+        <view class="user-role">
+          <text class="role-tag">{{userInfo.displayRole || '用户'}}</text>
+          <text class="badge badge-info" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'boss'}}">管理员</text>
         </view>
+      </view>
+      <view class="edit-icon">
+        <text class="arrow-icon">›</text>
+      </view>
     </view>
   </view>
 
-  <!-- 战绩仪表盘 (Glassmorphism) -->
-  <view class="stats-card animate-slide-up" style="animation-delay: 0.1s;">
-      <view class="stat-item">
-          <text class="stat-value gold">{{stats.monthlySales || '0'}}</text>
-          <text class="stat-label">本月业绩(万)</text>
-      </view>
-      <view class="divider-vertical"></view>
-      <view class="stat-item">
-          <text class="stat-value">{{stats.monthlyOrders || '0'}}</text>
-          <text class="stat-label">本月签单</text>
-      </view>
-      <view class="divider-vertical"></view>
-      <view class="stat-item">
-          <text class="stat-value">{{stats.conversionRate || '0'}}%</text>
-          <text class="stat-label">转化率</text>
-      </view>
+  <!-- 数据统计 -->
+  <view class="card stats-card animate-slide-up" style="animation-delay: 0.1s;">
+    <view class="stat-item">
+      <text class="stat-value primary">{{stats.monthlySales || '0'}}</text>
+      <text class="stat-label">本月业绩(万)</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{stats.monthlyOrders || '0'}}</text>
+      <text class="stat-label">本月签单</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{stats.conversionRate || '0'}}%</text>
+      <text class="stat-label">转化率</text>
+    </view>
   </view>
 
-  <!-- 菜单列表 (悬浮感) -->
-  <view class="menu-list animate-slide-up" style="animation-delay: 0.2s;">
-      <!-- 老板/管理员专属菜单 -->
-      <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'BOSS'}}" bindtap="navigateToPaymentSettings">
-          <view class="menu-left">
-              <image class="menu-icon" src="/assets/icons/payment-active.svg" />
-              <text class="label">支付设置</text>
-          </view>
-          <text class="arrow">></text>
+  <!-- 功能菜单 -->
+  <view class="card menu-card animate-slide-up" style="animation-delay: 0.15s;">
+    <!-- 管理菜单 -->
+    <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'BOSS'}}" bindtap="navigateToPaymentSettings">
+      <view class="menu-left">
+        <view class="menu-icon-box blue">
+          <image class="menu-icon" src="/assets/icons/payment-active.svg" />
+        </view>
+        <text class="menu-label">支付设置</text>
       </view>
+      <text class="menu-arrow">›</text>
+    </view>
 
-      <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'boss' || userInfo.role === 'manager'}}" bindtap="navigateToInvite">
-          <view class="menu-left">
-              <image class="menu-icon" src="/assets/icons/invite-active.svg" />
-              <text class="label">邀请成员</text>
-          </view>
-          <text class="arrow">></text>
+    <view class="menu-item" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'boss' || userInfo.role === 'manager'}}" bindtap="navigateToInvite">
+      <view class="menu-left">
+        <view class="menu-icon-box green">
+          <image class="menu-icon" src="/assets/icons/invite-active.svg" />
+        </view>
+        <text class="menu-label">邀请成员</text>
       </view>
-      
-      <!-- 通用菜单 -->
-      <view class="menu-item" bindtap="navigateToServiceList">
-          <view class="menu-left">
-              <image class="menu-icon" src="/assets/icons/support-active.svg" />
-              <text class="label">售后记录</text>
-          </view>
-          <text class="arrow">></text>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <!-- 通用菜单 -->
+    <view class="menu-item" bindtap="navigateToServiceList">
+      <view class="menu-left">
+        <view class="menu-icon-box orange">
+          <image class="menu-icon" src="/assets/icons/support-active.svg" />
+        </view>
+        <text class="menu-label">售后记录</text>
       </view>
-      <view class="menu-item">
-          <view class="menu-left">
-               <image class="menu-icon" src="/assets/icons/support-active.svg" /> <!-- 暂时复用图标，建议更换客服图标 -->
-               <text class="label">联系客服</text>
-          </view>
-          <text class="arrow">></text>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item">
+      <view class="menu-left">
+        <view class="menu-icon-box purple">
+          <image class="menu-icon" src="/assets/icons/support-active.svg" />
+        </view>
+        <text class="menu-label">联系客服</text>
       </view>
+      <text class="menu-arrow">›</text>
+    </view>
   </view>
 
-  <button class="btn-logout" bindtap="handleLogout">退出登录</button>
+  <!-- 分享按钮 -->
+  <view class="card share-card animate-slide-up" style="animation-delay: 0.2s;">
+    <button class="share-btn" open-type="share">
+      <image class="share-icon" src="/assets/icons/share-active.svg" />
+      <text>分享给好友</text>
+    </button>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-section animate-slide-up" style="animation-delay: 0.25s;">
+    <button class="btn-logout" bindtap="handleLogout">退出登录</button>
+  </view>
 </view>

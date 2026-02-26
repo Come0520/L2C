@@ -1,0 +1,25 @@
+/* 空状态组件样式 */
+.empty-state-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+}
+
+.empty-icon-wrap {
+  width: 240rpx;
+  height: 240rpx;
+  margin-bottom: 24rpx;
+}
+
+.empty-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #666;
+  text-align: center;
+}

@@ -9,6 +9,7 @@
  * 5. 生成报价单
  */
 import { authStore } from '../../../stores/auth-store';
+import { throttleTap } from '../../../utils/throttle-tap';
 
 interface RoomType {
     key: string;
@@ -515,7 +516,7 @@ Page({
     /**
      * 提交报价单
      */
-    async onSubmit() {
+    onSubmit: throttleTap(async function (this: any) {
         // 验证
         if (!this.data.customerId) {
             wx.showToast({ title: '请先选择客户', icon: 'none' });
@@ -563,7 +564,7 @@ Page({
         } finally {
             wx.hideLoading();
         }
-    }
+    })
 });
 
 export { };

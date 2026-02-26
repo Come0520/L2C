@@ -1,6 +1,6 @@
-
+/* pages/leads/index/index.wxss */
 .container {
-    background-color: #f8fafc;
+    background-color: var(--bg-page);
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -9,8 +9,8 @@
 /* Tabs */
 .tabs {
     display: flex;
-    background: #fff;
-    border-bottom: 2rpx solid #e2e8f0;
+    background: var(--bg-card);
+    border-bottom: 1rpx solid var(--border-light);
 }
 
 .tab-item {
@@ -18,13 +18,13 @@
     text-align: center;
     padding: 24rpx 0;
     font-size: 28rpx;
-    color: #64748b;
+    color: var(--text-muted);
     position: relative;
     font-weight: 500;
 }
 
 .tab-item.active {
-    color: #3b82f6;
+    color: var(--brand-primary);
     font-weight: 600;
 }
 
@@ -35,19 +35,19 @@
     transform: translateX(-50%);
     width: 40rpx;
     height: 4rpx;
-    background: #3b82f6;
+    background: var(--brand-primary);
     border-radius: 4rpx;
 }
 
 /* Search */
 .search-bar {
     padding: 16rpx 24rpx;
-    background: #fff;
+    background: var(--bg-card);
     box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.02);
 }
 
 .search-input-wrap {
-    background: #f1f5f9;
+    background: var(--bg-section);
     border-radius: 99rpx;
     padding: 12rpx 24rpx;
     display: flex;
@@ -58,7 +58,7 @@
     flex: 1;
     margin-left: 16rpx;
     font-size: 28rpx;
-    color: #334155;
+    color: var(--text-heading);
     height: 48rpx;
 }
 
@@ -71,16 +71,17 @@
 }
 
 .crm-card {
-    background: #fff;
-    border-radius: 20rpx;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
     padding: 24rpx;
     margin-bottom: 24rpx;
-    box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.03);
+    box-shadow: var(--shadow-sm);
     position: relative;
+    transition: all 0.2s ease;
 }
 
 .crm-card:active {
-    background: #f8fafc;
+    background: var(--bg-section);
 }
 
 .card-header {
@@ -89,7 +90,7 @@
     align-items: flex-start;
     margin-bottom: 20rpx;
     padding-bottom: 16rpx;
-    border-bottom: 2rpx dashed #f1f5f9;
+    border-bottom: 1rpx dashed var(--border-light);
 }
 
 .name-row {
@@ -102,7 +103,7 @@
 .name {
     font-size: 32rpx;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--text-heading);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -112,21 +113,21 @@
 .status-tag {
     font-size: 20rpx;
     padding: 4rpx 12rpx;
-    border-radius: 8rpx;
-    background: #f1f5f9;
-    color: #64748b;
+    border-radius: var(--radius-sm);
+    background: var(--bg-section);
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .status-tag.PENDING_ASSIGNMENT { background: #fee2e2; color: #ef4444; } /* Red */
 .status-tag.PENDING_FOLLOWUP { background: #fef3c7; color: #d97706; } /* Yellow */
-.status-tag.FOLLOWING_UP { background: #dbeafe; color: #2563eb; } /* Blue */
+.status-tag.FOLLOWING_UP { background: var(--brand-light); color: var(--brand-primary); } /* Blue */
 .status-tag.WON { background: #dcfce7; color: #16a34a; } /* Green */
-.status-tag.VOID { background: #f1f5f9; color: #94a3b8; } /* Gray */
+.status-tag.VOID { background: var(--bg-section); color: var(--text-muted); } /* Gray */
 
 .date {
     font-size: 22rpx;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 4rpx;
 }
 
@@ -143,13 +144,13 @@
 }
 
 .label {
-    color: #94a3b8;
+    color: var(--text-muted);
     width: 90rpx;
     flex-shrink: 0;
 }
 
 .value {
-    color: #475569;
+    color: var(--text-body);
     flex: 1;
     word-break: break-all;
 }
@@ -160,7 +161,7 @@
     bottom: 64rpx;
     width: 100rpx;
     height: 100rpx;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: var(--brand-primary);
     border-radius: 50%;
     color: white;
     font-size: 64rpx;
@@ -175,6 +176,7 @@
 
 .fab-add:active {
     transform: scale(0.95);
+    background: var(--brand-hover);
 }
 
 .empty-state {
@@ -182,7 +184,7 @@
     flex-direction: column;
     align-items: center;
     padding-top: 160rpx;
-    color: #cbd5e1;
+    color: var(--text-placeholder);
     font-size: 28rpx;
 }
 
@@ -196,6 +198,6 @@
 .loading-more, .no-more {
     text-align: center;
     padding: 32rpx;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 24rpx;
 }

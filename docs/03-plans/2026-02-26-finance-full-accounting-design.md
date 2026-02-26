@@ -26,19 +26,20 @@
 
 ## 二、专业安全机制（全部必须实现）
 
-| 安全原则 | 实现方式 |
-|---|---|
-| 凭证不可删除 | 禁止 DELETE，只允许 INSERT 红字冲销凭证 |
-| 账期锁定 | 状态 OPEN→CLOSED 不可逆，CLOSED 后拒绝写入 |
-| 借贷强制平衡 | Service 层强制校验，借方合计 ≠ 贷方合计时拒绝保存 |
-| 四权分立（企业模式） | 记账员与复核员不可为同一用户（系统强制） |
-| 完整审计日志 | 每笔写操作记录：用户ID/时间戳/操作前后数据快照 |
+| 安全原则             | 实现方式                                          |
+| -------------------- | ------------------------------------------------- |
+| 凭证不可删除         | 禁止 DELETE，只允许 INSERT 红字冲销凭证           |
+| 账期锁定             | 状态 OPEN→CLOSED 不可逆，CLOSED 后拒绝写入        |
+| 借贷强制平衡         | Service 层强制校验，借方合计 ≠ 贷方合计时拒绝保存 |
+| 四权分立（企业模式） | 记账员与复核员不可为同一用户（系统强制）          |
+| 完整审计日志         | 每笔写操作记录：用户ID/时间戳/操作前后数据快照    |
 
 ---
 
 ## 三、数据库新增表结构
 
 ### `chart_of_accounts`（会计科目表）
+
 ```sql
 id, tenant_id, code, name,
 category ENUM(ASSET/LIABILITY/EQUITY/INCOME/EXPENSE),
@@ -46,6 +47,7 @@ parent_id, level, is_active, is_system_default, created_at
 ```
 
 ### `journal_entries`（凭证主表）
+
 ```sql
 id, tenant_id, voucher_no, period_id, entry_date, description,
 status ENUM(DRAFT/PENDING_REVIEW/POSTED),
@@ -55,29 +57,34 @@ source_id, is_reversal, reversed_entry_id, created_at, updated_at
 ```
 
 ### `journal_entry_lines`（凭证借贷明细）
+
 ```sql
 id, entry_id, account_id, debit_amount NUMERIC(15,2),
 credit_amount NUMERIC(15,2), description, sort_order
 ```
 
 ### `expense_records`（费用录入）
+
 ```sql
 id, tenant_id, period_id, account_id, amount NUMERIC(15,2),
 description, expense_date, import_batch_id, created_by, created_at
 ```
 
 ### `accounting_periods`（账期）
+
 ```sql
 id, tenant_id, year, month, quarter,
 status ENUM(OPEN/CLOSED), closed_by, closed_at
 ```
 
 ### `voucher_templates`（自动凭证规则）
+
 ```sql
 id, tenant_id, source_type, debit_account_id, credit_account_id, is_active
 ```
 
 ### `finance_audit_logs`（财务审计日志）
+
 ```sql
 id, tenant_id, user_id, action, entity_type, entity_id,
 before_data JSONB, after_data JSONB, ip_address, created_at
@@ -87,13 +94,13 @@ before_data JSONB, after_data JSONB, ip_address, created_at
 
 ## 四、业务单据 → 自动凭证映射
 
-| 触发事件 | 默认借方科目 | 默认贷方科目 |
-|---|---|---|
-| 收款单审批通过 | 银行存款/现金 | 应收账款 |
-| 付款单审批通过 | 应付账款 | 银行存款/现金 |
-| 销售订单确认 | 应收账款 | 主营业务收入 |
-| 采购入库 | 库存商品 | 应付账款 |
-| 内部资金转账 | 目标账户 | 来源账户 |
+| 触发事件       | 默认借方科目  | 默认贷方科目  |
+| -------------- | ------------- | ------------- |
+| 收款单审批通过 | 银行存款/现金 | 应收账款      |
+| 付款单审批通过 | 应付账款      | 银行存款/现金 |
+| 销售订单确认   | 应收账款      | 主营业务收入  |
+| 采购入库       | 库存商品      | 应付账款      |
+| 内部资金转账   | 目标账户      | 来源账户      |
 
 > 科目可在 `voucher_templates` 中按租户配置覆写
 
@@ -118,29 +125,29 @@ before_data JSONB, after_data JSONB, ip_address, created_at
 
 ## 六、技术选型
 
-| 技术点 | 方案 | 备注 |
-|---|---|---|
-| Excel 导出 | `xlsx` + 现有 `ExcelExportButton` | 零成本复用 |
-| PDF 导出 | `@react-pdf/renderer` | 新增依赖，JSX 写模板 |
-| 金额计算 | 字符串 Decimal（现有规范） | 避免浮点精度丢失 |
-| 科目树 | 递归嵌套 + `parent_id` | Drizzle ORM 处理 |
+| 技术点     | 方案                              | 备注                 |
+| ---------- | --------------------------------- | -------------------- |
+| Excel 导出 | `xlsx` + 现有 `ExcelExportButton` | 零成本复用           |
+| PDF 导出   | `@react-pdf/renderer`             | 新增依赖，JSX 写模板 |
+| 金额计算   | 字符串 Decimal（现有规范）        | 避免浮点精度丢失     |
+| 科目树     | 递归嵌套 + `parent_id`            | Drizzle ORM 处理     |
 
 ---
 
 ## 七、开发排期（10 个 Phase，约 11 周）
 
-| Phase | 内容 | 预估 |
-|---|---|---|
-| 1 | 数据库建表 + 迁移 + Seed 科目数据 | 3天 |
-| 2 | 核心会计引擎（借贷校验/红字冲销/账期锁定） | 1周 |
-| 3 | 业务单据自动生成凭证 Hook | 1周 |
-| 4 | 科目管理页面 | 3天 |
-| 5 | 凭证管理页面 | 1周 |
-| 6 | 费用录入（手工+Excel导入） | 3天 |
-| 7 | 三大财务报表 + 导出 | 1周 |
-| 8 | 账期管理页面 | 2天 |
-| 9 | 个体户简单模式 | 1周 |
-| 10 | 权限与角色（对接现有 RBAC） | 2天 |
+| Phase | 内容                                       | 预估 |
+| ----- | ------------------------------------------ | ---- |
+| 1     | 数据库建表 + 迁移 + Seed 科目数据          | 3天  |
+| 2     | 核心会计引擎（借贷校验/红字冲销/账期锁定） | 1周  |
+| 3     | 业务单据自动生成凭证 Hook                  | 1周  |
+| 4     | 科目管理页面                               | 3天  |
+| 5     | 凭证管理页面                               | 1周  |
+| 6     | 费用录入（手工+Excel导入）                 | 3天  |
+| 7     | 三大财务报表 + 导出                        | 1周  |
+| 8     | 账期管理页面                               | 2天  |
+| 9     | 个体户简单模式                             | 1周  |
+| 10    | 权限与角色（对接现有 RBAC）                | 2天  |
 
 **Phase 1-3 完成后可交付核心会计引擎供专业会计人员内测。**
 
@@ -149,6 +156,7 @@ before_data JSONB, after_data JSONB, ip_address, created_at
 ## 八、验证计划
 
 ### 自动化测试命令
+
 ```bash
 # 单元测试（新增）
 pnpm test src/features/finance/__tests__/journal-validation.test.ts
@@ -163,6 +171,7 @@ pnpm type-check
 ```
 
 ### 关键场景手工验证（5条）
+
 1. **借贷不平衡拒绝保存** — 录入借方100/贷方90，点击保存，应见错误提示
 2. **账期锁定后写保护** — 关闭2月账期，再尝试新增2月凭证，应被系统拒绝
 3. **自动凭证生成** — 审批一笔收款单，进凭证列表，应自动出现对应会计分录

@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import React from 'react';
 /**
  * 基础应收账款表格 (AR Table)

@@ -17,27 +17,12 @@
     "declaration": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
+    "lib": ["ESNext", "DOM"],
     "isolatedModules": true,
-    "types": [
-      "jest",
-      "node",
-      "miniprogram-api-typings"
-    ]
+    "types": ["jest", "node", "miniprogram-api-typings"]
   },
-  "include": [
-    "./**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/__tests__/**"
-  ]
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/__tests__/**"]
 }

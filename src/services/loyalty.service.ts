@@ -1,6 +1,6 @@
 import { db } from "@/shared/api/db";
 import { customers, loyaltyTransactions } from "@/shared/api/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export class LoyaltyService {
 

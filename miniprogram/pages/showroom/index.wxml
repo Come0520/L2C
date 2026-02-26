@@ -1,9 +1,9 @@
-<!--pages/showroom/index.wxml-->
+<!-- pages/showroom/index.wxml -->
 <view class="container">
   <!-- Search Header -->
   <view class="search-header">
     <view class="search-bar">
-      <icon type="search" size="14" color="#64748b"></icon>
+      <icon type="search" size="14" color="var(--text-placeholder)"></icon>
       <input 
         class="search-input" 
         placeholder="搜索商品 / 案例..." 
@@ -13,12 +13,13 @@
       />
     </view>
     
-    <!-- 筛选按钮 -->
+    <!-- Filter -->
     <view class="filter-btn" bindtap="toggleFilter" wx:if="{{!isSelectionMode}}">
-        <text class="filter-icon"><image src="/assets/icons/filter-active.svg" style="width:28rpx;height:28rpx;vertical-align:middle;"/></text>
+        <!-- SVG not available directly without image, use text icon -->
+        <text class="filter-icon" style="font-size:20px; color:var(--text-body);">⚡</text>
     </view>
 
-    <!-- 选择按钮 (Selection Mode Toggle) -->
+    <!-- Selection Mode Toggle -->
     <view class="select-btn" bindtap="toggleSelectionMode">
         {{isSelectionMode ? '取消' : '选择'}}
     </view>
@@ -52,8 +53,8 @@
           </scroll-view>
 
           <view class="drawer-footer">
-              <button class="reset-btn" bindtap="resetFilter">重置</button>
-              <button class="confirm-btn" bindtap="confirmFilter">确认</button>
+              <button class="btn-secondary reset-btn" bindtap="resetFilter">重置</button>
+              <button class="btn-primary confirm-btn" bindtap="confirmFilter">确认</button>
           </view>
       </view>
   </view>
@@ -65,21 +66,21 @@
       bindtap="onTabChange" 
       data-tab="featured"
     >
-      ✨ 精选
+      精选
     </view>
     <view 
       class="tab-item {{activeTab === 'products' ? 'active' : ''}}" 
       bindtap="onTabChange" 
       data-tab="products"
     >
-      🏷️ 商品
+      商品
     </view>
     <view 
       class="tab-item {{activeTab === 'cases' ? 'active' : ''}}" 
       bindtap="onTabChange" 
       data-tab="cases"
     >
-      🏠 案例
+      案例
     </view>
   </view>
 
@@ -103,7 +104,7 @@
             <view class="resource-title">{{item.title}}</view>
             <view class="resource-meta">
               <text wx:if="{{item.price}}" class="price tag">{{item.price}}</text>
-              <text wx:if="{{item.tag}}" class="tag">{{item.tag}}</text>
+              <text wx:if="{{item.tag}}" class="tag type-tag">{{item.tag}}</text>
               <text wx:if="{{item.views}}" class="views">{{item.views}} 浏览</text>
             </view>
           </view>
@@ -111,20 +112,20 @@
       </block>
     </view>
     <view class="empty-state" wx:if="{{resources.length === 0 && !loading}}">
-        暂无内容
+        <text class="empty-text">暂无内容</text>
     </view>
-    <view style="height: 120rpx;"></view> <!-- Bottom spacer -->
+    <view style="height: 140rpx;"></view> <!-- Bottom spacer -->
   </scroll-view>
 
   <!-- Bottom Share Bar -->
   <view class="share-bar animate-slide-up" wx:if="{{isSelectionMode}}">
       <view class="selected-count">已选 {{selectedCount}} 个灵感</view>
       <button 
-        class="share-btn" 
+        class="share-btn btn-primary" 
         open-type="share" 
         disabled="{{selectedCount === 0}}"
       >
-        生成分享胶囊 💊
+        生成分享胶囊
       </button>
   </view>
 </view>

@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import { useState, useEffect, useCallback } from 'react';
 import {
     getBundles,

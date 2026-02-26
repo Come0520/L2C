@@ -1,19 +1,19 @@
-<!--pages/tasks/detail/detail.wxml-->
+<!-- pages/tasks/detail/detail.wxml -->
 <view class="container" wx:if="{{task}}">
-  <!-- 头部信息 -->
-  <view class="header">
+  <!-- Header Card -->
+  <view class="card header-card">
     <view class="title-row">
       <text class="task-no">{{task.measureNo || task.taskNo}}</text>
-      <van-tag type="{{statusType}}" size="medium">{{statusText}}</van-tag>
+      <text class="status-tag status-{{task.status}}">{{statusText}}</text>
     </view>
     <view class="time-row">
-      <van-icon name="clock-o" style="margin-right: 4px;" />
+      <icon class="icon" type="waiting" size="14" color="var(--text-muted)" />
       <text>预约时间：{{scheduledTime}}</text>
     </view>
   </view>
 
-  <!-- 客户信息 -->
-  <view class="section">
+  <!-- Customer Info Card -->
+  <view class="card">
     <view class="section-title">客户信息</view>
     <view class="address-box">
       <view class="address-text">{{task.customerAddress || task.address}}</view>
@@ -23,12 +23,12 @@
           <text class="phone" bindtap="makePhoneCall" data-phone="{{task.customerPhone}}">{{task.customerPhone}}</text>
         </view>
         <view class="action-bar">
-           <view class="action-icon" bindtap="openLocation">
-             <van-icon name="location-o" size="24px" color="#1989fa" />
+           <view class="action-btn" bindtap="openLocation" hover-class="action-btn-hover">
+             <text class="action-icon">📍</text>
              <text>导航</text>
            </view>
-           <view class="action-icon" bindtap="makePhoneCall" data-phone="{{task.customerPhone}}">
-             <van-icon name="phone-o" size="24px" color="#07c160" />
+           <view class="action-btn" bindtap="makePhoneCall" data-phone="{{task.customerPhone}}" hover-class="action-btn-hover">
+             <text class="action-icon">📞</text>
              <text>拨打</text>
            </view>
         </view>
@@ -36,49 +36,46 @@
     </view>
   </view>
 
-  <!-- 备注信息 -->
-  <view class="section" wx:if="{{task.remark}}">
+  <!-- Remark Card -->
+  <view class="card" wx:if="{{task.remark}}">
     <view class="section-title">备注</view>
-    <view style="padding: 12px 0; color: #666; font-size: 14px;">{{task.remark}}</view>
+    <view class="remark-content">{{task.remark}}</view>
   </view>
+  
+  <view class="footer-spacer"></view>
 
-  <!-- 底部操作栏 -->
+  <!-- Bottom Action Bar -->
   <view class="bottom-bar">
-     <van-button 
+     <button 
         wx:if="{{task.status === 'PENDING' || task.status === 'PENDING_DISPATCH'}}" 
-        type="primary" 
-        block 
-        class="btn-flex"
+        class="btn-primary btn-flex"
         bindtap="updateStatus" 
         data-status="IN_PROGRESS"
         data-action="accept"
-     >接单出发</van-button>
+     >接单出发</button>
 
-     <van-button 
+     <button 
         wx:if="{{task.status === 'IN_PROGRESS' || task.status === 'ASSIGNED'}}" 
-        type="info" 
-        block 
-        class="btn-flex"
+        class="btn-secondary btn-flex"
         bindtap="checkIn"
-     >签到</van-button>
+     >签到</button>
 
-     <van-button 
+     <button 
         wx:if="{{task.status === 'IN_PROGRESS'}}" 
-        type="primary" 
-        block 
-        class="btn-flex"
+        class="btn-primary btn-flex"
         bindtap="completeTask"
-     >完成任务</van-button>
+     >完成任务</button>
   </view>
 </view>
 
 <!-- Loading State -->
-<view wx:if="{{loading}}" style="text-align: center; padding-top: 50px;">
-    <van-loading type="spinner" />
+<view wx:if="{{loading}}" class="loading-state">
+  <view class="spinner"></view>
+  <text>加载中...</text>
 </view>
 
 <!-- Error State -->
-<view wx:if="{{error}}" style="text-align: center; padding-top: 50px; color: #999;">
-    <text>{{error}}</text>
-    <van-button size="small" type="default" bindtap="onLoad" style="margin-top: 10px;">重试</van-button>
+<view wx:if="{{error}}" class="empty-state">
+    <text class="empty-text">{{error}}</text>
+    <button class="btn-primary btn-retry" bindtap="onLoad">重试</button>
 </view>

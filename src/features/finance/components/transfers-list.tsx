@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import {
     Table,
     TableBody,

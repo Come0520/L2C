@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { db } from '@/shared/api/db';
 import { approvalFlows } from '@/shared/api/schema/approval';
 import { eq, and } from 'drizzle-orm';

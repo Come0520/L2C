@@ -5,6 +5,7 @@
 ## 1. 核心流程概览
 
 新增一个 Widget 通常需要遵循以下四个步骤：
+
 1. **类型定义**：在 `types.ts` 中注册新的 Widget ID。
 2. **组件实现**：编写业务逻辑组件。
 3. **元数据注册**：在 `registry.tsx` 中配置名称、权限及尺寸。
@@ -15,14 +16,15 @@
 ## 2. 详细步骤说明
 
 ### 2.1 类型定义 (Type Definition)
+
 在 `src/features/dashboard/types.ts` 的 `WidgetType` 联合类型中添加你的 ID。
+
 ```typescript
-export type WidgetType = 
-    | 'existing-widget'
-    | 'your-new-widget'; // 新增此处
+export type WidgetType = 'existing-widget' | 'your-new-widget'; // 新增此处
 ```
 
 ### 2.2 组件实现 (Component Implementation)
+
 - **存放位置**：根据所属业务领域存放在 `src/features/dashboard/widgets/` 下对应的模块中（如 `sales-widgets.tsx`）。
 - **设计标准**：
   - 使用 `shared/ui` 下的高级组件（如 `Card`）。
@@ -30,7 +32,9 @@ export type WidgetType =
   - 必须包含响应式处理，确保在不同 `w` (宽度) 下的显示效果。
 
 ### 2.3 元数据注册 (Metadata Registry)
+
 编辑 `src/features/dashboard/widgets/registry.tsx` 中的 `WIDGET_REGISTRY` 对象：
+
 ```typescript
 'your-new-widget': {
     type: 'your-new-widget',
@@ -44,7 +48,9 @@ export type WidgetType =
 ```
 
 ### 2.4 懒加载映射 (Lazy Loading)
+
 编辑 `src/features/dashboard/widgets/widget-renderer.tsx` 中的 `WIDGET_COMPONENTS` 对象：
+
 ```typescript
 'your-new-widget': React.lazy(() => import('./your-module').then(m => ({ default: m.YourNewWidget }))),
 ```
@@ -54,6 +60,7 @@ export type WidgetType =
 ## 3. L4 规范要求
 
 为符合 L4 级别健壮性要求，所有新增 Widget 必须：
+
 1. **自带骨架屏 (Skeleton)**：在 `React.Suspense` 触发时提供良好的视觉过渡。
 2. **异常隔离**：Widget 内部的错误不应导致整个仪表盘 white-screen（利用已有错误处理逻辑或 `ErrorBoundary`）。
 3. **权限校验**：通过 `permissions` 数组严格限定可见角色，防止越权。

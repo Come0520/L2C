@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import { Button } from '@/shared/ui/button';
 import X from 'lucide-react/dist/esm/icons/x';
 import {

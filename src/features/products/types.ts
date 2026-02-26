@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 import { products, auditLogs } from '@/shared/api/schema';
 
 export type AuditLog = typeof auditLogs.$inferSelect;

@@ -1,7 +1,32 @@
 {
   "description": "项目配置文件",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "assets/empty.png"
+      },
+      {
+        "type": "folder",
+        "value": "__tests__"
+      },
+      {
+        "type": "suffix",
+        "value": ".d.ts"
+      },
+      {
+        "type": "suffix",
+        "value": ".md"
+      },
+      {
+        "type": "suffix",
+        "value": ".txt"
+      },
+      {
+        "type": "suffix",
+        "value": ".log"
+      }
+    ],
     "include": []
   },
   "setting": {
@@ -36,7 +61,9 @@
     "packNpmManually": false,
     "packNpmRelationList": [],
     "minifyWXML": true,
-    "useCompilerPlugins": ["typescript"],
+    "useCompilerPlugins": [
+      "typescript"
+    ],
     "compileWorklet": false,
     "localPlugins": false,
     "disableUseStrict": false,

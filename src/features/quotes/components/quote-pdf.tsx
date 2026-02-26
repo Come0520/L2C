@@ -8,7 +8,6 @@ import {
     View,
     StyleSheet,
     Font,
-    Image,
 } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 

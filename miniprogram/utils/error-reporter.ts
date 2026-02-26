@@ -7,7 +7,7 @@ export interface ErrorItem {
     type: 'JS_ERROR' | 'PROMISE_ERROR' | 'API_ERROR' | 'WX_ERROR';
     path?: string;
     timestamp: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 import { authStore } from '../stores/auth-store';
@@ -20,7 +20,7 @@ export class ErrorReporter {
     private static instance: ErrorReporter;
     private queue: ErrorItem[] = [];
     private maxQueueSize: number = 20;
-    private flushTimer: any = null;
+    private flushTimer: ReturnType<typeof setTimeout> | null = null;
     private logManager = wx.getRealtimeLogManager ? wx.getRealtimeLogManager() : null;
 
     private constructor() { }
@@ -39,7 +39,7 @@ export class ErrorReporter {
         console.log('[ErrorReporter] 初始化...');
 
         // 捕获 JS 运行错误
-        (wx.onError as any)((error: string | Error) => {
+        wx.onError((error) => {
             this.report({
                 message: typeof error === 'string' ? error : error.message,
                 stack: typeof error === 'string' ? undefined : error.stack,

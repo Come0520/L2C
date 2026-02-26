@@ -47,7 +47,7 @@ export function ActivityForm({ customerId, onSuccess }: Props) {
             } else {
                 toast.error(res.error || '保存失败');
             }
-        } catch (e) {
+        } catch (_e) {
             toast.error('网络错误');
         } finally {
             setSubmitting(false);

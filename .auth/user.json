@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "372e9bd039b6c061d7698a9c1acd8b364c6cbe22627172314d502519875fc146%7Ccabb59665beef7cfcd83f5d7bdbbb4703fe397a7e890a9d3795c605b4d6e3a09",
+      "value": "92b81afabbc3eae2e6a81d7789d182cacf316c92e0dd0f5f680bed4f8a73181b%7Cd2b3d3257298d59d07801f45691261fe6fce913d78899d5b7a8a8494efea3aaf",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,10 +22,10 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiZDFzQ2pNd2R2X3YzNlJFX1RXNk9Xb1M4aVZ6OFRlVFJ1SUtGbVZLOU9sYWVOazVqLXB6eHFic1RRZzFfOE1JejRHNnBuTVJBdXp3TThIQ2RJY1g5c3cifQ..AxKt8Ts3NJ9qzwvPFtWdbQ.4hpeUaYK_d_9azEXi8_fmNPnqMnuBqoKoruSVrWFwwdAgBOrbEe2FsKn5nCYHgyeaCHaDWUDVxbComEU2XC7GOcvfeFCqOO_sJBjLFLR2vyDfIj1GDvVOyBpMVHjcD1pqX5BoO0DsoxF53F_9ye9qeSGQvXDuM9GSzO6WiQH8ypPx72E507DGzKzEF9TnkTfCNbZ-IF7gGXvMki5JtLAucc5yRf0R2IWPHnzs88tLNsoZJnWs9z0acV7X1kp46rI39COnWh8tieheDfTHAq3Yh4CAScb0XP8knNIFcfkUcQI9NvSsUFgA9SrpTQCq6jtW3qG1nfoEYv6_49CSFwIadIsicvJW2jv01Y3JyX4LNk-mkaxB_VRNeye9J9MhPtrUS6SOCNEGxC9p4t2p643vGPVp3H5TvMUqyO9mUkQSx4.58ZM01b7eM9i3QodTPTPvIkjvPX3xNmmYk8b2JgZfVQ",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiZDFzQ2pNd2R2X3YzNlJFX1RXNk9Xb1M4aVZ6OFRlVFJ1SUtGbVZLOU9sYWVOazVqLXB6eHFic1RRZzFfOE1JejRHNnBuTVJBdXp3TThIQ2RJY1g5c3cifQ..c3CBnPL7B8-nh7EcerrRqA.lmFGz_NgYJhL1q5g_r0yzE2kLa4BiJa0rIhMAn4H1xDoEO2O4LxPtjqL4Fk0NqWb_9RYRk_DoUuh6KPnMOrLtE3MATrz-DCOKNgMtEOPm0i6qXZYWqP6KyC34UEt89ERLHMs7kqkCaOBpKLVLYLIs1h8cnkFgtqzFj_D9Kb5CYovGP4H7pnIm2MnvBLB9sO3j7ZNU04jTC9jwq7UMLvVqGuxDfE3mhLdC1m5SshSuCSGmj8tmPqvuXMocBZNXiPc4keeMGo4dCPiuUgjyNaEW4yRO5h13V-_lCQtPuto0u6Rz8HHF_kcJZp0CRGNrDsXOLIyJl9l5hkRTTLDeka_fg1AAXHa3PANVWO5Hrhmsb1cFUhmoUI9iS_ky5Uj4RQmKxmEfnDh-YPqatddgL7_vqFSvYS23DL4uHZmPk0p1PA.HvGwh2Whj4_MBclM4_RxfCkt5HPMNV7eRGYgmMpr9x8",
       "domain": "localhost",
       "path": "/",
-      "expires": 1774698834.294549,
+      "expires": 1774707105.961986,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"

@@ -7,6 +7,7 @@
  * 3. 选填微信号、地址、备注
  * 4. 提交后返回列表页并刷新
  */
+import { throttleTap } from '../../../utils/throttle-tap';
 
 // 渠道数据类型定义
 interface ChannelContact {
@@ -227,7 +228,7 @@ Page({
     /**
      * 提交表单
      */
-    async onSubmit() {
+    onSubmit: throttleTap(async function (this: any) {
         if (!this.validate()) return;
         if (this.data.submitting) return;
 
@@ -275,7 +276,7 @@ Page({
         } finally {
             this.setData({ submitting: false });
         }
-    }
+    })
 });
 
-export {};
+export { };

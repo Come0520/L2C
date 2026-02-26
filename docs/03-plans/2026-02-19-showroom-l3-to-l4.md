@@ -59,18 +59,18 @@ npx tsc --noEmit
 
 ### 核心业务逻辑清单
 
-| 函数 | 文件 | 行号 | 关键点 |
-|:---|:---|:---:|:---|
-| `calculateScore()` | items.ts | L16-23 | 纯函数，评分算法 |
-| `canCreateShowroomItem()` | items.ts | L90-96 | 权限检查：Admin/PM + 租户开关 |
-| `canManageShowroomItem()` | items.ts | L99-104 | 权限检查：Owner + Admin/PM |
-| `createShowroomItem()` | items.ts | L106-145 | 创建 + XSS 清洗 + 审计 |
-| `updateShowroomItem()` | items.ts | L147-205 | 更新 + 所有者校验 + 审计 |
-| `deleteShowroomItem()` | items.ts | L207-242 | 软删除 ARCHIVED + 审计 |
-| `getShowroomItems()` | items.ts | L25-69 | 列表查询 + 筛选 + 分页 |
-| `getShowroomItem()` | items.ts | L71-87 | 单条查询 + ARCHIVED 过滤 |
-| `createShareLink()` | shares.ts | L14-43 | 创建分享 + 过期时间 + 审计 |
-| `getShareContent()` | shares.ts | L45-138 | 公开访问 + Redis 限流 + 采样回写 |
+| 函数                      | 文件      |   行号   | 关键点                           |
+| :------------------------ | :-------- | :------: | :------------------------------- |
+| `calculateScore()`        | items.ts  |  L16-23  | 纯函数，评分算法                 |
+| `canCreateShowroomItem()` | items.ts  |  L90-96  | 权限检查：Admin/PM + 租户开关    |
+| `canManageShowroomItem()` | items.ts  | L99-104  | 权限检查：Owner + Admin/PM       |
+| `createShowroomItem()`    | items.ts  | L106-145 | 创建 + XSS 清洗 + 审计           |
+| `updateShowroomItem()`    | items.ts  | L147-205 | 更新 + 所有者校验 + 审计         |
+| `deleteShowroomItem()`    | items.ts  | L207-242 | 软删除 ARCHIVED + 审计           |
+| `getShowroomItems()`      | items.ts  |  L25-69  | 列表查询 + 筛选 + 分页           |
+| `getShowroomItem()`       | items.ts  |  L71-87  | 单条查询 + ARCHIVED 过滤         |
+| `createShareLink()`       | shares.ts |  L14-43  | 创建分享 + 过期时间 + 审计       |
+| `getShareContent()`       | shares.ts | L45-138  | 公开访问 + Redis 限流 + 采样回写 |
 
 ---
 
@@ -79,6 +79,7 @@ npx tsc --noEmit
 **优先级:** P0（D3 主要提升点 — 纯函数最易测试）
 
 **Files:**
+
 - New: `src/features/showroom/actions/__tests__/items.test.ts`
 - Reference: `src/features/showroom/actions/items.ts:16-23`
 
@@ -88,6 +89,7 @@ npx tsc --noEmit
 > 推荐方案：将 `calculateScore` 改为 `export function`（它是纯函数，导出不影响安全性）。
 
 先修改 `items.ts` L16：
+
 ```typescript
 // items.ts L16: 将 const calculateScore 改为 export function
 export function calculateScore(data: Partial<z.infer<typeof createShowroomItemSchema>>) {
@@ -100,48 +102,48 @@ import { describe, it, expect } from 'vitest';
 import { calculateScore } from '../items';
 
 describe('calculateScore() 评分算法', () => {
-    it('空数据应返回基础分20', () => {
-        expect(calculateScore({})).toBe(20);
-    });
+  it('空数据应返回基础分20', () => {
+    expect(calculateScore({})).toBe(20);
+  });
 
-    it('有图片应加20分', () => {
-        expect(calculateScore({ images: ['https://example.com/img.jpg'] })).toBe(40);
-    });
+  it('有图片应加20分', () => {
+    expect(calculateScore({ images: ['https://example.com/img.jpg'] })).toBe(40);
+  });
 
-    it('内容超过50字应加20分', () => {
-        const longContent = 'a'.repeat(51);
-        expect(calculateScore({ content: longContent })).toBe(40);
-    });
+  it('内容超过50字应加20分', () => {
+    const longContent = 'a'.repeat(51);
+    expect(calculateScore({ content: longContent })).toBe(40);
+  });
 
-    it('内容不足50字不应加分', () => {
-        expect(calculateScore({ content: '短文本' })).toBe(20);
-    });
+  it('内容不足50字不应加分', () => {
+    expect(calculateScore({ content: '短文本' })).toBe(20);
+  });
 
-    it('有 productId 应加20分', () => {
-        expect(calculateScore({ productId: 'prod-123' })).toBe(40);
-    });
+  it('有 productId 应加20分', () => {
+    expect(calculateScore({ productId: 'prod-123' })).toBe(40);
+  });
 
-    it('有标签应加20分', () => {
-        expect(calculateScore({ tags: ['现代', '简约'] })).toBe(40);
-    });
+  it('有标签应加20分', () => {
+    expect(calculateScore({ tags: ['现代', '简约'] })).toBe(40);
+  });
 
-    it('全部条件满足应返回满分100', () => {
-        const fullData = {
-            images: ['https://example.com/img.jpg'],
-            content: 'a'.repeat(100),
-            productId: 'prod-123',
-            tags: ['tag1'],
-        };
-        expect(calculateScore(fullData)).toBe(100);
-    });
+  it('全部条件满足应返回满分100', () => {
+    const fullData = {
+      images: ['https://example.com/img.jpg'],
+      content: 'a'.repeat(100),
+      productId: 'prod-123',
+      tags: ['tag1'],
+    };
+    expect(calculateScore(fullData)).toBe(100);
+  });
 
-    it('空图片数组不应加分', () => {
-        expect(calculateScore({ images: [] })).toBe(20);
-    });
+  it('空图片数组不应加分', () => {
+    expect(calculateScore({ images: [] })).toBe(20);
+  });
 
-    it('空标签数组不应加分', () => {
-        expect(calculateScore({ tags: [] })).toBe(20);
-    });
+  it('空标签数组不应加分', () => {
+    expect(calculateScore({ tags: [] })).toBe(20);
+  });
 });
 ```
 
@@ -167,6 +169,7 @@ git commit -m "test(showroom): 为 calculateScore 纯函数编写 9 个单元测
 **优先级:** P0
 
 **Files:**
+
 - Modify: `src/features/showroom/actions/__tests__/items.test.ts`
 - Modify: `src/features/showroom/actions/items.ts` (导出权限函数)
 - Reference: `src/features/showroom/actions/items.ts:90-104`
@@ -190,12 +193,12 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock auth 和 permission 模块
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(),
-    checkPermission: vi.fn(),
+  auth: vi.fn(),
+  checkPermission: vi.fn(),
 }));
 
 vi.mock('@/features/settings/actions/system-settings-actions', () => ({
-    getSetting: vi.fn(),
+  getSetting: vi.fn(),
 }));
 
 import { canCreateShowroomItem, canManageShowroomItem } from '../items';
@@ -203,57 +206,63 @@ import { checkPermission } from '@/shared/lib/auth';
 import { getSetting } from '@/features/settings/actions/system-settings-actions';
 
 describe('canCreateShowroomItem() 权限检查', () => {
-    beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    const mockSession = (userId: string) => ({
-        user: { id: userId, tenantId: 't1' },
+  const mockSession = (userId: string) =>
+    ({
+      user: { id: userId, tenantId: 't1' },
     }) as any;
 
-    it('拥有 PRODUCTS.MANAGE 权限应返回 true', async () => {
-        vi.mocked(checkPermission).mockResolvedValueOnce(true);
-        expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
-    });
+  it('拥有 PRODUCTS.MANAGE 权限应返回 true', async () => {
+    vi.mocked(checkPermission).mockResolvedValueOnce(true);
+    expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
+  });
 
-    it('拥有 ADMIN.SETTINGS 权限应返回 true', async () => {
-        vi.mocked(checkPermission)
-            .mockResolvedValueOnce(false)   // PRODUCTS.MANAGE
-            .mockResolvedValueOnce(true);   // ADMIN.SETTINGS
-        expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
-    });
+  it('拥有 ADMIN.SETTINGS 权限应返回 true', async () => {
+    vi.mocked(checkPermission)
+      .mockResolvedValueOnce(false) // PRODUCTS.MANAGE
+      .mockResolvedValueOnce(true); // ADMIN.SETTINGS
+    expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
+  });
 
-    it('租户开关开启时普通用户应返回 true', async () => {
-        vi.mocked(checkPermission).mockResolvedValue(false);
-        vi.mocked(getSetting).mockResolvedValue(true);
-        expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
-    });
+  it('租户开关开启时普通用户应返回 true', async () => {
+    vi.mocked(checkPermission).mockResolvedValue(false);
+    vi.mocked(getSetting).mockResolvedValue(true);
+    expect(await canCreateShowroomItem(mockSession('u1'))).toBe(true);
+  });
 
-    it('无权限且开关关闭时应返回 false', async () => {
-        vi.mocked(checkPermission).mockResolvedValue(false);
-        vi.mocked(getSetting).mockResolvedValue(false);
-        expect(await canCreateShowroomItem(mockSession('u1'))).toBe(false);
-    });
+  it('无权限且开关关闭时应返回 false', async () => {
+    vi.mocked(checkPermission).mockResolvedValue(false);
+    vi.mocked(getSetting).mockResolvedValue(false);
+    expect(await canCreateShowroomItem(mockSession('u1'))).toBe(false);
+  });
 });
 
 describe('canManageShowroomItem() 权限检查', () => {
-    beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    const mockSession = (userId: string) => ({
-        user: { id: userId, tenantId: 't1' },
+  const mockSession = (userId: string) =>
+    ({
+      user: { id: userId, tenantId: 't1' },
     }) as any;
 
-    it('创建者本人应返回 true', async () => {
-        expect(await canManageShowroomItem(mockSession('user-1'), 'user-1')).toBe(true);
-    });
+  it('创建者本人应返回 true', async () => {
+    expect(await canManageShowroomItem(mockSession('user-1'), 'user-1')).toBe(true);
+  });
 
-    it('非创建者但有高级权限应返回 true', async () => {
-        vi.mocked(checkPermission).mockResolvedValueOnce(true);
-        expect(await canManageShowroomItem(mockSession('user-2'), 'user-1')).toBe(true);
-    });
+  it('非创建者但有高级权限应返回 true', async () => {
+    vi.mocked(checkPermission).mockResolvedValueOnce(true);
+    expect(await canManageShowroomItem(mockSession('user-2'), 'user-1')).toBe(true);
+  });
 
-    it('非创建者且无权限应返回 false', async () => {
-        vi.mocked(checkPermission).mockResolvedValue(false);
-        expect(await canManageShowroomItem(mockSession('user-2'), 'user-1')).toBe(false);
-    });
+  it('非创建者且无权限应返回 false', async () => {
+    vi.mocked(checkPermission).mockResolvedValue(false);
+    expect(await canManageShowroomItem(mockSession('user-2'), 'user-1')).toBe(false);
+  });
 });
 ```
 
@@ -279,6 +288,7 @@ git commit -m "test(showroom): 为权限检查函数编写 7 个单元测试"
 **优先级:** P0
 
 **Files:**
+
 - Modify: `src/features/showroom/actions/__tests__/items.test.ts`
 - Reference: `src/features/showroom/actions/items.ts:106-242`
 
@@ -288,134 +298,153 @@ git commit -m "test(showroom): 为权限检查函数编写 7 个单元测试"
 
 ```typescript
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        query: {
-            showroomItems: {
-                findFirst: vi.fn(),
-                findMany: vi.fn(),
-            },
-        },
-        insert: vi.fn(() => ({
-            values: vi.fn(() => ({
-                returning: vi.fn(() => [{
-                    id: 'item-new',
-                    title: '测试素材',
-                    type: 'CASE',
-                    tenantId: 't1',
-                    createdBy: 'u1',
-                }]),
-            })),
-        })),
-        update: vi.fn(() => ({
-            set: vi.fn(() => ({
-                where: vi.fn(() => ({
-                    returning: vi.fn(() => [{
-                        id: 'item-1',
-                        title: '更新后的标题',
-                    }]),
-                })),
-            })),
-        })),
-        select: vi.fn(() => ({
-            from: vi.fn(() => ({
-                where: vi.fn(() => [{ count: 5 }]),
-            })),
-        })),
+  db: {
+    query: {
+      showroomItems: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
     },
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        returning: vi.fn(() => [
+          {
+            id: 'item-new',
+            title: '测试素材',
+            type: 'CASE',
+            tenantId: 't1',
+            createdBy: 'u1',
+          },
+        ]),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => [
+            {
+              id: 'item-1',
+              title: '更新后的标题',
+            },
+          ]),
+        })),
+      })),
+    })),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => [{ count: 5 }]),
+      })),
+    })),
+  },
 }));
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
-    AuditService: { record: vi.fn() },
+  AuditService: { record: vi.fn() },
 }));
 
 vi.mock('isomorphic-dompurify', () => ({
-    default: { sanitize: vi.fn((html: string) => html) },
+  default: { sanitize: vi.fn((html: string) => html) },
 }));
 
-import { createShowroomItem, updateShowroomItem, deleteShowroomItem, getShowroomItem } from '../items';
+import {
+  createShowroomItem,
+  updateShowroomItem,
+  deleteShowroomItem,
+  getShowroomItem,
+} from '../items';
 import { auth } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
 import { db } from '@/shared/api/db';
 
 describe('createShowroomItem() 集成测试', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.mocked(auth).mockResolvedValue({
-            user: { id: 'u1', tenantId: 't1' },
-        } as any);
-        vi.mocked(checkPermission).mockResolvedValue(true); // 有权限
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'u1', tenantId: 't1' },
+    } as any);
+    vi.mocked(checkPermission).mockResolvedValue(true); // 有权限
+  });
+
+  it('应成功创建素材并记录审计日志', async () => {
+    const result = await createShowroomItem({
+      type: 'CASE',
+      title: '测试案例',
+      content: '这是一个测试案例的详细描述内容',
+      images: ['https://example.com/img1.jpg'],
+      tags: ['现代', '简约'],
+      status: 'PUBLISHED',
     });
 
-    it('应成功创建素材并记录审计日志', async () => {
-        const result = await createShowroomItem({
-            type: 'CASE',
-            title: '测试案例',
-            content: '这是一个测试案例的详细描述内容',
-            images: ['https://example.com/img1.jpg'],
-            tags: ['现代', '简约'],
-            status: 'PUBLISHED',
-        });
+    expect(result.id).toBe('item-new');
+    expect(AuditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'CREATE',
+        tableName: 'showroom_items',
+      })
+    );
+  });
 
-        expect(result.id).toBe('item-new');
-        expect(AuditService.record).toHaveBeenCalledWith(
-            expect.objectContaining({
-                action: 'CREATE',
-                tableName: 'showroom_items',
-            })
-        );
-    });
+  it('未授权用户应抛出错误', async () => {
+    vi.mocked(auth).mockResolvedValue(null as any);
+    await expect(
+      createShowroomItem({
+        type: 'CASE',
+        title: '测试',
+        images: [],
+        tags: [],
+        status: 'DRAFT',
+      })
+    ).rejects.toThrow('Unauthorized');
+  });
 
-    it('未授权用户应抛出错误', async () => {
-        vi.mocked(auth).mockResolvedValue(null as any);
-        await expect(
-            createShowroomItem({
-                type: 'CASE', title: '测试', images: [], tags: [], status: 'DRAFT',
-            })
-        ).rejects.toThrow('Unauthorized');
-    });
-
-    it('无创建权限应抛出权限错误', async () => {
-        vi.mocked(checkPermission).mockResolvedValue(false);
-        vi.mocked(getSetting).mockResolvedValue(false);
-        await expect(
-            createShowroomItem({
-                type: 'CASE', title: '测试', images: [], tags: [], status: 'DRAFT',
-            })
-        ).rejects.toThrow('无权创建');
-    });
+  it('无创建权限应抛出权限错误', async () => {
+    vi.mocked(checkPermission).mockResolvedValue(false);
+    vi.mocked(getSetting).mockResolvedValue(false);
+    await expect(
+      createShowroomItem({
+        type: 'CASE',
+        title: '测试',
+        images: [],
+        tags: [],
+        status: 'DRAFT',
+      })
+    ).rejects.toThrow('无权创建');
+  });
 });
 
 describe('deleteShowroomItem() 软删除', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.mocked(auth).mockResolvedValue({
-            user: { id: 'u1', tenantId: 't1' },
-        } as any);
-        vi.mocked(checkPermission).mockResolvedValue(true);
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'u1', tenantId: 't1' },
+    } as any);
+    vi.mocked(checkPermission).mockResolvedValue(true);
+  });
 
-    it('应软删除（标记 ARCHIVED）并记录审计日志', async () => {
-        vi.mocked(db.query.showroomItems.findFirst).mockResolvedValue({
-            id: 'item-1', title: '待删除', createdBy: 'u1', tenantId: 't1',
-        } as any);
+  it('应软删除（标记 ARCHIVED）并记录审计日志', async () => {
+    vi.mocked(db.query.showroomItems.findFirst).mockResolvedValue({
+      id: 'item-1',
+      title: '待删除',
+      createdBy: 'u1',
+      tenantId: 't1',
+    } as any);
 
-        const result = await deleteShowroomItem({ id: 'item-1' });
-        expect(result.success).toBe(true);
-        expect(AuditService.record).toHaveBeenCalledWith(
-            expect.objectContaining({
-                action: 'DELETE',
-                tableName: 'showroom_items',
-            })
-        );
-    });
+    const result = await deleteShowroomItem({ id: 'item-1' });
+    expect(result.success).toBe(true);
+    expect(AuditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'DELETE',
+        tableName: 'showroom_items',
+      })
+    );
+  });
 
-    it('素材不存在应抛出错误', async () => {
-        vi.mocked(db.query.showroomItems.findFirst).mockResolvedValue(undefined);
-        await expect(deleteShowroomItem({ id: 'nonexistent' }))
-            .rejects.toThrow('Item not found');
-    });
+  it('素材不存在应抛出错误', async () => {
+    vi.mocked(db.query.showroomItems.findFirst).mockResolvedValue(undefined);
+    await expect(deleteShowroomItem({ id: 'nonexistent' })).rejects.toThrow('Item not found');
+  });
 });
 ```
 
@@ -441,6 +470,7 @@ git commit -m "test(showroom): 为 CRUD Actions 编写集成测试含审计日�
 **优先级:** P1
 
 **Files:**
+
 - New: `src/features/showroom/actions/__tests__/shares.test.ts`
 - Reference: `src/features/showroom/actions/shares.ts`
 
@@ -450,45 +480,49 @@ git commit -m "test(showroom): 为 CRUD Actions 编写集成测试含审计日�
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        query: {
-            showroomShares: { findFirst: vi.fn() },
-            showroomItems: { findMany: vi.fn() },
-        },
-        insert: vi.fn(() => ({
-            values: vi.fn(() => ({
-                returning: vi.fn(() => [{
-                    id: 'share-new', tenantId: 't1', salesId: 'u1',
-                    expiresAt: new Date(Date.now() + 86400000),
-                }]),
-            })),
-        })),
-        update: vi.fn(() => ({
-            set: vi.fn(() => ({ where: vi.fn() })),
-        })),
+  db: {
+    query: {
+      showroomShares: { findFirst: vi.fn() },
+      showroomItems: { findMany: vi.fn() },
     },
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        returning: vi.fn(() => [
+          {
+            id: 'share-new',
+            tenantId: 't1',
+            salesId: 'u1',
+            expiresAt: new Date(Date.now() + 86400000),
+          },
+        ]),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn() })),
+    })),
+  },
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(),
+  auth: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
-    AuditService: { record: vi.fn() },
+  AuditService: { record: vi.fn() },
 }));
 
 vi.mock('@/shared/middleware/rate-limit', () => ({
-    checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 vi.mock('@/shared/lib/redis', () => ({
-    redis: { incr: vi.fn(), get: vi.fn().mockResolvedValue(10) },
+  redis: { incr: vi.fn(), get: vi.fn().mockResolvedValue(10) },
 }));
 
 vi.mock('next/headers', () => ({
-    headers: vi.fn().mockResolvedValue({
-        get: vi.fn().mockReturnValue('127.0.0.1'),
-    }),
+  headers: vi.fn().mockResolvedValue({
+    get: vi.fn().mockReturnValue('127.0.0.1'),
+  }),
 }));
 
 import { createShareLink, getShareContent } from '../shares';
@@ -497,50 +531,50 @@ import { db } from '@/shared/api/db';
 import { AuditService } from '@/shared/lib/audit-service';
 
 describe('createShareLink() 分享链接创建', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.mocked(auth).mockResolvedValue({
-            user: { id: 'u1', tenantId: 't1' },
-        } as any);
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'u1', tenantId: 't1' },
+    } as any);
+  });
 
-    it('应成功创建分享链接', async () => {
-        const result = await createShareLink({
-            items: [{ itemId: 'item-1' }],
-            expiresInDays: 7,
-        });
-        expect(result.id).toBe('share-new');
-        expect(AuditService.record).toHaveBeenCalled();
+  it('应成功创建分享链接', async () => {
+    const result = await createShareLink({
+      items: [{ itemId: 'item-1' }],
+      expiresInDays: 7,
     });
+    expect(result.id).toBe('share-new');
+    expect(AuditService.record).toHaveBeenCalled();
+  });
 
-    it('空 items 应被 Zod 拦截', async () => {
-        await expect(
-            createShareLink({ items: [], expiresInDays: 7 })
-        ).rejects.toThrow();
-    });
+  it('空 items 应被 Zod 拦截', async () => {
+    await expect(createShareLink({ items: [], expiresInDays: 7 })).rejects.toThrow();
+  });
 });
 
 describe('getShareContent() 公开访问', () => {
-    beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    it('分享不存在应返回 null', async () => {
-        vi.mocked(db.query.showroomShares.findFirst).mockResolvedValue(undefined);
-        const result = await getShareContent('nonexistent-uuid');
-        expect(result).toBeNull();
-    });
+  it('分享不存在应返回 null', async () => {
+    vi.mocked(db.query.showroomShares.findFirst).mockResolvedValue(undefined);
+    const result = await getShareContent('nonexistent-uuid');
+    expect(result).toBeNull();
+  });
 
-    it('过期分享应返回 expired=true', async () => {
-        vi.mocked(db.query.showroomShares.findFirst).mockResolvedValue({
-            id: 'share-1',
-            expiresAt: new Date('2020-01-01'), // 已过期
-            itemsSnapshot: [],
-            sales: { name: '张三' },
-        } as any);
+  it('过期分享应返回 expired=true', async () => {
+    vi.mocked(db.query.showroomShares.findFirst).mockResolvedValue({
+      id: 'share-1',
+      expiresAt: new Date('2020-01-01'), // 已过期
+      itemsSnapshot: [],
+      sales: { name: '张三' },
+    } as any);
 
-        const result = await getShareContent('share-1');
-        expect(result).not.toBeNull();
-        expect(result!.expired).toBe(true);
-    });
+    const result = await getShareContent('share-1');
+    expect(result).not.toBeNull();
+    expect(result!.expired).toBe(true);
+  });
 });
 ```
 
@@ -564,6 +598,7 @@ git commit -m "test(showroom): 为分享链接 CRUD 编写集成测试含过期�
 **优先级:** P1（D2 提升）
 
 **Files:**
+
 - Modify: `src/app/(dashboard)/showroom/page.tsx:15`
 - Modify: `src/app/(dashboard)/showroom/components/add-resource-dialog.tsx:40`
 - Modify: `src/features/settings/components/showroom-settings-config.tsx:32,46`
@@ -579,7 +614,7 @@ type: type === 'all' ? undefined : (type as 'PRODUCT' | 'CASE' | 'KNOWLEDGE' | '
 ### Step 2: 修复 `add-resource-dialog.tsx` 中的 `as any`
 
 ```typescript
-// add-resource-dialog.tsx L40: 
+// add-resource-dialog.tsx L40:
 // resolver: zodResolver(createShowroomItemSchema) as any,
 // 替换为（去掉 as any，修复 zodResolver 类型）：
 resolver: zodResolver(createShowroomItemSchema),
@@ -593,7 +628,7 @@ resolver: zodResolver(createShowroomItemSchema),
 // L32: form.reset(settings as unknown as ShowroomSettingsFormData);
 // 改为：安全解构赋值
 const parsed: ShowroomSettingsFormData = {
-    ENABLE_SHOWROOM_WRITE_FOR_ALL: Boolean(settings?.ENABLE_SHOWROOM_WRITE_FOR_ALL ?? true),
+  ENABLE_SHOWROOM_WRITE_FOR_ALL: Boolean(settings?.ENABLE_SHOWROOM_WRITE_FOR_ALL ?? true),
 };
 form.reset(parsed);
 
@@ -622,6 +657,7 @@ git commit -m "refactor(showroom): 消除 4 处 any/unknown 类型断言，提�
 **优先级:** P2（D1 功能闭环）
 
 **Files:**
+
 - Modify: `src/app/(dashboard)/showroom/components/showroom-detail-client.tsx:223-225, 393-395`
 - Modify: `src/app/(dashboard)/showroom/components/showroom-card.tsx:154-160`
 
@@ -638,20 +674,20 @@ git commit -m "refactor(showroom): 消除 4 处 any/unknown 类型断言，提�
 const [isSharing, setIsSharing] = useState(false);
 
 const handleShare = async () => {
-    setIsSharing(true);
-    try {
-        const share = await createShareLink({
-            items: [{ itemId: item.id }],
-            expiresInDays: 15,
-        });
-        const shareUrl = `${window.location.origin}/share/${share.id}`;
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success('分享链接已复制到剪贴板');
-    } catch (error) {
-        toast.error('分享失败');
-    } finally {
-        setIsSharing(false);
-    }
+  setIsSharing(true);
+  try {
+    const share = await createShareLink({
+      items: [{ itemId: item.id }],
+      expiresInDays: 15,
+    });
+    const shareUrl = `${window.location.origin}/share/${share.id}`;
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success('分享链接已复制到剪贴板');
+  } catch (error) {
+    toast.error('分享失败');
+  } finally {
+    setIsSharing(false);
+  }
 };
 ```
 
@@ -679,6 +715,7 @@ git commit -m "feat(showroom): 绑定分享按钮到 createShareLink Action"
 **优先级:** P2（D1 功能诚实性）
 
 **Files:**
+
 - Modify: `src/app/(dashboard)/showroom/components/showroom-detail-client.tsx`
 
 ### Step 1: 处理未实现功能按钮
@@ -709,6 +746,7 @@ git commit -m "fix(showroom): 标记未实现 CTA 按钮为 disabled 避免用�
 **优先级:** P2（D4 提升）
 
 **Files:**
+
 - New: `docs/02-requirements/modules/showroom.md`
 - Modify: `src/features/showroom/actions/items.ts` (添加 JSDoc)
 - Modify: `src/features/showroom/actions/shares.ts` (添加 JSDoc)
@@ -716,6 +754,7 @@ git commit -m "fix(showroom): 标记未实现 CTA 按钮为 disabled 避免用�
 ### Step 1: 创建需求文档
 
 基于代码实现反向输出需求文档，包含：
+
 - 模块概述（云展厅的定位和核心价值）
 - 用户角色与权限矩阵
 - 功能清单（CRUD / 分享 / 评分 / 搜索筛选）
@@ -739,16 +778,17 @@ git commit -m "docs(showroom): 创建需求文档并为 Actions 补充 JSDoc"
 
 ### 自动化测试
 
-| 测试类型 | 命令 | 预期结果 |
-|:---|:---|:---|
-| 现有测试不回归 | `pnpm test:run` | 全部 PASS |
-| Items 单元/集成测试 | `pnpm test:run src/features/showroom/actions/__tests__/items.test.ts` | ≥ 20 用例 PASS |
-| Shares 集成测试 | `pnpm test:run src/features/showroom/actions/__tests__/shares.test.ts` | ≥ 4 用例 PASS |
-| TypeScript 编译 | `npx tsc --noEmit` | 零新增错误 |
+| 测试类型            | 命令                                                                   | 预期结果       |
+| :------------------ | :--------------------------------------------------------------------- | :------------- |
+| 现有测试不回归      | `pnpm test:run`                                                        | 全部 PASS      |
+| Items 单元/集成测试 | `pnpm test:run src/features/showroom/actions/__tests__/items.test.ts`  | ≥ 20 用例 PASS |
+| Shares 集成测试     | `pnpm test:run src/features/showroom/actions/__tests__/shares.test.ts` | ≥ 4 用例 PASS  |
+| TypeScript 编译     | `npx tsc --noEmit`                                                     | 零新增错误     |
 
 ### 手动验证
 
 Task 6 完成后，可在浏览器中验证：
+
 1. 启动 `pnpm dev`
 2. 进入云展厅列表页 → 点击任意素材进入详情
 3. 点击「分享给客户」按钮，确认 Toast 提示 + 剪贴板包含分享链接 URL

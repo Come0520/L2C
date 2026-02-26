@@ -11,7 +11,7 @@
         <view class="section-header">
             <view class="label-row">
                 <text class="label">线下转账 (默认)</text>
-                <switch checked="{{config.offline.enabled}}" color="#07c160" bindchange="onOfflineSwitch" />
+                <switch checked="{{config.offline.enabled}}" color="#4f46e5" bindchange="onOfflineSwitch" />
             </view>
             <text class="caption">客户需上传转账截图，由财务人工核销。</text>
         </view>
@@ -33,14 +33,14 @@
         <view class="section-header">
             <view class="label-row">
                 <text class="label">微信支付 (在线)</text>
-                <switch checked="{{config.online.enabled}}" color="#07c160" disabled="{{true}}" />
+                <switch checked="{{config.online.enabled}}" color="#4f46e5" disabled="{{true}}" />
             </view>
             <text class="caption">开通需配置商户号 (即将开放)</text>
         </view>
     </view>
 
     <view class="footer-action">
-        <button class="btn-save" form-type="submit" loading="{{saving}}">保存配置</button>
+        <button class="primary-btn btn-save" form-type="submit" loading="{{saving}}">保存配置</button>
     </view>
   </form>
 </view>

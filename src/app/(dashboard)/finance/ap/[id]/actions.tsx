@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { Button } from '@/shared/ui/button';
 import { verifyPaymentBill } from '@/features/finance/actions/ap';
 import { toast } from 'sonner';
-import { Check, X, CreditCard } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -39,7 +39,7 @@ export function ApDetailActions({ billId, status }: ApDetailActionsProps) {
                 } else {
                     toast.error('操作失败');
                 }
-            } catch (error) {
+            } catch (_error) {
                 toast.error('网络错误');
             }
         });

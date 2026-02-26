@@ -3,6 +3,8 @@
  */
 import { authStore } from './stores/auth-store';
 import { errorReporter } from './utils/error-reporter';
+import { getCache, setCache, isCacheable } from './utils/cache-manager';
+
 // 后端 API 基础地址
 const API_BASE = 'http://localhost:3000/api/miniprogram'; // Local Development
 App({
@@ -71,13 +73,46 @@ App({
     },
     /**
      * 封装请求方法
+     * - GET 请求支持本地缓存（缓存优先 + 网络异步更新）
+     * - 网络失败自动重试 1 次
      */
     async request(path, data = {}, method = 'GET') {
+        const useCache = method === 'GET' && isCacheable(path);
+        if (useCache) {
+            const cached = getCache(path);
+            if (cached) {
+                // 后台静默刷新缓存（不阻塞返回）
+                this._doRequest(path, data, method).then((freshData) => {
+                    setCache(path, freshData);
+                }).catch(() => { /* 静默失败 */ });
+                return cached;
+            }
+        }
+        try {
+            const result = await this._doRequest(path, data, method);
+            if (useCache) setCache(path, result);
+            return result;
+        } catch (err) {
+            var _a;
+            if ((_a = err === null || err === void 0 ? void 0 : err.errMsg) === null || _a === void 0 ? void 0 : _a.includes('request:fail')) {
+                await new Promise(r => setTimeout(r, 1000));
+                const retryResult = await this._doRequest(path, data, method);
+                if (useCache) setCache(path, retryResult);
+                return retryResult;
+            }
+            throw err;
+        }
+    },
+    /**
+     * 底层请求执行（内部方法）
+     */
+    _doRequest(path, data, method) {
         return new Promise((resolve, reject) => {
             wx.request({
                 url: `${this.globalData.apiBase}${path}`,
                 method: method,
                 data,
+                timeout: 15000,
                 header: {
                     'Authorization': authStore.token ? `Bearer ${authStore.token}` : ''
                 },
@@ -85,7 +120,6 @@ App({
                     if (res.statusCode === 401) {
                         console.warn('[Request] 401 Unauthorized, logging out...');
                         authStore.logout();
-                        // 获取当前页面栈，如果在非 Public 页面则跳转登录
                         const pages = getCurrentPages();
                         const currentPage = pages[pages.length - 1];
                         if (currentPage && currentPage.route !== 'pages/landing/landing') {
@@ -98,7 +132,6 @@ App({
                         resolve(res.data);
                     }
                     else {
-                        // 自动上报 API 错误
                         errorReporter.report({
                             message: `接口请求返回状态码异常: ${res.statusCode}`,
                             type: 'API_ERROR',

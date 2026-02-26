@@ -66,8 +66,7 @@
 
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{!list.length && !loading}}">
-        <image class="empty-img" src="/assets/empty.png" /> 
-        <text>暂无报价单</text>
+        <empty-state text="暂无报价单" />
     </view>
   </scroll-view>
 

@@ -25,7 +25,7 @@ import { logger } from '@/shared/lib/logger';
 /**
  * 创建新房间 (Create Room)
  * 流程：校验报价单 -> 插入房间记录 -> 记录审计日志 -> 失效缓存。
- * 
+ *
  * @param data - 包含报价单 ID、名称及可选测量空间 ID 的对象
  * @param context - 执行上下文
  * @returns 创建成功的房间记录
@@ -40,7 +40,7 @@ export const createRoomActionInternal = createSafeAction(
     // 安全检查：验证报价单的租户归属
     const existingQuote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.quoteId), eq(quotes.tenantId, tenantId)),
-      columns: { id: true }
+      columns: { id: true },
     });
     if (!existingQuote) {
       logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId });
@@ -72,7 +72,7 @@ export const createRoomActionInternal = createSafeAction(
 /**
  * 客户端调用：在报价单中创建一个新房间 (Create Quote Room)
  * 场景：用户需要在报价单内按房间（如：主卧、客厅）组织行项目。
- * 
+ *
  * @param params - 符合 createQuoteRoomSchema 的参数（quoteId, name 等）
  * @returns 创建的房间记录
  */
@@ -85,7 +85,7 @@ export async function createRoom(params: z.infer<typeof createQuoteRoomSchema>) 
 /**
  * 更新房间信息 (Update Room)
  * 支持修改房间名称、测量空间关联等。
- * 
+ *
  * @param data - 包含房间 ID 及更新字段的对象
  * @param context - 执行上下文
  * @returns 更新后的房间记录
@@ -130,7 +130,7 @@ export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, c
  * 删除房间 (Delete Room)
  * 注意：由于外键约束或业务逻辑，通常会先清空该房间下的所有行项目。
  * 流程：删除行项目 -> 删除房间 -> 重新计算总额 -> 记录审计 -> 失效缓存。
- * 
+ *
  * @param data - 包含待删除房间 ID 的对象
  * @param context - 执行上下文
  * @returns 成功状态

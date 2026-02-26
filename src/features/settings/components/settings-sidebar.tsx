@@ -6,7 +6,6 @@ import { cn } from '@/shared/utils';
 import Building2 from 'lucide-react/dist/esm/icons/building';
 import Settings2 from 'lucide-react/dist/esm/icons/settings2';
 import Wallet from 'lucide-react/dist/esm/icons/wallet';
-import UserCog from 'lucide-react/dist/esm/icons/user-cog';
 import User from 'lucide-react/dist/esm/icons/user';
 import Shield from 'lucide-react/dist/esm/icons/shield';
 

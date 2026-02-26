@@ -3,7 +3,7 @@ import { authStore, UserInfo } from '../../stores/auth-store';
 Page({
     data: {
         userInfo: null as UserInfo | null,
-        dashboard: null as unknown as Record<string, any>,
+        dashboard: null as unknown as Record<string, unknown>,
         loading: false,
         today: ''
     },
@@ -108,10 +108,10 @@ Page({
         // Handle quick actions or stats tap
     },
 
-    handleTodoTap(e: any) {
+    handleTodoTap(e: WechatMiniprogram.TouchEvent) {
         const id = e.currentTarget.dataset.id;
         wx.navigateTo({ url: `/pages/quotes/detail?id=${id}` });
     }
 });
 
-export {};
+export { };

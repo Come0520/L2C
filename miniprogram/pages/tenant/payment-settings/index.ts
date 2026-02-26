@@ -27,11 +27,11 @@ Page({
         }
     },
 
-    onOfflineSwitch(e: any) {
+    onOfflineSwitch(e: WechatMiniprogram.SwitchChange) {
         this.setData({ 'config.offline.enabled': e.detail.value });
     },
 
-    onInstructionsInput(e: any) {
+    onInstructionsInput(e: WechatMiniprogram.TouchEvent) {
         this.setData({ 'config.offline.instructions': e.detail.value });
     },
 
@@ -59,4 +59,4 @@ Page({
     }
 });
 
-export {};
+export { };

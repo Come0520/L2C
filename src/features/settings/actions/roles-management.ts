@@ -327,7 +327,10 @@ export async function updateRole(
       changedFields: updateData,
     });
 
-    logger.info(`用户 ${session.user.id} 成功更新角色: ${id}`, { tenantId, name: validated.data.name });
+    logger.info(`用户 ${session.user.id} 成功更新角色: ${id}`, {
+      tenantId,
+      name: validated.data.name,
+    });
 
     revalidatePath('/settings/roles');
     return { success: true, message: '角色更新成功' };

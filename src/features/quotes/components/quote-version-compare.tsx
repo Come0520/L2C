@@ -14,7 +14,7 @@ import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import { cn } from '@/shared/lib/utils';
 import { toast } from 'sonner';
 
-import { VersionQuote, VersionQuoteItem, VersionQuoteRoom } from '../types';
+import { VersionQuote, VersionQuoteItem } from '../types';
 import { logger } from '@/shared/lib/logger';
 
 interface QuoteVersionCompareProps {

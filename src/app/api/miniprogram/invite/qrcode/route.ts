@@ -3,7 +3,7 @@
  * GET /api/miniprogram/invite/qrcode?code=xxxxxx
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 
 export async function GET(request: NextRequest) {

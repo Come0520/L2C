@@ -2,6 +2,7 @@
  * 编辑个人资料
  */
 import { authStore } from '../../../stores/auth-store';
+import { throttleTap } from '../../../utils/throttle-tap';
 // const app = getApp<IAppOption>();
 
 Page({
@@ -30,7 +31,7 @@ Page({
     /**
      * 选择头像
      */
-    onChooseAvatar(e: any) {
+    onChooseAvatar(e: WechatMiniprogram.TouchEvent) {
         const { avatarUrl } = e.detail;
         this.setData({
             'userInfo.avatarUrl': avatarUrl
@@ -40,7 +41,7 @@ Page({
     /**
      * 输入姓名
      */
-    onNameInput(e: any) {
+    onNameInput(e: WechatMiniprogram.TouchEvent) {
         this.setData({
             'userInfo.name': e.detail.value
         });
@@ -49,7 +50,7 @@ Page({
     /**
      * 保存
      */
-    async onSave() {
+    onSave: throttleTap(async function (this: any) {
         const { name, avatarUrl } = this.data.userInfo;
 
         if (!name.trim()) {
@@ -86,7 +87,7 @@ Page({
         } finally {
             this.setData({ submitting: false });
         }
-    }
+    })
 });
 
 export { };

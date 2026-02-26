@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import { logger } from "@/shared/lib/logger";
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';

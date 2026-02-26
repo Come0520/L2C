@@ -2,7 +2,6 @@
 
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
-import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/form';
 
 export function CurtainQuickQuoteConfig() {

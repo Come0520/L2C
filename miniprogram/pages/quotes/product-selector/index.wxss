@@ -3,20 +3,21 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #f8fafc;
+    background-color: var(--bg-page);
 }
 
 .search-bar {
     padding: 24rpx;
-    background: #fff;
-    border-bottom: 2rpx solid #f1f5f9;
+    background: var(--bg-card);
+    border-bottom: 1rpx solid var(--border-light);
 }
 
 .search-input {
-    background: #f1f5f9;
+    background: var(--bg-section);
     padding: 16rpx 24rpx;
-    border-radius: 12rpx;
+    border-radius: var(--radius-md);
     font-size: 28rpx;
+    color: var(--text-body);
 }
 
 .product-list {
@@ -26,20 +27,20 @@
 }
 
 .product-item {
-    background: #fff;
+    background: var(--bg-card);
     padding: 24rpx;
-    border-radius: 16rpx;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     margin-bottom: 24rpx;
-    box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.02);
+    box-shadow: var(--shadow-sm);
 }
 
 .prod-icon {
     width: 100rpx;
     height: 100rpx;
-    background: #eff6ff;
-    border-radius: 12rpx;
+    background: var(--brand-light);
+    border-radius: var(--radius-md);
     margin-right: 24rpx;
     display: flex;
     align-items: center;
@@ -54,7 +55,7 @@
 .prod-name {
     font-size: 30rpx;
     font-weight: bold;
-    color: #1e293b;
+    color: var(--text-heading);
     margin-bottom: 8rpx;
 }
 
@@ -64,28 +65,32 @@
 
 .tag {
     font-size: 22rpx;
-    background: #eff6ff;
-    color: #3b82f6;
+    background: var(--brand-light);
+    color: var(--brand-primary);
     padding: 4rpx 12rpx;
-    border-radius: 8rpx;
+    border-radius: var(--radius-sm);
     margin-right: 12rpx;
 }
 
 .sku {
     font-size: 22rpx;
-    color: #94a3b8;
+    color: var(--text-muted);
 }
 
 .prod-price {
     font-size: 32rpx;
     font-weight: bold;
-    color: #f59e0b;
+    color: var(--brand-primary);
+    font-family: 'DIN Alternate', sans-serif;
 }
 
 .btn-pick {
-    background: #3b82f6;
+    background: var(--brand-primary);
     color: #fff;
     font-size: 24rpx;
     padding: 12rpx 24rpx;
     border-radius: 99rpx;
+}
+.btn-pick:active {
+    background: var(--brand-hover);
 }

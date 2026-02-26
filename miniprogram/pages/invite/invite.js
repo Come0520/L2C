@@ -120,7 +120,7 @@ Page({
      * 跳转到状态页
      */
     goToStatus() {
-        wx.switchTab({ url: '/pages/status/status' });
+        wx.navigateTo({ url: '/pages/status/status' });
     },
     /**
      * 分享给好友
@@ -139,4 +139,4 @@ Page({
         };
     }
 });
-export {};
+export { };

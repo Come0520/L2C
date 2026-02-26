@@ -66,7 +66,7 @@ export function TargetsClientPage({ initialTargets, initialYear, initialMonth }:
             } else {
                 toast.error(res.error || '设置失败');
             }
-        } catch (error) {
+        } catch (_error) {
             toast.error('网络错误');
         } finally {
             setLoading(null);

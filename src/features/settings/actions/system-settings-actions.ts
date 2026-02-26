@@ -18,21 +18,22 @@ import { parseSettingValue, validateValueType } from './setting-utils';
  * 输入校验 Schema
  * 防止恶意输入注入和格式错误
  */
-const categorySchema = z.string()
+const categorySchema = z
+  .string()
   .min(1, '分类标识不能为空')
   .max(50, '分类标识过长')
   .regex(/^[a-z][a-z0-9_-]*$/i, '分类标识仅允许字母、数字、下划线和连字符');
 
-const settingKeySchema = z.string()
+const settingKeySchema = z
+  .string()
   .min(1, '配置键不能为空')
   .max(100, '配置键过长')
   .regex(/^[a-z][a-z0-9_.:-]*$/i, '配置键格式不合法');
 
-const batchSettingsSchema = z.record(
-  settingKeySchema,
-  z.unknown()
-).refine(obj => Object.keys(obj).length > 0, '至少需要一个配置项')
-  .refine(obj => Object.keys(obj).length <= 50, '单次最多更新 50 个配置项');
+const batchSettingsSchema = z
+  .record(settingKeySchema, z.unknown())
+  .refine((obj) => Object.keys(obj).length > 0, '至少需要一个配置项')
+  .refine((obj) => Object.keys(obj).length <= 50, '单次最多更新 50 个配置项');
 
 /**
  * 系统设置 Server Actions
@@ -242,7 +243,7 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
 
   logger.info(`用户 ${userId} 执行批量配置更新，条数: ${Object.keys(settings).length}`, {
     tenantId,
-    keys: Object.keys(settings)
+    keys: Object.keys(settings),
   });
 
   await db.transaction(async (tx) => {
@@ -316,7 +317,10 @@ const getCachedAllSettings = (tenantId: string) =>
         if (!grouped[setting.category]) {
           grouped[setting.category] = {};
         }
-        grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+        grouped[setting.category][setting.key] = parseSettingValue(
+          setting.value,
+          setting.valueType
+        );
       }
 
       return grouped;

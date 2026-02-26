@@ -28,7 +28,7 @@ Page({
         this.fetchTasks().then(() => wx.stopPullDownRefresh());
     },
 
-    onTabChange(e: any) {
+    onTabChange(e: WechatMiniprogram.TouchEvent) {
         const { status } = e.currentTarget.dataset;
         this.setData({ activeTab: status });
         this.filterList();
@@ -40,7 +40,7 @@ Page({
             const app = getApp<IAppOption>();
             const res = await app.request('/engineer/tasks');
             if (res.success) {
-                const allTasks = (res.data || []).map((t: any) => ({
+                const allTasks = (res.data || []).map((t: Record<string, string>) => ({
                     ...t,
                     scheduledDateFormatted: t.scheduledDate ? formatTime(new Date(t.scheduledDate)).split(' ')[0] : ''
                 }));
@@ -59,14 +59,14 @@ Page({
         let list = [];
         if (activeTab === 'PENDING') {
             // Show everything NOT completed or cancelled
-            list = allTasks.filter((t: any) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED');
+            list = allTasks.filter((t: Record<string, string>) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED');
         } else {
-            list = allTasks.filter((t: any) => t.status === 'COMPLETED');
+            list = allTasks.filter((t: Record<string, string>) => t.status === 'COMPLETED');
         }
         this.setData({ list });
     },
 
-    onToDetail(e: any) {
+    onToDetail(e: WechatMiniprogram.TouchEvent) {
         const { id } = e.currentTarget.dataset;
         wx.navigateTo({
             url: `/pages/projects/task-detail/index?id=${id}`
@@ -74,4 +74,4 @@ Page({
     }
 });
 
-export {};
+export { };

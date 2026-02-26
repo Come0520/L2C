@@ -37,7 +37,7 @@ export function CurtainFabricQuoteDialog({
             toast.success('添加成功');
             onOpenChange(false);
             router.refresh();
-        } catch (error) {
+        } catch (_error) {
             toast.error('添加失败');
         }
     };

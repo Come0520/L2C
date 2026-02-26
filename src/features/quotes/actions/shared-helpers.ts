@@ -13,15 +13,13 @@ import { revalidatePath, revalidateTag } from 'next/cache';
  * 计算行项目小计 (Calculate Item Subtotal)
  * 采用 Decimal.js 确保浮点数计算精度。
  * 公式：(单价 * 数量) + 加工费
- * 
+ *
  * @param price - 单价
  * @param quantity - 数量
  * @param processFee - 加工费（可选，默认为 0）
  * @returns 保留两位小数的小计金额
  */
 import Decimal from 'decimal.js';
-
-
 
 /**
  * 更新报价单总金额 (Update Quote Total)
@@ -30,7 +28,7 @@ import Decimal from 'decimal.js';
  * 2. 应用报价单级别的折扣率 (discountRate) 和折减金额 (discountAmount)。
  * 3. 检查折扣是否触发审批流。
  * 4. 持久化总额数据，并同步更新所属套餐 (Bundle) 的金额。
- * 
+ *
  * @param quoteId - 报价单 ID
  * @param tenantId - 租户 ID（用于隔离）
  */
@@ -89,7 +87,7 @@ export const updateQuoteTotal = async (quoteId: string, tenantId: string) => {
 /**
  * 更新套餐报价总金额 (Update Bundle Total)
  * 汇总套餐下所有子报价单的金额数据（总额、折减、最终金额）。
- * 
+ *
  * @param bundleId - 套餐报价单 ID
  * @param tenantId - 租户 ID
  */

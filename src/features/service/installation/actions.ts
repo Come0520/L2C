@@ -104,7 +104,7 @@ const updateInstallItemSchema = z.object({
 
 /**
  * 获取安装任务列表 (支持搜索、筛选与分页)
- * 
+ *
  * @param {Object} [params] - 查询参数
  * @param {number} [params.page=1] - 当前页码，从1开始
  * @param {number} [params.pageSize=20] - 每页显示的记录数
@@ -112,87 +112,86 @@ const updateInstallItemSchema = z.object({
  * @param {string} [params.status] - 任务状态过滤条件 (如: PENDING_DISPATCH, COMPLETED)
  * @returns {Promise<{success: boolean, data?: any[], pagination?: any, error?: string}>} 返回带分页信息的任务列表或错误信息
  */
-export const getInstallTasks = cache(async (params?: {
-  page?: number;
-  pageSize?: number;
-  search?: string;
-  status?: string;
-}) => {
-  const session = await auth();
-  if (!session?.user?.tenantId) return { success: false, error: '未授权' };
+export const getInstallTasks = cache(
+  async (params?: { page?: number; pageSize?: number; search?: string; status?: string }) => {
+    const session = await auth();
+    if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
-  try {
-    const { search, status, page = 1, pageSize = 20 } = params || {};
-    const offset = (page - 1) * pageSize;
+    try {
+      const { search, status, page = 1, pageSize = 20 } = params || {};
+      const offset = (page - 1) * pageSize;
 
-    // Build where conditions
-    const conditions = [eq(installTasks.tenantId, session.user.tenantId)];
+      // Build where conditions
+      const conditions = [eq(installTasks.tenantId, session.user.tenantId)];
 
-    if (status && status !== 'ALL') {
-      conditions.push(eq(installTasks.status, status as typeof installTasks.status.enumValues[number]));
-    }
-
-    if (search) {
-      const searchPattern = `%${search}%`;
-      conditions.push(
-        or(
-          ilike(installTasks.taskNo, searchPattern),
-          ilike(installTasks.customerName, searchPattern),
-          ilike(installTasks.customerPhone, searchPattern),
-          ilike(users.name, searchPattern) // Include installer name search
-        )!
-      );
-    }
-
-    // Get data and total count concurrently for better performance
-    const [tasksData, countResult] = await Promise.all([
-      db
-        .select({
-          installTask: installTasks,
-          order: orders,
-          customer: customers,
-          installer: users,
-        })
-        .from(installTasks)
-        .leftJoin(orders, eq(installTasks.orderId, orders.id))
-        .leftJoin(customers, eq(installTasks.customerId, customers.id))
-        .leftJoin(users, eq(installTasks.installerId, users.id))
-        .where(and(...conditions))
-        .orderBy(desc(installTasks.createdAt))
-        .limit(pageSize)
-        .offset(offset),
-      db
-        .select({ count: count() })
-        .from(installTasks)
-        .leftJoin(users, eq(installTasks.installerId, users.id))
-        .where(and(...conditions))
-    ]);
-
-    const total = Number(countResult[0]?.count || 0);
-
-    const tasks = tasksData.map((row) => ({
-      ...row.installTask,
-      order: row.order,
-      customer: row.customer,
-      installer: row.installer,
-    }));
-
-    return {
-      success: true,
-      data: tasks,
-      pagination: {
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize)
+      if (status && status !== 'ALL') {
+        conditions.push(
+          eq(installTasks.status, status as (typeof installTasks.status.enumValues)[number])
+        );
       }
-    };
-  } catch (_error: unknown) {
-    const errorMessage = _error instanceof Error ? _error.message : '未知错误';
-    logger.error('加载安装任务列表失败:', _error);
-    return { success: false, error: `系统错误: ${errorMessage}` };
+
+      if (search) {
+        const searchPattern = `%${search}%`;
+        conditions.push(
+          or(
+            ilike(installTasks.taskNo, searchPattern),
+            ilike(installTasks.customerName, searchPattern),
+            ilike(installTasks.customerPhone, searchPattern),
+            ilike(users.name, searchPattern) // Include installer name search
+          )!
+        );
+      }
+
+      // Get data and total count concurrently for better performance
+      const [tasksData, countResult] = await Promise.all([
+        db
+          .select({
+            installTask: installTasks,
+            order: orders,
+            customer: customers,
+            installer: users,
+          })
+          .from(installTasks)
+          .leftJoin(orders, eq(installTasks.orderId, orders.id))
+          .leftJoin(customers, eq(installTasks.customerId, customers.id))
+          .leftJoin(users, eq(installTasks.installerId, users.id))
+          .where(and(...conditions))
+          .orderBy(desc(installTasks.createdAt))
+          .limit(pageSize)
+          .offset(offset),
+        db
+          .select({ count: count() })
+          .from(installTasks)
+          .leftJoin(users, eq(installTasks.installerId, users.id))
+          .where(and(...conditions)),
+      ]);
+
+      const total = Number(countResult[0]?.count || 0);
+
+      const tasks = tasksData.map((row) => ({
+        ...row.installTask,
+        order: row.order,
+        customer: row.customer,
+        installer: row.installer,
+      }));
+
+      return {
+        success: true,
+        data: tasks,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      };
+    } catch (_error: unknown) {
+      const errorMessage = _error instanceof Error ? _error.message : '未知错误';
+      logger.error('加载安装任务列表失败:', _error);
+      return { success: false, error: `系统错误: ${errorMessage}` };
+    }
   }
-});
+);
 
 /**
  * 获取任务详情
@@ -242,14 +241,14 @@ export async function getInstallTaskById(id: string) {
 
 /**
  * 创建安装任务的内部执行函数
- * 
+ *
  * 流程：
  * 1. 验证用户权限与租户身份
  * 2. 校验客户与订单是否存在
  * 3. 生成唯一的安装任务号 (INS-日期-随机码)
  * 4. 插入安装任务主表，并根据报价单项自动生成安装子项
  * 5. 记录创建操作的审计日志
- * 
+ *
  * @param {z.infer<typeof createInstallTaskSchema>} data - 符合 Schema 校验的创建数据
  * @param {Object} ctx - Server Action 执行上下文，包含 Session 信息
  * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回操作结果
@@ -361,7 +360,7 @@ export async function createInstallTaskAction(data: z.infer<typeof createInstall
 
 /**
  * 指派师傅或重新派单的内部执行函数
- * 
+ *
  * 流程：
  * 1. 校验调度权限
  * 2. 冲突检测：检查师傅在指定日期和时段是否已有任务 (Hard/Soft 冲突)
@@ -369,7 +368,7 @@ export async function createInstallTaskAction(data: z.infer<typeof createInstall
  * 4. 更新任务状态为 DISPATCHING (已指派，待确认)
  * 5. 触发微信订阅消息通知师傅
  * 6. 记录派单审计日志
- * 
+ *
  * @param {z.infer<typeof dispatchTaskSchema>} data - 指派参数，包含师傅ID、预约日期和时段
  * @param {Object} ctx - Server Action 执行上下文
  * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回操作结果
@@ -384,7 +383,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
   try {
     logger.info(`[Dispatch] 准备指派安装任务: ${data.id}, 师傅: ${data.installerId}`, {
       scheduledDate: data.scheduledDate,
-      timeSlot: data.scheduledTimeSlot
+      timeSlot: data.scheduledTimeSlot,
     });
 
     // 1. Check Conflicts
@@ -458,7 +457,12 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       );
 
     await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
-      new: { status: 'DISPATCHING', installerId: data.installerId, scheduledDate: data.scheduledDate, event: 'DISPATCH_TASK' }
+      new: {
+        status: 'DISPATCHING',
+        installerId: data.installerId,
+        scheduledDate: data.scheduledDate,
+        event: 'DISPATCH_TASK',
+      },
     });
 
     logger.info(`[Dispatch] 安装任务指派成功: ${data.id}`);
@@ -482,7 +486,11 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
 
     // 记录派单审计日志
     await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
-      new: { action: 'DISPATCH', installerId: data.installerId, scheduledDate: data.scheduledDate?.toISOString() },
+      new: {
+        action: 'DISPATCH',
+        installerId: data.installerId,
+        scheduledDate: data.scheduledDate?.toISOString(),
+      },
     });
 
     revalidateTag('install-task', {});
@@ -503,13 +511,13 @@ export async function dispatchInstallTaskAction(data: z.infer<typeof dispatchTas
 
 /**
  * 安装师傅上门签到逻辑
- * 
+ *
  * 流程：
  * 1. 验证任务存在性与师傅身份
  * 2. 检查任务状态是否为可签到状态 (DISPATCHING)
  * 3. 记录签到地点与时间，并与预约时间对比进行迟到检测
  * 4. 状态流转至 PENDING_VISIT (服务中)
- * 
+ *
  * @param {z.infer<typeof checkInTaskSchema>} data - 签到数据，包含地理位置坐标
  * @param {Object} ctx - 执行上下文
  * @returns {Promise<{success: boolean, message?: string, data?: any, error?: string}>} 返回签到结果，包含迟到详情
@@ -671,16 +679,16 @@ export async function checkOutInstallTaskAction(data: z.infer<typeof checkOutTas
 
 /**
  * 销售或管理人员确认安装验收
- * 
+ *
  * 此操作标志着安装服务的正式终结。
- * 
+ *
  * 流程：
  * 1. 权限与租户隔离验证
  * 2. 将任务状态更新为 COMPLETED
  * 3. 记录最终确定的工费、调整原因及评价信息
  * 4. 记录验收操作审计日志
  * 5. (待扩展) 联动财务模块生成对账记录
- * 
+ *
  * @param {z.infer<typeof confirmInstallationSchema>} data - 验收参数，包含实际工费和评分
  * @param {Object} ctx - 执行上下文
  * @returns {Promise<{success: boolean, message?: string, error?: string}>} 返回验收结果
@@ -919,7 +927,6 @@ export async function updateInstallChecklistAction(data: z.infer<typeof updateCh
   return updateInstallChecklistInternal(data);
 }
 
-
 /**
  * 获取可用师傅列表
  */
@@ -931,10 +938,7 @@ export async function getInstallWorkersAction() {
     const getWorkers = unstable_cache(
       async () => {
         return await db.query.users.findMany({
-          where: and(
-            eq(users.tenantId, session.user.tenantId),
-            eq(users.role, 'WORKER')
-          ),
+          where: and(eq(users.tenantId, session.user.tenantId), eq(users.role, 'WORKER')),
           orderBy: [asc(users.name)],
         });
       },
@@ -952,4 +956,3 @@ export async function getInstallWorkersAction() {
     return { success: false, error: '获取师傅列表失败' };
   }
 }
-

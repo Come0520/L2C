@@ -15,8 +15,8 @@ interface TabBarData {
 Component({
     data: {
         selected: 0,
-        color: "#909399",
-        selectedColor: "#E6B450",
+        color: "#6B7280",
+        selectedColor: "#2563EB",
         list: [] as TabBarData['list']
     },
 
@@ -109,4 +109,4 @@ Component({
     }
 });
 
-export {};
+export { };

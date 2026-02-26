@@ -17,6 +17,7 @@
 ### Task 1: 为分析查询添加 `unstable_cache`
 
 **文件：**
+
 - 修改: `src/features/after-sales/actions/analytics.ts`
 - 测试: `src/features/after-sales/__tests__/analytics-cache.test.ts`
 
@@ -29,26 +30,30 @@ import { unstable_cache } from 'next/cache';
 
 // 在 action 内部为每个聚合查询添加缓存
 const getCachedLiabilityByParty = unstable_cache(
-    async (tenantId: string, startDate?: string, endDate?: string) => {
-        const dateConditions: SQL[] = [];
-        if (startDate) dateConditions.push(sql`${liabilityNotices.confirmedAt} >= ${new Date(startDate)}`);
-        if (endDate) dateConditions.push(sql`${liabilityNotices.confirmedAt} <= ${new Date(endDate)}`);
+  async (tenantId: string, startDate?: string, endDate?: string) => {
+    const dateConditions: SQL[] = [];
+    if (startDate)
+      dateConditions.push(sql`${liabilityNotices.confirmedAt} >= ${new Date(startDate)}`);
+    if (endDate) dateConditions.push(sql`${liabilityNotices.confirmedAt} <= ${new Date(endDate)}`);
 
-        return db.select({
-            liablePartyType: liabilityNotices.liablePartyType,
-            count: count(liabilityNotices.id),
-            totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
-        })
-        .from(liabilityNotices)
-        .where(and(
-            eq(liabilityNotices.tenantId, tenantId),
-            eq(liabilityNotices.status, 'CONFIRMED'),
-            ...dateConditions
-        ))
-        .groupBy(liabilityNotices.liablePartyType);
-    },
-    ['after-sales-liability-by-party'],
-    { revalidate: 300, tags: ['after-sales-analytics'] }
+    return db
+      .select({
+        liablePartyType: liabilityNotices.liablePartyType,
+        count: count(liabilityNotices.id),
+        totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
+      })
+      .from(liabilityNotices)
+      .where(
+        and(
+          eq(liabilityNotices.tenantId, tenantId),
+          eq(liabilityNotices.status, 'CONFIRMED'),
+          ...dateConditions
+        )
+      )
+      .groupBy(liabilityNotices.liablePartyType);
+  },
+  ['after-sales-liability-by-party'],
+  { revalidate: 300, tags: ['after-sales-analytics'] }
 );
 ```
 
@@ -83,6 +88,7 @@ git commit -m "perf(after-sales): 为分析查询添加 unstable_cache 缓存"
 ### Task 2: 修复 `deduction-safety.ts` 中的 N+1 查询
 
 **文件：**
+
 - 修改: `src/features/after-sales/logic/deduction-safety.ts:63-183`
 - 测试: `src/features/after-sales/__tests__/deduction-safety.test.ts`
 
@@ -92,38 +98,40 @@ git commit -m "perf(after-sales): 为分析查询添加 unstable_cache 缓存"
 
 ```typescript
 export async function getDeductionLedger(
-    partyType: LiablePartyType,
-    partyId: string
+  partyType: LiablePartyType,
+  partyId: string
 ): Promise<DeductionLedger | null> {
-    const session = await auth();
-    if (!session?.user?.tenantId) return null;
-    const tenantId = session.user.tenantId;
+  const session = await auth();
+  if (!session?.user?.tenantId) return null;
+  const tenantId = session.user.tenantId;
 
-    // 用聚合查询替代全量拉取 + 内存循环（消除 N+1）
-    const [summary] = await db
-        .select({
-            totalDeducted: sum(
-                sql`CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' THEN CAST(${liabilityNotices.amount} AS DECIMAL) ELSE 0 END`
-            ),
-            totalSettled: sum(
-                sql`CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' AND ${liabilityNotices.financeStatus} = 'SYNCED' THEN CAST(${liabilityNotices.amount} AS DECIMAL) ELSE 0 END`
-            ),
-            noticeCount: count(liabilityNotices.id),
-        })
-        .from(liabilityNotices)
-        .where(and(
-            eq(liabilityNotices.tenantId, tenantId),
-            eq(liabilityNotices.liablePartyType, partyType),
-            eq(liabilityNotices.liablePartyId, partyId)
-        ));
+  // 用聚合查询替代全量拉取 + 内存循环（消除 N+1）
+  const [summary] = await db
+    .select({
+      totalDeducted: sum(
+        sql`CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' THEN CAST(${liabilityNotices.amount} AS DECIMAL) ELSE 0 END`
+      ),
+      totalSettled: sum(
+        sql`CASE WHEN ${liabilityNotices.status} = 'CONFIRMED' AND ${liabilityNotices.financeStatus} = 'SYNCED' THEN CAST(${liabilityNotices.amount} AS DECIMAL) ELSE 0 END`
+      ),
+      noticeCount: count(liabilityNotices.id),
+    })
+    .from(liabilityNotices)
+    .where(
+      and(
+        eq(liabilityNotices.tenantId, tenantId),
+        eq(liabilityNotices.liablePartyType, partyType),
+        eq(liabilityNotices.liablePartyId, partyId)
+      )
+    );
 
-    if (!summary || Number(summary.noticeCount) === 0) return null;
+  if (!summary || Number(summary.noticeCount) === 0) return null;
 
-    const totalDeducted = Number(summary.totalDeducted || 0);
-    const totalSettled = Number(summary.totalSettled || 0);
-    const pendingAmount = totalDeducted - totalSettled;
+  const totalDeducted = Number(summary.totalDeducted || 0);
+  const totalSettled = Number(summary.totalSettled || 0);
+  const pendingAmount = totalDeducted - totalSettled;
 
-    // ...后续 partyName / maxAllowed 查询保持不变
+  // ...后续 partyName / maxAllowed 查询保持不变
 }
 ```
 
@@ -148,6 +156,7 @@ git commit -m "perf(after-sales): 用数据库聚合替代内存循环消除 N+1
 ### Task 3: 为核心表添加复合索引
 
 **文件：**
+
 - 修改: `src/shared/api/schema/after-sales.ts`（在表定义后添加索引）
 
 **Step 1: 添加索引声明**
@@ -159,15 +168,22 @@ import { index } from 'drizzle-orm/pg-core';
 
 // 在表对象导出后追加
 export const afterSalesTicketsIndexes = {
-    tenantStatusIdx: index('idx_as_tickets_tenant_status')
-        .on(afterSalesTickets.tenantId, afterSalesTickets.status),
-    tenantCreatedIdx: index('idx_as_tickets_tenant_created')
-        .on(afterSalesTickets.tenantId, afterSalesTickets.createdAt),
+  tenantStatusIdx: index('idx_as_tickets_tenant_status').on(
+    afterSalesTickets.tenantId,
+    afterSalesTickets.status
+  ),
+  tenantCreatedIdx: index('idx_as_tickets_tenant_created').on(
+    afterSalesTickets.tenantId,
+    afterSalesTickets.createdAt
+  ),
 };
 
 export const liabilityNoticesIndexes = {
-    tenantPartyIdx: index('idx_liability_tenant_party')
-        .on(liabilityNotices.tenantId, liabilityNotices.liablePartyType, liabilityNotices.liablePartyId),
+  tenantPartyIdx: index('idx_liability_tenant_party').on(
+    liabilityNotices.tenantId,
+    liabilityNotices.liablePartyType,
+    liabilityNotices.liablePartyId
+  ),
 };
 ```
 
@@ -188,6 +204,7 @@ git commit -m "perf(after-sales): 添加复合索引定义"
 ### Task 4: 组件懒加载
 
 **文件：**
+
 - 修改: `src/features/after-sales/components/after-sales-detail.tsx`
 
 **Step 1: 动态导入重量级组件**
@@ -227,26 +244,28 @@ git commit -m "perf(after-sales): 对 SLA 监控和溯源视图实施懒加载"
 ### Task 5: 编写 `ticket.ts` Server Actions 集成测试
 
 **文件：**
+
 - 创建: `src/features/after-sales/__tests__/ticket-actions.test.ts`
 
 **Step 1: 编写测试用例**
 
 覆盖以下场景（≥ 8 个用例）：
 
-| # | 用例 | 断言 |
-|---|------|------|
-| 1 | 获取工单列表 - 正常分页 | 返回 success=true，data 含 tickets 数组 |
-| 2 | 获取工单列表 - 状态筛选 | 仅返回对应状态工单 |
-| 3 | 获取工单列表 - 搜索过滤 | 按工单号模糊匹配 |
-| 4 | 创建工单 - 正常流程 | 返回 success=true + 工单数据 |
-| 5 | 创建工单 - 无效 orderId | 返回 success=false |
-| 6 | 获取工单详情 - 存在 | 返回完整工单含关联数据 |
-| 7 | 获取工单详情 - 手机号脱敏 | phone 格式为 `138****1234` |
-| 8 | 更新状态 - 合法转换 | PENDING→INVESTIGATING 成功 |
-| 9 | 更新状态 - 非法转换 | CLOSED→PENDING 失败 |
-| 10 | 更新状态 - 跨租户 | 返回工单不存在 |
+| #   | 用例                      | 断言                                    |
+| --- | ------------------------- | --------------------------------------- |
+| 1   | 获取工单列表 - 正常分页   | 返回 success=true，data 含 tickets 数组 |
+| 2   | 获取工单列表 - 状态筛选   | 仅返回对应状态工单                      |
+| 3   | 获取工单列表 - 搜索过滤   | 按工单号模糊匹配                        |
+| 4   | 创建工单 - 正常流程       | 返回 success=true + 工单数据            |
+| 5   | 创建工单 - 无效 orderId   | 返回 success=false                      |
+| 6   | 获取工单详情 - 存在       | 返回完整工单含关联数据                  |
+| 7   | 获取工单详情 - 手机号脱敏 | phone 格式为 `138****1234`              |
+| 8   | 更新状态 - 合法转换       | PENDING→INVESTIGATING 成功              |
+| 9   | 更新状态 - 非法转换       | CLOSED→PENDING 失败                     |
+| 10  | 更新状态 - 跨租户         | 返回工单不存在                          |
 
 Mock 策略：
+
 - `vi.mock('@/shared/api/db')` 返回模拟的 Drizzle 查询对象
 - `vi.mock('@/shared/lib/server-action')` 使 `createSafeAction` 直接调用 handler
 - `vi.mock('@/shared/lib/audit-service')` 返回空 mock
@@ -268,21 +287,22 @@ git commit -m "test(after-sales): 添加 ticket actions 集成测试（10 用例
 ### Task 6: 编写 `liability.ts` Server Actions 集成测试
 
 **文件：**
+
 - 创建: `src/features/after-sales/__tests__/liability-actions.test.ts`
 
 **Step 1: 编写测试用例**
 
 覆盖以下场景（≥ 6 个用例）：
 
-| # | 用例 | 断言 |
-|---|------|------|
-| 1 | 创建定责单 - 正常 | 返回 success=true + 定责单数据 |
-| 2 | 创建定责单 - 已关闭工单 | 返回 success=false |
-| 3 | 提交定责单 - DRAFT→PENDING_CONFIRM | 状态正确更新 |
-| 4 | 确认定责单 - 事务完整性 | 扣款金额同步且审计日志记录 |
-| 5 | 提起争议 - PENDING_CONFIRM→DISPUTED | 状态正确且原因保存 |
-| 6 | 仲裁裁决 - DISPUTED→CONFIRMED/REJECTED | 按仲裁结果更新 |
-| 7 | 跨租户访问 - 定责单隔离 | 返回定责单不存在 |
+| #   | 用例                                   | 断言                           |
+| --- | -------------------------------------- | ------------------------------ |
+| 1   | 创建定责单 - 正常                      | 返回 success=true + 定责单数据 |
+| 2   | 创建定责单 - 已关闭工单                | 返回 success=false             |
+| 3   | 提交定责单 - DRAFT→PENDING_CONFIRM     | 状态正确更新                   |
+| 4   | 确认定责单 - 事务完整性                | 扣款金额同步且审计日志记录     |
+| 5   | 提起争议 - PENDING_CONFIRM→DISPUTED    | 状态正确且原因保存             |
+| 6   | 仲裁裁决 - DISPUTED→CONFIRMED/REJECTED | 按仲裁结果更新                 |
+| 7   | 跨租户访问 - 定责单隔离                | 返回定责单不存在               |
 
 **Step 2: 运行测试**
 
@@ -301,32 +321,33 @@ git commit -m "test(after-sales): 添加 liability actions 集成测试（7 用�
 ### Task 7: 补充 `analytics.ts` 测试
 
 **文件：**
+
 - 创建: `src/features/after-sales/__tests__/analytics-actions.test.ts`
 
 **Step 1: 编写快照测试**
 
 ```typescript
 describe('getAfterSalesQualityAnalytics', () => {
-    it('应返回标准格式的统计报表', async () => {
-        const result = await getAfterSalesQualityAnalytics({});
-        expect(result).toMatchObject({
-            liabilityByParty: expect.any(Array),
-            ticketsByType: expect.any(Array),
-            ticketsByStatus: expect.any(Array),
-            summary: expect.objectContaining({
-                totalLiabilityAmount: expect.any(Number),
-                totalLiabilityCount: expect.any(Number),
-            }),
-        });
+  it('应返回标准格式的统计报表', async () => {
+    const result = await getAfterSalesQualityAnalytics({});
+    expect(result).toMatchObject({
+      liabilityByParty: expect.any(Array),
+      ticketsByType: expect.any(Array),
+      ticketsByStatus: expect.any(Array),
+      summary: expect.objectContaining({
+        totalLiabilityAmount: expect.any(Number),
+        totalLiabilityCount: expect.any(Number),
+      }),
     });
+  });
 
-    it('应按日期范围过滤', async () => {
-        const result = await getAfterSalesQualityAnalytics({
-            startDate: '2026-01-01',
-            endDate: '2026-01-31',
-        });
-        expect(result.liabilityByParty).toBeDefined();
+  it('应按日期范围过滤', async () => {
+    const result = await getAfterSalesQualityAnalytics({
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
     });
+    expect(result.liabilityByParty).toBeDefined();
+  });
 });
 ```
 
@@ -350,6 +371,7 @@ git commit -m "test(after-sales): 添加 analytics 统计报表测试"
 ### Task 8: 实现 `FiltersBar` 组件
 
 **文件：**
+
 - 修改: `src/features/after-sales/components/filters-bar.tsx`
 
 **Step 1: 实现筛选条件栏**
@@ -360,52 +382,76 @@ git commit -m "test(after-sales): 添加 analytics 统计报表测试"
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { Button } from '@/shared/components/ui/button';
 import { X } from 'lucide-react';
 
 interface FiltersBarProps {
-    statusOptions: { value: string; label: string }[];
-    typeOptions: { value: string; label: string }[];
+  statusOptions: { value: string; label: string }[];
+  typeOptions: { value: string; label: string }[];
 }
 
 export function FiltersBar({ statusOptions, typeOptions }: FiltersBarProps) {
-    const router = useRouter();
-    const searchParams = useSearchParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-    const updateFilter = (key: string, value: string | null) => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (value) params.set(key, value);
-        else params.delete(key);
-        params.set('page', '1'); // 重置分页
-        router.push(`?${params.toString()}`);
-    };
+  const updateFilter = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    params.set('page', '1'); // 重置分页
+    router.push(`?${params.toString()}`);
+  };
 
-    const clearAll = () => router.push('?');
+  const clearAll = () => router.push('?');
 
-    return (
-        <div className="flex items-center gap-3 flex-wrap">
-            <Select value={searchParams.get('status') || ''} onValueChange={v => updateFilter('status', v || null)}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="工单状态" /></SelectTrigger>
-                <SelectContent>
-                    {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-            </Select>
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Select
+        value={searchParams.get('status') || ''}
+        onValueChange={(v) => updateFilter('status', v || null)}
+      >
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="工单状态" />
+        </SelectTrigger>
+        <SelectContent>
+          {statusOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-            <Select value={searchParams.get('type') || ''} onValueChange={v => updateFilter('type', v || null)}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="工单类型" /></SelectTrigger>
-                <SelectContent>
-                    {typeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-            </Select>
+      <Select
+        value={searchParams.get('type') || ''}
+        onValueChange={(v) => updateFilter('type', v || null)}
+      >
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="工单类型" />
+        </SelectTrigger>
+        <SelectContent>
+          {typeOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-            {(searchParams.get('status') || searchParams.get('type')) && (
-                <Button variant="ghost" size="sm" onClick={clearAll}>
-                    <X className="h-4 w-4 mr-1" /> 清除筛选
-                </Button>
-            )}
-        </div>
-    );
+      {(searchParams.get('status') || searchParams.get('type')) && (
+        <Button variant="ghost" size="sm" onClick={clearAll}>
+          <X className="mr-1 h-4 w-4" /> 清除筛选
+        </Button>
+      )}
+    </div>
+  );
 }
 ```
 
@@ -425,6 +471,7 @@ git commit -m "feat(after-sales): 实现 FiltersBar 筛选条件栏组件"
 ### Task 9: 实现 `ResolutionTimeline` 组件
 
 **文件：**
+
 - 修改: `src/features/after-sales/components/resolution-timeline.tsx`
 
 **Step 1: 实现处理方案时间线**
@@ -439,42 +486,48 @@ import { Badge } from '@/shared/components/ui/badge';
 import { formatDate } from '@/shared/utils/format';
 
 interface TimelineEvent {
-    id: string;
-    timestamp: Date | string;
-    action: string;
-    actor: string;
-    details?: string;
+  id: string;
+  timestamp: Date | string;
+  action: string;
+  actor: string;
+  details?: string;
 }
 
 interface ResolutionTimelineProps {
-    events: TimelineEvent[];
+  events: TimelineEvent[];
 }
 
 export function ResolutionTimeline({ events }: ResolutionTimelineProps) {
-    if (events.length === 0) {
-        return <p className="text-sm text-muted-foreground">暂无处理记录</p>;
-    }
+  if (events.length === 0) {
+    return <p className="text-sm text-muted-foreground">暂无处理记录</p>;
+  }
 
-    return (
-        <Card>
-            <CardHeader><CardTitle className="text-base">处理时间线</CardTitle></CardHeader>
-            <CardContent>
-                <ol className="relative border-l border-muted-foreground/20 ml-3">
-                    {events.map((event) => (
-                        <li key={event.id} className="mb-6 ml-6">
-                            <span className="absolute -left-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary ring-4 ring-background" />
-                            <div className="flex items-center gap-2 mb-1">
-                                <time className="text-xs text-muted-foreground">{formatDate(event.timestamp)}</time>
-                                <Badge variant="outline" className="text-xs">{event.action}</Badge>
-                            </div>
-                            <p className="text-sm font-medium">{event.actor}</p>
-                            {event.details && <p className="text-sm text-muted-foreground mt-1">{event.details}</p>}
-                        </li>
-                    ))}
-                </ol>
-            </CardContent>
-        </Card>
-    );
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">处理时间线</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ol className="relative ml-3 border-l border-muted-foreground/20">
+          {events.map((event) => (
+            <li key={event.id} className="mb-6 ml-6">
+              <span className="absolute -left-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary ring-4 ring-background" />
+              <div className="mb-1 flex items-center gap-2">
+                <time className="text-xs text-muted-foreground">{formatDate(event.timestamp)}</time>
+                <Badge variant="outline" className="text-xs">
+                  {event.action}
+                </Badge>
+              </div>
+              <p className="text-sm font-medium">{event.actor}</p>
+              {event.details && (
+                <p className="mt-1 text-sm text-muted-foreground">{event.details}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
 }
 ```
 
@@ -485,6 +538,7 @@ export function ResolutionTimeline({ events }: ResolutionTimelineProps) {
 ### Task 10: 实现 `AddResolutionDialog` 组件
 
 **文件：**
+
 - 修改: `src/features/after-sales/components/add-resolution-dialog.tsx`
 
 **Step 1: 实现处理方案录入对话框**
@@ -498,6 +552,7 @@ export function ResolutionTimeline({ events }: ResolutionTimelineProps) {
 ### Task 11: 实现其余占位组件
 
 **文件：**
+
 - 修改: `src/features/after-sales/components/liability-drawer.tsx`
 - 修改: `src/features/after-sales/components/partial-return-dialog.tsx`
 - 修改: `src/features/after-sales/components/advanced-filters-dialog.tsx`
@@ -509,6 +564,7 @@ export function ResolutionTimeline({ events }: ResolutionTimelineProps) {
 ### Task 12: 实现 3 个占位 Action
 
 **文件：**
+
 - 修改: `src/features/after-sales/actions/ticket.ts:254-279`（`closeResolutionCostClosure` + `checkTicketFinancialClosure`）
 - 修改: `src/features/after-sales/actions/warranty.ts`（`createExchangeOrder`）
 
@@ -518,25 +574,25 @@ export function ResolutionTimeline({ events }: ResolutionTimelineProps) {
 
 ```typescript
 const checkTicketFinancialClosureAction = createSafeAction(
-    z.object({ ticketId: z.string().uuid() }),
-    async ({ ticketId }, { session }) => {
-        const tenantId = session.user.tenantId;
-        const notices = await db.query.liabilityNotices.findMany({
-            where: and(
-                eq(liabilityNotices.afterSalesId, ticketId),
-                eq(liabilityNotices.tenantId, tenantId)
-            ),
-        });
+  z.object({ ticketId: z.string().uuid() }),
+  async ({ ticketId }, { session }) => {
+    const tenantId = session.user.tenantId;
+    const notices = await db.query.liabilityNotices.findMany({
+      where: and(
+        eq(liabilityNotices.afterSalesId, ticketId),
+        eq(liabilityNotices.tenantId, tenantId)
+      ),
+    });
 
-        const allConfirmed = notices.every(n => n.status === 'CONFIRMED');
-        const allSynced = notices.every(n => n.financeStatus === 'SYNCED');
-        const canClose = notices.length > 0 && allConfirmed && allSynced;
+    const allConfirmed = notices.every((n) => n.status === 'CONFIRMED');
+    const allSynced = notices.every((n) => n.financeStatus === 'SYNCED');
+    const canClose = notices.length > 0 && allConfirmed && allSynced;
 
-        return {
-            success: true,
-            data: { canClose, totalNotices: notices.length, allConfirmed, allSynced },
-        };
-    }
+    return {
+      success: true,
+      data: { canClose, totalNotices: notices.length, allConfirmed, allSynced },
+    };
+  }
 );
 ```
 
@@ -555,6 +611,7 @@ const checkTicketFinancialClosureAction = createSafeAction(
 ### Task 13: 更新 README.md
 
 **文件：**
+
 - 修改: `src/features/after-sales/README.md`
 
 **Step 1: 修正目录结构描述**
@@ -585,6 +642,7 @@ git commit -m "docs(after-sales): 更新 README 目录结构为 actions/ 模块�
 ### Task 14: 清理冗余文件
 
 **文件：**
+
 - 检查: `src/features/after-sales/components/ticket-list-table.tsx`
 
 **Step 1: 检查是否有引用**
@@ -614,14 +672,14 @@ npm run build 2>&1 | Select-String "after-sales"
 
 ### 预期提升结果
 
-| 维度 | 升级前 | 升级后 | 提升 |
-|:---|:---:|:---:|:---:|
-| D1 功能完整性 | 6.5 | 8.5 | +2.0 |
-| D2 代码质量 | 8.5 | 9.0 | +0.5 |
-| D3 测试覆盖 | 6.0 | 8.0 | +2.0 |
-| D4 文档完整性 | 6.0 | 8.0 | +2.0 |
-| D5 UI/UX | 6.0 | 8.0 | +2.0 |
-| D6 安全规范 | 8.5 | 8.5 | — |
-| D7 可运维性 | 7.5 | 7.5 | — |
-| D8 性能优化 | 4.0 | 7.5 | +3.5 |
-| **综合** | **6.56** | **~8.2** | **+1.64** |
+| 维度          |  升级前  |  升级后  |   提升    |
+| :------------ | :------: | :------: | :-------: |
+| D1 功能完整性 |   6.5    |   8.5    |   +2.0    |
+| D2 代码质量   |   8.5    |   9.0    |   +0.5    |
+| D3 测试覆盖   |   6.0    |   8.0    |   +2.0    |
+| D4 文档完整性 |   6.0    |   8.0    |   +2.0    |
+| D5 UI/UX      |   6.0    |   8.0    |   +2.0    |
+| D6 安全规范   |   8.5    |   8.5    |     —     |
+| D7 可运维性   |   7.5    |   7.5    |     —     |
+| D8 性能优化   |   4.0    |   7.5    |   +3.5    |
+| **综合**      | **6.56** | **~8.2** | **+1.64** |

@@ -1,4 +1,3 @@
-import { logger } from "@/shared/lib/logger";
 
 import { leads } from '@/shared/api/schema';
 import { INTENTION_WEIGHTS } from '../config/scoring-config';

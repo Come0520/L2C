@@ -1,9 +1,8 @@
 <!--pages/invite/invite.wxml-->
 <view class="container">
-  <!-- 黑金风格背景 -->
   <scroll-view class="content-wrapper" scroll-y="true" enhanced="true" show-scrollbar="false">
     <!-- 未激活提示 -->
-    <view wx:if="{{tenantStatus !== 'active'}}" class="gold-card empty-card animate-slide-up">
+    <view wx:if="{{tenantStatus !== 'active'}}" class="card empty-card animate-slide-up">
       <view class="empty-icon-box lock">
         <view class="empty-icon">🔒</view>
       </view>
@@ -17,7 +16,7 @@
     <!-- 已激活 - 邀请功能 -->
     <view wx:else>
       <!-- 生成邀请 -->
-      <view class="gold-card invite-card animate-slide-up">
+      <view class="card invite-card animate-slide-up">
         <view class="card-header">
           <view class="header-icon-box">
             <text class="header-icon">👥</text>
@@ -33,7 +32,7 @@
           <view class="form-label">选择角色</view>
           <picker mode="selector" range="{{roleOptions}}" range-key="label" bindchange="onRoleChange">
             <view class="input-wrapper picker-wrapper">
-              <view class="glass-input picker-value {{selectedRole.label ? '' : 'placeholder'}}">
+              <view class="form-input picker-value {{selectedRole.label ? '' : 'placeholder'}}">
                 {{selectedRole.label || '请选择员工角色'}}
               </view>
               <text class="picker-arrow">▼</text>
@@ -76,7 +75,7 @@
       </view>
 
       <!-- 邀请记录 -->
-      <view class="gold-card list-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length > 0}}">
+      <view class="card list-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length > 0}}">
         <view class="list-header">
           <view class="section-title">邀请记录</view>
           <view class="list-count">{{inviteList.length}}</view>
@@ -100,7 +99,7 @@
       </view>
 
       <!-- 空记录 -->
-      <view class="gold-card empty-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length === 0 && !loading}}">
+      <view class="card empty-card animate-slide-up" style="animation-delay: 0.1s;" wx:if="{{inviteList.length === 0 && !loading}}">
         <view class="empty-state">
           <view class="empty-icon small">📝</view>
           <view class="empty-text">暂无邀请记录</view>

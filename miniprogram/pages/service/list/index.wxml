@@ -1,31 +1,46 @@
-<!--pages/service/list/index.wxml-->
+<!-- pages/service/list/index.wxml -->
 <view class="container">
-  <block wx:for="{{list}}" wx:key="id">
-    <view class="ticket-card">
-        <view class="card-header">
-            <text class="ticket-no">{{item.ticketNo}}</text>
-            <text class="status {{item.status}}">{{statusMap[item.status] || item.status}}</text>
-        </view>
-        <view class="card-body">
-            <view class="row">
-                <text class="label">类型：</text>
-                <text class="value">{{item.type}}</text>
-            </view>
-             <view class="row">
-                <text class="label">描述：</text>
-                <text class="value desc">{{item.description}}</text>
-            </view>
-             <view class="row">
-                <text class="label">时间：</text>
-                <text class="value">{{item.createdAtFormatted}}</text>
-            </view>
-        </view>
-        <!-- Optional: View Detail Button if we have detail page, for now just list -->
-    </view>
-  </block>
+  <!-- Tabs (Optional placeholder for standardizing list pages) -->
+  <view class="tabs">
+      <view class="tab active">全部售后</view>
+  </view>
 
-  <view class="empty" wx:if="{{!list.length && !loading}}">
-      <image src="/assets/empty.png" mode="aspectFit" class="empty-img"></image>
-      <text>暂无售后记录</text>
+  <view class="ticket-list">
+    <block wx:for="{{list}}" wx:key="id">
+      <view class="ticket-card animate-slide-up" style="animation-delay: {{index * 0.05}}s">
+          <view class="card-header">
+              <view class="ticket-info">
+                  <text class="ticket-no">NO. {{item.ticketNo}}</text>
+              </view>
+              <view class="status-badge status-{{item.status}}">
+                  <text class="status-dot"></text>
+                  <text>{{statusMap[item.status] || item.status}}</text>
+              </view>
+          </view>
+          <view class="card-body">
+              <view class="info-row">
+                  <text class="label">服务类型</text>
+                  <text class="value">{{item.type}}</text>
+              </view>
+               <view class="info-row">
+                  <text class="label">问题描述</text>
+                  <text class="value desc">{{item.description}}</text>
+              </view>
+               <view class="info-row">
+                  <text class="label">申请时间</text>
+                  <text class="value date-text">{{item.createdAtFormatted}}</text>
+              </view>
+          </view>
+      </view>
+    </block>
+
+    <view class="empty-state" wx:if="{{!list.length && !loading}}">
+      <image class="empty-image" src="/assets/empty-box.svg" mode="aspectFit"></image>
+      <text class="empty-text">暂无售后记录</text>
+    </view>
+  </view>
+  
+  <view class="fab-btn" bindtap="goToApply">
+    <text class="fab-icon">+</text>
   </view>
 </view>

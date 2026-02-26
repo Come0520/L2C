@@ -1,37 +1,56 @@
-<!--pages/service/apply/index.wxml-->
+<!-- pages/service/apply/index.wxml -->
 <view class="container">
-  <view class="form-group">
-    <view class="form-item">
-      <text class="label">关联订单</text>
-      <view class="value" wx:if="{{orderNo}}">{{orderNo}}</view>
-      <view class="value placeholder" wx:else bindtap="onSelectOrder">点击选择订单 ></view>
+  
+  <view class="form-card">
+    <view class="form-item" bindtap="onSelectOrder">
+      <view class="label-wrapper">
+        <text class="required-star">*</text>
+        <text class="label">关联订单</text>
+      </view>
+      <view class="value-wrapper">
+         <text class="value" wx:if="{{orderNo}}">{{orderNo}}</text>
+         <text class="placeholder" wx:else>请选择需售后的订单</text>
+         <text class="arrow">></text>
+      </view>
     </view>
   </view>
 
-  <view class="form-group">
-    <view class="group-title">售后类型</view>
+  <view class="form-card">
+    <view class="group-header">
+      <text class="required-star">*</text>
+      <text class="group-title">售后类型</text>
+    </view>
     <view class="type-grid">
-         <view class="type-item {{type === 'REPAIR' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="REPAIR">维修</view>
-         <view class="type-item {{type === 'RETURN' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="RETURN">退货/退款</view>
-         <view class="type-item {{type === 'COMPLAINT' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="COMPLAINT">投诉</view>
-         <view class="type-item {{type === 'OTHER' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="OTHER">其他</view>
+         <view class="type-item {{type === 'REPAIR' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="REPAIR">修复/维保</view>
+         <view class="type-item {{type === 'RETURN' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="RETURN">退货退款</view>
+         <view class="type-item {{type === 'COMPLAINT' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="COMPLAINT">服务投诉</view>
+         <view class="type-item {{type === 'OTHER' ? 'active' : ''}}" bindtap="onTypeSelect" data-type="OTHER">其他协助</view>
     </view>
   </view>
 
-  <view class="form-group">
-    <view class="group-title">问题描述</view>
-    <textarea 
-        class="desc-input" 
-        placeholder="请详细描述您遇到的问题，以便我们尽快为您解决" 
-        bindinput="onInputDesc"
-        value="{{description}}"
-        maxlength="200"
-    ></textarea>
-    <view class="word-count">{{description.length}}/200</view>
+  <view class="form-card">
+    <view class="group-header">
+      <text class="required-star">*</text>
+      <text class="group-title">问题描述</text>
+    </view>
+    <view class="textarea-wrapper">
+        <textarea 
+            class="desc-input" 
+            placeholder="请详细描述您遇到的问题，以便我们尽快为您安排专人解决..." 
+            placeholder-class="textarea-placeholder"
+            bindinput="onInputDesc"
+            value="{{description}}"
+            maxlength="200"
+            disable-default-padding
+        ></textarea>
+        <view class="word-count">{{description.length}}/200</view>
+    </view>
   </view>
 
-  <view class="form-group">
-    <view class="group-title">上传照片 ({{photos.length}}/9)</view>
+  <view class="form-card">
+    <view class="group-header">
+      <text class="group-title">上传凭证 <text class="subtitle">({{photos.length}}/9)</text></text>
+    </view>
     <view class="photo-grid">
         <block wx:for="{{photos}}" wx:key="*this">
             <view class="photo-item">
@@ -40,12 +59,17 @@
             </view>
         </block>
         <view class="photo-add" bindtap="chooseImage" wx:if="{{photos.length < 9}}">
-            <view class="add-icon">+</view>
+            <view class="icon-camera"></view>
+            <text class="add-text">添加图片</text>
         </view>
     </view>
   </view>
 
-  <view class="footer">
-    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">提交申请</button>
+  <view class="safe-bottom-space"></view>
+
+  <view class="footer-bar safe-bottom">
+    <button class="submit-btn {{(!orderNo || !type || !description) ? 'disabled' : ''}}" bindtap="onSubmit" disabled="{{submitting}}">
+        <text>提交申请</text>
+    </button>
   </view>
 </view>

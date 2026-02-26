@@ -10,7 +10,6 @@ import {
 } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import Edit from 'lucide-react/dist/esm/icons/edit';
-import Eye from 'lucide-react/dist/esm/icons/eye';
 import Ban from 'lucide-react/dist/esm/icons/ban';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { Badge } from '@/shared/ui/badge';

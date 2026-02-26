@@ -1,5 +1,5 @@
 import { db } from "@/shared/api/db";
-import { leads, orders, users, quotes, leadStatusEnum, orderStatusEnum } from "@/shared/api/schema";
+import { leads, orders, users, quotes } from "@/shared/api/schema";
 import { count, sum, eq, desc, and, gte, lte, sql, type AnyColumn } from "drizzle-orm";
 
 export interface DateRange {

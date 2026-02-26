@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import * as fs from 'fs';
 import * as path from 'path';
 import { globSync } from 'glob';
@@ -39,7 +39,7 @@ function scanAnyTypes() {
 }
 
 // @ts-ignore - Reserved for individual invocation where interactive CI output is preferred
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function checkAuditLevel() {
     console.info('🔍 Running NPM Audit for High/Critical vulnerabilities...');
     try {

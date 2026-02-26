@@ -1,31 +1,83 @@
-<view class="landing-container">
-  <swiper class="hero-swiper" indicator-dots="{{true}}" indicator-color="rgba(212, 175, 55, 0.3)" indicator-active-color="#D4AF37" autoplay interval="4000" circular>
-    <swiper-item>
-        <view class="slide">
-            <text class="slide-title">L2C 指挥官</text>
-            <text class="slide-subtitle">窗帘全流程管理专家</text>
-        </view>
-    </swiper-item>
-    <swiper-item>
-        <view class="slide">
-            <text class="slide-title">高效协作</text>
-            <text class="slide-subtitle">重塑您的业务流转</text>
-        </view>
-    </swiper-item>
-  </swiper>
-  
-  <view class="intro">
-    <view class="intro-text-row">
-        连接 <text class="intro-highlight">租户</text> · <text class="intro-highlight">员工</text> · <text class="intro-highlight">客户</text>
-    </view>
-    <view class="intro-text-row">一站式数字化尊享体验</view>
+<!--pages/landing/landing.wxml-->
+<view class="container landing-page">
+  <!-- 顶部 Logo 栏 -->
+  <view class="navbar">
+    <text class="brand-text">L2C</text>
   </view>
 
-  <view class="actions">
-    <button class="btn-primary" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">微信尊享登录</button>
-    <view class="link" bindtap="handlePasswordLogin">已有账号？密码登录</view>
-    <view class="link" bindtap="handleCreateTenant">我是商家，创建企业 ></view>
-    <!-- 开发模式入口 - 正式上线需移除 -->
-    <view class="dev-login" bindtap="devLogin">🔧 开发模式 (跳过登录)</view>
+  <!-- 第 1 幕：Hero 区域 (轮播) -->
+  <view class="hero-section">
+    <view class="hero-bg">
+      <view class="circle-blue"></view>
+      <view class="circle-indigo"></view>
+    </view>
+    
+    <swiper class="hero-swiper" autoplay circular interval="5000" bindchange="onSwiperChange">
+      <block wx:for="{{carouselItems}}" wx:key="id">
+        <swiper-item class="hero-slide animate-fade-in">
+          <view class="slide-content">
+            <view class="slide-title">{{item.title}}</view>
+            <view class="slide-subtitle">{{item.subtitle}}</view>
+            
+            <button class="btn-primary cta-btn" bindtap="goToRegister">
+              让窗帘生意更简单
+              <text class="arrow">→</text>
+            </button>
+            <view class="btn-secondary learn-more" bindtap="scrollToFeatures">了解更多</view>
+          </view>
+        </swiper-item>
+      </block>
+    </swiper>
+    
+    <!-- 自定义轮播指示点 -->
+    <view class="custom-dots">
+      <block wx:for="{{carouselItems}}" wx:key="id">
+        <view class="dot {{currentSlide === index ? 'active' : ''}}"></view>
+      </block>
+    </view>
   </view>
+
+  <!-- 第 2 幕：核心价值主张 (Value Proposition) -->
+  <view class="value-prop section bg-white">
+    <view class="vp-header">
+      <view class="vp-badge">核心优势</view>
+      <view class="vp-title">为什么选择 L2C？</view>
+    </view>
+    
+    <view class="vp-grid">
+      <view class="vp-card">
+        <view class="vp-icon blue">⚡</view>
+        <view class="vp-card-title">极速开单</view>
+        <view class="vp-card-desc">告别手写单据，3分钟生成专业报价单发送客户</view>
+      </view>
+      <view class="vp-card">
+        <view class="vp-icon purple">📊</view>
+        <view class="vp-card-title">业绩看板</view>
+        <view class="vp-card-desc">实时掌握店铺营收、利润率，数据驱动决策</view>
+      </view>
+      <view class="vp-card">
+        <view class="vp-icon green">🤝</view>
+        <view class="vp-card-title">客户跟进</view>
+        <view class="vp-card-desc">线索管理不遗漏，精准把握成交战机</view>
+      </view>
+      <view class="vp-card">
+        <view class="vp-icon orange">🛠️</view>
+        <view class="vp-card-title">工程协同</view>
+        <view class="vp-card-desc">安装师傅接单打卡，进度实时同步</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 第 3 幕：行动号召 (CTA Footer) -->
+  <view class="cta-section">
+    <view class="cta-content">
+      <view class="cta-title">准备好提升业绩了吗？</view>
+      <view class="cta-desc">加入数百家优秀门店，立即开启免费体验。</view>
+      
+      <button class="btn-primary" bindtap="goToRegister">免费注册，开箱即用</button>
+      <view class="login-link" bindtap="goToLogin">已有账号？去登录</view>
+    </view>
+  </view>
+  
+  <view class="copyright">© 2026 L2C.ASIA 全版权所有</view>
 </view>

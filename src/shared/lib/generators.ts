@@ -1,6 +1,6 @@
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, like, desc } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 import { format } from 'date-fns';
 
 export async function generateOrderNo(tenantId: string): Promise<string> {

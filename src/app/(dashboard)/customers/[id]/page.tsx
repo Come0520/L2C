@@ -24,226 +24,251 @@ import { CustomerActivitiesSection } from '@/features/customers/components/Custo
 
 export const revalidate = 60;
 
-export default async function CustomerDetailPage({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
-    const [session, resolvedParams] = await Promise.all([
-        auth(),
-        params
-    ]);
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [session, resolvedParams] = await Promise.all([auth(), params]);
 
-    const userId = session?.user?.id;
-    const tenantId = session?.user?.tenantId;
-    const userRole = session?.user?.role || 'USER';
+  const userId = session?.user?.id;
+  const tenantId = session?.user?.tenantId;
+  const userRole = session?.user?.role || 'USER';
 
-    if (!userId || !tenantId) {
-        redirect('/auth/login');
-    }
-    const customer = await getCustomerDetail(resolvedParams.id);
+  if (!userId || !tenantId) {
+    redirect('/auth/login');
+  }
+  const customer = await getCustomerDetail(resolvedParams.id);
 
-    if (!customer) {
-        notFound();
-    }
+  if (!customer) {
+    notFound();
+  }
 
-    // 权限检查：ADMIN/MANAGER 可查看，或者销售查看自己归属的客户
-    const canViewFull = userRole === 'ADMIN' || userRole === 'MANAGER' || customer.assignedSalesId === userId;
+  // 权限检查：ADMIN/MANAGER 可查看，或者销售查看自己归属的客户
+  const canViewFull =
+    userRole === 'ADMIN' || userRole === 'MANAGER' || customer.assignedSalesId === userId;
 
-    const handleViewPhone = async (customerId: string) => {
-        'use server';
-        await logPhoneView({
-            customerId,
-        });
-    };
+  const handleViewPhone = async (customerId: string) => {
+    'use server';
+    await logPhoneView({
+      customerId,
+    });
+  };
 
-    // eslint-disable-next-line react-hooks/purity
-    const now = Date.now(); // 获取当前服务器时间用于计算距上单天数 (Impure but safe in RSC for this use case)
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now(); // 获取当前服务器时间用于计算距上单天数 (Impure but safe in RSC for this use case)
 
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-                <nav className="text-sm text-gray-500">
-                    <Link href="/customers" className="hover:text-gray-700 transition-colors">客户管理</Link>
-                    <span className="mx-2">/</span>
-                    <span className="text-gray-700">客户详情</span>
-                </nav>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                            {customer.name}
-                            <Badge variant={
-                                customer.level === 'A' ? 'default' :
-                                    customer.level === 'B' ? 'secondary' : 'outline'
-                            } className={
-                                customer.level === 'A' ? 'bg-yellow-500 hover:bg-yellow-600' : ''
-                            }>
-                                {customer.level}级
-                            </Badge>
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-1">客户编号: {customer.customerNo}</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <MergeCustomerDialog
-                            targetCustomer={customer}
-                            userId={userId}
-                            trigger={
-                                <Button variant="outline">
-                                    合并客户
-                                </Button>
-                            }
-                        />
-                        <EditCustomerDialog
-                            customer={customer}
-                            trigger={
-                                <Button variant="outline">
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    编辑资料
-                                </Button>
-                            }
-                        />
-                        <Button>
-                            <Link href={`/leads/new?customerId=${customer.id}`} className="flex items-center">
-                                新建线索
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left: Info */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Basic Info */}
-                    <Card>
-                        <CardHeader title="基础信息" className="border-b pb-4 mb-4" />
-                        <CardContent>
-                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
-                                <div>
-                                    <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                                        <Phone className="h-4 w-4" /> 手机号
-                                    </dt>
-                                    <dd className="mt-1 text-sm text-gray-900">
-                                        <MaskedPhone
-                                            phone={customer.phone}
-                                            customerId={customer.id}
-                                            canViewFull={canViewFull}
-                                            onViewFull={handleViewPhone}
-                                            showCallButton={true}
-                                        />
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                                        <MessageSquare className="h-4 w-4" /> 微信号
-                                    </dt>
-                                    <dd className="mt-1 text-sm text-gray-900">{customer.wechat || '-'}</dd>
-                                </div>
-                                <div className="sm:col-span-2">
-                                    <dt className="text-sm font-medium text-gray-500">备注</dt>
-                                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-2 rounded">
-                                        {customer.notes || '暂无备注'}
-                                    </dd>
-                                </div>
-                            </dl>
-                        </CardContent>
-                    </Card>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <Card>
-                            <CardContent className="pt-6 text-center">
-                                <div className="text-2xl font-bold">¥{Number(customer.totalAmount || 0).toLocaleString()}</div>
-                                <div className="text-sm text-gray-500 mt-1">累计交易额</div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardContent className="pt-6 text-center">
-                                <div className="text-2xl font-bold">{customer.totalOrders}</div>
-                                <div className="text-sm text-gray-500 mt-1">累计订单数</div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardContent className="pt-6 text-center">
-                                <div className="text-2xl font-bold">
-                                    {customer.lastOrderAt ? Math.floor((now - new Date(customer.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24)) : '-'}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">距上单天数</div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <Tabs defaultValue="activities">
-                        <TabsList>
-                            <TabsTrigger value="activities">跟进记录</TabsTrigger>
-                            <TabsTrigger value="addresses">地址管理</TabsTrigger>
-
-                            <TabsTrigger value="referrals">转介绍 ({customer.referrals?.length || 0})</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="activities" className="mt-4">
-                            <CustomerActivitiesSection customerId={customer.id} />
-                        </TabsContent>
-                        <TabsContent value="addresses" className="mt-4">
-                            <CustomerAddressList
-                                addresses={customer.addresses || []}
-                                customerId={customer.id}
-                                tenantId={tenantId}
-                            />
-                        </TabsContent>
-
-                        <TabsContent value="referrals" className="mt-4">
-                            <div className="space-y-2">
-                                {(customer.referrals?.length || 0) > 0 ? (
-                                    customer.referrals!.map((ref: { id: string; name: string; customerNo: string; createdAt: Date | null }) => (
-                                        <div key={ref.id} className="flex justify-between items-center p-3 border rounded bg-white">
-                                            <div className="flex flex-col">
-                                                <Link href={`/customers/${ref.id}`} className="font-medium text-blue-600 hover:underline">
-                                                    {ref.name}
-                                                </Link>
-                                                <span className="text-xs text-gray-500">{ref.customerNo}</span>
-                                            </div>
-                                            <div className="text-sm text-gray-500">
-                                                {ref.createdAt ? formatDate(ref.createdAt) : '-'}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-4 text-gray-500">暂无转介绍记录</div>
-                                )}
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                </div>
-
-                {/* Right: Side Info */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader title="系统信息" className="text-sm text-gray-500 uppercase tracking-wider" />
-                        <CardContent className="space-y-3 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">创建时间</span>
-                                <span className="text-gray-900">{customer.createdAt ? formatDate(customer.createdAt) : '-'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">创建人</span>
-                                <span className="text-gray-900">{customer.creator?.name || '系统'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">归属销售</span>
-                                <span className="text-gray-900">{customer.assignedSales?.name || '未分配'}</span>
-                            </div>
-                            {customer.referrer && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500">推荐人</span>
-                                    <Link href={`/customers/${customer.referrer.id}`} className="text-blue-600 hover:underline">
-                                        {customer.referrer.name}
-                                    </Link>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <nav className="text-sm text-gray-500">
+          <Link href="/customers" className="transition-colors hover:text-gray-700">
+            客户管理
+          </Link>
+          <span className="mx-2">/</span>
+          <span className="text-gray-700">客户详情</span>
+        </nav>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+              {customer.name}
+              <Badge
+                variant={
+                  customer.level === 'A'
+                    ? 'default'
+                    : customer.level === 'B'
+                      ? 'secondary'
+                      : 'outline'
+                }
+                className={customer.level === 'A' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+              >
+                {customer.level}级
+              </Badge>
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">客户编号: {customer.customerNo}</p>
+          </div>
+          <div className="flex gap-2">
+            <MergeCustomerDialog
+              targetCustomer={customer}
+              userId={userId}
+              trigger={<Button variant="outline">合并客户</Button>}
+            />
+            <EditCustomerDialog
+              customer={customer}
+              trigger={
+                <Button variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  编辑资料
+                </Button>
+              }
+            />
+            <Button>
+              <Link href={`/leads/new?customerId=${customer.id}`} className="flex items-center">
+                新建线索
+              </Link>
+            </Button>
+          </div>
         </div>
-    );
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left: Info */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Basic Info */}
+          <Card>
+            <CardHeader title="基础信息" className="mb-4 border-b pb-4" />
+            <CardContent>
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                  <dt className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                    <Phone className="h-4 w-4" /> 手机号
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    <MaskedPhone
+                      phone={customer.phone}
+                      customerId={customer.id}
+                      canViewFull={canViewFull}
+                      onViewFull={handleViewPhone}
+                      showCallButton={true}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                    <MessageSquare className="h-4 w-4" /> 微信号
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">{customer.wechat || '-'}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-sm font-medium text-gray-500">备注</dt>
+                  <dd className="mt-1 rounded bg-gray-50 p-2 text-sm whitespace-pre-wrap text-gray-900">
+                    {customer.notes || '暂无备注'}
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold">
+                  ¥{Number(customer.totalAmount || 0).toLocaleString()}
+                </div>
+                <div className="mt-1 text-sm text-gray-500">累计交易额</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold">{customer.totalOrders}</div>
+                <div className="mt-1 text-sm text-gray-500">累计订单数</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold">
+                  {customer.lastOrderAt
+                    ? Math.floor(
+                        (now - new Date(customer.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24)
+                      )
+                    : '-'}
+                </div>
+                <div className="mt-1 text-sm text-gray-500">距上单天数</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs defaultValue="activities">
+            <TabsList>
+              <TabsTrigger value="activities">跟进记录</TabsTrigger>
+              <TabsTrigger value="addresses">地址管理</TabsTrigger>
+
+              <TabsTrigger value="referrals">
+                转介绍 ({customer.referrals?.length || 0})
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="activities" className="mt-4">
+              <CustomerActivitiesSection customerId={customer.id} />
+            </TabsContent>
+            <TabsContent value="addresses" className="mt-4">
+              <CustomerAddressList
+                addresses={customer.addresses || []}
+                customerId={customer.id}
+                tenantId={tenantId}
+              />
+            </TabsContent>
+
+            <TabsContent value="referrals" className="mt-4">
+              <div className="space-y-2">
+                {(customer.referrals?.length || 0) > 0 ? (
+                  customer.referrals!.map(
+                    (ref: {
+                      id: string;
+                      name: string;
+                      customerNo: string;
+                      createdAt: Date | null;
+                    }) => (
+                      <div
+                        key={ref.id}
+                        className="flex items-center justify-between rounded border bg-white p-3"
+                      >
+                        <div className="flex flex-col">
+                          <Link
+                            href={`/customers/${ref.id}`}
+                            className="font-medium text-blue-600 hover:underline"
+                          >
+                            {ref.name}
+                          </Link>
+                          <span className="text-xs text-gray-500">{ref.customerNo}</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {ref.createdAt ? formatDate(ref.createdAt) : '-'}
+                        </div>
+                      </div>
+                    )
+                  )
+                ) : (
+                  <div className="py-4 text-center text-gray-500">暂无转介绍记录</div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right: Side Info */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader
+              title="系统信息"
+              className="text-sm tracking-wider text-gray-500 uppercase"
+            />
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">创建时间</span>
+                <span className="text-gray-900">
+                  {customer.createdAt ? formatDate(customer.createdAt) : '-'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">创建人</span>
+                <span className="text-gray-900">{customer.creator?.name || '系统'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">归属销售</span>
+                <span className="text-gray-900">{customer.assignedSales?.name || '未分配'}</span>
+              </div>
+              {customer.referrer && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">推荐人</span>
+                  <Link
+                    href={`/customers/${customer.referrer.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {customer.referrer.name}
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }

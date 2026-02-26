@@ -1,69 +1,52 @@
-<!--pages/showroom/detail/index.wxml-->
+<!-- pages/showroom/detail/index.wxml -->
 <view class="container">
-  <!-- 沉浸式主图画廊 -->
+  <!-- Hero Image -->
   <view class="gallery-section">
     <image class="hero-image" src="{{product.image}}" mode="aspectFill"></image>
     <view class="gallery-overlay"></view>
-    
-    <!-- 顶部导航栏 (模拟) -->
-    <view class="nav-bar">
-        <view class="back-btn" bindtap="goBack">
-            <text class="back-icon">←</text>
-            <text class="back-text">BACK</text>
+  </view>
+
+  <!-- Info Card -->
+  <view class="info-card animate-slide-up">
+    <view class="header">
+        <view class="title">{{product.title}}</view>
+        <view class="subtitle">{{product.style || 'Art Deco Collection'}} / {{product.color || 'Classic'}}</view>
+    </view>
+
+    <view class="divider"></view>
+
+    <view class="specs">
+        <view class="spec-row">
+            <text class="label">材质 MATERIAL</text>
+            <text class="value">{{product.material || 'Premium Fabric'}}</text>
         </view>
+        <view class="spec-row">
+            <text class="label">工艺 CRAFT</text>
+            <text class="value">{{product.craft || 'Handmade'}}</text>
+        </view>
+        <view class="spec-row">
+            <text class="label">编号 NO.</text>
+            <text class="value">{{product.sku || '89757'}}</text>
+        </view>
+    </view>
+
+    <view class="price-box">
+        <text class="currency">¥</text>
+        <text class="amount">{{product.priceInt || '0'}}</text>
+        <text class="unit">/米</text>
     </view>
   </view>
 
-  <!-- 铭牌信息卡 -->
-  <view class="info-plaque animate-slide-up">
-    <!-- 装饰角标 -->
-    <view class="corner tl"></view>
-    <view class="corner tr"></view>
-    <view class="corner bl"></view>
-    <view class="corner br"></view>
-
-    <view class="plaque-content">
-        <view class="header">
-            <view class="title">{{product.title}}</view>
-            <view class="subtitle">{{product.style || 'Art Deco Collection'}} / {{product.color || 'Classic'}}</view>
-        </view>
-
-        <view class="divider-gold"></view>
-
-        <view class="specs">
-            <view class="spec-row">
-                <text class="label">材质 MATERIAL</text>
-                <text class="value">{{product.material || 'Premium Fabric'}}</text>
-            </view>
-            <view class="spec-row">
-                <text class="label">工艺 CRAFT</text>
-                <text class="value">{{product.craft || 'Handmade'}}</text>
-            </view>
-            <view class="spec-row">
-                <text class="label">编号 NO.</text>
-                <text class="value">{{product.sku || '89757'}}</text>
-            </view>
-        </view>
-
-        <view class="price-box">
-            <text class="currency">¥</text>
-            <text class="amount">{{product.priceInt || '0'}}</text>
-            <text class="unit">/米</text>
-        </view>
-    </view>
-  </view>
-
-  <!-- 详情内容区 -->
+  <!-- Content Section -->
   <view class="detail-content animate-slide-up" style="animation-delay: 0.1s;">
       <view class="section-title">
           <text>藏品详情</text>
-          <view class="line"></view>
       </view>
       <view class="desc-text">
           {{product.description || '甄选全球顶级面料，融合现代工艺与经典美学。每一次触碰，都是对品质生活的致敬。'}}
       </view>
       
-      <!-- 更多图片 -->
+      <!-- More Images -->
       <view class="more-images">
           <block wx:for="{{[1,2]}}" wx:key="*this">
             <view class="image-frame">
@@ -73,16 +56,17 @@
       </view>
   </view>
 
-  <!-- 底部操作栏 -->
+  <!-- Action Bar -->
   <view class="action-bar safe-bottom">
       <button class="action-btn share" open-type="share">
-          <image src="/assets/icons/share-active.svg" class="btn-icon" />
+          <text class="btn-icon">🔗</text>
           <text>分享</text>
       </button>
       <button class="action-btn contact" bindtap="handleContact">
+          <text class="btn-icon">💬</text>
           <text>咨询顾问</text>
       </button>
-      <button class="action-btn primary" bindtap="handleAddToQuote">
+      <button class="action-btn-primary" bindtap="handleAddToQuote">
           <text>加入报价</text>
       </button>
   </view>

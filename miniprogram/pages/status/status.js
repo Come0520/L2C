@@ -71,7 +71,7 @@ Page({
      * 跳转到邀请页
      */
     goToInvite() {
-        wx.switchTab({ url: '/pages/invite/invite' });
+        wx.navigateTo({ url: '/pages/invite/invite' });
     },
     /**
      * 跳转到注册页
@@ -118,4 +118,4 @@ Page({
         });
     },
 });
-export {};
+export { };

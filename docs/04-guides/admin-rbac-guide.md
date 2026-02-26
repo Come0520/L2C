@@ -5,6 +5,7 @@
 系统采用标准的 **基于角色的访问控制 (RBAC)** 模型，并结合多租户隔离机制。
 
 ### 核心概念
+
 - **Permission**: 原子操作权限（如 `lead.view`）。
 - **Role**: 权限集合的载体。
 - **User**: 关联一个特定角色，并在 `tenantId` 维度下隔离。
@@ -27,6 +28,7 @@ graph LR
 策略引擎允许在 RBAC 基础上实施更精细的 **ABAC (基于属性的访问控制)** 逻辑。
 
 ### 编写自定义策略
+
 实现 `PolicyRule` 接口：
 
 ```typescript
@@ -39,11 +41,12 @@ export const IpWhitelistPolicy: PolicyRule = {
       return { allowed: false, reason: '当前 IP 不在白名单内' };
     }
     return { allowed: true };
-  }
+  },
 };
 ```
 
 ### 注册策略
+
 在 `PolicyEngine.registerRule()` 中注册。
 
 ## 4. 速率限制与配额
@@ -54,6 +57,7 @@ export const IpWhitelistPolicy: PolicyRule = {
 ## 5. 审计日志 (Audit Log)
 
 所有 `admin` 模块的写操作 **必须** 通过 `AuditService.log` 记录：
+
 - `oldValues`: 变更前的状态。
 - `newValues`: 变更后的内容。
 - 关键字段必须包含 `tableName` 和 `recordId`。

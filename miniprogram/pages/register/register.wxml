@@ -20,7 +20,7 @@
             <view class="header-desc">创建您的企业，开启数字化管理</view>
         </view>
 
-        <view class="glass-card form-card animate-slide-up">
+        <view class="form-card animate-slide-up">
         <form bindsubmit="onSubmit">
             <!-- 企业名称 -->
             <view class="form-group">
@@ -30,7 +30,7 @@
             </view>
             <view class="input-wrapper">
                 <input 
-                class="glass-input" 
+                class="form-input" 
                 name="companyName"
                 placeholder="请输入企业全称"
                 placeholder-class="input-placeholder"
@@ -49,7 +49,7 @@
             </view>
             <view class="input-wrapper">
                 <input 
-                class="glass-input" 
+                class="form-input" 
                 name="applicantName"
                 placeholder="您的姓名"
                 placeholder-class="input-placeholder"
@@ -68,7 +68,7 @@
             </view>
             <view class="input-wrapper">
                 <input 
-                class="glass-input" 
+                class="form-input" 
                 name="phone"
                 type="number"
                 placeholder="11位手机号"
@@ -89,7 +89,7 @@
             </view>
             <picker mode="region" bindchange="onRegionChange" value="{{regionValue}}">
                 <view class="input-wrapper picker-wrapper">
-                <view class="glass-input picker-value {{form.region ? '' : 'placeholder'}}">
+                <view class="form-input picker-value {{form.region ? '' : 'placeholder'}}">
                     {{form.region || '请选择省市区'}}
                 </view>
                 <text class="picker-arrow">▼</text>
@@ -105,7 +105,7 @@
             </view>
             <view class="input-wrapper">
                 <input 
-                class="glass-input" 
+                class="form-input" 
                 name="password"
                 type="text"
                 password="{{true}}"
@@ -120,7 +120,7 @@
              <view class="form-group">
                 <view class="input-wrapper">
                     <input 
-                    class="glass-input" 
+                    class="form-input" 
                     name="confirmPassword"
                     type="text"
                     password="{{true}}"
@@ -135,11 +135,10 @@
 
             <!-- 提交按钮 -->
             <button 
-            class="submit-btn" 
+            class="submit-btn btn-primary" 
             form-type="submit"
             loading="{{submitting}}"
             disabled="{{submitting}}"
-            hover-class="submit-btn-hover"
             >
             <text wx:if="{{!submitting}}">提交入驻申请</text>
             <text wx:else>提交中...</text>
@@ -151,34 +150,33 @@
     <!-- Tab 1: Join Tenant -->
     <block wx:if="{{currentTab === 1}}">
         <view class="page-header animate-fade-in">
-             <view class="header-icon"><image src="/assets/icons/handshake-active.svg" style="width:64rpx;height:64rpx;"/></view>
-            <view class="header-desc">输入邀请码，加入现有团队/租户</view>
+             <view class="header-icon">🤝</view>
+            <view class="header-desc">输入邀请码，加入现有团队</view>
         </view>
 
-        <view class="glass-card form-card animate-slide-up">
+        <view class="form-card animate-slide-up">
             <view class="form-group">
             <view class="form-label">
                 <text class="label-text">邀请码</text>
             </view>
             <view class="input-wrapper">
                 <input 
-                class="glass-input invite-input" 
-                placeholder="请输入 6 位邀请码"
+                class="form-input invite-input" 
+                placeholder="输入 6 位邀请码"
                 placeholder-class="input-placeholder"
                 value="{{inviteCode}}"
                 bindinput="onInviteCodeInput"
                 maxlength="6"
-                type="number"
+                type="text"
                 />
             </view>
             </view>
 
             <button 
-            class="submit-btn join-btn" 
+            class="submit-btn btn-primary join-btn" 
             bindtap="onJoinSubmit"
             loading="{{submitting}}"
             disabled="{{submitting}}"
-            hover-class="submit-btn-hover"
             >
             <text wx:if="{{!submitting}}">立即加入</text>
             <text wx:else>验证中...</text>
@@ -188,7 +186,7 @@
     
     <!-- 返回登录 -->
     <view class="back-link" bindtap="goBack">
-    <text class="back-text">返回</text>
+      <text class="back-text">返回登录</text>
     </view>
 
     <!-- 底部留白 -->

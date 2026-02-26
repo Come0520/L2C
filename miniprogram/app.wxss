@@ -1,161 +1,272 @@
 /**
- * L2C 小程序全局样式 - Art Deco / 盖茨比奢华版
+ * L2C 小程序全局样式 - 简洁专业版
+ * 与 Web 落地页统一的蓝紫渐变设计系统
  */
 
-/* Art Deco Theme Definition */
+/* ========== 设计令牌 (Design Tokens) ========== */
 page {
-  /* 品牌色 - 盖茨比金 (Gatsby Gold) */
-  --gold-primary: #D4AF37; /* 经典复古金 */
-  --gold-light: #F2D091;   /* 香槟金 - 高光 */
-  --gold-dark: #AA8A28;    /* 暗金 - 阴影 */
-  
-  /* 辅助色 */
-  --obsidian-black: #050505; /* 曜石黑 */
-  --charcoal-black: #121212; /* 炭黑 - 卡片背景 */
-  --rich-black: #0F0F0F;     /* 丰富黑 */
-  
-  /* 状态色 - 降低饱和度以匹配复古感 */
-  --status-success: #059669; /* 祖母绿 */
-  --status-warning: #D97706; /* 琥珀色 */
-  --status-danger: #9F1239;  /* 宝石红 */
-  
+  /* 品牌色 - 蓝紫渐变系 (与落地页一致) */
+  --brand-primary: #2563EB;    /* blue-600 主色 */
+  --brand-indigo: #4F46E5;     /* indigo-600 渐变终点 */
+  --brand-light: #EFF6FF;      /* blue-50 浅底色 */
+  --brand-hover: #1D4ED8;      /* blue-700 悬浮态 */
+  --brand-100: #DBEAFE;        /* blue-100 */
+
+  /* 页面 & 卡片 */
+  --bg-page: #F8FAFC;          /* slate-50 页面底色 */
+  --bg-card: #FFFFFF;          /* 卡片底色 */
+  --bg-section: #F3F4F6;       /* gray-100 分区底色 */
+
   /* 文字 */
-  --text-main: #E2E8F0;      /* 铂金灰 */
-  --text-muted: #94A3B8;     /* 哑光灰 */
-  --text-gold: #F2D091;      /* 金色文字 */
-  
-  /* 背景 */
-  --bg-page: var(--obsidian-black);
-  --bg-card: rgba(18, 18, 18, 0.95);
-  
-  /* 装饰性渐变 */
-  --deco-gradient: linear-gradient(135deg, #D4AF37 0%, #F2D091 50%, #AA8A28 100%);
-  --deco-border: 1rpx solid rgba(212, 175, 55, 0.3);
-  
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --text-heading: #111827;     /* gray-900 标题 */
+  --text-body: #4B5563;        /* gray-600 正文 */
+  --text-muted: #9CA3AF;       /* gray-400 辅助 */
+  --text-placeholder: #D1D5DB; /* gray-300 占位 */
+
+  /* 边框 */
+  --border-main: #E5E7EB;      /* gray-200 */
+  --border-light: #F3F4F6;     /* gray-100 */
+
+  /* 状态色 */
+  --status-success: #16A34A;   /* green-600 */
+  --status-warning: #EAB308;   /* yellow-500 */
+  --status-danger: #DC2626;    /* red-600 */
+  --status-info: #2563EB;      /* blue-600 */
+
+  /* 间距 */
+  --spacing-xs: 8rpx;
+  --spacing-sm: 16rpx;
+  --spacing-md: 24rpx;
+  --spacing-lg: 32rpx;
+  --spacing-xl: 48rpx;
+
+  /* 圆角 */
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  --radius-full: 999rpx;
+
+  /* 全局字体 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 28rpx;
-  color: var(--text-main);
+  color: var(--text-body);
   background-color: var(--bg-page);
   line-height: 1.6;
-  letter-spacing: 1rpx; /* 增加字间距，提升高级感 */
 }
 
-/* 容器 */
+/* ========== 容器 ========== */
 .container {
   min-height: 100vh;
   box-sizing: border-box;
   background-color: var(--bg-page);
-  /* 装饰纹理建议在各页面单独添加，避免全局污染 */
+  padding: 0 var(--spacing-lg);
 }
 
-/* Art Deco Card (装饰艺术卡片) */
-.card, .deco-card {
+/* ========== 卡片 ========== */
+.card {
   background: var(--bg-card);
-  border: 1rpx solid rgba(212, 175, 55, 0.3); /* 金色细边框 */
-  border-radius: 8rpx; /* 较小的圆角，更硬朗 */
-  padding: 40rpx;
-  margin-bottom: 40rpx;
-  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.8);
-  position: relative;
-  /* 双线边框效果 - 通过 inset shadow 模拟 */
-  box-shadow: 
-    0 10rpx 30rpx rgba(0, 0, 0, 0.8),
-    inset 0 0 0 2rpx rgba(212, 175, 55, 0.1); 
+  border: 1rpx solid var(--border-main);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
-/* 装饰性角标 (Corner Ornaments) */
-.deco-card::before, .deco-card::after {
-    content: '';
-    position: absolute;
-    width: 20rpx;
-    height: 20rpx;
-    border: 2rpx solid var(--gold-primary);
-    transition: all 0.3s ease;
-}
-
-.deco-card::before {
-    top: -2rpx; left: -2rpx;
-    border-right: none;
-    border-bottom: none;
-}
-
-.deco-card::after {
-    bottom: -2rpx; right: -2rpx;
-    border-left: none;
-    border-top: none;
-}
-
-/* 按钮 - 奢华质感 */
-.btn-primary, .btn-gold {
-  background: linear-gradient(180deg, #F2D091 0%, #D4AF37 100%);
-  color: #0F0F0F;
+/* ========== 按钮 ========== */
+.btn-primary {
+  background: var(--brand-primary);
+  color: #FFFFFF;
   border: none;
-  border-radius: 4rpx; /* 微圆角 */
-  font-weight: bold;
-  letter-spacing: 2rpx;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 30rpx;
   padding: 24rpx 0;
-  box-shadow: 
-    0 4rpx 12rpx rgba(212, 175, 55, 0.3),
-    inset 0 1rpx 0 rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::after {
-    /* 金属光泽扫光动画 */
-    content: '';
-    position: absolute;
-    top: 0; left: -100%;
-    width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    animation: none;
+  text-align: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
 }
 
 .btn-primary:active {
-  opacity: 0.95;
+  background: var(--brand-hover);
   transform: translateY(2rpx);
-  box-shadow: 0 2rpx 6rpx rgba(212, 175, 55, 0.2);
+  box-shadow: 0 2rpx 6rpx rgba(37, 99, 235, 0.15);
 }
 
 .btn-secondary {
-  background: transparent;
-  color: var(--gold-primary);
-  border: 1rpx solid var(--gold-primary);
-  border-radius: 4rpx;
+  background: var(--bg-card);
+  color: var(--text-heading);
+  border: 1rpx solid var(--border-main);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 28rpx;
+  padding: 24rpx 0;
+  text-align: center;
+  transition: all 0.2s ease;
 }
 
-/* 状态徽章 */
+.btn-secondary:active {
+  background: var(--bg-section);
+}
+
+/* ========== 状态徽章 ========== */
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 4rpx 16rpx;
-  border-radius: 4rpx;
+  border-radius: var(--radius-full);
   font-size: 22rpx;
-  font-weight: 600;
-  border: 1rpx solid currentColor;
+  font-weight: 500;
 }
 
-/* 通用工具 */
-.text-gold { color: var(--gold-primary); }
-.text-light { color: var(--gold-light); }
-.bg-gold { background: var(--gold-primary); }
+.badge-success {
+  background: #DCFCE7;
+  color: var(--status-success);
+}
 
-.divider-gold {
+.badge-warning {
+  background: #FEF9C3;
+  color: #A16207;
+}
+
+.badge-danger {
+  background: #FEE2E2;
+  color: var(--status-danger);
+}
+
+.badge-info {
+  background: var(--brand-light);
+  color: var(--brand-primary);
+}
+
+/* ========== 分隔线 ========== */
+.divider {
   height: 1rpx;
-  background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
-  margin: 40rpx 0;
+  background: var(--border-main);
+  margin: var(--spacing-md) 0;
+}
+
+/* ========== 搜索栏 ========== */
+.search-bar {
+  padding: var(--spacing-sm) 0;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1rpx solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: 16rpx 24rpx;
+  gap: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--text-heading);
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+  color: var(--text-muted);
+  font-size: 28rpx;
+}
+
+.empty-img {
+  width: 200rpx;
+  height: 200rpx;
+  margin-bottom: var(--spacing-md);
   opacity: 0.5;
 }
 
-/* Art Deco Pattern Helper */
-.bg-pattern {
-    background-image: 
-      linear-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px);
-    background-size: 40rpx 40rpx;
+/* ========== 加载状态 ========== */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  color: var(--text-muted);
+  font-size: 26rpx;
 }
 
+.load-more, .loading-more, .no-more {
+  text-align: center;
+  padding: 32rpx 0;
+  color: var(--text-muted);
+  font-size: 24rpx;
+}
+
+/* ========== FAB 浮动按钮 ========== */
+.fab-add {
+  position: fixed;
+  right: 40rpx;
+  bottom: 160rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 300;
+  box-shadow: 0 8rpx 24rpx rgba(37, 99, 235, 0.3);
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.fab-add:active, .fab-active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
+}
+
+/* ========== 页面区块标题 ========== */
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin-bottom: var(--spacing-md);
+}
+
+/* ========== 动画 ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  opacity: 0;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* ========== 通用工具 ========== */
+.text-primary { color: var(--brand-primary); }
+.text-heading { color: var(--text-heading); }
+.text-muted { color: var(--text-muted); }
+.bg-brand-light { background: var(--brand-light); }
+
+.mt-16 { margin-top: 16rpx; }
+.mt-24 { margin-top: 24rpx; }
 .mt-32 { margin-top: 32rpx; }
+.mb-16 { margin-bottom: 16rpx; }
+.mb-24 { margin-bottom: 24rpx; }
 .mb-32 { margin-bottom: 32rpx; }
+
+/* ========== 安全区域 ========== */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}

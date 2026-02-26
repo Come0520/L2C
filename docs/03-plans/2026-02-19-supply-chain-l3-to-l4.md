@@ -5,6 +5,7 @@
 **Goal:** 将供应链模块从 L3 (完善期) 升级至 L4 (生产就绪)，综合得分从 5.6 提升到 ≥ 6.5
 
 **Architecture:** 围绕成熟度评估的三个核心短板进行改进：
+
 1. D7 可运维性（3→7）：为所有写操作添加 AuditService 审计日志
 2. D2 代码质量（5→7）：消除组件层 `any` 类型，定义严格 DTO 类型
 3. D3 测试覆盖（5→7）：为拆分引擎等核心模块补充单元测试
@@ -16,6 +17,7 @@
 ## Task 1: 为采购单 (PO) Actions 添加审计日志
 
 **Files:**
+
 - Modify: `src/features/supply-chain/actions/po-actions.ts`
 - Reference: `src/shared/lib/audit-service.ts`
 
@@ -32,9 +34,16 @@ import { AuditService } from '@/shared/lib/audit-service';
 在 PO 创建成功后（`return { id: po.id }` 之前）添加：
 
 ```typescript
-await AuditService.recordFromSession(session, 'purchaseOrders', po.id, 'CREATE', {
-    new: { poNo: po.poNo, supplierId: data.supplierId, totalAmount, status: 'DRAFT' }
-}, tx);
+await AuditService.recordFromSession(
+  session,
+  'purchaseOrders',
+  po.id,
+  'CREATE',
+  {
+    new: { poNo: po.poNo, supplierId: data.supplierId, totalAmount, status: 'DRAFT' },
+  },
+  tx
+);
 ```
 
 **Step 3: 为 `updatePoStatus` 添加审计日志**
@@ -43,9 +52,9 @@ await AuditService.recordFromSession(session, 'purchaseOrders', po.id, 'CREATE',
 
 ```typescript
 await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'UPDATE', {
-    old: { status: oldStatus },
-    new: { status },
-    changed: { status }
+  old: { status: oldStatus },
+  new: { status },
+  changed: { status },
 });
 ```
 
@@ -73,11 +82,13 @@ git commit -m "feat(supply-chain): 为采购单所有写操作添加审计日志
 ## Task 2: 为供应商 Actions 添加审计日志
 
 **Files:**
+
 - Modify: `src/features/supply-chain/actions/supplier-actions.ts`
 
 **Step 1: 引入 AuditService 并为写操作添加审计**
 
 需要覆盖的函数：
+
 - `createSupplierActionInternal` → `AuditService.recordFromSession(session, 'suppliers', supplier.id, 'CREATE')`
 - `updateSupplierActionInternal` → `AuditService.recordFromSession(session, 'suppliers', id, 'UPDATE')`
 
@@ -94,6 +105,7 @@ git commit -m "feat(supply-chain): 为供应商 CRUD 操作添加审计日志"
 ## Task 3: 为发货/库存/加工/规则/产品套件 Actions 添加审计日志
 
 **Files:**
+
 - Modify: `src/features/supply-chain/actions/shipment-actions.ts`
 - Modify: `src/features/supply-chain/actions/inventory-actions.ts`
 - Modify: `src/features/supply-chain/actions/processing-actions.ts`
@@ -104,19 +116,20 @@ git commit -m "feat(supply-chain): 为供应商 CRUD 操作添加审计日志"
 **Step 1: 逐文件添加 AuditService 审计**
 
 每个文件需要：
+
 1. 添加 `import { AuditService } from '@/shared/lib/audit-service';`
 2. 在每个写操作（CREATE/UPDATE/DELETE）成功后追加审计记录
 
 各文件审计要点：
 
-| 文件 | 需审计的函数 | 操作类型 | 表名 |
-|:---|:---|:---|:---|
-| `shipment-actions.ts` | `createShipment`, `updateShipment` | CREATE, UPDATE | `poShipments` |
-| `inventory-actions.ts` | `adjustInventory`, `transferInventory`, `setminStock` | UPDATE | `inventory` |
-| `processing-actions.ts` | `createProcessingOrder`, `updateProcessingOrder`, `updateProcessingOrderStatus` | CREATE, UPDATE | `workOrders` |
-| `rules.ts` | `createSplitRule`, `updateSplitRule`, `deleteSplitRule` | CREATE, UPDATE, DELETE | `splitRouteRules` |
-| `product-bundles.ts` | `createProductBundle`, `updateProductBundle`, `deleteProductBundle` | CREATE, UPDATE, DELETE | `productBundles` |
-| `product-pricing.ts` | 所有定价写操作 | UPDATE | `products` |
+| 文件                    | 需审计的函数                                                                    | 操作类型               | 表名              |
+| :---------------------- | :------------------------------------------------------------------------------ | :--------------------- | :---------------- |
+| `shipment-actions.ts`   | `createShipment`, `updateShipment`                                              | CREATE, UPDATE         | `poShipments`     |
+| `inventory-actions.ts`  | `adjustInventory`, `transferInventory`, `setminStock`                           | UPDATE                 | `inventory`       |
+| `processing-actions.ts` | `createProcessingOrder`, `updateProcessingOrder`, `updateProcessingOrderStatus` | CREATE, UPDATE         | `workOrders`      |
+| `rules.ts`              | `createSplitRule`, `updateSplitRule`, `deleteSplitRule`                         | CREATE, UPDATE, DELETE | `splitRouteRules` |
+| `product-bundles.ts`    | `createProductBundle`, `updateProductBundle`, `deleteProductBundle`             | CREATE, UPDATE, DELETE | `productBundles`  |
+| `product-pricing.ts`    | 所有定价写操作                                                                  | UPDATE                 | `products`        |
 
 **Step 2: 验证编译并提交**
 
@@ -131,6 +144,7 @@ git commit -m "feat(supply-chain): 为所有剩余 actions 添加完整审计日
 ## Task 4: 为核心组件定义严格 Props 类型（消除 `any`）
 
 **Files:**
+
 - Modify: `src/features/supply-chain/components/po-detail.tsx` (L29: `data: any`)
 - Modify: `src/features/supply-chain/components/po-table.tsx` (L18: `data: any[]`)
 - Modify: `src/features/supply-chain/components/inventory-table.tsx` (L18: `data: any[]`)
@@ -149,54 +163,54 @@ git commit -m "feat(supply-chain): 为所有剩余 actions 添加完整审计日
  */
 import type { InferSelectModel } from 'drizzle-orm';
 import type {
-    purchaseOrders,
-    purchaseOrderItems,
-    suppliers,
-    inventory,
-    splitRouteRules,
-    poShipments,
+  purchaseOrders,
+  purchaseOrderItems,
+  suppliers,
+  inventory,
+  splitRouteRules,
+  poShipments,
 } from '@/shared/api/schema';
 
 /** 采购单列表项类型 */
 export type POListItem = InferSelectModel<typeof purchaseOrders> & {
-    supplier?: { name: string; supplierNo: string } | null;
-    items?: POItemDetail[];
+  supplier?: { name: string; supplierNo: string } | null;
+  items?: POItemDetail[];
 };
 
 /** 采购单明细项类型 */
 export type POItemDetail = InferSelectModel<typeof purchaseOrderItems> & {
-    product?: { name: string; sku: string } | null;
+  product?: { name: string; sku: string } | null;
 };
 
 /** 采购单详情完整类型 */
 export type PODetailData = POListItem & {
-    auditLogs?: AuditLogEntry[];
-    payments?: PaymentRecord[];
+  auditLogs?: AuditLogEntry[];
+  payments?: PaymentRecord[];
 };
 
 /** 审计日志条目 */
 export interface AuditLogEntry {
-    id: string;
-    action: string;
-    userId?: string | null;
-    createdAt: Date | string;
-    changedFields?: Record<string, unknown> | null;
-    oldValues?: Record<string, unknown> | null;
-    newValues?: Record<string, unknown> | null;
+  id: string;
+  action: string;
+  userId?: string | null;
+  createdAt: Date | string;
+  changedFields?: Record<string, unknown> | null;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
 }
 
 /** 付款记录 */
 export interface PaymentRecord {
-    id: string;
-    amount: string;
-    paymentMethod: string;
-    paidAt?: Date | string | null;
+  id: string;
+  amount: string;
+  paymentMethod: string;
+  paidAt?: Date | string | null;
 }
 
 /** 库存列表项类型 */
 export type InventoryItem = InferSelectModel<typeof inventory> & {
-    warehouse?: { name: string } | null;
-    product?: { name: string; sku: string } | null;
+  warehouse?: { name: string } | null;
+  product?: { name: string; sku: string } | null;
 };
 
 /** 拆分规则类型 */
@@ -204,8 +218,8 @@ export type SplitRule = InferSelectModel<typeof splitRouteRules>;
 
 /** 发货追踪数据类型 */
 export interface ShipmentTrackingData {
-    status: string;
-    events?: { time: string; description: string }[];
+  status: string;
+  events?: { time: string; description: string }[];
 }
 ```
 
@@ -225,6 +239,7 @@ export interface ShipmentTrackingData {
 常见模式 `resolver: zodResolver(schema) as any` → `resolver: zodResolver(schema) as Resolver<T>`
 
 涉及文件：
+
 - `supplier-form.tsx` (3处)
 - `split-rule-manager.tsx` (2处)
 - `processor-dialog.tsx` (1处)
@@ -245,6 +260,7 @@ git commit -m "refactor(supply-chain): 消除组件层 any 类型，定义严格
 ## Task 5: 为拆分引擎编写单元测试
 
 **Files:**
+
 - Create: `src/features/supply-chain/__tests__/split-engine.test.ts`
 - Reference: `src/features/supply-chain/actions/split-engine.ts` (632行)
 
@@ -256,26 +272,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock 模块
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        select: vi.fn(),
-        insert: vi.fn(),
-        query: { splitRouteRules: { findMany: vi.fn() } },
-        transaction: vi.fn(),
-    }
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    query: { splitRouteRules: { findMany: vi.fn() } },
+    transaction: vi.fn(),
+  },
 }));
 
 describe('拆分引擎 - classifyByProductType', () => {
-    it('应将 FINISHED 类型产品分入成品队列', () => {
-        // 测试 classifyByProductType 函数
-    });
+  it('应将 FINISHED 类型产品分入成品队列', () => {
+    // 测试 classifyByProductType 函数
+  });
 
-    it('应将 CUSTOM 类型产品分入定制品队列', () => {
-        // 测试 CUSTOM 产品路由
-    });
+  it('应将 CUSTOM 类型产品分入定制品队列', () => {
+    // 测试 CUSTOM 产品路由
+  });
 
-    it('空数组应返回两个空队列', () => {
-        // 边界条件
-    });
+  it('空数组应返回两个空队列', () => {
+    // 边界条件
+  });
 });
 ```
 
@@ -283,9 +299,9 @@ describe('拆分引擎 - classifyByProductType', () => {
 
 ```typescript
 describe('拆分引擎 - matchConditionRules', () => {
-    it('应按优先级匹配分类条件规则 (eq)', () => { });
-    it('应正确处理 contains 操作符', () => { });
-    it('无匹配规则时返回 null', () => { });
+  it('应按优先级匹配分类条件规则 (eq)', () => {});
+  it('应正确处理 contains 操作符', () => {});
+  it('无匹配规则时返回 null', () => {});
 });
 ```
 
@@ -293,9 +309,9 @@ describe('拆分引擎 - matchConditionRules', () => {
 
 ```typescript
 describe('拆分引擎 - resolveBySupplierType', () => {
-    it('SUPPLIER 类型应生成 FABRIC PO', () => { });
-    it('PROCESSOR 类型应生成 WO', () => { });
-    it('BOTH 类型应同时生成 PO 和 WO', () => { });
+  it('SUPPLIER 类型应生成 FABRIC PO', () => {});
+  it('PROCESSOR 类型应生成 WO', () => {});
+  it('BOTH 类型应同时生成 PO 和 WO', () => {});
 });
 ```
 
@@ -303,8 +319,8 @@ describe('拆分引擎 - resolveBySupplierType', () => {
 
 ```typescript
 describe('拆分引擎 - groupBySupplierId', () => {
-    it('应按 supplierId + docType + poType 分组', () => { });
-    it('同一供应商不同 docType 应分为不同组', () => { });
+  it('应按 supplierId + docType + poType 分组', () => {});
+  it('同一供应商不同 docType 应分为不同组', () => {});
 });
 ```
 
@@ -328,6 +344,7 @@ git commit -m "test(supply-chain): 为拆分引擎核心算法添加单元测试
 ## Task 6: 补充发货/规则/产品套件操作测试
 
 **Files:**
+
 - Create: `src/features/supply-chain/__tests__/shipment-actions.test.ts`
 - Create: `src/features/supply-chain/__tests__/rules.test.ts`
 - Create: `src/features/supply-chain/__tests__/product-bundles.test.ts`
@@ -336,6 +353,7 @@ git commit -m "test(supply-chain): 为拆分引擎核心算法添加单元测试
 **Step 1: 编写发货操作测试**
 
 覆盖：`createShipment` / `updateShipment` / `getShipments`
+
 - 正常发货流程
 - 状态转换校验（仅 CONFIRMED → SHIPPED）
 - 租户隔离检查
@@ -343,6 +361,7 @@ git commit -m "test(supply-chain): 为拆分引擎核心算法添加单元测试
 **Step 2: 编写规则管理测试**
 
 覆盖：`getSplitRules` / `createSplitRule` / `updateSplitRule` / `deleteSplitRule`
+
 - 规则 CRUD
 - 租户隔离
 - 权限检查
@@ -350,6 +369,7 @@ git commit -m "test(supply-chain): 为拆分引擎核心算法添加单元测试
 **Step 3: 编写产品套件测试**
 
 覆盖：`createProductBundle` / `updateProductBundle` / `deleteProductBundle`
+
 - 套件创建（含明细项）
 - SKU 重复检查
 - 级联删除
@@ -378,6 +398,7 @@ git commit -m "test(supply-chain): 补充发货/规则/套件测试，替换占�
 ## Task 7: 补充核心 Actions 的 JSDoc 注释
 
 **Files:**
+
 - Modify: `src/features/supply-chain/actions/po-actions.ts`
 - Modify: `src/features/supply-chain/actions/inventory-actions.ts`
 - Modify: `src/features/supply-chain/actions/processing-actions.ts`
@@ -431,12 +452,12 @@ npx vitest run src/features/supply-chain/__tests__/
 
 更新 `docs/05-maturity-reports/supply-chain-maturity.md` 中的评分：
 
-| 维度 | 原分 | 目标分 |
-|:---|:---:|:---:|
-| D2 代码质量 | 5 | 7 |
-| D3 测试覆盖 | 5 | 7 |
-| D4 文档完整性 | 4 | 6 |
-| D7 可运维性 | 3 | 7 |
+| 维度          | 原分 | 目标分 |
+| :------------ | :--: | :----: |
+| D2 代码质量   |  5   |   7    |
+| D3 测试覆盖   |  5   |   7    |
+| D4 文档完整性 |  4   |   6    |
+| D7 可运维性   |  3   |   7    |
 
 **Step 4: 最终提交**
 
@@ -451,11 +472,11 @@ git commit -m "chore(supply-chain): L3→L4 升级完成，综合得分 5.6→7.
 
 ### 自动化测试
 
-| 测试类型 | 命令 | 预期结果 |
-|:---|:---|:---|
-| TypeScript 编译 | `npx tsc --noEmit` | 供应链模块零错误 |
-| 供应链单元测试 | `npx vitest run src/features/supply-chain/__tests__/` | 全部通过，≥ 10 个测试文件 |
-| 全局单元测试 | `npx vitest run` | 无回归失败 |
+| 测试类型        | 命令                                                  | 预期结果                  |
+| :-------------- | :---------------------------------------------------- | :------------------------ |
+| TypeScript 编译 | `npx tsc --noEmit`                                    | 供应链模块零错误          |
+| 供应链单元测试  | `npx vitest run src/features/supply-chain/__tests__/` | 全部通过，≥ 10 个测试文件 |
+| 全局单元测试    | `npx vitest run`                                      | 无回归失败                |
 
 ### 人工验证
 

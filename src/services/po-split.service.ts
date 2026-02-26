@@ -4,9 +4,8 @@ import {
     purchaseOrderItems,
     suppliers
 } from "@/shared/api/schema/supply-chain";
-import { products } from "@/shared/api/schema/catalogs";
 import { orders, orderItems } from "@/shared/api/schema/orders";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
 

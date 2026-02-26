@@ -8,7 +8,6 @@ import { revalidatePath } from 'next/cache';
 import { channelSchema, channelContactSchema, ChannelInput, ChannelContactInput } from './schema';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 import { logger } from '@/shared/lib/logger';

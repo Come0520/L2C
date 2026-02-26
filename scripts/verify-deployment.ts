@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import { execSync } from 'child_process';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';

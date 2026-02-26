@@ -1,17 +1,18 @@
 <!--
   登录页
   pages/login/login.wxml
-  审计修复: 添加错误提示区域、密码可见性切换
+  重构：使用全局白/蓝亮色系规范
 -->
 <view class="container">
-  <view class="header">
+  <view class="header animate-slide-up">
     <view class="title">欢迎回来</view>
     <view class="subtitle">登录 L2C 窗帘全流程管理大师</view>
   </view>
 
-  <view class="form-card">
+  <view class="form-card animate-slide-up" style="animation-delay: 0.1s;">
     <!-- 错误提示区域 -->
     <view class="error-banner" wx:if="{{errorMsg}}">
+      <icon type="warn" size="14" color="var(--color-error)"></icon>
       <text class="error-text">{{errorMsg}}</text>
     </view>
 
@@ -50,8 +51,8 @@
     </button>
 
     <view class="link-area">
-      <view class="tips">还没有账号？</view>
-      <view class="link" bindtap="goRegister">立即入驻/加入团队</view>
+      <text class="tips">还没有账号？</text>
+      <text class="link" bindtap="goRegister">立即入驻/加入团队</text>
     </view>
   </view>
 </view>

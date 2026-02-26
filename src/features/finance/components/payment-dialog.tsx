@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import React from 'react';
 /**
  * 财务支付统一入口组件 (Payment Dialog)
  * 

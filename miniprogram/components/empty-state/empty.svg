@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- 底部阴影 -->
+  <ellipse cx="100" cy="170" rx="60" ry="8" fill="#1a1a2e" opacity="0.3"/>
+  <!-- 盒子主体 -->
+  <path d="M60 80 L100 60 L140 80 L140 130 L100 150 L60 130 Z" fill="#2a2a3e" stroke="#3a3a5e" stroke-width="1.5"/>
+  <path d="M100 60 L100 150" stroke="#3a3a5e" stroke-width="1"/>
+  <path d="M60 80 L100 100 L140 80" stroke="#3a3a5e" stroke-width="1"/>
+  <path d="M100 100 L100 150" stroke="#3a3a5e" stroke-width="1"/>
+  <!-- 盒子上方的光效 -->
+  <path d="M80 70 L100 60 L120 70 L100 80 Z" fill="#E6B450" opacity="0.15"/>
+  <!-- 装饰线条 -->
+  <line x1="85" y1="45" x2="95" y2="55" stroke="#E6B450" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+  <line x1="100" y1="40" x2="100" y2="52" stroke="#E6B450" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  <line x1="115" y1="45" x2="105" y2="55" stroke="#E6B450" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+</svg>

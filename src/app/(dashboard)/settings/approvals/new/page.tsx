@@ -36,7 +36,7 @@ export default function NewApprovalFlowPage() {
             } else {
                 toast.error('创建失败');
             }
-        } catch (error) {
+        } catch (_error) {
             toast.error('发生错误');
         } finally {
             setLoading(false);

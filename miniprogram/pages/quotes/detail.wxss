@@ -1,38 +1,24 @@
 /* pages/quotes/detail.wxss */
 
-/* Art Deco Catalogue Theme */
+/* New Clean Theme */
 .container {
   min-height: 100vh;
-  background-color: #0f0f0f;
-  background-image: 
-    radial-gradient(circle at 50% 0%, #2a2a2a 0%, #0f0f0f 70%),
-    repeating-linear-gradient(90deg, rgba(212, 175, 55, 0.02) 0, rgba(212, 175, 55, 0.02) 1px, transparent 1px, transparent 20px);
-  color: #e2e8f0;
-  padding: 40rpx 32rpx;
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  padding: 32rpx;
   box-sizing: border-box;
 }
 
 /* 纸张容器/主边框 */
 .content-wrapper {
-  background: #1a1a1a;
-  border: 4rpx double var(--gold-dark); /* 双层边框 */
-  padding: 4px; /* 间隔为了 inner border */
-  box-shadow: 0 0 40rpx rgba(0,0,0,0.8);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
   position: relative;
 }
 
-/* 内边框装饰 */
-.content-wrapper::before {
-    content: '';
-    position: absolute;
-    top: 10rpx; left: 10rpx; right: 10rpx; bottom: 10rpx;
-    border: 1rpx solid rgba(212, 175, 55, 0.3);
-    pointer-events: none;
-    z-index: 10;
-}
-
 .section {
-  background: transparent;
   padding: 40rpx;
   position: relative;
   z-index: 2;
@@ -41,188 +27,185 @@
 /* 顶部标题区 */
 .quote-info {
     text-align: center;
-    border-bottom: 2rpx dashed var(--gold-dark);
-    margin-bottom: 40rpx;
+    border-bottom: 2rpx dashed var(--border-light);
+    margin-bottom: 0;
     padding-bottom: 40rpx;
 }
 
-.title { 
-    font-size: 48rpx; 
-    font-weight: 900; 
-    color: var(--gold-primary); 
-    text-transform: uppercase;
-    letter-spacing: 8rpx;
+.header-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16rpx;
     margin-bottom: 16rpx;
-    font-family: 'Times New Roman', serif; /* 复古衬线感 */
+}
+
+.title { 
+    font-size: 40rpx; 
+    font-weight: 700; 
+    color: var(--text-heading); 
+    letter-spacing: 2rpx;
 }
 
 /* 状态徽章 */
 .status.tag {
     display: inline-block;
-    padding: 4rpx 24rpx;
-    border: 1rpx solid var(--gold-primary);
-    color: var(--gold-primary);
-    font-size: 24rpx;
-    letter-spacing: 2rpx;
-    margin-bottom: 32rpx;
+    padding: 4rpx 16rpx;
+    border-radius: var(--radius-sm);
+    background: var(--bg-section);
+    color: var(--text-muted);
+    font-size: 22rpx;
+    font-weight: 500;
 }
 
-.sub-info, .customer { 
-    color: #94a3b8; 
-    font-size: 26rpx; 
-    letter-spacing: 2rpx;
-    margin-bottom: 8rpx;
+.sub-info {
+    color: var(--text-muted); 
+    font-size: 24rpx; 
+    font-family: monospace;
+    margin-bottom: 16rpx;
+}
+
+.customer { 
+    color: var(--text-body); 
+    font-size: 28rpx; 
+    font-weight: 500;
 }
 
 /* 商品列表 - 菜单风格 */
 .items {
     margin: 40rpx 0;
+    text-align: left;
 }
 
 .item {
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 32rpx;
-  position: relative;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid var(--border-light);
 }
 
 .item-main {
     flex: 1;
     display: flex;
     flex-direction: column;
+    padding-right: 24rpx;
 }
 
 .product-name {
-    font-size: 30rpx;
-    color: #e2e8f0;
+    font-size: 28rpx;
+    color: var(--text-heading);
     font-weight: 600;
-    letter-spacing: 1rpx;
-    position: relative;
-    padding-right: 16rpx;
-    background: #1a1a1a; /* 遮挡虚线 */
-    z-index: 2;
-    display: inline-block;
-    width: fit-content;
+    line-height: 1.4;
 }
 
 .sku-info {
     font-size: 24rpx;
-    color: #64748b;
-    margin-top: 4rpx;
-    font-style: italic;
-}
-
-/* 价格连接虚线 */
-.item::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: 12rpx; /* 在基线附近 */
-    border-bottom: 2rpx dotted #404040;
-    z-index: 1;
+    color: var(--text-muted);
+    margin-top: 8rpx;
 }
 
 .item-price {
-    z-index: 2;
-    padding-left: 16rpx;
-    background: #1a1a1a; /* 遮挡虚线 */
+    flex-shrink: 0;
 }
 
 .price {
     font-size: 32rpx;
-    color: var(--gold-light);
+    color: var(--brand-primary);
     font-weight: 700;
-    font-family: 'DIN Alternate', sans-serif;
 }
 
 /* 总计账单 */
 .total {
-  border-top: 2rpx solid var(--gold-primary);
-  border-bottom: 2rpx solid var(--gold-primary);
-  padding: 24rpx 0;
-  margin-top: 60rpx;
+  padding: 32rpx 0 0 0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: baseline;
 }
 
 .total text {
     font-size: 28rpx;
-    color: var(--gold-primary);
-    text-transform: uppercase;
-    letter-spacing: 4rpx;
+    color: var(--text-heading);
+    font-weight: 600;
 }
 
 .amount { 
-    font-size: 56rpx !important; 
-    color: var(--gold-light) !important;
-    text-shadow: 0 0 10rpx rgba(212, 175, 55, 0.4);
+    font-size: 48rpx !important; 
+    color: var(--brand-primary) !important;
     font-family: 'DIN Alternate', sans-serif;
 }
 
 /* 签字区域 */
 .section-title {
   font-size: 28rpx;
-  color: #94a3b8;
+  color: var(--text-heading);
   text-align: center;
   margin-bottom: 32rpx;
-  letter-spacing: 4rpx;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .signature-wrapper {
   margin-bottom: 40rpx;
-  border: 1rpx solid rgba(255,255,255,0.1);
-  background: #202020;
+  background: var(--bg-section);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1rpx solid var(--border-light);
 }
 
 /* 操作按钮 */
 .actions {
   display: flex;
   gap: 24rpx;
-  margin-top: 40rpx;
+}
+
+.actions-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 32rpx;
 }
 
 .btn-clear {
   flex: 1;
-  background: transparent;
-  color: #64748b;
-  border: 1rpx solid #404040;
-  height: 96rpx;
-  line-height: 96rpx;
-  font-size: 28rpx;
-  border-radius: 4rpx;
+  background: var(--bg-section);
+  color: var(--text-heading);
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 30rpx;
+  border-radius: var(--radius-md);
 }
 
-.btn-confirm {
+.btn-confirm, .btn-primary {
   flex: 2;
-  background: linear-gradient(135deg, #d4af37 0%, #b48a1e 100%);
-  color: #0f0f0f;
-  border: none;
-  height: 96rpx;
-  line-height: 96rpx;
-  font-weight: 800;
+  background: var(--brand-primary);
+  color: #FFFFFF;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-weight: 500;
   font-size: 30rpx;
-  letter-spacing: 2rpx;
-  border-radius: 4rpx;
-  box-shadow: 0 4rpx 16rpx rgba(212, 175, 55, 0.2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
+}
+
+.btn-confirm:active, .btn-primary:active {
+  background: var(--brand-hover);
 }
 
 .signed-section {
     text-align: center;
-    border: 2rpx solid var(--gold-primary);
-    margin-top: 40rpx;
-    padding: 40rpx;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 1rpx dashed var(--border-light);
 }
 
 .signed-img {
     width: 300rpx;
     height: 150rpx;
     margin: 20rpx auto;
-    filter: invert(1); /* 如果签名是黑色的，反转为白色显示在深色背景上 */
 }
 
 .signed-time {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 24rpx;
     font-family: monospace;
 }
@@ -233,5 +216,5 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
-    color: var(--gold-dark);
+    color: var(--text-muted);
 }

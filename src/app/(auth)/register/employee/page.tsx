@@ -106,7 +106,7 @@ function EmployeeRegisterContent() {
         if (loginResult?.ok) {
           // 登录成功，跳转首页
           setTimeout(() => {
-            router.push('/');
+            router.push('/dashboard');
           }, 1500);
         } else {
           // 登录失败，跳转登录页

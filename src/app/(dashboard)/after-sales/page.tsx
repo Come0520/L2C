@@ -4,9 +4,9 @@ import { AfterSalesList } from '@/features/after-sales/components/after-sales-li
 export const dynamic = 'force-dynamic';
 
 export default function AfterSalesPage() {
-    return (
-        <div className="flex h-full flex-col">
-            <AfterSalesList />
-        </div>
-    );
+  return (
+    <div className="flex h-full flex-col">
+      <AfterSalesList />
+    </div>
+  );
 }

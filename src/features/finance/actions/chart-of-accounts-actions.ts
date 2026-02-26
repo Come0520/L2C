@@ -1,12 +1,10 @@
 'use server';
 
-import { checkPermission, auth } from '@/shared/lib/auth';
+import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 import { chartOfAccounts } from '@/shared/api/schema';
-import { eq, or, desc, and } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { accountCategoryEnum } from '@/shared/api/schema/enums';
 
 import { CreateAccountInput, CreateAccountSchema, UpdateAccountInput, UpdateAccountSchema } from '../types/chart-of-accounts';
 
@@ -76,8 +74,6 @@ export async function createChartOfAccount(data: CreateAccountInput) {
         return { error: '新建科目失败，请稍后重试' };
     }
 }
-
-
 
 // 编辑科目
 export async function updateChartOfAccount(data: UpdateAccountInput) {

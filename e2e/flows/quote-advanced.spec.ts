@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLead } from './fixtures/test-helpers';
 
 test.describe('Quote Advanced Mode', () => {
     test.afterEach(async ({ page }, testInfo) => {
@@ -23,24 +24,15 @@ test.describe('Quote Advanced Mode', () => {
         const uniqueId = Math.random().toString(36).substring(7);
         const customerName = `AdvTest_${uniqueId}`;
 
-        const createLeadBtn = page.getByTestId('create-lead-btn');
-        await expect(createLeadBtn).toBeVisible({ timeout: 10000 });
-        await createLeadBtn.evaluate(btn => (btn as HTMLElement).click());
-
-        await expect(page.locator('div[role="dialog"]')).toBeVisible();
-        await page.fill('input[name="customerName"]', customerName);
-        await page.fill('input[name="customerPhone"]', `137${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`);
-        await page.getByTestId('submit-lead-btn').click();
-        await expect(page.locator('div[role="dialog"]')).toBeHidden();
+        const leadId = await createLead(page, {
+            name: customerName,
+            phone: `137${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+        });
 
         // 2. Lead Detail
         console.log('Step 2: Navigating to Lead Detail...');
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        const row = page.locator('tr').filter({ hasText: customerName });
-        await expect(row).toBeVisible();
-        await row.locator('a[href^="/leads/"]').first().click();
 
         // 3. Quick Quote
         console.log('Step 3: Creating Quick Quote...');
@@ -57,16 +49,9 @@ test.describe('Quote Advanced Mode', () => {
         // The form usually has "rooms.0.name" prefilled with '客厅'
         // Just fill dimensions to be safe
         const widthInput = page.locator('input[name="rooms.0.width"]');
-        if (await widthInput.isVisible()) {
-            await widthInput.fill('400');
-            await page.locator('input[name="rooms.0.height"]').fill('280');
-        } else {
-            // If no room visible, add one
-            await page.getByRole('button', { name: /添加房间/ }).click();
-            await page.locator('input[name="rooms.0.name"]').fill('DefaultRoom');
-            await page.locator('input[name="rooms.0.width"]').fill('400');
-            await page.locator('input[name="rooms.0.height"]').fill('280');
-        }
+        await expect(widthInput).toBeVisible({ timeout: 5000 });
+        await widthInput.fill('400');
+        await page.locator('input[name="rooms.0.height"]').fill('280');
 
         await page.getByTestId('submit-quote-btn').click();
 
@@ -105,7 +90,7 @@ test.describe('Quote Advanced Mode', () => {
 
         // 7. Verify logic
         console.log('Step 8: Verifying Logic...');
-        await expect(foldInput).first().toBeVisible(); // Use first() if multiple items
+        await expect(foldInput.first()).toBeVisible(); // Use first() if multiple items
 
         // Target the first row with fold input
         const firstFold = foldInput.first();

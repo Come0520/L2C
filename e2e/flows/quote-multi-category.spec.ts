@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLead } from './fixtures/test-helpers';
 
 test.describe('Quote Multi-Category', () => {
     test.afterEach(async ({ page }, testInfo) => {
@@ -20,25 +21,14 @@ test.describe('Quote Multi-Category', () => {
         console.log('Step 1: Creating Quote...');
         await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const uniqueId = Math.random().toString(36).substring(7);
-        await page.getByTestId('create-lead-btn').click();
-        await expect(page.locator('div[role="dialog"]')).toBeVisible(); // Ensure dialog open
-        await page.fill('input[name="customerName"]', `MixTest_${uniqueId}`);
-        await page.fill('input[name="customerPhone"]', `137${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`);
-        await page.getByTestId('submit-lead-btn').click();
 
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-
-        // Robust Navigation: Search for the lead to ensure it's in the list
-        await page.fill('input[placeholder="搜索线索..."]', `MixTest_${uniqueId}`);
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(1000); // Wait for filter
-
-        await page.locator('tr').filter({ hasText: `MixTest_${uniqueId}` }).locator('a[href^="/leads/"]').first().click();
-
-        await page.waitForLoadState('domcontentloaded');
+        const leadId = await createLead(page, {
+            name: `MixTest_${uniqueId}`,
+            phone: `137${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+        });
 
         // 2. Create Quick Quote from Detail Page
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.locator('a', { hasText: '快速报价' }).click();
         await page.getByTestId('plan-ECONOMIC').click();
 

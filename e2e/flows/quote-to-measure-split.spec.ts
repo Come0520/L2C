@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createLead } from './fixtures/test-helpers';
 
 /**
  * P1: 报价单 -> 测量单拆单逻辑 (Split Mechanism)
@@ -17,20 +18,15 @@ test.describe('Quote to Measure - Split Mechanism', () => {
     test('should trigger split mechanism for multi-category quote', async ({ page }) => {
         // 1. Create Lead
         await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await page.getByTestId('create-lead-btn').click();
         const leadName = `SplitTest_${Date.now()}`;
-        await page.fill('input[name="customerName"]', leadName);
-        await page.fill('input[name="customerPhone"]', `139${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`);
-        await page.getByTestId('submit-lead-btn').click();
 
-        // Find and enter Lead
-        await page.reload();
-        await page.fill('input[placeholder="搜索线索..."]', leadName);
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(500);
-        await page.locator('tr', { hasText: leadName }).locator('a').first().click();
+        const leadId = await createLead(page, {
+            name: leadName,
+            phone: `139${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+        });
 
         // 2. Create Quick Quote (Default Category: Curtain)
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.locator('a', { hasText: '快速报价' }).click();
         await page.getByTestId('plan-ECONOMIC').click();
         // Add Room

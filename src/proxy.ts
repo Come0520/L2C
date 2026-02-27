@@ -57,6 +57,24 @@ function createForbiddenResponse(message: string): NextResponse {
 }
 
 /**
+ * 提取 getToken 的安全配置（针对 HTTPS/代理环境）
+ * @param request - 原始请求
+ */
+function getSecureTokenOptions(request: NextRequest) {
+  const isSecure =
+    process.env.NODE_ENV === 'production' ||
+    request.url.startsWith('https://') ||
+    request.headers.get('x-forwarded-proto') === 'https';
+
+  return {
+    req: request,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: isSecure,
+    salt: isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token',
+  };
+}
+
+/**
  * 创建带有用户上下文的请求头
  * @param request - 原始请求
  * @param token - JWT Token
@@ -98,10 +116,7 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   // 0. 页面路由分流：已登录用户访问落地页 → 自动跳转工作台
   // ========================================
   if (pathname === '/') {
-    const sessionToken = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-    });
+    const sessionToken = await getToken(getSecureTokenOptions(request));
     if (sessionToken) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
@@ -132,10 +147,7 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
     }
 
     // 受保护页面路由：检查登录状态
-    const pageToken = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-    });
+    const pageToken = await getToken(getSecureTokenOptions(request));
 
     // 未登录 → 重定向到登录页
     if (!pageToken) {
@@ -152,10 +164,7 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   }
 
   // 2. 验证 JWT Token (Web Auth)
-  let token = (await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  })) as JWT | null;
+  let token = (await getToken(getSecureTokenOptions(request))) as JWT | null;
 
   // 2.1 尝试验证移动端自定义 Token (Mobile Auth Fallback)
   if (!token) {

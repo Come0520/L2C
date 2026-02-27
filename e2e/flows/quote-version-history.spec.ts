@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLead } from './fixtures/test-helpers';
 
 test.describe('Quote Version History', () => {
     test.afterEach(async ({ page }, testInfo) => {
@@ -23,19 +24,14 @@ test.describe('Quote Version History', () => {
         const uniqueId = Math.random().toString(36).substring(7);
         const customerName = `VerTest_${uniqueId}`;
 
-        await page.getByTestId('create-lead-btn').click();
-        await expect(page.locator('div[role="dialog"]')).toBeVisible();
-        await page.fill('input[name="customerName"]', customerName);
-        await page.fill('input[name="customerPhone"]', `134${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`);
-        await page.getByTestId('submit-lead-btn').click();
-        await expect(page.locator('div[role="dialog"]')).toBeHidden();
+        const leadId = await createLead(page, {
+            name: customerName,
+            phone: `134${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+        });
 
         // 2. Lead Detail
         console.log('Step 2: Navigating to Lead Detail...');
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-        const row = page.locator('tr').filter({ hasText: customerName });
-        await row.locator('a[href^="/leads/"]').first().click();
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 3. Create Quick Quote
         console.log('Step 3: Creating Quick Quote...');

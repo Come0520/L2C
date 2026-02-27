@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLead } from './fixtures/test-helpers';
 
 test.describe('Quote Lifecycle Flow', () => {
 
@@ -19,63 +20,18 @@ test.describe('Quote Lifecycle Flow', () => {
         // 1. Create Lead
         await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Use data-testid for stable selection
-        const createBtn = page.getByTestId('create-lead-btn');
-        await expect(createBtn).toBeVisible();
-        console.log('Clicking Create Lead Button...');
-
-        // Use JS click to bypass interception/overlays on mobile
-        await createBtn.evaluate(btn => (btn as HTMLElement).click());
-
-        // Wait for dialog
-        try {
-            await expect(page.locator('div[role="dialog"]')).toBeVisible({ timeout: 5000 });
-        } catch (e) {
-            console.log('Dialog did not open after JS click, checking for errors...');
-            // Check if we are still on the same page
-            console.log('Current URL:', page.url());
-            throw e;
-        }
-
         const timestamp = Date.now();
         const customerName = `QuoteTest ${timestamp}`;
         // 使用随机手机号避免冲突
         const phone = `138${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
 
-        await page.fill('input[name="customerName"]', customerName);
-        await page.fill('input[name="customerPhone"]', phone);
+        const leadId = await createLead(page, {
+            name: customerName,
+            phone: phone,
+        });
 
-        // Wait for save button and click
-        const saveBtn = page.getByTestId('submit-lead-btn');
-        await expect(saveBtn).toBeVisible();
-        await saveBtn.click();
-
-        // Wait for Dialog to close or Success Toast
-        // Using generic wait for dialog to be hidden or verify success message
-        await expect(page.locator('role=dialog')).toBeHidden({ timeout: 10000 });
-
-        // Wait a bit for DB consistency before reload
-        await page.waitForTimeout(2000);
-
-        // Wait for list to refresh and show new lead
-        // Sometimes list doesn't auto-refresh or takes time
-        console.log('Reloading page to refresh list...');
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-
-        // Find the row with the customer name
-        const row = page.locator('tr').filter({ hasText: customerName });
-        await expect(row).toBeVisible({ timeout: 15000 });
-
-        // Click on the detail link (Edit button wrapped in anchor)
-        const detailLink = row.locator('a[href^="/leads/"]').first();
-        await expect(detailLink).toBeVisible();
-        // Use JS click to bypass interception/overlays on mobile
-        await detailLink.evaluate(el => (el as HTMLElement).click());
-
-        // Ensure we navigated to the detail page
-        await expect(page).toHaveURL(/\/leads\/.+/);
-        console.log('Navigated to Detail Page:', page.url());
+        console.log('Navigated to Detail Page:', `/leads/${leadId}`);
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Check for 404
         if (await page.getByText(/404|Not Found|未找到/).isVisible()) {

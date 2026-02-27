@@ -104,3 +104,6 @@ gen_chunks.js
 generate_final.js
 build_v3_2.js
 
+next-build.tar.gz
+test-order.js
+e2e-results.json

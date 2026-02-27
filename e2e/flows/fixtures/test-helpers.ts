@@ -97,13 +97,26 @@ export async function createLead(
         throw e;
     }
 
-    // 等待列表刷新并出现新的列表项
-    await page.waitForLoadState('networkidle');
-    await page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 10000 });
+    // 等待页面刷新
+    await page.waitForLoadState('domcontentloaded');
 
-    // 从表格获取第一个线索的ID
-    const firstRow = page.locator('table tbody tr').first();
-    const leadLink = await firstRow.locator('a').first().getAttribute('href');
+    // 如果提供了具体名称，尝试精确定位包含该名称的行（避免由于刷新延迟导致抓取到旧数据）
+    let targetRow = page.locator('table tbody tr').first();
+    if (name) {
+        try {
+            // 等待包含新建名称的元素出现在视图中
+            await page.getByText(name).first().waitFor({ state: 'visible', timeout: 5000 });
+            targetRow = page.locator('table tbody tr', { hasText: name }).first();
+        } catch (e) {
+            console.log(`ℹ️ 在 5s 内未找到包含新名称 ${name} 的行，回退到第一行...`);
+            targetRow = page.locator('table tbody tr').first();
+        }
+    } else {
+        await targetRow.waitFor({ state: 'visible', timeout: 10000 });
+    }
+
+    // 从获取到的行中提取线索ID
+    const leadLink = await targetRow.locator('a').first().getAttribute('href');
     const leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
 
     return leadId;

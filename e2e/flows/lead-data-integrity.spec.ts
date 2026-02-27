@@ -79,7 +79,7 @@ test.describe('Lead Data Integrity', () => {
                 await page.waitForLoadState('domcontentloaded');
 
                 // 快速报价
-                const quoteBtn = page.locator('button:has-text("快速报价"), a:has-text("快速报价")');
+                const quoteBtn = page.locator('button:has-text("快速报价"), a:has-text("快速报价")').first();
                 if (await quoteBtn.isVisible({ timeout: 3000 })) {
                         await quoteBtn.click();
                         await page.waitForLoadState('domcontentloaded');
@@ -110,7 +110,8 @@ test.describe('Lead Data Integrity', () => {
                 await page.waitForLoadState('domcontentloaded');
 
                 // 验证页面包含测试名称
-                await expect(page.locator(`text=${testName}`).first()).toBeVisible({ timeout: 10000 });
+                await expect(page.locator('main').first()).toBeVisible({ timeout: 10000 });
+                await expect(page.getByText(testName).first()).toBeVisible({ timeout: 10000 });
                 console.log('✅ 事务一致性验证通过');
         });
 
@@ -118,7 +119,7 @@ test.describe('Lead Data Integrity', () => {
                 await navigateToModule(page, 'leads');
 
                 // 点击新建按钮
-                await page.click('button:has-text("新建线索")');
+                await page.click('[data-testid="create-lead-btn"]');
                 await page.waitForSelector('[role="dialog"], dialog');
 
                 // 填写必填字段

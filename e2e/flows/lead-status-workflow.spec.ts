@@ -17,7 +17,7 @@ test.describe('Lead Status Workflow', () => {
      */
     async function createLead(page: import('@playwright/test').Page, name: string): Promise<string> {
         // 点击「新建线索」按钮
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
 
         // 等待对话框出现
         await page.waitForSelector('[role="dialog"], dialog');

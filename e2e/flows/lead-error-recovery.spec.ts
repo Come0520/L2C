@@ -13,7 +13,7 @@ test.describe('Lead Error Recovery', () => {
         // 模拟网络中断
         await page.route('**/api/leads**', route => route.abort('failed'));
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('网络中断'), phone: '13800138001' });
         await page.click('button:has-text("创建线索")');
@@ -31,7 +31,7 @@ test.describe('Lead Error Recovery', () => {
             setTimeout(() => route.abort('timedout'), 30000);
         });
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('超时测试'), phone: '13800138002' });
         await page.click('button:has-text("创建线索")');
@@ -52,7 +52,7 @@ test.describe('Lead Error Recovery', () => {
             });
         });
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('数据库错误'), phone: '13800138003' });
         await page.click('button:has-text("创建线索")');
@@ -64,7 +64,7 @@ test.describe('Lead Error Recovery', () => {
     test('should handle validation error gracefully', async ({ page }) => {
         await navigateToModule(page, 'leads');
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
 
         // 不填写必填字段直接提交
@@ -87,7 +87,7 @@ test.describe('Lead Error Recovery', () => {
             });
         });
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('权限测试'), phone: '13800138004' });
         await page.click('button:has-text("创建线索")');
@@ -108,7 +108,7 @@ test.describe('Lead Error Recovery', () => {
             });
         });
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('限流测试'), phone: '13800138005' });
         await page.click('button:has-text("创建线索")');
@@ -129,7 +129,7 @@ test.describe('Lead Error Recovery', () => {
             });
         });
 
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: generateTestName('格式错误'), phone: '13800138006' });
         await page.click('button:has-text("创建线索")');

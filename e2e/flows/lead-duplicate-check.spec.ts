@@ -28,7 +28,7 @@ test.describe('Lead Duplicate Check', () => {
         console.log('✅ 第一个线索创建成功');
 
         // 尝试创建重复线索
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: name + '_Dupe', phone }); // 相同手机号
         await page.click('button:has-text("创建线索")');
@@ -64,7 +64,7 @@ test.describe('Lead Duplicate Check', () => {
 
         // 尝试创建相同手机号的新线索
         await navigateToModule(page, 'leads');
-        await page.click('button:has-text("新建线索")');
+        await page.click('[data-testid="create-lead-btn"]');
         await page.waitForSelector('[role="dialog"], dialog');
         await fillLeadForm(page, { name: name + '_New', phone }); // 相同手机号
         await page.click('button:has-text("创建线索")');

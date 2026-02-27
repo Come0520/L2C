@@ -37,6 +37,8 @@ services:
       - DB_MAX_CONNECTIONS=5 # 每个实例减少到 5 个连接
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_URL=${AUTH_URL:-https://l2c.asia}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://l2c.asia}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://l2c.asia}
       # Aliyun OSS
       - OSS_REGION=${OSS_REGION}
       - OSS_BUCKET=${OSS_BUCKET}
@@ -45,7 +47,8 @@ services:
     networks:
       - l2c-network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
+      # 使用 wget（alpine 默认包含），不用 curl（需要额外安装）
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
       interval: 15s # 每 15 秒检查一次
       timeout: 10s
       retries: 20 # 最多等 20 × 15s = 5 分钟

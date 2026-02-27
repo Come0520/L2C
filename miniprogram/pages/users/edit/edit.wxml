@@ -1,5 +1,6 @@
+<!--pages/users/edit/edit.wxml-->
 <view class="container">
-  <view class="form-group">
+  <view class="card form-card animate-slide-up">
     <view class="avatar-wrapper">
       <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
         <image class="avatar-img" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
@@ -12,6 +13,6 @@
       <input type="nickname" class="input" placeholder="请输入昵称" value="{{userInfo.name}}" bindinput="onNameInput"/>
     </view>
 
-    <button class="btn-save" loading="{{submitting}}" bindtap="onSave">保存修改</button>
+    <button class="primary-btn mt-48" loading="{{submitting}}" bindtap="onSave" hover-class="btn-hover">保存修改</button>
   </view>
 </view>

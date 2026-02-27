@@ -1,69 +1,71 @@
 <!--pages/projects/task-detail/index.wxml-->
 <view class="container" wx:if="{{task}}">
-  <!-- Task Info -->
-  <view class="card">
-    <view class="header">
-      <text class="title">任务信息</text>
-      <text class="status {{task.status}}">{{statusMap[task.status] || task.status}}</text>
+  <scroll-view scroll-y class="content" enhanced="true" show-scrollbar="false">
+    <!-- Task Info -->
+    <view class="card animate-slide-up" style="animation-delay: 0s;">
+      <view class="header">
+        <text class="title">任务信息</text>
+        <text class="status {{task.status}}">{{statusMap[task.status] || task.status}}</text>
+      </view>
+      <view class="row">
+        <text class="label">任务单号</text>
+        <text class="value">{{task.taskNo}}</text>
+      </view>
+      <view class="row">
+        <text class="label">预约时间</text>
+        <text class="value">{{task.scheduledDateFormatted}} {{task.scheduledTimeSlot}}</text>
+      </view>
     </view>
-    <view class="row">
-      <text class="label">任务单号</text>
-      <text class="value">{{task.taskNo}}</text>
-    </view>
-     <view class="row">
-      <text class="label">预约时间</text>
-      <text class="value">{{task.scheduledDateFormatted}} {{task.scheduledTimeSlot}}</text>
-    </view>
-  </view>
 
-  <!-- Customer Info -->
-  <view class="card">
-    <view class="header">
-        <text class="title">客户信息</text>
+    <!-- Customer Info -->
+    <view class="card animate-slide-up" style="animation-delay: 0.1s;">
+      <view class="header">
+          <text class="title">客户信息</text>
+      </view>
+      <view class="row">
+        <text class="label">姓名</text>
+        <text class="value">{{task.customerName}}</text>
+      </view>
+      <view class="row">
+        <text class="label">电话</text>
+        <text class="value phone" bindtap="makePhoneCall" data-phone="{{task.customerPhone}}">{{task.customerPhone}}</text>
+      </view>
+      <view class="row">
+        <text class="label">地址</text>
+        <text class="value">{{task.address}}</text>
+      </view>
     </view>
-    <view class="row">
-      <text class="label">姓名</text>
-      <text class="value">{{task.customerName}}</text>
-    </view>
-     <view class="row">
-      <text class="label">电话</text>
-      <text class="value phone" bindtap="makePhoneCall" data-phone="{{task.customerPhone}}">{{task.customerPhone}}</text>
-    </view>
-     <view class="row">
-      <text class="label">地址</text>
-      <text class="value">{{task.address}}</text>
-    </view>
-  </view>
 
-  <!-- Items -->
-  <view class="card">
-    <view class="header">
-        <text class="title">安装/测量内容</text>
+    <!-- Items -->
+    <view class="card animate-slide-up" style="animation-delay: 0.2s;">
+      <view class="header">
+          <text class="title">安装/测量内容</text>
+      </view>
+      <block wx:for="{{task.items}}" wx:key="id">
+          <view class="item-row">
+              <view class="item-main">
+                  <view class="room">{{item.roomName}}</view>
+                  <view class="product">{{item.productName}}</view>
+              </view>
+              <view class="item-qty">x{{item.quantity}}</view>
+          </view>
+      </block>
     </view>
-    <block wx:for="{{task.items}}" wx:key="id">
-        <view class="item-row">
-            <view class="item-main">
-                <view class="room">{{item.roomName}}</view>
-                <view class="product">{{item.productName}}</view>
-            </view>
-            <view class="item-qty">x{{item.quantity}}</view>
+
+    <!-- Completion Info -->
+    <view class="card animate-slide-up" wx:if="{{task.status === 'COMPLETED'}}" style="animation-delay: 0.3s;">
+        <view class="header">
+          <text class="title">完成信息</text>
         </view>
-    </block>
-  </view>
+        <view class="row">
+          <text class="label">备注</text>
+          <text class="value">{{task.remark || '-'}}</text>
+        </view>
+    </view>
+  </scroll-view>
 
   <!-- Actions -->
-  <view class="footer-actions" wx:if="{{task.status === 'PENDING_ACCEPT' || task.status === 'PENDING_START' || task.status === 'IN_PROGRESS'}}">
-      <button class="btn-primary" bindtap="onComplete">完成任务 / 上传凭证</button>
-  </view>
-
-  <!-- Completion Info -->
-  <view class="card" wx:if="{{task.status === 'COMPLETED'}}">
-       <view class="header">
-        <text class="title">完成信息</text>
-    </view>
-    <view class="row">
-        <text class="label">备注</text>
-        <text class="value">{{task.remark || '-'}}</text>
-    </view>
+  <view class="footer-actions animate-slide-up" wx:if="{{task.status === 'PENDING_ACCEPT' || task.status === 'PENDING_START' || task.status === 'IN_PROGRESS'}}" style="animation-delay: 0.3s;">
+      <button class="primary-btn" bindtap="onComplete">完成任务 / 上传凭证</button>
   </view>
 </view>

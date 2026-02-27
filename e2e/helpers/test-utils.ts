@@ -26,7 +26,7 @@ export async function skipOnDataLoadError(page: Page): Promise<boolean> {
  * 动态获取最近一条工单/订单的关联订单ID
  */
 export async function getValidOrderId(page: Page): Promise<string> {
-    const defaultFallback = '672ac864-dc76-4dc4-86af-0dd15c01c26c';
+    const defaultFallback = '4be245bf-6681-4925-972f-3191c04636c6';
 
     try {
         await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 15000 });

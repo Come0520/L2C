@@ -15,16 +15,16 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
 
     // 在测试前确保有数据
     test.beforeEach(async ({ page }) => {
-        await page.goto('/after-sales');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 检查是否有数据，如果没有则尝试 seed
         const hasData = await hasAfterSalesData(page);
         if (!hasData) {
             console.log('ℹ️ 售后工单列表为空，尝试创建测试数据...');
             await seedAfterSalesTickets(page);
-            await page.goto('/after-sales');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
         }
     });
 
@@ -42,11 +42,11 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
         const firstLink = firstRow.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
         } else {
             // 如果没有链接，点击整行
             await firstRow.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
         }
 
         // 验证进入详情页
@@ -83,7 +83,7 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
         const firstLink = firstRow.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 查找采购溯源卡片
             const purchaseTrace = page.locator('text=采购单号').or(page.locator('text=供应商'));
@@ -107,7 +107,7 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
         const firstLink = firstRow.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 查找安装溯源卡片
             const installTrace = page.locator('text=安装单号').or(page.locator('text=安装师傅'));
@@ -131,7 +131,7 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
         const firstLink = firstRow.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 查找证据链区域
             const evidenceSection = page.locator('text=证据链').or(page.locator('text=附件'));
@@ -162,7 +162,7 @@ test.describe('全链路溯源看板 (Traceability Dashboard)', () => {
         const firstLink = firstRow.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 查找批次统计区域
             const batchStats = page.locator('text=售后率').or(page.locator('text=批次问题'));

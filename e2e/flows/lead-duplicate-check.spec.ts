@@ -50,7 +50,7 @@ test.describe('Lead Duplicate Check', () => {
 
         // 导航到详情页并作废
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const voidBtn = page.locator('button:has-text("作废"), button:has-text("标记作废")');
         if (await voidBtn.isVisible({ timeout: 5000 })) {

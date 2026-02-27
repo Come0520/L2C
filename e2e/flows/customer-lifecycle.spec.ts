@@ -12,13 +12,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('客户全生命周期 (Customer Lifecycle)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应由线索成功转化为客户档案', async ({ page }) => {
         // 此逻辑通常在 Won 线索时自动触发
-        await page.goto('/customers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/customers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         await expect(page.getByRole('heading', { name: /客户管理/ })).toBeVisible();
 
@@ -40,7 +40,7 @@ test.describe('客户全生命周期 (Customer Lifecycle)', () => {
     });
 
     test('应支持客户标签与偏好管理', async ({ page }) => {
-        await page.goto('/customers');
+        await page.goto('/customers', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstLink = page.locator('table tbody tr a').first();
 
         if (await firstLink.isVisible()) {
@@ -68,7 +68,7 @@ test.describe('客户全生命周期 (Customer Lifecycle)', () => {
     });
 
     test('应正确显示客户消费统计数据', async ({ page }) => {
-        await page.goto('/customers');
+        await page.goto('/customers', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstLink = page.locator('table tbody tr a').first();
 
         if (await firstLink.isVisible()) {
@@ -87,7 +87,7 @@ test.describe('客户全生命周期 (Customer Lifecycle)', () => {
     });
 
     test('应支持发起复购线索', async ({ page }) => {
-        await page.goto('/customers');
+        await page.goto('/customers', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstRow = page.locator('table tbody tr').first();
 
         if (await firstRow.isVisible()) {

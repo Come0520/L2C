@@ -12,7 +12,7 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: generateTestName('软删除') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 点击删除按钮
                 const deleteBtn = page.locator('button:has-text("删除"), button[title="删除"]');
@@ -30,7 +30,7 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: generateTestName('级联删除') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 添加跟进记录
                 const addFollowupBtn = page.locator('button:has-text("添加跟进")');
@@ -58,7 +58,7 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: generateTestName('客户关联') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 转为客户
                 const convertBtn = page.locator('button:has-text("转为客户")');
@@ -76,13 +76,13 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: generateTestName('报价关联') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 快速报价
                 const quoteBtn = page.locator('button:has-text("快速报价"), a:has-text("快速报价")');
                 if (await quoteBtn.isVisible({ timeout: 3000 })) {
                         await quoteBtn.click();
-                        await page.waitForLoadState('networkidle');
+                        await page.waitForLoadState('domcontentloaded');
                         console.log('✅ 进入快速报价流程');
                 } else {
                         console.log('ℹ️ 未找到快速报价按钮');
@@ -94,7 +94,7 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: generateTestName('外键约束') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证页面正常加载
                 await expect(page.locator('main')).toBeVisible();
@@ -107,7 +107,7 @@ test.describe('Lead Data Integrity', () => {
                 const leadId = await createLead(page, { name: testName });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证页面包含测试名称
                 await expect(page.locator(`text=${testName}`).first()).toBeVisible({ timeout: 10000 });

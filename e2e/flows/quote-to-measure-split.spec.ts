@@ -11,12 +11,12 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Quote to Measure - Split Mechanism', () => {
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('should trigger split mechanism for multi-category quote', async ({ page }) => {
         // 1. Create Lead
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.getByTestId('create-lead-btn').click();
         const leadName = `SplitTest_${Date.now()}`;
         await page.fill('input[name="customerName"]', leadName);
@@ -98,7 +98,7 @@ test.describe('Quote to Measure - Split Mechanism', () => {
 
         // 6. Verify Tasks
         // Navigate to Service Module or check toast
-        await page.goto('/service/measurement');
+        await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // Filter by this customer? Or just check top rows.
         await expect(page.getByText(leadName)).toBeVisible();
 

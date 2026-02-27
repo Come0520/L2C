@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('渠道结算流程 (Channel Settlement Flow)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/finance/channel-settlements');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/channel-settlements', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 应能查看结算单列表', async ({ page }) => {

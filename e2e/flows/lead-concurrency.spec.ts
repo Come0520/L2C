@@ -16,8 +16,8 @@ test.describe('Lead Concurrency', () => {
 
                 await page1.goto('/leads');
                 await page2.goto('/leads');
-                await page1.waitForLoadState('networkidle');
-                await page2.waitForLoadState('networkidle');
+                await page1.waitForLoadState('domcontentloaded');
+                await page2.waitForLoadState('domcontentloaded');
 
                 // 页面1创建线索
                 await page1.click('button:has-text("新建线索")');
@@ -50,8 +50,8 @@ test.describe('Lead Concurrency', () => {
 
                 await page1.goto(`/leads/${leadId}`);
                 await page2.goto(`/leads/${leadId}`);
-                await page1.waitForLoadState('networkidle');
-                await page2.waitForLoadState('networkidle');
+                await page1.waitForLoadState('domcontentloaded');
+                await page2.waitForLoadState('domcontentloaded');
 
                 // 两个页面同时尝试分配
                 const assignBtn1 = page1.locator('button:has-text("分配")');
@@ -85,8 +85,8 @@ test.describe('Lead Concurrency', () => {
 
                 await page1.goto(`/leads/${leadId}`);
                 await page2.goto(`/leads/${leadId}`);
-                await page1.waitForLoadState('networkidle');
-                await page2.waitForLoadState('networkidle');
+                await page1.waitForLoadState('domcontentloaded');
+                await page2.waitForLoadState('domcontentloaded');
 
                 // 两个页面同时尝试编辑
                 const editBtn1 = page1.locator('button:has-text("编辑资料")');
@@ -118,8 +118,8 @@ test.describe('Lead Concurrency', () => {
 
                 await page1.goto(`/leads/${leadId}`);
                 await page2.goto(`/leads/${leadId}`);
-                await page1.waitForLoadState('networkidle');
-                await page2.waitForLoadState('networkidle');
+                await page1.waitForLoadState('domcontentloaded');
+                await page2.waitForLoadState('domcontentloaded');
 
                 // 两个页面同时添加跟进
                 const addBtn1 = page1.locator('button:has-text("添加跟进")');
@@ -159,8 +159,8 @@ test.describe('Lead Concurrency', () => {
 
                 await page1.goto(`/leads/${leadId}`);
                 await page2.goto(`/leads/${leadId}`);
-                await page1.waitForLoadState('networkidle');
-                await page2.waitForLoadState('networkidle');
+                await page1.waitForLoadState('domcontentloaded');
+                await page2.waitForLoadState('domcontentloaded');
 
                 // 两个页面同时尝试转为客户
                 const convertBtn1 = page1.locator('button:has-text("转为客户")');

@@ -11,8 +11,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('通知铃铛与未读徽标 (Notification Bell)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/dashboard');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 通知铃铛应显示未读数徽标', async ({ page }) => {
@@ -49,8 +49,8 @@ test.describe('通知铃铛与未读徽标 (Notification Bell)', () => {
 
 test.describe('通知中心页面 (Notification Center)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/notifications');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/notifications', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-3: 应能标记单条通知为已读', async ({ page }) => {
@@ -97,8 +97,8 @@ test.describe('通知中心页面 (Notification Center)', () => {
 
 test.describe('通知偏好设置 (Notification Preferences)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/settings/notifications');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/settings/notifications', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P2-1: 应能切换各类通知的接收渠道', async ({ page }) => {

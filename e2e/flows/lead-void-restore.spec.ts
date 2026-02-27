@@ -17,7 +17,7 @@ test.describe('线索作废与恢复 (Lead Void & Restore)', () => {
 
         // 导航到详情页
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 点击作废按钮
         const voidBtn = page.locator('button:has-text("作废"), button:has-text("标记作废")');
@@ -80,7 +80,7 @@ test.describe('线索作废与恢复 (Lead Void & Restore)', () => {
 
         // 作废该线索
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const voidBtn = page.locator('button:has-text("作废"), button:has-text("标记作废")');
         if (await voidBtn.isVisible({ timeout: 5000 })) {

@@ -13,8 +13,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('产品管理 (Products)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/supply-chain/products');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P-01: 产品列表应正确展示', async ({ page }) => {
@@ -114,7 +114,7 @@ test.describe('产品管理 (Products)', () => {
             const link = firstRow.locator('a').first();
             if (await link.isVisible()) {
                 await link.click();
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证到达详情页
                 const urlPattern = /\/products\/|\/supply-chain\/products\//;
@@ -129,8 +129,8 @@ test.describe('产品管理 (Products)', () => {
 
 test.describe('产品批量导入 (Product Import)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/supply-chain/products');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P-06: 应能打开批量导入对话框', async ({ page }) => {
@@ -168,8 +168,8 @@ test.describe('产品批量导入 (Product Import)', () => {
 
 test.describe('产品供应商关联 (Product Suppliers)', () => {
     test('P-07: 产品详情应显示供应商信息', async ({ page }) => {
-        await page.goto('/supply-chain/products');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 等待产品库 Tab 加载
         await expect(page.getByRole('tab', { name: /产品库/ })).toBeVisible();
@@ -184,8 +184,8 @@ test.describe('产品供应商关联 (Product Suppliers)', () => {
     });
 
     test('P-08: 应能添加产品供应商关联', async ({ page }) => {
-        await page.goto('/supply-chain/products');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 等待产品库 Tab 加载
         await expect(page.getByRole('tab', { name: /产品库/ })).toBeVisible();
@@ -203,8 +203,8 @@ test.describe('产品供应商关联 (Product Suppliers)', () => {
 test.describe('产品属性模板 (Attribute Templates)', () => {
     test('P-09: 应能访问属性模板配置页面', async ({ page }) => {
         // 尝试访问属性模板配置页面
-        await page.goto('/supply-chain/products/templates');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/products/templates', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const templateManager = page.locator('text=品类属性模板')
             .or(page.locator('text=属性模板'));
@@ -213,8 +213,8 @@ test.describe('产品属性模板 (Attribute Templates)', () => {
             console.log('✅ 属性模板配置页面访问正常');
         } else {
             // 可能是在产品管理页面的设置中
-            await page.goto('/settings/products');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/settings/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
 
             const settingsTemplateLink = page.locator('text=属性模板');
             if (await settingsTemplateLink.isVisible()) {

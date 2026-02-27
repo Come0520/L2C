@@ -25,7 +25,7 @@ test.describe('Lead Bulk Operations', () => {
      */
     async function selectTableRows(page: import('@playwright/test').Page, count?: number): Promise<number> {
         // 等待表格加载
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找表格行内的复选框
         const checkboxes = page.locator('table tbody tr input[type="checkbox"]');

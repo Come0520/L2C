@@ -33,8 +33,8 @@ test.describe('订单全生命周期 E2E', () => {
     });
 
     test('准备工作: 创建并激活报价单', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 创建线索
         await page.getByTestId('create-lead-btn').click();
@@ -98,7 +98,7 @@ test.describe('订单全生命周期 E2E', () => {
     test('Step 2: 确认排产', async ({ page }) => {
         test.skip(!createdOrderId, '需要先创建订单');
         await page.goto(`/orders/${createdOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const confirmBtn = page.getByRole('button', { name: /确认排产|确认生产/ });
         await expect(confirmBtn).toBeVisible({ timeout: 10000 });

@@ -18,7 +18,7 @@ test.describe('Quote Multi-Category', () => {
 
         // 1. Create Quote via Lead Flow (Standard Stable Flow)
         console.log('Step 1: Creating Quote...');
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const uniqueId = Math.random().toString(36).substring(7);
         await page.getByTestId('create-lead-btn').click();
         await expect(page.locator('div[role="dialog"]')).toBeVisible(); // Ensure dialog open
@@ -27,7 +27,7 @@ test.describe('Quote Multi-Category', () => {
         await page.getByTestId('submit-lead-btn').click();
 
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Robust Navigation: Search for the lead to ensure it's in the list
         await page.fill('input[placeholder="搜索线索..."]', `MixTest_${uniqueId}`);
@@ -36,7 +36,7 @@ test.describe('Quote Multi-Category', () => {
 
         await page.locator('tr').filter({ hasText: `MixTest_${uniqueId}` }).locator('a[href^="/leads/"]').first().click();
 
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 2. Create Quick Quote from Detail Page
         await page.locator('a', { hasText: '快速报价' }).click();

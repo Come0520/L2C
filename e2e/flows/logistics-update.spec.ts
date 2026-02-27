@@ -25,8 +25,8 @@ test.describe('物流更新 E2E', () => {
     });
 
     test('Step 0: 创建测试订单并进入生产状态', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 快速创建线索及订单 (简化流程，假设已有成熟 Helper)
         await page.getByTestId('create-lead-btn').click();

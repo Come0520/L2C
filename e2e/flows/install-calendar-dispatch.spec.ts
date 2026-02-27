@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('安装日历视图 (Install Calendar View)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 应能切换到日历视图', async ({ page }) => {
@@ -60,8 +60,8 @@ test.describe('安装日历视图 (Install Calendar View)', () => {
 
 test.describe('智能师傅推荐 (Smart Worker Recommendation)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-4: 派单时应显示推荐师傅', async ({ page }) => {

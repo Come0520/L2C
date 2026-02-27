@@ -14,8 +14,8 @@ import { test, expect } from '@playwright/test';
 test.describe('数据仪表盘基础功能', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到仪表盘页面 (通常是 /analytics 或 /dashboard)
-        await page.goto('/analytics');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/analytics', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应正确渲染仪表盘核心组件', async ({ page }) => {

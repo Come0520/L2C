@@ -39,8 +39,8 @@ test.describe('发货后财务与渠道结算闭环', () => {
     // 前置：找一个已发货或已完成的订单，用于财务核销
     // ----------------------------------------------------------------
     test('Step 0: 查找已完成/已发货订单用于财务核销', async ({ page }) => {
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -82,7 +82,7 @@ test.describe('发货后财务与渠道结算闭环', () => {
         }
 
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const quoteId = await createQuickQuote(page);
         if (!quoteId) return;
@@ -105,11 +105,11 @@ test.describe('发货后财务与渠道结算闭环', () => {
         const arLink = page.locator('a[href*="finance/ar"], a:has-text("应收款"), nav a:has-text("账款")').first();
         if (await arLink.isVisible({ timeout: 3000 })) {
             await arLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
         } else {
             // 直接导航
-            await page.goto('/finance/ar');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
         }
 
         // 验证应收款列表页面加载
@@ -138,8 +138,8 @@ test.describe('发货后财务与渠道结算闭环', () => {
     // 场景2：执行收款核销
     // ----------------------------------------------------------------
     test('Step 2: 执行收款核销操作', async ({ page }) => {
-        await page.goto('/finance/ar');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -160,7 +160,7 @@ test.describe('发货后财务与渠道结算闭环', () => {
         } else {
             // 进入详情再操作
             await pendingRow.locator('a').first().click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             const detailBtn = page.getByRole('button', { name: /登记收款|录入收款|收款核销/ });
             if (await detailBtn.isVisible({ timeout: 3000 })) {
@@ -212,8 +212,8 @@ test.describe('发货后财务与渠道结算闭环', () => {
     // 场景3：核销后验证账期余额更新
     // ----------------------------------------------------------------
     test('Step 3: 验证核销后账期余额更新', async ({ page }) => {
-        await page.goto('/finance/ar');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找已核销的记录
         const completedRow = page.locator('table tbody tr')
@@ -225,7 +225,7 @@ test.describe('发货后财务与渠道结算闭环', () => {
 
             // 进入详情验证
             await completedRow.locator('a').first().click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证状态为已核销
             await expect(page.getByText(/已核销|COLLECTED|核销完成/)).toBeVisible({ timeout: 5000 });
@@ -240,8 +240,8 @@ test.describe('发货后财务与渠道结算闭环', () => {
     // ----------------------------------------------------------------
     test('Step 4: 验证渠道佣金自动计算记录', async ({ page }) => {
         // 导航到渠道功能
-        await page.goto('/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -256,7 +256,7 @@ test.describe('发货后财务与渠道结算闭环', () => {
         const commissionLink = page.locator('nav a:has-text("佣金流水"), a[href*="commission"]').first();
         if (await commissionLink.isVisible({ timeout: 2000 })) {
             await commissionLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
         }
 
         // 验证佣金列表加载
@@ -274,14 +274,14 @@ test.describe('发货后财务与渠道结算闭环', () => {
     // 场景5：验证渠道结算单生成
     // ----------------------------------------------------------------
     test('Step 5: 验证渠道结算单可生成', async ({ page }) => {
-        await page.goto('/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
         // 导航到结算单
-        await page.goto('/channels/settlements');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/channels/settlements', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         await expect(page.locator('main, [role="main"]')).toBeVisible({ timeout: 10000 });
         console.log('✅ 渠道结算单列表页加载正常');
@@ -305,8 +305,8 @@ test.describe('发货后财务与渠道结算闭环', () => {
 // ----------------------------------------------------------------
 test.describe('财务数据完整性', () => {
     test('应收款总额应与订单金额一致', async ({ page }) => {
-        await page.goto('/finance');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -324,8 +324,8 @@ test.describe('财务数据完整性', () => {
     });
 
     test('收款记录应有完整的审计跟踪', async ({ page }) => {
-        await page.goto('/finance/ar');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -336,7 +336,7 @@ test.describe('财务数据完整性', () => {
 
         if (await completedRow.isVisible({ timeout: 3000 })) {
             await completedRow.locator('a').first().click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 检查是否有操作日志/审计轨迹
             const auditSection = page.locator('[data-testid="audit-log"], [class*="audit"], [class*="timeline"]');

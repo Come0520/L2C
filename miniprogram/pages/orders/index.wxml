@@ -7,9 +7,9 @@
         <view class="tab-item {{activeTab === 'COMPLETED' ? 'active' : ''}}" bindtap="onTabChange" data-status="COMPLETED">已完成</view>
     </view>
 
-    <scroll-view class="order-list" scroll-y="true" bindscrolltolower="onLoadMore">
+    <scroll-view class="order-list" scroll-y="true" bindscrolltolower="onLoadMore" enhanced="true" show-scrollbar="false">
         <block wx:for="{{list}}" wx:key="id">
-            <view class="order-card" bindtap="onToDetail" data-id="{{item.id}}">
+            <view class="card order-card animate-slide-up" bindtap="onToDetail" data-id="{{item.id}}" style="animation-delay: {{index * 0.05}}s">
                 <view class="card-header">
                     <text class="order-no">{{item.orderNo}}</text>
                     <text class="status {{item.status}}">{{statusMap[item.status] || item.status}}</text>
@@ -36,6 +36,7 @@
         </block>
 
         <view class="empty-state" wx:if="{{!list.length && !loading}}">
+            <view class="empty-icon">📝</view>
             <text>暂无订单</text>
         </view>
     </scroll-view>

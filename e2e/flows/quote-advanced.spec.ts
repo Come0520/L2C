@@ -18,7 +18,7 @@ test.describe('Quote Advanced Mode', () => {
 
         // 1. Create Lead
         console.log('Step 1: Creating Lead...');
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const uniqueId = Math.random().toString(36).substring(7);
         const customerName = `AdvTest_${uniqueId}`;
@@ -36,7 +36,7 @@ test.describe('Quote Advanced Mode', () => {
         // 2. Lead Detail
         console.log('Step 2: Navigating to Lead Detail...');
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const row = page.locator('tr').filter({ hasText: customerName });
         await expect(row).toBeVisible();

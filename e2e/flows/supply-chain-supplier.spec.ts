@@ -13,8 +13,8 @@ test.describe('Supply Chain - Supplier Management', () => {
     const supplierName = `AutoSupplier_${timestamp}`;
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/supply-chain/suppliers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/suppliers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('should execute full supplier lifecycle: Create -> Search -> Update', async ({ page }) => {

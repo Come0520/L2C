@@ -21,14 +21,14 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
 
 
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应成功发起测量任务并进入待分配列表', async ({ page }) => {
         // Step 1: 在线索详情页发起测量
         // 先找到一个线索 (由于 Seed 脚本已运行，应该有数据)
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const firstLead = page.locator('table tbody tr').first();
         await expect(firstLead).toBeVisible();
@@ -46,14 +46,14 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
         await expect(page.getByText(/成功/)).toBeVisible();
 
         // Step 2: 验证进入测量列表
-        await page.goto('/service/measurement');
+        await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await expect(page.getByRole('tab', { name: /待分配/ })).toBeVisible();
         // 应该能看到刚创建的单子 (由于是 Mock 环境，可能需要刷新或等待)
         console.log('✅ 发起测量任务完成');
     });
 
     test('应支持派单操作 (分配测量师)', async ({ page }) => {
-        await page.goto('/service/measurement');
+        await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.getByRole('tab', { name: /待分配/ }).click();
 
         const pendingRow = page.locator('table tbody tr').first();
@@ -80,7 +80,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
 
         test('测量师应能查看任务并提交测量结果', async ({ page }) => {
             // 模拟测量师登录后的路径
-            await page.goto('/service/measurement');
+            await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
             // 查找"待上门"或"已分配"的单子
             const taskRow = page.locator('table tbody tr').first(); // 简化查找
@@ -126,7 +126,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
     });
 
     test('销售端应能确认/驳回测量结果', async ({ page }) => {
-        await page.goto('/service/measurement');
+        await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.getByRole('tab', { name: /待确认/ }).click();
 
         const confirmRow = page.locator('table tbody tr').first();
@@ -153,7 +153,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
 
     test('应验证多方案展示 (Variant/Round)', async ({ page }) => {
         // 复杂的版本列表展示验证
-        await page.goto('/service/measurement');
+        await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstLink = page.locator('table tbody tr a').first();
         if (await firstLink.isVisible()) {
             await firstLink.click();

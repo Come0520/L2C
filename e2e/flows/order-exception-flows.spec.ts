@@ -33,8 +33,8 @@ test.describe('订单异常流程 E2E', () => {
     });
 
     test('准备工作: 创建并激活报价单', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 创建线索
         await page.getByTestId('create-lead-btn').click();

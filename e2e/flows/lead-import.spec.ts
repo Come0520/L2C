@@ -58,7 +58,7 @@ test.describe('Lead Excel Import', () => {
 
         const filePath = createExcelFile(`leads_import_${uniqueId}.xlsx`, data);
 
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Click Import Button
         // Assuming button text "导入线索" or looking for upload icon
@@ -98,7 +98,7 @@ test.describe('Lead Excel Import', () => {
         const uniqueId = Math.random().toString(36).substring(7);
         const existingPhone = `135${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
 
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.getByTestId('create-lead-btn').click();
         await page.getByTestId('lead-name-input').fill(`Existing_${uniqueId}`);
         await page.getByTestId('lead-phone-input').fill(existingPhone);

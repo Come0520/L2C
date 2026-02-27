@@ -30,7 +30,7 @@ test.describe('核心业务全链路 (Core Business Flow)', () => {
 
         // 导航到线索详情
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 2. 报价管理：创建快速报价
         const quoteId = await createQuickQuote(page, { plan: 'STANDARD' });
@@ -61,7 +61,7 @@ test.describe('核心业务全链路 (Core Business Flow)', () => {
         // 4. 供应链集成：验证采购单生成
         await navigateToModule(page, 'supply-chain');
         await page.click('text=采购单'); // 或者是特定的侧边栏链接
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 搜索关联订单号的采购单
         await page.getByPlaceholder(/搜索|单号/).fill(orderNo?.trim() || '');

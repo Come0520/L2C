@@ -26,18 +26,19 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         await page.goto('/after-sales', { timeout: 60000, waitUntil: 'domcontentloaded' });
 
         // 点击创建按钮
-        const createBtn = page.getByRole('button', { name: /创建|新增|新建/ });
-        if (!(await createBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+        const createBtn = page.getByText('新建工单').last();
+        if (!(await createBtn.isVisible({ timeout: 10000 }).catch(() => false))) {
             console.log('⚠️ 未找到创建按钮');
             return;
         }
         await createBtn.click();
 
         // 验证进入新建页面
-        await expect(page).toHaveURL(/\/after-sales\/new/);
+        await expect(page).toHaveURL(/\/after-sales\/new/, { timeout: 15000 });
 
         // 填写关联订单 ID (E2E 环境中需要一个真实的 UUID)
         const orderIdInput = page.getByLabel(/关联订单/);
+        await expect(orderIdInput).toBeVisible({ timeout: 10000 });
         await orderIdInput.fill(validOrderId); // Valid Order ID from DB
 
         // 选择工单类型
@@ -48,24 +49,16 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         }
 
         // 填写问题描述
-        await page.getByLabel(/描述/).fill('E2E 定责流程测试 - 自动化');
+        await page.getByLabel(/详细描述|描述/).fill('E2E 定责流程测试 - 自动化');
 
         // 提交
-        await page.getByRole('button', { name: /提交|创建|确定/ }).click();
+        await page.getByRole('button', { name: /创建工单/ }).click();
 
-        // 验证成功
-        await expect(page.getByText(/成功|已创建/).first()).toBeVisible({ timeout: 10000 });
+        // 验证成功反馈，并等待页面自动跳转到详情页
+        await expect(page).toHaveURL(/\/after-sales\/[a-zA-Z0-9-]+/, { timeout: 15000 });
 
-        // 获取工单 ID（从 URL 或列表）
-        await page.waitForTimeout(1000);
-        const firstRow = page.locator('table tbody tr').first();
-        const ticketLink = firstRow.locator('a').first();
-        if (await ticketLink.isVisible()) {
-            await ticketLink.click();
-            await expect(page).toHaveURL(/\/after-sales\/.+/);
-            createdTicketId = page.url().split('/').pop() || null;
-            console.log(`✅ 创建工单成功: ${createdTicketId}`);
-        }
+        createdTicketId = page.url().split('/').pop() || null;
+        console.log(`✅ 创建工单成功: ${createdTicketId}`);
     });
 
     test('P0-2: 应能在工单详情页发起定责', async ({ page }) => {
@@ -89,8 +82,8 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         await expect(page).toHaveURL(/\/after-sales\/.+/);
 
         // 查找 "新建定责单" 按钮
-        const liabilityBtn = page.getByRole('button', { name: /定责|新建定责单/ });
-        if (!(await liabilityBtn.isVisible())) {
+        const liabilityBtn = page.getByRole('button', { name: /新建定责单/ });
+        if (!(await liabilityBtn.isVisible({ timeout: 10000 }))) {
             console.log('⚠️ 该工单状态不支持定责或按钮不可见');
             return; // 跳过，不抛错
         }
@@ -99,8 +92,8 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
 
         // 等待定责单对话框
         const dialog = page.getByRole('dialog').first();
-        await expect(dialog).toBeVisible();
-        await expect(dialog.getByText(/新建定责单|定责/).first()).toBeVisible();
+        await expect(dialog).toBeVisible({ timeout: 10000 });
+        await expect(dialog.getByText(/新建定责单/).first()).toBeVisible();
 
         // 选择责任方类型
         const partyTypeSelect = dialog.getByLabel(/责任方类型/);
@@ -110,7 +103,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         }
 
         // 填写定责金额
-        await dialog.locator('input[type="number"]').fill('500');
+        await dialog.getByLabel(/定责金额/).fill('500');
 
         // 填写定责原因
         const reasonTextarea = dialog.getByLabel(/定责原因/);

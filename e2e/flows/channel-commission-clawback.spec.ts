@@ -11,8 +11,8 @@ import { skipOnDataLoadError } from '../helpers/test-utils';
 
 test.describe('渠道佣金扣回 (Commission Clawback)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P0-1: 渠道详情应显示佣金记录', async ({ page }) => {
@@ -73,7 +73,7 @@ test.describe('渠道佣金扣回 (Commission Clawback)', () => {
     });
 
     test('P0-3: 结算单应体现负向调整', async ({ page }) => {
-        await page.goto('/finance/channel-settlements');
+        await page.goto('/finance/channel-settlements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         const table = page.locator('table');
@@ -94,8 +94,8 @@ test.describe('渠道佣金扣回 (Commission Clawback)', () => {
 
 test.describe('底价供货模式 (Base Price Mode)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P0-4: 底价供货渠道应显示结算价折扣', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('底价供货模式 (Base Price Mode)', () => {
 
     test('P0-5: 不同等级渠道结算价应不同', async ({ page }) => {
         // 查看渠道等级配置 (新路径)
-        await page.goto('/settings/channels');
+        await page.goto('/settings/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 点击佣金配置 Tab
@@ -149,8 +149,8 @@ test.describe('底价供货模式 (Base Price Mode)', () => {
     });
 
     test('P0-6: 渠道选品池管理页面', async ({ page }) => {
-        await page.goto('/settings/channels/products');
-        // await page.waitForLoadState('networkidle');
+        await page.goto('/settings/channels/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // await page.waitForLoadState('domcontentloaded');
         if (await skipOnDataLoadError(page)) return;
 
         // 验证页面加载（使用多种选择器策略）
@@ -176,8 +176,8 @@ test.describe('底价供货模式 (Base Price Mode)', () => {
     });
 
     test('P0-7: 渠道表单应包含佣金触发模式', async ({ page }) => {
-        await page.goto('/settings/channels');
-        // await page.waitForLoadState('networkidle');
+        await page.goto('/settings/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // await page.waitForLoadState('domcontentloaded');
         if (await skipOnDataLoadError(page)) return;
 
         // 使用更健壮的选择器 - 适配渠道列表页

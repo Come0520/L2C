@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P0-1: 指派师傅时应检测时段冲突', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
 
     test('P0-2: 强冲突应禁止指派', async ({ page }) => {
         // 此测试验证强冲突时无法完成指派
-        await page.goto('/install-tasks');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
         if (await pendingRow.isVisible()) {
@@ -86,7 +86,7 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
     });
 
     test('P0-3: 软冲突应显示赶场风险警告', async ({ page }) => {
-        await page.goto('/install-tasks');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
         if (await pendingRow.isVisible()) {
@@ -112,7 +112,7 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
     });
 
     test('P1-1: 强制派单应跳过校验', async ({ page }) => {
-        await page.goto('/install-tasks');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
         if (await pendingRow.isVisible()) {

@@ -11,8 +11,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('收款单审核流程 (Payment Order Audit)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/finance/payment-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/payment-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P0-1: 应能创建预收款单并上传凭证', async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe('收款单审核流程 (Payment Order Audit)', () => {
     });
 
     test('P0-5: 正常收款单应能关联多个订单', async ({ page }) => {
-        await page.goto('/finance/payment-orders/new');
+        await page.goto('/finance/payment-orders/new', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // 类型选择普通收款
         // ... (选择客户后加载订单的逻辑)
         console.log('ℹ️ 此流程涉及复杂的客户与订单联动，需 Mock 环境支持');

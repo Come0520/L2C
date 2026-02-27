@@ -13,8 +13,8 @@ import { test, expect } from '@playwright/test';
 test.describe('通知中心基础功能', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到通知中心页面
-        await page.goto('/notifications');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/notifications', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应显示通知列表或空状态', async ({ page }) => {

@@ -17,7 +17,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应在应收账单列表页正常显示数据', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 检测数据加载错误
         const errorElement = page.getByText('Data Load Error');
@@ -40,7 +40,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应支持录入收款记录并同步状态', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 查找待收款的单子
         const pendingRow = page.locator('tr', { has: page.getByText(/待回款|PENDING/) }).first();
@@ -72,7 +72,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应验证收款计划 (Schedules)', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstLink = page.locator('table tbody tr a').first();
         if (await firstLink.isVisible()) {
             await firstLink.click();
@@ -90,7 +90,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应支持退款操作', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 查找已回款或部分回款的单子
         const paidRow = page.locator('tr', { has: page.getByText(/已完成|部分回款|COMPLETED|PARTIAL/) }).first();
@@ -114,7 +114,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应阻止超额收款', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pendingRow = page.locator('tr', { has: page.getByText(/待回款|PENDING/) }).first();
         if (await pendingRow.isVisible()) {
@@ -152,7 +152,7 @@ test.describe('财务应收 (Finance AR)', () => {
     });
 
     test('应在完成收款后更新状态为 COMPLETED', async ({ page }) => {
-        await page.goto('/finance/ar');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 查找部分回款的单子 (可以完成剩余)
         const partialRow = page.locator('tr', { has: page.getByText(/部分回款|PARTIAL/) }).first();

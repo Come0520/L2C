@@ -7,9 +7,9 @@ test.describe('Lead Status Workflow', () => {
 
     test.beforeEach(async ({ page }) => {
         // 导航到线索列表页面
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // 等待页面加载完成
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     /**
@@ -45,7 +45,7 @@ test.describe('Lead Status Workflow', () => {
         await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
         // 等待列表刷新
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 从表格获取第一个线索的ID
         const firstRow = page.locator('table tbody tr').first();
@@ -68,7 +68,7 @@ test.describe('Lead Status Workflow', () => {
 
         // 导航到线索详情页面
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证详情页加载成功 - 检查面包屑中的 "线索详情" 文本
         await expect(page.getByText('线索详情')).toBeVisible({ timeout: 10000 });
@@ -88,7 +88,7 @@ test.describe('Lead Status Workflow', () => {
         const poolTab = page.getByRole('button', { name: '公海池' });
         if (await poolTab.isVisible()) {
             await poolTab.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 公海池 tab 点击成功');
         }
 
@@ -96,7 +96,7 @@ test.describe('Lead Status Workflow', () => {
         const pendingTab = page.getByRole('button', { name: '待跟进' });
         if (await pendingTab.isVisible()) {
             await pendingTab.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 待跟进 tab 点击成功');
         }
 
@@ -104,7 +104,7 @@ test.describe('Lead Status Workflow', () => {
         const allTab = page.getByRole('button', { name: '全部线索' });
         if (await allTab.isVisible()) {
             await allTab.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 全部线索 tab 点击成功');
         }
     });
@@ -115,7 +115,7 @@ test.describe('Lead Status Workflow', () => {
 
         // 导航到详情页
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找并点击「标记作废」或类似按钮
         const voidButton = page.locator('button:has-text("作废"), button:has-text("标记作废")').first();

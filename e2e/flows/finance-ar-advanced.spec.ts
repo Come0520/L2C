@@ -7,8 +7,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Finance AR Advanced Flows', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/finance/ar');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应验证分批收款流程 (Partial Payments)', async ({ page }) => {

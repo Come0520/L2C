@@ -33,8 +33,8 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
     // 场景1：找到一个已安装/待验收的订单
     // ----------------------------------------------------------------
     test('Step 1: 查找待验收的安装单', async ({ page }) => {
-        await page.goto('/service/installation');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
         if (await skipOnDataLoadError(page)) {
             console.log('⏭️ 数据加载错误，跳过');
             return;
@@ -81,7 +81,7 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
         test.skip(!installationId, '需要先找到安装单');
 
         await page.goto(`/service/installation/${installationId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 检查验收按钮
         const confirmBtn = page.getByRole('button', { name: /确认验收|验收通过|完成验收/ });
@@ -131,7 +131,7 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
         test.skip(!installedOrderId, '需要先获取关联订单ID');
 
         await page.goto(`/orders/${installedOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证订单状态为已完成
         const statusBadge = page.locator('[data-testid="order-status"], [class*="badge"], [class*="status"]')
@@ -156,7 +156,7 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
         test.skip(!installedOrderId, '需要先获取关联订单ID');
 
         await page.goto(`/orders/${installedOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查看保修信息区域
         const warrantySection = page.locator(
@@ -182,7 +182,7 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
 
         // 方案A：从订单页直接创建售后
         await page.goto(`/orders/${installedOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const createAfterSalesBtn = page.getByRole('button', { name: /申请售后|创建售后|提交工单/ });
 
@@ -216,8 +216,8 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
         } else {
             // 方案B：直接导航到售后页面创建，关联该订单
             console.log('ℹ️ 订单页无直接创建售后按钮，改为导航到售后模块');
-            await page.goto('/after-sales/new');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/after-sales/new', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
 
             const orderInput = page.getByLabel(/关联订单/);
             if (await orderInput.isVisible()) {
@@ -244,8 +244,8 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
 // ----------------------------------------------------------------
 test.describe('保修期边界条件验证', () => {
     test('保修期内应允许创建售后工单', async ({ page }) => {
-        await page.goto('/after-sales');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证页面能正常加载（非500错误）
         await expect(page.locator('main, [role="main"]')).toBeVisible({ timeout: 10000 });
@@ -257,8 +257,8 @@ test.describe('保修期边界条件验证', () => {
     });
 
     test('应正确显示售后工单的保修状态标签', async ({ page }) => {
-        await page.goto('/after-sales');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const table = page.locator('table');
         if (await table.isVisible()) {

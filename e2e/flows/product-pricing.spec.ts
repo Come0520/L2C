@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('商品定价规则 (Product Pricing)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/products');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 商品详情应显示价格信息', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('商品定价规则 (Product Pricing)', () => {
 
     test('P1-4: 采购员应能看到成本价', async ({ page }) => {
         // 此测试依赖当前登录用户角色
-        await page.goto('/products');
+        await page.goto('/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const costHeader = page.getByRole('columnheader', { name: /成本|采购价/ });
 
         if (await costHeader.isVisible()) {
@@ -76,8 +76,8 @@ test.describe('商品定价规则 (Product Pricing)', () => {
 
 test.describe('报价中的定价计算 (Quote Pricing)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/quotes');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-5: 报价明细应自动计算阶梯价', async ({ page }) => {

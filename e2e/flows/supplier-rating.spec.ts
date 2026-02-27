@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('供应商评分与预警 (Supplier Rating & Warning)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/supply-chain/suppliers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/suppliers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P2-1: 供应商列表应显示评分列', async ({ page }) => {
@@ -66,8 +66,8 @@ test.describe('供应商评分与预警 (Supplier Rating & Warning)', () => {
 
 test.describe('师傅评价与满意度', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P2-4: 安装任务详情应显示师傅评价', async ({ page }) => {

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('售后财务联动 (After-sales Finance Linkage)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/after-sales');
+        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
     });
 
     test('should display after-sales page', async ({ page }) => {

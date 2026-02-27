@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('鲁棒性与边界测试 (Error Boundaries & Resilience)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // 等待页面基础加载完成
         await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => { });
     });
@@ -40,10 +40,10 @@ test.describe('鲁棒性与边界测试 (Error Boundaries & Resilience)', () => 
         });
 
         // 尝试新建线索
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // 等待可能存在的骨架屏或加载动画消失
         await page.waitForSelector('.lucide-loader-2, .animate-spin', { state: 'hidden', timeout: 15000 }).catch(() => { });
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 等待新建按钮出现且可交互
         const createBtn = page.getByRole('button', { name: /新建线索|新建/ });
@@ -95,7 +95,7 @@ test.describe('鲁棒性与边界测试 (Error Boundaries & Resilience)', () => 
 
         // 恢复网络
         await context.setOffline(false);
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await expect(page.getByRole('heading', { name: /线索/ })).toBeVisible({ timeout: 20000 });
     });
 });

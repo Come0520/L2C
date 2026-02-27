@@ -6,7 +6,7 @@ test.describe('报价组合 (Quote Bundles) 模块 E2E 测试', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到报价组合列表页
         await safeGoto(page, '/quote-bundles');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('验证报价组合/套餐基础布局', async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe('报价组合 (Quote Bundles) 模块 E2E 测试', () => {
         if (isNotFound) {
             console.log('检测到 404，重定向到产品设置组合页');
             await safeGoto(page, '/settings/products?tab=bundles');
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
         }
 
         // 验证标题：Header 映射或内容文案

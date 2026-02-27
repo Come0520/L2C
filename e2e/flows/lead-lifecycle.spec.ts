@@ -19,7 +19,7 @@ test.describe('Lead Lifecycle', () => {
 
                 // 导航到线索详情页
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 分配销售
                 const assignBtn = page.locator('button:has-text("分配")');
@@ -63,7 +63,7 @@ test.describe('Lead Lifecycle', () => {
 
                 // 导航到详情页验证数据
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证页面包含测试名称
                 await expect(page.locator(`text=${testName}`).first()).toBeVisible({ timeout: 10000 });
@@ -76,7 +76,7 @@ test.describe('Lead Lifecycle', () => {
                 const leadId = await createLead(page, { name: generateTestName('多次跟进') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 分配销售
                 const assignBtn = page.locator('button:has-text("分配")');
@@ -117,7 +117,7 @@ test.describe('Lead Lifecycle', () => {
                 const leadId = await createLead(page, { name: generateTestName('作废测试') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 点击作废按钮
                 const voidBtn = page.locator('button:has-text("作废"), button:has-text("标记作废")');
@@ -142,7 +142,7 @@ test.describe('Lead Lifecycle', () => {
                 const leadId = await createLead(page, { name: generateTestName('公海池') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 分配销售
                 const assignBtn = page.locator('button:has-text("分配")');

@@ -11,13 +11,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('劳务结算 (Labor Settlement)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应在劳务对账列表页显示师傅维度的汇总', async ({ page }) => {
         // 劳务结算通常在财务 AP 模块的一个子分类
-        await page.goto('/finance/ap?type=LABOR');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/finance/ap?type=LABOR', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         await expect(page.getByRole('heading', { name: /劳务|师傅/ })).toBeVisible();
 
@@ -32,7 +32,7 @@ test.describe('劳务结算 (Labor Settlement)', () => {
     });
 
     test('应支持生成劳务对账单并包含任务明细', async ({ page }) => {
-        await page.goto('/finance/ap?type=LABOR');
+        await page.goto('/finance/ap?type=LABOR', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const generateBtn = page.getByRole('button', { name: /生成对账单/ });
         if (await generateBtn.isVisible()) {
@@ -51,7 +51,7 @@ test.describe('劳务结算 (Labor Settlement)', () => {
     });
 
     test('应在劳务单详情中显示任务关联', async ({ page }) => {
-        await page.goto('/finance/ap?type=LABOR');
+        await page.goto('/finance/ap?type=LABOR', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const firstRow = page.locator('table tbody tr').first();
         if (await firstRow.isVisible()) {
@@ -71,7 +71,7 @@ test.describe('劳务结算 (Labor Settlement)', () => {
     });
 
     test('应支持结算确认', async ({ page }) => {
-        await page.goto('/finance/ap?type=LABOR');
+        await page.goto('/finance/ap?type=LABOR', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const pendingRow = page.locator('table tbody tr').first();
 
         if (await pendingRow.isVisible()) {

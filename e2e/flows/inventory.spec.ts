@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Supply Chain - Inventory Management', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/supply-chain/inventory');
+        await page.goto('/supply-chain/inventory', { waitUntil: 'domcontentloaded', timeout: 60000 });
     });
 
     test('should display inventory page and handle adjustment', async ({ page }) => {

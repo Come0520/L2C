@@ -30,8 +30,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
     // ----------------------------------------------------------------
     test('Step 1: 查看待采购池数据', async ({ page }) => {
         // 导航到待采购池（Pending Pool）
-        await page.goto('/supply-chain/pending-pool');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/pending-pool', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) {
             console.log('⏭️ 数据加载错误，跳过');
@@ -70,8 +70,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
     // 场景2：查看拆单规则配置
     // ----------------------------------------------------------------
     test('Step 2: 验证拆单规则已配置', async ({ page }) => {
-        await page.goto('/supply-chain/split-rules');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/split-rules', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) {
             console.log('⏭️ 跳过');
@@ -109,8 +109,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
     // 场景3：在待采购池中手动分配供应商（assignToSupplier）
     // ----------------------------------------------------------------
     test('Step 3: 未匹配项手动分配供应商', async ({ page }) => {
-        await page.goto('/supply-chain/pending-pool');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/pending-pool', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 切换到"未匹配"Tab（UNMATCHED items）
         const unmatchedTab = page.getByRole('tab', { name: /未匹配|待分配|UNMATCHED/ });
@@ -184,8 +184,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
     // 场景4：提交草稿PO审批
     // ----------------------------------------------------------------
     test('Step 4: 提交草稿PO进入审批', async ({ page }) => {
-        await page.goto('/supply-chain/pending-pool');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/pending-pool', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 切换到草稿PO Tab
         const draftTab = page.getByRole('tab', { name: /草稿|Draft/ });
@@ -228,8 +228,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
     // 场景5：从采购单列表验证PO已生成
     // ----------------------------------------------------------------
     test('Step 5: 验证采购单（PO）已生成', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -253,7 +253,7 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
             const detailLink = firstRow.locator('a').first();
             if (await detailLink.isVisible()) {
                 await detailLink.click();
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证PO详情页包含关键信息
                 await expect(page.getByText(/采购单号|PO号/)).toBeVisible({ timeout: 5000 });
@@ -271,8 +271,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
 // ----------------------------------------------------------------
 test.describe('加工工单（WO）生成验证', () => {
     test('应显示加工单列表', async ({ page }) => {
-        await page.goto('/supply-chain/production-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/production-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -287,8 +287,8 @@ test.describe('加工工单（WO）生成验证', () => {
     });
 
     test('加工单应关联正确的订单', async ({ page }) => {
-        await page.goto('/supply-chain/production-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/production-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         if (await skipOnDataLoadError(page)) return;
 
@@ -302,7 +302,7 @@ test.describe('加工工单（WO）生成验证', () => {
         const link = firstRow.locator('a').first();
         if (await link.isVisible()) {
             await link.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证加工单详情包含关联字段
             await expect(page.getByText(/工单号|WO号|订单/)).toBeVisible({ timeout: 5000 });

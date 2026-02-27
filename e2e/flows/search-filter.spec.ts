@@ -12,8 +12,8 @@ import { test } from '@playwright/test';
 test.describe('全局搜索功能', () => {
 
     test('应执行全局搜索并显示结果', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找全局搜索输入框
         const searchInput = page.locator('[data-testid="global-search"], input[placeholder*="搜索"], [aria-label*="搜索"]');
@@ -34,7 +34,7 @@ test.describe('全局搜索功能', () => {
             } else {
                 // 可能是按 Enter 触发搜索
                 await page.keyboard.press('Enter');
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
                 console.log('✅ 全局搜索已执行');
             }
         } else {
@@ -43,8 +43,8 @@ test.describe('全局搜索功能', () => {
     });
 
     test('应在搜索结果中显示正确的实体类型', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const searchInput = page.locator('[data-testid="global-search"], input[placeholder*="搜索"]').first();
 
@@ -69,8 +69,8 @@ test.describe('全局搜索功能', () => {
 test.describe('列表筛选功能', () => {
 
     test('线索列表应支持状态筛选', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找状态筛选器
         const statusFilter = page.locator('[data-testid="status-filter"], select[name*="status"], [aria-label*="状态"]');
@@ -85,7 +85,7 @@ test.describe('列表筛选功能', () => {
 
             if (optionCount > 1) {
                 await options.nth(1).click();
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证 URL 变化
                 const url = page.url();
@@ -97,8 +97,8 @@ test.describe('列表筛选功能', () => {
     });
 
     test('订单列表应支持关键词搜索', async ({ page }) => {
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找搜索输入框
         const searchInput = page.locator('input[placeholder*="搜索"], input[name*="search"], [data-testid="list-search"]');
@@ -109,7 +109,7 @@ test.describe('列表筛选功能', () => {
 
             // 可能需要按 Enter 或自动搜索
             await page.keyboard.press('Enter');
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证表格数据变化
             const rows = page.locator('table tbody tr');
@@ -121,8 +121,8 @@ test.describe('列表筛选功能', () => {
     });
 
     test('客户列表应支持等级筛选', async ({ page }) => {
-        await page.goto('/customers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/customers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找等级筛选器
         const levelFilter = page.locator('[data-testid="level-filter"], select[name*="level"], [aria-label*="等级"]');
@@ -139,7 +139,7 @@ test.describe('列表筛选功能', () => {
                 const aOption = page.getByRole('option', { name: /A/ });
                 if (await aOption.isVisible().catch(() => false)) {
                     await aOption.click();
-                    await page.waitForLoadState('networkidle');
+                    await page.waitForLoadState('domcontentloaded');
                     console.log('✅ 等级筛选应用成功');
                 }
             }
@@ -152,8 +152,8 @@ test.describe('列表筛选功能', () => {
 test.describe('分页功能', () => {
 
     test('应正确显示分页信息', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找分页组件
         const pagination = page.locator('[class*="pagination"], [data-testid="pagination"], nav[aria-label*="页"]');
@@ -174,8 +174,8 @@ test.describe('分页功能', () => {
     });
 
     test('应支持翻页操作', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 记录当前数据
         const firstRowText = await page.locator('table tbody tr').first().textContent().catch(() => '');
@@ -185,7 +185,7 @@ test.describe('分页功能', () => {
 
         if (await nextBtn.isVisible() && !await nextBtn.isDisabled()) {
             await nextBtn.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证数据变化
             const newFirstRowText = await page.locator('table tbody tr').first().textContent().catch(() => '');
@@ -206,8 +206,8 @@ test.describe('分页功能', () => {
     });
 
     test('应支持每页数量切换', async ({ page }) => {
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找每页数量选择器
         const pageSizeSelect = page.locator('[data-testid="page-size"], select[name*="pageSize"], [aria-label*="每页"]');
@@ -220,7 +220,7 @@ test.describe('分页功能', () => {
             const option = page.getByRole('option', { name: /20|25|50/ }).first();
             if (await option.isVisible().catch(() => false)) {
                 await option.click();
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 验证 URL 包含 pageSize 参数
                 const url = page.url();

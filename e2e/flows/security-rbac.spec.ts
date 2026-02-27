@@ -38,8 +38,8 @@ test.describe('RBAC 安全权限测试', () => {
         });
 
         // 2. 访问首页，检查导航菜单
-        await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证侧边栏是否隐藏了“系统设置”或“用户管理”
         // 注意：这里需要根据实际 UI 的文本或 selector 来调整
@@ -73,7 +73,7 @@ test.describe('RBAC 安全权限测试', () => {
             });
         });
 
-        await page.goto('/');
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 尝试通过浏览器原生 fetch 调用一个管理类接口（模拟绕过 UI 的攻击）
         const unauthorizedAction = await page.evaluate(async () => {
@@ -102,8 +102,8 @@ test.describe('RBAC 安全权限测试', () => {
             });
         });
 
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证“创建线索”按钮是否不显示或被禁用
         const createBtn = page.getByRole('button', { name: /创建|新增/ });

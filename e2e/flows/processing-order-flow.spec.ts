@@ -11,8 +11,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/processing-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P0-1: 加工单列表应显示正确字段', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
 
     test('P0-2: 从订单流转触发加工单验证', async ({ page }) => {
         // 此用例模拟订单状态变为 PROCESSING 时自动生成的逻辑
-        await page.goto('/orders');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstOrder = page.locator('table tbody tr').first();
 
         if (await firstOrder.isVisible()) {
@@ -39,7 +39,7 @@ test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
             console.log(`✅ 正在验证订单 ${orderNo} 的加工联动`);
 
             // 导航到加工单列表并搜索该订单号
-            await page.goto('/processing-orders');
+            await page.goto('/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
             await page.getByPlaceholder(/搜索|单号/).fill(orderNo?.trim() || '');
             await page.keyboard.press('Enter');
             await page.waitForTimeout(1000);

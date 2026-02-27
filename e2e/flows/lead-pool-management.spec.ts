@@ -12,7 +12,7 @@ test.describe('Lead Pool Management', () => {
         const leadId = await createLead(page, { name: generateTestName('退回公海') });
 
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 退回公海
         const returnBtn = page.locator('button:has-text("退回"), button[title="退回"]');
@@ -40,7 +40,7 @@ test.describe('Lead Pool Management', () => {
         const leadId = await createLead(page, { name: generateTestName('认领线索') });
 
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 分配销售
         const assignBtn = page.locator('button:has-text("分配")');
@@ -57,7 +57,7 @@ test.describe('Lead Pool Management', () => {
         const leadId = await createLead(page, { name: generateTestName('自动回收') });
 
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 分配销售
         const assignBtn = page.locator('button:has-text("分配")');
@@ -95,7 +95,7 @@ test.describe('Lead Pool Management', () => {
         console.log(`✅ 创建了 ${leadIds.length} 个测试线索`);
 
         // 等待表格刷新
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 选择多个线索进行批量操作
         const checkboxes = page.locator('table tbody tr input[type="checkbox"]');

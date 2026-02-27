@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('安装工费计算 (Install Fee Calculation)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 派单时应填写预估工费', async ({ page }) => {

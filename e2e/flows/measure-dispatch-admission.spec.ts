@@ -10,13 +10,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('测量费用准入 (Measure Fee Admission)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/measure-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/measure-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-1: 未付定金客户应无法直接发起测量', async ({ page }) => {
         // 进入线索详情，尝试发起测量
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const firstLead = page.locator('table tbody tr').first();
         if (await firstLead.isVisible()) {
@@ -39,7 +39,7 @@ test.describe('测量费用准入 (Measure Fee Admission)', () => {
     });
 
     test('P1-2: 免费测量需要审批', async ({ page }) => {
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const firstLead = page.locator('table tbody tr').first();
         if (await firstLead.isVisible()) {
@@ -66,7 +66,7 @@ test.describe('测量费用准入 (Measure Fee Admission)', () => {
 
     test('P1-3: 已付定金客户可直接预约测量', async ({ page }) => {
         // 此测试需要特定数据环境（有已付定金的线索）
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 筛选已付定金的线索
         const statusFilter = page.getByRole('combobox', { name: /状态/ });
@@ -93,8 +93,8 @@ test.describe('测量费用准入 (Measure Fee Admission)', () => {
 
 test.describe('测量员派单 (Measure Dispatch)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/measure-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/measure-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P1-4: 应能指派测量员', async ({ page }) => {

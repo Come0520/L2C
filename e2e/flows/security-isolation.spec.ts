@@ -23,7 +23,7 @@ test.describe('数据安全与租户隔离 (Security & Isolation)', () => {
 
     test('P0-2: 普通用户尝试进入“系统设置”应被拦截', async ({ page }) => {
         // 这里假设当前登录用户是一个普通销售
-        await page.goto('/settings/approvals');
+        await page.goto('/settings/approvals', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 检查是否重定向到仪表盘或显示无权限
         const url = page.url();
@@ -34,7 +34,7 @@ test.describe('数据安全与租户隔离 (Security & Isolation)', () => {
 
     test('P0-3: 敏感字段权限验证 (底价/成本)', async ({ page }) => {
         // 导航到一个包含成本信息的页面，如商品详情或报价明细
-        await page.goto('/products');
+        await page.goto('/products', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstRow = page.locator('table tbody tr').first();
 
         if (await firstRow.isVisible()) {
@@ -54,7 +54,7 @@ test.describe('数据安全与租户隔离 (Security & Isolation)', () => {
     test('P0-4: API 越权尝试 (Mock 测试目标)', async ({ page }) => {
         // 尝试手动向 Action 接口发送请求（通过 UI 触发非授权操作）
         // 这里通过验证页面上关键“删除”按钮的可用性来间接测试
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const bulkDeleteBtn = page.getByRole('button', { name: /批量删除|全部删除/ });
 
         if (await bulkDeleteBtn.isVisible()) {

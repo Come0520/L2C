@@ -6,7 +6,7 @@ test.describe('展厅 (Showroom) 模块 E2E 测试', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到展厅列表页
         await safeGoto(page, '/showroom');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('验证展厅列表页基础布局与搜索', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('展厅 (Showroom) 模块 E2E 测试', () => {
 
     test('验证展厅列表内容渲染与跳转', async ({ page }) => {
         // 等待可能出现的卡片加载
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const cards = page.locator('.card, [role="article"]');
         const count = await cards.count();

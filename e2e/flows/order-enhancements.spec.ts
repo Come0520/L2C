@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应支持订单拆单 (PENDING_PO)', async ({ page }) => {

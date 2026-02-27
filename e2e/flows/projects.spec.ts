@@ -6,7 +6,7 @@ test.describe('项目 (Projects) 模块 E2E 测试', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到项目列表页
         await safeGoto(page, '/projects');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('验证项目列表页基础布局', async ({ page }) => {

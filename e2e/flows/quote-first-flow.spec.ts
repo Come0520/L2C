@@ -72,7 +72,7 @@ test.describe('报价优先模式 E2E', () => {
         test.skip(!createdQuoteId, '需要先创建报价单');
 
         await page.goto(`/quotes/${createdQuoteId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找派送测量按钮
         const pushMeasureBtn = page.getByRole('button', { name: /派送测量|发起测量/ });

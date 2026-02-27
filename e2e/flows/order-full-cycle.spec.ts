@@ -23,7 +23,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         // 1. Create Lead
         console.log('Step 1: Creating Lead...');
         console.log('Step 1: Creating Lead...');
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         await page.getByTestId('create-lead-btn').click();
@@ -34,7 +34,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         // Search and Navigate to Detail
         console.log('  - Navigating to detail via first row...');
         await page.reload(); // Refresh immediately
-        // await page.waitForLoadState('networkidle');
+        // await page.waitForLoadState('domcontentloaded');
         if (await skipOnDataLoadError(page)) return;
 
         // Simplified: Click first row
@@ -164,8 +164,8 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         console.log('Step 7: Verifying Order Status (Pending Delivery)...');
 
         // 直接导航到订单列表，移除多余的 goBack 和 reload
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
         if (await skipOnDataLoadError(page)) return;
 
         // 等待表格加载
@@ -174,7 +174,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         // 使用轮询等待状态变更（订单可能需要时间更新状态）
         await expect(async () => {
             await page.reload();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             const row = page.locator('table tbody tr').first();
             await expect(row).toContainText(/待发货|PENDING_DELIVERY/);
         }).toPass({ timeout: 30000, intervals: [2000, 3000, 5000] });

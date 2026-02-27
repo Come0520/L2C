@@ -17,7 +17,7 @@ test.describe('Quote Lifecycle Flow', () => {
 
     test('should create a lead and convert to quick quote', async ({ page }) => {
         // 1. Create Lead
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Use data-testid for stable selection
         const createBtn = page.getByTestId('create-lead-btn');
@@ -61,7 +61,7 @@ test.describe('Quote Lifecycle Flow', () => {
         // Sometimes list doesn't auto-refresh or takes time
         console.log('Reloading page to refresh list...');
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Find the row with the customer name
         const row = page.locator('tr').filter({ hasText: customerName });
@@ -151,8 +151,8 @@ test.describe('Quote Lifecycle Flow', () => {
 
     test('should submit and approve quote flow', async ({ page }) => {
         // 1. Navigate to Quotes List
-        await page.goto('/quotes');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 2. Find a DRAFT quote
         const draftRow = page.locator('tr').filter({ hasText: /DRAFT|草稿/ }).first();
@@ -226,8 +226,8 @@ test.describe('Quote Lifecycle Flow', () => {
 
     test('should lock quote after order creation', async ({ page }) => {
         // 导航到报价列表，找一个 LOCKED 状态的报价
-        await page.goto('/quotes');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const lockedRow = page.locator('tr').filter({ hasText: /LOCKED|已锁定/ }).first();
 

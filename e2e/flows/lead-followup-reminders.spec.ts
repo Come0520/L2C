@@ -40,7 +40,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('跟进提醒') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 await addFollowup(page, '设置跟进提醒测试', 1); // 明天跟进
                 console.log('✅ 跟进提醒设置成功');
@@ -51,7 +51,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('列表提醒') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 await addFollowup(page, '列表显示测试', 1);
 
@@ -65,7 +65,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('过期提醒') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 注意：设置过期时间（负数天数）
                 await addFollowup(page, '过期提醒测试', -1);
@@ -77,7 +77,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('完成跟进') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 添加第一条跟进
                 await addFollowup(page, '第一次跟进', 1);
@@ -92,7 +92,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('多次跟进') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 // 添加多条跟进记录
                 for (let i = 0; i < 3; i++) {
@@ -106,7 +106,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('特殊字符') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 const specialContent = '测试内容@#$%^&*()_+-={}[]|\\:;"\'<>?,./~`';
                 await addFollowup(page, specialContent, 1);
@@ -118,7 +118,7 @@ test.describe('Lead Followup Reminders', () => {
                 const leadId = await createLead(page, { name: generateTestName('长内容') });
 
                 await page.goto(`/leads/${leadId}`);
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('domcontentloaded');
 
                 const longContent = 'A'.repeat(500);
                 await addFollowup(page, longContent, 1);

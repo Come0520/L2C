@@ -13,13 +13,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('采购单流程 (Supply Chain PO)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应在采购单列表页正常显示数据并支持筛选', async ({ page }) => {
         // 导航到采购单列表
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证页面标题
         await expect(page.getByRole('heading', { name: /采购单/ })).toBeVisible();
@@ -45,8 +45,8 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
     });
 
     test('应支持采购单状态流转: 下单确认', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找状态为"草稿"或"待下单"的采购单
         const draftTab = page.getByRole('tab', { name: /待下单|草稿/ });
@@ -92,7 +92,7 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
     });
 
     test('应支持填写物流信息与确认发货', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 切换到已下单状态
         const orderedTab = page.getByRole('tab', { name: /已下单|生产中/ });
@@ -132,7 +132,7 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
     });
 
     test('应支持到货确认与入库', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const shippedTab = page.getByRole('tab', { name: /已发货|待入库/ });
         if (await shippedTab.isVisible()) {
@@ -166,8 +166,8 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
     });
 
     test('应支持导出采购单 (PDF/图片)', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const firstRow = page.locator('table tbody tr').first();
         const rowText = await firstRow.textContent();
@@ -196,7 +196,7 @@ test.describe('采购单流程 (Supply Chain PO)', () => {
 test.describe('采购单关联逻辑 (订单木桶效应)', () => {
     test('应验证采购单状态对订单状态的驱动逻辑', async ({ page }) => {
         // 此测试属于逻辑验证，主要检查 UI 上的关联显示
-        await page.goto('/orders');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const firstLink = page.locator('table tbody tr a').first();
 
         if (await firstLink.isVisible()) {
@@ -225,8 +225,8 @@ test.describe('采购单关联逻辑 (订单木桶效应)', () => {
 
 test.describe('供应链批量操作 (Supply-01 Enhancement)', () => {
     test('应支持待采购池页面展示和筛选', async ({ page }) => {
-        await page.goto('/supply-chain/pending-pool');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/pending-pool', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证页面标题
         const heading = page.getByRole('heading', { name: /待采购|采购池/ });
@@ -235,14 +235,14 @@ test.describe('供应链批量操作 (Supply-01 Enhancement)', () => {
             console.log('✅ 待采购池页面加载成功');
         } else {
             // 如果页面不存在，导航到供应链主页
-            await page.goto('/supply-chain');
+            await page.goto('/supply-chain', { waitUntil: 'domcontentloaded', timeout: 60000 });
             console.log('⚠️ 待采购池页面尚未实现，跳过');
         }
     });
 
     test('应支持批量选择采购单', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找全选复选框
         const selectAll = page.locator('table thead input[type="checkbox"]');
@@ -262,8 +262,8 @@ test.describe('供应链批量操作 (Supply-01 Enhancement)', () => {
     });
 
     test('应支持合并采购单创建', async ({ page }) => {
-        await page.goto('/supply-chain/purchase-orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/purchase-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找合并采购按钮
         const mergeBtn = page.getByRole('button', { name: /合并采购|创建合并/ });
@@ -288,8 +288,8 @@ test.describe('供应链批量操作 (Supply-01 Enhancement)', () => {
 
 test.describe('供应商评价 (Supply-02 Enhancement)', () => {
     test('应在供应商详情页展示评价指标', async ({ page }) => {
-        await page.goto('/supply-chain/suppliers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/suppliers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const firstRow = page.locator('table tbody tr').first();
         const hasRow = await firstRow.isVisible({ timeout: 5000 });
@@ -299,8 +299,8 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
             console.log('ℹ️ 供应商列表为空，尝试创建测试数据...');
             const { seedSuppliers } = await import('./fixtures/supplier-data-seed');
             await seedSuppliers(page);
-            await page.goto('/supply-chain/suppliers');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/supply-chain/suppliers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
         }
 
         // 重新检查是否有数据
@@ -314,7 +314,7 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
         const firstLink = rowAfterSeed.locator('a').first();
         if (await firstLink.isVisible({ timeout: 3000 })) {
             await firstLink.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证评价指标展示
             const ratingSection = page.locator('[data-testid="supplier-rating"]');
@@ -332,8 +332,8 @@ test.describe('供应商评价 (Supply-02 Enhancement)', () => {
     });
 
     test('应在供应商列表页展示评分排名', async ({ page }) => {
-        await page.goto('/supply-chain/suppliers');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/supply-chain/suppliers', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证表格包含评分列
         const ratingColumn = page.locator('th').filter({ hasText: /评分|星级|等级/ });

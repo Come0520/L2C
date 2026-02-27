@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import Link from 'next/link';
 import { Label } from '@/shared/ui/label';
@@ -39,7 +38,6 @@ const loginSchema = z.object({
  * ```
  */
 export function LoginForm() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -84,8 +82,8 @@ export function LoginForm() {
         toast.error(errorMsg);
       } else {
         toast.success('登录成功，欢迎回来');
-        router.push('/dashboard');
-        router.refresh();
+        // 使用硬跳转确保 session cookie 被正确携带
+        window.location.href = '/dashboard';
       }
     } catch (_err: unknown) {
       logger.error('[Auth:Login] 登录执行异常', {

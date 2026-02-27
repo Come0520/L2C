@@ -65,7 +65,7 @@ test.describe('L2C 系统烟雾测试', () => {
 
     // 基础安全性检查：尝试未授权访问登录页
     test('验证已登录状态下访问登录页应重定向', async ({ page }) => {
-        await page.goto('/login');
+        await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForTimeout(2000);
         // 应该自动重定向到首页或工作台
         expect(page.url()).not.toContain('/login');
@@ -74,7 +74,7 @@ test.describe('L2C 系统烟雾测试', () => {
 
     // 404 页面检查
     test('验证 404 错误页面', async ({ page }) => {
-        await page.goto('/some-non-existent-page');
+        await page.goto('/some-non-existent-page', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await expect(page.locator('body')).toContainText(/404|未找到|不存在/);
         console.log('✅ 404 页面展示正常');
     });

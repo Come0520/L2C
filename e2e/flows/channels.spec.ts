@@ -14,8 +14,8 @@ import { test, expect } from '@playwright/test';
 test.describe('渠道管理基础功能', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到渠道管理页面
-        await page.goto('/settings/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/settings/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('应显示渠道列表', async ({ page }) => {
@@ -103,8 +103,8 @@ test.describe('渠道管理基础功能', () => {
 test.describe('渠道分析面板', () => {
     test('应显示渠道效果分析数据', async ({ page }) => {
         // 导航到渠道分析页面 (可能是 /analytics/channels 或 /settings/channels/analytics)
-        await page.goto('/analytics');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/analytics', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找渠道相关的分析卡片或图表
         const channelChart = page.locator('[data-testid="channel-analytics"], [data-testid="customer-source-chart"]');
@@ -125,8 +125,8 @@ test.describe('渠道分析面板', () => {
 test.describe('渠道归因规则', () => {
     test('应能配置归因规则', async ({ page }) => {
         // 导航到渠道设置页面
-        await page.goto('/settings/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/settings/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找归因设置入口
         const attributionTab = page.getByRole('tab', { name: /归因|Attribution/i });
@@ -164,8 +164,8 @@ test.describe('渠道归因规则', () => {
 test.describe('渠道数据完整性', () => {
     test('渠道应正确关联到线索', async ({ page }) => {
         // 创建一个带渠道的线索
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const createBtn = page.getByTestId('create-lead-btn');
         if (await createBtn.isVisible()) {
@@ -187,8 +187,8 @@ test.describe('渠道数据完整性', () => {
     });
 
     test('渠道统计数据应正确计算', async ({ page }) => {
-        await page.goto('/settings/channels');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/settings/channels', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找统计数据列
         const leadCountColumn = page.getByRole('columnheader', { name: /线索数|Lead Count/i });

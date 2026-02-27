@@ -15,7 +15,7 @@ test.describe('财务欠款账本 (Finance Debt Ledger)', () => {
     });
 
     test('P0-1: 应能查看供应商对账单列表', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 验证页面加载
@@ -31,7 +31,7 @@ test.describe('财务欠款账本 (Finance Debt Ledger)', () => {
     });
 
     test('P0-2: 对账单详情应显示欠款信息', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 点击进入第一条对账单详情
@@ -61,7 +61,7 @@ test.describe('财务欠款账本 (Finance Debt Ledger)', () => {
     });
 
     test('P0-3: 售后扣款应自动关联到对账单', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 此测试验证售后扣款与对账单的联动
@@ -94,7 +94,7 @@ test.describe('财务欠款账本 (Finance Debt Ledger)', () => {
 
 test.describe('财务极端场景 (Finance Edge Cases)', () => {
     test('P1-1: 扣款超过待结算金额应生成欠款记录', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 查找欠款账本入口
@@ -114,7 +114,7 @@ test.describe('财务极端场景 (Finance Edge Cases)', () => {
     });
 
     test('P1-2: 对账单应支持手动调整', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         const table = page.locator('table');
@@ -137,7 +137,7 @@ test.describe('财务极端场景 (Finance Edge Cases)', () => {
     });
 
     test('P1-3: 应能导出对账单', async ({ page }) => {
-        await page.goto('/finance/statements');
+        await page.goto('/finance/statements', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 查找导出按钮
@@ -157,7 +157,7 @@ test.describe('劳务结算欠款处理', () => {
     });
 
     test('P1-4: 劳务结算应显示售后扣款明细', async ({ page }) => {
-        await page.goto('/finance/labor-settlement');
+        await page.goto('/finance/labor-settlement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         // 验证页面加载

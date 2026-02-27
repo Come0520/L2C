@@ -24,28 +24,37 @@ export async function createLead(
     } = options;
 
     // 点击「新建线索」按钮
-    await page.click('button:has-text("新建线索")');
+    await page.click('[data-testid="create-lead-btn"]');
 
     // 等待对话框出现
-    await page.waitForSelector('[role="dialog"], dialog', { timeout: 10000 });
+    const dialog = page.locator('[role="dialog"], dialog');
+    await dialog.waitFor({ state: 'visible', timeout: 10000 });
 
-    // 填写客户姓名
-    await page.fill('input[placeholder*="姓名"]', name);
+    // 填写客户姓名（使用通配符匹配兼容不同措辞）
+    await dialog.locator('input[placeholder*="客户姓名"], input[placeholder*="姓名"]').first().fill(name);
 
     // 填写手机号
-    await page.fill('input[placeholder*="手机号"]', phone);
+    await dialog.locator('input[placeholder*="手机号"]').fill(phone);
+
+    // 意向等级映射
+    const intentionMap = {
+        '高': '高意向',
+        '中': '中意向',
+        '低': '低意向'
+    };
+    const mappedIntention = intentionMap[intention] || intention;
 
     // 选择意向等级 (Shadcn UI Select 组件)
     try {
-        const intentionTrigger = page.locator('button[role="combobox"]').filter({ hasText: /选择意向|意向/ });
+        const intentionTrigger = dialog.locator('button[role="combobox"]').filter({ hasText: /选择意向|意向/ });
         if (await intentionTrigger.isVisible({ timeout: 2000 })) {
             await intentionTrigger.click();
-            await page.getByRole('option', { name: new RegExp(intention) }).click();
+            await page.getByRole('option', { name: new RegExp(mappedIntention) }).click();
         } else {
             // 降级回退到原生 select
-            const intentionSelect = page.locator('text=意向等级').locator('..').locator('select');
+            const intentionSelect = dialog.locator('text=意向等级').locator('..').locator('select');
             if (await intentionSelect.isVisible({ timeout: 1000 })) {
-                await intentionSelect.selectOption({ label: intention });
+                await intentionSelect.selectOption({ label: mappedIntention });
             }
         }
     } catch (e) {
@@ -53,17 +62,17 @@ export async function createLead(
     }
 
     // 点击提交按钮 (尝试匹配多种常见文本)
-    const submitBtn = page.locator('button:has-text("创建线索"), button:has-text("确定"), button:has-text("提交")').last();
+    const submitBtn = dialog.locator('button:has-text("创建线索"), button:has-text("确定"), button:has-text("提交")').last();
     if (await submitBtn.isVisible()) {
         await submitBtn.click();
     } else {
         // 尝试查找对话框底部的确认按钮
-        const dialogSubmit = page.locator('[role="dialog"] button[type="submit"], dialog button[type="submit"]');
+        const dialogSubmit = dialog.locator('button[type="submit"]');
         if (await dialogSubmit.isVisible()) {
             await dialogSubmit.click();
         } else {
             // 最后尝试通过 class 查找
-            await page.click('.confirm-btn, .submit-btn');
+            await dialog.locator('.confirm-btn, .submit-btn').first().click();
         }
     }
 
@@ -75,13 +84,12 @@ export async function createLead(
     }
 
     // 等待对话框关闭
-    const dialog = page.locator('[role="dialog"], dialog');
     try {
         await expect(dialog).not.toBeVisible({ timeout: 10000 });
     } catch (e) {
         // 如果对话框还显示，可能是因为有表单验证错误
         console.error('⚠️ 创建线索对话框未关闭，检查是否有验证错误...');
-        const fieldErrors = page.locator('.text-red-500, .error-message');
+        const fieldErrors = dialog.locator('.text-red-500, .error-message');
         if (await fieldErrors.count() > 0) {
             const errorTexts = await fieldErrors.allTextContents();
             throw new Error(`表单验证失败: ${errorTexts.join(', ')}`);
@@ -89,8 +97,9 @@ export async function createLead(
         throw e;
     }
 
-    // 等待列表刷新
+    // 等待列表刷新并出现新的列表项
     await page.waitForLoadState('networkidle');
+    await page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 10000 });
 
     // 从表格获取第一个线索的ID
     const firstRow = page.locator('table tbody tr').first();
@@ -232,15 +241,21 @@ export async function waitForToast(
 
 /**
  * 导航到模块并等待加载完成
+ * 使用 domcontentloaded 替代 networkidle 以提高稳定性
  */
 export async function navigateToModule(
     page: Page,
     module: 'leads' | 'quotes' | 'orders' | 'finance' | 'service/measurement' | 'service/installation' | 'supply-chain' | 'after-sales' | 'analytics' | 'settings'
 ): Promise<void> {
-    await page.goto(`/${module}`);
-    await page.waitForLoadState('networkidle');
-    // 等待主要内容加载
-    await page.waitForSelector('main, [role="main"]', { timeout: 10000 });
+    await page.goto(`/${module}`, { timeout: 60000, waitUntil: 'domcontentloaded' });
+    // 等待主要内容加载（增加超时到 30s，兼容首次编译）
+    try {
+        await page.locator('main').first().waitFor({ state: 'visible', timeout: 30000 });
+    } catch {
+        // 降级：如果 main 元素不存在，等待页面稳定
+        console.log('⚠️ 未找到 <main> 元素，等待页面稳定...');
+        await page.waitForLoadState('domcontentloaded');
+    }
 }
 
 /**

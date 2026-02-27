@@ -24,7 +24,7 @@ test.describe('Lead Management', () => {
         const randomName = `测试客户_${Math.random().toString(36).substring(7)}`;
 
         // 导航到线索列表页
-        await page.goto('/leads');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 等待创建按钮可见 (使用 data-testid 更稳定)
         const createBtn = page.getByTestId('create-lead-btn');

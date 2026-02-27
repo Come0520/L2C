@@ -42,8 +42,8 @@ test.describe('完整销售流程 E2E', () => {
     });
 
     test('Step 1: 创建线索', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 点击创建按钮
         const createBtn = page.getByTestId('create-lead-btn');
@@ -88,7 +88,7 @@ test.describe('完整销售流程 E2E', () => {
 
         // 导航到线索详情
         await page.goto(`/leads/${createdLeadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 点击快速报价按钮
         const quickQuoteBtn = page.getByTestId('quick-quote-btn');
@@ -97,7 +97,7 @@ test.describe('完整销售流程 E2E', () => {
 
         // 等待页面跳转
         await expect(page).toHaveURL(/\/leads\/.*\/quick-quote/);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 选择方案 (经济型 或 第一个可用方案)
         const economicPlan = page.getByTestId('plan-ECONOMIC');
@@ -145,7 +145,7 @@ test.describe('完整销售流程 E2E', () => {
 
         // 导航到报价详情
         await page.goto(`/quotes/${createdQuoteId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找激活按钮
         const activateBtn = page.getByRole('button', { name: /激活|生效/ });
@@ -171,7 +171,7 @@ test.describe('完整销售流程 E2E', () => {
         test.skip(!createdQuoteId, '需要先创建报价');
 
         await page.goto(`/quotes/${createdQuoteId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找转订单按钮
         const convertBtn = page.getByRole('button', { name: /转订单|创建订单/ });
@@ -208,8 +208,8 @@ test.describe('完整销售流程 E2E', () => {
     test('Step 5: 验证订单详情与状态', async ({ page }) => {
         // 如果没有从上一步获取订单 ID，尝试从订单列表查找
         if (!createdOrderId) {
-            await page.goto('/orders');
-            await page.waitForLoadState('networkidle');
+            await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForLoadState('domcontentloaded');
 
             const row = page.locator('tr').filter({ hasText: testCustomerName }).first();
             if (await row.isVisible()) {
@@ -222,7 +222,7 @@ test.describe('完整销售流程 E2E', () => {
         test.skip(!createdOrderId, '需要先创建订单');
 
         await page.goto(`/orders/${createdOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证订单详情页加载
         await expect(page.getByText(/订单/)).toBeVisible();
@@ -247,7 +247,7 @@ test.describe('完整销售流程 E2E', () => {
         test.skip(!createdOrderId, '需要先创建订单');
 
         await page.goto(`/orders/${createdOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找确认排产按钮
         const confirmBtn = page.getByRole('button', { name: /确认排产|确认生产/ });
@@ -275,7 +275,7 @@ test.describe('完整销售流程 E2E', () => {
         test.setTimeout(60000); // 单独增加此步骤的超时
 
         await page.goto(`/orders/${createdOrderId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 等待页面完全渲染
         await expect(page.getByText(/订单/)).toBeVisible({ timeout: 10000 });
@@ -320,8 +320,8 @@ test.describe('销售流程边界条件', () => {
 
     test('应阻止重复转订单', async ({ page }) => {
         // 找一个已转订单的报价单
-        await page.goto('/quotes');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const lockedRow = page.locator('tr').filter({ hasText: /LOCKED|已锁定/ }).first();
 

@@ -6,7 +6,7 @@ test.describe('个人偏好设置 (Profile Settings) 模块 E2E 测试', () => {
     test.beforeEach(async ({ page }) => {
         // 导航到个人设置页面
         await safeGoto(page, '/profile/settings');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('验证个人设置页面基础布局', async ({ page }) => {

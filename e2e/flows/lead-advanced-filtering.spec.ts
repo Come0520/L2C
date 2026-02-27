@@ -28,7 +28,7 @@ test.describe('Lead Advanced Filtering', () => {
         if (await searchInput.isVisible({ timeout: 3000 })) {
             await searchInput.fill('测试');
             await page.waitForTimeout(1000); // 等待防抖
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 关键词搜索测试完成');
         } else {
             console.log('ℹ️ 未找到搜索框');
@@ -54,7 +54,7 @@ test.describe('Lead Advanced Filtering', () => {
         if (await searchInput.isVisible({ timeout: 3000 })) {
             await searchInput.fill('不存在的客户名称_' + Date.now());
             await page.waitForTimeout(1000);
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
 
             // 验证空状态显示
             const emptyState = page.locator('text=/暂无|没有找到|无数据/');
@@ -78,7 +78,7 @@ test.describe('Lead Advanced Filtering', () => {
         const resetBtn = page.locator('button:has-text("重置"), button:has-text("清空")');
         if (await resetBtn.isVisible({ timeout: 3000 })) {
             await resetBtn.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 筛选条件重置完成');
         } else {
             console.log('ℹ️ 未找到重置按钮');
@@ -100,7 +100,7 @@ test.describe('Lead Advanced Filtering', () => {
         if (await searchInput.isVisible({ timeout: 3000 })) {
             await searchInput.fill('@#$%^&*()');
             await page.waitForTimeout(1000);
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded');
             console.log('✅ 特殊字符搜索测试完成');
         }
     });
@@ -111,7 +111,7 @@ test.describe('Lead Advanced Filtering', () => {
 
         // 刷新页面
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证 Tab 状态（可能通过 URL 保持）
         console.log('✅ 筛选持久化测试完成');

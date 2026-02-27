@@ -40,7 +40,7 @@ test.describe('全链路业务流 (Full Business Chain)', () => {
         test.skip(!leadId, '前置线索创建失败');
 
         await page.goto(`/leads/${leadId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         quoteId = await createQuickQuote(page, { plan: 'STANDARD', roomName: '全链路测试房' });
         expect(quoteId).not.toBe('');
@@ -55,7 +55,7 @@ test.describe('全链路业务流 (Full Business Chain)', () => {
         test.skip(!quoteId, '前置报价流程失败');
 
         await page.goto(`/quotes/${quoteId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         orderId = await convertQuoteToOrder(page);
         expect(orderId).not.toBe('');
@@ -108,8 +108,8 @@ test.describe('全链路业务流 (Full Business Chain)', () => {
     test('5. 服务交付联动 (安装服务)', async ({ page }) => {
         test.skip(!orderId, '前置订单流程失败');
 
-        await page.goto('/service/installation');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 切换到待分配/待处理
         const pendingTab = page.getByRole('tab').filter({ hasText: /待分配|待处理/ });

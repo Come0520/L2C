@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('客户电子签名 (Customer Signature)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P2-1: 验收对话框应显示客户签名区域', async ({ page }) => {
@@ -59,8 +59,8 @@ test.describe('客户电子签名 (Customer Signature)', () => {
 
 test.describe('签到签退记录 (Check-in/Check-out)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/install-tasks');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('P2-3: 安装单详情应显示签到时间', async ({ page }) => {
@@ -108,7 +108,7 @@ test.describe('签到签退记录 (Check-in/Check-out)', () => {
 
 test.describe('离线模式指示 (Offline Mode Indicator)', () => {
     test('P2-6: 页面应有网络状态指示', async ({ page }) => {
-        await page.goto('/install-tasks');
+        await page.goto('/install-tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 查找网络状态指示器
         const networkIndicator = page.locator('[class*="online"]').or(page.locator('[class*="network"]'));

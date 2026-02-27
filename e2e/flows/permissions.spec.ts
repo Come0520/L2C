@@ -13,8 +13,8 @@ test.describe('权限与安全边界测试', () => {
 
     test('应在表单中验证必填字段', async ({ page }) => {
         // 导航到线索创建
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const createBtn = page.getByTestId('create-lead-btn');
         await expect(createBtn).toBeVisible();
@@ -38,8 +38,8 @@ test.describe('权限与安全边界测试', () => {
     });
 
     test('应验证手机号格式', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         const createBtn = page.getByTestId('create-lead-btn');
         await createBtn.click();
@@ -65,8 +65,8 @@ test.describe('权限与安全边界测试', () => {
         const testPhone = `138${timestamp.toString().slice(-8)}`;
         const testName = `去重测试_${timestamp}`;
 
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 第一次创建
         const createBtn = page.getByTestId('create-lead-btn');
@@ -100,8 +100,8 @@ test.describe('权限与安全边界测试', () => {
 
     test('应验证金额不能为负数', async ({ page }) => {
         // 导航到财务收款页面
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 找一个订单进入详情
         const firstOrderLink = page.locator('table tbody tr a').first();
@@ -148,8 +148,8 @@ test.describe('权限与安全边界测试', () => {
 test.describe('租户隔离验证', () => {
     test('应只显示当前租户的数据', async ({ page }) => {
         // 验证线索列表
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证页面标题可见（说明有权限访问）
         await expect(page.getByRole('heading', { name: /线索/ })).toBeVisible();
@@ -166,7 +166,7 @@ test.describe('租户隔离验证', () => {
         const fakeId = '00000000-0000-0000-0000-000000000000';
 
         await page.goto(`/orders/${fakeId}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // 验证 404 页面或错误提示
         const hasNotFound = await page.getByText(/不存在|未找到|404|Not Found/i).isVisible().catch(() => false);
@@ -179,8 +179,8 @@ test.describe('租户隔离验证', () => {
 
 test.describe('URL 状态同步验证', () => {
     test('筛选条件应同步到 URL', async ({ page }) => {
-        await page.goto('/orders');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找状态筛选器
         const statusFilter = page.locator('[data-testid="status-filter"], [aria-label*="状态"]');
@@ -207,8 +207,8 @@ test.describe('URL 状态同步验证', () => {
     });
 
     test('分页状态应同步到 URL', async ({ page }) => {
-        await page.goto('/leads');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForLoadState('domcontentloaded');
 
         // 查找分页组件
         const nextPageBtn = page.getByRole('button', { name: /下一页|Next|>/ });

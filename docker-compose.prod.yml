@@ -36,7 +36,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DB_MAX_CONNECTIONS=5 # 每个实例减少到 5 个连接
       - AUTH_SECRET=${AUTH_SECRET}
-      - AUTH_URL=${AUTH_URL:-http://localhost:3000}
+      - AUTH_URL=${AUTH_URL:-https://l2c.asia}
       # Aliyun OSS
       - OSS_REGION=${OSS_REGION}
       - OSS_BUCKET=${OSS_BUCKET}

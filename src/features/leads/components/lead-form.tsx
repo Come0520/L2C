@@ -287,7 +287,7 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
                     />
 
                     <div className="flex justify-end space-x-2 pt-4">
-                        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full md:w-auto">
+                        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full md:w-auto" data-testid="submit-lead-btn">
                             {form.formState.isSubmitting ? '正在提交...' : (isEdit ? '保存更新' : '创建线索')}
                         </Button>
                     </div>

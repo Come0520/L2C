@@ -13,7 +13,7 @@ import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * NextAuth 核心配置与导出
- * 
+ *
  * 包含：
  * - handlers: 认证路由处理器
  * - auth: 用于获取服务端会话的函数 (await auth())
@@ -73,7 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             action: 'LOGIN_FAILED',
             userId: user.id || 'unknown',
             tenantId: user.tenantId || 'unknown',
-            details: { method: 'credentials', platform: 'pc', reason: 'invalid_password' }
+            details: { method: 'credentials', platform: 'pc', reason: 'invalid_password' },
           });
           return null;
         }
@@ -89,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           action: 'LOGIN_SUCCESS',
           userId: user.id,
           tenantId: user.tenantId,
-          details: { method: 'credentials', platform: 'pc' }
+          details: { method: 'credentials', platform: 'pc' },
         });
 
         // 登录成功重置速率限制
@@ -128,9 +128,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        */
       /**
        * 微信用户信息映射
-       * 
+       *
        * @description 将微信服务器返回的原始 profile 数据（如 openid, nickname）映射到系统内部用户模型。
-       * 
+       *
        * @param profile - 微信原始用户信息
        * @returns 映射后的用户对象，包含 id, name, email, image 等字段
        */
@@ -160,7 +160,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      */
     /**
      * 会话回调 (Session Callback)
-     * 
+     *
      * @description
      * 每当检测到会话被查询时调用。此回调负责将 JWT 中的自定义载荷（如 id, role, tenantId）
      *注入到客户端可见的 Session 对象中。
@@ -180,7 +180,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      */
     /**
      * 令牌回调 (JWT Callback)
-     * 
+     *
      * @description
      * 每当创建或更新 JWT 时调用。用于将数据库中的持久化字段存入令牌，
      * 减少后续在服务端各模块中查询数据库的次数。
@@ -195,7 +195,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
   },
-  // secret: process.env.AUTH_SECRET, // Usually auto-detected
+  // 信任反向代理头 (X-Forwarded-Proto, X-Forwarded-Host)
+  // 生产环境使用 nginx 反代 + Docker，必须启用此选项
+  // 否则 Auth.js 的 CSRF 校验会因协议不匹配而失败，导致 session 异常
+  trustHost: true,
+  // secret: process.env.AUTH_SECRET, // 通常由 AUTH_SECRET 环境变量自动检测
 });
 
 /**
@@ -214,13 +218,13 @@ export interface CheckPermissionOptions {
 
 /**
  * 核心权限检查函数 (RBAC via DB)
- * 
+ *
  * 校验逻辑：
  * 1. 检查是否存在有效的会话和角色。
  * 2. 如果是超级管理员 (ADMIN 角色) 直接通过。
  * 3. 调用 checkRolePermission 进行细粒度的权限位校验。
  * 4. 如果启用了 audit，记录审计日志到数据库。
- * 
+ *
  * @param session - 会话对象
  * @param permissionName - 权限名称 (如: 'order.edit')
  * @param options - 可选配置 (审计记录等)
@@ -234,7 +238,7 @@ export const checkPermission = async (
   if (!session?.user?.roles || session.user.roles.length === 0) {
     logger.warn('权限检查失败：未找到有效会话或用户角色', {
       userId: session?.user?.id,
-      permission: permissionName
+      permission: permissionName,
     });
     return false;
   }
@@ -249,7 +253,7 @@ export const checkPermission = async (
       roles: session.user.roles,
       permission: permissionName,
       tenantId: session.user.tenantId,
-      path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+      path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
     });
   } else {
     // 仅在调试或高安全场景下记录成功日志，避免日志爆炸

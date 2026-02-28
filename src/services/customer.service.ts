@@ -14,7 +14,7 @@ import {
   paymentOrders,
   creditNotes,
   paymentBills,
-  statementConfirmations
+  statementConfirmations,
 } from '../shared/api/schema/finance';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
@@ -179,7 +179,7 @@ export class CustomerService {
       'source',
       'referrerName',
       'level',
-      'address'
+      'address',
     ];
 
     for (const field of compareFields) {
@@ -277,10 +277,10 @@ export class CustomerService {
     }
 
     // [Fix 5.1] 检查被合并客户是否已合并或已删除
-    const invalidSources = mergedCustomers.filter(mc => mc.isMerged || mc.deletedAt);
+    const invalidSources = mergedCustomers.filter((mc) => mc.isMerged || mc.deletedAt);
     if (invalidSources.length > 0) {
       throw new AppError(
-        `被合并档案中包含已合并或已删除的记录: ${invalidSources.map(c => c.customerNo).join(', ')}`,
+        `被合并档案中包含已合并或已删除的记录: ${invalidSources.map((c) => c.customerNo).join(', ')}`,
         ERROR_CODES.INVALID_OPERATION,
         400
       );
@@ -316,49 +316,75 @@ export class CustomerService {
       await tx
         .update(afterSalesTickets)
         .set({ customerId: primaryId })
-        .where(and(inArray(afterSalesTickets.customerId, mergedIds), eq(afterSalesTickets.tenantId, tenantId)));
+        .where(
+          and(
+            inArray(afterSalesTickets.customerId, mergedIds),
+            eq(afterSalesTickets.tenantId, tenantId)
+          )
+        );
       affectedTables.push('after_sales_tickets');
 
       // 2.5 迁移测量单
       await tx
         .update(measureTasks)
         .set({ customerId: primaryId })
-        .where(and(inArray(measureTasks.customerId, mergedIds), eq(measureTasks.tenantId, tenantId)));
+        .where(
+          and(inArray(measureTasks.customerId, mergedIds), eq(measureTasks.tenantId, tenantId))
+        );
       affectedTables.push('measure_tasks');
 
       // 2.6 迁移地址
       await tx
         .update(customerAddresses)
         .set({ customerId: primaryId })
-        .where(and(inArray(customerAddresses.customerId, mergedIds), eq(customerAddresses.tenantId, tenantId)));
+        .where(
+          and(
+            inArray(customerAddresses.customerId, mergedIds),
+            eq(customerAddresses.tenantId, tenantId)
+          )
+        );
       affectedTables.push('customer_addresses');
 
       // 2.7 迁移安装单
       await tx
         .update(installTasks)
         .set({ customerId: primaryId })
-        .where(and(inArray(installTasks.customerId, mergedIds), eq(installTasks.tenantId, tenantId)));
+        .where(
+          and(inArray(installTasks.customerId, mergedIds), eq(installTasks.tenantId, tenantId))
+        );
       affectedTables.push('install_tasks');
 
       // 2.8 迁移客户活动
       await tx
         .update(customerActivities)
         .set({ customerId: primaryId })
-        .where(and(inArray(customerActivities.customerId, mergedIds), eq(customerActivities.tenantId, tenantId)));
+        .where(
+          and(
+            inArray(customerActivities.customerId, mergedIds),
+            eq(customerActivities.tenantId, tenantId)
+          )
+        );
       affectedTables.push('customer_activities');
 
       // 2.9 迁移展厅分享
       await tx
         .update(showroomShares)
         .set({ customerId: primaryId })
-        .where(and(inArray(showroomShares.customerId, mergedIds), eq(showroomShares.tenantId, tenantId)));
+        .where(
+          and(inArray(showroomShares.customerId, mergedIds), eq(showroomShares.tenantId, tenantId))
+        );
       affectedTables.push('showroom_shares');
 
       // 2.10 迁移积分记录
       await tx
         .update(loyaltyTransactions)
         .set({ customerId: primaryId })
-        .where(and(inArray(loyaltyTransactions.customerId, mergedIds), eq(loyaltyTransactions.tenantId, tenantId)));
+        .where(
+          and(
+            inArray(loyaltyTransactions.customerId, mergedIds),
+            eq(loyaltyTransactions.tenantId, tenantId)
+          )
+        );
       affectedTables.push('loyalty_transactions');
 
       // 2.11 迁移财务数据
@@ -366,21 +392,27 @@ export class CustomerService {
       await tx
         .update(arStatements)
         .set({ customerId: primaryId })
-        .where(and(inArray(arStatements.customerId, mergedIds), eq(arStatements.tenantId, tenantId)));
+        .where(
+          and(inArray(arStatements.customerId, mergedIds), eq(arStatements.tenantId, tenantId))
+        );
       affectedTables.push('ar_statements');
 
       // Receipt Bills
       await tx
         .update(receiptBills)
         .set({ customerId: primaryId })
-        .where(and(inArray(receiptBills.customerId, mergedIds), eq(receiptBills.tenantId, tenantId)));
+        .where(
+          and(inArray(receiptBills.customerId, mergedIds), eq(receiptBills.tenantId, tenantId))
+        );
       affectedTables.push('receipt_bills');
 
       // Payment Orders (Legacy)
       await tx
         .update(paymentOrders)
         .set({ customerId: primaryId })
-        .where(and(inArray(paymentOrders.customerId, mergedIds), eq(paymentOrders.tenantId, tenantId)));
+        .where(
+          and(inArray(paymentOrders.customerId, mergedIds), eq(paymentOrders.tenantId, tenantId))
+        );
       affectedTables.push('payment_orders');
 
       // Credit Notes
@@ -425,26 +457,121 @@ export class CustomerService {
       // 3. 累加统计字段
       let totalOrders = primary.totalOrders || 0;
       let totalAmount = Number(primary.totalAmount || 0);
+      let loyaltyPoints = primary.loyaltyPoints || 0;
 
-      // 记录字段冲突决策 (简单起见，这里记录变更前的旧值)
+      // 记录字段冲突决策
       const fieldConflicts: Record<string, unknown> = {};
 
+      // 智能字段合并的中间变量
+      let mergedPhoneSecondary = primary.phoneSecondary;
+      let mergedNotes = primary.notes || '';
+      let mergedTags = [...(primary.tags || [])];
+      let mergedWechat = primary.wechat;
+      let mergedLevel = primary.level;
+      let mergedSource = primary.source;
+      let mergedReferrerName = primary.referrerName;
+      let mergedFirstOrderAt = primary.firstOrderAt;
+      let mergedLastOrderAt = primary.lastOrderAt;
+
+      // 等级优先级映射（A 最高, D 最低）
+      const LEVEL_ORDER: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
+
       for (const mc of mergedCustomers) {
+        // ── 统计字段累加 ──
         totalOrders += mc.totalOrders || 0;
         totalAmount += Number(mc.totalAmount || 0);
-        // 如果是 LATEST 优先，这里应包含逻辑合并字段值
+        loyaltyPoints += mc.loyaltyPoints || 0;
+
+        // ── 🔴 高优先级：电话号码 → 备用电话 ──
+        if (!mergedPhoneSecondary && mc.phone) {
+          mergedPhoneSecondary = mc.phone;
+          fieldConflicts['phoneSecondary'] = {
+            from: primary.phoneSecondary,
+            to: mc.phone,
+            source: mc.customerNo,
+          };
+        }
+
+        // ── 🔴 高优先级：备注追加 ──
+        if (mc.notes) {
+          mergedNotes = mergedNotes
+            ? `${mergedNotes}\n---\n[合并自 ${mc.customerNo}] ${mc.notes}`
+            : `[合并自 ${mc.customerNo}] ${mc.notes}`;
+          fieldConflicts['notes'] = { action: 'append', source: mc.customerNo };
+        }
+
+        // ── 🔴 高优先级：标签并集 ──
+        if (mc.tags && mc.tags.length > 0) {
+          mergedTags = [...new Set([...mergedTags, ...mc.tags])];
+          fieldConflicts['tags'] = { action: 'union', source: mc.customerNo };
+        }
+
+        // ── 🟡 中优先级：微信号空值补充 ──
+        if (!mergedWechat && mc.wechat) {
+          mergedWechat = mc.wechat;
+          fieldConflicts['wechat'] = { from: null, to: mc.wechat, source: mc.customerNo };
+        }
+
+        // ── 🟡 中优先级：客户等级取更高 ──
+        if (mc.level) {
+          const currentOrder = LEVEL_ORDER[mergedLevel || 'D'] || 1;
+          const mcOrder = LEVEL_ORDER[mc.level] || 1;
+          if (mcOrder > currentOrder) {
+            fieldConflicts['level'] = { from: mergedLevel, to: mc.level, source: mc.customerNo };
+            mergedLevel = mc.level as typeof mergedLevel;
+          }
+        }
+
+        // ── 🟡 中优先级：时间极值 ──
+        if (mc.firstOrderAt) {
+          if (!mergedFirstOrderAt || mc.firstOrderAt < mergedFirstOrderAt) {
+            mergedFirstOrderAt = mc.firstOrderAt;
+          }
+        }
+        if (mc.lastOrderAt) {
+          if (!mergedLastOrderAt || mc.lastOrderAt > mergedLastOrderAt) {
+            mergedLastOrderAt = mc.lastOrderAt;
+          }
+        }
+
+        // ── 🟢 低优先级：来源/带单人空值补充 ──
+        if (!mergedSource && mc.source) {
+          mergedSource = mc.source;
+          fieldConflicts['source'] = { from: null, to: mc.source, source: mc.customerNo };
+        }
+        if (!mergedReferrerName && mc.referrerName) {
+          mergedReferrerName = mc.referrerName;
+          fieldConflicts['referrerName'] = {
+            from: null,
+            to: mc.referrerName,
+            source: mc.customerNo,
+          };
+        }
       }
 
       const avgOrderAmount = totalOrders > 0 ? totalAmount / totalOrders : 0;
 
-      // 4. 更新主档案
+      // 4. 更新主档案（含智能合并字段）
       // [Fix 2.5] 更新主档案增加 tenantId 检查
       const [updatedPrimary] = await tx
         .update(customers)
         .set({
+          // 统计字段
           totalOrders,
           totalAmount: totalAmount.toString(),
           avgOrderAmount: avgOrderAmount.toFixed(2),
+          loyaltyPoints,
+          // 智能合并字段
+          phoneSecondary: mergedPhoneSecondary,
+          notes: mergedNotes || null,
+          tags: mergedTags.length > 0 ? mergedTags : [],
+          wechat: mergedWechat,
+          level: mergedLevel,
+          source: mergedSource,
+          referrerName: mergedReferrerName,
+          firstOrderAt: mergedFirstOrderAt,
+          lastOrderAt: mergedLastOrderAt,
+          // 元数据
           mergedFrom: [...(primary.mergedFrom || []), ...mergedIds],
           updatedAt: new Date(),
           version: (primary.version || 0) + 1,
@@ -504,12 +631,17 @@ export class CustomerService {
   /**
    * 更新客户信息
    * [Fix 1.2] 添加等级降级校验
-    * [Fix 3.1] 记录审计日志
-    * [Fix 3.4] 限制更新字段（在 schema 层已限制，此处为双重保障）
+   * [Fix 3.1] 记录审计日志
+   * [Fix 3.4] 限制更新字段（在 schema 层已限制，此处为双重保障）
    */
   static async updateCustomer(
     id: string,
-    data: Partial<Omit<typeof customers.$inferInsert, 'id' | 'customerNo' | 'tenantId' | 'createdAt' | 'createdBy'>>,
+    data: Partial<
+      Omit<
+        typeof customers.$inferInsert,
+        'id' | 'customerNo' | 'tenantId' | 'createdAt' | 'createdBy'
+      >
+    >,
     tenantId: string,
     userId: string,
     version?: number
@@ -540,7 +672,7 @@ export class CustomerService {
         .set({
           ...data,
           updatedAt: new Date(),
-          version: (existing.version || 0) + 1
+          version: (existing.version || 0) + 1,
         })
         .where(
           and(

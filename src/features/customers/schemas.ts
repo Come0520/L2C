@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 
 // Define enums as Zod enums or strings if Zod enum from drizzle is not directly compatible
 // Drizzle 'pgEnum' exports a value that can be used, but Zod usually wants native string array or z.enum()
 const customerLevels = ['A', 'B', 'C', 'D'] as const;
-const customerTypes = ['INDIVIDUAL', 'COMPANY', 'DESIGNER', 'PARTNER'] as const;
+
 export const customerLifecycleStages = [
   'LEAD',
   'OPPORTUNITY',
@@ -22,9 +23,6 @@ export const customerPipelineStatuses = [
   'PENDING_INSTALLATION',
   'COMPLETED',
 ] as const;
-
-// 中国大陆手机号正则
-const phoneRegex = /^\d{8,11}$/;
 
 /**
  * 客户偏好设置 Schema (JSONB)
@@ -45,14 +43,16 @@ export const preferencesSchema = z
  */
 export const customerSchema = z.object({
   name: z.string().min(1, '姓名不能为空').max(50, '姓名不能超过50字'), // 客户姓名
-  phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'), // 主联系电话
+  phone: z
+    .string()
+    .refine((val) => isValidPhoneNumber(val, 'CN'), { message: '请输入有效的电话号码' }), // 主联系电话
   phoneSecondary: z
     .string()
-    .regex(phoneRegex, '请输入有效的中国大陆手机号')
+    .refine((val) => !val || isValidPhoneNumber(val, 'CN'), { message: '请输入有效的电话号码' })
     .optional()
     .or(z.literal('')), // 备用电话
   wechat: z.string().max(50).optional(), // 微信 ID
-  type: z.enum(customerTypes).optional().default('INDIVIDUAL'), // 客户类型
+
   level: z.enum(customerLevels).optional().default('D'), // 客户等级 (A/B/C/D)
   address: z.string().max(200, '地址不能超过200字').optional(), // 详细地址
   notes: z.string().max(500, '备注不能超过500字').optional(), // 备注信息
@@ -112,7 +112,7 @@ export const getCustomersSchema = z
     page: z.coerce.number().default(1),
     pageSize: z.coerce.number().max(100, '每页最多100条').default(10),
     search: z.string().optional(),
-    type: z.string().optional(),
+
     level: z.string().optional(),
     assignedSalesId: z.string().optional(),
     lifecycleStage: z.string().optional(),
@@ -121,7 +121,6 @@ export const getCustomersSchema = z
   })
   .transform((data) => {
     // 使用 Set 提升查找性能 O(n) → O(1)
-    const validTypes = new Set(['INDIVIDUAL', 'COMPANY', 'DESIGNER', 'PARTNER']);
     const validLevels = new Set(['A', 'B', 'C', 'D']);
     const validLifecycleStages = new Set(['LEAD', 'OPPORTUNITY', 'SIGNED', 'DELIVERED', 'LOST']);
     const validPipelineStatuses = new Set([
@@ -138,7 +137,6 @@ export const getCustomersSchema = z
 
     return {
       ...data,
-      type: data.type && validTypes.has(data.type) ? data.type : undefined,
       level: data.level && validLevels.has(data.level) ? data.level : undefined,
       lifecycleStage:
         data.lifecycleStage && validLifecycleStages.has(data.lifecycleStage)

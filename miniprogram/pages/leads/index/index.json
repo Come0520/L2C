@@ -1,8 +1,0 @@
-{
-    "navigationBarTitleText": "线索管理",
-    "enablePullDownRefresh": true,
-    "onReachBottomDistance": 50,
-    "usingComponents": {
-        "empty-state": "/components/empty-state/index"
-    }
-}

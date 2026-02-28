@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -16,6 +17,7 @@ import {
   FormDescription,
 } from '@/shared/ui/form';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { updateProfile } from '../actions/profile-actions';
 import { User } from 'next-auth';
 
@@ -23,7 +25,7 @@ const profileFormSchema = z.object({
   name: z.string().min(2, '姓名至少2个字符').max(20, '姓名最多20个字符'),
   phone: z
     .string()
-    .regex(/^\d{8,11}$/, '手机号格式不正确')
+    .refine((val) => !val || isValidPhoneNumber(val, 'CN'), { message: '请输入有效的电话号码' })
     .optional()
     .or(z.literal('')),
   image: z.string().url('头像链接无效').optional().or(z.literal('')),
@@ -90,7 +92,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
             <FormItem>
               <FormLabel>手机号</FormLabel>
               <FormControl>
-                <Input placeholder="请输入手机号" {...field} />
+                <PhoneInput placeholder="请输入手机号" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -23,18 +23,24 @@ export async function createLead(
         intention = '高'
     } = options;
 
-    // 点击「新建线索」按钮
-    await page.click('[data-testid="create-lead-btn"]');
+
+    // 点击新建线索按钮
+    console.log('Step 1: Creating Lead...');
+    await page.getByTestId('create-lead-btn').click();
 
     // 等待对话框出现
-    const dialog = page.locator('[role="dialog"], dialog');
+    const dialog = page.getByRole('dialog');
     await dialog.waitFor({ state: 'visible', timeout: 10000 });
 
     // 填写客户姓名（使用通配符匹配兼容不同措辞）
     await dialog.locator('input[placeholder*="客户姓名"], input[placeholder*="姓名"]').first().fill(name);
 
     // 填写手机号
-    await dialog.locator('input[placeholder*="手机号"]').fill(phone);
+    // lead-form.tsx 使用普通 Input + onChange 自动拼接 +86 前缀
+    // 只需填入国内号码部分（如 13800000001）
+    const rawPhone = phone.replace(/^\+86/, '');
+    await dialog.locator('input[placeholder*="手机号"]').first().fill(rawPhone);
+    await page.waitForTimeout(300);
 
     // 意向等级映射
     const intentionMap = {
@@ -61,6 +67,19 @@ export async function createLead(
         console.log('⚠️ 意向等级选择失败，跳过', e);
     }
 
+    // 等待可能的 Turbopack 编译完成（避免 HMR 中断 React 树）
+    try {
+        // 等待 "Compiling..." 指示器消失
+        const compilingIndicator = page.locator('text=Compiling');
+        if (await compilingIndicator.isVisible({ timeout: 1000 })) {
+            console.log('⏳ 等待 Turbopack 编译完成...');
+            await compilingIndicator.waitFor({ state: 'hidden', timeout: 30000 });
+            await page.waitForTimeout(1000); // 额外等待 HMR 生效
+        }
+    } catch {
+        // 编译指示器不可见，继续
+    }
+
     // 点击提交按钮 (尝试匹配多种常见文本)
     const submitBtn = dialog.locator('button:has-text("创建线索"), button:has-text("确定"), button:has-text("提交")').last();
     if (await submitBtn.isVisible()) {
@@ -76,6 +95,9 @@ export async function createLead(
         }
     }
 
+    // 给 Server Action 执行留足时间
+    await page.waitForTimeout(2000);
+
     // 检查是否有错误提示
     const errorToast = page.locator('.toast-error, [data-type="error"]');
     if (await errorToast.isVisible({ timeout: 2000 })) {
@@ -89,12 +111,28 @@ export async function createLead(
     } catch (e) {
         // 如果对话框还显示，可能是因为有表单验证错误
         console.error('⚠️ 创建线索对话框未关闭，检查是否有验证错误...');
-        const fieldErrors = dialog.locator('.text-red-500, .error-message');
-        if (await fieldErrors.count() > 0) {
+
+        // 截图调试
+        await page.screenshot({ path: 'e2e/debug-dialog-not-closed.png', fullPage: true });
+
+        // 增强错误检测（匹配 Shadcn FormMessage 的 destructive 文本）
+        const fieldErrors = dialog.locator('.text-red-500, .text-destructive, [role="alert"], .error-message, p.text-sm.font-medium');
+        const errorCount = await fieldErrors.count();
+        if (errorCount > 0) {
             const errorTexts = await fieldErrors.allTextContents();
+            console.error(`表单验证错误: ${errorTexts.join(', ')}`);
             throw new Error(`表单验证失败: ${errorTexts.join(', ')}`);
         }
-        throw e;
+
+        // 检查对话框内是否显示 "正在提交" 说明还在请求
+        const submitBtn = dialog.locator('button:has-text("正在提交")');
+        if (await submitBtn.isVisible({ timeout: 1000 })) {
+            console.error('⚠️ 表单仍在提交中...');
+            await page.waitForTimeout(5000);
+            await expect(dialog).not.toBeVisible({ timeout: 10000 });
+        } else {
+            throw e;
+        }
     }
 
     // 等待页面刷新

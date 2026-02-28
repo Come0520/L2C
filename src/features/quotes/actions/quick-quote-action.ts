@@ -57,7 +57,6 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
         phone: lead.customerPhone || '',
         wechat: lead.customerWechat || null,
         preferences: { source: 'LEAD_CONVERSION' },
-        type: 'INDIVIDUAL',
         lifecycleStage: 'LEAD',
         pipelineStatus: 'UNASSIGNED',
       },

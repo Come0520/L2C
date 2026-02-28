@@ -93,7 +93,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <AnimatedTabs
         tabs={[
           { value: 'products', label: '产品库', icon: <Boxes className="mr-2 h-4 w-4" /> },
@@ -104,7 +104,10 @@ export default function ProductsPage() {
         onChange={setActiveTab}
       >
         {activeTab === 'products' && (
-          <div data-tab-value="products" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+          <div
+            data-tab-value="products"
+            className="glass-liquid-ultra rounded-2xl border border-white/10 p-6"
+          >
             <div className="flex flex-col items-start gap-6 md:flex-row">
               {/* Sidebar Filters */}
               <div className="w-full shrink-0 md:w-64">
@@ -120,9 +123,8 @@ export default function ProductsPage() {
                   onAdd={handleAdd}
                   onImportSuccess={fetchData}
                   loading={loading}
-                  className="border-none shadow-none p-0 bg-transparent"
+                  className="border-none bg-transparent p-0 shadow-none"
                 />
-
 
                 {/* Product Grid */}
                 <div className="min-h-[500px]">
@@ -145,13 +147,19 @@ export default function ProductsPage() {
         )}
 
         {activeTab === 'packages' && (
-          <div data-tab-value="packages" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+          <div
+            data-tab-value="packages"
+            className="glass-liquid-ultra rounded-2xl border border-white/10 p-6"
+          >
             <PackageManager />
           </div>
         )}
 
         {activeTab === 'templates' && (
-          <div data-tab-value="templates" className="glass-liquid-ultra p-6 rounded-2xl border border-white/10">
+          <div
+            data-tab-value="templates"
+            className="glass-liquid-ultra rounded-2xl border border-white/10 p-6"
+          >
             <AttributeTemplateManager />
           </div>
         )}
@@ -162,7 +170,9 @@ export default function ProductsPage() {
         onOpenChange={setIsDialogOpen}
         initialData={
           editingProduct
-            ? (editingProduct as unknown as React.ComponentProps<typeof ProductDialog>['initialData'])
+            ? (editingProduct as unknown as React.ComponentProps<
+                typeof ProductDialog
+              >['initialData'])
             : undefined
         }
         onSuccess={fetchData}

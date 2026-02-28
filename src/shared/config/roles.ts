@@ -19,6 +19,18 @@ export interface RoleDefinition {
  * 系统预设角色配置
  */
 export const ROLES: Record<string, RoleDefinition> = {
+  // ==================== 老板（全知全能） ====================
+  BOSS: {
+    code: 'BOSS',
+    name: '老板',
+    description: '企业老板，全知全能，拥有系统全部权限，不受任何限制',
+    isSystem: true,
+    permissions: [
+      // 全局超级权限，覆盖所有模块所有操作
+      PERMISSIONS.GLOBAL.ADMIN,
+    ],
+  },
+
   // ==================== 租户超级管理员 ====================
   TENANT_ADMIN: {
     code: 'TENANT_ADMIN',
@@ -57,10 +69,12 @@ export const ROLES: Record<string, RoleDefinition> = {
       PERMISSIONS.LEAD.TRANSFER,
       PERMISSIONS.LEAD.IMPORT,
       PERMISSIONS.LEAD.EXPORT,
-      // 客户 - 全部权限
+      PERMISSIONS.LEAD.RESTORE, // 经理可恢复作废线索
+      // 客户 - 全部权限 + 合并审批
       PERMISSIONS.CUSTOMER.ALL_VIEW,
       PERMISSIONS.CUSTOMER.ALL_EDIT,
       PERMISSIONS.CUSTOMER.DELETE,
+      PERMISSIONS.CUSTOMER.MERGE, // 经理可发起客户合并审批
       // 报价 - 全部权限 + 审批 + 删除
       PERMISSIONS.QUOTE.ALL_VIEW,
       PERMISSIONS.QUOTE.ALL_EDIT,
@@ -118,14 +132,13 @@ export const ROLES: Record<string, RoleDefinition> = {
     description: '销售人员，负责线索跟进、客户维护、报价和订单',
     isSystem: true,
     permissions: [
-      // 线索 - 自己的 + 创建
+      // 线索 - 自己的（OWN_EDIT 隐含创建能力）+ 公海可见
       PERMISSIONS.LEAD.OWN_VIEW,
-      PERMISSIONS.LEAD.OWN_EDIT,
-      PERMISSIONS.LEAD.CREATE,
-      // 客户 - 自己的 + 创建
+      PERMISSIONS.LEAD.OWN_EDIT, // 编辑/创建自己的线索
+      PERMISSIONS.LEAD.POOL_VIEW, // 能看到公海线索，可主动认领
+      // 客户 - 自己的（OWN_EDIT 隐含创建能力）
       PERMISSIONS.CUSTOMER.OWN_VIEW,
-      PERMISSIONS.CUSTOMER.OWN_EDIT,
-      PERMISSIONS.CUSTOMER.CREATE,
+      PERMISSIONS.CUSTOMER.OWN_EDIT, // 编辑/创建自己的客户
       // 报价 - 自己的 + 创建
       PERMISSIONS.QUOTE.OWN_VIEW,
       PERMISSIONS.QUOTE.OWN_EDIT,
@@ -173,6 +186,8 @@ export const ROLES: Record<string, RoleDefinition> = {
       // 财务 - 应付操作（派单员负责付款相关）
       PERMISSIONS.FINANCE.AP_VIEW,
       PERMISSIONS.FINANCE.AP_CREATE,
+      // 系统 - 邀请工人入驻
+      PERMISSIONS.SETTINGS.INVITE_WORKER,
     ],
   },
 
@@ -289,6 +304,7 @@ export function getRoleDefinition(code: string): RoleDefinition | undefined {
  * 角色代码到中文名称的映射
  */
 export const ROLE_LABELS: Record<string, string> = {
+  BOSS: '老板',
   TENANT_ADMIN: '超级管理员',
   ADMIN: '管理员',
   MANAGER: '经理',

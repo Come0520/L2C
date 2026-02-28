@@ -29,7 +29,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
-  const [roles, setRoles] = useState<string[]>(['STAFF']);
+  const [roles, setRoles] = useState<string[]>(['SALES']);
   const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -118,11 +118,7 @@ export function InviteUserDialog({ availableRoles }: InviteUserDialogProps) {
                 <span>加载角色中...</span>
               </div>
             ) : (
-              <RoleSelector
-                options={roleOptions}
-                selected={roles}
-                onSelect={setRoles}
-              />
+              <RoleSelector options={roleOptions} selected={roles} onSelect={setRoles} />
             )}
           </div>
 

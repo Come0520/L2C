@@ -46,7 +46,9 @@ export function UserForm({
     if (open && initialData) {
       form.reset({
         name: initialData.name || '',
-        roles: initialData.roles || (initialData.role ? [initialData.role] : []) || [],
+        roles: Array.from(
+          new Set([...(initialData.roles || []), ...(initialData.role ? [initialData.role] : [])])
+        ).filter((r) => r && r !== 'STAFF'),
         isActive: initialData.isActive ?? true,
       });
     }
@@ -96,11 +98,19 @@ export function UserForm({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-muted-foreground opacity-70">手机号</Label>
-                  <Input value={initialData.phone || '-'} disabled className="bg-muted/50 cursor-not-allowed" />
+                  <Input
+                    value={initialData.phone || '-'}
+                    disabled
+                    className="bg-muted/50 cursor-not-allowed"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-muted-foreground opacity-70">邮箱</Label>
-                  <Input value={initialData.email || '未绑定'} disabled className="bg-muted/50 cursor-not-allowed" />
+                  <Input
+                    value={initialData.email || '未绑定'}
+                    disabled
+                    className="bg-muted/50 cursor-not-allowed"
+                  />
                 </div>
               </div>
             )}
@@ -114,10 +124,12 @@ export function UserForm({
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+            <div className="bg-muted/30 flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="active-mode" className="text-sm font-medium">账号状态</Label>
-                <p className="text-xs text-muted-foreground">控制该用户是否可以登录系统</p>
+                <Label htmlFor="active-mode" className="text-sm font-medium">
+                  账号状态
+                </Label>
+                <p className="text-muted-foreground text-xs">控制该用户是否可以登录系统</p>
               </div>
               <Switch
                 id="active-mode"
@@ -127,8 +139,13 @@ export function UserForm({
             </div>
           </fieldset>
 
-          <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
+          <DialogFooter className="border-t pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
               取消
             </Button>
             <Button type="submit" disabled={loading} className="min-w-[100px]">

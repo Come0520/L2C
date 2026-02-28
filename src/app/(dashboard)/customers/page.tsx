@@ -41,7 +41,6 @@ export default async function CustomersPage({
       page,
       pageSize: 10,
       search: query,
-      type: typeof resolvedParams.type === 'string' ? resolvedParams.type : undefined,
       level: typeof resolvedParams.level === 'string' ? resolvedParams.level : undefined,
       lifecycleStage:
         typeof resolvedParams.lifecycleStage === 'string'
@@ -61,11 +60,11 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <CustomersToolbar />
         </div>
-        <div className="flex items-center gap-2 glass-layout-card p-2 rounded-xl border border-white/10 shadow-sm">
+        <div className="glass-layout-card flex items-center gap-2 rounded-xl border border-white/10 p-2 shadow-sm">
           <CreateCustomerDialog
             tenantId={tenantId}
             trigger={

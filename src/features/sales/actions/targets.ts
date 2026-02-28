@@ -1,13 +1,14 @@
 'use server';
 
 import { db } from '@/shared/api/db';
-import { salesTargets, users } from '@/shared/api/schema';
+import { salesTargets, users, quotes } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 import { SalesTargetDTO } from '../types';
 
@@ -120,14 +121,42 @@ export async function getSalesTargets(
 
     const result = await getCachedSalesTargets(session.user.tenantId, year, month);
 
-    const data: SalesTargetDTO[] = result.map((r) => ({
-      userId: r.userId,
-      userName: r.userName || 'Unknown',
-      userAvatar: r.userAvatar,
-      targetId: r.targetId,
-      targetAmount: parseFloat(r.targetAmount as string) || 0,
-      updatedAt: r.updatedAt,
-    }));
+    // 查询该月所有 ACCEPTED 报价单用于计算完成金额
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59);
+    const acceptedQuotes = await db.query.quotes.findMany({
+      where: and(eq(quotes.tenantId, session.user.tenantId), eq(quotes.status, 'ACCEPTED')),
+      columns: { finalAmount: true, createdBy: true, createdAt: true },
+    });
+
+    // 按用户 ID 汇总完成金额
+    const achievedMap = new Map<string, number>();
+    for (const q of acceptedQuotes) {
+      const d = new Date(q.createdAt as unknown as string);
+      if (d >= startDate && d <= endDate && q.createdBy) {
+        achievedMap.set(
+          q.createdBy,
+          (achievedMap.get(q.createdBy) || 0) + (parseFloat(q.finalAmount as string) || 0)
+        );
+      }
+    }
+
+    const data: SalesTargetDTO[] = result.map((r) => {
+      const targetAmount = parseFloat(r.targetAmount as string) || 0;
+      const achievedAmount = achievedMap.get(r.userId) || 0;
+      const completionRate =
+        targetAmount > 0 ? Math.round((achievedAmount / targetAmount) * 1000) / 10 : 0;
+      return {
+        userId: r.userId,
+        userName: r.userName || 'Unknown',
+        userAvatar: r.userAvatar,
+        targetId: r.targetId,
+        targetAmount,
+        achievedAmount,
+        completionRate,
+        updatedAt: r.updatedAt,
+      };
+    });
 
     logger.info(
       `[sales][targets] Successfully fetched targets for ${year}-${month}, count: ${data.length}`
@@ -162,6 +191,7 @@ export async function updateSalesTarget(
   amount: number
 ) {
   try {
+    // 权限检查：使用权限矩阵
     const session = await auth();
     if (!session?.user?.tenantId) {
       logger.warn(`[sales][targets] Unauthorized update target attempt: user ${session?.user?.id}`);
@@ -189,13 +219,8 @@ export async function updateSalesTarget(
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
-    // 权限检查
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { role: true },
-    });
-
-    if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
+    const hasManagePermission = await checkPermission(session, PERMISSIONS.SALES_TARGETS.MANAGE);
+    if (!hasManagePermission) {
       logger.warn(
         `[sales][targets] Permission denied for updateSalesTarget: user ${session.user.id}`
       );
@@ -297,6 +322,7 @@ export async function adjustSalesTarget(
   reason?: string
 ) {
   try {
+    // 权限检查：使用权限矩阵
     const session = await auth();
     if (!session?.user?.tenantId) {
       logger.warn(`[sales][targets] Unauthorized adjust target attempt: user ${session?.user?.id}`);
@@ -329,12 +355,8 @@ export async function adjustSalesTarget(
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { role: true },
-    });
-
-    if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
+    const hasManagePermission = await checkPermission(session, PERMISSIONS.SALES_TARGETS.MANAGE);
+    if (!hasManagePermission) {
       logger.warn(
         `[sales][targets] Permission denied for adjustSalesTarget: user ${session.user.id}`
       );
@@ -435,6 +457,7 @@ export async function confirmSalesTarget(
   notes?: string
 ) {
   try {
+    // 权限检查：使用权限矩阵
     const session = await auth();
     if (!session?.user?.tenantId) {
       logger.warn(
@@ -463,12 +486,8 @@ export async function confirmSalesTarget(
       return { success: false, error: validation.error.issues[0]?.message || '参数校验失败' };
     }
 
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { role: true },
-    });
-
-    if (!['admin', 'manager', 'BOSS'].includes(currentUser?.role || '')) {
+    const hasManagePermission = await checkPermission(session, PERMISSIONS.SALES_TARGETS.MANAGE);
+    if (!hasManagePermission) {
       logger.warn(
         `[sales][targets] Permission denied for confirmSalesTarget: user ${session.user.id}`
       );

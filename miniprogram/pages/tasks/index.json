@@ -2,5 +2,8 @@
   "navigationBarTitleText": "我的任务",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "light",
-  "backgroundColor": "#141414"
+  "backgroundColor": "#141414",
+  "usingComponents": {
+    "custom-tab-bar": "/custom-tab-bar/index"
+  }
 }

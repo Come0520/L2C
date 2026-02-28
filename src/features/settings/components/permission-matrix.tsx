@@ -7,6 +7,7 @@ import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Save from 'lucide-react/dist/esm/icons/save';
+import Info from 'lucide-react/dist/esm/icons/info';
 // Remove unused cn import
 import { Button } from '@/shared/ui/button';
 import { TriStateCheckbox, TriState, TriStateLabel } from '@/shared/ui/tri-state-checkbox';
@@ -45,18 +46,25 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
     return initial;
   });
 
+  // 所有已知权限列表（用于 ** 通配符展开）
+  // 注意：必须在 useState 之前声明，以便初始化函数能访问此值
+  const allPermCodes = data.permissionGroups.flatMap((g) => g.permissions.map((p) => p.code));
+
   // 权限状态
   const [permissionStates, setPermissionStates] = useState<PermissionStateMap>(() => {
-    return buildInitialStates(data.roles);
+    return buildInitialStates(data.roles, allPermCodes);
   });
 
   // 原始状态（用于比较是否修改）
-  const originalStates = useMemo(() => buildInitialStates(data.roles), [data.roles]);
+  const originalStates = useMemo(
+    () => buildInitialStates(data.roles, allPermCodes),
+    [data.roles, allPermCodes]
+  );
 
   // 监听外部 data 的变化并重置内部状态，以确保在服务器数据更新（例如恢复预设后）界面能同步
   React.useEffect(() => {
-    setPermissionStates(buildInitialStates(data.roles));
-  }, [data.roles]);
+    setPermissionStates(buildInitialStates(data.roles, allPermCodes));
+  }, [data.roles, allPermCodes]);
 
   const router = useRouter();
 
@@ -181,7 +189,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
   // 重置所有更改
   const handleReset = () => {
-    setPermissionStates(buildInitialStates(data.roles));
+    setPermissionStates(buildInitialStates(data.roles, allPermCodes));
     toast.info('已重置为当前保存的状态');
   };
 
@@ -250,9 +258,6 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                 <th key={role.roleCode} className="min-w-[80px] p-3 text-center font-medium">
                   <div className="flex flex-col items-center gap-1">
                     <span>{role.roleName}</span>
-                    <span className="text-muted-foreground text-xs font-normal">
-                      {role.roleCode}
-                    </span>
                   </div>
                 </th>
               ))}
@@ -286,7 +291,20 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                   group.permissions.map((perm) => (
                     <tr key={perm.code} className="hover:bg-muted/20 border-t">
                       <td className="bg-background sticky left-0 p-2 pl-8">
-                        <span className="text-sm">{perm.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">{perm.label}</span>
+                          {/* 叹号图标：悬停显示权限说明（权限代码） */}
+                          <span
+                            title={
+                              perm.description
+                                ? `${perm.description}\n权限代码：${perm.code}`
+                                : `权限代码：${perm.code}`
+                            }
+                            className="text-muted-foreground/60 hover:text-muted-foreground inline-flex cursor-help items-center transition-colors"
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                          </span>
+                        </div>
                       </td>
                       {data.roles.map((role) => (
                         <td key={role.roleCode} className="p-2 text-center">
@@ -297,7 +315,8 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                                 handlePermissionChange(role.roleCode, perm.code, value)
                               }
                               isModified={isModified(role.roleCode, perm.code)}
-                              disabled={role.roleCode === 'ADMIN'}
+                              // 超级权限角色（ADMIN / BOSS）不允许在矩阵中修改
+                              disabled={role.roleCode === 'ADMIN' || role.roleCode === 'BOSS'}
                             />
                           </div>
                         </td>
@@ -325,8 +344,11 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
 /**
  * 构建初始权限状态
+ *
+ * @param roles 角色权限覆盖数据列表
+ * @param allPermCodes 矩阵中所有已知权限 code（用于 ** 通配符展开）
  */
-function buildInitialStates(roles: RoleOverrideData[]): PermissionStateMap {
+function buildInitialStates(roles: RoleOverrideData[], allPermCodes: string[]): PermissionStateMap {
   const states: PermissionStateMap = {};
 
   for (const role of roles) {
@@ -335,11 +357,23 @@ function buildInitialStates(roles: RoleOverrideData[]): PermissionStateMap {
     // 基于有效权限构建状态
     const effectivePerms = new Set(role.effectivePermissions);
 
-    // 遍历所有已知权限
-    // 判断每个权限的状态
+    // 超级管理员通配符处理：** 代表拥有全部权限
+    if (effectivePerms.has('**')) {
+      for (const code of allPermCodes) {
+        states[role.roleCode][code] = 'EDIT';
+      }
+      continue; // 无需再逐个解析
+    }
+
+    // 遍历有效权限，判断每个权限的 UI 状态
     for (const perm of effectivePerms) {
-      if (perm === '**' || perm === '*') {
-        // 超级权限，所有都是 EDIT
+      if (perm === '*') {
+        // 超级查看权限：仅 view 类设为 VIEW
+        for (const code of allPermCodes) {
+          if (code.includes('.view') && !states[role.roleCode][code]) {
+            states[role.roleCode][code] = 'VIEW';
+          }
+        }
         continue;
       }
 
@@ -355,7 +389,7 @@ function buildInitialStates(roles: RoleOverrideData[]): PermissionStateMap {
           states[role.roleCode][perm] = 'VIEW';
         }
       } else {
-        // 特殊权限（如 approve, dispatch 等）
+        // 特殊权限（如 approve、dispatch 等）
         states[role.roleCode][perm] = 'EDIT';
       }
     }

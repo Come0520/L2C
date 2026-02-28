@@ -326,3 +326,86 @@ export const navLinks = [
   { label: '客户案例', href: '#testimonials' },
   { label: '价格体系', href: '#pricing' },
 ];
+
+// ======================== 版本更新与荣誉墙 ========================
+export interface VersionUpdate {
+  type: 'feature' | 'fix' | 'optimize';
+  content: string;
+}
+
+export interface VersionRecord {
+  id: string;
+  version: string;
+  date: string;
+  title: string;
+  description: string;
+  contributors: string[]; // 关联的共建者名字
+  updates: VersionUpdate[];
+}
+
+export const versionHistory: VersionRecord[] = [
+  {
+    id: 'v1.2.1',
+    version: 'v1.2.1',
+    date: '2026-02-28',
+    title: '认证稳定性与线索权限精细化',
+    description: '修复生产环境登录无限重定向死循环，并完成线索模块役权限体系全面梳理与精细化拆分。',
+    contributors: ['聂老师', '一枝花'],
+    updates: [
+      {
+        type: 'fix',
+        content: '修复 edge runtime 代理下 secure cookie 前缀识别错误导致的登录死循环',
+      },
+      { type: 'fix', content: '登录页增加 session 完整性校验，从源头防范重定向环路' },
+      { type: 'fix', content: '加入 trustHost 配置，修复 nginx 反代下 CSRF 协议不匹配问题' },
+      {
+        type: 'feature',
+        content: '线索权限全面精细化：拆分公海池查看/认领、转移、全量管理等独立权限位',
+      },
+      { type: 'feature', content: '新增 BOSS 角色，支持租户内最高级别权限管理' },
+      {
+        type: 'optimize',
+        content: '升级一键部署脚本，支持本地构建 → SCP 上传 → ECS 原子替换全流程自动化',
+      },
+    ],
+  },
+  {
+    id: 'v1.2.0',
+    version: 'v1.2.0',
+    date: '2024-04-15',
+    title: '移动端全面优化与售后升级',
+    description: '为移动设备提供了原生级体验，同时引入售后服务流程闭环。',
+    contributors: ['一枝花'],
+    updates: [
+      { type: 'feature', content: '上线全新售后工单模块，支持图片/视频举证' },
+      { type: 'optimize', content: '重构全局数据表格适配，手机端无需横向滚动' },
+      { type: 'fix', content: '修复在部分 iOS 设备上时间筛选器跨层级遮挡的问题' },
+    ],
+  },
+  {
+    id: 'v1.1.0',
+    version: 'v1.1.0',
+    date: '2024-02-28',
+    title: '智能业财与云展厅 2.0',
+    description: '深入打通从线索到收款的财务数据流。',
+    contributors: ['聂老师'],
+    updates: [
+      { type: 'feature', content: '新增云展厅一键分享海报，助力微信私域获客' },
+      { type: 'feature', content: '业财一体化升级：发票与收款完全联动对账' },
+      { type: 'optimize', content: '优化了报价单导出和分发性能' },
+    ],
+  },
+  {
+    id: 'v1.0.0',
+    version: 'v1.0.0',
+    date: '2024-01-01',
+    title: 'L2C 起航',
+    description: '基础架构和核心业财流程从 0 到 1 建设完成。',
+    contributors: ['聂老师', '一枝花'],
+    updates: [
+      { type: 'feature', content: 'CRM 线索与客户库' },
+      { type: 'feature', content: '商品库与报价引擎' },
+      { type: 'feature', content: '订单与采购管理体系' },
+    ],
+  },
+];

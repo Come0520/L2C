@@ -30,9 +30,10 @@ test.describe('Quote to Measure - Split Mechanism', () => {
         await page.locator('a', { hasText: '快速报价' }).click();
         await page.getByTestId('plan-ECONOMIC').click();
         // Add Room
-        await page.getByRole('button', { name: /添加房间/ }).click({ force: true });
+        const widthInput = page.locator('input[name="rooms.0.width"]');
+        await expect(widthInput).toBeVisible({ timeout: 5000 });
         await page.locator('input[name="rooms.0.name"]').fill('Living Room');
-        await page.locator('input[name="rooms.0.width"]').fill('400');
+        await widthInput.fill('400');
         await page.locator('input[name="rooms.0.height"]').fill('280');
         await page.getByTestId('submit-quote-btn').click();
         await page.waitForURL(/\/quotes\/.*/);

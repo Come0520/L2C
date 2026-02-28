@@ -120,8 +120,8 @@ export async function createActivity(
     // [Fix 5.4] 使用 activitySchema 校验并清理输入
     const data = trimInput(activitySchema.parse(input));
 
-    // 权限检查
-    await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT);
+    // 权限检查：创建客户动态记录需要 OWN_EDIT 权限
+    await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT);
 
     // 验证客户是否存在且属于当前租户
     const customer = await db.query.customers.findFirst({

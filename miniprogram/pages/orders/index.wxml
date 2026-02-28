@@ -40,4 +40,7 @@
             <text>暂无订单</text>
         </view>
     </scroll-view>
+
+    <!-- 分包页面无法自动获取 custom-tab-bar，需手动添加以保持导航栏可见 -->
+    <custom-tab-bar />
 </view>

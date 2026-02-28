@@ -8,7 +8,7 @@ Page({
     },
     onShow() {
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 0 }); // Index 0 for Workbench
+            this.getTabBar().setData({ selected: 0 }); // 工作台是 adminTabs[0]，角色 tab 列表索引为 0
         }
         // Update user info
         this.setData({

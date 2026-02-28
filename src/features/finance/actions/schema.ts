@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 
 // ==================== 基础配置 (Base Config) ====================
 
@@ -35,7 +36,9 @@ export const updateFinanceAccountSchema = createFinanceAccountSchema.partial().e
 export const createPaymentOrderSchema = z.object({
   customerId: z.string().uuid().optional(), // 预收款可以只凭电话? 需求说关联已有客户
   customerName: z.string().min(1, '客户姓名不能为空'),
-  customerPhone: z.string().min(1, '客户电话不能为空'),
+  customerPhone: z
+    .string()
+    .refine((val) => isValidPhoneNumber(val, 'CN'), { message: '请输入有效的电话号码' }),
   type: z.enum(['PREPAID', 'NORMAL']).default('NORMAL'),
   totalAmount: z.number().min(0.01, '收款金额必须大于0'),
   paymentMethod: z.string().min(1, '支付方式不能为空'),

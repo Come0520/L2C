@@ -1,11 +1,33 @@
 <!--pages/manager/targets/index.wxml-->
 <view class="container">
+  
+  <view class="tabs">
+    <view class="tab-item {{activeTab === 'monthly' ? 'active' : ''}}" bindtap="switchTab" data-tab="monthly">
+        <text>月目标</text>
+    </view>
+    <view class="tab-item {{activeTab === 'weekly' ? 'active' : ''}}" bindtap="switchTab" data-tab="weekly">
+        <text>周目标</text>
+    </view>
+  </view>
+
   <view class="card header-card">
     <view class="date-picker">
-        <text>{{year}}年{{month}}月</text>
+        <text wx:if="{{activeTab === 'monthly'}}">{{year}}年{{month}}月</text>
+        <text wx:else>{{year}}年 第{{week}}周</text>
     </view>
     <view class="stats">
-        <text>总目标: ¥{{totalTarget}}</text>
+        <view class="stat-item">
+            <text class="stat-label">总目标</text>
+            <text class="stat-value">¥{{totalTarget}}</text>
+        </view>
+        <view class="stat-item">
+            <text class="stat-label">已完成</text>
+            <text class="stat-value achieved">¥{{totalAchieved}}</text>
+        </view>
+        <view class="stat-item">
+            <text class="stat-label">达成率</text>
+            <text class="stat-value rate {{totalRate >= 100 ? 'high' : totalRate >= 80 ? 'medium' : 'low'}}">{{totalRate}}%</text>
+        </view>
     </view>
   </view>
 
@@ -22,8 +44,14 @@
                 <image class="avatar" src="{{item.userAvatar || '/assets/default-avatar.png'}}" />
                 <text class="name">{{item.userName}}</text>
             </view>
-            <view class="amount {{item.targetAmount > 0 ? '' : 'empty'}}">
-                {{item.targetAmount > 0 ? '¥' + item.targetAmount : '未设置'}}
+            <view class="target-data">
+                <view class="amount {{item.targetAmount > 0 ? '' : 'empty'}}">
+                    {{item.targetAmount > 0 ? '¥' + item.targetAmount : '未设置'}}
+                </view>
+                <view class="achieved-row" wx:if="{{item.targetAmount > 0}}">
+                    <text class="achieved-amount">完成 ¥{{item.achievedAmount || '0'}}</text>
+                    <text class="rate {{item.completionRate >= 100 ? 'high' : item.completionRate >= 80 ? 'medium' : 'low'}}">{{item.completionRate || 0}}%</text>
+                </view>
             </view>
             <view class="action">
                 <text class="edit-btn">设置</text>
@@ -40,7 +68,8 @@
         </view>
         <view class="dialog-body">
             <view class="user-preview">
-                <text>{{currentItem.userName}} - {{month}}月目标</text>
+                <text wx:if="{{activeTab === 'monthly'}}">{{currentItem.userName}} - {{month}}月目标</text>
+                <text wx:else>{{currentItem.userName}} - 第{{week}}周目标</text>
             </view>
             <input 
                 class="target-input" 

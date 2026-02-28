@@ -17,6 +17,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  // ── Onboarding 守卫：检测新租户是否需要填写初始化问卷 ──
+  if (session.user?.tenantId && session.user?.role === 'BOSS') {
+    const { db } = await import('@/shared/api/db');
+    const { tenants } = await import('@/shared/api/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, session.user.tenantId),
+      columns: { onboardingStatus: true, status: true },
+    });
+
+    if (tenant?.status === 'active' && tenant?.onboardingStatus === 'pending') {
+      redirect('/onboarding');
+    }
+  }
+
   // 初始化租户配置（静默尝试，确保旧租户配置补齐）
   if (session.user?.tenantId) {
     const { initTenantSettings } =

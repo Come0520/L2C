@@ -1,10 +1,11 @@
 'use server';
 
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 import { roles } from '@/shared/api/schema';
 import { eq, asc } from 'drizzle-orm';
 import { ROLES } from '@/shared/config/roles';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { logger } from '@/shared/lib/logger';
 
 export type RoleOption = {
@@ -21,6 +22,29 @@ export async function getAvailableRoles(): Promise<RoleOption[]> {
   }
 
   try {
+    // 权限校验1: 检查是否具有全部角色管理权限（checkPermission 返回布尔值，不抛出）
+    const hasFullRoleAccess = await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+
+    if (!hasFullRoleAccess) {
+      // 权限校验2: 如果没有全部权限，检查是否有特别的邀请工人权限
+      const canInviteWorker = await checkPermission(session, PERMISSIONS.SETTINGS.INVITE_WORKER);
+      if (canInviteWorker) {
+        // 如果只具有邀请工人的权限，直接返回 WORKER 选项即可
+        const workerRole = ROLES['WORKER'];
+        return [
+          {
+            label: `${workerRole.name} (${workerRole.code})`,
+            value: workerRole.code,
+            description: workerRole.description || '',
+            isSystem: workerRole.isSystem || false,
+          },
+        ];
+      }
+      // 什么权限都没有，返回空
+      return [];
+    }
+
+    // ============= 有全部角色权限，走正常获取流程 ===============
     const dbRoles = await db.query.roles.findMany({
       where: eq(roles.tenantId, session.user.tenantId),
       orderBy: [asc(roles.code)],

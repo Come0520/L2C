@@ -33,7 +33,8 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
   if (!session?.user?.tenantId || !session?.user?.id) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  await checkPermission(session, PERMISSIONS.LEAD.CREATE);
+  // 创建线索需要 OWN_EDIT 权限（创建能力已并入编辑权限语义中）
+  await checkPermission(session, PERMISSIONS.LEAD.OWN_EDIT);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;
@@ -117,7 +118,8 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
   if (!session?.user?.tenantId) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+  // 更新线索需要 OWN_EDIT 权限
+  await checkPermission(session, PERMISSIONS.LEAD.OWN_EDIT);
 
   const { id, ...data } = updateLeadSchema.parse(input);
 
@@ -262,7 +264,8 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) 
   if (!session?.user?.tenantId || !session?.user?.id) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+  // 添加跟进记录需要 OWN_EDIT 权限
+  await checkPermission(session, PERMISSIONS.LEAD.OWN_EDIT);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;
@@ -364,9 +367,9 @@ export async function releaseToPool(leadId: string) {
   if (!session?.user?.tenantId || !session?.user?.id) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  // 基础操作权限
-  const userWithPerms = session.user as typeof session.user & { permissions?: string[] };
-  const hasManagePerm = userWithPerms.permissions?.includes(PERMISSIONS.LEAD.MANAGE) || false;
+  // 释放到公海需要 TRANSFER 权限
+  await checkPermission(session, PERMISSIONS.LEAD.TRANSFER);
+  const hasManagePerm = true; // 通过 TRANSFER 权限检查保证，不再需要手动判断
 
   try {
     logger.info('[leads] 释放线索至公海开始:', {
@@ -419,7 +422,8 @@ export async function claimFromPool(leadId: string) {
   if (!session?.user?.tenantId || !session?.user?.id) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  await checkPermission(session, PERMISSIONS.LEAD.EDIT);
+  // 公海认领线索需要 OWN_EDIT 权限
+  await checkPermission(session, PERMISSIONS.LEAD.OWN_EDIT);
 
   try {
     logger.info('[leads] 从公海认领线索开始:', {
@@ -476,7 +480,10 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
   if (!session?.user?.tenantId || !session?.user?.id) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
-  await checkPermission(session, PERMISSIONS.LEAD.MANAGE);
+  // 线索转化为客户——系统内部调用，不建议在前端直接执行
+  // 业务期望：该操作应由报价转订单、开报价单选客户等业务流自动触发
+  // 权限：内部调用时使用 ALL_EDIT，确保只有经理级可手动触发
+  await checkPermission(session, PERMISSIONS.LEAD.ALL_EDIT);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;

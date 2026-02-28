@@ -1,6 +1,6 @@
 {
   "name": "l2c",
-  "version": "0.1.0",
+  "version": "1.2.1",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -93,6 +93,7 @@
     "html2canvas": "^1.4.1",
     "isomorphic-dompurify": "3.0.0-rc.2",
     "jose": "^6.1.3",
+    "libphonenumber-js": "^1.12.38",
     "lucide-react": "^0.562.0",
     "motion": "^12.26.2",
     "nanoid": "^5.1.6",
@@ -110,6 +111,7 @@
     "react-grid-layout": "1.4.4",
     "react-hook-form": "^7.69.0",
     "react-markdown": "^10.1.0",
+    "react-phone-number-input": "^3.4.16",
     "react-resizable": "^3.1.3",
     "react-signature-canvas": "1.1.0-alpha.2",
     "recharts": "^3.6.0",

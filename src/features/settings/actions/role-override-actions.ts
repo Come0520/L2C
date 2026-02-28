@@ -39,7 +39,7 @@ export interface PermissionMatrixData {
     key: string;
     label: string;
     description?: string;
-    permissions: { code: string; label: string }[];
+    permissions: { code: string; label: string; description?: string }[];
   }[];
 }
 

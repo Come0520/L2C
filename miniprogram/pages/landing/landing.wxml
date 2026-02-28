@@ -1,83 +1,93 @@
 <!--pages/landing/landing.wxml-->
-<view class="container landing-page">
-  <!-- 顶部 Logo 栏 -->
-  <view class="navbar">
-    <text class="brand-text">L2C</text>
+<!-- 单屏紧凑落地页 - 用 SVG 图标替代 Emoji，采用 SaaS 信任蓝 + 橙色 CTA 配色方案 -->
+<view class="landing-page">
+  <!-- 背景装饰层 -->
+  <view class="landing-bg">
+    <view class="bg-orb orb-1"></view>
+    <view class="bg-orb orb-2"></view>
+    <view class="bg-orb orb-3"></view>
   </view>
 
-  <!-- 第 1 幕：Hero 区域 (轮播) -->
-  <view class="hero-section">
-    <view class="hero-bg">
-      <view class="circle-blue"></view>
-      <view class="circle-indigo"></view>
-    </view>
-    
-    <swiper class="hero-swiper" autoplay circular interval="5000" bindchange="onSwiperChange">
-      <block wx:for="{{carouselItems}}" wx:key="id">
-        <swiper-item class="hero-slide animate-fade-in">
-          <view class="slide-content">
-            <view class="slide-title">{{item.title}}</view>
-            <view class="slide-subtitle">{{item.subtitle}}</view>
-            
-            <button class="btn-primary cta-btn" bindtap="goToRegister">
-              让窗帘生意更简单
-              <text class="arrow">→</text>
-            </button>
-            <view class="btn-secondary learn-more" bindtap="scrollToFeatures">了解更多</view>
-          </view>
-        </swiper-item>
-      </block>
-    </swiper>
-    
-    <!-- 自定义轮播指示点 -->
-    <view class="custom-dots">
-      <block wx:for="{{carouselItems}}" wx:key="id">
-        <view class="dot {{currentSlide === index ? 'active' : ''}}"></view>
-      </block>
+  <!-- 顶部品牌栏 -->
+  <view class="landing-nav">
+    <view class="nav-brand">
+      <view class="brand-dot"></view>
+      <text class="brand-name">L2C</text>
     </view>
   </view>
 
-  <!-- 第 2 幕：核心价值主张 (Value Proposition) -->
-  <view class="value-prop section bg-white">
-    <view class="vp-header">
-      <view class="vp-badge">核心优势</view>
-      <view class="vp-title">为什么选择 L2C？</view>
+  <!-- 主体内容区 -->
+  <view class="landing-main">
+    <!-- Hero 文案区 -->
+    <view class="hero-area">
+      <view class="hero-headline">
+        <text class="hero-line1">窗帘生意</text>
+        <text class="hero-line2">更简单</text>
+      </view>
+      <text class="hero-sub">从报价到安装，一部手机管好全流程</text>
     </view>
-    
-    <view class="vp-grid">
-      <view class="vp-card">
-        <view class="vp-icon blue">⚡</view>
-        <view class="vp-card-title">极速开单</view>
-        <view class="vp-card-desc">告别手写单据，3分钟生成专业报价单发送客户</view>
+
+    <!-- 4 大功能亮点 - 2x2 网格 -->
+    <view class="features-grid">
+      <view class="feat-card">
+        <view class="feat-icon-wrap blue">
+          <image class="feat-icon-img" src="/assets/icons/flash-blue.svg" mode="aspectFit" />
+        </view>
+        <view class="feat-info">
+          <text class="feat-title">极速开单</text>
+          <text class="feat-desc">3分钟出报价</text>
+        </view>
       </view>
-      <view class="vp-card">
-        <view class="vp-icon purple">📊</view>
-        <view class="vp-card-title">业绩看板</view>
-        <view class="vp-card-desc">实时掌握店铺营收、利润率，数据驱动决策</view>
+      <view class="feat-card">
+        <view class="feat-icon-wrap indigo">
+          <image class="feat-icon-img" src="/assets/icons/chart-indigo.svg" mode="aspectFit" />
+        </view>
+        <view class="feat-info">
+          <text class="feat-title">业绩看板</text>
+          <text class="feat-desc">数据驱动决策</text>
+        </view>
       </view>
-      <view class="vp-card">
-        <view class="vp-icon green">🤝</view>
-        <view class="vp-card-title">客户跟进</view>
-        <view class="vp-card-desc">线索管理不遗漏，精准把握成交战机</view>
+      <view class="feat-card">
+        <view class="feat-icon-wrap teal">
+          <image class="feat-icon-img" src="/assets/icons/handshake-teal.svg" mode="aspectFit" />
+        </view>
+        <view class="feat-info">
+          <text class="feat-title">客户跟进</text>
+          <text class="feat-desc">线索零遗漏</text>
+        </view>
       </view>
-      <view class="vp-card">
-        <view class="vp-icon orange">🛠️</view>
-        <view class="vp-card-title">工程协同</view>
-        <view class="vp-card-desc">安装师傅接单打卡，进度实时同步</view>
+      <view class="feat-card">
+        <view class="feat-icon-wrap amber">
+          <image class="feat-icon-img" src="/assets/icons/tools-amber.svg" mode="aspectFit" />
+        </view>
+        <view class="feat-info">
+          <text class="feat-title">工程协同</text>
+          <text class="feat-desc">进度实时同步</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 行动号召区 -->
+    <view class="cta-area">
+      <button class="cta-button" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">
+        <text class="cta-text">微信一键登录</text>
+        <text class="cta-arrow">→</text>
+      </button>
+      <view class="alt-actions">
+        <text class="alt-link" bindtap="handleCreateTenant">注册新企业</text>
+        <view class="alt-dot"></view>
+        <text class="alt-link" bindtap="handlePasswordLogin">密码登录</text>
       </view>
     </view>
   </view>
 
-  <!-- 第 3 幕：行动号召 (CTA Footer) -->
-  <view class="cta-section">
-    <view class="cta-content">
-      <view class="cta-title">准备好提升业绩了吗？</view>
-      <view class="cta-desc">加入数百家优秀门店，立即开启免费体验。</view>
-      
-      <button class="btn-primary" bindtap="goToRegister">免费注册，开箱即用</button>
-      <view class="login-link" bindtap="goToLogin">已有账号？去登录</view>
-    </view>
+  <!-- 开发者快速登录 (上线前移除) -->
+  <view class="dev-login" bindtap="devLogin">
+    <text class="dev-login-text">🔧 开发模式免登录</text>
   </view>
-  
-  <view class="copyright">© 2026 L2C.ASIA 全版权所有</view>
+
+  <!-- 底部版权 -->
+  <view class="landing-bottom">
+    <text class="bottom-text">© 2026 L2C.ASIA</text>
+  </view>
 </view>

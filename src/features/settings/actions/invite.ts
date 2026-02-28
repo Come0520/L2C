@@ -39,11 +39,20 @@ export async function createEmployeeInviteLink(defaultRoles?: string[]) {
     return { success: false, error: '未授权' };
   }
 
-  // 检查权限（只有管理员可以邀请员工）
+  // 检查权限（只有管理员可以邀请所有员工，或者有特定权限的人只能邀请工人）
   try {
     await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
   } catch {
-    return { success: false, error: '无权限邀请员工' };
+    // 如果没有全局 MANAGE 权限，再检查是否有专有 INVITE_WORKER 的权限
+    try {
+      await checkPermission(session, PERMISSIONS.SETTINGS.INVITE_WORKER);
+      // 检查 defaultRoles 是否严格只包含 WORKER
+      if (!defaultRoles || defaultRoles.length === 0 || defaultRoles.some((r) => r !== 'WORKER')) {
+        return { success: false, error: '无权限邀请该类型的员工，仅限邀请工人' };
+      }
+    } catch {
+      return { success: false, error: '无权限邀请员工' };
+    }
   }
 
   try {

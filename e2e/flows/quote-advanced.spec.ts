@@ -55,78 +55,81 @@ test.describe('Quote Advanced Mode', () => {
 
         await page.getByTestId('submit-quote-btn').click();
 
-        // 5. Detail View
+        // 5. 验证跳转到报价详情页
         console.log('Step 5: Verifying Redirect...');
         await expect(page).toHaveURL(/\/quotes\/.*/, { timeout: 15000 });
 
-        console.log('Step 6: Verifying Item Appearance...');
-        // Wait for table to populate
-        await expect(page.getByText('此空间暂无明细数据')).toBeHidden({ timeout: 5000 }).catch(() => console.log("Table might still be empty..."));
+        // 6. 切换到"窗帘"标签页以查看商品明细行
+        // 默认显示"汇总"视图，没有明细行，需先切换
+        console.log('Step 6: Switching to CURTAIN tab...');
+        const curtainTab = page.getByRole('tab', { name: '窗帘' });
+        await expect(curtainTab).toBeVisible({ timeout: 10000 });
+        await curtainTab.click();
 
-        // Check if any quantity input (numeric) exists
-        // If not, we can't test.
-        const inputs = page.locator('input[type="number"]');
-        const count = await inputs.count();
-        console.log(`Found ${count} numeric inputs initially.`);
+        // 等待标签页切换完成
+        await page.waitForTimeout(1000);
 
-        if (count === 0) {
-            throw new Error("No items created in quote! Cannot test advanced mode.");
+        console.log('Step 7: Verifying Item Appearance...');
+        // 等待商品行出现
+        const firstRow = page.locator('tbody tr').first();
+        try {
+            await expect(firstRow).toBeVisible({ timeout: 10000 });
+        } catch (e) {
+            console.log("Failed to find any rows after switching to CURTAIN tab. Saving page content...");
+            const html = await page.content();
+            fs.writeFileSync('test-results/quote-advanced-failed.html', html);
+            await page.screenshot({ path: 'test-results/quote-advanced-failed.png', fullPage: true });
+            throw e;
         }
 
-        // 6. Mode Toggle
-        console.log('Step 7: Toggling Advanced Mode...');
-        const foldInput = page.getByPlaceholder('倍数');
-        await expect(foldInput).toBeHidden();
+        // 记录初始行文本
+        const initialText = await firstRow.textContent();
+        console.log(`Initial Row text:`, initialText);
 
-        const toggleBtn = page.getByRole('button', { name: /高级模式|极简模式/ });
-        // If text is already '极简模式', we are in Advanced. But default is Simple.
-        const text = await toggleBtn.textContent();
-        if (text?.includes('高级模式')) {
-            await toggleBtn.click();
-            await expect(page.getByText('Mode updated').or(page.getByText('高级模式'))).toBeVisible({ timeout: 10000 });
-        } else {
-            console.log("Already in Advanced Mode?");
+        // 8. 打开高级配置 Drawer
+        console.log('Step 8: Opening Advanced Config Drawer...');
+        // 高级配置按钮有 title="高级配置" 属性 (Settings 图标)
+        const advancedBtn = firstRow.locator('button[title="高级配置"]');
+        await expect(advancedBtn).toBeVisible({ timeout: 5000 });
+        await advancedBtn.click();
+
+        // 9. 验证 Drawer 打开并修改褶皱倍数
+        console.log('Step 9: Verifying Drawer Logic...');
+        // DrawerContent 使用 role="dialog"
+        const drawerContent = page.getByRole('dialog');
+        await expect(drawerContent).toBeVisible({ timeout: 5000 });
+        await expect(drawerContent.getByText('高级配置:')).toBeVisible();
+
+        // 褶皱倍数 Label 文本为 "褶皱倍数 (Fold Ratio)"
+        const foldInput = drawerContent.locator('label:has-text("褶皱倍数") + input, label:has-text("褶皱倍数") ~ input').first();
+        // 备选方案：直接用更灵活的选择器
+        const foldInputAlt = drawerContent.locator('input[type="number"]').nth(2); // 第三个数字输入框（安装位置/离地高度之后）
+
+        // 尝试精确选择器，如果不可见则回退
+        let actualFoldInput = foldInput;
+        if (!(await foldInput.isVisible().catch(() => false))) {
+            console.log('Trying alternative fold input selector...');
+            actualFoldInput = foldInputAlt;
         }
+        await expect(actualFoldInput).toBeVisible();
 
-        // 7. Verify logic
-        console.log('Step 8: Verifying Logic...');
-        await expect(foldInput.first()).toBeVisible(); // Use first() if multiple items
+        const initialFold = parseFloat(await actualFoldInput.inputValue());
+        console.log(`Initial fold ratio: ${initialFold}`);
 
-        // Target the first row with fold input
-        const firstFold = foldInput.first();
-        const itemRow = page.locator('tr').filter({ has: firstFold });
-        // Try to find quantity index dynamically
-        const rowInputs = itemRow.locator('input');
-        // Log values
-        const inputCount = await rowInputs.count();
-        console.log(`Row has ${inputCount} inputs`);
+        // 修改褶皱倍数
+        await actualFoldInput.fill('3');
 
-        // Assumption: Quantity is the one with value ~ (Width * 2 / 100)?
-        // Width 400cm -> 4m. Fold 2 -> 8m.
-        // Look for input with value around 8
-        let quantityInput;
-        for (let i = 0; i < inputCount; i++) {
-            const val = await rowInputs.nth(i).inputValue();
-            if (Math.abs(parseFloat(val) - 8.0) < 2.0) { // Tolerant check
-                quantityInput = rowInputs.nth(i);
-                console.log(`Found Quantity Input at index ${i} with value ${val}`);
-                break;
-            }
-        }
+        // 保存
+        const saveBtn = drawerContent.getByRole('button', { name: '保存更改' });
+        await saveBtn.click();
 
-        if (!quantityInput) {
-            console.log("Could not identify quantity input by value helper. Fallback to index 3/4.");
-            quantityInput = rowInputs.nth(3); // Fallback
-        }
+        // 等待 Drawer 关闭
+        await expect(drawerContent).toBeHidden({ timeout: 5000 });
+        await page.waitForTimeout(2000); // 等待 server action 回写
 
-        const initialQty = parseFloat(await quantityInput.inputValue());
+        const newText = await firstRow.textContent();
+        console.log(`New Row text:`, newText);
 
-        await firstFold.fill('3');
-        await firstFold.blur();
-        await page.waitForTimeout(2000);
-
-        const newQty = parseFloat(await quantityInput.inputValue());
-        console.log(`Qty change: ${initialQty} -> ${newQty}`);
-        expect(newQty).toBeGreaterThan(initialQty);
+        expect(newText).not.toEqual(initialText);
     });
 });

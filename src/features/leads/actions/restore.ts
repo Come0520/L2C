@@ -43,7 +43,7 @@ export async function restoreLeadAction(
   if (!session?.user?.tenantId || !session?.user?.id) {
     return { success: false, error: 'Unauthorized: 未登录或缺少租户信息' };
   }
-  await checkPermission(session, PERMISSIONS.LEAD.MANAGE);
+  await checkPermission(session, PERMISSIONS.LEAD.RESTORE);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;

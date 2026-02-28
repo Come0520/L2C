@@ -14,3 +14,9 @@ export { getAfterSalesHealth } from './after-sales-health';
 export { getCashFlowForecast } from './cash-flow';
 export { getARAgingAnalysis } from './ar-aging';
 export { getPricingReference } from './pricing-reference';
+export {
+  getTargetAchievementOverview,
+  getTargetCompletionTrend,
+  getTargetRiskWarnings,
+} from './target-achievement';
+export { getQuarterlyComparison, getAnnualTargetProgress } from './target-achievement-p5';

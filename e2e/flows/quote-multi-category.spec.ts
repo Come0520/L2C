@@ -33,9 +33,10 @@ test.describe('Quote Multi-Category', () => {
         await page.getByTestId('plan-ECONOMIC').click();
 
         // Ensure room exists
-        await page.getByRole('button', { name: /添加房间/ }).click({ force: true });
+        const widthInput = page.locator('input[name="rooms.0.width"]');
+        await expect(widthInput).toBeVisible({ timeout: 5000 });
         await page.locator('input[name="rooms.0.name"]').fill('MixRoom');
-        await page.locator('input[name="rooms.0.width"]').fill('300');
+        await widthInput.fill('300');
         await page.locator('input[name="rooms.0.height"]').fill('270');
         await page.getByTestId('submit-quote-btn').click();
 

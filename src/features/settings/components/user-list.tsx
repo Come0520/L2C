@@ -97,13 +97,13 @@ export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListPro
                   <TableCell>{item.phone}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(item.roles && item.roles.length > 0 ? item.roles : [item.role]).map(
-                        (role: string) => (
+                      {(item.roles && item.roles.length > 0 ? item.roles : [item.role])
+                        .filter((role: string) => role !== 'STAFF')
+                        .map((role: string) => (
                           <Badge key={role} variant="outline" className="text-xs">
                             {getRoleLabel(role)}
                           </Badge>
-                        )
-                      )}
+                        ))}
                     </div>
                   </TableCell>
                   <TableCell>

@@ -88,4 +88,7 @@
     </view>
     <view class="footer-spacer"></view>
   </scroll-view>
+
+  <!-- installer 角色作为分包页面无法自动注入 custom-tab-bar，需手动添加以保持导航栏可见 -->
+  <custom-tab-bar />
 </view>

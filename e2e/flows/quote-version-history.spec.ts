@@ -40,16 +40,11 @@ test.describe('Quote Version History', () => {
         await page.getByTestId('plan-ECONOMIC').click();
 
         // Check/Add Room
-        if (await page.locator('input[name="rooms.0.name"]').isVisible()) {
-            await page.locator('input[name="rooms.0.name"]').fill('Room1');
-            await page.locator('input[name="rooms.0.width"]').fill('300');
-            await page.locator('input[name="rooms.0.height"]').fill('270');
-        } else {
-            await page.getByRole('button', { name: /添加房间/ }).click();
-            await page.locator('input[name="rooms.0.name"]').fill('Room1');
-            await page.locator('input[name="rooms.0.width"]').fill('300');
-            await page.locator('input[name="rooms.0.height"]').fill('270');
-        }
+        const widthInput = page.locator('input[name="rooms.0.width"]');
+        await expect(widthInput).toBeVisible({ timeout: 5000 });
+        await page.locator('input[name="rooms.0.name"]').fill('Room1');
+        await widthInput.fill('300');
+        await page.locator('input[name="rooms.0.height"]').fill('270');
 
         await page.getByTestId('submit-quote-btn').click();
 

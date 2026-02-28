@@ -5,18 +5,25 @@
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { tenants, invitations, users } from '@/shared/api/schema';
+import { tenants, invitations } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
 import { getMiniprogramUser } from '../../auth-utils';
 import { customAlphabet } from 'nanoid';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
+import { RolePermissionService } from '@/shared/lib/role-permission-service';
+import { PERMISSIONS } from '@/shared/config/permissions';
 
 // 允许邀请的角色白名单
-const ALLOWED_INVITE_ROLES = ['SALES', 'INSTALLER', 'MEASURER', 'ShowroomManager', 'ADMIN', 'MANAGER'];
-
-
+const ALLOWED_INVITE_ROLES = [
+  'SALES',
+  'INSTALLER',
+  'MEASURER',
+  'ShowroomManager',
+  'ADMIN',
+  'MANAGER',
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,13 +33,12 @@ export async function POST(request: NextRequest) {
       return apiError('未授权', 401);
     }
 
-    // 1. 验证请求者权限 (必须是管理员或经理)
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, tokenData.id),
-      columns: { role: true },
-    });
-
-    if (!currentUser || !['ADMIN', 'SUPER_ADMIN', 'MANAGER'].includes(currentUser.role || '')) {
+    // 1. 验证请求者权限（必须拥有用户管理权限）
+    const hasUserManage = await RolePermissionService.hasPermission(
+      tokenData.id,
+      PERMISSIONS.SETTINGS.USER_MANAGE
+    );
+    if (!hasUserManage) {
       return apiError('无权限生成邀请码', 403);
     }
 
@@ -105,7 +111,7 @@ export async function POST(request: NextRequest) {
       action: 'GENERATE_INVITE',
       userId: tokenData.id,
       tenantId: tokenData.tenantId,
-      details: { role, maxUses }
+      details: { role, maxUses },
     });
 
     return apiSuccess({

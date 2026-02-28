@@ -1,7 +1,5 @@
 import { z } from 'zod';
-
-// 中国大陆手机号正则 (11位，以1开头，第二位为3-9)
-const phoneRegex = /^\d{8,11}$/;
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 
 // 阶梯费率结构
 const tieredRateSchema = z.object({
@@ -43,7 +41,9 @@ export const channelSchema = z
     customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
     level: z.enum(['S', 'A', 'B', 'C']).default('C'),
     contactName: z.string().min(1, '请输入核心联系人').max(50, '联系人姓名不能超过50字'),
-    phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'),
+    phone: z.string().refine((val) => isValidPhoneNumber(val, 'CN'), {
+      message: '请输入有效的电话号码',
+    }),
 
     // 财务配置
     commissionRate: z.coerce.number().min(0, '返点比例不能小于0').max(100, '返点比例不能超过100'),
@@ -129,7 +129,9 @@ export const channelContactSchema = z.object({
   channelId: z.string().uuid(),
   name: z.string().min(1, '请输入姓名').max(50, '姓名不能超过50字'),
   position: z.string().max(50, '职位名称不能超过50字').optional(),
-  phone: z.string().regex(phoneRegex, '请输入有效的中国大陆手机号'),
+  phone: z.string().refine((val) => isValidPhoneNumber(val, 'CN'), {
+    message: '请输入有效的电话号码',
+  }),
   isMain: z.boolean().default(false),
 });
 

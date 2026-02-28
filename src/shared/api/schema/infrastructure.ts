@@ -64,6 +64,15 @@ export const tenants = pgTable('tenants', {
   //     };
   // }
   settings: jsonb('settings').default({}),
+
+  /**
+   * 初始化引导状态
+   * - pending: 待填写（BOSS 首次登录时拦截展示问卷）
+   * - completed: 已完成问卷并应用了推荐配置
+   * - skipped: 用户主动跳过
+   */
+  onboardingStatus: varchar('onboarding_status', { length: 20 }).default('pending'),
+
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

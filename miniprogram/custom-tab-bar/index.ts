@@ -38,33 +38,30 @@ Component({
         switchTab(e: any) {
             const data = e.currentTarget.dataset;
             const url = data.path;
-
+            // 官方最佳实践：所有 tab 页均在主包并在 tabBar.list 中注册，直接用 wx.switchTab
             wx.switchTab({ url });
-
-            // Update user interface immediately for better feedback
-            this.setData({
-                selected: data.index
-            });
+            // 立即更新选中状态，提升视觉反馈
+            this.setData({ selected: data.index });
         },
 
         updateTabs() {
-            const role = authStore.currentRole; // 'admin' | 'sales' | 'installer' | 'customer' | 'guest'
-            console.log('[CustomTabBar] Updating tabs for role:', role); // Debugging
+            const role = authStore.currentRole;
+            console.log('[CustomTabBar] Updating tabs for role:', role);
 
             let list: any[] = [];
 
-            // 1. Boss (Admin)
+            // 1. Boss (Admin) - 所有路径均为主包 tabBar.list 中的路径
             const adminTabs = [
                 { pagePath: "/pages/workbench/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
-                { pagePath: "/pages/crm/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
-                { pagePath: "/pages/orders/index", text: "订单", iconPath: "/assets/tabbar/order.svg", selectedIconPath: "/assets/tabbar/order-active.svg" },
+                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
+                { pagePath: "/pages/quotes/index", text: "报价", iconPath: "/assets/tabbar/quote.svg", selectedIconPath: "/assets/tabbar/quote-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];
 
             // 2. Sales
             const salesTabs = [
                 { pagePath: "/pages/workbench/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
-                { pagePath: "/pages/crm/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
+                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
                 { pagePath: "/pages/quotes/index", text: "报价", iconPath: "/assets/tabbar/quote.svg", selectedIconPath: "/assets/tabbar/quote-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];

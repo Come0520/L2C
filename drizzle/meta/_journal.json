@@ -253,6 +253,13 @@
       "when": 1772104014380,
       "tag": "0035_orange_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1772195769957,
+      "tag": "0036_boring_champions",
+      "breakpoints": true
     }
   ]
 }

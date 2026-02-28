@@ -49,8 +49,8 @@ export async function createCustomer(input: z.input<typeof customerSchema>) {
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // 权限检查：需要客户创建权限
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.CREATE))) {
+  // 创建客户需要 OWN_EDIT 权限（创建能力已并入编辑权限）
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -70,7 +70,6 @@ export async function createCustomer(input: z.input<typeof customerSchema>) {
         level: data.level ?? 'D',
         notes: data.notes ?? null,
         tags: data.tags ?? null,
-        type: data.type ?? 'INDIVIDUAL',
         source: data.source ?? null,
         referrerName: data.referrerName ?? null,
         preferences: data.preferences ?? undefined,
@@ -108,8 +107,8 @@ export async function updateCustomer(input: z.input<typeof updateCustomerSchema>
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // 权限检查：需要客户编辑权限
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT))) {
+  // 权限检查：编辑客户需要 OWN_EDIT 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -180,8 +179,8 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // 权限检查
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT))) {
+  // 权限检查：添加地址需要 OWN_EDIT 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -260,8 +259,8 @@ export async function updateCustomerAddress(input: z.infer<typeof updateAddressS
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // [Fix 3.3] 增加权限检查
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT))) {
+  // [Fix 3.3] 添加权限检查，更新地址需要 OWN_EDIT 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -351,8 +350,8 @@ export async function deleteCustomerAddress(id: string, version?: number) {
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // 权限检查：需要客户编辑权限
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT))) {
+  // 权限检查：删除地址需要 OWN_EDIT 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -420,8 +419,8 @@ export async function setDefaultAddress(id: string, customerId: string, version?
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // 权限检查
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.EDIT))) {
+  // 权限检查：设置默认地址需要 OWN_EDIT 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.OWN_EDIT))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
@@ -497,8 +496,8 @@ export async function setDefaultAddress(id: string, customerId: string, version?
 }
 
 /**
- * 合并客户
- * 将多个源客户的数据合并到目标客户，并逻辑删除源客户。
+ * 合并客户（提交审批）
+ * 发起客户合并申请，需经店长审批通过后系统自动执行合并。
  *
  * 权限要求：CUSTOMER.MANAGE
  */
@@ -511,33 +510,47 @@ export async function mergeCustomersAction(
   const tenantId = session?.user?.tenantId;
   if (!tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // [Fix 3.3] 增加权限检查 (MANAGE 权限)
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.MANAGE))) {
+  // [Fix 3.3] 客户合并需要 MERGE 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.MERGE))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 
-  logger.info('[customers] 合并客户:', { ...data, userId, tenantId });
+  logger.info('[customers] 提交客户合并审批:', { ...data, userId, tenantId });
 
   try {
-    const result = await CustomerService.mergeCustomers(
-      data.targetCustomerId,
-      data.sourceCustomerIds,
-      data.fieldPriority,
-      tenantId,
-      userId,
-      data.targetCustomerVersion
-    );
+    // 将合并参数序列化存储到审批 comment 中，供审批通过后回调使用
+    const mergeParams = JSON.stringify({
+      sourceCustomerIds: data.sourceCustomerIds,
+      fieldPriority: data.fieldPriority,
+      targetCustomerVersion: data.targetCustomerVersion,
+    });
 
-    // 精确清除客户列表及相关详情缓存
-    revalidateTag(`customers-list-${tenantId}`, {});
-    revalidateTag(`customer-detail-${data.targetCustomerId}`, {});
-    for (const id of data.sourceCustomerIds) {
-      revalidateTag(`customer-detail-${id}`, {});
+    // 提交审批申请
+    const { submitApproval } = await import('@/features/approval/actions/submission');
+    const approvalResult = await submitApproval({
+      flowCode: 'CUSTOMER_MERGE',
+      entityType: 'CUSTOMER_MERGE',
+      entityId: data.targetCustomerId,
+      comment: mergeParams,
+      tenantId,
+      requesterId: userId,
+    });
+
+    if (!approvalResult.success) {
+      const errMsg = 'error' in approvalResult ? String(approvalResult.error) : '审批提交失败';
+      throw new AppError(errMsg, ERROR_CODES.INVALID_OPERATION, 400);
     }
 
-    return result;
+    const approvalId = 'approvalId' in approvalResult ? approvalResult.approvalId : undefined;
+    logger.info('[customers] 客户合并审批已提交:', { approvalId });
+
+    return {
+      success: true,
+      approvalId,
+      message: '合并申请已提交，等待店长审批',
+    };
   } catch (error) {
-    logger.error('[customers] 合并客户失败:', error);
+    logger.error('[customers] 提交客户合并审批失败:', error);
     throw error;
   }
 }
@@ -553,8 +566,8 @@ export async function previewMergeAction(sourceId: string, targetId: string) {
   const tenantId = session?.user?.tenantId;
   if (!tenantId) throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
 
-  // [Fix 3.3] 增加权限检查 (MANAGE 权限)
-  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.MANAGE))) {
+  // [Fix 3.3] 预览合并结果需要 MERGE 权限
+  if (!(await checkPermission(session, PERMISSIONS.CUSTOMER.MERGE))) {
     throw new AppError('Permission denied', ERROR_CODES.PERMISSION_DENIED, 403);
   }
 

@@ -10,17 +10,17 @@ import { Badge } from '@/shared/ui/badge';
 import { formatDate } from '@/shared/lib/utils';
 import Edit from 'lucide-react/dist/esm/icons/edit';
 import Phone from 'lucide-react/dist/esm/icons/phone';
-import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import Link from 'next/link';
 
 import { EditCustomerDialog } from '@/features/customers/components/edit-customer-dialog';
-import { CustomerAddressList } from '@/features/customers/components/customer-address-list';
 import { auth } from '@/shared/lib/auth';
 import { MaskedPhone } from '@/shared/components/masked-phone';
 import { logPhoneView } from '@/features/customers/actions/privacy-actions';
 import { MergeCustomerDialog } from '@/features/customers/components/merge-customer-dialog';
 import { CustomerActivitiesSection } from '@/features/customers/components/CustomerActivitiesSection';
+import { InlineNotesEditor } from '@/features/customers/components/inline-notes-editor';
+import { CreateLeadDialog } from '@/features/leads/components/create-lead-dialog';
 
 export const revalidate = 60;
 
@@ -98,11 +98,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                 </Button>
               }
             />
-            <Button>
-              <Link href={`/leads/new?customerId=${customer.id}`} className="flex items-center">
-                新建线索
-              </Link>
-            </Button>
+            <CreateLeadDialog
+              tenantId={tenantId}
+              trigger={<Button variant="outline">新建线索</Button>}
+            />
           </div>
         </div>
       </div>
@@ -131,14 +130,19 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                 </div>
                 <div>
                   <dt className="flex items-center gap-2 text-sm font-medium text-gray-500">
-                    <MessageSquare className="h-4 w-4" /> 微信号
+                    <MapPin className="h-4 w-4" /> 默认地址
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-900">{customer.wechat || '-'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {customer.addresses?.find((a) => a.isDefault)?.address || '暂无地址'}
+                  </dd>
                 </div>
                 <div className="sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">备注</dt>
-                  <dd className="mt-1 rounded bg-gray-50 p-2 text-sm whitespace-pre-wrap text-gray-900">
-                    {customer.notes || '暂无备注'}
+                  <dd className="mt-1">
+                    <InlineNotesEditor
+                      customerId={customer.id}
+                      initialNotes={customer.notes || ''}
+                    />
                   </dd>
                 </div>
               </dl>
@@ -175,61 +179,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </Card>
           </div>
 
-          <Tabs defaultValue="activities">
-            <TabsList>
-              <TabsTrigger value="activities">跟进记录</TabsTrigger>
-              <TabsTrigger value="addresses">地址管理</TabsTrigger>
-
-              <TabsTrigger value="referrals">
-                转介绍 ({customer.referrals?.length || 0})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="activities" className="mt-4">
-              <CustomerActivitiesSection customerId={customer.id} />
-            </TabsContent>
-            <TabsContent value="addresses" className="mt-4">
-              <CustomerAddressList
-                addresses={customer.addresses || []}
-                customerId={customer.id}
-                tenantId={tenantId}
-              />
-            </TabsContent>
-
-            <TabsContent value="referrals" className="mt-4">
-              <div className="space-y-2">
-                {(customer.referrals?.length || 0) > 0 ? (
-                  customer.referrals!.map(
-                    (ref: {
-                      id: string;
-                      name: string;
-                      customerNo: string;
-                      createdAt: Date | null;
-                    }) => (
-                      <div
-                        key={ref.id}
-                        className="flex items-center justify-between rounded border bg-white p-3"
-                      >
-                        <div className="flex flex-col">
-                          <Link
-                            href={`/customers/${ref.id}`}
-                            className="font-medium text-blue-600 hover:underline"
-                          >
-                            {ref.name}
-                          </Link>
-                          <span className="text-xs text-gray-500">{ref.customerNo}</span>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {ref.createdAt ? formatDate(ref.createdAt) : '-'}
-                        </div>
-                      </div>
-                    )
-                  )
-                ) : (
-                  <div className="py-4 text-center text-gray-500">暂无转介绍记录</div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+          {/* 跟进记录（直接展开） */}
+          <CustomerActivitiesSection customerId={customer.id} />
         </div>
 
         {/* Right: Side Info */}
@@ -264,6 +215,48 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     {customer.referrer.name}
                   </Link>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 转介绍卡片 */}
+          <Card>
+            <CardHeader
+              title={`转介绍 (${customer.referrals?.length || 0})`}
+              className="text-sm tracking-wider text-gray-500 uppercase"
+            />
+            <CardContent>
+              {(customer.referrals?.length || 0) > 0 ? (
+                <div className="space-y-2">
+                  {customer.referrals!.map(
+                    (ref: {
+                      id: string;
+                      name: string;
+                      customerNo: string;
+                      createdAt: Date | null;
+                    }) => (
+                      <div
+                        key={ref.id}
+                        className="flex items-center justify-between rounded border p-3"
+                      >
+                        <div className="flex flex-col">
+                          <Link
+                            href={`/customers/${ref.id}`}
+                            className="font-medium text-blue-600 hover:underline"
+                          >
+                            {ref.name}
+                          </Link>
+                          <span className="text-xs text-gray-500">{ref.customerNo}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {ref.createdAt ? formatDate(ref.createdAt) : '-'}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="py-4 text-center text-sm text-gray-500">暂无转介绍记录</div>
               )}
             </CardContent>
           </Card>

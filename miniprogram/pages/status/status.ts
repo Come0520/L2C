@@ -1,3 +1,5 @@
+import { isAppEnv } from '../../utils/env';
+
 /**
  * 审批状态页
  */
@@ -11,6 +13,8 @@ Page({
         reviewTime: '',
         rejectReason: '',
         loading: true,
+        // 是否支持订阅消息（多端应用模式下不支持）
+        supportSubscribe: !isAppEnv(),
     },
 
     onLoad() {
@@ -108,6 +112,11 @@ Page({
      * 订阅通知
      */
     subscribeNotification() {
+        if (isAppEnv()) {
+            wx.showToast({ title: '当前环境不支持消息订阅', icon: 'none' });
+            return;
+        }
+
         wx.requestSubscribeMessage({
             tmplIds: [
                 // 审批结果通知模板ID

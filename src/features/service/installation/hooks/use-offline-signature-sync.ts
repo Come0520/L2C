@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
     getPendingCount,
     syncPendingSignatures,
@@ -60,6 +60,11 @@ export function useOfflineSignatureSync(
         }
     }, [isSyncing, uploadFn, refreshPendingCount]);
 
+    const syncRef = useRef(sync);
+    useEffect(() => {
+        syncRef.current = sync;
+    }, [sync]);
+
     // 监听网络状态
     useEffect(() => {
         const handleOnline = () => {
@@ -70,7 +75,7 @@ export function useOfflineSignatureSync(
             const count = getPendingCount();
             if (count > 0) {
                 toast.info(`检测到 ${count} 个待上传签名，正在同步...`);
-                sync(true);
+                syncRef.current(true);
             }
         };
 
@@ -91,7 +96,7 @@ export function useOfflineSignatureSync(
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [sync, refreshPendingCount]);
+    }, [refreshPendingCount]);
 
     // 页面可见时检查并同步
     useEffect(() => {
@@ -99,14 +104,14 @@ export function useOfflineSignatureSync(
             if (document.visibilityState === 'visible' && checkOnline()) {
                 const count = getPendingCount();
                 if (count > 0) {
-                    sync(true);
+                    syncRef.current(true);
                 }
             }
         };
 
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
-    }, [sync]);
+    }, []);
 
     return {
         /** 当前是否在线 */

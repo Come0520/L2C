@@ -137,7 +137,7 @@ const getSalesFunnelAction = createSafeAction(salesFunnelSchema, async (params, 
                 throw error;
             }
         },
-        [`sales-funnel-${tenantId}-${salesId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`sales-funnel-${tenantId}-${salesId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-funnel'], revalidate: 3600 }
     )();
 });

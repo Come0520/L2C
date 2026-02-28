@@ -109,7 +109,7 @@ describe('Quote Lifecycle Actions (L5)', () => {
 
         const result = await submitQuote({ id: MOCK_QUOTE_ID });
 
-        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.QUOTE.EDIT);
+        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.QUOTE.OWN_EDIT);
         expect(QuoteLifecycleService.submit).toHaveBeenCalledWith(MOCK_QUOTE_ID, MOCK_TENANT_ID, MOCK_USER_ID);
         expect(AuditService.recordFromSession).toHaveBeenCalledWith(
             MOCK_SESSION, 'quotes', MOCK_QUOTE_ID, 'UPDATE', expect.objectContaining({ new: { action: 'SUBMIT' } })
@@ -179,7 +179,7 @@ describe('Quote Lifecycle Actions (L5)', () => {
 
         const result = await convertQuoteToOrder({ quoteId: MOCK_QUOTE_ID });
 
-        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.ORDER.CREATE);
+        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.ORDER.OWN_EDIT);
         expect(QuoteLifecycleService.convertToOrder).toHaveBeenCalledWith(MOCK_QUOTE_ID, MOCK_TENANT_ID, MOCK_USER_ID);
         expect(result).toHaveProperty('id', MOCK_ORDER_ID);
     });
@@ -191,7 +191,7 @@ describe('Quote Lifecycle Actions (L5)', () => {
 
         const result = await createNextVersion({ quoteId: MOCK_QUOTE_ID });
 
-        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.QUOTE.CREATE);
+        expect(checkPermission).toHaveBeenCalledWith(MOCK_SESSION, PERMISSIONS.QUOTE.OWN_EDIT);
         expect(QuoteService.createNextVersion).toHaveBeenCalledWith(MOCK_QUOTE_ID, MOCK_USER_ID, MOCK_TENANT_ID);
         expect(result).toHaveProperty('id', MOCK_NEW_VERSION_ID);
     });

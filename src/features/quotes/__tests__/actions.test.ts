@@ -3,6 +3,11 @@
  * 覆盖关键场景：创建报价、折扣审批、删除行项目、租户隔离
  */
 import { describe, vi, beforeEach, it, expect } from 'vitest';
+import { createQuote } from '../actions/quote-crud';
+import { deleteQuoteItem } from '../actions/quote-item-crud';
+import { submitQuote, approveQuote, rejectQuote } from '../actions/quote-lifecycle-actions';
+import { deleteRoom } from '../actions/quote-room-crud';
+import { QuoteLifecycleService } from '../../../services/quote-lifecycle.service';
 
 // ── Mock 定义 ────────────────────────────
 
@@ -37,15 +42,15 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/api/schema/quotes', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/shared/api/schema/quotes')>();
+vi.mock('../../../shared/api/schema/quotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../shared/api/schema/quotes')>();
   return {
     ...actual,
   };
 });
 
-vi.mock('@/shared/api/schema/catalogs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/shared/api/schema/catalogs')>();
+vi.mock('../../../shared/api/schema/catalogs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../shared/api/schema/catalogs')>();
   return {
     ...actual,
     products: { id: 'id', category: 'category', isActive: 'isActive' },
@@ -63,7 +68,7 @@ vi.mock('drizzle-orm', async (importOriginal) => {
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
-    revalidateTag: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({
@@ -194,8 +199,6 @@ describe('报价单 Actions 集成测试', () => {
 
   describe('createQuote - 创建报价单', () => {
     it('应成功创建报价单并设置 rootQuoteId', async () => {
-      const { createQuote } = await import('../actions/quote-crud');
-
       const result = await createQuote({
         customerId: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
         title: '测试报价',
@@ -256,9 +259,6 @@ describe('报价单 Actions 集成测试', () => {
 
   describe('submitQuote - 提交报价单', () => {
     it('应调用 QuoteLifecycleService.submit', async () => {
-      const { submitQuote } = await import('../actions/quote-lifecycle-actions');
-      const { QuoteLifecycleService } = await import('@/services/quote-lifecycle.service');
-
       await submitQuote({
         id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
       });
@@ -273,9 +273,6 @@ describe('报价单 Actions 集成测试', () => {
 
   describe('approveQuote - 审批报价单', () => {
     it('应传入租户 ID 调用 QuoteLifecycleService.approve', async () => {
-      const { approveQuote } = await import('../actions/quote-lifecycle-actions');
-      const { QuoteLifecycleService } = await import('@/services/quote-lifecycle.service');
-
       await approveQuote({
         id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
       });
@@ -290,9 +287,6 @@ describe('报价单 Actions 集成测试', () => {
 
   describe('rejectQuote - 拒绝报价单', () => {
     it('应传入租户 ID 调用 QuoteLifecycleService.reject', async () => {
-      const { rejectQuote } = await import('../actions/quote-lifecycle-actions');
-      const { QuoteLifecycleService } = await import('@/services/quote-lifecycle.service');
-
       await rejectQuote({
         id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
         rejectReason: '价格不合理',

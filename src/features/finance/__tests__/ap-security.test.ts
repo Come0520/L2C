@@ -54,6 +54,8 @@ vi.mock('@/features/channels/logic/commission.service', () => ({
 
 import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
+import { verifyPaymentBill } from '../actions/ap';
+import { checkPermission } from '@/shared/lib/auth';
 
 // ==================== FN-20: verifyPaymentBill 测试 ====================
 
@@ -102,8 +104,6 @@ describe('[FN-20] verifyPaymentBill - 余额核销安全测试', () => {
 
         vi.mocked(db.transaction).mockImplementation((fn: (...args: unknown[]) => unknown) => (fn as (...args: unknown[]) => unknown)(mockTx));
 
-        const { verifyPaymentBill } = await import('../actions/ap');
-
         // 由于 verifyPaymentBill 是 createSafeAction 包装，需特殊调用
         // 这里测试核心业务逻辑：余额不足应抛出错误
         const currentBalance = new Decimal('500.00');
@@ -141,7 +141,7 @@ describe('[FN-20] verifyPaymentBill - 余额核销安全测试', () => {
         vi.mocked(auth).mockResolvedValue(null as any);
 
         // 由于 createSafeAction 在 auth() 返回 null 时应拒绝，这里验证 checkPermission 未调用
-        const { checkPermission } = await import('@/shared/lib/auth');
+        // const { checkPermission } = await import('@/shared/lib/auth');
         // 无会话时权限检查应失败
     });
 

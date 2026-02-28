@@ -68,10 +68,10 @@ describe('RBAC 权限检查', () => {
         it('用户拥有精确权限应返回 true', async () => {
             // Mock 返回的具体权限
             vi.mocked(db.query.roles.findFirst).mockResolvedValue({
-                permissions: ['order.view', 'order.edit'],
+                permissions: ['order.view', 'order.own.edit'],
             } as any);
 
-            const result = await checkPermission(mockSession, 'order.edit');
+            const result = await checkPermission(mockSession, 'order.own.edit');
             expect(result).toBe(true);
         });
 
@@ -80,7 +80,7 @@ describe('RBAC 权限检查', () => {
                 permissions: ['order.view'],
             } as any);
 
-            const result = await checkPermission(mockSession, 'order.edit');
+            const result = await checkPermission(mockSession, 'order.own.edit');
             expect(result).toBe(false);
         });
 
@@ -170,10 +170,10 @@ describe('RBAC 权限检查', () => {
     describe('审计日志', () => {
         it('options.audit=true 应写入审计日志', async () => {
             vi.mocked(db.query.roles.findFirst).mockResolvedValue({
-                permissions: ['order.edit'],
+                permissions: ['order.own.edit'],
             } as any);
 
-            await checkPermission(mockSession, 'order.edit', {
+            await checkPermission(mockSession, 'order.own.edit', {
                 audit: true,
                 action: 'UPDATE_ORDER',
                 resourceType: 'orders',
@@ -185,7 +185,7 @@ describe('RBAC 权限检查', () => {
 
         it('审计写入失败不应影响权限结果', async () => {
             vi.mocked(db.query.roles.findFirst).mockResolvedValue({
-                permissions: ['order.edit'],
+                permissions: ['order.own.edit'],
             } as any);
 
             // 模拟审计抛出错误
@@ -194,7 +194,7 @@ describe('RBAC 权限检查', () => {
             }));
             (db.insert as any) = mockInsert;
 
-            const result = await checkPermission(mockSession, 'order.edit', {
+            const result = await checkPermission(mockSession, 'order.own.edit', {
                 audit: true,
             });
 

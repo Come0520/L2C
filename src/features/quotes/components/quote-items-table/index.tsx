@@ -94,7 +94,7 @@ export function QuoteItemsTable({
     return mode !== 'simple';
   };
 
-  const showImage = isFieldVisible('imageUrl');
+  const showImage = true; // 强制显示商品图片列，满足用户在商品和尺寸之间添加图片的要求
   const showWidth = isFieldVisible('width');
   const showHeight = isFieldVisible('height');
   const showFold = isFieldVisible('foldRatio');
@@ -284,7 +284,10 @@ export function QuoteItemsTable({
 
       {viewMode === 'category' && (
         <CategoryView
+          quoteId={quoteId}
+          rooms={rooms}
           items={items}
+          allowedCategories={allowedCategories}
           readOnly={readOnly}
           {...columnVisibility}
           expandedItemIds={expandedItemIds}

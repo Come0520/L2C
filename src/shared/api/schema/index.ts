@@ -33,3 +33,4 @@ export * from './role-overrides';
 export * from './customer-activities';
 export * from './showroom';
 export * from './onboarding-profiles';
+export * from './landing-testimonials';

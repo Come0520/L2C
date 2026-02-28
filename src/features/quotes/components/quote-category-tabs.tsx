@@ -127,11 +127,13 @@ export function QuoteCategoryTabs({
     );
 }
 
+import { CATEGORY_LABELS } from '../constants';
+
 /**
  * 获取品类的中文标签
  */
-export function getCategoryLabel(category: QuoteCategory): string {
-    return CATEGORY_CONFIG[category]?.label || category;
+export function getCategoryLabel(category: QuoteCategory | string): string {
+    return CATEGORY_CONFIG[category as QuoteCategory]?.label || CATEGORY_LABELS[category] || category;
 }
 
 /**

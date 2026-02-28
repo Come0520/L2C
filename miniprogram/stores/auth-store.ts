@@ -4,7 +4,7 @@
  * @description 管理用户信息、角色、租户状态，并在状态变化时通知所有订阅者（如自定义 TabBar）。
  * 数据持久化于 wx.Storage，应用启动时自动恢复。
  */
-export type UserRole = 'admin' | 'sales' | 'installer' | 'customer' | 'guest';
+export type UserRole = 'admin' | 'sales' | 'installer' | 'customer' | 'guest' | 'tester';
 
 export interface UserInfo {
     id: string;

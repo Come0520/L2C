@@ -33,7 +33,7 @@ interface PODetailProps {
 
 export function PODetail({ data, onUpdateStatus }: PODetailProps) {
     const [showLogisticsDialog, setShowLogisticsDialog] = useState(false);
-    const [showQuoteUpload, setShowQuoteUpload] = useState(false);
+    const [_showQuoteUpload, setShowQuoteUpload] = useState(false);
 
     const statusSteps = data.type === 'FABRIC' ? [
         { key: 'DRAFT', label: '草稿', icon: FileText },
@@ -61,7 +61,7 @@ export function PODetail({ data, onUpdateStatus }: PODetailProps) {
     const handleMarkReady = useCallback(() => handleStatusChange('READY'), [handleStatusChange]);
     const handleConfirmDelivered = useCallback(() => handleStatusChange('DELIVERED'), [handleStatusChange]);
     const handleOpenLogistics = useCallback(() => setShowLogisticsDialog(true), []);
-    const handleOpenQuoteUpload = useCallback(() => setShowQuoteUpload(true), []);
+    const _handleOpenQuoteUpload = useCallback(() => setShowQuoteUpload(true), []);
 
     return (
         <div className="space-y-6">

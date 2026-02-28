@@ -195,9 +195,9 @@ describe('AP Actions', () => {
         it('should handle REJECTED status', async () => {
             const mockTx = {
                 query: {
-                    paymentBills: { findFirst: vi.fn().mockResolvedValue({ id: mockBillId, status: 'PENDING', items: [] }) },
+                    paymentBills: { findFirst: vi.fn().mockResolvedValue({ id: mockBillId, status: 'PENDING', items: [], version: 1 }) },
                 },
-                update: vi.fn().mockReturnValue(createChainedMock([])),
+                update: vi.fn().mockReturnValue(createChainedMock([{ id: mockBillId }])),
             };
             (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
 

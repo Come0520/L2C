@@ -5,6 +5,7 @@ import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import { ProductImportDialog } from './product-import-dialog';
+import { ProductImageBatchUploadDialog } from './product-image-batch-upload-dialog';
 
 interface ProductsToolbarProps {
     search: string;
@@ -37,6 +38,7 @@ export function ProductsToolbar({
             loading={loading}
         >
             <ProductImportDialog onSuccess={onImportSuccess} />
+            <ProductImageBatchUploadDialog onSuccess={onRefresh} />
             <Button onClick={onAdd} className="shadow-md transition-all hover:shadow-lg">
                 <Plus className="mr-2 h-4 w-4" /> 新增产品
             </Button>

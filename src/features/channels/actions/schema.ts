@@ -56,7 +56,7 @@ export const channelSchema = z
         if (!rates || rates.length === 0) return;
 
         // Sort by minAmount to check for overlaps
-        const sortedRates = [...rates].sort((a, b) => a.minAmount - b.minAmount);
+        const sortedRates = rates.toSorted((a, b) => a.minAmount - b.minAmount);
 
         for (let i = 0; i < sortedRates.length; i++) {
           const current = sortedRates[i];

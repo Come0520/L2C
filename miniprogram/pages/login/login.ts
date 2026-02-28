@@ -74,7 +74,7 @@ Page({
                     } else if (user.role === 'customer') {
                         wx.reLaunch({ url: '/pages/index/index' });
                     } else {
-                        wx.reLaunch({ url: '/pages/workbench/index' });
+                        wx.reLaunch({ url: '/pages/index/index' });
                     }
                 }, 1000);
 
@@ -97,4 +97,4 @@ Page({
 
 export { };
 
-export {};
+export { };

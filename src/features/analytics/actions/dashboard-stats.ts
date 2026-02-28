@@ -105,7 +105,7 @@ const getDashboardStatsAction = createSafeAction(dashboardStatsSchema, async (pa
                 throw new Error('获取数据失败');
             }
         },
-        [`dashboard-stats-${tenantId}-${salesId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`dashboard-stats-${tenantId}-${salesId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-dashboard'], revalidate: 3600 }
     )();
 });

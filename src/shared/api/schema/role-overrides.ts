@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 
 /**
@@ -20,10 +20,10 @@ export const roleOverrides = pgTable('role_overrides', {
     roleCode: varchar('role_code', { length: 50 }).notNull(),
 
     // 在预设基础上新增的权限（JSON 数组）
-    addedPermissions: text('added_permissions').default('[]').notNull(),
+    addedPermissions: jsonb('added_permissions').$type<string[]>().default([]).notNull(),
 
     // 从预设中移除的权限（JSON 数组）
-    removedPermissions: text('removed_permissions').default('[]').notNull(),
+    removedPermissions: jsonb('removed_permissions').$type<string[]>().default([]).notNull(),
 
     // 审计字段
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

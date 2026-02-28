@@ -78,7 +78,7 @@ export async function submitQuoteAction(params: z.infer<typeof submitQuoteSchema
  */
 export const submitQuote = createSafeAction(submitQuoteSchema, async (data, context) => {
   // P2-01: 权限校验
-  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
     logger.warn('无权执行此操作：提交报价单', { userId: context.session.user.id });
     throw new Error('无权执行此操作');
@@ -185,7 +185,7 @@ export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context)
   const userTenantId = context.session.user.tenantId;
 
   // P2-01: 权限校验
-  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
     logger.warn('无权执行此操作：锁定报价单', { userId: context.session.user.id });
     throw new Error('无权执行此操作');
@@ -263,7 +263,7 @@ export const unlockQuote = createSafeAction(unlockQuoteSchema, async (data, cont
   const userTenantId = context.session.user.tenantId;
 
   // P2-01: 权限校验
-  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.EDIT);
+  const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
     logger.warn('无权执行此操作：解锁报价单', { userId: context.session.user.id });
     throw new Error('无权执行此操作');
@@ -427,7 +427,7 @@ export const convertQuoteToOrder = createSafeAction(
   async (data, context) => {
     logger.info('[quotes] 开始转订单', { quoteId: data.quoteId, version: data.version });
     // P2-01: 权限校验 (转订单需要创建订单权限)
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.ORDER.CREATE);
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.ORDER.OWN_EDIT);
     if (!hasPermission) {
       logger.warn('无权执行此操作：转订单', { userId: context.session.user.id });
       throw new Error('无权执行此操作');
@@ -486,7 +486,7 @@ export const createNextVersion = createSafeAction(
   async (data, context) => {
     logger.info('[quotes] 开始创建新版本', { quoteId: data.quoteId, version: data.version });
     // P2-01: 权限校验 (创建新版本视为创建报价)
-    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.CREATE);
+    const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
     if (!hasPermission) {
       logger.warn('无权执行此操作：创建新版本', { userId: context.session.user.id });
       throw new Error('无权执行此操作');

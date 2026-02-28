@@ -1,10 +1,15 @@
-// 移除 authStore 引入
 Page({
     data: {
+        activeTab: 'monthly', // 'monthly' | 'weekly'
         year: new Date().getFullYear(),
         month: new Date().getMonth() + 1,
+        // 计算当前周数的简单粗暴逻辑（ISO）直接拿前端近似替代
+        week: 1,
+        // 渲染数据
         list: [],
         totalTarget: '0',
+        totalAchieved: '0',
+        totalRate: 0,
         // Dialog
         showDialog: false,
         currentItem: null,
@@ -12,20 +17,44 @@ Page({
         saving: false
     },
     onLoad() {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+        const week1 = new Date(d.getFullYear(), 0, 4);
+        const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        this.setData({ week });
+        this.fetchList();
+    },
+    switchTab(e) {
+        const tab = e.currentTarget.dataset.tab;
+        if (this.data.activeTab === tab)
+            return;
+        this.setData({ activeTab: tab });
         this.fetchList();
     },
     async fetchList() {
         wx.showLoading({ title: '加载中...' });
         try {
             const app = getApp();
-            const { year, month } = this.data;
-            const res = await app.request(`/sales/targets?year=${year}&month=${month}`);
+            const { activeTab, year, month, week } = this.data;
+            let url = '';
+            if (activeTab === 'monthly') {
+                url = `/sales/targets?year=${year}&month=${month}`;
+            }
+            else {
+                url = `/sales/weekly-targets?year=${year}&week=${week}`;
+            }
+            const res = await app.request(url);
             if (res.success) {
                 const list = res.data;
                 const total = list.reduce((sum, item) => sum + parseFloat(item.targetAmount || 0), 0);
+                const totalAchieved = list.reduce((sum, item) => sum + parseFloat(item.achievedAmount || 0), 0);
+                const totalRate = total > 0 ? Math.round((totalAchieved / total) * 1000) / 10 : 0;
                 this.setData({
                     list,
-                    totalTarget: total.toLocaleString()
+                    totalTarget: total.toLocaleString(),
+                    totalAchieved: totalAchieved.toLocaleString(),
+                    totalRate
                 });
             }
         }
@@ -52,7 +81,7 @@ Page({
         this.setData({ tempTarget: e.detail.value });
     },
     async onSave() {
-        const { currentItem, tempTarget, year, month } = this.data;
+        const { activeTab, currentItem, tempTarget, year, month, week } = this.data;
         const amount = parseFloat(tempTarget);
         if (isNaN(amount) || amount < 0) {
             wx.showToast({ title: '请输入有效金额', icon: 'none' });
@@ -61,14 +90,19 @@ Page({
         this.setData({ saving: true });
         try {
             const app = getApp();
-            const res = await app.request('/sales/targets', {
+            let url = '';
+            let data = {};
+            if (activeTab === 'monthly') {
+                url = '/sales/targets';
+                data = { userId: currentItem.userId, year, month, targetAmount: amount };
+            }
+            else {
+                url = '/sales/weekly-targets';
+                data = { userId: currentItem.userId, year, week, targetAmount: amount };
+            }
+            const res = await app.request(url, {
                 method: 'POST',
-                data: {
-                    userId: currentItem.userId,
-                    year,
-                    month,
-                    targetAmount: amount
-                }
+                data
             });
             if (res.success) {
                 wx.showToast({ title: '设置成功', icon: 'success' });

@@ -293,7 +293,7 @@ export async function requestFeeWaiver(input: unknown) {
   const { taskId, reason } = parsed.data;
 
   // 权限校验：通常需要经理或以上权限
-  await checkPermission(session, PERMISSIONS.MEASURE.MANAGE);
+  await checkPermission(session, PERMISSIONS.MEASURE.ALL_EDIT);
 
   await db
     .update(measureTasks)

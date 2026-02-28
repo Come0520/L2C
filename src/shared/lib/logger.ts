@@ -42,11 +42,11 @@ function formatLog(
   // 提取 Session 关键信息
   const sessionInfo = session
     ? {
-        userId: session.userId,
-        tenantId: session.tenantId,
-        role: session.role,
-        traceId: session.traceId,
-      }
+      userId: session.userId,
+      tenantId: session.tenantId,
+      role: session.role,
+      traceId: session.traceId,
+    }
     : {};
 
   // 合并上下文
@@ -67,10 +67,10 @@ function formatLog(
       error:
         error instanceof Error
           ? {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-            }
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
           : error,
     };
     return JSON.stringify(logEntry);
@@ -108,21 +108,21 @@ export const logger = {
   info: (...args: unknown[]) => {
     try {
       console.log('[INFO]', ...args);
-    } catch (e) {
+    } catch (_e) {
       console.log('[INFO]', 'Unserializable log arguments');
     }
   },
   warn: (...args: unknown[]) => {
     try {
       console.warn('[WARN]', ...args);
-    } catch (e) {
+    } catch (_e) {
       console.warn('[WARN]', 'Unserializable log arguments');
     }
   },
   error: (...args: unknown[]) => {
     try {
       console.error('[ERROR]', ...args);
-    } catch (e) {
+    } catch (_e) {
       console.error('[ERROR]', 'Failed to log error due to serialization crash');
     }
   },

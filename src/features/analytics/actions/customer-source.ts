@@ -73,7 +73,7 @@ const getCustomerSourceDistributionAction = createSafeAction(customerSourceSchem
                 throw error;
             }
         },
-        [`customer-source-${tenantId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`customer-source-${tenantId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-source'], revalidate: 3600 }
     )();
 });

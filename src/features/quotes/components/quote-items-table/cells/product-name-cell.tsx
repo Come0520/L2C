@@ -15,6 +15,7 @@ interface ProductNameCellProps {
   level: number;
   readOnly: boolean;
   showImage: boolean;
+  roomName?: string;
   onProductSelect: (id: string, product: ProductSearchResult) => Promise<void>;
 }
 
@@ -23,6 +24,7 @@ export const ProductNameCell = memo(function ProductNameCell({
   level,
   readOnly,
   showImage,
+  roomName,
   onProductSelect,
 }: ProductNameCellProps) {
   const warning = item.attributes?.calcResult?.warning || item.attributes?._warnings;
@@ -37,73 +39,35 @@ export const ProductNameCell = memo(function ProductNameCell({
           </div>
         )}
         {readOnly ? (
-          <span className="block max-w-[200px] truncate">{item.productName}</span>
-        ) : (
-          <div className="w-48">
-            <ProductAutocomplete
-              value={item.productName}
-              onSelect={(p) => onProductSelect(item.id, p)}
-              allowedCategories={
-                item.category === 'CURTAIN_ACCESSORY' ? ['CURTAIN_ACCESSORY'] : undefined
-              }
-              category={item.category}
-              placeholder={
-                item.category === 'CURTAIN_ACCESSORY' ? '搜索辅料(绑带等)...' : '选择商品...'
-              }
-            />
-          </div>
-        )}
-        {!readOnly &&
-          showImage &&
-          (item.attributes?.productImage ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="bg-muted group relative ml-2 h-8 w-8 shrink-0 cursor-zoom-in overflow-hidden rounded border">
-                  <Image
-                    src={String(item.attributes.productImage)}
-                    alt="Product"
-                    width={32}
-                    height={32}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                  />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-64 overflow-hidden border-none p-0 shadow-xl"
-                side="right"
-              >
-                <Image
-                  src={String(item.attributes.productImage)}
-                  alt="Preview"
-                  width={256}
-                  height={256}
-                  className="h-auto w-full"
-                />
-              </PopoverContent>
-            </Popover>
-          ) : (
-            <div
-              className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50 opacity-50"
-              title="No Image"
-            >
-              <span className="text-muted-foreground text-[10px]">图</span>
-            </div>
-          ))}
-        {warning && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Badge
-                variant="error"
-                className="ml-2 shrink-0 cursor-pointer text-xs hover:opacity-80"
-              >
-                !
+          <div className="flex items-center">
+            <span className="block max-w-[200px] truncate">{item.productName}</span>
+            {roomName && (
+              <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground font-normal bg-muted/30 whitespace-nowrap">
+                {roomName}
               </Badge>
-            </PopoverTrigger>
-            <PopoverContent className="glass-popover text-destructive w-64 p-3 text-sm" side="top">
-              <div className="mb-1 font-semibold">⚠️ 警报</div>
-              <div className="text-xs opacity-90">{warning}</div>
-            </PopoverContent>
-          </Popover>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center w-full max-w-[300px]">
+            <div className="w-48">
+              <ProductAutocomplete
+                value={item.productName}
+                onSelect={(p) => onProductSelect(item.id, p)}
+                allowedCategories={
+                  item.category === 'CURTAIN_ACCESSORY' ? ['CURTAIN_ACCESSORY'] : undefined
+                }
+                category={item.category}
+                placeholder={
+                  item.category === 'CURTAIN_ACCESSORY' ? '搜索辅料(绑带等)...' : '选择商品...'
+                }
+              />
+              {roomName && (
+                <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground font-normal bg-muted/30 whitespace-nowrap shrink-0">
+                  {roomName}
+                </Badge>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </TableCell>

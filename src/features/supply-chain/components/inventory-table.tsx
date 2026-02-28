@@ -48,7 +48,7 @@ const InventoryTableRow = React.memo(function InventoryTableRow({ item }: Invent
     );
 });
 
-export function InventoryTable({ data }: { data: InventoryItem[] }) {
+export function InventoryTable({ data }: InventoryTableProps) {
     return (
         <div className="rounded-md border">
             <Table>

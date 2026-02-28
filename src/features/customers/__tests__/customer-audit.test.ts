@@ -4,8 +4,8 @@
  */
 import { describe, vi, beforeEach, it, expect } from 'vitest';
 import { AuditService } from '@/shared/services/audit-service';
-
-// ── Mock 定义 ────────────────────────────
+import { addCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../actions/mutations';
+import { createActivity } from '../actions/activities';
 
 const { mockDbInsert, mockDbUpdate, mockDbDelete, mockDbQuery } = vi.hoisted(() => {
     return {
@@ -103,12 +103,12 @@ describe('客户模块 Audit Actions', () => {
 
     describe('addCustomerAddress', () => {
         it('应在创建地址后记录审计日志', async () => {
-            const { addCustomerAddress } = await import('../actions/mutations');
-
             const validUuid = '123e4567-e89b-12d3-a456-426614174000';
             mockDbQuery.customers.findFirst.mockResolvedValue({ id: validUuid, tenantId: 'test-tenant-id' });
 
-            const result = await addCustomerAddress({
+            console.log('--- TEST START ---');
+
+            const resultPromise = addCustomerAddress({
                 customerId: validUuid,
                 label: '公司',
                 province: '北京',
@@ -118,6 +118,12 @@ describe('客户模块 Audit Actions', () => {
                 address: 'Test Address',
                 isDefault: true,
             });
+
+            console.log('--- CALL INITIATED ---');
+
+            const result = await resultPromise;
+
+            console.log('--- CALL RESOLVED ---');
 
             expect(result).toBeDefined();
 
@@ -135,8 +141,6 @@ describe('客户模块 Audit Actions', () => {
 
     describe('updateCustomerAddress', () => {
         it('应在更新地址后记录审计日志', async () => {
-            const { updateCustomerAddress } = await import('../actions/mutations');
-
             await updateCustomerAddress({
                 id: 'addr-1',
                 address: 'Updated Address',
@@ -156,8 +160,6 @@ describe('客户模块 Audit Actions', () => {
 
     describe('deleteCustomerAddress', () => {
         it('应在删除地址后记录审计日志', async () => {
-            const { deleteCustomerAddress } = await import('../actions/mutations');
-
             await deleteCustomerAddress('addr-1');
 
             expect(AuditService.log).toHaveBeenCalledWith(
@@ -173,8 +175,6 @@ describe('客户模块 Audit Actions', () => {
 
     describe('createActivity', () => {
         it('应在创建活动后记录审计日志', async () => {
-            const { createActivity } = await import('../actions/activities');
-
             // Mock insert returning
             mockDbInsert.mockImplementation(() => ({
                 values: vi.fn().mockReturnValue({

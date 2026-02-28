@@ -287,6 +287,7 @@ const QuoteItemRow = memo(
                       <Input
                         disabled={readOnly}
                         type="number"
+                        onFocus={(e) => e.target.select()}
                         className="h-8 w-16 bg-transparent/50 px-1 text-right"
                         defaultValue={Number(item.width) || ''}
                         placeholder="宽"
@@ -324,6 +325,7 @@ const QuoteItemRow = memo(
                       <Input
                         disabled={readOnly}
                         type="number"
+                        onFocus={(e) => e.target.select()}
                         className="h-8 w-16 bg-transparent/50 px-1 text-right"
                         defaultValue={Number(item.height) || ''}
                         placeholder="高"
@@ -361,6 +363,7 @@ const QuoteItemRow = memo(
                   <Input
                     disabled={readOnly}
                     type="number"
+                    onFocus={(e) => e.target.select()}
                     className="h-8 w-14 bg-transparent/50 px-1 text-right"
                     defaultValue={Number(item.foldRatio) || ''}
                     placeholder="倍数"
@@ -388,6 +391,7 @@ const QuoteItemRow = memo(
                   <Input
                     disabled={readOnly}
                     type="number"
+                    onFocus={(e) => e.target.select()}
                     className="h-8 w-16 bg-transparent/50 px-1 text-right"
                     defaultValue={Number(item.processFee) || ''}
                     placeholder="工费"
@@ -409,6 +413,7 @@ const QuoteItemRow = memo(
                   key={item.quantity} // Force re-render when calculated quantity changes
                   disabled={readOnly}
                   type="number"
+                  onFocus={(e) => e.target.select()}
                   className="text-primary h-8 w-16 bg-transparent/50 px-1 text-right font-medium"
                   defaultValue={Number(item.quantity)}
                   onBlur={(e) => {
@@ -489,6 +494,7 @@ const QuoteItemRow = memo(
               <Input
                 disabled={readOnly}
                 type="number"
+                onFocus={(e) => e.target.select()}
                 className="h-8 w-20 bg-transparent/50 px-1 text-right"
                 defaultValue={Number(item.unitPrice)}
                 onBlur={(e) => {
@@ -886,7 +892,9 @@ export function QuoteItemsTable({
     await handleUpdate(id, {
       productId: product.id,
       productName: product.name,
-      unitPrice: product.unitPrice ? parseFloat(String(product.unitPrice)) : undefined,
+      unitPrice: product.retailPrice !== null && product.retailPrice !== undefined
+        ? parseFloat(String(product.retailPrice))
+        : product.unitPrice ? parseFloat(String(product.unitPrice)) : undefined,
       attributes: {
         ...product.specs,
         productImage: product.images?.[0],
@@ -1082,7 +1090,7 @@ export function QuoteItemsTable({
                     )}
                     {showAmount && <TableHead className="h-9 w-[10%] text-right">小计</TableHead>}
                     {showRemark && <TableHead className="h-9">备注</TableHead>}
-                    <TableHead className="h-9 w-[80px]"></TableHead>
+                    <TableHead className="h-9 w-[80px] text-center">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

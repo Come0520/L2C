@@ -296,7 +296,7 @@ export class WorkbenchService {
                     throw new WorkbenchError(WorkbenchErrors.FETCH_TODOS_FAILED, { tenantId, userId, error });
                 }
             },
-            [`todos-${tenantId}-${userId}-${[...userRoles].sort().join(',')}`],
+            [`todos-${tenantId}-${userId}-${userRoles.toSorted().join(',')}`],
             { revalidate: 60, tags: [`todos:${tenantId}`, `todos:${userId}`] }
         )();
     }

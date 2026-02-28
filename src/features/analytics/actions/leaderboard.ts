@@ -72,7 +72,7 @@ const getLeaderboardAction = createSafeAction(leaderboardSchema, async (params, 
                 throw new Error('获取数据失败');
             }
         },
-        [`leaderboard-${tenantId}-${params.sortBy}-${params.limit}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`leaderboard-${tenantId}-${params.sortBy}-${params.limit}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-leaderboard'], revalidate: 3600 }
     )();
 });

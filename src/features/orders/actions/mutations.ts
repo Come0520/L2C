@@ -34,7 +34,7 @@ const updateOrderStatusActionInternal = createSafeAction(
     if (!session.user.tenantId) throw new Error('Unauthorized');
 
     // 权限检查：需要订单编辑权限
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const order = await db.query.orders.findFirst({
       where: and(eq(orders.id, data.id), eq(orders.tenantId, session.user.tenantId)),

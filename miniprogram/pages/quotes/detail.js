@@ -18,6 +18,7 @@ Page({
         this.fetchPaymentConfig();
         // Calculate responsive width
         const sys = wx.getSystemInfoSync();
+        // [兼容性] App下的 windowWidth 是安全区域宽度，直接拿来算可能有边界重叠，稍微留一点边距
         this.setData({
             signatureWidth: sys.windowWidth - 32
         });

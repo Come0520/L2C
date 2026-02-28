@@ -35,7 +35,7 @@ const LeaderboardTableRow = React.memo(function LeaderboardTableRow({ item, inde
                 <Avatar className="h-6 w-6">
                     <AvatarFallback>{item.salesName ? item.salesName.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
                 </Avatar>
-                {item.salesName || 'Unknown'}
+                {item.salesName || '未知'}
             </TableCell>
             <TableCell className="text-right">{item.orderCount}</TableCell>
             <TableCell className="text-right font-bold">
@@ -49,17 +49,17 @@ export function LeaderboardTable({ data, className }: LeaderboardTableProps) {
     return (
         <Card className={className}>
             <CardHeader>
-                <CardTitle>Top Performers</CardTitle>
-                <CardDescription>Leading sales representatives by revenue</CardDescription>
+                <CardTitle>销售精英榜</CardTitle>
+                <CardDescription>本期按成交金额排名</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[50px]">Rank</TableHead>
-                            <TableHead>Sales Rep</TableHead>
-                            <TableHead className="text-right">Deals</TableHead>
-                            <TableHead className="text-right">Revenue</TableHead>
+                            <TableHead className="w-[50px]">排名</TableHead>
+                            <TableHead>销售员</TableHead>
+                            <TableHead className="text-right">订单数</TableHead>
+                            <TableHead className="text-right">成交额</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

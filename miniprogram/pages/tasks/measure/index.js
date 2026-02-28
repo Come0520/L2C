@@ -1,7 +1,8 @@
 /**
  * 测量数据录入页
- * pages/tasks/measure/index.ts
+ * measure/index.ts
  */
+import { throttleTap } from '../../../utils/throttle-tap';
 Page({
     data: {
         taskId: '',
@@ -145,7 +146,7 @@ Page({
     /**
      * 提交数据
      */
-    async submitData() {
+    submitData: throttleTap(async function () {
         // 数据验证
         if (this.data.items.length === 0) {
             wx.showToast({ title: '请至少添加一个窗户', icon: 'none' });
@@ -205,11 +206,11 @@ Page({
         }
         catch (err) {
             console.error('[submitData] Error:', err);
-            wx.showToast({ title: err.message || '提交失败', icon: 'none' });
+            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : '提交失败');
+            wx.showToast({ title: errorMessage, icon: 'none' });
         }
         finally {
             this.setData({ submitting: false });
         }
-    },
+    })
 });
-export {};

@@ -2,6 +2,7 @@
  * 编辑个人资料
  */
 import { authStore } from '../../../stores/auth-store';
+import { throttleTap } from '../../../utils/throttle-tap';
 // const app = getApp<IAppOption>();
 Page({
     data: {
@@ -44,7 +45,7 @@ Page({
     /**
      * 保存
      */
-    async onSave() {
+    onSave: throttleTap(async function () {
         const { name, avatarUrl } = this.data.userInfo;
         if (!name.trim()) {
             wx.showToast({ title: '请输入姓名', icon: 'none' });
@@ -76,5 +77,5 @@ Page({
         finally {
             this.setData({ submitting: false });
         }
-    }
+    })
 });

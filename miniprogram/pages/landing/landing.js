@@ -47,7 +47,7 @@ Page({
                             case 'admin':
                             case 'boss':
                             case 'sales':
-                                wx.reLaunch({ url: '/pages/workbench/index' });
+                                wx.reLaunch({ url: '/pages/index/index' });
                                 break;
                             case 'installer':
                                 wx.reLaunch({ url: '/pages/tasks/index' });
@@ -119,7 +119,7 @@ Page({
         authStore.setLogin(mockToken, mockUser);
         wx.showToast({ title: '开发模式登录', icon: 'success' });
         setTimeout(() => {
-            wx.reLaunch({ url: '/pages/workbench/index' });
+            wx.reLaunch({ url: '/pages/index/index' });
         }, 500);
     }
 });

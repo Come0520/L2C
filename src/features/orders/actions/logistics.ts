@@ -33,7 +33,7 @@ export async function requestDelivery(input: RequestDeliveryInput) {
     if (!session) throw new Error('Unauthorized');
     const tenantId = session.user.tenantId;
 
-    await checkPermission(session, PERMISSIONS.ORDER.MANAGE);
+    await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
     const validatedInput = requestDeliverySchema.parse(input);
     const { orderId, company, trackingNo, remark } = validatedInput;
@@ -101,7 +101,7 @@ export async function updateLogistics(input: UpdateLogisticsInput) {
     const tenantId = session.user.tenantId;
 
     try {
-        await checkPermission(session, PERMISSIONS.ORDER.MANAGE);
+        await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
         const validatedInput = updateLogisticsSchema.parse(input);
         const { orderId, company, trackingNo } = validatedInput;

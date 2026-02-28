@@ -108,7 +108,7 @@ const getAfterSalesHealthAction = createSafeAction(afterSalesHealthSchema, async
                 throw error;
             }
         },
-        [`after-sales-health-${tenantId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`after-sales-health-${tenantId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-after-sales'], revalidate: 3600 }
     )();
 });

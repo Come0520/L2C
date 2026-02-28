@@ -287,14 +287,14 @@ const compareSupplierPricesActionInternal = createSafeAction(compareSupplierPric
     }
 
     // 按价格排序
-    const sortedByPrice = [...result].sort((a, b) => {
+    const sortedByPrice = result.toSorted((a, b) => {
         const priceA = parseFloat(a.purchasePrice || '0');
         const priceB = parseFloat(b.purchasePrice || '0');
         return priceA - priceB;
     });
 
     // 按货期排序
-    const sortedByLeadTime = [...result].sort((a, b) => {
+    const sortedByLeadTime = result.toSorted((a, b) => {
         return (a.leadTimeDays || 0) - (b.leadTimeDays || 0);
     });
 

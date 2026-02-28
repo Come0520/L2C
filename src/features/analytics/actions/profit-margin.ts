@@ -91,7 +91,7 @@ const getProfitMarginAnalysisAction = createSafeAction(profitMarginSchema, async
                 throw error;
             }
         },
-        [`profit-margin-${tenantId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`profit-margin-${tenantId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-profit'], revalidate: 3600 }
     )();
 });

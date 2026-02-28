@@ -17,7 +17,7 @@ Page({
                 'boss': '老板',
                 'manager': '经理',
                 'sales': '销售顾问',
-                'installer': '安装师傅',
+                'worker': '安装师傅', // 统一使用 WORKER 角色代码
                 'customer': '客户'
             };
             // 优先使用映射的中文名，否则保持原样 (转小写)
@@ -28,20 +28,20 @@ Page({
         });
         // Mock data loading - in real app would fetch from API
         // this.fetchStats(); 
-        // Update TabBar selection (usually last item)
+        // 更新 TabBar 高亮：「我的」在不同角色 tab 列表中位置不同
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            // Index is dynamic, logic needs to be robust or just set by matching path
-            const role = authStore.currentRole;
-            let index = 2; // Default for Guest/Customer
-            // Fix: Check for known roles, avoiding "employee" if not in type definition
-            if (role === 'admin' || role === 'sales' || role === 'installer')
-                index = 2;
-            this.getTabBar().setData({ selected: index });
+            const tabBar = this.getTabBar();
+            const index = tabBar.data.list.findIndex((item) => item.pagePath === '/pages/users/profile');
+            if (index !== -1)
+                tabBar.setData({ selected: index });
         }
     },
     handleLogout() {
-        wx.clearStorageSync();
-        wx.reLaunch({ url: '/pages/landing/landing' });
+        // 使用异步 API，避免阻塞 JS 线程（官方性能规范）
+        wx.clearStorage({
+            success: () => wx.reLaunch({ url: '/pages/landing/landing' }),
+            fail: () => wx.reLaunch({ url: '/pages/landing/landing' }),
+        });
     },
     navigateToPaymentSettings() {
         wx.navigateTo({ url: '/pages/tenant/payment-settings/index' });

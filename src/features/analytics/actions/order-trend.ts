@@ -73,7 +73,7 @@ const getOrderTrendAction = createSafeAction(orderTrendSchema, async (params, { 
                 throw new Error('获取数据失败');
             }
         },
-        [`order-trend-${tenantId}-${params.granularity}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`order-trend-${tenantId}-${params.granularity}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-trend'], revalidate: 3600 }
     )();
 });

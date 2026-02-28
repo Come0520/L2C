@@ -93,6 +93,7 @@ const settingsTabs = [
     icon: Shield,
     items: [
       { href: '/settings/feature-flags', label: '功能开关' },
+      { href: '/settings/testimonials', label: '首页评论' },
       { href: '/settings/audit-logs', label: '操作日志' },
     ],
   },

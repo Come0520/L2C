@@ -72,11 +72,11 @@ describe('RBAC checkRolePermission Core Logic', () => {
 
     it('1. 精确匹配 (Exact Match): 角色拥有具体权限放行', async () => {
         vi.mocked(db.query.roles.findFirst).mockResolvedValueOnce({
-            permissions: ['order.create', 'product.view']
+            permissions: ['order.own.edit', 'product.view']
         });
 
         const session = createMockSession(['SALES']);
-        const result = await checkPermission(session as any, 'order.create');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(true);
     });
 
@@ -86,7 +86,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
         });
 
         const session = createMockSession(['SALES']);
-        const result = await checkPermission(session as any, 'order.create');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(false);
     });
 
@@ -117,7 +117,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
 
         const session = createMockSession(['USER']);
         // Action 校验通用权限
-        const result = await checkPermission(session as any, 'order.edit');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(true);
     });
 
@@ -127,7 +127,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
         });
 
         const session = createMockSession(['MANAGER']);
-        const result = await checkPermission(session as any, 'order.edit');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(true);
     });
 
@@ -142,7 +142,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
         });
 
         const session = createMockSession(['ROLE_A', 'ROLE_B']);
-        const result = await checkPermission(session as any, 'order.edit');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(true);
     });
 
@@ -151,7 +151,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
         vi.mocked(db.query.roles.findFirst).mockResolvedValueOnce(null);
 
         const session = createMockSession(['GHOST_ROLE']);
-        const result = await checkPermission(session as any, 'order.edit');
+        const result = await checkPermission(session as any, 'order.own.edit');
         expect(result).toBe(false);
     });
 

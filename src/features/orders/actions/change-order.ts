@@ -46,7 +46,7 @@ export async function createChangeRequestAction(input: z.infer<typeof createChan
     const tenantId = getTenantId(session);
 
     // 权限检查：需要订单编辑权限
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     try {
         const result = await ChangeOrderService.createRequest(input.orderId, tenantId, {

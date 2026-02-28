@@ -16,6 +16,8 @@ interface Props {
     className?: string;
     /** 按钮显示的文本标签，默认为 "上传图片" */
     label?: string;
+    /** 组件显示风格：全量文字 (default) 或是紧凑模式 (compact) */
+    variant?: "default" | "compact";
 }
 
 /**
@@ -30,7 +32,7 @@ interface Props {
  * <UploadButton onUploadComplete={(url) => console.log(url)} label="上传凭证" />
  * ```
  */
-export function UploadButton({ onUploadComplete, className, label = "上传图片" }: Props) {
+export function UploadButton({ onUploadComplete, className, label = "上传图片", variant = "default" }: Props) {
     const [uploading, setUploading] = useState(false);
 
     /**
@@ -74,12 +76,16 @@ export function UploadButton({ onUploadComplete, className, label = "上传图�
             {uploading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             ) : (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground p-4">
-                    <UploadCloud className="h-8 w-8" />
+                <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 text-center">
+                    <UploadCloud className={variant === "compact" ? "h-6 w-6" : "h-8 w-8"} />
                     <div className="flex flex-col items-center">
                         <span className="text-sm font-medium">{label}</span>
-                        <span className="text-xs text-muted-foreground mt-1">点击或拖拽文件到此区域</span>
-                        <span className="text-[10px] text-muted-foreground/60 mt-0.5">支持 JPG, PNG, GIF, WebP (最大 10MB)</span>
+                        {variant === "default" && (
+                            <>
+                                <span className="text-xs text-muted-foreground mt-1">点击或拖拽文件到此区域</span>
+                                <span className="text-[10px] text-muted-foreground/60 mt-0.5 max-w-[200px]">支持 JPG, PNG, GIF, WebP (最大 10MB)</span>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

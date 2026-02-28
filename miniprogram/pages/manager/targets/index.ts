@@ -1,4 +1,4 @@
-import { IAppOption } from '../../../../app';
+import { IAppOption } from '../../../app';
 
 Page({
     data: {

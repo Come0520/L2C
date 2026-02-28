@@ -58,6 +58,9 @@ vi.mock('@/shared/api/schema/enums', () => ({
             'CURTAIN', 'WALLPAPER', 'WALLCLOTH', 'MATTRESS', 'OTHER',
             'CURTAIN_FABRIC', 'CURTAIN_SHEER', 'CURTAIN_TRACK', 'MOTOR', 'CURTAIN_ACCESSORY'
         ]
+    },
+    productTypeEnum: {
+        enumValues: ['FINISHED', 'RAW_MATERIAL']
     }
 }));
 
@@ -106,6 +109,7 @@ const validProductInput = {
     sku: 'CUR-001',
     name: '测试窗帘面料',
     category: 'CURTAIN' as const,
+    productType: 'FINISHED' as const,
     unit: '米',
     purchasePrice: 35.5,
     logisticsCost: 5,

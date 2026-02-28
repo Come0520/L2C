@@ -33,7 +33,9 @@ Page({
 
     onShow() {
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 2 });
+            const tabBar = this.getTabBar();
+            const index = tabBar.data.list.findIndex((item: any) => item.pagePath === '/pages/quotes/index');
+            if (index !== -1) tabBar.setData({ selected: index });
         }
         this.resetAndFetch();
     },

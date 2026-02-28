@@ -113,7 +113,7 @@ describe('Transfer Actions', () => {
                     }
                 },
                 insert: vi.fn().mockReturnValue(createChainedMock([{ id: 'trf-new', transferNo: 'TRF-NEW' }])),
-                update: vi.fn().mockReturnValue(createChainedMock()),
+                update: vi.fn().mockReturnValue(createChainedMock([{ id: 'any-id' }])),
             };
 
             (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
@@ -177,7 +177,7 @@ describe('Transfer Actions', () => {
                 },
                 update: vi.fn()
                     .mockReturnValueOnce(createChainedMock([mockTransfer])) // Mock status update to CANCELLING
-                    .mockReturnValue(createChainedMock()),
+                    .mockReturnValue(createChainedMock([{ id: 'any-id' }])),
                 insert: vi.fn().mockReturnValue(createChainedMock()),
             };
 

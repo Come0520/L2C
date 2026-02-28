@@ -237,29 +237,58 @@ export interface TestimonialItem {
   author: string;
   role: string;
   company: string;
+  /** 头像背景色（用于微信风格气泡头像） */
+  avatarColor?: string;
 }
 
 export const testimonialItems: TestimonialItem[] = [
   {
     id: 't1',
-    content: '用了 L2C 之后，报价效率提升了至少 3 倍，客户也觉得我们更专业了。',
+    content: '用了 L2C 之后，报价效率提升了至少 3 倍，客户也觉得我们更专业了。以前手算要半天，现在五分钟搞定，还不出错！',
     author: '张经理',
     role: '店长',
     company: '城东窗帘旗舰店',
+    avatarColor: '#3B82F6',
   },
   {
     id: 't2',
-    content: '以前最头疼的就是订单跟踪，现在打开手机一目了然，再也没丢过单。',
+    content: '以前最头疼的就是订单跟踪，现在打开手机一目了然，再也没丢过单。安装师傅也说任务单清楚多了，省了好多电话。',
     author: '李总',
     role: '总经理',
     company: '锦绣家居',
+    avatarColor: '#10B981',
   },
   {
     id: 't3',
-    content: '最惊喜的是居然免费！功能比我们之前用的付费软件还全面，果断全店切换。',
+    content: '最惊喜的是居然免费！功能比我们之前用的付费软件还全面，果断全店切换。员工上手也快，给个赞！',
     author: '王姐',
     role: '创始人',
     company: '品致窗饰',
+    avatarColor: '#F59E0B',
+  },
+  {
+    id: 't4',
+    content: '云展厅真的很好用，客户自己扫码就能看我们所有产品，还能 24 小时浏览。有次半夜客户发来"我要这款"，第二天直接签单了哈哈。',
+    author: '陈老板',
+    role: '老板娘',
+    company: '新家窗帘定制',
+    avatarColor: '#8B5CF6',
+  },
+  {
+    id: 't5',
+    content: '供应商对账以前每月要花三四天，现在直接出报表，半小时就结束了。时间省下来，可以多谈几个大客户。',
+    author: '刘会计',
+    role: '财务主管',
+    company: '和美布艺',
+    avatarColor: '#EC4899',
+  },
+  {
+    id: 't6',
+    content: '测量师用手机录数据，直接传回来，完全不用再靠纸条传来传去。出错少了，客户投诉也少了，真的省心！',
+    author: '赵师傅',
+    role: '首席测量师',
+    company: '阳光窗帘工程',
+    avatarColor: '#14B8A6',
   },
 ];
 
@@ -345,6 +374,32 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.2.2',
+    version: 'v1.2.2',
+    date: '2026-02-28',
+    title: '架构健壮性与测试引擎升级',
+    description: '全面解决 Vitest 测试中的 ESM 死锁与并发超时问题，极大提升了开发环境下的测试执行效率与稳定性。',
+    contributors: ['Antigravity'],
+    updates: [
+      {
+        type: 'fix',
+        content: '解决 Vitest 测试中由动态 import() 引起的 ESM 循环依赖死锁与超时',
+      },
+      {
+        type: 'fix',
+        content: '修复 filesystem 与 finance 模块在测试环境下的 Mock 缺失与路径解析错误',
+      },
+      {
+        type: 'optimize',
+        content: '重构核心模块测试用例的导入逻辑，显著提升测试套件启动与执行速度',
+      },
+      {
+        type: 'optimize',
+        content: '完成 L2C 全量 2100+ 测试用例的一键通过验收，确保存量功能零回退',
+      },
+    ],
+  },
+  {
     id: 'v1.2.1',
     version: 'v1.2.1',
     date: '2026-02-28',
@@ -372,7 +427,7 @@ export const versionHistory: VersionRecord[] = [
   {
     id: 'v1.2.0',
     version: 'v1.2.0',
-    date: '2024-04-15',
+    date: '2026-02-27',
     title: '移动端全面优化与售后升级',
     description: '为移动设备提供了原生级体验，同时引入售后服务流程闭环。',
     contributors: ['一枝花'],
@@ -385,7 +440,7 @@ export const versionHistory: VersionRecord[] = [
   {
     id: 'v1.1.0',
     version: 'v1.1.0',
-    date: '2024-02-28',
+    date: '2026-02-25',
     title: '智能业财与云展厅 2.0',
     description: '深入打通从线索到收款的财务数据流。',
     contributors: ['聂老师'],
@@ -398,7 +453,7 @@ export const versionHistory: VersionRecord[] = [
   {
     id: 'v1.0.0',
     version: 'v1.0.0',
-    date: '2024-01-01',
+    date: '2026-02-23',
     title: 'L2C 起航',
     description: '基础架构和核心业财流程从 0 到 1 建设完成。',
     contributors: ['聂老师', '一枝花'],

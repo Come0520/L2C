@@ -56,7 +56,7 @@ Page({
                             case 'admin':
                             case 'boss':
                             case 'sales':
-                                wx.reLaunch({ url: '/pages/workbench/index' });
+                                wx.reLaunch({ url: '/pages/index/index' });
                                 break;
                             case 'installer':
                                 wx.reLaunch({ url: '/pages/tasks/index' });
@@ -122,7 +122,7 @@ Page({
         const mockUser = {
             id: 'dev-user-001',
             name: '开发测试员',
-            role: 'admin' as const,
+            role: 'tester' as const,
             tenantId: 'dev-tenant-001',
             tenantName: '测试企业',
             avatarUrl: ''
@@ -133,7 +133,7 @@ Page({
 
         wx.showToast({ title: '开发模式登录', icon: 'success' });
         setTimeout(() => {
-            wx.reLaunch({ url: '/pages/workbench/index' });
+            wx.reLaunch({ url: '/pages/index/index' });
         }, 500);
     }
 });

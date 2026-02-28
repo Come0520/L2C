@@ -258,7 +258,7 @@ const createInstallTaskInternal = createSafeAction(createInstallTaskSchema, asyn
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
   // 权限检查：需要安装服务管理权限
-  await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+  await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
   try {
     const newTask = await db.transaction(async (tx) => {
@@ -378,7 +378,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
   // P1 修复：添加权限检查
-  await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+  await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
   try {
     logger.info(`[Dispatch] 准备指派安装任务: ${data.id}, 师傅: ${data.installerId}`, {
@@ -701,7 +701,7 @@ const confirmInstallationInternal = createSafeAction(
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     // P1 修复：添加权限检查
-    await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+    await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
     return db.transaction(async (tx) => {
       // P0 修复：添加租户隔离
@@ -771,7 +771,7 @@ const rejectInstallationInternal = createSafeAction(
     if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
     // P1 修复：添加权限检查
-    await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+    await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
     // P0 修复：添加租户隔离查询
     const task = await db.query.installTasks.findFirst({

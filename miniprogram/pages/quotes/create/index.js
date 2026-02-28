@@ -9,6 +9,7 @@
  * 5. 生成报价单
  */
 import { authStore } from '../../../stores/auth-store';
+import { throttleTap } from '../../../utils/throttle-tap';
 Page({
     data: {
         // 客户信息
@@ -431,7 +432,7 @@ Page({
     /**
      * 提交报价单
      */
-    async onSubmit() {
+    onSubmit: throttleTap(async function () {
         var _a;
         // 验证
         if (!this.data.customerId) {
@@ -478,5 +479,5 @@ Page({
         finally {
             wx.hideLoading();
         }
-    }
+    })
 });

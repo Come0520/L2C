@@ -17,6 +17,7 @@ import {
   AmountCell,
   RemarkCell,
   ItemActionsCell,
+  ImageCell,
 } from './cells';
 import type { QuoteItem, CalcResult, ColumnVisibility } from './types';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
@@ -31,6 +32,7 @@ interface QuoteItemRowProps extends ColumnVisibility {
   item: QuoteItem;
   level: number;
   readOnly: boolean;
+  roomName?: string;
   isExpanded: boolean;
   colSpan: number;
   handleUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
@@ -48,6 +50,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
   item,
   level,
   readOnly,
+  roomName,
   showImage,
   showWidth,
   showHeight,
@@ -100,8 +103,11 @@ export const QuoteItemRow = memo(function QuoteItemRow({
           level={level}
           readOnly={readOnly}
           showImage={showImage}
+          roomName={roomName}
           onProductSelect={handleProductSelect}
         />
+
+        {showImage && <ImageCell item={item} />}
 
         {isAccessory && middleSectionColSpan > 0 ? (
           <TableCell colSpan={middleSectionColSpan} className="p-2">

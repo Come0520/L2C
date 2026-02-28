@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { TableCell } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
-import Plus from 'lucide-react/dist/esm/icons/plus';
+
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import Trash2 from 'lucide-react/dist/esm/icons/trash';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
@@ -26,7 +26,6 @@ export const ItemActionsCell = memo(function ItemActionsCell({
   isCurtain,
   isExpanded,
   readOnly,
-  onAddAccessory,
   onToggleExpand,
   onAdvancedEdit,
   onDelete,
@@ -34,18 +33,9 @@ export const ItemActionsCell = memo(function ItemActionsCell({
   if (readOnly) return null;
 
   return (
-    <TableCell className="p-2">
-      <div className="flex items-center space-x-1">
-        {level === 0 && (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onAddAccessory}
-            className="hover:bg-primary/10 hover:text-primary h-7 w-7"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        )}
+    <TableCell className="p-2 text-center">
+      <div className="flex items-center justify-center space-x-1">
+
         {level === 0 && isCurtain && (
           <Button
             size="icon"

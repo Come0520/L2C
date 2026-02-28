@@ -21,6 +21,26 @@ const PUBLIC_PATH_PREFIXES = [
 ] as const;
 
 /**
+ * 落地页每日展示 Cookie 名称前缀
+ * 完整格式：landing_seen_YYYY-MM-DD
+ * 每天跨零点后 Cookie 失效，用户将重新看到落地页
+ */
+const LANDING_COOKIE_PREFIX = 'landing_seen_';
+
+/**
+ * 获取今日日期字符串（北京时间，格式：YYYY-MM-DD）
+ * 用于构造每日唯一的落地页 Cookie 名称
+ */
+function getTodayDateString(): string {
+  return new Date().toLocaleDateString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).replace(/\//g, '-'); // 格式化为 YYYY-MM-DD
+}
+
+/**
  * 未绑定租户的标识符
  */
 const UNBOUND_TENANT_ID = '__UNBOUND__';
@@ -113,15 +133,45 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   const { pathname } = request.nextUrl;
 
   // ========================================
-  // 0. 页面路由分流：已登录用户访问落地页 → 自动跳转工作台
+  // 0. 页面路由分流：落地页「每日首次必看」策略
+  //    - 未登录用户：直接看落地页
+  //    - 已登录用户 + 今天第一次访问：展示落地页，种下当日 Cookie
+  //    - 已登录用户 + 今天已看过：跳转到工作台
   // ========================================
   if (pathname === '/') {
     const sessionToken = await getToken(getSecureTokenOptions(request));
-    if (sessionToken) {
+
+    // 未登录用户：直接放行到落地页
+    if (!sessionToken) {
+      return NextResponse.next();
+    }
+
+    // 已登录用户：检查今日是否已看过落地页
+    const todayKey = LANDING_COOKIE_PREFIX + getTodayDateString();
+    const hasSeenTodayRaw = request.cookies.get(todayKey)?.value;
+
+    if (hasSeenTodayRaw === '1') {
+      // 今天已看过 → 直接跳转工作台
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
-    // 未登录用户：放行到 (marketing) 落地页
-    return NextResponse.next();
+
+    // 今天第一次 → 展示落地页，并种下当日 Cookie（有效期至次日零点）
+    const response = NextResponse.next();
+    const now = new Date();
+    // 计算今日剩余秒数（到次日 0 点北京时间）
+    const tomorrowMidnight = new Date();
+    tomorrowMidnight.setUTCHours(16, 0, 0, 0); // 北京次日 0 点 = UTC 16:00
+    if (tomorrowMidnight <= now) {
+      tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
+    }
+    const maxAge = Math.floor((tomorrowMidnight.getTime() - now.getTime()) / 1000);
+    response.cookies.set(todayKey, '1', {
+      maxAge,
+      httpOnly: false, // 前端可读，便于调试
+      sameSite: 'lax',
+      path: '/',
+    });
+    return response;
   }
 
   // ========================================

@@ -37,7 +37,7 @@ export async function createOrderPayment(data: {
   }
 
   // 权限检查
-  await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+  await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;

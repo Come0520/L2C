@@ -5,6 +5,7 @@ import { authStore } from './stores/auth-store';
 import { errorReporter } from './utils/error-reporter';
 import { getCache, setCache, isCacheable } from './utils/cache-manager';
 import { tracker } from './utils/tracker';
+import { isAppEnv } from './utils/env';
 
 // 后端 API 基础地址
 const API_BASE = 'http://localhost:3000/api/miniprogram'; // Local Development
@@ -61,6 +62,13 @@ App<IAppOption>({
     },
 
     async wxLogin(): Promise<{ success: boolean; openId?: string; error?: string }> {
+        // [兼容性] 如果是多端应用 (App) 模式，原生 wx.login 将失效（抛错）。
+        // 这里提供一个显式的失败回调，引导业务层进入“验证码登录/账号登录”降级逻辑
+        if (isAppEnv()) {
+            console.warn('[App Entry] 多端应用模式暂不支持静默微信授权登录，强行走本地降级逻辑。');
+            return Promise.resolve({ success: false, error: '当前环境不支持快捷登录，请选择手机号登录' });
+        }
+
         return new Promise((resolve) => {
             wx.login({
                 success: async (res) => {

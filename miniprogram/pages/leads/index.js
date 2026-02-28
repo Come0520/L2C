@@ -1,4 +1,4 @@
-// 引用 app 实例
+// authStore 用于在 onLoad/onShow 中使用 (如果后续有需要的话)
 const app = getApp();
 Page({
     data: {
@@ -16,8 +16,12 @@ Page({
         this.fetchList(true);
     },
     onShow() {
-        if (typeof this.getTabBar === 'function' && this.getTabBar())
-            this.getTabBar().setData({ selected: 1 }); // 线索是 adminTabs[1]，角色 tab 列表索引为 1
+        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+            const tabBar = this.getTabBar();
+            const index = tabBar.data.list.findIndex((item) => item.pagePath === '/pages/leads/index');
+            if (index !== -1)
+                tabBar.setData({ selected: index });
+        }
     },
     async fetchList(reset = false) {
         if (this.data.loading)
@@ -78,4 +82,4 @@ Page({
         wx.navigateTo({ url: '/pages/leads-sub/create/index' });
     }
 });
-export { };
+export {};

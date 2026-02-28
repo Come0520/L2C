@@ -14,6 +14,7 @@ import {
   updateProductSchema,
   deleteProductSchema,
   activateProductSchema,
+  batchUpdateProductImagesSchema,
 } from '../schema';
 
 /**
@@ -68,6 +69,7 @@ const createProductActionInternal = createSafeAction(
         defaultSupplierId: data.defaultSupplierId,
         isStockable: data.isStockable,
         specs: data.attributes || {},
+        images: data.images || [],
         description: data.description,
         createdBy: session.user!.id,
       })
@@ -135,6 +137,7 @@ const updateProductActionInternal = createSafeAction(
         defaultSupplierId: updates.defaultSupplierId,
         isStockable: updates.isStockable,
         specs: updates.attributes,
+        images: updates.images || [],
         description: updates.description,
         updatedAt: new Date(),
       })
@@ -292,16 +295,14 @@ const batchCreateProductsActionInternal = createSafeAction(
             processingCost: data.processingCost.toString(),
             lossRate: data.lossRate.toString(),
             retailPrice: data.retailPrice.toString(),
-            // [Refactor] 移除渠道相关字段
-            // channelPriceMode: data.channelPriceMode,
-            // channelPrice: data.channelPrice.toString(),
-            // channelDiscountRate: data.channelDiscountRate.toString(),
             floorPrice: data.floorPrice.toString(),
             isToBEnabled: data.isToBEnabled,
             isToCEnabled: data.isToCEnabled,
             defaultSupplierId: data.defaultSupplierId,
             isStockable: data.isStockable,
             description: data.description,
+            // 确保将按品类导入的各类扩充属性保存在 specs 字段 (对应 schema.ts 的 attributes JSONB)
+            specs: data.attributes || {},
             createdBy: userId,
           })
           .returning();
@@ -333,4 +334,93 @@ const batchCreateProductsActionInternal = createSafeAction(
 
 export async function batchCreateProducts(params: z.infer<typeof batchCreateProductsSchema>) {
   return batchCreateProductsActionInternal(params);
+}
+
+/**
+ * 批量更新产品多图
+ *
+ * @description 接收包含不同 SKU 及各图库类型的数组集合，提取数据库中对应的商品信息，
+ * 并将其图库与属性合并更新保存。
+ *
+ * @param items - `batchUpdateProductImagesSchema` 的序列信息
+ * @returns `{ successCount, errorCount, errors[] }`
+ */
+const batchUpdateProductImagesActionInternal = createSafeAction(
+  batchUpdateProductImagesSchema,
+  async (items, { session }) => {
+    await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+    const tenantId = session.user!.tenantId;
+    const userId = session.user!.id;
+
+    const results = {
+      successCount: 0,
+      errorCount: 0,
+      errors: [] as { row: number; sku: string; error: string }[],
+    };
+
+    for (let i = 0; i < items.length; i++) {
+      const data = items[i];
+      try {
+        const productMatch = await db.query.products.findFirst({
+          where: and(eq(products.tenantId, tenantId), eq(products.sku, data.sku))
+        });
+
+        if (!productMatch) {
+          throw new Error(`对应 SKU "${data.sku}" 的产品未找到`);
+        }
+
+        // 合并或覆盖新增的图库
+        const updatedImages = data.images && data.images.length > 0
+          ? [...(productMatch.images ? (productMatch.images as string[]) : []), ...data.images]
+          : productMatch.images;
+
+        const existingSpecs = (productMatch.specs as Record<string, unknown>) || {};
+
+        if (Array.isArray(data.materialImages) && data.materialImages.length > 0) {
+          const arr = Array.isArray(existingSpecs.materialImages) ? existingSpecs.materialImages : [];
+          existingSpecs.materialImages = [...arr, ...data.materialImages];
+        }
+        if (Array.isArray(data.sceneImages) && data.sceneImages.length > 0) {
+          const arr = Array.isArray(existingSpecs.sceneImages) ? existingSpecs.sceneImages : [];
+          existingSpecs.sceneImages = [...arr, ...data.sceneImages];
+        }
+
+        const [updatedProduct] = await db
+          .update(products)
+          .set({
+            images: updatedImages,
+            specs: existingSpecs,
+            updatedAt: new Date(),
+          })
+          .where(eq(products.id, productMatch.id))
+          .returning();
+
+        await AuditService.log(db, {
+          tenantId,
+          userId,
+          tableName: 'products',
+          recordId: updatedProduct.id,
+          action: 'UPDATE',
+          newValues: { images: updatedImages, specs: existingSpecs },
+          details: { action: 'BATCH_UPDATE_IMAGES' },
+        });
+
+        results.successCount++;
+      } catch (error: unknown) {
+        results.errorCount++;
+        results.errors.push({
+          row: i + 1,
+          sku: data.sku,
+          error: error instanceof Error ? error.message : '未知错误',
+        });
+      }
+    }
+
+    revalidatePath('/supply-chain/products');
+    return results;
+  }
+);
+
+export async function batchUpdateProductImages(params: z.infer<typeof batchUpdateProductImagesSchema>) {
+  return batchUpdateProductImagesActionInternal(params);
 }

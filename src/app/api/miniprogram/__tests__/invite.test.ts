@@ -4,6 +4,7 @@ import { POST as generateInviteHandler } from '../invite/generate/route';
 import { POST as acceptInviteHandler } from '../invite/accept/route';
 import { db } from '@/shared/api/db';
 import * as authUtils from '../auth-utils';
+import { RolePermissionService } from '@/shared/lib/role-permission-service';
 
 // Mock DB
 vi.mock('@/shared/api/db', () => ({
@@ -53,6 +54,13 @@ vi.mock('@/shared/services/miniprogram/security.service', () => ({
     }
 }));
 
+// Mock RolePermissionService
+vi.mock('@/shared/lib/role-permission-service', () => ({
+    RolePermissionService: {
+        hasPermission: vi.fn(),
+    }
+}));
+
 // Mock jose (避免真实 JWT 签名和验证)
 vi.mock('jose', () => {
     class MockSignJWT {
@@ -96,6 +104,7 @@ describe('小程序邀请模块测试', () => {
             vi.mocked(db.query.users.findFirst).mockResolvedValue({
                 role: 'SALES' // 非管理员
             } as never);
+            vi.mocked(RolePermissionService.hasPermission).mockResolvedValue(false);
 
             const req = createReq('http://localhost/api/invite/generate', { role: 'SALES' });
             const res = await generateInviteHandler(req);
@@ -113,6 +122,7 @@ describe('小程序邀请模块测试', () => {
             vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
                 id: 't1', status: 'active'
             } as never);
+            vi.mocked(RolePermissionService.hasPermission).mockResolvedValue(true);
 
             const req = createReq('http://localhost/api/invite/generate', { role: 'SALES' });
             const res = await generateInviteHandler(req);
@@ -132,6 +142,7 @@ describe('小程序邀请模块测试', () => {
             vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
                 id: 't1', status: 'pending' // 未激活
             } as never);
+            vi.mocked(RolePermissionService.hasPermission).mockResolvedValue(true);
 
             const req = createReq('http://localhost/api/invite/generate', { role: 'SALES' });
             const res = await generateInviteHandler(req);

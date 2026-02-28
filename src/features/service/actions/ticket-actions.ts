@@ -119,7 +119,7 @@ export async function updateTicketStatus(
   if (!session || !session.user?.tenantId) return { success: false, error: 'Unauthorized' };
 
   // P0-2 Fix: Add permission check
-  await checkPermission(session, PERMISSIONS.AFTER_SALES.MANAGE);
+  await checkPermission(session, PERMISSIONS.AFTER_SALES.ALL_EDIT);
 
   try {
     // 【防御性逻辑】：不允许对已关闭状态的工单继续操作流转

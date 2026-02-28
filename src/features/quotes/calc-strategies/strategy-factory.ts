@@ -11,6 +11,7 @@ export class StrategyFactory {
                 return new WallpaperStrategy();
             case 'CURTAIN':
             case 'CURTAIN_FABRIC':
+            case 'CURTAIN_SHEER':
                 return new CurtainStrategy();
             default:
                 return new StandardProductStrategy();

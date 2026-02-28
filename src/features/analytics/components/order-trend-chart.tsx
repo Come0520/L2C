@@ -27,8 +27,8 @@ export function OrderTrendChart({ data, className }: OrderTrendChartProps) {
     return (
         <Card className={className}>
             <CardHeader>
-                <CardTitle>Sales Trend</CardTitle>
-                <CardDescription>Daily revenue over the last 30 days</CardDescription>
+                <CardTitle>销售趋势</CardTitle>
+                <CardDescription>所选时间段内每日成交金额</CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">

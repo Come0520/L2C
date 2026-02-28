@@ -1,4 +1,5 @@
 export { ProductNameCell } from './product-name-cell';
+export { ImageCell } from './image-cell';
 export { DimensionCell } from './dimension-cell';
 export { QuantityCell } from './quantity-cell';
 export {

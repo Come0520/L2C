@@ -253,7 +253,7 @@ export async function assignToSupplier(
     if (!session?.user) throw new Error('Unauthorized');
 
     const tenantId = getTenantId(session);
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const validated = assignToSupplierSchema.parse(input);
     const { orderItemIds, supplierId, poType } = validated;
@@ -390,7 +390,7 @@ export async function submitForApproval(
     if (!session?.user) throw new Error('Unauthorized');
 
     const tenantId = getTenantId(session);
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const validated = submitForApprovalSchema.parse(input);
     const { poIds } = validated;
@@ -472,7 +472,7 @@ export async function mergeToPurchaseOrder(
     if (!session?.user) throw new Error('Unauthorized');
 
     const tenantId = getTenantId(session);
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const validated = mergeToPurchaseOrderSchema.parse(input);
     const { orderItemIds, supplierId: forcedSupplierId } = validated;

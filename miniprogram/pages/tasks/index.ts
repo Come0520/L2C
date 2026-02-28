@@ -29,8 +29,11 @@ Page({
 
     onShow() {
         // 设置 TabBar 选中状态
+        // worker 角色动态查找任务页 index
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 0 });
+            const tabBar = this.getTabBar();
+            const index = tabBar.data.list.findIndex((item: any) => item.pagePath === '/pages/tasks/index');
+            if (index !== -1) tabBar.setData({ selected: index });
         }
         // 刷新任务列表
         this.fetchTasks();
@@ -134,4 +137,4 @@ Page({
     },
 });
 
-export {};
+export { };

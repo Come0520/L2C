@@ -33,7 +33,7 @@ describe('custom-tab-bar', () => {
         container.instance.updateTabs();
         const list = container.data.list;
         expect(list).toHaveLength(2);
-        expect(list[0].text).toBe('首页');
+        expect(list[0].text).toBe('主页');
         expect(list[1].text).toBe('我的');
     });
 
@@ -42,9 +42,9 @@ describe('custom-tab-bar', () => {
         container.instance.updateTabs();
 
         const list = container.data.list;
-        expect(list).toHaveLength(4);
+        expect(list).toHaveLength(2);
         expect(list[0].text).toBe('工作台');
-        expect(list[1].text).toBe('线索');
+        expect(list[1].text).toBe('我的');
     });
 
     test('安装工 (Installer) 应看到任务 Tabs', () => {
@@ -52,8 +52,10 @@ describe('custom-tab-bar', () => {
         container.instance.updateTabs();
 
         const list = container.data.list;
-        expect(list).toHaveLength(2);
+        expect(list).toHaveLength(3);
         expect(list[0].text).toBe('任务');
+        expect(list[1].text).toBe('工作台');
+        expect(list[2].text).toBe('我的');
     });
 
     test('点击 switchTab 应调用 wx.switchTab', () => {

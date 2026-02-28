@@ -1,0 +1,1 @@
+const fs=require('fs');const txt=fs.readFileSync('full_test_result.json','utf8');const json=JSON.parse(txt.substring(txt.indexOf('{')));json.testResults.filter(t=>t.status==='failed').forEach(f=>{if(f.name.includes('src')&&!f.name.includes('servers')&&!f.name.includes('e2e')){console.log(f.name);}});

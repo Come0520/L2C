@@ -128,8 +128,8 @@ export function QuoteVersionCompare({ currentQuote, versions }: QuoteVersionComp
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-card/50 hover:bg-card shadow-sm border-border">
-                    <ArrowRightLeft className="mr-2 h-4 w-4 text-primary" />
+                <Button variant="outline" size="sm">
+                    <ArrowRightLeft className="mr-2 h-4 w-4" />
                     版本差异比对
                 </Button>
             </DialogTrigger>

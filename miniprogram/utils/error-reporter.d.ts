@@ -7,7 +7,7 @@ export interface ErrorItem {
     type: 'JS_ERROR' | 'PROMISE_ERROR' | 'API_ERROR' | 'WX_ERROR';
     path?: string;
     timestamp: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 /**
  * 错误上报工具

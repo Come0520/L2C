@@ -7,6 +7,7 @@
  * 3. 选填微信号、地址、备注
  * 4. 提交后返回列表页并刷新
  */
+import { throttleTap } from '../../../utils/throttle-tap';
 Page({
     data: {
         form: {
@@ -182,7 +183,7 @@ Page({
     /**
      * 提交表单
      */
-    async onSubmit() {
+    onSubmit: throttleTap(async function () {
         if (!this.validate())
             return;
         if (this.data.submitting)
@@ -230,6 +231,5 @@ Page({
         finally {
             this.setData({ submitting: false });
         }
-    }
+    })
 });
-export {};

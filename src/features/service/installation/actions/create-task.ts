@@ -29,7 +29,7 @@ const generateInstallTasksFromOrderActionInternal = createSafeAction(
         const tenantId = session.user.tenantId;
 
         // 权限检查
-        await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+        await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
         const { orderId } = input;
 

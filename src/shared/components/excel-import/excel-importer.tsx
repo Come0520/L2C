@@ -13,6 +13,7 @@ import { ScrollArea } from '@/shared/ui/scroll-area';
 import { ExcelImporterProps, ImporterState, ValidationResult } from './types';
 import { parseExcelFile, validateExcelData } from './utils';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 /**
  * 通用 Excel 导入组件
@@ -21,6 +22,7 @@ export function ExcelImporter<T extends Record<string, any>>({
     schema,
     onImport,
     templateUrl,
+    exampleData,
     columnMapping,
     title = '导入数据',
     description = '支持 .xlsx, .xls, .csv 格式文件',
@@ -55,6 +57,45 @@ export function ExcelImporter<T extends Record<string, any>>({
         const file = e.target.files?.[0];
         if (file) {
             await onDrop([file]);
+            // Clear value to allow same file re-upload
+            e.target.value = '';
+        }
+    };
+
+    const handleDownloadTemplate = () => {
+        if (templateUrl) {
+            // 后备方案：支持静态 URL 下载
+            window.location.href = templateUrl;
+            return;
+        }
+
+        if (!exampleData) {
+            toast.error('未提供静态模板或动态示例数据配置');
+            return;
+        }
+
+        try {
+            // 构造动态模板：第1行表头，第2行示例数据
+            const headers = Object.keys(columnMapping);
+            const exampleRow = headers.reduce((acc, header) => {
+                const key = columnMapping[header] as keyof typeof exampleData;
+                acc[header] = exampleData[key] !== undefined ? exampleData[key] : '';
+                return acc;
+            }, {} as Record<string, any>);
+
+            const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers });
+
+            // 可选：可以调整列宽使它更好看
+            const wscols = headers.map(() => ({ wch: 20 }));
+            ws['!cols'] = wscols;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '批量导入模板');
+
+            XLSX.writeFile(wb, `${title}模板.xlsx`);
+        } catch (error) {
+            console.error('Failed to generate template:', error);
+            toast.error('生成模板失败');
         }
     };
 
@@ -96,9 +137,9 @@ export function ExcelImporter<T extends Record<string, any>>({
                         <h3 className="text-lg font-semibold">{title}</h3>
                         <p className="text-sm text-muted-foreground">{description}</p>
                     </div>
-                    {templateUrl && (
-                        <Button variant="outline" size="sm" asChild>
-                            <a href={templateUrl} download>下载模板</a>
+                    {(templateUrl || exampleData) && (
+                        <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+                            下载模板
                         </Button>
                     )}
                 </div>

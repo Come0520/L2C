@@ -11,5 +11,6 @@ export interface IAppOption {
         error?: string;
     }>;
     request: (path: string, data?: any, method?: string) => Promise<any>;
+    _doRequest: (path: string, data: any, method: string) => Promise<any>;
 }
 export {};

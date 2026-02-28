@@ -55,6 +55,9 @@ vi.mock('@/shared/api/schema/enums', () => ({
             'CURTAIN', 'WALLPAPER', 'WALLCLOTH', 'MATTRESS', 'OTHER',
             'CURTAIN_FABRIC', 'CURTAIN_SHEER', 'CURTAIN_TRACK', 'MOTOR', 'CURTAIN_ACCESSORY'
         ]
+    },
+    productTypeEnum: {
+        enumValues: ['FINISHED', 'RAW_MATERIAL']
     }
 }));
 

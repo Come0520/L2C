@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { LoginForm } from '../components/login-form';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -34,6 +34,22 @@ vi.mock('@/shared/lib/logger', () => ({
 describe('LoginForm', () => {
   let mockPush: ReturnType<typeof vi.fn>;
   let mockRefresh: ReturnType<typeof vi.fn>;
+
+  const originalLocation = window.location;
+
+  beforeAll(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: '' },
+    });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
+  });
 
   beforeEach(() => {
     vi.clearAllMocks(); // 完全清理所有 mock 历史
@@ -114,7 +130,7 @@ describe('LoginForm', () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('登录成功，欢迎回来');
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(window.location.href).toBe('/dashboard');
     });
   });
 

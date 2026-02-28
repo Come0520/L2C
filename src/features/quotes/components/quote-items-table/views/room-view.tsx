@@ -74,6 +74,7 @@ export function RoomView({
 }: RoomViewProps) {
   const columnCount =
     2 +
+    (showImage ? 1 : 0) +
     (showWidth || showHeight ? 1 : 0) +
     (showFold ? 1 : 0) +
     (showProcessFee ? 1 : 0) +
@@ -184,6 +185,7 @@ export function RoomView({
                     showWidth={showWidth}
                     showHeight={showHeight}
                     showUnit={showUnit}
+                    showImage={showImage}
                     allowedCategories={allowedCategories}
                   />
                 </TableBody>
@@ -217,6 +219,13 @@ export function RoomView({
               <TableBody>{renderRows(itemsByRoom.unassigned)}</TableBody>
             </Table>
           </div>
+        </div>
+      )}
+
+      {/* 底部新增明显的添加空间入口 */}
+      {!readOnly && onAddRoom && rooms.length > 0 && (
+        <div className="flex items-center justify-center p-6 mt-4 border-2 border-dashed border-muted rounded-xl bg-muted/20 hover:bg-muted/40 transition-colors">
+          <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
         </div>
       )}
     </>

@@ -63,8 +63,8 @@ export class RolePermissionService {
     }
 
     // 3. 解析覆盖配置
-    const addedPermissions: string[] = JSON.parse(override.addedPermissions || '[]');
-    const removedPermissions: string[] = JSON.parse(override.removedPermissions || '[]');
+    const addedPermissions: string[] = override.addedPermissions || [];
+    const removedPermissions: string[] = override.removedPermissions || [];
 
     // 4. 合并权限：基础 + 增加 - 移除
     for (const perm of addedPermissions) {
@@ -127,6 +127,14 @@ export class RolePermissionService {
         effectivePermissions.includes(`${module}.own.${action}`) ||
         effectivePermissions.includes(`${module}.all.${action}`)
       ) {
+        return true;
+      }
+    }
+
+    // 6.6 高阶权限包含低阶权限 (OWN 包含于 ALL)
+    if (parts.length === 3 && parts[1] === 'own') {
+      const [module, _scope, action] = parts;
+      if (effectivePermissions.includes(`${module}.all.${action}`)) {
         return true;
       }
     }
@@ -245,8 +253,8 @@ export class RolePermissionService {
 
     for (const override of overrides) {
       result[override.roleCode] = {
-        added: JSON.parse(override.addedPermissions || '[]'),
-        removed: JSON.parse(override.removedPermissions || '[]'),
+        added: override.addedPermissions || [],
+        removed: override.removedPermissions || [],
       };
     }
 

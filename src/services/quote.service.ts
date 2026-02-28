@@ -138,7 +138,7 @@ export class QuoteService {
             // 5. Clone Items & Handle parentId Mapping
             // We need to process root items first, then accessories
             const itemIdMap = new Map<string, string>();
-            const sortedItems = [...originalQuote.items].sort((a, b) => {
+            const sortedItems = originalQuote.items.toSorted((a, b) => {
                 // Root items (parentId == null) first
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
@@ -243,7 +243,7 @@ export class QuoteService {
 
             // 6. 复制报价项并处理 parentId 映射
             const itemIdMap = new Map<string, string>();
-            const sortedItems = [...originalQuote.items].sort((a, b) => {
+            const sortedItems = originalQuote.items.toSorted((a, b) => {
                 // 主商品优先（parentId == null）
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
@@ -940,7 +940,7 @@ export class QuoteService {
 
             const itemIdMap = new Map<string, string>();
             // 先处理主项（parentId 为 null），再处理附件
-            const sortedItems = [...allItems].sort((a, b) => {
+            const sortedItems = allItems.toSorted((a, b) => {
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
                 return 0;
@@ -1040,7 +1040,7 @@ export class QuoteService {
 
             // 4. 复制报价商品项 → 模板商品项
             const itemIdMap = new Map<string, string>();
-            const sortedItems = [...sourceQuote.items].sort((a, b) => {
+            const sortedItems = sourceQuote.items.toSorted((a, b) => {
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
                 return 0;

@@ -83,7 +83,7 @@ export class QuoteTemplateService {
 
             // 4. 复制商品项（先根项，再附件）
             const itemIdMap = new Map<string, string>();
-            const sortedItems = [...quote.items].sort((a, b) => {
+            const sortedItems = quote.items.toSorted((a, b) => {
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
                 return 0;
@@ -188,7 +188,7 @@ export class QuoteTemplateService {
 
             // 5. 复制商品项（先根项，再附件）
             const itemIdMap = new Map<string, string>();
-            const sortedItems = [...template.items].sort((a, b) => {
+            const sortedItems = template.items.toSorted((a, b) => {
                 if (!a.parentId && b.parentId) return -1;
                 if (a.parentId && !b.parentId) return 1;
                 return 0;

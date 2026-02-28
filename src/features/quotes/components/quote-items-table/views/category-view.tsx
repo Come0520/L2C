@@ -5,8 +5,10 @@ import { Badge } from '@/shared/ui/badge';
 import { CATEGORY_LABELS } from '@/features/quotes/constants';
 import { QuoteTableHeader } from '../table-header';
 import { QuoteItemRow } from '../quote-item-row';
-import type { QuoteItem, ColumnVisibility, CalcResult } from '../types';
+import { QuoteInlineAddRow } from '../../quote-inline-add-row';
+import type { QuoteItem, ColumnVisibility, CalcResult, RoomData } from '../types';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
+import { RoomSelectorWithConfig } from '../../room-selector-popover';
 
 type CalcHandler = (
   item: QuoteItem,
@@ -15,7 +17,10 @@ type CalcHandler = (
 ) => { quantity: number; calcResult?: CalcResult } | number | null;
 
 interface CategoryViewProps extends ColumnVisibility {
+  quoteId: string;
+  rooms?: RoomData[];
   items: QuoteItem[];
+  allowedCategories?: string[];
   readOnly: boolean;
   expandedItemIds: Set<string>;
   handleUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
@@ -25,11 +30,15 @@ interface CategoryViewProps extends ColumnVisibility {
   handleClientCalc: CalcHandler;
   handleAdvancedEdit: (item: QuoteItem) => void;
   handleToggleItem: (itemId: string) => void;
+  onAddRoom?: (name: string) => void;
   onRowClick?: (item: QuoteItem) => void;
 }
 
 export function CategoryView({
+  quoteId,
+  rooms = [],
   items,
+  allowedCategories,
   readOnly,
   showImage,
   showWidth,
@@ -49,6 +58,7 @@ export function CategoryView({
   handleClientCalc,
   handleAdvancedEdit,
   handleToggleItem,
+  onAddRoom,
   onRowClick,
 }: CategoryViewProps) {
   const itemsByCategory: Record<string, QuoteItem[]> = {};
@@ -60,6 +70,7 @@ export function CategoryView({
 
   const columnCount =
     2 +
+    (showImage ? 1 : 0) +
     (showWidth || showHeight ? 1 : 0) +
     (showFold ? 1 : 0) +
     (showProcessFee ? 1 : 0) +
@@ -72,6 +83,7 @@ export function CategoryView({
   const renderRows = (nodes: QuoteItem[], level = 0): React.ReactNode => {
     return nodes.map((item) => {
       const isItemExpanded = expandedItemIds.has(item.id);
+      const room = rooms.find((r) => r.id === item.roomId);
       return (
         <QuoteItemRow
           key={item.id}
@@ -79,6 +91,7 @@ export function CategoryView({
           level={level}
           readOnly={readOnly}
           showImage={showImage}
+          roomName={room?.name}
           showWidth={showWidth}
           showHeight={showHeight}
           showFold={showFold}
@@ -128,11 +141,40 @@ export function CategoryView({
                 showRemark={showRemark}
                 showImage={showImage}
               />
-              <TableBody>{renderRows(categoryItems)}</TableBody>
+              <TableBody>
+                {renderRows(categoryItems)}
+                {!readOnly && (
+                  <QuoteInlineAddRow
+                    quoteId={quoteId}
+                    roomId={null}
+                    rooms={rooms}
+                    onSuccess={undefined}
+                    readOnly={readOnly}
+                    showFold={showFold}
+                    showProcessFee={showProcessFee}
+                    showRemark={showRemark}
+                    showWidth={showWidth}
+                    showHeight={showHeight}
+                    showUnit={showUnit}
+                    showImage={showImage}
+                    allowedCategories={allowedCategories || [category]}
+                  />
+                )}
+              </TableBody>
             </Table>
           </div>
         </div>
       ))}
+      {!readOnly && onAddRoom && (
+        <div className="pt-4 border-t border-dashed flex justify-center">
+          <RoomSelectorWithConfig
+            onSelect={(name) => {
+              onAddRoom(name);
+            }}
+            size="default"
+          />
+        </div>
+      )}
     </div>
   );
 }

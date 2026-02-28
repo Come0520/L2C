@@ -1,5 +1,6 @@
 import { logger } from '@/shared/lib/logger';
 import { ProductSupplierManager } from './product-supplier-manager';
+import { PhotoUpload } from '@/shared/components/photo-upload/photo-upload';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -105,32 +106,34 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
     ) as Resolver<ProductFormValues>,
     defaultValues: initialData
       ? {
-          ...initialData,
-          attributes: initialData.specs || {},
-          purchasePrice: Number(initialData.purchasePrice),
-          logisticsCost: Number(initialData.logisticsCost),
-          processingCost: Number(initialData.processingCost),
-          lossRate: Number(initialData.lossRate),
-          retailPrice: Number(initialData.retailPrice),
-          floorPrice: Number(initialData.floorPrice),
-        }
+        ...initialData,
+        images: initialData.images || [],
+        attributes: initialData.specs || {},
+        purchasePrice: Number(initialData.purchasePrice),
+        logisticsCost: Number(initialData.logisticsCost),
+        processingCost: Number(initialData.processingCost),
+        lossRate: Number(initialData.lossRate),
+        retailPrice: Number(initialData.retailPrice),
+        floorPrice: Number(initialData.floorPrice),
+      }
       : {
-          sku: '',
-          name: '',
-          category: 'CURTAIN',
-          productType: 'FINISHED',
-          unit: '米',
-          purchasePrice: 0,
-          logisticsCost: 0,
-          processingCost: 0,
-          lossRate: 0.05,
-          retailPrice: 0,
-          floorPrice: 0,
-          isToBEnabled: true,
-          isToCEnabled: true,
-          isStockable: false,
-          attributes: {},
-        },
+        sku: '',
+        name: '',
+        category: 'CURTAIN',
+        productType: 'FINISHED',
+        unit: '米',
+        purchasePrice: 0,
+        logisticsCost: 0,
+        processingCost: 0,
+        lossRate: 0.05,
+        retailPrice: 0,
+        floorPrice: 0,
+        isToBEnabled: true,
+        isToCEnabled: true,
+        isStockable: false,
+        images: [],
+        attributes: {},
+      },
   });
 
   const category = form.watch('category');
@@ -977,6 +980,55 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               保存产品后即可管理多供应商价格与货期
             </div>
           )}
+        </section>
+
+        {/* ==================== ⑤ 图库信息区 ==================== */}
+        <section className="space-y-4">
+          <h3 className="border-l-4 border-blue-500 pl-2 text-sm font-semibold">图库信息</h3>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>商品主图</FormLabel>
+                  <FormControl>
+                    <PhotoUpload value={field.value || []} onChange={field.onChange} maxFiles={5} />
+                  </FormControl>
+                  <FormDescription>用于列表展示，最多 5 张</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="attributes.materialImages"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>材质细节图</FormLabel>
+                  <FormControl>
+                    <PhotoUpload value={field.value || []} onChange={field.onChange} maxFiles={5} />
+                  </FormControl>
+                  <FormDescription>纹理及触感展示，最多 5 张</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="attributes.sceneImages"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>场景搭配图</FormLabel>
+                  <FormControl>
+                    <PhotoUpload value={field.value || []} onChange={field.onChange} maxFiles={5} />
+                  </FormControl>
+                  <FormDescription>搭配效果展示，最多 5 张</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </section>
 
         {/* ==================== 提交按钮 ==================== */}

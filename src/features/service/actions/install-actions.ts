@@ -93,7 +93,7 @@ export async function dispatchInstallTask(data: {
     try {
         const session = await getSession();
         // P0-3 Fix: Add permission check
-        await checkPermission(session, PERMISSIONS.INSTALL.MANAGE);
+        await checkPermission(session, PERMISSIONS.INSTALL.ALL_EDIT);
 
         const { taskId, installerId, scheduledDate, scheduledTimeSlot } = data;
 

@@ -291,6 +291,7 @@ const ROLE_MAP: Record<string, string[]> = {
  * 通过角色映射支持 TENANT_ADMIN 等扩展角色
  */
 export function getAvailableWidgets(role: string): WidgetMeta[] {
+    if (!role || role === 'GUEST') return [];
     const widgets = Object.values(WIDGET_REGISTRY).filter((widget): widget is WidgetMeta => widget !== undefined);
     // 获取映射后的权限角色列表，未匹配到时回退为 ['USER']
     const mappedRoles = ROLE_MAP[role] || ['USER'];

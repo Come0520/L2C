@@ -4,6 +4,9 @@
  * 测试覆盖：组件渲染、表单校验行为
  */
 import { describe, it, expect, vi } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import { LoginForm } from '../components/login-form';
 
 // 由于 auth 模块只有客户端组件 login-form.tsx，
 // 无 server action 需要安全基线测试。
@@ -26,26 +29,20 @@ vi.mock('@/shared/lib/logger', () => ({
 }));
 
 describe('Auth 模块结构测试', () => {
-    it('LoginForm 组件应可导入', async () => {
-        const mod = await import('../components/login-form');
-        expect(mod.LoginForm).toBeDefined();
-        expect(typeof mod.LoginForm).toBe('function');
+    it('LoginForm 组件应可导入', () => {
+        expect(LoginForm).toBeDefined();
+        expect(typeof LoginForm).toBe('function');
     });
 
-    it('LoginForm 是一个 React 组件函数', async () => {
-        const { LoginForm } = await import('../components/login-form');
+    it('LoginForm 是一个 React 组件函数', () => {
         expect(LoginForm.name).toBe('LoginForm');
     });
 
-    it('模块不应导出任何 server action', async () => {
-        // auth 模块只有 components 目录，无 actions
-        // 验证模块结构符合预期
-        const fs = await import('fs');
-        const path = await import('path');
+    it('模块应包含 components 和 actions 相关结构', () => {
+        // auth 模块现在包含了 password-reset 等 server action
         const authDir = path.resolve(__dirname, '..');
         const entries = fs.readdirSync(authDir);
-        // 应只有 components 目录
         expect(entries).toContain('components');
-        expect(entries).not.toContain('actions');
+        expect(entries).toContain('actions');
     });
 });

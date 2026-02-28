@@ -65,7 +65,7 @@ Page({
                         wx.reLaunch({ url: '/pages/index/index' });
                     }
                     else {
-                        wx.reLaunch({ url: '/pages/workbench/index' });
+                        wx.reLaunch({ url: '/pages/index/index' });
                     }
                 }, 1000);
             }

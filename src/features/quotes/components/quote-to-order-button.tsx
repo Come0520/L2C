@@ -81,9 +81,8 @@ export function QuoteToOrderButton({ quoteId, defaultAmount }: QuoteToOrderButto
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="default" className="gap-2 bg-blue-600 hover:bg-blue-700">
-                    <ArrowRight className="w-4 h-4" />
-                    转为订单
+                <Button variant="outline" size="sm">
+                    <ArrowRight className="h-4 w-4 mr-2" />转为订单
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

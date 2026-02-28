@@ -1,3 +1,4 @@
+import { isAppEnv } from '../../utils/env';
 /**
  * 企业入驻与加入申请页
  */
@@ -161,21 +162,28 @@ Page({
                 if (result.data.token) {
                     wx.setStorageSync('token', result.data.token);
                 }
-                // 跳转
-                const { redirectUrl } = this.data;
-                wx.showModal({
-                    title: '申请已提交',
-                    content: '您的入驻申请已提交，我们将在1-3个工作日内审核',
-                    showCancel: false,
-                    success: () => {
-                        if (redirectUrl) {
-                            wx.reLaunch({ url: redirectUrl });
+                wx.showToast({ title: '申请提交成功', icon: 'success' });
+                // 如果不是App环境，再引导订阅
+                if (!isAppEnv()) {
+                    wx.requestSubscribeMessage({
+                        tmplIds: [
+                            // 审批结果通知模板ID
+                            'your_approval_template_id',
+                        ],
+                        success: (subRes) => console.log('订阅成功:', subRes),
+                        fail: (subErr) => console.error('订阅失败:', subErr),
+                        complete: () => {
+                            setTimeout(() => {
+                                wx.redirectTo({ url: '/pages/status/status' });
+                            }, 1500);
                         }
-                        else {
-                            wx.switchTab({ url: '/pages/status/status' });
-                        }
-                    },
-                });
+                    });
+                }
+                else {
+                    setTimeout(() => {
+                        wx.redirectTo({ url: '/pages/status/status' });
+                    }, 1500);
+                }
             }
             else {
                 throw new Error(result.error || '提交失败');
@@ -239,7 +247,7 @@ Page({
                         wx.reLaunch({ url: '/pages/index/index' });
                     }
                     else {
-                        wx.reLaunch({ url: '/pages/workbench/index' });
+                        wx.reLaunch({ url: '/pages/index/index' });
                     }
                 }, 1500);
             }
@@ -262,4 +270,3 @@ Page({
         wx.navigateBack();
     },
 });
-export {};

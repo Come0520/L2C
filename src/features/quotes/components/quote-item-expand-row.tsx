@@ -247,6 +247,7 @@ export function QuoteItemExpandRow({
                   <div className="relative">
                     <Input
                       type="number"
+                      onFocus={(e) => e.target.select()}
                       value={editedAttrs.fabricWidth || ''}
                       onChange={(e) => updateAttr('fabricWidth', e.target.value)}
                       placeholder="280"
@@ -305,6 +306,7 @@ export function QuoteItemExpandRow({
                   <div className="relative">
                     <Input
                       type="number"
+                      onFocus={(e) => e.target.select()}
                       value={editedAttrs.groundClearance ?? 2}
                       onChange={(e) => updateAttr('groundClearance', e.target.value)}
                       className="h-8 pr-8 text-sm"
@@ -320,6 +322,7 @@ export function QuoteItemExpandRow({
                   <Input
                     type="number"
                     step="0.1"
+                    onFocus={(e) => e.target.select()}
                     value={editedFoldRatio}
                     onChange={(e) => setEditedFoldRatio(Number(e.target.value))}
                     className="h-8 text-sm"

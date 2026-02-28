@@ -3,7 +3,7 @@
 import { Button } from '@/shared/ui/button';
 import Download from 'lucide-react/dist/esm/icons/download';
 import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet';
-import Image from 'lucide-react/dist/esm/icons/image';
+import ImageIcon from 'lucide-react/dist/esm/icons/image';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -204,7 +204,7 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                     <Download className="mr-2 h-4 w-4" />
                     导出
                 </Button>
@@ -221,7 +221,7 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
 
                 {/* 图片导出（微信分享） */}
                 <DropdownMenuItem onClick={handleImageExport}>
-                    <Image className="mr-2 h-4 w-4" />
+                    <ImageIcon className="mr-2 h-4 w-4" />
                     导出图片（微信分享）
                 </DropdownMenuItem>
             </DropdownMenuContent>

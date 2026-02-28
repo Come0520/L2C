@@ -38,7 +38,7 @@ export default async function QuoteDetailPage({
     const versions = await getQuoteVersions(rootId);
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-10">
+        <div className="w-full pb-10">
             <QuoteDetail quote={quote} versions={versions} initialConfig={config} />
         </div>
     );

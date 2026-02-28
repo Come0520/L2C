@@ -67,7 +67,7 @@ vi.mock('@/shared/lib/auth', () => ({
     checkPermission: mockCheckPermission,
 }));
 vi.mock('@/shared/config/permissions', () => ({
-    PERMISSIONS: { ORDER: { VIEW: 'order.view', EDIT: 'order.edit' } },
+    PERMISSIONS: { ORDER: { VIEW: 'order.view', EDIT: 'order.own.edit' } },
 }));
 vi.mock('@/shared/lib/audit-service', () => ({
     AuditService: { recordFromSession: vi.fn() },

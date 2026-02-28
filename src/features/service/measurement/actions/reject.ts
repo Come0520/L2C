@@ -54,7 +54,7 @@ const rejectMeasureTaskActionInternal = createSafeAction(
 
             // 权限校验
             try {
-                await checkPermission(session, PERMISSIONS.MEASURE.MANAGE);
+                await checkPermission(session, PERMISSIONS.MEASURE.ALL_EDIT);
             } catch (_error) {
                 return { success: false, error: '无权限驳回任务' };
             }

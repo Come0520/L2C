@@ -21,7 +21,7 @@ interface ApprovalProgressStepsProps {
  */
 export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalProgressStepsProps) {
     // Sort nodes by order
-    const sortedNodes = [...nodes].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const sortedNodes = nodes.toSorted((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
     if (sortedNodes.length === 0) {
         return (

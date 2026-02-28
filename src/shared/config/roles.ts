@@ -142,7 +142,7 @@ export const ROLES: Record<string, RoleDefinition> = {
       // 报价 - 自己的 + 创建
       PERMISSIONS.QUOTE.OWN_VIEW,
       PERMISSIONS.QUOTE.OWN_EDIT,
-      PERMISSIONS.QUOTE.CREATE,
+      PERMISSIONS.QUOTE.OWN_EDIT,
       // 订单 - 仅自己
       PERMISSIONS.ORDER.OWN_VIEW,
       PERMISSIONS.ORDER.OWN_EDIT,
@@ -152,7 +152,7 @@ export const ROLES: Record<string, RoleDefinition> = {
       // 售后 - 自己的 + 创建
       PERMISSIONS.AFTER_SALES.OWN_VIEW,
       PERMISSIONS.AFTER_SALES.OWN_EDIT,
-      PERMISSIONS.AFTER_SALES.CREATE,
+      PERMISSIONS.AFTER_SALES.OWN_EDIT,
       // 渠道 - 仅查看（了解客户来源）
       PERMISSIONS.CHANNEL.VIEW,
       // 产品 - 仅查看
@@ -180,7 +180,7 @@ export const ROLES: Record<string, RoleDefinition> = {
       // 安装 - 查看 + 派工 + 创建任务
       PERMISSIONS.INSTALL.ALL_VIEW,
       PERMISSIONS.INSTALL.DISPATCH,
-      PERMISSIONS.INSTALL.CREATE,
+      PERMISSIONS.INSTALL.OWN_EDIT,
       // 客户 - 查看（用于联系）
       PERMISSIONS.CUSTOMER.ALL_VIEW,
       // 财务 - 应付操作（派单员负责付款相关）

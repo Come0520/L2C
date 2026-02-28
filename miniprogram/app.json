@@ -5,7 +5,6 @@
     "pages/index/index",
     "pages/register/register",
     "pages/status/status",
-    "pages/workbench/index",
     "pages/workbench/engineer/index",
     "pages/leads/index",
     "pages/crm/index",
@@ -17,60 +16,90 @@
     "pages/quotes/detail",
     "pages/quotes/product-selector/index",
     "pages/users/profile",
-    "pages/users/edit/edit"
+    "pages/users/edit/edit",
+    "pages/reports/index",
+    "pages/tasks/index",
+    "pages/tasks/detail/detail",
+    "pages/tasks/measure/index"
   ],
   "subpackages": [
     {
       "root": "pages/leads-sub",
       "name": "leads",
-      "pages": ["create/index", "detail/index"]
-    },
-    {
-      "root": "pages/tasks",
-      "name": "tasks",
-      "pages": ["index", "detail/detail", "measure/index"]
+      "pages": [
+        "create/index",
+        "detail/index"
+      ]
     },
     {
       "root": "pages/showroom",
       "name": "showroom",
-      "pages": ["index", "detail/index", "capsule/index"]
+      "pages": [
+        "index",
+        "detail/index",
+        "capsule/index"
+      ]
     },
     {
       "root": "pages/service",
       "name": "service",
-      "pages": ["apply/index", "list/index"]
+      "pages": [
+        "apply/index",
+        "list/index"
+      ]
     },
     {
       "root": "pages/projects",
       "name": "projects",
-      "pages": ["task-detail/index"]
+      "pages": [
+        "task-detail/index"
+      ]
     },
     {
       "root": "pages/invite",
       "name": "invite",
-      "pages": ["invite"]
+      "pages": [
+        "invite"
+      ]
     },
     {
       "root": "pages/manager",
       "name": "manager",
-      "pages": ["targets/index"]
+      "pages": [
+        "targets/index"
+      ]
     },
     {
       "root": "pages/tenant",
       "name": "tenant",
-      "pages": ["payment-settings/index"]
-    },
-    {
-      "root": "pages/reports",
-      "name": "reports",
-      "pages": ["index"]
+      "pages": [
+        "payment-settings/index"
+      ]
     },
     {
       "root": "pages/orders",
       "name": "orders",
-      "pages": ["index", "detail/index"]
+      "pages": [
+        "index",
+        "detail/index"
+      ]
     }
   ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": [
+        "orders",
+        "manager"
+      ]
+    },
+    "pages/leads/index": {
+      "network": "wifi",
+      "packages": [
+        "leads"
+      ]
+    }
+  },
   "window": {
     "navigationBarTitleText": "L2C 窗帘全流程管理大师",
     "navigationBarBackgroundColor": "#141414",
@@ -88,10 +117,6 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/workbench/index",
         "text": "工作台"
       },
       {
@@ -103,11 +128,16 @@
         "text": "报价"
       },
       {
+        "pagePath": "pages/tasks/index",
+        "text": "任务"
+      },
+      {
         "pagePath": "pages/users/profile",
         "text": "我的"
       }
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
 }

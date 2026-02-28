@@ -165,7 +165,7 @@ describe('Customer Activities Actions', () => {
 
             await createActivity(validActivityInput);
 
-            expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`, 'default');
+            expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`, {});
         });
 
         it('审计日志应包含详细变更信息', async () => {

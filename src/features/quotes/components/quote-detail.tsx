@@ -3,14 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
-import { LiquidButton } from '@/shared/ui/liquid/liquid-button';
 import { Input } from '@/shared/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
 
 import { QuoteItemsTable, type QuoteItem } from './quote-items-table/index';
 import { VersionQuote } from '../types';
 
-import { QuoteVersionDrawer } from './quote-version-drawer';
+import { QuoteVersionDropdown } from './quote-version-dropdown';
 import { QuoteToOrderButton } from './quote-to-order-button';
 import {
   updateQuote,
@@ -27,6 +26,9 @@ import Ruler from 'lucide-react/dist/esm/icons/ruler';
 import Save from 'lucide-react/dist/esm/icons/save';
 import X from 'lucide-react/dist/esm/icons/x';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Send from 'lucide-react/dist/esm/icons/send';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { cn } from '@/shared/lib/utils';
 import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
@@ -49,6 +51,7 @@ import {
   QuoteCategory,
   ViewMode,
   CATEGORY_TO_PRODUCT_CATEGORIES,
+  getCategoryLabel,
 } from './quote-category-tabs';
 import { QuoteSummaryTab } from './quote-summary-tab';
 import { QuoteExportMenu } from './quote-export-menu';
@@ -169,23 +172,6 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
 
     const categoryMap = new Map<string, { label: string; count: number; subtotal: number }>();
 
-    const getCategoryLabel = (cat: string) => {
-      switch (cat) {
-        case 'CURTAIN':
-          return '窗帘';
-        case 'WALLCLOTH':
-          return '墙布';
-        case 'WALLPAPER':
-          return '墙纸';
-        case 'WALL_PANEL':
-          return '墙員';
-        case 'STANDARD':
-          return '标品';
-        default:
-          return '其他';
-      }
-    };
-
     allItems.forEach((item) => {
       const cat = item.category || 'OTHER';
       const existing = categoryMap.get(cat);
@@ -243,7 +229,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-bold tracking-tight">报价单详情: {quote.quoteNo}</h2>
-                <QuoteVersionDrawer
+                <QuoteVersionDropdown
                   currentQuoteId={quote.id}
                   currentVersion={quote.version || 1}
                   versions={versions.map((v) => ({
@@ -299,8 +285,8 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               )}
             </div>
           </div>
-          <div className="space-x-2">
-            <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               {versions.length > 1 && (
                 <QuoteVersionCompare
                   currentQuote={{
@@ -322,16 +308,16 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               )}
               {quote.status === 'DRAFT' && (
                 <>
-                  <LiquidButton variant="ghost" size="sm" onClick={() => setImportDialogOpen(true)}>
-                    <Ruler className="h-4 w-4" /> 导入测量
-                  </LiquidButton>
+                  <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+                    <Ruler className="h-4 w-4 mr-2" /> 导入测量
+                  </Button>
 
-                  <LiquidButton variant="ghost" size="sm" onClick={() => setTemplateDialogOpen(true)}>
-                    <Layout className="h-4 w-4" /> 保存为模板
-                  </LiquidButton>
+                  <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}>
+                    <Layout className="h-4 w-4 mr-2" /> 保存为模板
+                  </Button>
 
-                  <LiquidButton
-                    variant="secondary"
+                  <Button
+                    variant="outline"
                     size="sm"
                     disabled={riskResult?.hardStop}
                     title={riskResult?.hardStop ? "存在严重风险，无法提交" : "提交审核"}
@@ -348,8 +334,8 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                       });
                     }}
                   >
-                    提交审核
-                  </LiquidButton>
+                    <Send className="h-4 w-4 mr-2" /> 提交审核
+                  </Button>
                 </>
               )}
 
@@ -408,34 +394,34 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
 
               {quote.status === 'PENDING_APPROVAL' && (
                 <>
-                  <LiquidButton
-                    variant="ghost"
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setRejectDialogOpen(true)}
                   >
-                    驳回
-                  </LiquidButton>
-                  <LiquidButton
-                    variant="secondary"
+                    <XCircle className="h-4 w-4 mr-2" /> 驳回
+                  </Button>
+                  <Button
+                    variant="default"
                     size="sm"
                     onClick={() => setApproveDialogOpen(true)}
                   >
-                    批准
-                  </LiquidButton>
+                    <CheckCircle className="h-4 w-4 mr-2" /> 批准
+                  </Button>
                 </>
               )}
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <QuoteToOrderButton
                   quoteId={quote.id}
                   defaultAmount={quote.finalAmount || undefined}
                 />
               </div>
 
-              <LiquidButton variant="ghost" size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4" /> 保存
-              </LiquidButton>
+              <Button variant="outline" size="sm" onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" /> 保存
+              </Button>
               {/* Mode Toggle Button Removed */}
             </div>
           </div>

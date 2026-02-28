@@ -92,7 +92,7 @@ const getDeliveryEfficiencyAction = createSafeAction(deliveryEfficiencySchema, a
                 throw error;
             }
         },
-        [`delivery-efficiency-${tenantId}-${startDate.getTime()}-${endDate.getTime()}`],
+        [`delivery-efficiency-${tenantId}-${startDate.toDateString()}-${endDate.toDateString()}`],
         { tags: [`analytics-${tenantId}`, 'analytics-delivery'], revalidate: 3600 }
     )();
 });

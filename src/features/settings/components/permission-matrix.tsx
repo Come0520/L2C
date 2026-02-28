@@ -8,6 +8,8 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Save from 'lucide-react/dist/esm/icons/save';
 import Info from 'lucide-react/dist/esm/icons/info';
+import { createPortal } from 'react-dom';
+import { getPermissionDescription } from '@/shared/config/permissions';
 // Remove unused cn import
 import { Button } from '@/shared/ui/button';
 import { TriStateCheckbox, TriState, TriStateLabel } from '@/shared/ui/tri-state-checkbox';
@@ -35,6 +37,93 @@ interface PermissionMatrixProps {
 // 内部状态类型：roleCode -> permission -> TriState
 type PermissionStateMap = Record<string, Record<string, TriState>>;
 
+/**
+ * 权限说明气泡组件
+ * 使用纯 React state + position:fixed 实现，完全绕过 HoverCard 的 CSS 变量透明问题。
+ * 背景色硬编码为纯白 #ffffff，不依赖任何主题 CSS 变量。
+ */
+function PermissionInfoBubble({ code }: { code: string }) {
+  const description = getPermissionDescription(code);
+  const [visible, setVisible] = React.useState(false);
+  const [coords, setCoords] = React.useState({ x: 0, y: 0 });
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = React.useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setCoords({ x: rect.right + 10, y: rect.top - 8 });
+    timerRef.current = setTimeout(() => setVisible(true), 150);
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setVisible(false);
+  }, []);
+
+  return (
+    <>
+      {/* 触发器：蓝色 ⓘ 图标 */}
+      <span
+        className="text-blue-400/60 hover:text-blue-500 inline-flex cursor-help items-center transition-colors duration-150"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Info className="h-3.5 w-3.5" />
+      </span>
+
+      {/* 气泡弹窗：用 Portal 渲染到 body，position:fixed 确保层级最高 */}
+      {visible && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              top: coords.y,
+              left: coords.x,
+              zIndex: 99999,
+              width: 288,
+              background: '#ffffff',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none',
+              borderRadius: 12,
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 20px 40px -4px rgba(0,0,0,0.12)',
+              overflow: 'hidden',
+              opacity: 1,
+              pointerEvents: 'none',
+            }}
+          >
+            {/* 顶部蓝色渐变标题栏 */}
+            <div
+              style={{
+                background: 'linear-gradient(to right, #eff6ff, #eef2ff)',
+                borderBottom: '1px solid #f3f4f6',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <div style={{ background: '#dbeafe', borderRadius: 6, padding: 4 }}>
+                <Info style={{ width: 12, height: 12, color: '#2563eb' }} />
+              </div>
+              <code style={{ fontFamily: 'monospace', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
+                {code}
+              </code>
+            </div>
+            {/* 正文：纯白底色，深灰文字 */}
+            <div style={{ background: '#ffffff', padding: '12px 14px' }}>
+              <p style={{ fontSize: 13, lineHeight: 1.65, color: '#1f2937', margin: 0, fontWeight: 400 }}>
+                {description || '暂无权限说明'}
+              </p>
+            </div>
+          </div>,
+          document.body
+        )
+      }
+    </>
+  );
+}
+
+
 export function PermissionMatrix({ data }: PermissionMatrixProps) {
   // 折叠状态：groupKey -> boolean
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
@@ -47,24 +136,33 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
   });
 
   // 所有已知权限列表（用于 ** 通配符展开）
-  // 注意：必须在 useState 之前声明，以便初始化函数能访问此值
-  const allPermCodes = data.permissionGroups.flatMap((g) => g.permissions.map((p) => p.code));
+  // 使用 useMemo 稳定引用，避免 useEffect 依赖数组每次渲染产生新引用导致无限循环
+  const allPermCodes = useMemo(
+    () => data.permissionGroups.flatMap((g) => g.permissions.map((p) => p.code)),
+    [data.permissionGroups]
+  );
+
+  // 需要在 UI 中渲染的角色列表（不包含超级管理员）
+  const displayRoles = useMemo(
+    () => data.roles.filter((role) => role.roleCode !== 'TENANT_ADMIN'),
+    [data.roles]
+  );
 
   // 权限状态
   const [permissionStates, setPermissionStates] = useState<PermissionStateMap>(() => {
-    return buildInitialStates(data.roles, allPermCodes);
+    return buildInitialStates(displayRoles, allPermCodes);
   });
 
   // 原始状态（用于比较是否修改）
   const originalStates = useMemo(
-    () => buildInitialStates(data.roles, allPermCodes),
-    [data.roles, allPermCodes]
+    () => buildInitialStates(displayRoles, allPermCodes),
+    [displayRoles, allPermCodes]
   );
 
   // 监听外部 data 的变化并重置内部状态，以确保在服务器数据更新（例如恢复预设后）界面能同步
   React.useEffect(() => {
-    setPermissionStates(buildInitialStates(data.roles, allPermCodes));
-  }, [data.roles, allPermCodes]);
+    setPermissionStates(buildInitialStates(displayRoles, allPermCodes));
+  }, [displayRoles, allPermCodes]);
 
   const router = useRouter();
 
@@ -109,7 +207,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
     try {
       // 构建覆盖数据
-      const overrides = data.roles.map((role) => {
+      const overrides = displayRoles.map((role) => {
         const basePermissions = new Set(role.basePermissions);
         const added: string[] = [];
         const removed: string[] = [];
@@ -254,7 +352,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
               <th className="bg-muted/50 sticky left-0 min-w-[200px] p-3 text-left font-medium">
                 权限模块
               </th>
-              {data.roles.map((role) => (
+              {displayRoles.map((role) => (
                 <th key={role.roleCode} className="min-w-[80px] p-3 text-center font-medium">
                   <div className="flex flex-col items-center gap-1">
                     <span>{role.roleName}</span>
@@ -271,7 +369,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                   className="bg-muted/30 hover:bg-muted/50 cursor-pointer"
                   onClick={() => toggleGroup(group.key)}
                 >
-                  <td colSpan={data.roles.length + 1} className="sticky left-0 p-2">
+                  <td colSpan={displayRoles.length + 1} className="sticky left-0 p-2">
                     <div className="flex items-center gap-2">
                       {expandedGroups[group.key] ? (
                         <ChevronDown className="h-4 w-4" />
@@ -293,20 +391,11 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                       <td className="bg-background sticky left-0 p-2 pl-8">
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm">{perm.label}</span>
-                          {/* 叹号图标：悬停显示权限说明（权限代码） */}
-                          <span
-                            title={
-                              perm.description
-                                ? `${perm.description}\n权限代码：${perm.code}`
-                                : `权限代码：${perm.code}`
-                            }
-                            className="text-muted-foreground/60 hover:text-muted-foreground inline-flex cursor-help items-center transition-colors"
-                          >
-                            <Info className="h-3.5 w-3.5" />
-                          </span>
+                          {/* ⓘ 图标：悬停弹出气泡，展示权限中文说明和权限代码 */}
+                          <PermissionInfoBubble code={perm.code} />
                         </div>
                       </td>
-                      {data.roles.map((role) => (
+                      {displayRoles.map((role) => (
                         <td key={role.roleCode} className="p-2 text-center">
                           <div className="flex justify-center">
                             <TriStateCheckbox

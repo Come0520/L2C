@@ -56,7 +56,7 @@ export function QuoteVersionDrawer({
     const [isCreating, setIsCreating] = useState(false);
 
     // 按版本号降序排列
-    const sortedVersions = [...versions].sort((a, b) => b.version - a.version);
+    const sortedVersions = versions.toSorted((a, b) => b.version - a.version);
 
     const handleCreateVersion = async () => {
         setIsCreating(true);

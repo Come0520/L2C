@@ -260,6 +260,20 @@
       "when": 1772195769957,
       "tag": "0036_boring_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1772257380600,
+      "tag": "0037_serious_umar",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1772266516136,
+      "tag": "0038_upgrade_role_override_jsonb",
+      "breakpoints": true
     }
   ]
 }

@@ -95,22 +95,29 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
         setBottomGradientOpacity(scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1));
     };
 
+    const stateRef = useRef({ selectedIndex, itemsLength: items.length, onItemSelect, enableArrowNavigation });
     useEffect(() => {
-        if (!enableArrowNavigation) return;
+        stateRef.current = { selectedIndex, itemsLength: items.length, onItemSelect, enableArrowNavigation };
+    }, [selectedIndex, items.length, onItemSelect, enableArrowNavigation]);
+
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const state = stateRef.current;
+            if (!state.enableArrowNavigation) return;
+
             if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
                 e.preventDefault();
                 keyboardNavRef.current = true;
-                setSelectedIndex(prev => Math.min(prev + 1, items.length - 1));
+                setSelectedIndex(prev => Math.min(prev + 1, state.itemsLength - 1));
             } else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
                 e.preventDefault();
                 keyboardNavRef.current = true;
                 setSelectedIndex(prev => Math.max(prev - 1, 0));
             } else if (e.key === 'Enter') {
-                if (selectedIndex >= 0 && selectedIndex < items.length) {
+                if (state.selectedIndex >= 0 && state.selectedIndex < state.itemsLength) {
                     e.preventDefault();
-                    if (onItemSelect) {
-                        onItemSelect(selectedIndex);
+                    if (state.onItemSelect) {
+                        state.onItemSelect(state.selectedIndex);
                     }
                 }
             }
@@ -118,7 +125,7 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [items, selectedIndex, onItemSelect, enableArrowNavigation]);
+    }, []);
 
     useEffect(() => {
         if (!keyboardNavRef.current || selectedIndex < 0 || !listRef.current) return;

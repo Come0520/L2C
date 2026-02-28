@@ -34,7 +34,7 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
     }
 
     // 权限检查
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     // 从入参中获取 version 用于乐观并发控制
     const versionNum = 'version' in data ? Number(data.version) : 0;
@@ -80,7 +80,7 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
     }
 
     // 权限检查
-    await checkPermission(session, PERMISSIONS.ORDER.EDIT);
+    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const versionNum = 'version' in data ? Number(data.version) : 0;
 

@@ -4,6 +4,7 @@ import type { ColumnVisibility } from './types';
 type QuoteTableHeaderProps = ColumnVisibility;
 
 export function QuoteTableHeader({
+  showImage,
   showWidth,
   showHeight,
   showFold,
@@ -18,6 +19,7 @@ export function QuoteTableHeader({
     <TableHeader>
       <TableRow className="glass-table-header">
         <TableHead className="h-9 w-[25%] px-4">商品</TableHead>
+        {showImage && <TableHead className="h-9 w-[60px] text-center">图片</TableHead>}
         {(showWidth || showHeight) && <TableHead className="h-9 w-[15%]">尺寸 (cm)</TableHead>}
         {showFold && <TableHead className="h-9 w-[8%]">倍数</TableHead>}
         {showProcessFee && <TableHead className="h-9 w-[10%]">加工费</TableHead>}

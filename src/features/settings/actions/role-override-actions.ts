@@ -13,7 +13,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 import { getRoleLabel, getRoleDefinition } from '@/shared/config/roles';
 import { eq, and, asc } from 'drizzle-orm';
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { revalidatePath, unstable_cache } from 'next/cache';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
 import { logger } from '@/shared/lib/logger';
 
@@ -232,8 +232,8 @@ export async function saveRoleOverride(
         await tx
           .update(roleOverrides)
           .set({
-            addedPermissions: JSON.stringify(finalAdded),
-            removedPermissions: JSON.stringify(finalRemoved),
+            addedPermissions: finalAdded,
+            removedPermissions: finalRemoved,
             updatedAt: new Date(),
             updatedBy: userId,
           })
@@ -247,8 +247,8 @@ export async function saveRoleOverride(
           userId: session.user.id,
           tenantId: session.user.tenantId,
           oldValues: {
-            addedPermissions: JSON.parse(existing.addedPermissions || '[]'),
-            removedPermissions: JSON.parse(existing.removedPermissions || '[]'),
+            addedPermissions: existing.addedPermissions || [],
+            removedPermissions: existing.removedPermissions || [],
           },
           newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
           changedFields: { roleCode },
@@ -260,8 +260,8 @@ export async function saveRoleOverride(
           .values({
             tenantId,
             roleCode,
-            addedPermissions: JSON.stringify(finalAdded),
-            removedPermissions: JSON.stringify(finalRemoved),
+            addedPermissions: finalAdded,
+            removedPermissions: finalRemoved,
             updatedBy: userId,
           })
           .returning({ id: roleOverrides.id });
@@ -278,9 +278,7 @@ export async function saveRoleOverride(
       }
     });
 
-    revalidateTag('permission-matrix', {});
-    revalidateTag(`permission-matrix-${tenantId}`, {});
-    revalidatePath('/settings/roles');
+    revalidatePath('/settings/roles', 'page');
 
     return {
       success: true,
@@ -342,9 +340,7 @@ export async function resetRoleOverride(
       }
     });
 
-    revalidateTag('permission-matrix', {});
-    revalidateTag(`permission-matrix-${tenantId}`, {});
-    revalidatePath('/settings/roles');
+    revalidatePath('/settings/roles', 'page');
 
     const roleLabel = getRoleLabel(roleCode);
     return {
@@ -408,8 +404,8 @@ export async function saveAllRoleOverrides(
           await tx
             .update(roleOverrides)
             .set({
-              addedPermissions: JSON.stringify(finalAdded),
-              removedPermissions: JSON.stringify(finalRemoved),
+              addedPermissions: finalAdded,
+              removedPermissions: finalRemoved,
               updatedAt: new Date(),
               updatedBy: userId,
             })
@@ -434,8 +430,8 @@ export async function saveAllRoleOverrides(
             .values({
               tenantId,
               roleCode,
-              addedPermissions: JSON.stringify(finalAdded),
-              removedPermissions: JSON.stringify(finalRemoved),
+              addedPermissions: finalAdded,
+              removedPermissions: finalRemoved,
               updatedBy: userId,
             })
             .returning({ id: roleOverrides.id });
@@ -452,7 +448,7 @@ export async function saveAllRoleOverrides(
       }
     });
 
-    revalidatePath('/settings/roles');
+    revalidatePath('/settings/roles', 'page');
     return { success: true, message: '所有角色权限配置已保存' };
   } catch (error) {
     logger.error('批量保存角色覆盖失败:', error);
@@ -511,9 +507,7 @@ export async function restoreDefaultRoleOverrides(): Promise<{
       }
     });
 
-    revalidateTag('permission-matrix', {});
-    revalidateTag(`permission-matrix-${tenantId}`, {});
-    revalidatePath('/settings/roles');
+    revalidatePath('/settings/roles', 'page');
 
     return {
       success: true,

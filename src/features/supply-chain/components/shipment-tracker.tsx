@@ -14,7 +14,7 @@ interface ShipmentTrackerProps {
     updatedAt?: string | Date;
 }
 
-export function ShipmentTracker({ orderId, company, trackingNo, status, trackingData }: ShipmentTrackerProps) {
+export function ShipmentTracker({ orderId: _orderId, company, trackingNo, status, trackingData: _trackingData }: ShipmentTrackerProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

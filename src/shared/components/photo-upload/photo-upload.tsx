@@ -74,6 +74,7 @@ export function PhotoUpload({ value = [], onChange, maxFiles = 5 }: PhotoUploadP
               onUploadComplete={handleUploadComplete}
               className="h-full w-full"
               label="上传"
+              variant="compact"
             />
           </div>
         )}

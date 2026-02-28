@@ -13,6 +13,7 @@ export interface ProductSearchResult {
     sku: string;
     category: string;
     unitPrice: string | null;
+    retailPrice: string | null;
     unit: string | null;
     specs: Record<string, unknown>;
     images?: string[];
@@ -87,6 +88,7 @@ export async function searchProducts(
             sku: true,
             category: true,
             unitPrice: true,
+            retailPrice: true,
             unit: true,
             specs: true,
             images: true,

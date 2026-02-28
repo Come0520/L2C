@@ -76,6 +76,7 @@ export const createProductSchema = z
 
     description: z.string().optional(),
     attributes: z.record(z.string(), z.any()).default({}),
+    images: z.array(z.string()).optional().default([]),
   })
   .describe('提供给产品新建使用的完备业务属性聚合结构');
 
@@ -116,3 +117,17 @@ export const getProductSchema = z
     id: z.string().uuid(),
   })
   .describe('精确提取单品完整多态详情结构的查验依据');
+
+/**
+ * 批量更新产品图片 Schema
+ */
+export const batchUpdateProductImagesSchema = z
+  .array(
+    z.object({
+      sku: z.string().min(1, 'SKU不能为空'),
+      images: z.array(z.string()).optional(), // 主图
+      materialImages: z.array(z.string()).optional(), // 材质图
+      sceneImages: z.array(z.string()).optional(), // 场景图
+    })
+  )
+  .describe('接受多个含有 SKU 及其待更新的主图/材质图/场景图数组序列');

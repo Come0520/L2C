@@ -116,17 +116,18 @@ const createQuoteItemActionInternal = createSafeAction(
     const { presetLoss } = config;
 
     // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
+    const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(data.category) || data.category.includes('CURTAIN');
+    const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(data.category);
+
     if (
       data.width &&
       data.height &&
-      (data.category === 'CURTAIN' ||
-        data.category === 'WALLPAPER' ||
-        data.category === 'WALLCLOTH')
+      (isCurtain || isWallpaper)
     ) {
       // Common setup
       const strategy = StrategyFactory.getStrategy(data.category);
       const fabricWidthCm =
-        (attributes.fabricWidth as number) || (data.category === 'CURTAIN' ? 280 : 53);
+        (attributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
       const calcParams: Record<string, unknown> = {
         measuredWidth: Number(data.width),
@@ -193,7 +194,7 @@ const createQuoteItemActionInternal = createSafeAction(
     await updateQuoteTotal(data.quoteId, context.session.user.tenantId);
 
     // 自动配件联动
-    if (newItem && (data.category === 'CURTAIN' || data.category === 'WALLPAPER')) {
+    if (newItem && (isCurtain || isWallpaper)) {
       const recommendations = await AccessoryLinkageService.getRecommendedAccessories(
         {
           category: data.category,
@@ -284,7 +285,8 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   const category = existing.category;
   const width = updateData.width ?? Number(existing.width);
   const height = updateData.height ?? Number(existing.height);
-  const foldRatio = updateData.foldRatio ?? Number(existing.foldRatio) ?? 2;
+  const parsedFoldRatio = Number(existing.foldRatio);
+  const foldRatio = updateData.foldRatio ?? (parsedFoldRatio > 0 ? parsedFoldRatio : 2);
   const attributes = { ...((existing.attributes as Record<string, unknown>) || {}) };
   let unitPrice = Number(existing.unitPrice);
   let productName = existing.productName;
@@ -354,15 +356,18 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 
   const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
 
+  const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) || category.includes('CURTAIN');
+  const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(category);
+
   // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
   if (
     width &&
     height &&
-    (category === 'CURTAIN' || category === 'WALLPAPER' || category === 'WALLCLOTH')
+    (isCurtain || isWallpaper)
   ) {
     const strategy = StrategyFactory.getStrategy(category);
     const fabricWidthCm =
-      (mergedAttributes.fabricWidth as number) || (category === 'CURTAIN' ? 280 : 53);
+      (mergedAttributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
     const calcParams: Record<string, unknown> = {
       measuredWidth: Number(width),

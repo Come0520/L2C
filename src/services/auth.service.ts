@@ -33,7 +33,7 @@ export class AuthService {
      * @param openId The WeChat OpenID.
      * @param tenantId The Tenant ID (required for new user creation).
      */
-    static async loginWithWeChat(openId: string, tenantId: string) {
+    static async loginWithWeChat(openId: string, _tenantId: string) {
         const existingUser = await db.query.users.findFirst({
             where: eq(users.wechatOpenId, openId),
         });

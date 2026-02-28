@@ -226,7 +226,7 @@ export interface CheckPermissionOptions {
  * 4. 如果启用了 audit，记录审计日志到数据库。
  *
  * @param session - 会话对象
- * @param permissionName - 权限名称 (如: 'order.edit')
+ * @param permissionName - 权限名称 (如: 'order.own.edit')
  * @param options - 可选配置 (审计记录等)
  * @returns 是否拥有权限
  */
@@ -336,6 +336,15 @@ const checkRolePermission = async (session: Session, permissionName: string): Pr
         allPermissions.has(`${module}.own.${action}`) ||
         allPermissions.has(`${module}.all.${action}`)
       ) {
+        return true;
+      }
+    }
+
+    // 4. 如果请求的范围权限是 own（如 order.own.edit），
+    //    但用户拥有更高阶的 all 权限（如 order.all.edit），则必然放行。
+    if (parts.length === 3 && parts[1] === 'own') {
+      const [module, _scope, action] = parts;
+      if (allPermissions.has(`${module}.all.${action}`)) {
         return true;
       }
     }

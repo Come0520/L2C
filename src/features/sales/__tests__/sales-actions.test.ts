@@ -5,13 +5,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSalesTargets, updateSalesTarget, getMySalesTarget, adjustSalesTarget, confirmSalesTarget } from '../actions/targets';
 import { getSalesDashboardStats } from '../actions/dashboard';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 
 // ===== Mock 依赖 =====
 
 vi.mock('@/shared/lib/auth', () => ({
     auth: vi.fn(),
+    checkPermission: vi.fn(),
 }));
 
 vi.mock('@/shared/services/audit-service', () => ({
@@ -79,6 +80,7 @@ const makeSession = (role: string = 'BOSS', tenantId: string = TENANT_A, userId:
 });
 
 const mockAuth = vi.mocked(auth);
+const mockCheckPermission = vi.mocked(checkPermission);
 const mockAuditLog = vi.mocked(AuditService.log);
 
 // ===== 测试套件 =====
@@ -87,6 +89,7 @@ describe('Sales 模块测试', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockCheckPermission.mockResolvedValue(true);
         // 默认 DB Mock 返回值
         mockDbFindFirstUsers.mockResolvedValue({
             id: ADMIN_ID,
@@ -162,6 +165,7 @@ describe('Sales 模块测试', () => {
 
         it('sales 角色（非管理员）应被拒绝', async () => {
             mockAuth.mockResolvedValue(makeSession('sales', TENANT_A, SALES_USER_ID) as never);
+            mockCheckPermission.mockResolvedValue(false);
             // Mock DB 返回普通销售角色用户
             mockDbFindFirstUsers.mockResolvedValue({
                 id: SALES_USER_ID,
@@ -175,6 +179,7 @@ describe('Sales 模块测试', () => {
 
         it('普通员工角色应被拒绝', async () => {
             mockAuth.mockResolvedValue(makeSession('employee', TENANT_A) as never);
+            mockCheckPermission.mockResolvedValue(false);
             mockDbFindFirstUsers.mockResolvedValue({
                 id: ADMIN_ID,
                 role: 'employee',
@@ -292,6 +297,7 @@ describe('Sales 模块测试', () => {
 
         it('非管理层角色应被拒绝', async () => {
             mockAuth.mockResolvedValue(makeSession('employee', TENANT_A) as never);
+            mockCheckPermission.mockResolvedValue(false);
             mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'employee', tenantId: TENANT_A });
             const result = await adjustSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH, 1000, '调整原因');
             expect(result.success).toBe(false);
@@ -355,6 +361,7 @@ describe('Sales 模块测试', () => {
 
         it('普通员工缺少权限应被拒绝', async () => {
             mockAuth.mockResolvedValue(makeSession('employee') as never);
+            mockCheckPermission.mockResolvedValue(false);
             mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'employee', tenantId: TENANT_A });
             const result = await confirmSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH);
             expect(result.success).toBe(false);

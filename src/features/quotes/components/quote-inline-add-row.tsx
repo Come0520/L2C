@@ -8,16 +8,20 @@ import Plus from 'lucide-react/dist/esm/icons/plus';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { ProductAutocomplete } from './product-autocomplete';
 import { ProductPickerDialog } from './product-picker-dialog';
-import { createQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
+import { createQuoteItem } from '@/features/quotes/actions/quote-item-crud';
 import { logger } from '@/shared/lib/logger';
+import type { RoomData } from './quote-items-table/types';
 
 interface QuoteInlineAddRowProps {
   /** 报价单 ID */
   quoteId: string;
   /** 空间 ID（可选） */
   roomId?: string | null;
+  /** 所有空间数据（用于分类视图下选择空间） */
+  rooms?: RoomData[];
   /** 商品品类筛选（单一品类） */
   category?: string;
   /** 允许的品类列表（用于限制可选商品范围） */
@@ -38,6 +42,8 @@ interface QuoteInlineAddRowProps {
   showHeight?: boolean;
   /** 是否显示单位列 */
   showUnit?: boolean;
+  /** 是否显示图片列 */
+  showImage?: boolean;
 }
 
 /**
@@ -52,6 +58,7 @@ interface QuoteInlineAddRowProps {
 export function QuoteInlineAddRow({
   quoteId,
   roomId,
+  rooms,
   category,
   allowedCategories,
   onSuccess,
@@ -62,6 +69,7 @@ export function QuoteInlineAddRow({
   showWidth = false,
   showHeight = false,
   showUnit = true,
+  showImage = false,
 }: QuoteInlineAddRowProps) {
   // 是否处于编辑模式
   const [isEditing, setIsEditing] = useState(false);
@@ -69,6 +77,8 @@ export function QuoteInlineAddRow({
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 增强搜索对话框状态（双击打开）
   const [pickerOpen, setPickerOpen] = useState(false);
+  // 当未传入 roomId 却传入 rooms 时，说明可以在行内选择空间
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(roomId || null);
   // 宽度输入框引用（用于焦点控制）
   const widthInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,11 +87,17 @@ export function QuoteInlineAddRow({
    */
   const handleProductSelect = useCallback(
     async (product: ProductSearchResult) => {
+      // 在分类视图下（传入了 rooms）强制要求选择空间
+      if (!roomId && rooms && rooms.length > 0 && !selectedRoomId) {
+        toast.error('请先选择商品所在的空间');
+        return;
+      }
+
       setIsSubmitting(true);
       try {
         await createQuoteItem({
           quoteId,
-          roomId: roomId || undefined,
+          roomId: roomId || selectedRoomId || undefined,
           category: product.category || category || 'STANDARD',
           productId: product.id,
           productName: product.name,
@@ -101,7 +117,7 @@ export function QuoteInlineAddRow({
         setIsSubmitting(false);
       }
     },
-    [quoteId, roomId, category, onSuccess]
+    [quoteId, roomId, category, onSuccess, rooms, selectedRoomId]
   );
 
   /**
@@ -128,6 +144,7 @@ export function QuoteInlineAddRow({
   // 计算列数
   const colSpan =
     2 + // Name + Actions
+    (showImage ? 1 : 0) +
     (showWidth || showHeight ? 1 : 0) +
     (showFold ? 1 : 0) +
     (showProcessFee ? 1 : 0) +
@@ -145,9 +162,30 @@ export function QuoteInlineAddRow({
       {/* 编辑状态：显示可编辑行 */}
       {isEditing && (
         <TableRow className="bg-primary/5 animate-in fade-in border-dashed duration-200">
-          {/* 商品名称 - 搜索框 */}
+          {/* 商品名称 - 搜索框 + 可选的空间选择器 */}
           <TableCell className="p-2">
             <div className="flex items-center gap-2">
+              {/* 空间选择器（仅当未固定 roomId 且存在 rooms 可选时展示） */}
+              {!roomId && rooms && rooms.length > 0 && (
+                <div className="w-24 shrink-0">
+                  <Select
+                    value={selectedRoomId || undefined}
+                    onValueChange={setSelectedRoomId}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-white/50 border-dashed">
+                      <SelectValue placeholder="空间" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id} className="text-xs">
+                          {room.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="w-48">
                 <ProductAutocomplete
                   onSelect={handleProductSelect}
@@ -161,6 +199,9 @@ export function QuoteInlineAddRow({
               {isSubmitting && <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />}
             </div>
           </TableCell>
+
+          {/* 图片占位 */}
+          {showImage && <TableCell className="p-2"></TableCell>}
 
           {/* 尺寸 */}
           {(showWidth || showHeight) && (

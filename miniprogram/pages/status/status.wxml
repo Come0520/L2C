@@ -60,9 +60,10 @@
         </view>
         <view class="status-time">审批时间：{{reviewTime}}</view>
         
-        <button class="outline-btn mt-32" bindtap="reApply" hover-class="btn-hover">
-          重新申请
-        </button>
+        <van-button wx:if="{{supportSubscribe}}" type="primary" block bind:click="subscribeNotification">
+            订阅审批结果通知
+        </van-button>
+        <van-button wx:else type="primary" block bind:click="reApply">重新申请</van-button>
       </view>
 
       <!-- 未申请 -->

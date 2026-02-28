@@ -159,7 +159,7 @@ export class AnalyticsService {
         // Based on previous contexts, `orders` has relations. 
 
         // Safe fallback:
-        const salesRepColumn = orders.createdBy;
+        const _salesRepColumn = orders.createdBy;
 
         // Join with Users to get names
         const results = await db

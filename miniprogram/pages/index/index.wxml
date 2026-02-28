@@ -1,103 +1,427 @@
 <!--pages/index/index.wxml-->
 <view class="container index-page">
-  <!-- 顶部品牌 -->
-  <view class="brand-header animate-fade-in">
-    <view class="logo-row">
-      <image class="logo" src="/assets/logo.png" mode="aspectFit" />
-      <view class="brand-text">
-        <text class="brand-name">L2C</text>
-        <text class="brand-tag">PRO</text>
-      </view>
-    </view>
-  </view>
 
-  <!-- 未登录：登录卡片 -->
-  <view wx:if="{{!isLoggedIn}}" class="login-section animate-slide-up">
-    <view class="card login-card">
-      <view class="login-header">
-        <text class="login-title">欢迎使用 L2C</text>
-        <text class="login-desc">登录以访问您的企业工作台</text>
-      </view>
-
-      <button 
-        class="btn-wechat" 
-        open-type="getPhoneNumber" 
-        bindgetphonenumber="onGetPhoneNumber"
-        loading="{{loading}}"
-      >
-        <text>微信一键登录</text>
-      </button>
-
-      <view class="login-footer">
-        <text class="footer-text">还没有账号？</text>
-        <view class="footer-link" bindtap="goToRegister">
-          <text>申请入驻 →</text>
+  <!-- ============================= -->
+  <!-- 未登录：登录卡片或品牌页       -->
+  <!-- ============================= -->
+  <block wx:if="{{!isLoggedIn}}">
+    <view class="brand-header animate-fade-in">
+      <view class="logo-row">
+        <!-- <image class="logo" src="/assets/logo.png" mode="aspectFit" /> -->
+        <view class="brand-text">
+          <text class="brand-name">L2C</text>
+          <text class="brand-tag">PRO</text>
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 已登录：仪表盘 -->
-  <view wx:else class="dashboard animate-slide-up">
-    <!-- 用户信息 -->
-    <view class="card user-summary">
-      <view class="user-row">
-        <view class="avatar-wrap">
-          <image class="user-avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+    <view class="login-section animate-slide-up">
+      <view class="card login-card">
+        <view class="login-header">
+          <text class="login-title">欢迎使用 L2C</text>
+          <text class="login-desc">登录以访问您的企业工作台</text>
         </view>
-        <view class="user-info">
-          <text class="user-name">{{userInfo.name || '用户'}}</text>
-          <view class="tenant-badge {{tenantStatus === 'active' ? 'active' : ''}}">
-            {{userInfo.tenantName || '未绑定企业'}}
+
+        <button class="btn-wechat" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" loading="{{loading}}">
+          <text>微信一键登录</text>
+        </button>
+
+        <view class="login-footer">
+          <text class="footer-text">还没有账号？</text>
+          <view class="footer-link" bindtap="goToRegister">
+            <text>申请入驻 →</text>
           </view>
         </view>
-        <view class="badge {{tenantStatus === 'active' ? 'badge-success' : 'badge-warning'}}">
-          {{statusText}}
-        </view>
-      </view>
-
-      <!-- 状态提醒 -->
-      <view wx:if="{{tenantStatus === 'pending_approval'}}" class="alert alert-warning">
-        <text>⏳ 企业入驻申请审核中</text>
-      </view>
-      <view wx:elif="{{tenantStatus === 'rejected'}}" class="alert alert-danger">
-        <text>审核未通过: {{rejectReason}}</text>
       </view>
     </view>
-
-    <!-- 功能菜单 -->
-    <view class="menu-grid">
-      <view class="card menu-item" bindtap="goToStatus" hover-class="card-hover">
-        <view class="menu-icon-wrap blue">
-          <image class="menu-icon-img" src="/assets/icons/list-active.svg" />
-        </view>
-        <text class="menu-name">审批进度</text>
-      </view>
-
-      <view class="card menu-item" bindtap="goToInvite" wx:if="{{tenantStatus === 'active'}}" hover-class="card-hover">
-        <view class="menu-icon-wrap green">
-          <image class="menu-icon-img" src="/assets/icons/invite-active.svg" />
-        </view>
-        <text class="menu-name">邀请员工</text>
-      </view>
-
-      <view class="card menu-item" bindtap="openNotification" hover-class="card-hover">
-        <view class="menu-icon-wrap purple">
-          <image class="menu-icon-img" src="/assets/icons/flash-active.svg" />
-        </view>
-        <text class="menu-name">消息订阅</text>
-      </view>
-
-      <view class="card menu-item" bindtap="logout" hover-class="card-hover">
-        <view class="menu-icon-wrap gray">
-          <image class="menu-icon-img" src="/assets/icons/support-active.svg" />
-        </view>
-        <text class="menu-name">退出登录</text>
-      </view>
+    
+    <view class="copyright">
+      L2C Sales Management System v1.0
     </view>
+  </block>
+
+  <!-- ============================= -->
+  <!-- 已登录：根据角色显示不同视图   -->
+  <!-- ============================= -->
+  <block wx:else>
+
+    <!-- 异常状态：入驻中/被拒绝 -->
+    <block wx:if="{{tenantStatus === 'pending_approval' || tenantStatus === 'rejected'}}">
+      <view class="brand-header animate-fade-in">
+        <view class="logo-row">
+          <!-- <image class="logo" src="/assets/logo.png" mode="aspectFit" /> -->
+          <view class="brand-text">
+            <text class="brand-name">L2C</text>
+            <text class="brand-tag">PRO</text>
+          </view>
+        </view>
+      </view>
+      <view class="dashboard animate-slide-up">
+        <view class="card user-summary">
+          <view class="user-row">
+            <view class="avatar-wrap">
+              <image class="user-avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+            </view>
+            <view class="user-info">
+              <text class="user-name">{{userInfo.name || '用户'}}</text>
+              <view class="tenant-badge {{tenantStatus === 'active' ? 'active' : ''}}">
+                {{userInfo.tenantName || '未绑定企业'}}
+              </view>
+            </view>
+            <view class="badge {{tenantStatus === 'active' ? 'badge-success' : 'badge-warning'}}">
+              {{statusText}}
+            </view>
+          </view>
+
+          <view wx:if="{{tenantStatus === 'pending_approval'}}" class="alert alert-warning">
+            <text>⏳ 企业入驻申请审核中</text>
+          </view>
+          <view wx:elif="{{tenantStatus === 'rejected'}}" class="alert alert-danger">
+            <text>审核未通过: {{rejectReason}}</text>
+          </view>
+        </view>
+
+        <!-- 仅提供基础菜单 -->
+        <view class="menu-grid">
+          <view class="card menu-item" bindtap="goToStatus" hover-class="card-hover">
+            <view class="menu-icon-wrap blue">
+              <image class="menu-icon-img" src="/assets/icons/list-active.svg" />
+            </view>
+            <text class="menu-name">审批进度</text>
+          </view>
+          <view class="card menu-item" bindtap="logout" hover-class="card-hover">
+            <view class="menu-icon-wrap gray">
+              <image class="menu-icon-img" src="/assets/icons/support-active.svg" />
+            </view>
+            <text class="menu-name">退出登录</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 正常工作台：已激活用户的视图聚合 -->
+    <block wx:else>
+      <view class="workbench-page">
+        <!-- 通用顶部：问候 + 头像 -->
+        <view class="header animate-fade-in">
+          <view class="greeting">
+            <text class="greeting-text">你好，{{userInfo.name || '用户'}}</text>
+            <text class="greeting-date">{{today}}</text>
+          </view>
+          <image class="header-avatar" src="{{userInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+        </view>
+
+        <!-- BOSS / ADMIN 视图 -->
+        <block wx:if="{{role === 'boss' || role === 'admin' || role === 'tester'}}">
+          <view class="stats-grid animate-slide-up">
+            <view class="stat-card">
+              <text class="stat-num primary">{{dashboard.targetCompletion || '0'}}%</text>
+              <text class="stat-desc">目标达成</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.leads || '0'}}</text>
+              <text class="stat-desc">新线索</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.orders || '0'}}</text>
+              <text class="stat-desc">订单</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.cash || '0'}}</text>
+              <text class="stat-desc">万元回款</text>
+            </view>
+          </view>
+          
+          <view class="section-title">快捷入口</view>
+          <view class="quick-actions animate-slide-up">
+            <view class="action-item" bindtap="navigateToReports">
+              <view class="action-icon-box orange">
+                <!-- 之前的跳转逻辑已修改为 navigateTo -->
+                <image class="action-icon" src="/assets/icons/chart-active.svg" />
+              </view>
+              <text class="action-text">数据报表</text>
+            </view>
+            <view class="action-item" bindtap="navigateToTargets">
+              <view class="action-icon-box green">
+                <image class="action-icon" src="/assets/icons/success-active.svg" />
+              </view>
+              <text class="action-text">销售目标</text>
+            </view>
+            <view class="action-item" bindtap="navigateToCreateQuote">
+              <view class="action-icon-box blue">
+                <image class="action-icon" src="/assets/icons/flash-active.svg" />
+              </view>
+              <text class="action-text">快速报价</text>
+            </view>
+            <view class="action-item" bindtap="navigateToShowroom">
+              <view class="action-icon-box purple">
+                <image class="action-icon" src="/assets/icons/gallery-active.svg" />
+              </view>
+              <text class="action-text">云展厅</text>
+            </view>
+            <view class="action-item" bindtap="goToInvite">
+              <view class="action-icon-box green">
+                <image class="action-icon" src="/assets/icons/invite-active.svg" />
+              </view>
+              <text class="action-text">邀请员工</text>
+            </view>
+          </view>
+
+          <view class="section-title">待办事项</view>
+          <view class="todo-list animate-slide-up">
+            <block wx:for="{{dashboard.todos}}" wx:key="id">
+              <view class="card todo-item" bindtap="handleTodoTap" data-id="{{item.id}}">
+                <view class="todo-main">
+                  <view class="todo-title">{{item.title}}</view>
+                  <view class="todo-desc">{{item.desc}}</view>
+                </view>
+                <view class="todo-right">
+                  <view class="badge {{item.status === 'urgent' ? 'badge-danger' : item.status === 'pending' ? 'badge-warning' : 'badge-info'}}">
+                    {{item.statusText || item.status}}
+                  </view>
+                  <view class="todo-time">{{item.time}}</view>
+                </view>
+              </view>
+            </block>
+            <view class="empty-state" wx:if="{{!dashboard.todos || !dashboard.todos.length}}">暂无待办事项</view>
+          </view>
+        </block>
+
+        <!-- MANAGER 视图 -->
+        <block wx:if="{{role === 'manager' || role === 'tester'}}">
+          <view class="stats-grid animate-slide-up">
+            <view class="stat-card">
+              <text class="stat-num primary">{{dashboard.targetCompletion || '0'}}%</text>
+              <text class="stat-desc">团队目标</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.leads || '0'}}</text>
+              <text class="stat-desc">线索</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.quotes || '0'}}</text>
+              <text class="stat-desc">报价</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.orders || '0'}}</text>
+              <text class="stat-desc">订单</text>
+            </view>
+          </view>
+          
+          <view class="section-title">快捷入口</view>
+          <view class="quick-actions animate-slide-up">
+            <view class="action-item" bindtap="navigateToTargets">
+              <view class="action-icon-box green">
+                <image class="action-icon" src="/assets/icons/success-active.svg" />
+              </view>
+              <text class="action-text">销售目标</text>
+            </view>
+            <view class="action-item" bindtap="navigateToReports">
+              <view class="action-icon-box orange">
+                <image class="action-icon" src="/assets/icons/chart-active.svg" />
+              </view>
+              <text class="action-text">数据报表</text>
+            </view>
+            <view class="action-item" bindtap="navigateToCreateQuote">
+              <view class="action-icon-box blue">
+                <image class="action-icon" src="/assets/icons/flash-active.svg" />
+              </view>
+              <text class="action-text">快速报价</text>
+            </view>
+            <view class="action-item" bindtap="goToInvite">
+              <view class="action-icon-box green">
+                <image class="action-icon" src="/assets/icons/invite-active.svg" />
+              </view>
+              <text class="action-text">邀请员工</text>
+            </view>
+          </view>
+          
+          <view class="section-title">待办事项</view>
+          <view class="todo-list animate-slide-up">
+            <block wx:for="{{dashboard.todos}}" wx:key="id">
+              <view class="card todo-item" bindtap="handleTodoTap" data-id="{{item.id}}">
+                <view class="todo-main">
+                  <view class="todo-title">{{item.title}}</view>
+                  <view class="todo-desc">{{item.desc}}</view>
+                </view>
+                <view class="todo-right">
+                  <view class="badge badge-warning">{{item.statusText || item.status}}</view>
+                  <view class="todo-time">{{item.time}}</view>
+                </view>
+              </view>
+            </block>
+            <view class="empty-state" wx:if="{{!dashboard.todos || !dashboard.todos.length}}">暂无待办事项</view>
+          </view>
+        </block>
+
+        <!-- SALES 视图 -->
+        <block wx:if="{{role === 'sales' || role === 'tester'}}">
+          <view class="stats-grid animate-slide-up">
+            <view class="stat-card">
+              <text class="stat-num primary">{{dashboard.targetCompletion || '0'}}%</text>
+              <text class="stat-desc">本月业绩</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.leads || '0'}}</text>
+              <text class="stat-desc">我的线索</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.quotes || '0'}}</text>
+              <text class="stat-desc">报价单</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">{{dashboard.stats.orders || '0'}}</text>
+              <text class="stat-desc">订单</text>
+            </view>
+          </view>
+          
+          <view class="section-title">快捷入口</view>
+          <view class="quick-actions animate-slide-up">
+            <view class="action-item" bindtap="navigateToCreateQuote">
+              <view class="action-icon-box blue">
+                <image class="action-icon" src="/assets/icons/flash-active.svg" />
+              </view>
+              <text class="action-text">新建报价</text>
+            </view>
+            <view class="action-item" bindtap="navigateToCreateCustomer">
+              <view class="action-icon-box teal">
+                <image class="action-icon" src="/assets/icons/list-active.svg" />
+              </view>
+              <text class="action-text">新建客户</text>
+            </view>
+            <view class="action-item" bindtap="navigateToShowroom">
+              <view class="action-icon-box purple">
+                <image class="action-icon" src="/assets/icons/gallery-active.svg" />
+              </view>
+              <text class="action-text">云展厅</text>
+            </view>
+          </view>
+          
+          <view class="section-title">今日跟进</view>
+          <view class="todo-list animate-slide-up">
+            <block wx:for="{{dashboard.todos}}" wx:key="id">
+              <view class="card todo-item" bindtap="handleTodoTap" data-id="{{item.id}}">
+                <view class="todo-main">
+                  <view class="todo-title">{{item.title}}</view>
+                  <view class="todo-desc">{{item.desc}}</view>
+                </view>
+                <view class="todo-right">
+                  <view class="badge badge-info">{{item.statusText || item.status}}</view>
+                  <view class="todo-time">{{item.time}}</view>
+                </view>
+              </view>
+            </block>
+            <view class="empty-state" wx:if="{{!dashboard.todos || !dashboard.todos.length}}">今日暂无跟进事项</view>
+          </view>
+        </block>
+
+        <!-- WORKER 视图 -->
+        <block wx:if="{{role === 'worker' || role === 'installer' || role === 'tester'}}">
+          <view class="stats-grid animate-slide-up">
+            <view class="stat-card" bindtap="goToTasks">
+              <text class="stat-num primary">{{todayTaskCount}}</text>
+              <text class="stat-desc">今日任务</text>
+            </view>
+            <view class="stat-card">
+              <text class="stat-num">¥{{pendingEarnings}}</text>
+              <text class="stat-desc">待结算</text>
+            </view>
+          </view>
+          <view class="section-title">快捷操作</view>
+          <view class="quick-actions animate-slide-up">
+            <view class="action-item" bindtap="goToTasks">
+              <view class="action-icon-box blue">
+                <image class="action-icon" src="/assets/tabbar/task.svg" />
+              </view>
+              <text class="action-text">查看任务</text>
+            </view>
+            <view class="action-item" bindtap="goToEarnings">
+              <view class="action-icon-box green">
+                <image class="action-icon" src="/assets/icons/success-active.svg" />
+              </view>
+              <text class="action-text">我的收益</text>
+            </view>
+          </view>
+        </block>
+
+        <!-- CUSTOMER 视图 -->
+        <block wx:if="{{role === 'customer' || role === 'tester'}}">
+          <view class="advisor-card animate-slide-up" wx:if="{{advisorInfo}}">
+            <image class="advisor-avatar" src="{{advisorInfo.avatarUrl || '/assets/default-avatar.png'}}" />
+            <view class="advisor-info">
+              <view class="advisor-name">{{advisorInfo.name}}</view>
+              <view class="advisor-title">您的专属顾问</view>
+            </view>
+            <view class="advisor-call" bindtap="callAdvisor">
+              <image class="call-icon" src="/assets/icons/flash-active.svg" />
+              <text>联系</text>
+            </view>
+          </view>
+          <view class="advisor-card-empty animate-slide-up" wx:else>
+            <text class="advisor-empty-text">顾问信息加载中…</text>
+          </view>
+
+          <view class="pending-sign-card animate-slide-up" wx:if="{{pendingSignCount > 0}}" bindtap="goToPendingSign">
+            <view class="pending-sign-left">
+              <view class="pending-sign-badge">{{pendingSignCount}}</view>
+              <view class="pending-sign-text">份文件待您签字确认</view>
+            </view>
+            <view class="pending-sign-arrow">→</view>
+          </view>
+
+          <view class="section-title">我的服务</view>
+          <view class="customer-grid animate-slide-up">
+            <view class="customer-grid-item" bindtap="goToShowroom">
+              <view class="grid-icon-box purple">🛍️</view>
+              <text class="grid-text">产品展厅</text>
+            </view>
+            <view class="customer-grid-item" bindtap="goToPendingSign">
+              <view class="grid-icon-box blue">✍️</view>
+              <text class="grid-text">签字确认</text>
+            </view>
+            <view class="customer-grid-item" bindtap="goToWarranty">
+              <view class="grid-icon-box teal">🔧</view>
+              <text class="grid-text">保修申请</text>
+            </view>
+            <view class="customer-grid-item" bindtap="goToReview">
+              <view class="grid-icon-box orange">⭐</view>
+              <text class="grid-text">完工评价</text>
+            </view>
+          </view>
+        </block>
+
+        <!-- 未知/其他角色 兜底视图 -->
+        <block wx:if="{{role !== 'boss' && role !== 'admin' && role !== 'manager' && role !== 'sales' && role !== 'worker' && role !== 'installer' && role !== 'customer' && role !== 'tester'}}">
+          <view class="empty-state">
+            <text class="empty-desc">无法识别您的业务角色 ({{role}})</text>
+            <text class="empty-sub">请联系系统管理员为您分配正确的岗位角色权限。</text>
+          </view>
+          
+          <view class="section-title">基础功能</view>
+          <view class="quick-actions animate-slide-up">
+            <view class="action-item" bindtap="goToEarnings">
+              <view class="action-icon-box gray">
+                <image class="action-icon" src="/assets/icons/support-active.svg" />
+              </view>
+              <text class="action-text">个人中心</text>
+            </view>
+            <view class="action-item" bindtap="logout">
+              <view class="action-icon-box orange">
+                <image class="action-icon" src="/assets/icons/error-active.svg" />
+              </view>
+              <text class="action-text">退出登录</text>
+            </view>
+          </view>
+        </block>
+
+      </view>
+    </block>
+
+  </block>
+
+  <!-- loading 遮罩 -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-spinner" />
   </view>
 
-  <view class="copyright">
-    L2C Sales Management System v1.0
-  </view>
 </view>

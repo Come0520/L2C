@@ -46,7 +46,7 @@ export const FoldRatioCell = memo(function FoldRatioCell({
       <Input
         disabled={readOnly}
         type="number"
-        className="h-8 w-14 bg-transparent/50 px-1 text-right"
+        className="h-8 w-14 bg-transparent/50 px-1 text-right ml-auto"
         defaultValue={Number(item.foldRatio) || ''}
         placeholder="倍数"
         onBlur={handleBlur}
@@ -77,7 +77,7 @@ export const ProcessFeeCell = memo(function ProcessFeeCell({
       <Input
         disabled={readOnly}
         type="number"
-        className="h-8 w-16 bg-transparent/50 px-1 text-right"
+        className="h-8 w-16 bg-transparent/50 px-1 text-right ml-auto"
         defaultValue={Number(item.processFee) || ''}
         placeholder="工费"
         onBlur={handleBlur}
@@ -132,7 +132,7 @@ export const UnitPriceCell = memo(function UnitPriceCell({
       <Input
         disabled={readOnly}
         type="number"
-        className="h-8 w-20 bg-transparent/50 px-1 text-right"
+        className="h-8 w-20 bg-transparent/50 px-1 text-right ml-auto"
         defaultValue={Number(item.unitPrice)}
         onBlur={handleBlur}
       />

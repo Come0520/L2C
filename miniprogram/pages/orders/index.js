@@ -16,7 +16,11 @@ Page({
         this.fetchList();
     },
     onShow() {
-        // Auto refresh when returning
+        // 订单页在 admin tab 中的索引是 2，高亮对应 tab
+        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+            this.getTabBar().setData({ selected: 2 });
+        }
+        // 返回详情页后自动刷新
         this.fetchList();
     },
     onPullDownRefresh() {

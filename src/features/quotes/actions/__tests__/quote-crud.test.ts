@@ -41,8 +41,8 @@ vi.mock('@/shared/api/db', () => ({
 
 // Mock Server Action Middleware
 vi.mock('@/shared/lib/server-action', () => ({
-    createSafeAction: (schema: any, handler: any) => {
-        return async (input: any) => {
+    createSafeAction: (schema: unknown, handler: (data: unknown, context: { session: typeof MOCK_SESSION }) => Promise<unknown>) => {
+        return async (input: unknown) => {
             return handler(input, { session: MOCK_SESSION });
         };
     }

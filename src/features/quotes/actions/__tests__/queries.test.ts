@@ -45,7 +45,7 @@ const mockQueryBuilder = {
     leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockResolvedValue([{ count: 1 }]),
-    then: function (resolve: any) {
+    then: function (resolve: (value: unknown) => void) {
         resolve([{ count: 1 }]);
     }
 };

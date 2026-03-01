@@ -84,6 +84,17 @@ export async function applyTemplate(
     const sessionTenantId = session.user.tenantId;
     const sessionUserId = session.user.id;
 
+    // --- Dynamic Routing Config Logic ---
+    const hasDedicatedFinance = template.roles.some(r => r.name.includes('财务') || r.name.includes('内勤'));
+    const hasDedicatedDispatch = template.roles.some(r => r.name.includes('派单'));
+    const hasDedicatedProcurement = template.roles.some(r => r.name.includes('采购'));
+    const isLargeManaged = ['LARGE_MANAGED', 'MULTI_BRANCH', 'MANAGED_STORE', 'MANAGED_5', 'MANAGED_4', 'MANAGED_3'].includes(templateId);
+
+    const orderFlowConfig = {
+      financeConfirmationRequired: hasDedicatedFinance,
+      managerApprovalRequired: isLargeManaged
+    };
+
     await db.transaction(async (tx) => {
       await tx.insert(tenantProfiles).values({
         tenantId: sessionTenantId,
@@ -94,14 +105,25 @@ export async function applyTemplate(
         teamSize,
         collaborationMode: null,
         salesStructure: null,
-        hasDedicatedFinance: false,
-        hasDedicatedDispatch: false,
-        hasDedicatedProcurement: false,
+        hasDedicatedFinance,
+        hasDedicatedDispatch,
+        hasDedicatedProcurement,
       } as typeof tenantProfiles.$inferInsert);
+
+      // Fetch current tenant to merge settings
+      const currentTenant = await tx.query.tenants.findFirst({
+        where: eq(tenants.id, sessionTenantId),
+        columns: { settings: true },
+      });
+      const currentSettings = (currentTenant?.settings as Record<string, unknown>) || {};
 
       await tx
         .update(tenants)
-        .set({ onboardingStatus: 'completed', updatedAt: new Date() })
+        .set({
+          onboardingStatus: 'completed',
+          settings: { ...currentSettings, orderFlowConfig },
+          updatedAt: new Date()
+        })
         .where(eq(tenants.id, sessionTenantId));
     });
 

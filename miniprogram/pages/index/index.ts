@@ -247,10 +247,6 @@ Page({
         wx.makePhoneCall({ phoneNumber: advisor.phone });
     },
 
-    goToPendingSign() {
-        wx.navigateTo({ url: '/pages/quotes/index?filter=needSign' });
-    },
-
     goToShowroom() {
         wx.navigateTo({ url: '/pages/showroom/index' });
     },

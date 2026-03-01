@@ -73,8 +73,8 @@ export function AccountFormDialog({
           return;
         }
 
-        if ((result as any).warning) {
-          toast.warning((result as any).warning);
+        if ('warning' in result && result.warning) {
+          toast.warning(String(result.warning));
         } else {
           toast.success(isEdit ? '编辑科目成功' : '新增科目成功');
         }

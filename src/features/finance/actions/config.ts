@@ -7,7 +7,7 @@ import { financeConfigs, financeAccounts } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 import { clearFinanceConfigCache } from '../services/finance-config-utils';
 import {
     updateFinanceConfigSchema,
@@ -26,21 +26,29 @@ export async function getFinanceConfig() {
     // 权限检查：查看财务配置
     if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) throw new Error('权限不足：需要财务查看权限');
 
-    const configs = await db.query.financeConfigs.findMany({
-        where: eq(financeConfigs.tenantId, session.user.tenantId),
-    });
+    const getCachedConfig = unstable_cache(
+        async () => {
+            const configs = await db.query.financeConfigs.findMany({
+                where: eq(financeConfigs.tenantId, session.user!.tenantId!),
+            });
 
-    // 将数组转化为对象
-    const configMap: Record<string, unknown> = {};
-    configs.forEach(c => {
-        try {
-            configMap[c.configKey] = JSON.parse(c.configValue);
-        } catch {
-            configMap[c.configKey] = c.configValue;
-        }
-    });
+            // 将数组转化为对象
+            const configMap: Record<string, unknown> = {};
+            configs.forEach(c => {
+                try {
+                    configMap[c.configKey] = JSON.parse(c.configValue);
+                } catch {
+                    configMap[c.configKey] = c.configValue;
+                }
+            });
 
-    return configMap;
+            return configMap;
+        },
+        [`finance-config-${session.user.tenantId}`],
+        { tags: [`finance-config-${session.user.tenantId}`], revalidate: 3600 }
+    );
+
+    return getCachedConfig();
 }
 
 import { AuditService } from '@/shared/services/audit-service';
@@ -121,9 +129,17 @@ export async function getFinanceAccounts() {
     // 权限检查：查看财务账户
     if (!await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)) throw new Error('权限不足：需要财务查看权限');
 
-    return await db.query.financeAccounts.findMany({
-        where: eq(financeAccounts.tenantId, session.user.tenantId),
-    });
+    const getCachedAccounts = unstable_cache(
+        async () => {
+            return await db.query.financeAccounts.findMany({
+                where: eq(financeAccounts.tenantId, session.user!.tenantId!),
+            });
+        },
+        [`finance-accounts-${session.user.tenantId}`],
+        { tags: [`finance-accounts-${session.user.tenantId}`, `finance-config-${session.user.tenantId}`], revalidate: 3600 }
+    );
+
+    return getCachedAccounts();
 }
 
 /**

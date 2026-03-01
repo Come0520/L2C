@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import Info from 'lucide-react/dist/esm/icons/info';
-import type { QuoteItem } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 
 interface QuantityCellProps {
   item: QuoteItem;
@@ -29,12 +29,12 @@ export const QuantityCell = memo(function QuantityCell({
 
   return (
     <TableCell className="p-2">
-      <div className="flex items-center gap-1">
+      <div className="flex justify-center items-center gap-1">
         <Input
           key={item.quantity}
           disabled={readOnly}
           type="number"
-          className="text-primary h-8 w-16 bg-transparent/50 px-1 text-right font-medium"
+          className="text-primary h-8 w-16 bg-transparent/50 px-1 text-center font-medium"
           defaultValue={Number(item.quantity)}
           onBlur={handleBlur}
         />

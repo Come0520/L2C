@@ -54,7 +54,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           verificationStatus: verificationResult.success
             ? verificationResult.data.status
             : 'unverified',
-          settings: {},
+          settings: tenantResult.data.settings,
         });
       }
     } catch (error) {

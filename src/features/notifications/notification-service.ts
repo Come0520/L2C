@@ -188,6 +188,22 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
     return items;
   });
 
+  logger.info(`[NotificationService] Template ${input.templateCode} enqueued ${queueItems.length} messages for user ${input.userId}.`);
+  if (template.priority === 'URGENT' || template.priority === 'HIGH') {
+    try {
+      await AuditService.log(db, {
+        tableName: 'notification_queue',
+        recordId: queueItems[0]?.id || input.userId,
+        action: 'CREATE',
+        userId: session.user.id || input.userId,
+        tenantId: tenantId,
+        newValues: { templateCode: input.templateCode, channels, queuedCount: queueItems.length, priority: template.priority }
+      });
+    } catch (auditErr) {
+      logger.error('Failed to write audit log for urgent notification:', { error: auditErr });
+    }
+  }
+
   return {
     success: true,
     data: {
@@ -322,6 +338,10 @@ export async function processNotificationQueue(batchSize: number = 50) {
       stats.failed++;
       logger.error(`[NotificationQueue] Error processing item ${item.id}:`, error);
     }
+  }
+
+  if (stats.processed > 0) {
+    logger.info(`[NotificationQueue] Processed ${stats.processed} items. Success: ${stats.success}, Failed: ${stats.failed}`);
   }
 
   return stats;

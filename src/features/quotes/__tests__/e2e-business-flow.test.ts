@@ -33,7 +33,7 @@ describe('报价单端到端业务流程', () => {
         mockDb.insert.mockReturnValue({
             values: vi.fn().mockReturnThis(),
             returning: vi.fn().mockResolvedValue([{ id: 'quote-1' }])
-        } as any);
+        } as never);
 
         // 2. 模拟 Action 服务调用
         const submitResult = await QuoteLifecycleService.submit('quote-1', mockTenantId, mockUserId);

@@ -20,7 +20,8 @@
     "pages/reports/index",
     "pages/tasks/index",
     "pages/tasks/detail/detail",
-    "pages/tasks/measure/index"
+    "pages/tasks/measure/index",
+    "pages/tasks/customer-confirm/index"
   ],
   "subpackages": [
     {

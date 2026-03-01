@@ -1,6 +1,5 @@
 'use server';
 
-
 import { db } from '@/shared/api/db';
 import { receiptBills } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -9,8 +8,6 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidateTag } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
-
-
 
 /**
  * 获取收款单列表
@@ -81,7 +78,36 @@ export async function voidReceiptBill(id: string) {
         details: { reason: 'USER_VOID' }
     });
 
-
     revalidateTag(`finance-receipt-${session.user.tenantId}`, {});
     return { success: true };
+}
+
+/**
+ * 获取客户可用预收款列表
+ * 供报价转订单弹窗使用，筛选指定客户名下已核销、有余额的预收款单。
+ *
+ * @param customerId - 客户 ID
+ * @returns 可用预收款列表（含 id、receiptNo、remainingAmount）
+ */
+export async function getAvailablePrepayments(customerId: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new Error('未授权');
+
+    const bills = await db.query.receiptBills.findMany({
+        where: and(
+            eq(receiptBills.tenantId, session.user.tenantId),
+            eq(receiptBills.customerId, customerId),
+            eq(receiptBills.status, 'VERIFIED'),
+            eq(receiptBills.type, 'PREPAID'),
+        ),
+        columns: {
+            id: true,
+            receiptNo: true,
+            remainingAmount: true,
+        },
+        orderBy: [desc(receiptBills.createdAt)],
+    });
+
+    // 过滤余额大于 0 的单据
+    return bills.filter(b => Number(b.remainingAmount || 0) > 0);
 }

@@ -7,6 +7,7 @@ import {
     Dialog,
     DialogContent,
     DialogTrigger,
+    DialogTitle,
 } from '@/shared/ui/dialog';
 import { cn } from '@/shared/lib/utils';
 
@@ -58,6 +59,7 @@ export function ImagePreview({
                 </div>
             </DialogTrigger>
             <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                <DialogTitle className="sr-only">预览图片</DialogTitle>
                 <div className={cn(
                     "relative w-full h-[80vh] flex items-center justify-center",
                     zoomClassName

@@ -17,6 +17,13 @@ const createRefundRequestSchema = z.object({
   accountId: z.string().optional(), // From which account we pay
 });
 
+/**
+ * 提交退款申请 (Submit Refund Request)
+ * 验证财务创建权限后，基于底层 createPaymentBill 代理创建退款类型的红字付款单
+ * @param data - 退款相关明细（订单号、金额、收款人类型及凭证）
+ * @returns 带有 success 标识或 error 的退款账单创建结果
+ * @throws 缺少所需权限或参数无效报错
+ */
 export async function submitRefundRequest(data: z.infer<typeof createRefundRequestSchema>) {
   // 双重防护：入口权限检查
   const session = await auth();
@@ -24,17 +31,20 @@ export async function submitRefundRequest(data: z.infer<typeof createRefundReque
   if (!(await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE)))
     throw new Error('权限不足：需要财务创建权限');
 
+  // 执行运行时数据校验
+  const parsedData = createRefundRequestSchema.parse(data);
+
   // Wrap createPaymentBill with REFUND type
   return createPaymentBill({
     type: 'REFUND',
     payeeType: 'CUSTOMER',
-    payeeId: data.customerId,
-    orderId: data.orderId, // Pass orderId
-    payeeName: data.customerName,
-    amount: Number(data.amount),
-    remark: data.remark || 'Client Refund',
-    proofUrl: data.proofUrl,
-    paymentMethod: data.paymentMethod as string, // Schema expects string
-    accountId: data.accountId,
+    payeeId: parsedData.customerId,
+    orderId: parsedData.orderId, // Pass orderId
+    payeeName: parsedData.customerName,
+    amount: Number(parsedData.amount),
+    remark: parsedData.remark || 'Client Refund',
+    proofUrl: parsedData.proofUrl,
+    paymentMethod: parsedData.paymentMethod, // Schema expects string
+    accountId: parsedData.accountId,
   });
 }

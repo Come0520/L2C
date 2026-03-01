@@ -30,7 +30,7 @@ export function Navbar() {
   /** 已登录状态 */
   const isLoggedIn = status === 'authenticated' && !!session?.user;
 
-  /** 进入工作台：清除今日落地页 Cookie 后跳转（下次再来才会重新看到落地页） */
+  /** 进入工作台：直接跳转到仪表盘 */
   function handleEnterDashboard() {
     router.push('/dashboard');
   }

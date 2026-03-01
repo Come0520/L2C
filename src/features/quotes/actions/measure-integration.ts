@@ -58,7 +58,7 @@ const createMeasureFromQuoteActionInternal = createSafeAction(
 
     revalidatePath('/measurements');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
 
     logger.info('[quotes] 从报价单成功触发测量任务创建', {
       quoteId: data.quoteId,

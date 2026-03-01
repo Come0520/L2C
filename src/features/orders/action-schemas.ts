@@ -21,11 +21,16 @@ export const cancelOrderSchema = z.object({
 
 export const createOrderSchema = z.object({
     quoteId: z.string().uuid(),
-    paymentProofImg: z.string().optional(),
-    confirmationImg: z.string().optional(),
     paymentAmount: z.string().optional(),
     paymentMethod: z.enum(['CASH', 'WECHAT', 'ALIPAY', 'BANK']).optional(),
     remark: z.string().optional(),
+    usedPrepayments: z.array(z.string()).optional(),
+    newPayment: z.object({
+        amount: z.number().or(z.string().transform(v => parseFloat(v))),
+        proofUrl: z.string().optional(),
+        paymentMethod: z.enum(['CASH', 'WECHAT', 'ALIPAY', 'BANK']),
+        accountId: z.string().optional()
+    }).optional(),
 });
 
 export const splitOrderSchema = z.object({

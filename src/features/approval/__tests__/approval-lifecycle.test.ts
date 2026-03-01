@@ -12,6 +12,7 @@ import { db } from '@/shared/api/db';
 import * as schema from '@/shared/api/schema';
 import * as submissionActions from '../actions/submission';
 import * as processingActions from '../actions/processing';
+import * as revokeActions from '../actions/revoke';
 
 // Mock auth module
 vi.mock('@/shared/lib/auth', () => ({
@@ -39,6 +40,16 @@ describe('Approval Lifecycle Integration Tests', () => {
     let quoteId: string;
     let flowId: string;
     let flowCode: string;
+
+    // variables for new test cases
+    let flowAllCode: string;
+    let quoteAllId: string;
+    let flowRejectCode: string;
+    let quoteRejectId: string;
+    let flowRevokeCode: string;
+    let quoteRevokeId: string;
+    let flowAnyCode: string;
+    let quoteAnyId: string;
 
     beforeAll(async () => {
         // 1. Create Tenant
@@ -108,6 +119,39 @@ describe('Approval Lifecycle Integration Tests', () => {
             validUntil: new Date(Date.now() + 86400000)
         }).returning() as Quote[];
         quoteId = quote.id;
+
+        // 5. Create Extra Flows for new tests
+        const extraFlows = await db.insert(schema.approvalFlows).values([
+            { tenantId, code: 'QUOTE_ALL_' + Date.now(), name: 'Quote All Flow', isActive: true },
+            { tenantId, code: 'QUOTE_REJECT_' + Date.now(), name: 'Quote Reject Flow', isActive: true },
+            { tenantId, code: 'QUOTE_REVOKE_' + Date.now(), name: 'Quote Revoke Flow', isActive: true },
+            { tenantId, code: 'QUOTE_ANY_' + Date.now(), name: 'Quote Any Flow', isActive: true }
+        ]).returning();
+
+        flowAllCode = extraFlows[0].code;
+        flowRejectCode = extraFlows[1].code;
+        flowRevokeCode = extraFlows[2].code;
+        flowAnyCode = extraFlows[3].code;
+
+        await db.insert(schema.approvalNodes).values([
+            { tenantId, flowId: extraFlows[0].id, name: 'Finance All', approverRole: 'FINANCE', approverMode: 'ALL', sortOrder: 1 },
+            { tenantId, flowId: extraFlows[1].id, name: 'Finance Reject', approverRole: 'FINANCE', approverMode: 'ALL', sortOrder: 1 },
+            { tenantId, flowId: extraFlows[2].id, name: 'Finance Revoke', approverRole: 'FINANCE', approverMode: 'ALL', sortOrder: 1 },
+            { tenantId, flowId: extraFlows[3].id, name: 'Finance Any', approverRole: 'FINANCE', approverMode: 'ANY', sortOrder: 1 }
+        ]);
+
+        // 6. Create Extra Quotes for new tests
+        const extraQuotes = await db.insert(schema.quotes).values([
+            { tenantId, quoteNo: `QT_ALL_${Date.now()}`, customerId: customer.id, totalAmount: '50000', status: 'DRAFT', createdBy: requesterId, validUntil: new Date(Date.now() + 86400000) },
+            { tenantId, quoteNo: `QT_REJ_${Date.now()}`, customerId: customer.id, totalAmount: '50000', status: 'DRAFT', createdBy: requesterId, validUntil: new Date(Date.now() + 86400000) },
+            { tenantId, quoteNo: `QT_REV_${Date.now()}`, customerId: customer.id, totalAmount: '50000', status: 'DRAFT', createdBy: requesterId, validUntil: new Date(Date.now() + 86400000) },
+            { tenantId, quoteNo: `QT_ANY_${Date.now()}`, customerId: customer.id, totalAmount: '50000', status: 'DRAFT', createdBy: requesterId, validUntil: new Date(Date.now() + 86400000) }
+        ]).returning();
+
+        quoteAllId = extraQuotes[0].id;
+        quoteRejectId = extraQuotes[1].id;
+        quoteRevokeId = extraQuotes[2].id;
+        quoteAnyId = extraQuotes[3].id;
 
     }, 30000);
 
@@ -185,5 +229,105 @@ describe('Approval Lifecycle Integration Tests', () => {
             });
             expect(finalInstance?.status).toBe('APPROVED'); // 2/4 = 50% → 多数通过!
         }
+    });
+
+    it('should run ALL mode flow (Submit -> Approve All -> Approved)', async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+
+        const submitRes = await submissionActions.submitApproval({
+            entityType: 'QUOTE', entityId: quoteAllId, flowCode: flowAllCode
+        });
+        expect(submitRes.success).toBe(true);
+        const approvalId = submitRes.approvalId!;
+
+        const tasks = await db.query.approvalTasks.findMany({
+            where: (t: any, { eq }: any) => eq(t.approvalId, approvalId)
+        });
+
+        // There should be tasks for all 3 FINANCE approvers
+        expect(tasks.length).toBeGreaterThanOrEqual(3);
+
+        const app1Task = tasks.find((t: any) => t.approverId === approver1Id);
+        const app2Task = tasks.find((t: any) => t.approverId === approver2Id);
+        const app3Task = tasks.find((t: any) => t.approverId === _approver3Id);
+
+        // App 1 approves
+        vi.mocked(auth).mockResolvedValue({ user: { id: approver1Id, tenantId }, expires: '' } as any);
+        await processingActions.processApproval({ taskId: app1Task!.id, action: 'APPROVE' });
+
+        let instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('PENDING'); // 1/3
+
+        // App 2 approves
+        vi.mocked(auth).mockResolvedValue({ user: { id: approver2Id, tenantId }, expires: '' } as any);
+        await processingActions.processApproval({ taskId: app2Task!.id, action: 'APPROVE' });
+
+        instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('PENDING'); // 2/3
+
+        // App 3 approves
+        vi.mocked(auth).mockResolvedValue({ user: { id: _approver3Id, tenantId }, expires: '' } as any);
+        await processingActions.processApproval({ taskId: app3Task!.id, action: 'APPROVE' });
+
+        instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('APPROVED'); // 3/3 = 100%
+    });
+
+    it('should run reject flow (Submit -> Reject -> Rejected)', async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+
+        const submitRes = await submissionActions.submitApproval({
+            entityType: 'QUOTE', entityId: quoteRejectId, flowCode: flowRejectCode
+        });
+        const approvalId = submitRes.approvalId!;
+
+        const tasks = await db.query.approvalTasks.findMany({
+            where: (t: any, { eq }: any) => eq(t.approvalId, approvalId)
+        });
+        const app1Task = tasks.find((t: any) => t.approverId === approver1Id);
+
+        // App 1 rejects
+        vi.mocked(auth).mockResolvedValue({ user: { id: approver1Id, tenantId }, expires: '' } as any);
+        await processingActions.processApproval({ taskId: app1Task!.id, action: 'REJECT' });
+
+        const instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('REJECTED'); // One rejection stops everything
+    });
+
+    it('should run user revoke flow (Submit -> Revoke -> Canceled)', async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+
+        const submitRes = await submissionActions.submitApproval({
+            entityType: 'QUOTE', entityId: quoteRevokeId, flowCode: flowRevokeCode
+        });
+        const approvalId = submitRes.approvalId!;
+
+        // User revokes
+        vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+        await revokeActions.revokeApprovalAction(approvalId);
+
+        const instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('CANCELED');
+    });
+
+    it('should run ANY mode flow (Submit -> Anyone Approves -> Approved)', async () => {
+        vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+
+        const submitRes = await submissionActions.submitApproval({
+            entityType: 'QUOTE', entityId: quoteAnyId, flowCode: flowAnyCode
+        });
+        const approvalId = submitRes.approvalId!;
+
+        const tasks = await db.query.approvalTasks.findMany({
+            where: (t: any, { eq }: any) => eq(t.approvalId, approvalId)
+        });
+        const app2Task = tasks.find((t: any) => t.approverId === approver2Id); // Random approver 2
+
+        // App 2 approves
+        vi.mocked(auth).mockResolvedValue({ user: { id: approver2Id, tenantId }, expires: '' } as any);
+        await processingActions.processApproval({ taskId: app2Task!.id, action: 'APPROVE' });
+
+        const instance = await db.query.approvals.findFirst({ where: (t: any, { eq }: any) => eq(t.id, approvalId) });
+        expect(instance?.status).toBe('APPROVED'); // ANY mode means 1 approval is enough
     });
 });

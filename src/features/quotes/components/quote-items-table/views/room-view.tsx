@@ -1,12 +1,14 @@
 'use client';
 
+import { Fragment, useMemo } from 'react';
 import { Table, TableBody, TableRow, TableCell } from '@/shared/ui/table';
-import { QuoteRoomAccordion } from '../../quote-room-accordion';
 import { QuoteInlineAddRow } from '../../quote-inline-add-row';
 import { RoomSelectorWithConfig } from '../../room-selector-popover';
 import { QuoteTableHeader } from '../table-header';
 import { QuoteItemRow } from '../quote-item-row';
-import type { QuoteItem, RoomData, ColumnVisibility, CalcResult } from '../types';
+import { useRowSpanCalc } from '../use-rowspan-calc';
+import type { RoomData, ColumnVisibility, CalcResult } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 
 type CalcHandler = (
@@ -26,12 +28,12 @@ interface RoomViewProps extends ColumnVisibility {
   onAddRoom?: (name: string) => void;
   handleUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
-  handleAddAccessory: (parentId: string, roomId: string | null) => Promise<void>;
+
   handleProductSelect: (id: string, product: ProductSearchResult) => Promise<void>;
   handleClientCalc: CalcHandler;
-  handleAdvancedEdit: (item: QuoteItem) => void;
-  handleToggleRoom: (roomId: string) => void;
+  handleAddAccessory: (parentId: string, roomId: string | null) => Promise<void>;
   handleToggleItem: (itemId: string) => void;
+  handleToggleRoom: (roomId: string) => void;
   handleRoomRename: (id: string, name: string) => Promise<void>;
   handleDeleteRoom: (id: string) => Promise<void>;
   getRoomSubtotal: (roomId: string) => number;
@@ -42,7 +44,6 @@ interface RoomViewProps extends ColumnVisibility {
 export function RoomView({
   quoteId,
   rooms,
-  items: _items,
   itemsByRoom,
   readOnly,
   showImage,
@@ -60,20 +61,34 @@ export function RoomView({
   onAddRoom,
   handleUpdate,
   handleDelete,
-  handleAddAccessory,
+
   handleProductSelect,
   handleClientCalc,
-  handleAdvancedEdit,
-  handleToggleRoom,
+  handleAddAccessory,
   handleToggleItem,
-  handleRoomRename,
-  handleDeleteRoom,
-  getRoomSubtotal,
+  handleToggleRoom,
   allowedCategories,
   onRowClick,
+  getRoomSubtotal,
 }: RoomViewProps) {
+  /**
+   * 将 itemsByRoom.mapping 转换为 useRowSpanCalc 所需的格式
+   * （只包含 root items，附件作为 children）
+   */
+  const itemsByRoomForCalc = useMemo(() => itemsByRoom.mapping, [itemsByRoom.mapping]);
+
+  /**
+   * 计算每行的 RowSpan 信息：
+   *   - roomRowSpan / isRoomFirstRow → 空间列合并
+   *   - productRowSpan / isProductFirstRow → 图片列合并
+   *   - roomSubtotal → 空间小计
+   *   - roomIndex → 交替背景色
+   */
+  const rowSpanMap = useRowSpanCalc(rooms, itemsByRoomForCalc, expandedItemIds, readOnly);
+
+  /** 总列数（用于 expand 行的 colSpan） */
   const columnCount =
-    2 +
+    1 + // 商品列
     (showImage ? 1 : 0) +
     (showWidth || showHeight ? 1 : 0) +
     (showFold ? 1 : 0) +
@@ -82,17 +97,27 @@ export function RoomView({
     (showUnit ? 1 : 0) +
     (showUnitPrice ? 1 : 0) +
     (showAmount ? 1 : 0) +
-    (showRemark ? 1 : 0);
+    (showRemark ? 1 : 0) +
+    1; // 操作列
 
-  const renderRows = (nodes: QuoteItem[], level = 0): React.ReactNode => {
+  /** 递归渲染商品行及其附件行 */
+  const renderRows = (
+    nodes: QuoteItem[],
+    level = 0,
+    roomName?: string
+  ): React.ReactNode => {
     return nodes.map((item) => {
       const isItemExpanded = expandedItemIds.has(item.id);
+      const rowSpanInfo = rowSpanMap.get(item.id);
+
       return (
         <QuoteItemRow
           key={item.id}
           item={item}
           level={level}
           readOnly={readOnly}
+          roomName={roomName}
+          rowSpanInfo={rowSpanInfo}
           showImage={showImage}
           showWidth={showWidth}
           showHeight={showHeight}
@@ -107,12 +132,13 @@ export function RoomView({
           colSpan={columnCount}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-          handleAddAccessory={handleAddAccessory}
+          hideRoomColumn
+
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
-          handleAdvancedEdit={handleAdvancedEdit}
+          handleAddAccessory={handleAddAccessory}
           onToggleExpand={() => handleToggleItem(item.id)}
-          renderChildren={renderRows}
+          renderChildren={(children, childLevel) => renderRows(children, childLevel, roomName)}
           onRowClick={onRowClick}
         />
       );
@@ -121,90 +147,118 @@ export function RoomView({
 
   return (
     <>
-      {(rooms.length > 0 || itemsByRoom.unassigned.length > 0) && !readOnly && onAddRoom && (
+      {/* 顶部添加空间按钮 */}
+      {rooms.length > 0 && !readOnly && onAddRoom && (
         <div className="flex justify-start">
           <RoomSelectorWithConfig onSelect={onAddRoom} align="start" />
         </div>
       )}
 
-      {rooms.map((room) => {
-        const isExpanded = expandedRoomIds.has(room.id);
-        const roomItemCount = (itemsByRoom.mapping[room.id] || []).length;
-        const roomSubtotal = getRoomSubtotal(room.id);
-
-        return (
-          <QuoteRoomAccordion
-            key={room.id}
-            room={{
-              id: room.id,
-              name: room.name,
-              itemCount: roomItemCount,
-              subtotal: roomSubtotal,
-            }}
-            isExpanded={isExpanded}
-            onToggle={handleToggleRoom}
-            readOnly={readOnly}
-            onRename={handleRoomRename}
-            onDelete={handleDeleteRoom}
-          >
-            <div className="overflow-x-auto">
-              <Table>
-                <QuoteTableHeader
-                  showWidth={showWidth}
-                  showHeight={showHeight}
-                  showFold={showFold}
-                  showProcessFee={showProcessFee}
-                  showQuantity={showQuantity}
-                  showUnit={showUnit}
-                  showUnitPrice={showUnitPrice}
-                  showAmount={showAmount}
-                  showRemark={showRemark}
-                  showImage={showImage}
-                />
-                <TableBody>
-                  {itemsByRoom.mapping[room.id]?.length > 0 ? (
-                    renderRows(itemsByRoom.mapping[room.id])
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={9}
-                        className="text-muted-foreground h-16 border-none py-4 text-center italic"
-                      >
-                        此空间暂无明细，请添加商品
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  <QuoteInlineAddRow
-                    quoteId={quoteId}
-                    roomId={room.id}
-                    onSuccess={undefined}
-                    readOnly={readOnly}
-                    showFold={showFold}
-                    showProcessFee={showProcessFee}
-                    showRemark={showRemark}
-                    showWidth={showWidth}
-                    showHeight={showHeight}
-                    showUnit={showUnit}
-                    showImage={showImage}
-                    allowedCategories={allowedCategories}
-                  />
-                </TableBody>
-              </Table>
+      {/* 空状态提示（无空间且无未分配商品） */}
+      {rooms.length === 0 && itemsByRoom.unassigned.length === 0 && (
+        <div className="glass-empty-state text-muted-foreground py-12 text-center">
+          <p className="text-sm">暂无报价文件明细</p>
+          <p className="mt-1 text-xs opacity-60">请先添加空间，再在空间内添加商品</p>
+          {!readOnly && onAddRoom && (
+            <div className="mt-4">
+              <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
             </div>
-          </QuoteRoomAccordion>
-        );
-      })}
+          )}
+        </div>
+      )}
 
+      {/* 主体：按空间分块显示 */}
+      {rooms.length > 0 && (
+        <div className="space-y-6">
+          {rooms.map((room) => {
+            const roomItems = itemsByRoom.mapping[room.id] || [];
+            const isExpanded = expandedRoomIds.has(room.id);
+
+            return (
+              <div key={room.id} className="glass-table overflow-hidden shadow-sm rounded-xl border border-border/50">
+                <div
+                  className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleToggleRoom(room.id)}
+                >
+                  <div className="font-semibold text-base flex items-center gap-2">
+                    <span className="text-muted-foreground mr-1">
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                    {room.name}
+                  </div>
+                  <div className="text-primary font-bold">
+                    ¥{getRoomSubtotal(room.id).toFixed(2)}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <QuoteTableHeader
+                        hideRoomColumn
+                        showImage={showImage}
+                        showWidth={showWidth}
+                        showHeight={showHeight}
+                        showFold={showFold}
+                        showProcessFee={showProcessFee}
+                        showQuantity={showQuantity}
+                        showUnit={showUnit}
+                        showUnitPrice={showUnitPrice}
+                        showAmount={showAmount}
+                        showRemark={showRemark}
+                      />
+                      <TableBody>
+                        {/* 渲染该空间下的所有商品行（含附件） */}
+                        {roomItems.length > 0 ? (
+                          renderRows(roomItems, 0)
+                        ) : (
+                          // 空空间占位行
+                          <TableRow key={`empty-${room.id}`}>
+                            <TableCell colSpan={columnCount} className="text-muted-foreground py-8 border-b text-center text-xs italic">
+                              此空间暂无明细，请添加商品
+                            </TableCell>
+                          </TableRow>
+                        )}
+
+                        {/* 每个空间底部的添加商品行 */}
+                        {!readOnly && (
+                          <QuoteInlineAddRow
+                            quoteId={quoteId}
+                            roomId={room.id}
+                            category={allowedCategories?.[0]}
+                            allowedCategories={allowedCategories}
+                            showImage={showImage}
+                            showWidth={showWidth}
+                            showHeight={showHeight}
+                            showFold={showFold}
+                            showProcessFee={showProcessFee}
+                            showRemark={showRemark}
+                            showUnit={showUnit}
+                          />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 未分配商品（临时兼容，后续将强制绑定空间） */}
       {itemsByRoom.unassigned.length > 0 && (
-        <div className="glass-table overflow-hidden shadow-sm">
-          <div className="glass-section-header bg-amber-500/10 px-4 py-2 dark:bg-amber-500/10">
+        <div className="glass-table overflow-hidden shadow-sm rounded-xl border border-amber-500/20">
+          <div className="glass-section-header bg-amber-500/10 px-4 py-2 dark:bg-amber-500/10 border-b border-amber-500/20">
             <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              未分配空间商品
+              未分配空间商品（请将商品移至具体空间）
             </span>
           </div>
           <div className="overflow-x-auto">
             <Table>
               <QuoteTableHeader
+                hideRoomColumn
+                showImage={showImage}
                 showWidth={showWidth}
                 showHeight={showHeight}
                 showFold={showFold}
@@ -214,17 +268,16 @@ export function RoomView({
                 showUnitPrice={showUnitPrice}
                 showAmount={showAmount}
                 showRemark={showRemark}
-                showImage={showImage}
               />
-              <TableBody>{renderRows(itemsByRoom.unassigned)}</TableBody>
+              <TableBody>{renderRows(itemsByRoom.unassigned, 0)}</TableBody>
             </Table>
           </div>
         </div>
       )}
 
-      {/* 底部新增明显的添加空间入口 */}
+      {/* 底部添加空间入口 */}
       {!readOnly && onAddRoom && rooms.length > 0 && (
-        <div className="flex items-center justify-center p-6 mt-4 border-2 border-dashed border-muted rounded-xl bg-muted/20 hover:bg-muted/40 transition-colors">
+        <div className="mt-4 flex items-center justify-center rounded-xl border-2 border-dashed border-muted bg-muted/20 p-6 transition-colors hover:bg-muted/40">
           <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
         </div>
       )}

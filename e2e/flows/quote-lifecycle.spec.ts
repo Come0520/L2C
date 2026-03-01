@@ -106,77 +106,73 @@ test.describe('Quote Lifecycle Flow', () => {
     });
 
     test('should submit and approve quote flow', async ({ page }) => {
-        // 1. Navigate to Quotes List
-        await page.goto('/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await page.waitForLoadState('domcontentloaded');
+        // 1. Create Lead and Quote first
+        await page.goto('/leads', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const timestamp = Date.now();
+        const customerName = `QuoteApproveTest ${timestamp}`;
+        // 使用随机手机号避免冲突
+        const phone = `139${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
 
-        // 2. Find a DRAFT quote
-        const draftRow = page.locator('tr').filter({ hasText: /DRAFT|草稿/ }).first();
+        const leadId = await createLead(page, { name: customerName, phone: phone });
+        await page.goto(`/leads/${leadId}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // If no draft exists, skip the test gracefully
-        const hasDraft = await draftRow.isVisible({ timeout: 5000 }).catch(() => false);
-        if (!hasDraft) {
-            console.log('⏭️ 无草稿报价单，跳过流程测试');
-            test.skip();
-            return;
+        // Wait for page load indicators
+        const quickQuoteBtn = page.locator('a', { hasText: '快速报价' });
+        await expect(quickQuoteBtn).toBeVisible({ timeout: 10000 });
+        await quickQuoteBtn.click();
+
+        // Fill Quote Form
+        const planCard = page.getByTestId('plan-ECONOMIC');
+        await expect(planCard).toBeVisible();
+        await planCard.click();
+
+        const roomNameInput = page.locator('input[name="rooms.0.name"]');
+        await expect(roomNameInput).toBeVisible();
+        await roomNameInput.fill('Bedroom');
+        await page.locator('input[name="rooms.0.width"]').fill('300');
+        await page.locator('input[name="rooms.0.height"]').fill('250');
+
+        const submitQuoteBtn = page.getByTestId('submit-quote-btn');
+        await expect(submitQuoteBtn).toBeVisible();
+        await submitQuoteBtn.click();
+
+        await expect(page).toHaveURL(/\/quotes\/.*/);
+
+        // wait for Quote detail to load
+        await expect(page.locator(`text=${customerName}`)).toBeVisible();
+
+        // 2. Submit Quote for Approval
+        const submitBtn = page.getByRole('button', { name: /提交审核/ });
+        if (await submitBtn.isVisible()) {
+            await submitBtn.click();
+            await expect(page.getByText(/已提交|待审批/)).toBeVisible({ timeout: 5000 });
         }
 
-        try {
-            // 尝试点击链接或直接点击行
-            const linkInRow = draftRow.locator('a').first();
-            if (await linkInRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-                await linkInRow.click();
-            } else {
-                // 如果没有链接，尝试点击行本身或使用按钮
-                const detailBtn = draftRow.getByRole('button', { name: /查看|详情|编辑/ }).first();
-                if (await detailBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-                    await detailBtn.click();
-                } else {
-                    console.log('⚠️ 找到草稿报价单但无法点击进入详情，跳过');
-                    return;
-                }
-            }
-            await page.waitForURL(/\/quotes\/.*/, { timeout: 10000 });
+        // 3. Handle Pending Approval (Risk Control)
+        await page.reload();
 
-            // 3. Submit Quote
-            const submitBtn = page.getByRole('button', { name: /提交审核/ });
-            if (await submitBtn.isVisible()) {
-                await submitBtn.click();
-                // Wait for status change
-                await expect(page.getByText(/已提交|待审批/)).toBeVisible({ timeout: 5000 });
-            }
+        const approveBtn = page.getByRole('button', { name: /批准/ });
+        if (await approveBtn.isVisible()) {
+            console.log('Detected PENDING_APPROVAL, approving...');
+            page.once('dialog', dialog => dialog.accept());
+            await approveBtn.click();
+            await expect(page.getByText(/已批准|APPROVED|已接受/)).toBeVisible({ timeout: 5000 });
+        }
 
-            // 4. Handle Pending Approval (Risk Control)
-            await page.reload();
+        // 4. Convert to Order
+        const convertBtn = page.getByRole('button', { name: /转订单/ });
+        if (await convertBtn.isVisible()) {
+            console.log('Converting to Order...');
+            page.once('dialog', dialog => dialog.accept());
+            await convertBtn.click();
 
-            const approveBtn = page.getByRole('button', { name: /批准/ });
-            if (await approveBtn.isVisible()) {
-                console.log('Detected PENDING_APPROVAL, approving...');
-                page.once('dialog', dialog => dialog.accept());
-                await approveBtn.click();
-                await expect(page.getByText(/已批准|APPROVED/)).toBeVisible({ timeout: 5000 });
-            }
-
-            // 5. Convert to Order
-            const convertBtn = page.getByRole('button', { name: /转订单/ });
-            if (await convertBtn.isVisible()) {
-                console.log('Converting to Order...');
-                page.once('dialog', dialog => dialog.accept());
-                await convertBtn.click();
-
-                // 6. Verify Order Created
-                await Promise.race([
-                    expect(page).toHaveURL(/\/orders\/.*/, { timeout: 15000 }),
-                    expect(page.getByText(/订单创建成功/)).toBeVisible({ timeout: 15000 })
-                ]);
-                console.log('✅ 报价转订单流程验证通过');
-            } else {
-                const statusBadge = page.locator('.badge');
-                console.log('⚠️ 转订单按钮未出现，当前状态可能是: ', await statusBadge.textContent().catch(() => 'unknown'));
-            }
-        } catch (error) {
-            console.log('⚠️ 报价审批流程遇到问题:', error);
-            // 不抛出错误，允许测试继续
+            await Promise.race([
+                expect(page).toHaveURL(/\/orders\/.*/, { timeout: 15000 }),
+                expect(page.getByText(/订单创建成功/)).toBeVisible({ timeout: 15000 })
+            ]);
+            console.log('✅ 报价转订单流程验证通过');
+        } else {
+            console.log('⚠️ 转订单按钮未出现');
         }
     });
 

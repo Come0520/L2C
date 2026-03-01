@@ -366,7 +366,7 @@ export const createPaymentBill = createSafeAction(createPaymentBillSchema, async
         }
     }
 
-    revalidateTag('finance-ap');
+    revalidateTag('finance-ap', {});
     return paymentBill;
 });
 
@@ -621,7 +621,7 @@ export const verifyPaymentBill = createSafeAction(verifyPaymentBillSchema, async
         // Removed duplicate audit log here.
 
         revalidatePath(`/finance/ap`);
-        revalidateTag('ap');
+        revalidateTag('ap', {});
         logger.info('[finance] verifyPaymentBill 执行成功', { id, newStatus: status });
         return { success: true };
     });
@@ -794,7 +794,7 @@ export async function generateLaborSettlement() {
 
         logger.info('[finance] 劳务结算单生成完成', { settlementCount, deductionCount });
 
-        revalidateTag('ap');
+        revalidateTag('ap', {});
         return { count: settlementCount, deductionCount };
     });
 }
@@ -888,7 +888,7 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
             details: { liabilityNoticeId }
         });
 
-        revalidateTag('ap');
+        revalidateTag('ap', {});
         return { success: true, statementId: statement.id };
     });
 }
@@ -1001,7 +1001,7 @@ export async function createSupplierRefundStatement(input: z.infer<typeof create
                 details: { originalStatementId: data.originalStatementId, reason: data.reason }
             });
 
-            revalidateTag('finance-ap');
+            revalidateTag('finance-ap', {});
 
             return {
                 success: true,
@@ -1180,7 +1180,7 @@ export async function updatePaymentBill(data: z.infer<typeof createPaymentBillSc
             }
         }
         // @ts-ignore - Temporary fix for build: revalidateTag expects 2 arguments in this internal wrapper
-        revalidateTag(`finance-ap-${tenantId}`, ['finance-ap']);
+        revalidateTag(`finance-ap-${session.user.tenantId}`, {});
         return updatedBill;
     });
 }

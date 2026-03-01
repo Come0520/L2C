@@ -5,6 +5,7 @@ import { products, productSuppliers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
 import { auth } from '@/shared/lib/auth';
+import { logger } from '@/shared/lib/logger';
 
 interface CostBreakdown {
     purchaseCost: number;
@@ -33,7 +34,7 @@ interface PriceAnalysis {
  */
 export const calculateProductCost = async (productId: string, supplierId?: string): Promise<CostBreakdown> => {
     try {
-        console.warn('[supply-chain] calculateProductCost 开始执行:', { productId, supplierId });
+        logger.info('[supply-chain] calculateProductCost 开始执行:', { productId, supplierId });
         // 认证检查
         const session = await auth();
         if (!session?.user?.id) {
@@ -86,7 +87,7 @@ export const calculateProductCost = async (productId: string, supplierId?: strin
             .add(processingCost)
             .add(lossCost);
 
-        console.warn('[supply-chain] calculateProductCost 执行成功:', { totalCost: totalCost.toNumber() });
+        logger.info('[supply-chain] calculateProductCost 执行成功:', { totalCost: totalCost.toNumber() });
         return {
             purchaseCost: purchasePrice.toNumber(),
             logisticsCost: logisticsCost.toNumber(),
@@ -95,7 +96,7 @@ export const calculateProductCost = async (productId: string, supplierId?: strin
             totalCost: totalCost.toNumber(),
         };
     } catch (error) {
-        console.error('[supply-chain] calculateProductCost 异常:', error);
+        logger.error('[supply-chain] calculateProductCost 异常:', error);
         throw error;
     }
 };
@@ -130,7 +131,7 @@ export const analyzeProductProfit = async (
             marginRate: marginRate.toNumber(),
         };
     } catch (error) {
-        console.error('[supply-chain] analyzeProductProfit 异常:', error);
+        logger.error('[supply-chain] analyzeProductProfit 异常:', error);
         throw error;
     }
 };
@@ -152,7 +153,7 @@ export const calculateChannelPrice = (
     fixedPrice?: number,
     discountRate?: number
 ): number => {
-    console.warn('[supply-chain] calculateChannelPrice 输入:', { basePrice, mode, fixedPrice, discountRate });
+    logger.info('[supply-chain] calculateChannelPrice 输入:', { basePrice, mode, fixedPrice, discountRate });
     if (mode === 'FIXED') {
         const result = fixedPrice || basePrice;
         return result;

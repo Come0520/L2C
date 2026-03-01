@@ -218,3 +218,154 @@
     height: 100vh;
     color: var(--text-muted);
 }
+
+/* ======================== */
+/* 签字触发区域               */
+/* ======================== */
+.sign-cta-section {
+  text-align: center;
+  padding: 48rpx 40rpx;
+  border-top: 1rpx dashed var(--border-light);
+}
+
+.sign-hint {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  margin-bottom: 32rpx;
+  line-height: 1.6;
+}
+
+.btn-sign-open {
+  width: 100%;
+  height: 96rpx;
+  line-height: 96rpx;
+  background: linear-gradient(135deg, #1a73e8, #0d47a1);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  letter-spacing: 2rpx;
+  box-shadow: 0 8rpx 24rpx rgba(26, 115, 232, 0.35);
+}
+
+.btn-sign-open:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* ======================== */
+/* 多版本选择器               */
+/* ======================== */
+.version-picker {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 16rpx;
+  padding: 8rpx 16rpx;
+  background-color: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-color, #333333);
+}
+
+.version-text {
+  font-weight: 500;
+  color: var(--primary-color, #1a73e8);
+}
+
+.version-icon {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  color: #999;
+}
+
+/* ======================== */
+/* 签字弹窗                  */
+/* ======================== */
+.sign-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sign-modal-card {
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 32rpx 60rpx;
+  box-sizing: border-box;
+}
+
+.sign-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.sign-modal-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.sign-modal-close {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: var(--text-muted);
+  background: var(--bg-section);
+  border-radius: 50%;
+}
+
+.sign-modal-desc {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  margin-bottom: 32rpx;
+  line-height: 1.6;
+}
+
+.sign-canvas-wrap {
+  background: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2rpx dashed #e0e0e0;
+  margin-bottom: 32rpx;
+}
+
+.sign-modal-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.btn-resign {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: var(--bg-section);
+  color: var(--text-heading);
+  font-size: 28rpx;
+  border-radius: var(--radius-md);
+}
+
+.btn-submit-sign {
+  flex: 2;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #1a73e8, #0d47a1);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4rpx 16rpx rgba(26, 115, 232, 0.3);
+}

@@ -22,7 +22,7 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
 
-  const handleImport = async (data: BaseProductImportItem[]) => {
+  const handleImport = async (data: (BaseProductImportItem & Record<string, unknown>)[]) => {
     try {
       const payload = data.map((item) => ({
         ...item,
@@ -127,9 +127,9 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
             {selectedCategory ? (
               <div className="space-y-4 pt-4 border-t">
                 <label className="text-sm font-medium">第二步：下载模板并上传数据</label>
-                <ExcelImporter
-                  {...(getImportConfigByCategory(selectedCategory) as any)}
-                  onImport={handleImport as any}
+                <ExcelImporter<BaseProductImportItem & Record<string, unknown>>
+                  {...getImportConfigByCategory(selectedCategory)}
+                  onImport={handleImport}
                 />
               </div>
             ) : (

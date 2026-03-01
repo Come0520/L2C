@@ -1,12 +1,20 @@
 import { z } from 'zod';
 
-// 共享 attributes 校验规则：仅允许基础类型值，防止原型链污染或注入复杂对象
-// P1-R5-01: 安全修复
-const safeAttributesSchema = z.record(
-  z.string(),
-  z.union([z.string(), z.number(), z.boolean(), z.null(),
-  z.array(z.union([z.string(), z.number(), z.boolean(), z.null()]))])
-).optional();
+// 共享 attributes 校验规则：允许基础类型值和嵌套 JSON 结构
+// 支持嵌套对象是必须的，因为服务端 updateQuoteItem 会将 calcResult（嵌套对象）
+// 和 customPanels（对象数组）写入 attributes
+const safeAttrValue: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(safeAttrValue),
+    z.record(z.string(), safeAttrValue),
+  ])
+);
+
+const safeAttributesSchema = z.record(z.string(), safeAttrValue).optional();
 
 export const createQuoteSchema = z.object({
   customerId: z.string().uuid().describe('客户ID'),

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { ANALYTICS_PERMISSIONS } from '../constants';
+import { AuditService } from '@/shared/services/audit-service';
 
 const salesFunnelSchema = z.object({
     startDate: z.string().optional(),
@@ -41,6 +42,15 @@ const getSalesFunnelAction = createSafeAction(salesFunnelSchema, async (params, 
 
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = params.endDate ? new Date(params.endDate) : new Date();
+
+    await AuditService.log(db, {
+        tableName: 'analytics',
+        action: 'VIEW_REPORT',
+        recordId: `sales-funnel-${tenantId}-${salesId || 'all'}`,
+        userId: session.user.id,
+        tenantId,
+        details: { reportName: 'SalesFunnel', params: { startDate, endDate, salesId } }
+    });
 
     return unstable_cache(
         async () => {

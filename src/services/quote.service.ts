@@ -34,9 +34,14 @@ interface TenantSettings {
 export class QuoteService {
 
     /**
-     * Activate a specific version of a quote, deactivating others in the same version chain.
-     * @param quoteId - The ID of the quote version to activate.
-     * @param tenantId - The tenant ID to ensure ownership.
+     * 激活指定版本的报价单 (Activate Quote Version)
+     * 在同一版本链中停用其他版本，确保只有一个活跃版本。
+     *
+     * @param quoteId - 要激活的报价版本 ID
+     * @param tenantId - 租户 ID，用于数据隔离校验
+     * @returns 已激活的报价对象
+     * @throws Error 当报价不存在时抛出 'Quote not found'
+     * @security 🔒 租户隔离：所有查询和更新均携带 tenantId 过滤
      */
     static async activateVersion(quoteId: string, tenantId: string) {
         return await db.transaction(async (tx) => {
@@ -73,7 +78,16 @@ export class QuoteService {
         });
     }
     /**
-     * Create a new version of an existing quote.
+     * 创建报价单的下一版本 (Create Next Version)
+     * 基于现有报价深拷贝（含空间和明细项），生成新版本号并自动激活。
+     * 原版本将被标记为非活跃状态。
+     *
+     * @param quoteId - 源报价单 ID
+     * @param userId - 创建者用户 ID
+     * @param tenantId - 租户 ID，用于数据隔离校验
+     * @returns 新创建的版本报价对象
+     * @throws Error 当源报价不存在时抛出 'Quote not found'
+     * @security 🔒 租户隔离 + 事务原子性保障
      */
     static async createNextVersion(quoteId: string, userId: string, tenantId: string) {
         return await db.transaction(async (tx) => {
@@ -280,7 +294,13 @@ export class QuoteService {
     }
 
     /**
-     * Get all versions of a quote family.
+     * 获取报价版本历史 (Get Quote Version History)
+     * 查询同一版本链（rootQuoteId）下的所有报价版本，按版本号倒序排列。
+     *
+     * @param rootQuoteId - 版本链根报价 ID
+     * @param tenantId - 租户 ID，用于数据隔离校验
+     * @returns 版本列表（含创建者信息），按版本号降序排列
+     * @security 🔒 租户隔离
      */
     static async getQuoteHistory(rootQuoteId: string, tenantId: string) {
         return await db.query.quotes.findMany({
@@ -293,9 +313,16 @@ export class QuoteService {
     }
 
     /**
-    /**
-     * Preview measurement data import to calculate diffs.
-     * 🔒 Tenant Isolation: Added tenantId check
+     * 预览测量数据导入差异 (Preview Measurement Import)
+     * 对比测量工单数据与现有报价项，生成创建/更新/忽略的操作清单，
+     * 供用户确认后再执行实际导入。
+     *
+     * @param quoteId - 报价单 ID
+     * @param measureTaskId - 测量工单 ID
+     * @param tenantId - 租户 ID，用于数据隔离校验
+     * @returns 导入预览结果，包含操作清单和统计摘要
+     * @throws Error 当报价或测量工单不存在时抛出异常
+     * @security 🔒 租户隔离
      */
     static async previewMeasurementImport(quoteId: string, measureTaskId: string, tenantId: string): Promise<ImportPreviewResult> {
         const quote = await db.query.quotes.findFirst({
@@ -406,8 +433,16 @@ export class QuoteService {
     }
 
     /**
-     * Execute selected import actions.
-     * 🔒 Tenant Isolation: Added tenantId check
+     * 执行测量数据导入 (Execute Measurement Import)
+     * 根据预览阶段确认的操作清单，批量创建空间、新增商品项或更新尺寸。
+     * 执行完毕后自动重新计算报价总额。
+     *
+     * @param quoteId - 报价单 ID
+     * @param actions - 经用户确认的导入操作清单
+     * @param tenantId - 租户 ID，用于数据隔离校验
+     * @returns `{ success: boolean, count: number }` 执行结果
+     * @throws Error 当报价不存在或无权访问时抛出异常
+     * @security 🔒 租户隔离：UPDATE_ITEM 操作额外校验 tenantId
      */
     static async executeMeasurementImport(quoteId: string, actions: ImportAction[], tenantId: string) {
         const quote = await db.query.quotes.findFirst({
@@ -547,10 +582,15 @@ export class QuoteService {
     // 其他调用点应使用 shared-helpers.ts 中的公共 updateQuoteTotal
 
     /**
-     * Calculate risk for a quote based on tenant settings.
-     */
-    /**
-     * Calculate risk for a quote based on tenant settings.
+     * 计算报价风控评估 (Calculate Quote Risk)
+     * 根据租户的折扣控制配置，评估报价是否触发风控预警或硬性拦截。
+     * 评估结果将自动回写到报价单的 `approvalRequired` 和 `minProfitMargin` 字段。
+     *
+     * @param quoteId - 报价单 ID
+     * @param tenantId - 租户 ID，用于获取租户级风控配置
+     * @returns 风控评估结果（含 isRisk / hardStop / reason 等字段）
+     * @throws Error 当报价不存在时抛出 'Quote not found'
+     * @security 🔒 租户隔离
      */
     static async calculateQuoteRisk(quoteId: string, tenantId: string) {
         const quote = await db.query.quotes.findFirst({
@@ -586,20 +626,8 @@ export class QuoteService {
      * @deprecated Use QuoteLifecycleService.submit instead
      */
     static async submitQuote(quoteId: string, tenantId: string) {
-        const risk = await this.calculateQuoteRisk(quoteId, tenantId);
-
-        if (risk.hardStop) {
-            throw new Error("Quote cannot be submitted due to serious risk: " + risk.reason.join(", "));
-        }
-
-        const status = risk.isRisk ? 'PENDING_APPROVAL' : 'PENDING_CUSTOMER';
-
-        await db.update(quotes).set({
-            status,
-            lockedAt: new Date()
-        }).where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
-
-        return { status, risk };
+        const { QuoteLifecycleService } = await import('./quote-lifecycle.service');
+        return QuoteLifecycleService.submit(quoteId, tenantId, 'system');
     }
 
     /**
@@ -611,35 +639,8 @@ export class QuoteService {
      * @returns 是否已过期
      */
     static async checkAndExpireQuote(quoteId: string, tenantId: string): Promise<{ expired: boolean; expiredAt?: Date }> {
-        const quote = await db.query.quotes.findFirst({
-            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId))
-        });
-
-        if (!quote) throw new Error('Quote not found');
-
-        // 如果已是 EXPIRED 状态，直接返回
-        if (quote.status === 'EXPIRED') {
-            return { expired: true, expiredAt: quote.updatedAt ?? undefined };
-        }
-
-        // 检查是否需要过期（validUntil 已过期且状态不是已确认/已拒绝）
-        const now = new Date();
-        const validUntil = quote.validUntil;
-        const canExpire = quote.status === 'DRAFT' || quote.status === 'PENDING_APPROVAL' || quote.status === 'PENDING_CUSTOMER';
-
-        if (validUntil && validUntil < now && canExpire) {
-            // 更新状态为 EXPIRED
-            await db.update(quotes)
-                .set({
-                    status: 'EXPIRED',
-                    updatedAt: now
-                })
-                .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
-
-            return { expired: true, expiredAt: now };
-        }
-
-        return { expired: false };
+        const { QuoteExpirationService } = await import('../features/quotes/services/quote-expiration.service');
+        return QuoteExpirationService.checkAndExpireQuote(quoteId, tenantId);
     }
 
     /**
@@ -650,42 +651,8 @@ export class QuoteService {
      * @returns 处理结果统计
      */
     static async expireAllOverdueQuotes(tenantId?: string): Promise<{ processed: number; expired: number }> {
-        // const { lt, inArray } = await import('drizzle-orm'); // Removed dynamic import
-
-
-        const now = new Date();
-
-        // 构建查询条件
-        const conditions = [
-            lt(quotes.validUntil, now),
-            inArray(quotes.status, ['DRAFT', 'PENDING_APPROVAL', 'PENDING_CUSTOMER'])
-        ];
-
-        if (tenantId) {
-            conditions.push(eq(quotes.tenantId, tenantId));
-        }
-
-        // 查找所有过期报价
-        const overdueQuotes = await db.query.quotes.findMany({
-            where: and(...conditions),
-            columns: { id: true }
-        });
-
-        if (overdueQuotes.length === 0) {
-            return { processed: 0, expired: 0 };
-        }
-
-        const quoteIds = overdueQuotes.map(q => q.id);
-
-        // 批量更新状态
-        await db.update(quotes)
-            .set({
-                status: 'EXPIRED',
-                updatedAt: now
-            })
-            .where(inArray(quotes.id, quoteIds));
-
-        return { processed: quoteIds.length, expired: quoteIds.length };
+        const { QuoteExpirationService } = await import('../features/quotes/services/quote-expiration.service');
+        return QuoteExpirationService.expireAllOverdueQuotes(tenantId);
     }
 
     /**
@@ -707,105 +674,8 @@ export class QuoteService {
         priceChanges: { itemId: string; oldPrice: number; newPrice: number }[];
         newValidUntil: Date;
     }> {
-        const quote = await db.query.quotes.findFirst({
-            where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
-            with: { items: true }
-        });
-
-
-
-        if (!quote) throw new Error('Quote not found');
-
-        // 仅允许 EXPIRED 或 DRAFT 状态的报价刷新价格
-        if (quote.status !== 'EXPIRED' && quote.status !== 'DRAFT') {
-            throw new Error('只有已过期或草稿状态的报价可以刷新价格');
-        }
-
-        const { products: productsSchema } = await import('@/shared/api/schema/catalogs'); // Renamed to avoid confusion
-
-        const itemIds = quote.items
-            .filter(item => item.productId)
-            .map(item => item.productId as string);
-
-        if (itemIds.length === 0) {
-            return { success: true, updatedItems: 0, priceChanges: [], newValidUntil: new Date() };
-        }
-
-        // P1-02 优化：批量查询商品价格，避免 N+1 查询
-        const productsList = await db.query.products.findMany({
-            where: and(inArray(productsSchema.id, itemIds), eq(productsSchema.tenantId, tenantId)),
-            columns: { id: true, retailPrice: true }
-        });
-
-        const productPriceMap = new Map(productsList.map(p => [p.id, Number(p.retailPrice)]));
-        const priceChanges: { itemId: string; oldPrice: number; newPrice: number }[] = [];
-        let updatedItems = 0;
-
-        // 🔒 P1-R4-03 修复：所有操作在同一事务内执行，确保原子性
-        await db.transaction(async (tx) => {
-            for (const item of quote.items) {
-                if (!item.productId) continue;
-
-                const newPrice = productPriceMap.get(item.productId);
-                if (newPrice === undefined) continue;
-
-                const oldPrice = Number(item.unitPrice);
-
-                // 如果价格有变化，更新报价项
-                if (Math.abs(oldPrice - newPrice) > 0.01) {
-                    // P1-05 修复：使用整数运算避免浮点精度问题
-                    const newSubtotal = Math.round(newPrice * Number(item.quantity) * 100) / 100;
-
-                    await tx.update(quoteItems)
-                        .set({
-                            unitPrice: newPrice.toFixed(2),
-                            subtotal: newSubtotal.toFixed(2),
-                            updatedAt: new Date()
-                        })
-                        .where(and(eq(quoteItems.id, item.id), eq(quoteItems.tenantId, tenantId)));
-
-                    priceChanges.push({
-                        itemId: item.id,
-                        oldPrice,
-                        newPrice
-                    });
-                    updatedItems++;
-                }
-            }
-
-            // ✅ 移入事务：重新计算总额
-            const updatedItemsList = await tx.query.quoteItems.findMany({
-                where: and(eq(quoteItems.quoteId, quoteId), eq(quoteItems.tenantId, tenantId)),
-            });
-            const totalDec = updatedItemsList.reduce(
-                (acc, item) => acc.plus(new Decimal(item.subtotal || 0)),
-                new Decimal(0)
-            );
-
-            // ✅ 移入事务：计算新的有效期并更新状态
-            const newValidUntil = new Date();
-            newValidUntil.setDate(newValidUntil.getDate() + newValidDays);
-
-            await tx.update(quotes)
-                .set({
-                    totalAmount: totalDec.toFixed(2),
-                    finalAmount: totalDec.toFixed(2),
-                    status: 'DRAFT',
-                    validUntil: newValidUntil,
-                    updatedAt: new Date()
-                })
-                .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)));
-        });
-
-        const newValidUntil = new Date();
-        newValidUntil.setDate(newValidUntil.getDate() + newValidDays);
-
-        return {
-            success: true,
-            updatedItems,
-            priceChanges,
-            newValidUntil
-        };
+        const { QuoteExpirationService } = await import('../features/quotes/services/quote-expiration.service');
+        return QuoteExpirationService.refreshExpiredQuotePrices(quoteId, tenantId, newValidDays);
     }
 
     /**
@@ -872,7 +742,7 @@ export class QuoteService {
         userId: string,
         validDays: number = 7
     ) {
-        const { quoteTemplates, quoteTemplateRooms, quoteTemplateItems } = await import('@/shared/api/schema/quotes');
+        const { quoteTemplates, quoteTemplateRooms: _quoteTemplateRooms, quoteTemplateItems: _quoteTemplateItems } = await import('@/shared/api/schema/quotes');
 
         return await db.transaction(async (tx) => {
             // 1. 获取模板及其 rooms/items

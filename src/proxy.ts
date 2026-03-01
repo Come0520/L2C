@@ -20,25 +20,8 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/mobile/auth/login', // 移动端登录
 ] as const;
 
-/**
- * 落地页每日展示 Cookie 名称前缀
- * 完整格式：landing_seen_YYYY-MM-DD
- * 每天跨零点后 Cookie 失效，用户将重新看到落地页
- */
-const LANDING_COOKIE_PREFIX = 'landing_seen_';
-
-/**
- * 获取今日日期字符串（北京时间，格式：YYYY-MM-DD）
- * 用于构造每日唯一的落地页 Cookie 名称
- */
-function getTodayDateString(): string {
-  return new Date().toLocaleDateString('zh-CN', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\//g, '-'); // 格式化为 YYYY-MM-DD
-}
+// 注：已移除「每日首次必看」Cookie 策略。
+// 新策略：每次打开网页都展示落地页，已登录用户可直接点击「进入工作台」。
 
 /**
  * 未绑定租户的标识符
@@ -133,45 +116,13 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   const { pathname } = request.nextUrl;
 
   // ========================================
-  // 0. 页面路由分流：落地页「每日首次必看」策略
-  //    - 未登录用户：直接看落地页
-  //    - 已登录用户 + 今天第一次访问：展示落地页，种下当日 Cookie
-  //    - 已登录用户 + 今天已看过：跳转到工作台
+  // 0. 页面路由分流：落地页「每次必看」策略
+  //    - 无论登录状态和访问历史，始终展示落地页
+  //    - 已登录用户：页面上显示「进入工作台」按钮，点击即可进入
+  //    - 未登录用户：页面上显示「登录」/「注册」入口
   // ========================================
   if (pathname === '/') {
-    const sessionToken = await getToken(getSecureTokenOptions(request));
-
-    // 未登录用户：直接放行到落地页
-    if (!sessionToken) {
-      return NextResponse.next();
-    }
-
-    // 已登录用户：检查今日是否已看过落地页
-    const todayKey = LANDING_COOKIE_PREFIX + getTodayDateString();
-    const hasSeenTodayRaw = request.cookies.get(todayKey)?.value;
-
-    if (hasSeenTodayRaw === '1') {
-      // 今天已看过 → 直接跳转工作台
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-
-    // 今天第一次 → 展示落地页，并种下当日 Cookie（有效期至次日零点）
-    const response = NextResponse.next();
-    const now = new Date();
-    // 计算今日剩余秒数（到次日 0 点北京时间）
-    const tomorrowMidnight = new Date();
-    tomorrowMidnight.setUTCHours(16, 0, 0, 0); // 北京次日 0 点 = UTC 16:00
-    if (tomorrowMidnight <= now) {
-      tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
-    }
-    const maxAge = Math.floor((tomorrowMidnight.getTime() - now.getTime()) / 1000);
-    response.cookies.set(todayKey, '1', {
-      maxAge,
-      httpOnly: false, // 前端可读，便于调试
-      sameSite: 'lax',
-      path: '/',
-    });
-    return response;
+    return NextResponse.next();
   }
 
   // ========================================

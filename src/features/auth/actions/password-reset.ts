@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use server';
 
 import { db } from '@/shared/api/db';
@@ -10,16 +9,7 @@ import { hash } from 'bcryptjs';
 import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 import { ActionState as ActionResponse } from '@/shared/lib/server-action';
-
-// Validation schemas
-export const requestResetSchema = z.object({
-  email: z.string().email('请输入有效的邮箱地址'),
-});
-
-export const resetPasswordSchema = z.object({
-  token: z.string().min(1, '重置链接无效，缺失令牌'),
-  newPassword: z.string().min(8, '密码长度不能少于 8 位'),
-});
+import { requestResetSchema, resetPasswordSchema } from '@/features/auth/schemas/password-reset-schema';
 
 /**
  * 发起密码重置请求：生成 token 并发送邮件
@@ -35,7 +25,7 @@ export async function requestPasswordReset(
     if (!parsed.success) {
       return {
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '验证失败' },
+        error: parsed.error.issues[0]?.message || '验证失败',
       };
     }
 
@@ -104,7 +94,7 @@ export async function requestPasswordReset(
       logger.error(`[Auth:ResetPassword] Failed to send reset email to ${email}`);
       return {
         success: false,
-        error: { code: 'EMAIL_SEND_FAILED', message: '重置邮件发送失败，请联系管理员或稍后重试' },
+        error: '重置邮件发送失败，请联系管理员或稍后重试',
       };
     }
 
@@ -114,7 +104,7 @@ export async function requestPasswordReset(
     logger.error('[Auth:ResetPassword] Exception in requestPasswordReset:', error);
     return {
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: '请求过程中发生内部错误' },
+      error: '请求过程中发生内部错误',
     };
   }
 }
@@ -133,7 +123,7 @@ export async function resetPassword(
     if (!parsed.success) {
       return {
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || '验证失败' },
+        error: parsed.error.issues[0]?.message || '验证失败',
       };
     }
 
@@ -151,7 +141,7 @@ export async function resetPassword(
     if (!activeCode) {
       return {
         success: false,
-        error: { code: 'INVALID_TOKEN', message: '重置链接无效或已使用' },
+        error: '重置链接无效或已使用',
       };
     }
 
@@ -159,7 +149,7 @@ export async function resetPassword(
     if (new Date() > activeCode.expiresAt) {
       return {
         success: false,
-        error: { code: 'EXPIRED_TOKEN', message: '重置链接已过期，请重新发起请求' },
+        error: '重置链接已过期，请重新发起请求',
       };
     }
 
@@ -184,7 +174,7 @@ export async function resetPassword(
     logger.error('[Auth:ResetPassword] Exception in resetPassword:', error);
     return {
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: '密码重置过程中发生内部错误' },
+      error: '密码重置过程中发生内部错误',
     };
   }
 }

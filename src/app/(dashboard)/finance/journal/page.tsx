@@ -11,6 +11,7 @@ import {
   getJournalEntryById,
 } from '@/features/finance/actions/journal-entry-actions';
 import { JournalEntryDetail } from '@/features/finance/components/journal-entry-detail';
+import { FinanceEmptyState } from '@/features/finance/components/finance-empty-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import {
@@ -58,30 +59,29 @@ export default async function JournalPage({
         </Button>
       </div>
 
-      <div className="bg-card rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>凭证字号</TableHead>
-              <TableHead>记账日期</TableHead>
-              <TableHead>账期</TableHead>
-              <TableHead>摘要</TableHead>
-              <TableHead className="text-right">借方合计</TableHead>
-              <TableHead className="text-right">贷方合计</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>来源</TableHead>
-              <TableHead className="text-center">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.length === 0 ? (
+      {entries.length === 0 ? (
+        <FinanceEmptyState
+          title="暂无记账凭证"
+          description="系统暂无任何记账凭证记录，您可以点击右上角“手工记账”开始录入。"
+        />
+      ) : (
+        <div className="bg-card rounded-md border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
-                  暂无凭证数据
-                </TableCell>
+                <TableHead>凭证字号</TableHead>
+                <TableHead>记账日期</TableHead>
+                <TableHead>账期</TableHead>
+                <TableHead>摘要</TableHead>
+                <TableHead className="text-right">借方合计</TableHead>
+                <TableHead className="text-right">贷方合计</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>来源</TableHead>
+                <TableHead className="text-center">操作</TableHead>
               </TableRow>
-            ) : (
-              entries.map((entry) => (
+            </TableHeader>
+            <TableBody>
+              {entries.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">{entry.voucherNo}</TableCell>
                   <TableCell>
@@ -112,11 +112,11 @@ export default async function JournalPage({
                     <DetailDialog entryId={entry.id} />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,20 +10,28 @@ import {
 import { eq, or, and, ne, desc } from "drizzle-orm";
 
 /**
- * 报价模板服务
- * 提供模板的创建、查询、复制等核心功能
+ * 报价模板服务 (Quote Template Service)
+ * 提供模板的创建、查询、应用等核心功能。
+ * 明细模板支持公共模板（租户列表）和私有模板（租户专属）两种范围。
  */
 export class QuoteTemplateService {
 
     /**
-     * 从现有报价保存为模板
-     * 
-     * @param quoteId - 源报价ID
+     * 将报价单保存为模板 (Save As Template)
+     * 将现有报价单的空间和商品明细复制到模板表中，平键为可平衣的模板。
+     * 支持设置分类、标签和公开范围。
+     *
+     * @param quoteId - 源报价 ID
      * @param name - 模板名称
      * @param description - 模板描述
-     * @param userId - 创建者ID
-     * @param tenantId - 租户ID
-     * @param options - 附加选项（分类、标签、是否公开）
+     * @param userId - 创建者 ID
+     * @param tenantId - 租户 ID
+     * @param options.category - 模板分类（可选）
+     * @param options.tags - 模板标签列表（可选）
+     * @param options.isPublic - 是否公开到租户分享列表（可选）
+     * @returns 新创建的模板对象
+     * @throws Error 源报价不存在时抛出
+     * @security 🔒 租户隔离 + 事务包裹
      */
     static async saveAsTemplate(
         quoteId: string,
@@ -114,12 +122,17 @@ export class QuoteTemplateService {
     }
 
     /**
-     * 从模板创建报价
-     * 
-     * @param templateId - 模板ID
-     * @param customerId - 目标客户ID
-     * @param userId - 创建者ID
-     * @param tenantId - 租户ID
+     * 从模板创建报价单 (Create Quote From Template)
+     * 将模板的空间和商品项全量复制到新报价单中。
+     * 新报价单状态为 DRAFT，数量和尺寸可在创建后进一步编辑。
+     *
+     * @param templateId - 模板 ID
+     * @param customerId - 目标客户 ID
+     * @param userId - 创建者 ID
+     * @param tenantId - 租户 ID
+     * @returns 新创建的报价单对象
+     * @throws Error 模板不存在时抛出
+     * @security 🔒 租户隔离 + 事务包裹
      */
     static async createQuoteFromTemplate(
         templateId: string,
@@ -221,7 +234,14 @@ export class QuoteTemplateService {
     }
 
     /**
-     * 获取模板列表
+     * 查询模板列表 (Get Templates)
+     * 支持按分类和排除某模板过滤。公开模板和当前租户的私有模板均包含在结果中。
+     *
+     * @param tenantId - 租户 ID
+     * @param options.excludeId - 要排除的模板 ID（防止自引用）
+     * @param options.category - 按分类过滤（可选）
+     * @returns 模板列表，按创建时间倒序
+     * @security 🔒 租户隔离
      */
     static async getTemplates(tenantId: string, options: { excludeId?: string; category?: string } = {}) {
         const rules = [
@@ -263,7 +283,13 @@ export class QuoteTemplateService {
     }
 
     /**
-     * 获取单个模板详情
+     * 获取单个模板详情 (Get Template)
+     * 查询指定模板的完整信息，包含空间列表和商品明细项。
+     *
+     * @param templateId - 模板 ID
+     * @param tenantId - 租户 ID
+     * @returns 模板详情对象（含 rooms/items），不存在则返回 `undefined`
+     * @security 🔒 租户隔离
      */
     static async getTemplate(templateId: string, tenantId: string) {
 
@@ -293,7 +319,14 @@ export class QuoteTemplateService {
     }
 
     /**
-     * 删除模板（软删除）
+     * 删除模板（软删除） (Delete Template)
+     * 将模板的 `isActive` 设为 `false`，不的实际删除数据库记录。
+     * 软删除后模板不再出现在列表中。
+     *
+     * @param templateId - 模板 ID
+     * @param tenantId - 租户 ID
+     * @throws Error 模板不存在时抛出
+     * @security 🔒 租户隔离
      */
     static async deleteTemplate(templateId: string, tenantId: string) {
         // 🔒 安全校验：验证租户归属
@@ -313,7 +346,11 @@ export class QuoteTemplateService {
     }
 
     /**
-     * 根据商品类型推断模板分类
+     * 根据商品类型推断模板分类 (Infer Category)
+     * 分析报价项中的主要商品类型，推断该模板应归属的分类（如 CURTAIN 、WALLPAPER 等）。
+     *
+     * @param items - 报价项数组（至少有 category 字段）
+     * @returns 推断得到的模板分类字符串，无法判断则返回 `'MIXED'`
      */
     private static inferCategory(items: { category: string }[]): string {
         const categories = new Set(items.map(i => i.category));

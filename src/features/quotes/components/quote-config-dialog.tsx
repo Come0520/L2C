@@ -11,10 +11,12 @@ import { QuoteConfig } from '@/services/quote-config.service';
 import { updateGlobalQuoteConfig, toggleQuoteMode, updateUserPlan } from '@/features/quotes/actions/config-actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import Settings2 from 'lucide-react/dist/esm/icons/settings2';
+import { Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Switch } from '@/shared/ui/switch';
 import { logger } from '@/shared/lib/logger';
+import { LinkageRule } from '@/services/quote-config.service';
 
 interface QuoteConfigDialogProps {
     currentConfig?: QuoteConfig;
@@ -29,6 +31,68 @@ const AVAILABLE_FIELDS = [
     { id: 'fabricWidth', label: '面料幅宽' },
     { id: 'installMethod', label: '安装方式 (明/暗装)' },
     { id: 'openingStyle', label: '打开方式 (单/双开)' }
+];
+
+/**
+ * BOM 预设模板：每个主材类别对应一组固定的可选组件，用户通过开关控制是否启用
+ */
+interface BomPresetComponent {
+    targetCategory: string;
+    label: string;
+    description: string;
+    defaultCalcLogic: 'FINISHED_WIDTH' | 'FINISHED_HEIGHT' | 'PROPORTIONAL' | 'FIXED';
+}
+
+const BOM_PRESETS: { value: string; label: string; components: BomPresetComponent[] }[] = [
+    {
+        value: 'CURTAIN', label: '窗帘',
+        components: [
+            { targetCategory: 'CURTAIN_TRACK', label: '轨道', description: '窗帘轨道 / 滑轨 / 罗马杆', defaultCalcLogic: 'FINISHED_WIDTH' },
+            { targetCategory: 'SERVICE', label: '加工费', description: '制作、安装、裁剪等加工费用', defaultCalcLogic: 'FIXED' },
+            { targetCategory: 'CURTAIN_ACCESSORY', label: '辅料', description: '挂钩、绑带、铅块等', defaultCalcLogic: 'FIXED' },
+        ]
+    },
+    {
+        value: 'WALLPAPER', label: '墙纸',
+        components: [
+            { targetCategory: 'WALL_ACCESSORY', label: '辅料', description: '墙纸胶、基膜等', defaultCalcLogic: 'PROPORTIONAL' },
+            { targetCategory: 'SERVICE', label: '施工费', description: '铺贴施工人工费', defaultCalcLogic: 'PROPORTIONAL' },
+        ]
+    },
+    {
+        value: 'WALLCLOTH', label: '墙布',
+        components: [
+            { targetCategory: 'WALLCLOTH_ACCESSORY', label: '辅料', description: '墙布胶、基膜等', defaultCalcLogic: 'PROPORTIONAL' },
+            { targetCategory: 'SERVICE', label: '施工费', description: '铺贴施工人工费', defaultCalcLogic: 'PROPORTIONAL' },
+        ]
+    },
+    {
+        value: 'BLIND', label: '功能帘',
+        components: [
+            { targetCategory: 'MOTOR', label: '电机', description: '电动开合电机', defaultCalcLogic: 'FIXED' },
+            { targetCategory: 'SERVICE', label: '安装费', description: '安装人工费', defaultCalcLogic: 'FIXED' },
+        ]
+    },
+    {
+        value: 'SOFT_PACK', label: '软硬包',
+        components: [
+            { targetCategory: 'SERVICE', label: '安装费', description: '安装人工费', defaultCalcLogic: 'FIXED' },
+            { targetCategory: 'HARDWARE', label: '五金', description: '挂件、螺丝等', defaultCalcLogic: 'FIXED' },
+        ]
+    },
+    {
+        value: 'WALLPANEL', label: '墙咔',
+        components: [
+            { targetCategory: 'PANEL_ACCESSORY', label: '附件', description: '墙咔配套附件', defaultCalcLogic: 'FIXED' },
+            { targetCategory: 'SERVICE', label: '安装费', description: '安装人工费', defaultCalcLogic: 'FIXED' },
+        ]
+    },
+    {
+        value: 'MATTRESS', label: '床垫',
+        components: [
+            { targetCategory: 'STANDARD', label: '配套标品', description: '床笺、枕头等', defaultCalcLogic: 'FIXED' },
+        ]
+    },
 ];
 
 export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
@@ -57,6 +121,32 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
         width: currentConfig?.presetLoss?.wallpaper?.widthLoss ?? 20,
         cut: currentConfig?.presetLoss?.wallpaper?.cutLoss ?? 10
     });
+
+    // BOM Templates
+    const [bomTemplates, setBomTemplates] = useState<LinkageRule[]>(currentConfig?.bomTemplates || []);
+    const [activeBomTab, setActiveBomTab] = useState(BOM_PRESETS[0].value);
+
+    /** 检查某个组件在当前 bomTemplates 中是否已启用 */
+    const isComponentEnabled = (mainCat: string, targetCat: string) =>
+        bomTemplates.some(r => r.mainCategory === mainCat && r.targetCategory === targetCat);
+
+    /** 切换某个组件的启用/禁用状态 */
+    const toggleComponent = (mainCat: string, targetCat: string, defaultCalcLogic: string) => {
+        const exists = bomTemplates.findIndex(
+            r => r.mainCategory === mainCat && r.targetCategory === targetCat
+        );
+        if (exists >= 0) {
+            // 关闭：移除该规则
+            setBomTemplates(prev => prev.filter((_, i) => i !== exists));
+        } else {
+            // 开启：添加该规则
+            setBomTemplates(prev => [...prev, {
+                mainCategory: mainCat,
+                targetCategory: targetCat,
+                calcLogic: defaultCalcLogic as LinkageRule['calcLogic'],
+            }]);
+        }
+    };
 
     const handleFieldToggle = (fieldId: string) => {
         setSelectedFields(prev =>
@@ -95,7 +185,8 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
                 visibleFields: selectedFields,
                 presetLoss,
                 defaultPlan, // Also update global default
-                planSettings
+                planSettings,
+                bomTemplates
             });
 
             toast.success('配置已保存');
@@ -114,7 +205,7 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
                     <Settings2 className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px]" resizable>
                 <DialogHeader>
                     <DialogTitle>报价系统配置</DialogTitle>
                 </DialogHeader>
@@ -123,7 +214,8 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="general">通用设置</TabsTrigger>
                         <TabsTrigger value="calculation">计算参数</TabsTrigger>
-                        <TabsTrigger value="plans" disabled={mode === 'simple'}>方案配置</TabsTrigger>
+                        {/* <TabsTrigger value="plans" disabled={mode === 'simple'}>方案配置</TabsTrigger> */}
+                        <TabsTrigger value="bom">BOM联动</TabsTrigger>
                     </TabsList>
 
                     {/* General Settings */}
@@ -252,62 +344,92 @@ export function QuoteConfigDialog({ currentConfig }: QuoteConfigDialogProps) {
                         </div>
                     </TabsContent>
 
-                    {/* Plan Settings (Advanced Mode) */}
+                    {/* 方案配置 - 暂时隐藏，后续完善后再开放
                     <TabsContent value="plans" className="space-y-4 py-4 max-h-[400px] overflow-y-auto pr-2">
-                        <div className="space-y-6">
-                            {(['ECONOMIC', 'COMFORT', 'LUXURY'] as const).map((planKey) => (
-                                <Card key={planKey}>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm">
-                                            {planKey === 'ECONOMIC' ? '经济型' : planKey === 'COMFORT' ? '舒适型' : '豪华型'} 设置
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs">销售加价率 (%)</Label>
-                                                <Input
-                                                    type="number"
-                                                    value={planSettings[planKey].markup * 100}
-                                                    onChange={(e) => setPlanSettings({
-                                                        ...planSettings,
-                                                        [planKey]: { ...planSettings[planKey], markup: Number(e.target.value) / 100 }
-                                                    })}
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs">质量档次</Label>
-                                                <Input
-                                                    value={planSettings[planKey].quality}
-                                                    onChange={(e) => setPlanSettings({
-                                                        ...planSettings,
-                                                        [planKey]: { ...planSettings[planKey], quality: e.target.value }
-                                                    })}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs">方案描述 (适用场景)</Label>
-                                            <Input
-                                                value={planSettings[planKey].description}
-                                                onChange={(e) => setPlanSettings({
-                                                    ...planSettings,
-                                                    [planKey]: { ...planSettings[planKey], description: e.target.value }
-                                                })}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                        ...
+                    </TabsContent>
+                    */}
+
+                    {/* BOM Settings - 预设组件 + 开关模式 */}
+                    <TabsContent value="bom" className="space-y-3 py-4 max-h-[450px] overflow-y-auto pr-2">
+                        <p className="text-sm text-muted-foreground mb-3">
+                            选择主材类别，通过开关控制添加该商品时自动带出哪些配套组件。全部关闭则不启用 BOM。
+                        </p>
+
+                        {/* 主材类别 Tab 按钮栏 */}
+                        <div className="flex flex-wrap gap-1.5 border-b pb-2">
+                            {BOM_PRESETS.map((preset) => {
+                                const enabledCount = preset.components.filter(
+                                    c => isComponentEnabled(preset.value, c.targetCategory)
+                                ).length;
+                                return (
+                                    <button
+                                        key={preset.value}
+                                        type="button"
+                                        onClick={() => setActiveBomTab(preset.value)}
+                                        className={`px-3 py-1.5 text-xs rounded-md border transition-all ${activeBomTab === preset.value
+                                            ? 'bg-primary text-primary-foreground border-primary shadow-sm font-medium'
+                                            : 'bg-background hover:bg-muted border-border text-muted-foreground'
+                                            }`}
+                                    >
+                                        {preset.label}
+                                        {enabledCount > 0 && (
+                                            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${activeBomTab === preset.value
+                                                ? 'bg-primary-foreground/20 text-primary-foreground'
+                                                : 'bg-muted-foreground/15 text-muted-foreground'
+                                                }`}>{enabledCount}/{preset.components.length}</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {/* 当前类别下的组件开关列表 */}
+                        {(() => {
+                            const currentPreset = BOM_PRESETS.find(p => p.value === activeBomTab);
+                            if (!currentPreset) return null;
+
+                            return (
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-medium text-foreground">
+                                        添加「{currentPreset.label}」时自动带出：
+                                    </h4>
+                                    {currentPreset.components.map((comp) => {
+                                        const enabled = isComponentEnabled(currentPreset.value, comp.targetCategory);
+                                        return (
+                                            <div
+                                                key={comp.targetCategory}
+                                                className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${enabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-border'
+                                                    }`}
+                                            >
+                                                <div className="space-y-0.5">
+                                                    <span className={`text-sm font-medium ${enabled ? 'text-foreground' : 'text-muted-foreground'
+                                                        }`}>{comp.label}</span>
+                                                    <p className="text-xs text-muted-foreground">{comp.description}</p>
+                                                </div>
+                                                <Switch
+                                                    checked={enabled}
+                                                    onCheckedChange={() => toggleComponent(
+                                                        currentPreset.value,
+                                                        comp.targetCategory,
+                                                        comp.defaultCalcLogic
+                                                    )}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </TabsContent>
                 </Tabs>
+
 
                 <div className="flex justify-end gap-2 mt-2">
                     <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
                     <Button onClick={handleSave}>保存全部配置</Button>
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

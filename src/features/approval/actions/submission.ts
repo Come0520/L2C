@@ -6,7 +6,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { ApprovalDelegationService } from '@/services/approval-delegation.service';
-import { getSetting } from '@/features/settings/actions/system-settings-actions';
+import { getSettingInternal } from '@/features/settings/actions/system-settings-actions';
 import { addDays } from 'date-fns';
 import { findApproversByRole } from './utils';
 import { logger } from '@/shared/lib/logger';
@@ -41,15 +41,15 @@ export async function submitApproval(
     requesterId?: string;
     flowCode: string;
     entityType:
-      | 'QUOTE'
-      | 'ORDER'
-      | 'PAYMENT_BILL'
-      | 'RECEIPT_BILL'
-      | 'MEASURE_TASK'
-      | 'ORDER_CHANGE'
-      | 'LEAD_RESTORE'
-      | 'ORDER_CANCEL'
-      | 'CUSTOMER_MERGE';
+    | 'QUOTE'
+    | 'ORDER'
+    | 'PAYMENT_BILL'
+    | 'RECEIPT_BILL'
+    | 'MEASURE_TASK'
+    | 'ORDER_CHANGE'
+    | 'LEAD_RESTORE'
+    | 'ORDER_CANCEL'
+    | 'CUSTOMER_MERGE';
     entityId: string;
     amount?: string | number;
     comment?: string;
@@ -178,7 +178,7 @@ export async function submitApproval(
       const { addHours } = await import('date-fns');
       timeoutAt = addHours(new Date(), firstNode.timeoutHours);
     } else {
-      const timeoutValue = await getSetting('APPROVAL_TIMEOUT_DAYS');
+      const timeoutValue = await getSettingInternal('APPROVAL_TIMEOUT_DAYS', tenantId);
       const timeoutDays = typeof timeoutValue === 'number' ? timeoutValue : 3;
       timeoutAt = addDays(new Date(), timeoutDays);
     }

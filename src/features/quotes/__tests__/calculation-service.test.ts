@@ -31,7 +31,7 @@ describe('报价计算服务 (Calculation Service)', () => {
             quantity: 5,
             unitPrice: 20,
             product: null
-        } as any);
+        } as never);
 
         const result = await QuoteCalculationService.recalculateItem('item-standard', { width: 0, height: 0 });
         expect(result.usage).toBe(5);
@@ -52,11 +52,13 @@ describe('报价计算服务 (Calculation Service)', () => {
                 openingStyle: 'DOUBLE'
             },
             product: null
-        } as any);
+        } as never);
 
         const result = await QuoteCalculationService.recalculateItem('item-curtain', { width: 200, height: 250 });
-        expect(result.usage).toBeCloseTo(4.1);
-        expect(result.subtotal).toBeCloseTo(410);
+        // 窗帘用量 = 200cm × 2.0（褶皱倍）+ 双开侧边损耗 5cm×2×2片 = 420cm → 4.2m
+        expect(result.usage).toBeCloseTo(4.2);
+        expect(result.subtotal).toBeCloseTo(420);
+
     });
 
     it('墙纸计算策略处理 (Dispatch wallpaper strategy)', async () => {
@@ -71,7 +73,7 @@ describe('报价计算服务 (Calculation Service)', () => {
                 rollLength: 10
             },
             product: null
-        } as any);
+        } as never);
 
         const result = await QuoteCalculationService.recalculateItem('item-wallpaper', { width: 300, height: 250 });
         expect(result.usage).toBeGreaterThan(0);

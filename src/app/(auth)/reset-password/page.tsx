@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Label } from '@/shared/ui/label';
@@ -13,7 +13,8 @@ import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
-import { resetPassword, resetPasswordSchema } from '@/features/auth/actions/password-reset';
+import { resetPassword } from '@/features/auth/actions/password-reset';
+import { resetPasswordSchema } from '@/features/auth/schemas/password-reset-schema';
 
 const BottomGradient = () => {
   return (
@@ -24,7 +25,7 @@ const BottomGradient = () => {
   );
 };
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -218,5 +219,13 @@ export default function ResetPasswordPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

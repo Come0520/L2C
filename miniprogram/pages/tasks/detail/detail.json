@@ -5,7 +5,8 @@
         "van-cell-group": "@vant/weapp/cell-group/index",
         "van-tag": "@vant/weapp/tag/index",
         "van-icon": "@vant/weapp/icon/index",
-        "van-steps": "@vant/weapp/steps/index"
+        "van-steps": "@vant/weapp/steps/index",
+        "signature": "../../../components/signature/signature"
     },
     "navigationBarTitleText": "任务详情"
 }

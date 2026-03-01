@@ -39,8 +39,8 @@ describe('Comprehensive Calculation Engine Verification', () => {
                 fabricType: 'FIXED_WIDTH',
                 unitPrice: 100
             });
-            // cutWidth = 2400 + 10(double) = 2410
-            // N = ceil(2410 / 140) = 18 strips
+            // cutWidth = 2400 + 20(double) = 2420
+            // N = ceil(2420 / 140) = 18 strips
             expect(result.details.stripCount).toBe(18);
         });
     });

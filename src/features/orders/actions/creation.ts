@@ -36,7 +36,7 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
 
     const rawInput = input && typeof input === 'object' ? input : {} as CreateOrderInput;
     const validatedInput = createOrderSchema.parse(rawInput);
-    const { quoteId, paymentAmount } = validatedInput;
+    const { quoteId, paymentAmount, remark, usedPrepayments, newPayment } = validatedInput;
 
     try {
         // 1. 获取报价单
@@ -47,26 +47,34 @@ export async function createOrderFromQuote(input: CreateOrderInput) {
         if (!quote) throw new Error('Quote not found');
 
         // 2. 调用 Service 层转换
-        const order = await OrderService.convertFromQuote(quoteId, tenantId, paymentAmount ?? '0');
+        const options = {
+            paymentAmount: paymentAmount ?? '0',
+            remark,
+            usedPrepayments,
+            newPayment
+        };
+
+        const result = await OrderService.convertFromQuote(quoteId, tenantId, session.user.id, options);
+        const actualOrder = result;
 
         // 3. 记录审计日志
         await AuditService.record({
             tenantId,
             userId: session.user.id,
             tableName: 'orders',
-            recordId: order.id,
+            recordId: actualOrder.id,
             action: 'ORDER_CREATED',
-            newValues: { quoteId, paymentAmount },
+            newValues: { quoteId, options },
         });
 
-        logger.info('[orders] 订单从报价单转化成功:', { orderId: order.id, tenantId, quoteId });
+        logger.info('[orders] 订单从报价单转化成功:', { orderId: actualOrder.id, tenantId, quoteId });
 
         // 4. 异步处理佣金逻辑 (不阻塞订单创建)
-        checkAndGenerateCommission(order.id, 'ORDER_CREATED').catch((e: Error) => {
+        checkAndGenerateCommission(actualOrder.id, 'ORDER_CREATED').catch((e: Error) => {
             logger.error('[createOrderFromQuote] 佣金处理失败:', e.message);
         });
 
-        return order;
+        return result;
     } catch (e: unknown) {
         const error = e as Error;
         logger.error('[orders] 订单转化失败:', { quoteId, error: error.message });

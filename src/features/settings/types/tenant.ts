@@ -10,6 +10,7 @@ export interface TenantInfo {
     code: string;
     logoUrl: string | null;
     contact: TenantContactInfo;
+    settings?: Record<string, unknown>;
 }
 
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';

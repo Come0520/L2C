@@ -184,6 +184,13 @@ const generateAggregatedStatementActionInternal = createSafeAction(aggregateStat
     };
 });
 
+/**
+ * 生成多客户或按时间的汇总对账单 (Generate Aggregated Statement)
+ * 供用户选择一段时间、并任意指定客户组合，生成对账汇总信息
+ * @param params - 包含开始日期、结束日期、指定客户范围等过滤条件
+ * @returns 汇总成功并附带账面明细与期末余额信息等结构体
+ * @throws 获取数据异常或校验失败引发Error
+ */
 export async function generateAggregatedStatement(params: z.infer<typeof aggregateStatementsSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
@@ -267,6 +274,12 @@ const generatePeriodStatementsActionInternal = createSafeAction(generatePeriodSt
     };
 });
 
+/**
+ * 按周期自动化生成待确认对账单 (Generate Period Statements)
+ * @param params - 提取的周期（每周，每双周，每月）以及计算基准日
+ * @returns 返回挂账数量以及账单明细数组
+ * @throws 并发或校验异常时终止抛错
+ */
 export async function generatePeriodStatements(params: z.infer<typeof generatePeriodStatementsSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
@@ -480,6 +493,14 @@ const batchWriteOffActionInternal = createSafeAction(batchWriteOffSchema, async 
     });
 });
 
+/**
+ * 批量执行应收账单的收款核销 (Batch Write-Off)
+ * 将单据或资金分配至多笔对账单进行自动或针对性抵扣
+ * 在同一业务事务内维持 AR 与资金流一致性，并记录 Audit 日志
+ * @param params - 包含待核销的单据、明细分摊和结算凭证
+ * @returns 若成功则下发每笔具体抵扣详情及总体余额更新结果
+ * @throws 更新竞争冲突或权限拒止时抛出错误
+ */
 export async function batchWriteOff(params: z.infer<typeof batchWriteOffSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');
@@ -565,6 +586,13 @@ const crossPeriodReconciliationActionInternal = createSafeAction(crossPeriodReco
     };
 });
 
+/**
+ * 执行跨期对账并迁移结转应收余额 (Cross-Period Reconciliation)
+ * 处理未结清的尾款/欠款进入新的账期以避免坏账遗漏
+ * @param params - 前后跨期分界线，以及需要针对的单一或批量客户限制
+ * @returns 返回滚转单据详情和滚转后分布数量
+ * @throws 获取失败引发相应错异常
+ */
 export async function crossPeriodReconciliation(params: z.infer<typeof crossPeriodReconciliationSchema>) {
     const session = await auth();
     if (!session?.user?.tenantId) throw new Error('未授权');

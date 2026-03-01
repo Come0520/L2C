@@ -14,10 +14,10 @@ import { Badge } from '@/shared/ui/badge';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Eye from 'lucide-react/dist/esm/icons/eye';
 import { useState } from 'react';
+import Link from 'next/link';
 import { PaymentBillDialog } from './PaymentBillDialog';
 import { format } from 'date-fns';
-import Link from 'next/link';
-import { EmptyTableRow } from '@/shared/ui/empty-table-row';
+import { FinanceEmptyState } from './finance-empty-state';
 
 import { APStatementWithRelations, APSupplierStatementWithRelations, APLaborStatementWithRelations } from '../types';
 
@@ -148,37 +148,40 @@ export function APStatementTable({ data, type }: APStatementTableProps) {
                 </Button>
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>账单编号</TableHead>
-                            <TableHead>{type === 'SUPPLIER' ? '供应商' : '安装工'}</TableHead>
-                            <TableHead>期间/订单</TableHead>
-                            <TableHead>总额</TableHead>
-                            <TableHead>已付</TableHead>
-                            <TableHead>待付</TableHead>
-                            <TableHead>状态</TableHead>
-                            <TableHead>日期</TableHead>
-                            <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.length === 0 ? (
-                            <EmptyTableRow colSpan={9} message="暂无应付记录" />
-                        ) : (
-                            data.map((item) => (
+            {data.length === 0 ? (
+                <FinanceEmptyState
+                    title={`暂无${title}记录`}
+                    description={type === 'SUPPLIER' ? "目前没有可结算的供应商应付对账单" : "目前没有可结算的劳务对账单"}
+                />
+            ) : (
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>账单编号</TableHead>
+                                <TableHead>{type === 'SUPPLIER' ? '供应商' : '安装工'}</TableHead>
+                                <TableHead>期间/订单</TableHead>
+                                <TableHead>总额</TableHead>
+                                <TableHead>已付</TableHead>
+                                <TableHead>待付</TableHead>
+                                <TableHead>状态</TableHead>
+                                <TableHead>日期</TableHead>
+                                <TableHead className="text-right">操作</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.map((item) => (
                                 <APStatementTableRow
                                     key={item.id}
                                     item={item}
                                     type={type}
                                     onCreatePayment={handleCreatePayment}
                                 />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
             <PaymentBillDialog
                 open={isBillDialogOpen}

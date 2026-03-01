@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
 import { ANALYTICS_PERMISSIONS } from '../constants';
 import { logger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
 
 const cashFlowForecastSchema = z.object({
     forecastDays: z.number().optional().default(90),
@@ -37,6 +38,15 @@ const getCashFlowForecastAction = createSafeAction(cashFlowForecastSchema, async
     const todayStr = today.toISOString().split('T')[0];
     const forecastEndDateStr = forecastEndDate.toISOString().split('T')[0];
     const tenantId = session.user.tenantId;
+
+    await AuditService.log(db, {
+        tableName: 'analytics',
+        action: 'VIEW_REPORT',
+        recordId: `cash-flow-forecast-${tenantId}-${params.forecastDays}`,
+        userId: session.user.id,
+        tenantId,
+        details: { reportName: 'CashFlowForecast', params: { forecastDays: params.forecastDays } }
+    });
 
     return unstable_cache(
         async () => {

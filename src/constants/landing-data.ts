@@ -374,6 +374,41 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.2.3',
+    version: 'v1.2.3',
+    date: '2026-03-01',
+    title: '全模块成熟度升级与安全加固',
+    description:
+      '完成多模块 L3→L4 成熟度批量升级，新增分析模块缓存与审计集成、调度模块 tenantId 硬隔离安全补丁、仪表盘懒加载重构，并修复报价导出与登录重定向等关键 Bug。',
+    contributors: ['Antigravity'],
+    updates: [
+      {
+        type: 'feature',
+        content: '分析模块 (Analytics) 增强：查询性能优化、缓存策略、AuditService 集成、骨架屏加载',
+      },
+      {
+        type: 'feature',
+        content: '调度模块安全补丁：实现 tenantId 硬隔离，新增安全 Server Actions 与集成测试',
+      },
+      {
+        type: 'optimize',
+        content: '仪表盘 (Dashboard) 重构：React.lazy 懒加载 + Suspense 骨架屏 + 审计日志',
+      },
+      {
+        type: 'fix',
+        content: '修复报价单导出 PDF 卡死与下拉选项命名混乱问题',
+      },
+      {
+        type: 'fix',
+        content: '修复忘记密码功能邮件发送无响应的问题',
+      },
+      {
+        type: 'optimize',
+        content: '报价摘要视图优化：三种视图模式高亮、空分类过滤、折叠逻辑调整',
+      },
+    ],
+  },
+  {
     id: 'v1.2.2',
     version: 'v1.2.2',
     date: '2026-02-28',

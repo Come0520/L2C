@@ -83,7 +83,7 @@ vi.mock('next/cache', () => ({
     revalidateTag: vi.fn()
 }));
 
-import { createProduct, updateProduct, deleteProduct, activateProduct } from '../actions/mutations';
+import { createProduct, updateProduct, deleteProduct, activateProduct, batchUpdateProductImages } from '../actions/mutations';
 import { db } from '@/shared/api/db';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
@@ -123,6 +123,7 @@ const validProductInput = {
     isStockable: false,
     description: '这是一款测试窗帘面料',
     attributes: { fabricWidth: 2.8 },
+    images: [],
 };
 
 // ---------------------------------------------------------
@@ -282,6 +283,68 @@ describe('Products Mutations', () => {
             });
 
             expect(result.success).toBe(true);
+        });
+    });
+    // ==================== 批量更新产品多图 ====================
+    describe('batchUpdateProductImages', () => {
+        it('成功批量更新图片并合并规格图库', async () => {
+            const mockExistingProduct = {
+                id: mockProductId,
+                sku: 'CUR-001',
+                tenantId: mockTenantId,
+                images: ['old-main.jpg'],
+                specs: { materialImages: ['old-mat.jpg'] }
+            };
+
+            vi.mocked(db.query.products.findFirst).mockResolvedValue(mockExistingProduct as any);
+
+            const updatedProduct = { ...mockExistingProduct, images: ['old-main.jpg', 'new-main.jpg'] };
+            vi.mocked(db.update).mockReturnValue({
+                set: vi.fn().mockReturnValue({
+                    where: vi.fn().mockReturnValue({
+                        returning: vi.fn().mockResolvedValue([updatedProduct])
+                    })
+                })
+            } as any);
+
+            const result = await batchUpdateProductImages([
+                {
+                    sku: 'CUR-001',
+                    images: ['new-main.jpg'],
+                    materialImages: ['new-mat.jpg'],
+                    sceneImages: ['new-scene.jpg']
+                }
+            ]);
+
+            expect(result.success).toBe(true);
+            expect(result.data?.successCount).toBe(1);
+            expect(result.data?.errorCount).toBe(0);
+            expect(result.data?.errors).toHaveLength(0);
+        });
+
+        it('当部分产品 SKU 未找到时，记录错误但不中断', async () => {
+            vi.mocked(db.query.products.findFirst)
+                .mockResolvedValueOnce(null as any) // 找不到
+                .mockResolvedValueOnce({ id: 'prod-2', tenantId: mockTenantId, sku: 'CUR-002', specs: {} } as any);
+
+            vi.mocked(db.update).mockReturnValue({
+                set: vi.fn().mockReturnValue({
+                    where: vi.fn().mockReturnValue({
+                        returning: vi.fn().mockResolvedValue([{ id: 'prod-2' }]) // mock successful return
+                    })
+                })
+            } as any);
+
+            const result = await batchUpdateProductImages([
+                { sku: 'NOT-EXIST', images: ['img1.jpg'] },
+                { sku: 'CUR-002', images: ['img2.jpg'] }
+            ]);
+
+            expect(result.success).toBe(true);
+            expect(result.data?.successCount).toBe(1);
+            expect(result.data?.errorCount).toBe(1);
+            expect(result.data?.errors[0].sku).toBe('NOT-EXIST');
+            expect(result.data?.errors[0].error).toContain('未找到');
         });
     });
 });

@@ -130,6 +130,20 @@ describe('Notification Server Actions', () => {
             expect(result.data?.data).toEqual([]);
             expect(result.data?.meta?.total).toBe(0);
         });
+
+        it('should fetch notifications with type filter', async () => {
+            const mockData = [{ id: 'n2', title: 'System Info', type: 'SYSTEM' }];
+            vi.mocked(db.query.notifications.findMany).mockResolvedValue(mockData as never);
+
+            vi.mocked(db.select).mockReturnValue(hoisted.createDrizzleMock([{ count: 1 }]));
+
+            const result = await getNotifications({ page: 1, limit: 10, onlyUnread: false, type: 'SYSTEM' });
+
+            expect(result.success).toBe(true);
+            expect(result.data?.data).toEqual(mockData);
+            expect(result.data?.meta?.total).toBe(1);
+            expect(db.query.notifications.findMany).toHaveBeenCalled();
+        });
     });
 
     describe('markAsRead', () => {
@@ -210,6 +224,13 @@ describe('Notification Server Actions', () => {
     describe('markAllAsRead', () => {
         it('should update all unread notifications for the user', async () => {
             const result = await markAllAsRead();
+
+            expect(result.success).toBe(true);
+            expect(db.update).toHaveBeenCalled();
+        });
+
+        it('should update unread notifications of specific type', async () => {
+            const result = await markAllAsRead({ type: 'SYSTEM' });
 
             expect(result.success).toBe(true);
             expect(db.update).toHaveBeenCalled();

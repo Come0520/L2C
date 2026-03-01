@@ -90,8 +90,14 @@ const createQuoteItemActionInternal = createSafeAction(
       });
 
       if (product) {
-        // 尝试在产品库中查找默认配件产品
-        if (product.unitPrice && !data.unitPrice) currentUnitPrice = Number(product.unitPrice);
+        // 价格填充：优先使用零售价 (retailPrice)，其次使用批发价 (unitPrice)
+        if (!data.unitPrice) {
+          if (product.retailPrice) {
+            currentUnitPrice = Number(product.retailPrice);
+          } else if (product.unitPrice) {
+            currentUnitPrice = Number(product.unitPrice);
+          }
+        }
         if (!data.productName) currentProductName = product.name;
 
         // 从产品规格中填充属性
@@ -142,6 +148,7 @@ const createQuoteItemActionInternal = createSafeAction(
         sideLoss: (attributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
         bottomLoss: (attributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
         headerLoss: (attributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
+        customPanels: Array.isArray(attributes.customPanels) ? attributes.customPanels as { width: number }[] : undefined,
         // Wallpaper specifics
         rollLength: (attributes.rollLength as number) || 10,
         patternRepeat: (attributes.patternRepeat as number) || 0,
@@ -194,14 +201,17 @@ const createQuoteItemActionInternal = createSafeAction(
     await updateQuoteTotal(data.quoteId, context.session.user.tenantId);
 
     // 自动配件联动
-    if (newItem && (isCurtain || isWallpaper)) {
+    if (newItem && config.bomTemplates && config.bomTemplates.length > 0) {
       const recommendations = await AccessoryLinkageService.getRecommendedAccessories(
         {
           category: data.category,
           width: Number(data.width || 0),
           height: Number(data.height || 0),
+          foldRatio: Number(data.foldRatio || config.presetLoss.curtain.defaultFoldRatio),
+          quantity: quantity
         },
-        tenantId
+        tenantId,
+        config.bomTemplates
       );
 
       for (const rec of recommendations) {
@@ -234,7 +244,7 @@ const createQuoteItemActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 行项目创建成功', { itemId: newItem.id, quoteId: data.quoteId });
     return newItem;
   }
@@ -294,6 +304,16 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   let quantity = updateData.quantity ?? Number(existing.quantity);
   const warnings: string[] = [];
 
+  // 判断是否只更新了数量（手动修改用量场景）
+  const isManualQuantityOverride =
+    updateData.quantity !== undefined &&
+    updateData.width === undefined &&
+    updateData.height === undefined &&
+    updateData.foldRatio === undefined &&
+    updateData.attributes === undefined &&
+    productId === undefined &&
+    updateData.category === undefined;
+
   // 产品自动填充逻辑
   const currentProductId = productId ?? existing.productId;
   if (currentProductId) {
@@ -302,8 +322,14 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     });
 
     if (product) {
-      if (updateData.unitPrice === undefined && product.unitPrice)
-        unitPrice = Number(product.unitPrice);
+      // 价格填充：优先使用零售价 (retailPrice)，其次使用批发价 (unitPrice)
+      if (updateData.unitPrice === undefined) {
+        if (product.retailPrice) {
+          unitPrice = Number(product.retailPrice);
+        } else if (product.unitPrice) {
+          unitPrice = Number(product.unitPrice);
+        }
+      }
       if (productNameFromUI === undefined) productName = product.name;
 
       const specs = (product.specs as Record<string, unknown>) || {};
@@ -382,6 +408,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
       sideLoss: (mergedAttributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
       bottomLoss: (mergedAttributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
       headerLoss: (mergedAttributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
+      customPanels: Array.isArray(mergedAttributes.customPanels) ? mergedAttributes.customPanels as { width: number }[] : undefined,
       // Wallpaper specifics
       rollLength: (mergedAttributes.rollLength as number) || 10,
       patternRepeat: (mergedAttributes.patternRepeat as number) || 0,
@@ -391,7 +418,11 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     };
 
     const result = strategy.calculate(calcParams);
-    quantity = result.usage;
+
+    // 如果不是纯手动修改用量的场景，则使用计算引擎的结果覆盖
+    if (!isManualQuantityOverride) {
+      quantity = result.usage;
+    }
 
     if (result.details) {
       (mergedAttributes as Record<string, unknown>).calcResult = result.details;
@@ -440,7 +471,7 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   });
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', {});
+  revalidateTag('quotes', 'default');
   return { success: true };
 });
 
@@ -490,7 +521,7 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
   await updateQuoteTotal(existing.quoteId, userTenantId);
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', {});
+  revalidateTag('quotes', 'default');
   return { success: true };
 });
 
@@ -551,7 +582,7 @@ export const reorderQuoteItems = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 行项目排序完成', { quoteId: data.quoteId });
     return { success: true };
   }

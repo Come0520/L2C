@@ -14,7 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { updateQuoteItem } from '@/features/quotes/actions/mutations';
+import { updateQuoteItem } from '@/features/quotes/actions/quote-item-crud';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
@@ -43,6 +43,7 @@ interface QuoteItemAdvancedAttributes {
   headerLoss?: number | string;
   rollLength?: number | string;
   patternRepeat?: number | string;
+  customPanels?: { width: number }[];
   [key: string]: unknown;
 }
 
@@ -80,11 +81,16 @@ export function QuoteItemAdvancedDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
-      const processedAttributes: Record<string, string | number | boolean | null> = {};
+      const processedAttributes: Record<string, string | number | boolean | null | { width: number }[]> = {};
       Object.keys(attributes).forEach((key) => {
         const val = attributes[key];
         if (val !== undefined && val !== null) {
-          processedAttributes[key] = String(val);
+          // 数组类型属性（如 customPanels）直接保留，不做 String() 转换
+          if (Array.isArray(val)) {
+            processedAttributes[key] = val;
+          } else {
+            processedAttributes[key] = String(val);
+          }
         }
       });
       // 将可能会产生 undefined 的字段转为 null
@@ -204,24 +210,31 @@ export function QuoteItemAdvancedDrawer({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>拉动形式 (Opening Style)</Label>
+                      <Label>拉动形式</Label>
                       <Select
                         value={attributes.openingStyle || 'SPLIT'}
-                        onValueChange={(v) => updateAttribute('openingStyle', v)}
+                        onValueChange={(v) => {
+                          updateAttribute('openingStyle', v);
+                          // 选择"自定义"时，初始化默认 2 片（各取一半宽度）
+                          if (v === 'CUSTOM' && (!attributes.customPanels || !Array.isArray(attributes.customPanels) || (attributes.customPanels as { width: number }[]).length === 0)) {
+                            const halfWidth = Math.round(Number(item.width || 0) * 100 / 2); // m→cm 再除2
+                            updateAttribute('customPanels', [{ width: halfWidth }, { width: halfWidth }]);
+                          }
+                        }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select style" />
+                          <SelectValue placeholder="选择形式" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="SPLIT">对开 (Split)</SelectItem>
-                          <SelectItem value="SINGLE_LEFT">单开左 (Left)</SelectItem>
-                          <SelectItem value="SINGLE_RIGHT">单开右 (Right)</SelectItem>
-                          <SelectItem value="MULTI">多开 (Multi)</SelectItem>
+                          <SelectItem value="SPLIT">对开</SelectItem>
+                          <SelectItem value="SINGLE_LEFT">单开左</SelectItem>
+                          <SelectItem value="SINGLE_RIGHT">单开右</SelectItem>
+                          <SelectItem value="CUSTOM">自定义片数</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>褶皱倍数 (Fold Ratio)</Label>
+                      <Label>褶皱倍数</Label>
                       <Input
                         type="number"
                         step="0.1"
@@ -230,6 +243,65 @@ export function QuoteItemAdvancedDrawer({
                       />
                     </div>
                   </div>
+
+                  {/* 自定义片数编辑器 */}
+                  {attributes.openingStyle === 'CUSTOM' && (() => {
+                    const panels = Array.isArray(attributes.customPanels)
+                      ? (attributes.customPanels as { width: number }[])
+                      : [{ width: 0 }, { width: 0 }];
+
+                    const updatePanel = (index: number, width: number) => {
+                      const newPanels = [...panels];
+                      newPanels[index] = { width };
+                      updateAttribute('customPanels', newPanels);
+                    };
+                    const addPanel = () => {
+                      updateAttribute('customPanels', [...panels, { width: 0 }]);
+                    };
+                    const removePanel = (index: number) => {
+                      if (panels.length <= 1) return;
+                      const newPanels = panels.filter((_, i) => i !== index);
+                      updateAttribute('customPanels', newPanels);
+                    };
+
+                    return (
+                      <div className="space-y-2 rounded-lg border border-dashed p-3">
+                        <Label className="text-xs text-muted-foreground">各片宽度 (cm)，高度和褶皱倍数共用</Label>
+                        <div className="space-y-2">
+                          {panels.map((panel, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground w-14 shrink-0">第{index + 1}片</span>
+                              <Input
+                                type="number"
+                                className="h-8 flex-1"
+                                value={panel.width || ''}
+                                onChange={(e) => updatePanel(index, Number(e.target.value))}
+                                placeholder="宽度"
+                              />
+                              <span className="text-xs text-muted-foreground">cm</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => removePanel(index)}
+                                disabled={panels.length <= 1}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full h-7 text-xs"
+                          onClick={addPanel}
+                        >
+                          + 添加一片
+                        </Button>
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

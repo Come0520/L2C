@@ -9,9 +9,10 @@ export const CurtainAttributesSchema = z.object({
     pattern: z.string().optional(),
     lining: z.string().optional(), // 衬里
     valance: z.string().optional(), // 帘头
-    openingStyle: z.enum(['SINGLE', 'DOUBLE', 'MULTI']).default('DOUBLE'),
+    openingStyle: z.enum(['SINGLE', 'DOUBLE', 'MULTI', 'CUSTOM']).default('DOUBLE'),
     installPosition: z.enum(['WINDOW_BOX', 'INSIDE', 'OUTSIDE']).default('WINDOW_BOX'),
     groundClearance: z.number().default(2), // 离地高度
+    customPanels: z.array(z.object({ width: z.number() })).optional(), // 自定义片数
     remarks: z.string().optional(),
 });
 

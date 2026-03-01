@@ -7,6 +7,7 @@ import { eq, and, count, inArray, sql } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { createLogger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
 
 const logger = createLogger('DashboardStatsAction');
 
@@ -117,6 +118,20 @@ export const getDashboardStats = createSafeAction(
 
             // 使用缓存获取数据
             const stats = await getCachedStatsData(tenantId, userId, currentRole, session.user.name);
+
+            // [L4 升级] 引入审计监控：对核心大盘数据刷新动作留痕
+            try {
+                await AuditService.log(db, {
+                    tableName: 'system', // 对于不涉及实体的读取行为，用 system/dashboard 占位
+                    recordId: userId,
+                    action: 'FETCH_DASHBOARD_STATS',
+                    userId,
+                    tenantId,
+                    details: { message: '刷新仪表盘总体大盘数据', role: currentRole }
+                });
+            } catch (auditErr) {
+                logger.warn('审计日志记录失败', { userId }, auditErr);
+            }
 
             logger.info('成功获取仪表盘统计数据', { userId, tenantId, cardCount: stats.cards.length });
             return stats;

@@ -1,9 +1,9 @@
 import { db } from "@/shared/api/db";
-import { orders, orderItems } from "@/shared/api/schema";
+import { orders, orderItems, tenants, receiptBills, receiptBillItems, arStatements } from "@/shared/api/schema";
 import { quotes } from "@/shared/api/schema/quotes";
 import { OrderStateMachine } from '@/features/orders/logic/order-state-machine';
 import type { OrderStatus } from '@/shared/lib/status-maps';
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
 import { POSplitService } from "./po-split.service";
@@ -17,6 +17,13 @@ export interface CreateOrderOptions {
     paymentAmount?: string;
     paymentMethod?: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
     remark?: string;
+    usedPrepayments?: string[];
+    newPayment?: {
+        amount: number;
+        proofUrl?: string;
+        paymentMethod: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
+        accountId?: string;
+    };
 }
 
 export class OrderService {
@@ -69,18 +76,76 @@ export class OrderService {
                 throw new Error(`Order already exists for this quote: ${existingOrder.orderNo}`);
             }
 
-            // 2. Create Order Header
-            const orderNo = await this.generateOrderNo();
+            // 2. Fetch Tenant Settings for dynamic routing
+            const tenant = await tx.query.tenants.findFirst({
+                where: eq(tenants.id, tenantId),
+                columns: { settings: true }
+            });
+            const settings = (tenant?.settings as unknown as { orderFlowConfig?: any }) || {};
+            const orderFlowConfig = settings.orderFlowConfig || {
+                financeConfirmationRequired: false,
+                managerApprovalRequired: false
+            };
 
+            // 3. Process Existing Prepayments
+            let verifiedPrepaymentTotal = new Decimal(0);
+            const appliedPrepayments = [];
+
+            if (options?.usedPrepayments && options.usedPrepayments.length > 0) {
+                const prepayments = await tx.query.receiptBills.findMany({
+                    where: and(
+                        inArray(receiptBills.id, options.usedPrepayments),
+                        eq(receiptBills.tenantId, tenantId),
+                        eq(receiptBills.status, 'VERIFIED')
+                    )
+                });
+
+                for (const p of prepayments) {
+                    const remaining = new Decimal(p.remainingAmount || 0);
+                    verifiedPrepaymentTotal = verifiedPrepaymentTotal.plus(remaining);
+                    appliedPrepayments.push({ id: p.id, amount: remaining.toString() });
+                }
+            }
+
+            // 4. Calculate Shortfall and Deficit
             const total = new Decimal(quote.totalAmount || 0);
-            const paid = new Decimal(options?.paymentAmount || 0);
-            const balance = total.minus(paid);
+            const newPaymentAmount = new Decimal(options?.newPayment?.amount || 0);
+            const shortfall = total.minus(verifiedPrepaymentTotal);
+            const deficit = shortfall.minus(newPaymentAmount);
+
+            // 5. Determine Order Status based on Dynamic Routing
+            let targetStatus: OrderStatus = 'PENDING_PO';
+            let newPaymentVerified = false;
+
+            if (deficit.gt(0)) {
+                // Scenario C: Insufficient funds
+                if (orderFlowConfig.managerApprovalRequired) {
+                    targetStatus = 'PENDING_APPROVAL';
+                } else {
+                    targetStatus = 'PENDING_PO';
+                }
+            } else {
+                // Scenario A & B: Fully paid (or overpaid)
+                if (newPaymentAmount.gt(0)) {
+                    if (orderFlowConfig.financeConfirmationRequired) {
+                        targetStatus = 'SIGNED'; // Wait for finance confirmation
+                    } else {
+                        targetStatus = 'PENDING_PO'; // Auto verified new payment
+                        newPaymentVerified = true;
+                    }
+                } else {
+                    targetStatus = 'PENDING_PO'; // Everything covered by existing verified prepayments
+                }
+            }
+
+            // 6. Create Order Header
+            const orderNo = await this.generateOrderNo();
+            const totalPaid = verifiedPrepaymentTotal.plus(newPaymentVerified ? newPaymentAmount : new Decimal(0));
 
             // Prepare Snapshot
             const quoteSnapshot = {
                 quote: {
                     ...quote,
-                    // Ensure items have product details
                     items: quote.items
                 },
                 customer: quote.customer,
@@ -93,37 +158,30 @@ export class OrderService {
                 quoteId: quote.id,
                 quoteVersionId: quote.id,
                 customerId: quote.customerId,
-                customerName: quote.customer.name, // Use relation
-                customerPhone: quote.customer.phone, // Use relation
-                deliveryAddress: options?.paymentProofImg ? undefined : undefined, // Simplify
+                customerName: quote.customer.name,
+                customerPhone: quote.customer.phone,
 
                 // Populate Channel Info from Lead
                 channelId: quote.lead?.channelId,
                 channelContactId: quote.lead?.channelContactId,
-                // channelCooperationMode: We might need to fetch channel to get this default, or leave null to use channel default at runtime
 
                 totalAmount: quote.totalAmount,
-                paidAmount: options?.paymentAmount || '0',
-                balanceAmount: String(balance),
+                paidAmount: totalPaid.toString(),
+                balanceAmount: total.minus(totalPaid).toString(),
                 settlementType: 'PREPAID',
-                status: 'PENDING_PO',
+                status: targetStatus,
 
-                confirmationImg: options?.confirmationImg,
-                paymentProofImg: options?.paymentProofImg,
-                paymentMethod: options?.paymentMethod,
-                paymentTime: options?.paymentAmount ? new Date() : null,
+                paymentMethod: options?.newPayment?.paymentMethod || 'CASH',
                 remark: options?.remark,
 
-                quoteSnapshot, // Save Deep Snapshot
-                snapshotData: {}, // Initialize generic snapshot data
-
-                isLocked: false, // Default false
-
+                quoteSnapshot,
+                snapshotData: {},
+                isLocked: false,
                 salesId: quote.createdBy,
                 createdBy: userId,
             }).returning();
 
-            // 3. Create Order Items
+            // 7. Create Order Items
             if (quote.items && quote.items.length > 0) {
                 const itemsToInsert = quote.items.map(item => ({
                     tenantId,
@@ -142,6 +200,92 @@ export class OrderService {
                     status: 'PENDING' as const,
                 }));
                 await tx.insert(orderItems).values(itemsToInsert);
+            }
+
+            // 8. Create or Update ReceiptBills & AR Statements
+            // Create AR Statement for the order
+            const statementNo = `AR${format(new Date(), 'yyyyMMdd')}${randomBytes(2).toString('hex').toUpperCase()}`;
+            const [arStatement] = await tx.insert(arStatements).values({
+                tenantId,
+                statementNo,
+                orderId: newOrder.id,
+                customerId: newOrder.customerId,
+                customerName: newOrder.customerName ?? 'No Name',
+                totalAmount: newOrder.totalAmount ?? '0',
+                receivedAmount: totalPaid.toString(),
+                pendingAmount: newOrder.balanceAmount ?? '0',
+                settlementType: 'PREPAID',
+                status: totalPaid.gte(total) ? 'PAID' : (totalPaid.gt(0) ? 'PARTIAL' : 'INVOICED'),
+                salesId: newOrder.salesId ?? userId,
+                channelId: newOrder.channelId ?? undefined,
+            }).returning();
+
+            // Deduct from existing prepayments
+            for (const p of appliedPrepayments) {
+                await tx.update(receiptBills)
+                    .set({
+                        usedAmount: p.amount,
+                        remainingAmount: '0',
+                        updatedAt: new Date()
+                    })
+                    .where(and(eq(receiptBills.id, p.id), eq(receiptBills.tenantId, tenantId)));
+
+                // Link the prepayments to this order via receiptBillItems (for history tracking)
+                await tx.insert(receiptBillItems).values({
+                    tenantId,
+                    receiptBillId: p.id,
+                    orderId: newOrder.id,
+                    orderNo: newOrder.orderNo,
+                    amount: p.amount,
+                    statementId: arStatement.id,
+                });
+            }
+
+            // Create New Payment Receipt Bill if provided
+            if (newPaymentAmount.gt(0) && options?.newPayment) {
+                const receiptNo = `REC${format(new Date(), 'yyyyMMdd')}${randomBytes(3).toString('hex').toUpperCase()}`;
+                const newReceiptStatus = newPaymentVerified ? 'VERIFIED' : 'PENDING_APPROVAL';
+
+                const [bill] = await tx.insert(receiptBills).values({
+                    tenantId,
+                    receiptNo,
+                    customerId: newOrder.customerId,
+                    customerName: newOrder.customerName ?? 'No Name',
+                    customerPhone: newOrder.customerPhone ?? '',
+                    type: 'PREPAID',
+                    totalAmount: options.newPayment.amount.toString(),
+                    usedAmount: newPaymentVerified ? options.newPayment.amount.toString() : '0',
+                    remainingAmount: newPaymentVerified ? '0' : options.newPayment.amount.toString(),
+                    status: newReceiptStatus,
+                    paymentMethod: options.newPayment.paymentMethod,
+                    accountId: options.newPayment.accountId ?? undefined,
+                    proofUrl: options.newPayment.proofUrl ?? '',
+                    receivedAt: new Date(),
+                    remark: options.remark ?? '支付尾款/新下款',
+                    createdBy: userId,
+                    verifiedBy: newPaymentVerified ? userId : undefined,
+                    verifiedAt: newPaymentVerified ? new Date() : undefined,
+                }).returning();
+
+                await tx.insert(receiptBillItems).values({
+                    tenantId,
+                    receiptBillId: bill.id,
+                    orderId: newOrder.id,
+                    orderNo: newOrder.orderNo,
+                    amount: options.newPayment.amount.toString(),
+                    statementId: arStatement.id,
+                });
+            }
+
+            // 9. Auto trigger manager approval if needed
+            if (targetStatus === 'PENDING_APPROVAL') {
+                await submitApproval({
+                    entityType: 'ORDER',
+                    entityId: newOrder.id,
+                    flowCode: 'ORDER_LOW_DEPOSIT',
+                    comment: `客户仅预付：${totalPaid.toString()}元，申请低定金发单`,
+                    amount: newOrder.totalAmount || '0',
+                });
             }
 
             return newOrder;

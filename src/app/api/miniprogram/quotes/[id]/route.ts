@@ -6,7 +6,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems, customers } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, desc } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../auth-utils';
@@ -59,7 +59,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       orderBy: [quoteItems.sortOrder],
     });
 
-    // 4. Format Response
+    // 4. 查询关联版本（方案 B 追加）
+    const rootId = quote.rootQuoteId || quote.id;
+    const versions = await db.query.quotes.findMany({
+      columns: { id: true, version: true, status: true, createdAt: true },
+      where: and(
+        or(eq(quotes.rootQuoteId, rootId), eq(quotes.id, rootId)),
+        eq(quotes.tenantId, user.tenantId)
+      ),
+      orderBy: desc(quotes.version)
+    });
+
+    // 5. Format Response
     const data = {
       id: quote.id,
       quoteNo: quote.quoteNo,
@@ -80,6 +91,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         subtotal: item.subtotal,
         attributes: item.attributes,
       })),
+      versions: versions,
     };
 
     return apiSuccess(data);

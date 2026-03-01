@@ -7,7 +7,7 @@ import { CATEGORY_LABELS } from '@/features/quotes/constants';
 // 1. Generic parsers
 // ----------------------------------------------------------------------
 
-const parseNumber = (val: any) => {
+const parseNumber = (val: unknown) => {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
     const parsed = parseFloat(val);
@@ -16,7 +16,7 @@ const parseNumber = (val: any) => {
   return 0; // Default fallback instead of throwing to be more forgiving in Excel
 };
 
-const parseBooleanStr = (val: any) => {
+const parseBooleanStr = (val: unknown) => {
   if (typeof val === 'boolean') return val;
   if (typeof val === 'string') {
     const lower = val.toLowerCase().trim();
@@ -91,8 +91,7 @@ const baseColumnMapping = {
 /**
  * 生成各品类的配置工厂
  */
-export function getImportConfigByCategory(category: string): Omit<ExcelImporterProps<any>, 'onImport'> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export function getImportConfigByCategory(category: string): Omit<ExcelImporterProps<BaseProductImportItem & Record<string, unknown>>, 'onImport'> {
   const categoryLabel = CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || '其它商品';
 
   // ========== 窗帘类 (成品/面料) ==========

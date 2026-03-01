@@ -13,11 +13,15 @@ import X from 'lucide-react/dist/esm/icons/x';
 import { toast } from 'sonner';
 
 // Widget 组件导入
-import { StatCard } from '@/features/analytics/components/stat-card';
-import { ArApSummaryCard } from '@/features/analytics/components/ar-ap-summary-card';
-import { DeliveryEfficiencyCard } from '@/features/analytics/components/delivery-efficiency-card';
-import { CustomerSourceChart } from '@/features/analytics/components/customer-source-chart';
-import { SalesFunnelChart } from '@/features/analytics/components/sales-funnel-chart';
+import { Suspense, lazy } from 'react';
+import { CardSkeleton } from '@/shared/ui/skeleton-variants';
+import { WidgetErrorBoundary } from '../widgets/widget-error-boundary';
+
+const StatCard = lazy(() => import('@/features/analytics/components/stat-card').then(mod => ({ default: mod.StatCard })));
+const ArApSummaryCard = lazy(() => import('@/features/analytics/components/ar-ap-summary-card').then(mod => ({ default: mod.ArApSummaryCard })));
+const DeliveryEfficiencyCard = lazy(() => import('@/features/analytics/components/delivery-efficiency-card').then(mod => ({ default: mod.DeliveryEfficiencyCard })));
+const CustomerSourceChart = lazy(() => import('@/features/analytics/components/customer-source-chart').then(mod => ({ default: mod.CustomerSourceChart })));
+const SalesFunnelChart = lazy(() => import('@/features/analytics/components/sales-funnel-chart').then(mod => ({ default: mod.SalesFunnelChart })));
 import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import Users from 'lucide-react/dist/esm/icons/users';
 import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
@@ -96,9 +100,10 @@ export function DashboardPageClient({
 
     // 渲染 Widget
     const renderWidget = useCallback((widget: WidgetConfig) => {
+        let content;
         switch (widget.type) {
             case 'kpi-sales':
-                return (
+                content = (
                     <StatCard
                         title="本月签约"
                         value={`¥${Number(statsData?.totalSales || 0).toLocaleString()}`}
@@ -106,8 +111,9 @@ export function DashboardPageClient({
                         trend={{ value: 12.5, label: '较上月' }}
                     />
                 );
+                break;
             case 'kpi-leads':
-                return (
+                content = (
                     <StatCard
                         title="待跟进线索"
                         value={statsData?.newLeads || 0}
@@ -115,8 +121,9 @@ export function DashboardPageClient({
                         description="本月新增"
                     />
                 );
+                break;
             case 'kpi-orders':
-                return (
+                content = (
                     <StatCard
                         title="成交订单"
                         value={statsData?.orderCount || 0}
@@ -124,8 +131,9 @@ export function DashboardPageClient({
                         description="本月成交"
                     />
                 );
+                break;
             case 'kpi-conversion':
-                return (
+                content = (
                     <StatCard
                         title="转化率"
                         value={`${statsData?.conversionRate || 0}%`}
@@ -133,15 +141,17 @@ export function DashboardPageClient({
                         description="线索转订单"
                     />
                 );
+                break;
             case 'ar-ap-summary':
-                return (
+                content = (
                     <ArApSummaryCard
                         pendingReceivables={statsData?.pendingReceivables || '0'}
                         pendingPayables={statsData?.pendingPayables || '0'}
                     />
                 );
+                break;
             case 'delivery-efficiency':
-                return (
+                content = (
                     <DeliveryEfficiencyCard
                         measureAvgDays={deliveryData?.measureAvgDays}
                         measureOnTimeRate={deliveryData?.measureOnTimeRate}
@@ -151,21 +161,32 @@ export function DashboardPageClient({
                         overdueTaskCount={deliveryData?.overdueTaskCount}
                     />
                 );
+                break;
             case 'customer-source':
-                return (
+                content = (
                     <CustomerSourceChart data={sourceData} />
                 );
+                break;
             case 'sales-funnel':
-                return (
+                content = (
                     <SalesFunnelChart data={funnelData} />
                 );
+                break;
             default:
-                return (
+                content = (
                     <div className="h-full bg-muted/50 rounded-lg flex items-center justify-center text-muted-foreground">
                         {widget.title}
                     </div>
                 );
         }
+
+        return (
+            <WidgetErrorBoundary title={widget.title}>
+                <Suspense fallback={<CardSkeleton />}>
+                    {content}
+                </Suspense>
+            </WidgetErrorBoundary>
+        );
     }, [statsData, deliveryData, sourceData, funnelData]);
 
     return (

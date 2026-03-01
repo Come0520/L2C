@@ -4,11 +4,16 @@ import { auth } from '@/shared/lib/auth';
 import { db } from '@/shared/api/db';
 import { accountingPeriods, users, journalEntries } from '@/shared/api/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_cache } from 'next/cache';
 import { getFinanceMode } from './simple-mode-actions';
 import { canClosePeriod } from '../utils/finance-permissions';
+import { AuditService } from '@/shared/services/audit-service';
 
-// 获取当月账期或自动创建一个新账期
+/**
+ * 获取或初始创建当前账期 (Get or Create Current Period)
+ * 依据系统时间推算并确保当前自然月的会计账期存在
+ * @returns 当前月度账期信息
+ */
 export async function getOrCreateCurrentPeriod() {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -33,17 +38,29 @@ export async function getOrCreateCurrentPeriod() {
 
         // 若不存在，则创建
         if (!currentPeriod) {
-            const inserted = await db.insert(accountingPeriods)
-                .values({
-                    tenantId,
-                    year,
-                    month,
-                    quarter,
-                    status: 'OPEN',
-                })
-                .returning();
+            currentPeriod = await db.transaction(async (tx) => {
+                const inserted = await tx.insert(accountingPeriods)
+                    .values({
+                        tenantId,
+                        year,
+                        month,
+                        quarter,
+                        status: 'OPEN',
+                    })
+                    .returning();
 
-            currentPeriod = inserted[0];
+                await AuditService.log(tx, {
+                    tenantId: tenantId,
+                    userId: session.user!.id!,
+                    tableName: 'accounting_periods',
+                    recordId: inserted[0].id,
+                    action: 'INSERT',
+                    newValues: inserted[0]
+                });
+
+                return inserted[0];
+            });
+
             revalidatePath('/finance/periods');
         }
 
@@ -54,7 +71,11 @@ export async function getOrCreateCurrentPeriod() {
     }
 }
 
-// 获取全部账期列表 (带有关账人信息)
+/**
+ * 获取完整的账期列表及其关账人信息 (Get Accounting Periods)
+ * @returns 包含所有账期数据的列表对象，并解析出执行关账操作的用户姓名
+ * @throws 权限不足或查询出错时抛出错误
+ */
 export async function getAccountingPeriods() {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -64,33 +85,42 @@ export async function getAccountingPeriods() {
     const tenantId = session.user.tenantId;
 
     try {
-        const periods = await db.query.accountingPeriods.findMany({
-            where: eq(accountingPeriods.tenantId, tenantId),
-            orderBy: [desc(accountingPeriods.year), desc(accountingPeriods.month)],
-        });
-        const closedByIds = periods.map((p) => p.closedBy).filter(Boolean) as string[];
-        let userMap: Record<string, string> = {};
+        const getCachedPeriods = unstable_cache(
+            async () => {
+                const periods = await db.query.accountingPeriods.findMany({
+                    where: eq(accountingPeriods.tenantId, tenantId),
+                    orderBy: [desc(accountingPeriods.year), desc(accountingPeriods.month)],
+                });
+                const closedByIds = periods.map((p) => p.closedBy).filter(Boolean) as string[];
+                let userMap: Record<string, string> = {};
 
-        if (closedByIds.length > 0) {
-            const closedUsers = await db.query.users.findMany({
-                where: inArray(users.id, Array.from(new Set(closedByIds))),
-                columns: {
-                    id: true,
-                    name: true,
-                },
-            });
+                if (closedByIds.length > 0) {
+                    const closedUsers = await db.query.users.findMany({
+                        where: inArray(users.id, Array.from(new Set(closedByIds))),
+                        columns: {
+                            id: true,
+                            name: true,
+                        },
+                    });
 
-            userMap = closedUsers.reduce((acc, u) => {
-                acc[u.id] = u.name || '未知用户';
-                return acc;
-            }, {} as Record<string, string>);
-        }
+                    userMap = closedUsers.reduce((acc, u) => {
+                        acc[u.id] = u.name || '未知用户';
+                        return acc;
+                    }, {} as Record<string, string>);
+                }
 
-        const dataWithUsers = periods.map((p) => ({
-            ...p,
-            closedByName: p.closedBy ? userMap[p.closedBy] : null,
-        }));
+                const dataWithUsers = periods.map((p) => ({
+                    ...p,
+                    closedByName: p.closedBy ? userMap[p.closedBy] : null,
+                }));
 
+                return dataWithUsers;
+            },
+            [`accounting-periods-${tenantId}`],
+            { tags: [`accounting-periods-${tenantId}`], revalidate: 3600 }
+        );
+
+        const dataWithUsers = await getCachedPeriods();
         return { success: true, data: dataWithUsers };
 
     } catch (error) {
@@ -99,6 +129,12 @@ export async function getAccountingPeriods() {
     }
 }
 
+/**
+ * 关闭指定的会计账期 (Close Accounting Period)
+ * 财务结账的核心操作，成功关闭后期间内禁止再次记账
+ * @param periodId - 要关闭的账期ID
+ * @returns 带有 success 标识或 error 错误原因的对象
+ */
 export async function closeAccountingPeriod(periodId: string) {
     const session = await auth();
     if (!session?.user?.tenantId) {
@@ -145,13 +181,25 @@ export async function closeAccountingPeriod(periodId: string) {
             return { error: '该账期下尚有未记账或待审核的凭证，无法关闭！' };
         }
 
-        await db.update(accountingPeriods)
-            .set({
-                status: 'CLOSED',
-                closedBy: session.user.id,
-                closedAt: new Date(),
-            })
-            .where(eq(accountingPeriods.id, periodId));
+        await db.transaction(async (tx) => {
+            await tx.update(accountingPeriods)
+                .set({
+                    status: 'CLOSED',
+                    closedBy: session.user!.id,
+                    closedAt: new Date(),
+                })
+                .where(eq(accountingPeriods.id, periodId));
+
+            await AuditService.log(tx, {
+                tenantId: session.user!.tenantId!,
+                userId: session.user!.id!,
+                tableName: 'accounting_periods',
+                recordId: periodId,
+                action: 'UPDATE',
+                newValues: { status: 'CLOSED', closedBy: session.user!.id },
+                oldValues: { status: targetPeriod.status }
+            });
+        });
 
         revalidatePath('/finance/periods');
         return { success: true };

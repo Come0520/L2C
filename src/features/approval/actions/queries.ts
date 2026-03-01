@@ -27,11 +27,30 @@ const getPendingApprovalsInternal = createSafeAction(paginationSchema, async (pa
                 where: whereClause,
                 with: {
                     approval: {
+                        columns: {
+                            id: true,
+                            entityType: true,
+                            entityId: true,
+                            status: true,
+                            createdAt: true,
+                            requesterId: true
+                        },
                         with: {
-                            flow: true
+                            flow: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                }
+                            }
                         }
                     },
-                    node: true
+                    node: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            nodeType: true,
+                        }
+                    }
                 },
                 orderBy: [desc(approvalTasks.createdAt)],
                 limit: pageSize,
@@ -77,12 +96,36 @@ const getProcessedApprovalsInternal = createSafeAction(paginationSchema, async (
                 where: whereClause,
                 with: {
                     approval: {
+                        columns: {
+                            id: true,
+                            entityType: true,
+                            entityId: true,
+                            status: true,
+                            createdAt: true,
+                            requesterId: true
+                        },
                         with: {
-                            flow: true,
-                            requester: true
+                            flow: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                }
+                            },
+                            requester: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                }
+                            }
                         }
                     },
-                    node: true
+                    node: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            nodeType: true,
+                        }
+                    }
                 },
                 orderBy: [desc(approvalTasks.actionAt)],
                 limit: pageSize,
@@ -125,8 +168,21 @@ const getApprovalHistoryInternal = createSafeAction(paginationSchema, async (par
         const [myApprovals, totalResult] = await Promise.all([
             db.query.approvals.findMany({
                 where: whereClause,
+                columns: {
+                    id: true,
+                    entityType: true,
+                    status: true,
+                    createdAt: true,
+                    requesterId: true,
+                    currentNodeId: true,
+                },
                 with: {
-                    flow: true,
+                    flow: {
+                        columns: {
+                            id: true,
+                            name: true,
+                        }
+                    },
                 },
                 orderBy: [desc(approvals.createdAt)],
                 limit: pageSize,

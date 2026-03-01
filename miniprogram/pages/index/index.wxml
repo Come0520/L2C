@@ -2,6 +2,15 @@
 <view class="container index-page">
 
   <!-- ============================= -->
+  <!-- 弥散光律动背景层 (Mesh Gradient/Aurora) -->
+  <!-- ============================= -->
+  <view class="glass-bg-layer">
+    <view class="bg-shape shape-1"></view>
+    <view class="bg-shape shape-2"></view>
+    <view class="bg-shape shape-3"></view>
+  </view>
+
+  <!-- ============================= -->
   <!-- 未登录：登录卡片或品牌页       -->
   <!-- ============================= -->
   <block wx:if="{{!isLoggedIn}}">
@@ -374,10 +383,6 @@
             <view class="customer-grid-item" bindtap="goToShowroom">
               <view class="grid-icon-box purple">🛍️</view>
               <text class="grid-text">产品展厅</text>
-            </view>
-            <view class="customer-grid-item" bindtap="goToPendingSign">
-              <view class="grid-icon-box blue">✍️</view>
-              <text class="grid-text">签字确认</text>
             </view>
             <view class="customer-grid-item" bindtap="goToWarranty">
               <view class="grid-icon-box teal">🔧</view>

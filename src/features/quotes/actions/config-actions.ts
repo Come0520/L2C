@@ -53,6 +53,13 @@ const updateGlobalConfigSchema = z.object({
             description: z.string().optional(),
         }).optional(),
     }).optional(),
+    bomTemplates: z.array(z.object({
+        mainCategory: z.string(),
+        targetCategory: z.string(),
+        matchPattern: z.string().optional(),
+        calcLogic: z.enum(['FINISHED_WIDTH', 'FINISHED_HEIGHT', 'FIXED', 'PROPORTIONAL']),
+        ratio: z.number().optional(),
+    })).optional(),
 });
 
 const updateUserPlanSchema = z.object({
@@ -118,7 +125,8 @@ const updateGlobalQuoteConfigActionInternal = createSafeAction(updateGlobalConfi
         presetLoss: data.presetLoss as QuoteConfig['presetLoss'],
         discountControl: data.discountControl,
         defaultPlan: data.defaultPlan,
-        planSettings: data.planSettings
+        planSettings: data.planSettings,
+        bomTemplates: data.bomTemplates as QuoteConfig['bomTemplates']
     };
     await QuoteConfigService.updateTenantConfig(
         session.user.tenantId,

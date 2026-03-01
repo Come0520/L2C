@@ -4,9 +4,10 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 /**
- * 工作流管理 Actions - 占位实现
+ * 工作流管理 Actions (占位实现)
  *
- * @todo [P3] 待工作流模块正式开发后，替换占位函数为实际数据库操作和业务逻辑。
+ * 注意：当前实现仅用于演示和权限校验。待工作流模块正式开发后，
+ * 将替换占位函数为实际的数据库操作和业务逻辑。
  * 当前 createWorkflow / updateWorkflow / deleteWorkflow 仅做权限校验，不执行持久化。
  */
 

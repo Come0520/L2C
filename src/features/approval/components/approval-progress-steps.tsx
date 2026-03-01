@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils';
  */
 interface ApprovalProgressStepsProps {
     /** 审批流程中的定义节点列表 */
-    nodes: Array<{ id: string; name: string; sortOrder: number | null }>;
+    nodes: Array<{ id: string; name: string; sortOrder: number | null; approverRole?: string | null; approverUserId?: string | null; }>;
     /** 已创建的审批任务列表，用于展示每个节点的完成情况 */
     tasks: Array<{ id: string; nodeId: string | null; status: string | null; approver?: { name: string | null } | null; actionAt?: Date | null; comment?: string | null }>;
     /** 当前审批流停留的节点 ID */
@@ -56,7 +56,7 @@ export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalP
 
                 const colors = {
                     PENDING: 'glass-step-inactive text-muted-foreground',
-                    CURRENT: 'bg-primary border-primary text-primary-foreground animate-pulse',
+                    CURRENT: 'bg-primary border-primary text-primary-foreground animate-pulse shadow-[0_0_12px_rgba(24,24,27,0.4)] dark:shadow-[0_0_12px_rgba(250,250,250,0.4)]',
                     APPROVED: 'bg-green-500 border-green-500 text-white',
                     REJECTED: 'bg-red-500 border-red-500 text-white',
                     CANCELED: 'glass-step-inactive', // Cancelled is also inactive style basically
@@ -85,7 +85,7 @@ export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalP
                             <div className="flex items-center justify-between">
                                 <h4 className={cn(
                                     "text-sm font-semibold",
-                                    state === 'CURRENT' ? 'text-primary' : 'text-zinc-900'
+                                    state === 'CURRENT' ? 'text-primary' : 'text-zinc-900 dark:text-zinc-100'
                                 )}>
                                     {node.name}
                                 </h4>
@@ -102,7 +102,7 @@ export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalP
                                 {nodeTasks.length > 0 ? (
                                     nodeTasks.map((task, tid) => (
                                         <div key={task.id || tid} className="text-xs text-zinc-500 flex items-center gap-2">
-                                            <span className="font-medium text-zinc-700">{task.approver?.name || '未知审批人'}</span>
+                                            <span className="font-medium text-zinc-700 dark:text-zinc-300">{task.approver?.name || '未知审批人'}</span>
                                             {task.actionAt && (
                                                 <span className="text-zinc-400">
                                                     {new Date(task.actionAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -114,7 +114,16 @@ export function ApprovalProgressSteps({ nodes, tasks, currentNodeId }: ApprovalP
                                         </div>
                                     ))
                                 ) : (
-                                    state === 'PENDING' && <div className="text-xs text-zinc-400">等待到达此环节</div>
+                                    state === 'PENDING' && (
+                                        <div className="text-xs text-zinc-400 flex flex-col gap-1 mt-1">
+                                            <span>等待到达此环节</span>
+                                            {(node.approverRole || node.approverUserId) && (
+                                                <span className="text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full w-fit">
+                                                    预计由 {node.approverRole ? `[${node.approverRole}] 角色` : '指定用户'} 处理
+                                                </span>
+                                            )}
+                                        </div>
+                                    )
                                 )}
                             </div>
                         </div>

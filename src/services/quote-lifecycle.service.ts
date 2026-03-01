@@ -10,10 +10,17 @@ import type { InferInsertModel } from 'drizzle-orm';
 
 export class QuoteLifecycleService {
   /**
-   * Submit a quote for processing
-   */
-  /**
-   * Submit a quote for processing
+   * 提交报价单审批 (Submit Quote)
+   * 根据那卡风控评估，将报价单状态过渡到 PENDING_APPROVAL（需审批）
+   * 或 PENDING_CUSTOMER（等待客户确认）。
+   * 如果提交时需要审批流程，将自动创建审批请求。
+   *
+   * @param quoteId - 报价单 ID
+   * @param tenantId - 租户 ID，用于数据隔离校验
+   * @param _userId - 操作者用户 ID（留备后续审计使用）
+   * @returns 提交结果，含新状态和风控信息
+   * @throws Error 报价不存在、状态不允许提交时抛出
+   * @security 🔒 租户隔离 + 事务包裹
    */
   static async submit(quoteId: string, tenantId: string, _userId: string) {
     return await db.transaction(async (tx) => {
@@ -97,6 +104,18 @@ export class QuoteLifecycleService {
 
   // ... (approve/accept/reject/lock checks were already safer with optional tenantId, but ensuring convertToOrder is safe constitutes the main P0fix here)
 
+  /**
+   * 审批通过报价单 (Approve Quote)
+   * 将报价单状态从 PENDING_APPROVAL 过渡到 APPROVED。
+   * 仅有授权审批者有权执行此操作。
+   *
+   * @param quoteId - 报价单 ID
+   * @param approverId - 审批者用户 ID
+   * @param tenantId - 租户 ID，用于数据隔离校验
+   * @returns 已更新的报价对象
+   * @throws Error 报价不存在或状态不符合时抛出
+   * @security 🔒 租户隔离
+   */
   static async approve(quoteId: string, approverId: string, tenantId: string) {
     // 🔒 安全修复：校验报价单归属当前租户
     const quote = await db.query.quotes.findFirst({
@@ -135,6 +154,18 @@ export class QuoteLifecycleService {
     return result;
   }
 
+  /**
+   * 拒绝报价单（审批） (Reject Quote)
+   * 将报价单状态从 PENDING_APPROVAL 过渡到 REJECTED，
+   * 并记录拒绝原因。拒绝后报价单可被重新编辑和提交。
+   *
+   * @param quoteId - 报价单 ID
+   * @param reason - 拒绝原因（必填）
+   * @param tenantId - 租户 ID，用于数据隔离校验
+   * @returns 已更新的报价对象
+   * @throws Error 报价不存在或状态不符合时抛出
+   * @security 🔒 租户隔离
+   */
   static async reject(quoteId: string, reason: string, tenantId: string) {
     // 🔒 安全修复：校验报价单归属当前租户
     const quote = await db.query.quotes.findFirst({
@@ -174,7 +205,16 @@ export class QuoteLifecycleService {
   }
 
   /**
-   * Convert Quote to Order
+   * 报价单转订单 (Convert Quote to Order)
+   * 将状态为 APPROVED 的报价单转化为正式订单。
+   * 转化过程包含：复制客户和地址信息、创建订单主表和明细项、更新报价单状态。
+   *
+   * @param quoteId - 报价单 ID（状态必须为 APPROVED）
+   * @param tenantId - 租户 ID，用于数据隔离校验
+   * @param userId - 操作者用户 ID
+   * @returns 新创建的订单对象
+   * @throws Error 报价不存在、状态不是 APPROVED，或订单创建失败时抛出
+   * @security 🔒 租户隔离 + 事务包裹，保障报价单状态更新和订单创建的原子性
    */
   static async convertToOrder(quoteId: string, tenantId: string, userId: string) {
     return await db.transaction(async (tx) => {
@@ -304,8 +344,13 @@ export class QuoteLifecycleService {
   }
 
   /**
-   * 过期处理自动化 (Check for Expirations)
-   * 自动将超过 validUntil 的报价单标记为 EXPIRED
+   * 自动检查并标记过期报价 (Check Expirations)
+   * 把所有超过 `validUntil` 日期且处于活跃状态的报价单标记为 EXPIRED。
+   * 此方法通常由定时任务（Cron Job）调用。
+   *
+   * @param tenantId - 租户 ID，限定处理范围
+   * @returns 已标记过期的报价单数量
+   * @security 🔒 租户隔离
    */
   static async checkExpirations(tenantId: string) {
     const now = new Date();

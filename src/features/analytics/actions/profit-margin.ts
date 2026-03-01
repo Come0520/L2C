@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { ANALYTICS_PERMISSIONS } from '../constants';
+import { AuditService } from '@/shared/services/audit-service';
 
 const profitMarginSchema = z.object({
     startDate: z.string().optional(),
@@ -37,6 +38,15 @@ const getProfitMarginAnalysisAction = createSafeAction(profitMarginSchema, async
     const startDate = params.startDate ? new Date(params.startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = params.endDate ? new Date(params.endDate) : new Date();
     const tenantId = session.user.tenantId;
+
+    await AuditService.log(db, {
+        tableName: 'analytics',
+        action: 'VIEW_REPORT',
+        recordId: `profit-margin-${tenantId}`,
+        userId: session.user.id,
+        tenantId,
+        details: { reportName: 'ProfitMarginAnalysis', params: { startDate, endDate, groupBy: params.groupBy } }
+    });
 
     return unstable_cache(
         async () => {

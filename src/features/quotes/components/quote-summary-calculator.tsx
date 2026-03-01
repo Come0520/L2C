@@ -6,6 +6,9 @@ import { QuoteCategory, getCategoryLabel } from './quote-category-tabs';
 
 /**
  * 报价项数据结构（用于汇总计算）
+ * 极简视图只需 id/category/roomId/subtotal
+ * 标准视图额外需要 productName/quantity/unitPrice/unit
+ * 详细视图额外需要 width/height/foldRatio/processFee/remark
  */
 export interface QuoteSummaryItem {
     id: string;
@@ -14,6 +17,17 @@ export interface QuoteSummaryItem {
     parentId: string | null;
     subtotal: number | string;
     children?: QuoteSummaryItem[];
+    // 标准视图字段
+    productName?: string;
+    quantity?: number | string;
+    unitPrice?: number | string;
+    unit?: string;
+    // 详细视图字段
+    width?: number | string;
+    height?: number | string;
+    foldRatio?: number | string;
+    processFee?: number | string;
+    remark?: string;
 }
 
 /**
@@ -27,6 +41,16 @@ export interface RoomSummary {
 }
 
 /**
+ * 品类→空间维度明细（用于三级视图展示）
+ */
+export interface CategoryRoomDetail {
+    roomId: string;
+    roomName: string;
+    subtotal: number;
+    items: QuoteSummaryItem[];
+}
+
+/**
  * 品类汇总数据
  */
 export interface CategorySummary {
@@ -35,6 +59,8 @@ export interface CategorySummary {
     roomCount: number;
     itemCount: number;
     subtotal: number;
+    /** 按空间分组的明细（品类 → 空间 → 行项目） */
+    roomBreakdown: CategoryRoomDetail[];
 }
 
 /**
@@ -122,8 +148,10 @@ export function calculateQuoteSummary(
 
     const roomSummaries = Array.from(roomMap.values()).filter(r => r.itemCount > 0);
 
-    // 3. 按品类汇总
+    // 3. 按品类汇总，同时构建 roomBreakdown 三层数据
     const categoryMap = new Map<string, CategorySummary>();
+    // 临时：品类 → 空间 → 行项目列表
+    const catRoomItemsMap = new Map<string, Map<string, QuoteSummaryItem[]>>();
 
     mainItems.forEach(item => {
         const category = item.category || 'OTHER';
@@ -136,20 +164,52 @@ export function calculateQuoteSummary(
                 roomCount: 0,
                 itemCount: 0,
                 subtotal: 0,
+                roomBreakdown: [],
             };
             categoryMap.set(category, categorySummary);
         }
 
         categorySummary.itemCount += 1;
         categorySummary.subtotal += itemSubtotals.get(item.id) || 0;
+
+        // 构建品类→空间→行项目映射
+        const roomId = item.roomId || '__unassigned__';
+        if (!catRoomItemsMap.has(category)) {
+            catRoomItemsMap.set(category, new Map());
+        }
+        const roomItemsMap = catRoomItemsMap.get(category)!;
+        if (!roomItemsMap.has(roomId)) {
+            roomItemsMap.set(roomId, []);
+        }
+        roomItemsMap.get(roomId)!.push(item);
     });
 
-    // 计算每个品类涉及的空间数
+    // 计算每个品类涉及的空间数，并生成 roomBreakdown
     categoryMap.forEach((summary, category) => {
         const roomsInCategory = new Set(
             mainItems.filter(i => i.category === category).map(i => i.roomId || '__unassigned__')
         );
         summary.roomCount = roomsInCategory.size;
+
+        // 生成 roomBreakdown
+        const roomItemsMap = catRoomItemsMap.get(category);
+        if (roomItemsMap) {
+            summary.roomBreakdown = Array.from(roomItemsMap.entries()).map(([rId, rItems]) => {
+                const roomName = rId === '__unassigned__'
+                    ? '未分配空间'
+                    : (rooms.find(r => r.id === rId)?.name || '未知空间');
+                const roomSubtotal = rItems.reduce(
+                    (sum, item) => sum + (itemSubtotals.get(item.id) || 0),
+                    0
+                );
+                return {
+                    roomId: rId,
+                    roomName,
+                    subtotal: roomSubtotal,
+                    items: rItems,
+                };
+            });
+        }
     });
 
     const categorySummaries = Array.from(categoryMap.values());

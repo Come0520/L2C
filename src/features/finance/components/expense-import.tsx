@@ -105,7 +105,9 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
       const res = await importExpenseRecords({ rows: previewData, createVoucher });
 
       if (res?.error || res?.data?.error) {
-        const details = (res as any)?.details || res?.data?.details;
+        const resDetails = res && typeof res === 'object' && 'details' in res ? (res as { details: any }).details : null;
+        const dataDetails = res?.data?.details;
+        const details = resDetails || dataDetails;
         toast.error(res?.error || res?.data?.error, {
           description: details ? details.join('\n') : undefined,
           duration: 5000,

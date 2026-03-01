@@ -5,10 +5,18 @@
     <view class="section quote-info">
       <view class="header-row">
         <view class="title">尊享 · 报价单</view>
-        <view class="status tag">{{quote.status === 'DRAFT' ? '草稿' : (quote.status === 'CONFIRMED' ? '已确认' : quote.status)}}</view>
+        <view class="status tag">{{quote.status === 'DRAFT' ? '草稿' : (quote.status === 'ACCEPTED' || quote.status === 'CONFIRMED' ? '已确认' : (quote.status === 'PENDING_APPROVAL' ? '待确认' : quote.status))}}</view>
       </view>
       <view class="sub-info">NO. {{quote.quoteNo}}</view>
       <view class="customer">致：{{quote.customerName}} 阁下</view>
+      
+      <!-- 多版本切换入口 -->
+      <picker bindchange="onVersionChange" value="{{currentVersionIndex}}" range="{{versionOptions}}" wx:if="{{versions.length > 1}}">
+        <view class="version-picker">
+          <text class="version-text">{{versionOptions[currentVersionIndex]}}</text>
+          <text class="version-icon">🔽</text>
+        </view>
+      </picker>
       
       <view class="items">
         <block wx:for="{{quote.items}}" wx:key="id">
@@ -32,29 +40,51 @@
 
     <!-- 已确认状态展示 -->
     <view class="section signed-section" wx:if="{{quote.customerSignatureUrl}}">
-        <view class="section-title">已签字确认</view>
+        <view class="section-title">✅ 您已签字确认</view>
         <image class="signed-img" src="{{quote.customerSignatureUrl}}" mode="aspectFit"></image>
         <view class="signed-time">确认时间：{{quote.confirmedAt}}</view>
-        <view class="actions-row mt-4" wx:if="{{quote.id && quote.status === 'CONFIRMED'}}">
+        <view class="actions-row mt-4" wx:if="{{quote.id && (quote.status === 'ACCEPTED' || quote.status === 'CONFIRMED')}}">
              <button class="btn-primary" bindtap="onTurnToOrder">生成订单</button>
         </view>
     </view>
 
-    <!-- 待签字区域 -->
-    <view class="section signature-section" wx:elif="{{quote.status !== 'CONFIRMED'}}">
-      <view class="section-title">客户确认签字</view>
-      <view class="signature-wrapper">
-        <signature id="signature" width="{{signatureWidth}}" height="{{signatureHeight}}" />
-      </view>
-      <view class="actions">
-        <button class="btn-clear" bindtap="handleClear">重签</button>
-        <button class="btn-confirm" bindtap="handleConfirm">确认并支付</button>
-      </view>
+    <!-- 待签字区域：底部签字确认按钮 -->
+    <view class="section sign-cta-section" wx:elif="{{quote.status === 'PENDING_APPROVAL' || quote.status === 'PENDING'}}">
+      <view class="sign-hint">请仔细阅读报价单内容，确认无误后签字</view>
+      <button class="btn-sign-open" bindtap="openSignModal">✍️ 签字确认报价单</button>
     </view>
+
   </scroll-view>
 </view>
 
+<!-- 加载中 -->
 <view class="loading-state" wx:else>
     <view class="loading-spinner"></view>
     <text>加载中...</text>
+</view>
+
+<!-- ============================= -->
+<!-- 签字弹窗                       -->
+<!-- ============================= -->
+<view class="sign-modal-mask" wx:if="{{showSignModal}}" catchtap="closeSignModal">
+  <view class="sign-modal-card" catchtap="">
+    <!-- 弹窗顶部 -->
+    <view class="sign-modal-header">
+      <view class="sign-modal-title">签字确认</view>
+      <view class="sign-modal-close" bindtap="closeSignModal">✕</view>
+    </view>
+
+    <view class="sign-modal-desc">请在下方区域手写签名，确认您已阅读并同意本报价单</view>
+
+    <!-- 签名画板 -->
+    <view class="sign-canvas-wrap">
+      <signature id="signature" width="{{signatureWidth}}" height="{{signatureHeight}}" lineColor="#1a1a1a" lineWidth="4" />
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="sign-modal-actions">
+      <button class="btn-resign" bindtap="handleClear">重新签名</button>
+      <button class="btn-submit-sign" bindtap="handleConfirm">确认提交</button>
+    </view>
+  </view>
 </view>

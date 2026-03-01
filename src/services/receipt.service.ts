@@ -5,7 +5,8 @@ import {
     financeAccounts,
     accountTransactions,
     arStatements,
-    tenants
+    tenants,
+    orders
 } from "@/shared/api/schema";
 import { eq, and } from "drizzle-orm";
 import { Decimal } from "decimal.js";
@@ -293,6 +294,38 @@ export class ReceiptService {
                         // 5. 触发渠道佣金结算 (Trigger Commission Calculation)
                         if (pending.lte(0) && item.orderId) {
                             await checkAndGenerateCommission(item.orderId, 'PAYMENT_COMPLETED');
+                        }
+
+                        // 6. 订单状态自动扭转 (SIGNED -> PENDING_PO)
+                        // 当补充尾款完成财务核销后，推进因等待财务确收而滞留的订单
+                        if (item.orderId) {
+                            const relatedOrder = await tx.query.orders.findFirst({
+                                where: and(eq(orders.id, item.orderId), eq(orders.tenantId, tenantId)),
+                                columns: { id: true, status: true, version: true }
+                            });
+                            if (relatedOrder && relatedOrder.status === 'SIGNED') {
+                                await tx.update(orders)
+                                    .set({
+                                        status: 'PENDING_PO',
+                                        version: relatedOrder.version + 1,
+                                        updatedAt: new Date()
+                                    })
+                                    .where(and(
+                                        eq(orders.id, item.orderId),
+                                        eq(orders.tenantId, tenantId)
+                                    ));
+
+                                await AuditService.log(tx, {
+                                    tenantId,
+                                    userId,
+                                    tableName: 'orders',
+                                    recordId: relatedOrder.id,
+                                    action: 'UPDATE',
+                                    oldValues: { status: 'SIGNED' },
+                                    newValues: { status: 'PENDING_PO' },
+                                    details: { reason: 'FINANCE_VERIFIED', receiptBillId: id }
+                                });
+                            }
                         }
                     }
                 }

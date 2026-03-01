@@ -66,7 +66,7 @@ describe('报价单并发保护测试', () => {
             set: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             returning: vi.fn().mockResolvedValue([])
-        } as any);
+        } as never);
 
         const result = await submitQuoteAction({
             id: '110e8400-e29b-41d4-a716-446655440000',
@@ -85,7 +85,7 @@ describe('报价单并发保护测试', () => {
             set: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             returning: vi.fn().mockResolvedValue([{ id: '110e8400-e29b-41d4-a716-446655440000' }])
-        } as any);
+        } as never);
 
         const result = await submitQuoteAction({
             id: '110e8400-e29b-41d4-a716-446655440000'

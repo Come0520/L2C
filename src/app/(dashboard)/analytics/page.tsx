@@ -22,6 +22,8 @@ import {
 } from '@/features/analytics/components/leaderboard-table';
 import { TargetAchievementSection } from '@/features/analytics/components/target-achievement-section';
 import { ARAgingWidget } from '@/features/dashboard/widgets/ar-aging-widget';
+import { AnalyticsCardSkeleton } from '@/features/analytics/components/analytics-skeleton';
+import { Skeleton } from '@/shared/ui/skeleton';
 import {
   AnalyticsDraggableLayout,
   resetAnalyticsLayout,
@@ -38,7 +40,6 @@ import {
 } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import {
-  Loader2,
   DollarSign,
   Users,
   ShoppingCart,
@@ -326,20 +327,10 @@ export default function AnalyticsPage() {
       ? `${format(dateRange.from, 'MM/dd')} — ${format(dateRange.to, 'MM/dd')}`
       : '选择日期';
 
-  // ==================== 加载状态 ====================
-
-  if (loading && !metrics) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="text-primary h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   // ==================== 各模块内容定义 ====================
 
   const gridItems = {
-    'stat-sales': (
+    'stat-sales': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
       <StatCard
         title="总销售额"
         value={`¥${Number(metrics?.totalSales || 0).toLocaleString()}`}
@@ -348,7 +339,7 @@ export default function AnalyticsPage() {
         className="h-full"
       />
     ),
-    'stat-leads': (
+    'stat-leads': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
       <StatCard
         title="活跃线索"
         value={metrics?.newLeads || 0}
@@ -357,7 +348,7 @@ export default function AnalyticsPage() {
         className="h-full"
       />
     ),
-    'stat-orders': (
+    'stat-orders': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
       <StatCard
         title="成交订单"
         value={metrics?.orderCount || 0}
@@ -366,7 +357,7 @@ export default function AnalyticsPage() {
         className="h-full"
       />
     ),
-    'stat-rate': (
+    'stat-rate': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
       <StatCard
         title="线索转化率"
         value={`${metrics?.conversionRate || 0}%`}
@@ -375,20 +366,20 @@ export default function AnalyticsPage() {
         className="h-full"
       />
     ),
-    'trend': (
+    'trend': loading && !trendData.length ? <AnalyticsCardSkeleton /> : (
       <OrderTrendChart data={trendData} className="h-full" />
     ),
-    'funnel': (
+    'funnel': loading && !funnelData ? <AnalyticsCardSkeleton /> : (
       <SalesFunnelChart
         data={funnelData?.stages || []}
         summary={funnelData?.summary}
         className="h-full"
       />
     ),
-    'ar-aging': (
+    'ar-aging': loading ? <AnalyticsCardSkeleton /> : (
       <ARAgingWidget className="h-full" />
     ),
-    'payables': (
+    'payables': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
       <StatCard
         title="待付账款"
         value={`¥${Number(metrics?.pendingPayables || 0).toLocaleString()}`}
@@ -397,10 +388,10 @@ export default function AnalyticsPage() {
         className="h-full"
       />
     ),
-    'leaderboard': (
+    'leaderboard': loading && !leaderboardData.length ? <AnalyticsCardSkeleton /> : (
       <LeaderboardTable data={leaderboardData} className="h-full" />
     ),
-    'targets': (
+    'targets': loading && !targetOverview ? <AnalyticsCardSkeleton /> : (
       <div className="h-full space-y-2 overflow-auto p-1">
         <h2 className="flex items-center gap-2 text-xl font-semibold">🎯 目标达成分析</h2>
         <TargetAchievementSection

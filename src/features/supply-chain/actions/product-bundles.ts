@@ -11,6 +11,7 @@ import { createProductBundleSchema, updateProductBundleSchema } from '../schemas
 import { z } from 'zod';
 import { SUPPLY_CHAIN_PATHS } from "../constants";
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 产品套件 (Product Bundle) 领域 Actions
@@ -20,7 +21,7 @@ import { AuditService } from '@/shared/lib/audit-service';
  */
 
 const createProductBundleActionInternal = createSafeAction(createProductBundleSchema, async (data, { session }) => {
-    console.warn('[supply-chain] createProductBundle 开始执行:', { bundleSku: data.bundleSku, name: data.name });
+    logger.info('[supply-chain] createProductBundle 开始执行:', { bundleSku: data.bundleSku, name: data.name });
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     const existing = await db.query.productBundles.findFirst({
@@ -82,7 +83,7 @@ export async function createProductBundle(params: Parameters<typeof createProduc
 }
 
 const updateProductBundleActionInternal = createSafeAction(updateProductBundleSchema, async (data, { session }) => {
-    console.warn('[supply-chain] updateProductBundle 开始执行:', { id: data.id });
+    logger.info('[supply-chain] updateProductBundle 开始执行:', { id: data.id });
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
     const { id, items, ...updates } = data;
@@ -151,7 +152,7 @@ const deleteProductBundleSchema = z.object({
 });
 
 const deleteProductBundleActionInternal = createSafeAction(deleteProductBundleSchema, async ({ id }, { session }) => {
-    console.warn('[supply-chain] deleteProductBundle 开始执行:', { id });
+    logger.info('[supply-chain] deleteProductBundle 开始执行:', { id });
     // [CQ-02] fix: 使用独立的 delete schema
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
 
@@ -173,7 +174,7 @@ const deleteProductBundleActionInternal = createSafeAction(deleteProductBundleSc
         await AuditService.recordFromSession(session, 'productBundles', id, 'DELETE', undefined, tx);
     });
 
-    console.warn('[supply-chain] deleteProductBundle 执行成功:', { id });
+    logger.info('[supply-chain] deleteProductBundle 执行成功:', { id });
     revalidatePath(SUPPLY_CHAIN_PATHS.PRODUCT_BUNDLES);
     return { success: true };
 });

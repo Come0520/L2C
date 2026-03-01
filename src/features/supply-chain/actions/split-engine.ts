@@ -1,4 +1,5 @@
 import { db } from '@/shared/api/db';
+import { logger } from '@/shared/lib/logger';
 import { and, eq, inArray, asc } from 'drizzle-orm';
 import {
     purchaseOrders,
@@ -93,12 +94,12 @@ export async function executeSplitRouting(
     tenantId: string,
     session: Session
 ): Promise<SplitEngineResult> {
-    console.warn('[supply-chain] executeSplitRouting 启动:', { orderId });
+    logger.info('[supply-chain] executeSplitRouting 启动:', { orderId });
     // 1. 获取订单项并联查产品信息
     const enrichedItems = await getEnrichedOrderItems(orderId, tenantId);
 
     if (enrichedItems.length === 0) {
-        console.warn('[supply-chain] executeSplitRouting: 订单无有效项，跳过');
+        logger.info('[supply-chain] executeSplitRouting: 订单无有效项，跳过');
         return {
             createdPOIds: [],
             createdTaskIds: [],
@@ -125,7 +126,7 @@ export async function executeSplitRouting(
     // 7. 生成最终结果
     const result = await generateSplitResult(allRoutedItems, orderId, tenantId, session);
 
-    console.warn('[supply-chain] executeSplitRouting 执行成功:', {
+    logger.info('[supply-chain] executeSplitRouting 执行成功:', {
         poCount: result.createdPOIds.length,
         taskCount: result.createdTaskIds.length,
         pendingPoolCount: result.pendingPoolItemIds.length
@@ -290,7 +291,7 @@ async function resolveBySupplierType(
             case 'BOTH':
                 // 兼具供应和加工 → 生成 FABRIC PO（面料采购）
                 // 注：WO 在 PO 到货后由独立流程触发
-                console.warn('[supply-chain] resolveBySupplierType: 检测到兼备供应商，流向设为 PO(FABRIC)', { supplierId });
+                logger.info('[supply-chain] resolveBySupplierType: 检测到兼备供应商，流向设为 PO(FABRIC)', { supplierId });
                 result.push({
                     ...item,
                     resolvedSupplierId: supplierId,

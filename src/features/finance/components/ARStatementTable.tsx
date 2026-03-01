@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { ReceiptBillDialog } from './receipt-bill-dialog';
+import { FinanceEmptyState } from './finance-empty-state';
 
 import { ARStatementWithRelations } from '../types';
 
@@ -77,30 +78,29 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
                 </Button>
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>账单编号</TableHead>
-                            <TableHead>关联订单</TableHead>
-                            <TableHead>客户姓名</TableHead>
-                            <TableHead>总额</TableHead>
-                            <TableHead>已收</TableHead>
-                            <TableHead>待收</TableHead>
-                            <TableHead>状态</TableHead>
-                            <TableHead>创建日期</TableHead>
-                            <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.length === 0 ? (
+            {data.length === 0 ? (
+                <FinanceEmptyState
+                    title="暂无应收对账单"
+                    description="客户的应收单据将在这里展示"
+                />
+            ) : (
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                    暂无应收记录
-                                </TableCell>
+                                <TableHead>账单编号</TableHead>
+                                <TableHead>关联订单</TableHead>
+                                <TableHead>客户姓名</TableHead>
+                                <TableHead>总额</TableHead>
+                                <TableHead>已收</TableHead>
+                                <TableHead>待收</TableHead>
+                                <TableHead>状态</TableHead>
+                                <TableHead>创建日期</TableHead>
+                                <TableHead className="text-right">操作</TableHead>
                             </TableRow>
-                        ) : (
-                            data.map((item) => (
+                        </TableHeader>
+                        <TableBody>
+                            {data.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.statementNo}</TableCell>
                                     <TableCell>
@@ -131,11 +131,11 @@ export function ARStatementTable({ data }: ARStatementTableProps) {
                                         )}
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
             <ReceiptBillDialog
                 open={isReceiptDialogOpen}

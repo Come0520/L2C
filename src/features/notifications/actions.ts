@@ -14,6 +14,7 @@ const getNotificationsSchema = z.object({
     page: z.number().default(1),
     limit: z.number().default(20),
     onlyUnread: z.boolean().default(false),
+    type: z.string().optional(),
 });
 
 const markAsReadSchema = z.object({
@@ -29,6 +30,7 @@ interface GetNotificationsParams {
     page: number;
     limit: number;
     onlyUnread: boolean;
+    type?: string;
 }
 
 interface NotificationResult {
@@ -48,7 +50,7 @@ interface NotificationResult {
  * @returns 通知列表及分页元数据
  */
 export async function getNotificationsPure(session: SessionUser, params: GetNotificationsParams): Promise<NotificationResult> {
-    const { page, limit, onlyUnread } = params;
+    const { page, limit, onlyUnread, type } = params;
     const tenantId = session.tenantId;
     const userId = session.id;
 
@@ -56,7 +58,8 @@ export async function getNotificationsPure(session: SessionUser, params: GetNoti
         const whereCondition = and(
             eq(notifications.tenantId, tenantId),
             eq(notifications.userId, userId),
-            onlyUnread ? eq(notifications.isRead, false) : undefined
+            onlyUnread ? eq(notifications.isRead, false) : undefined,
+            type && type !== 'ALL' ? eq(notifications.type, type as 'SYSTEM' | 'ORDER_STATUS' | 'APPROVAL' | 'ALERT' | 'MENTION' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR') : undefined
         );
 
         const data = await db.query.notifications.findMany({
@@ -168,7 +171,9 @@ export async function markAsRead(params: z.infer<typeof markAsReadSchema>) {
     return markAsReadActionInternal(params);
 }
 
-const markAllAsReadActionInternal = createSafeAction(z.object({}), async (_params, { session }) => {
+const markAllAsReadActionInternal = createSafeAction(z.object({
+    type: z.string().optional(),
+}), async (params, { session }) => {
     const userId = session.user.id;
 
     await db.update(notifications)
@@ -176,7 +181,8 @@ const markAllAsReadActionInternal = createSafeAction(z.object({}), async (_param
         .where(and(
             eq(notifications.userId, userId),
             eq(notifications.tenantId, session.user.tenantId),
-            eq(notifications.isRead, false)
+            eq(notifications.isRead, false),
+            params.type && params.type !== 'ALL' ? eq(notifications.type, params.type as 'SYSTEM' | 'ORDER_STATUS' | 'APPROVAL' | 'ALERT' | 'MENTION' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR') : undefined
         ));
 
     return { success: true };
@@ -187,8 +193,8 @@ const markAllAsReadActionInternal = createSafeAction(z.object({}), async (_param
  *
  * @returns 操作结果
  */
-export async function markAllAsRead() {
-    return markAllAsReadActionInternal({});
+export async function markAllAsRead(params?: { type?: string }) {
+    return markAllAsReadActionInternal(params || {});
 }
 
 

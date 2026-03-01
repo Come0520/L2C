@@ -6,12 +6,19 @@ import { financeConfigs, expenseRecords, chartOfAccounts } from '@/shared/api/sc
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
+import { checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
 
 // ==========================
 // 模式管理: Config读写
 // ==========================
 
-// 判断当前使用者属于专业状态还是简易状态 (默认为 simple)
+/**
+ * 获取当前租户的财务处理模式 (Get Finance Mode)
+ * 根据租户的全局配置检测为系统设定的专业 (professional) 还是简易 (simple) 模式
+ * @returns 带有当前模式的成功载体，默认为 simple 模式
+ */
 export async function getFinanceMode() {
   const session = await auth();
   if (!session?.user?.tenantId) {
@@ -40,11 +47,18 @@ export async function getFinanceMode() {
   }
 }
 
-// 切换模式
+/**
+ * 切换全局系统财务模式 (Toggle Finance Mode)
+ * @param newMode - 目标模式枚举 ('simple' | 'professional')
+ * @returns 切换后的状态对象
+ */
 export async function toggleFinanceMode(newMode: 'simple' | 'professional') {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return { error: '未授权访问' };
+  }
+  if (!await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE)) {
+    return { error: '权限不足：需要财务管理权限' };
   }
 
   const tenantId = session.user.tenantId;
@@ -58,15 +72,36 @@ export async function toggleFinanceMode(newMode: 'simple' | 'professional') {
     });
 
     if (config) {
-      await db
-        .update(financeConfigs)
-        .set({ configValue: newMode })
-        .where(eq(financeConfigs.id, config.id));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(financeConfigs)
+          .set({ configValue: newMode })
+          .where(eq(financeConfigs.id, config.id));
+        await AuditService.log(tx, {
+          tenantId: tenantId,
+          userId: session.user!.id!,
+          tableName: 'finance_configs',
+          recordId: config.id,
+          action: 'UPDATE',
+          newValues: { configValue: newMode },
+          oldValues: { configValue: config.configValue }
+        });
+      });
     } else {
-      await db.insert(financeConfigs).values({
-        tenantId,
-        configKey: 'finance_mode',
-        configValue: newMode,
+      await db.transaction(async (tx) => {
+        const inserted = await tx.insert(financeConfigs).values({
+          tenantId,
+          configKey: 'finance_mode',
+          configValue: newMode,
+        }).returning();
+        await AuditService.log(tx, {
+          tenantId: tenantId,
+          userId: session.user!.id!,
+          tableName: 'finance_configs',
+          recordId: inserted[0].id,
+          action: 'INSERT',
+          newValues: inserted[0]
+        });
       });
     }
 
@@ -127,7 +162,12 @@ async function getOrCreateSimpleBaseAccounts(tenantId: string) {
 
 import { SimpleTransactionSchema, type SimpleTransactionInput } from '../types/simple-transaction';
 
-// 新增简易流水 (使用 expenseRecords 借壳，类型靠底层占位科目区分)
+/**
+ * 新增简易版资金流水 (Add Simple Transaction)
+ * 在简易模式下避开双边复式记账，直接写入具有占位核算科目的费用记录
+ * @param data - 新增流水的明细载荷，自动分入基础收支科目
+ * @returns 处理结果是否成功
+ */
 export async function addSimpleTransaction(data: SimpleTransactionInput) {
   const session = await auth();
   if (!session?.user?.tenantId) {
@@ -142,6 +182,13 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
   const { type, amount, expenseDate, description } = parseResult.data;
   const tenantId = session.user.tenantId;
 
+  if (type === 'INCOME' && !(await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE))) {
+    return { error: '权限不足：需要收款单创建权限' };
+  }
+  if (type === 'EXPENSE' && !(await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE))) {
+    return { error: '权限不足：需要付款单创建权限' };
+  }
+
   try {
     const { incomeAccountId, expenseAccountId } = await getOrCreateSimpleBaseAccounts(tenantId);
     const targetAccountId = type === 'INCOME' ? incomeAccountId : expenseAccountId;
@@ -151,13 +198,24 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
      * 简易模式面向小微商户，仅提供最轻量的收支记录功能。
      * 当用户从简易模式升级到专业模式时，可通过数据迁移服务批量生成对应凭证。
      */
-    await db.insert(expenseRecords).values({
-      tenantId,
-      accountId: targetAccountId,
-      amount: amount.toString(), // DB decimal
-      description,
-      expenseDate: expenseDate.toISOString(),
-      createdBy: session.user.id,
+    await db.transaction(async (tx) => {
+      const inserted = await tx.insert(expenseRecords).values({
+        tenantId,
+        accountId: targetAccountId,
+        amount: amount.toString(), // DB decimal
+        description,
+        expenseDate: expenseDate.toISOString(),
+        createdBy: session.user!.id,
+      }).returning();
+
+      await AuditService.log(tx, {
+        tenantId: tenantId,
+        userId: session.user!.id!,
+        tableName: 'expense_records',
+        recordId: inserted[0].id,
+        action: 'INSERT',
+        newValues: inserted[0]
+      });
     });
 
     revalidatePath('/finance/simple');
@@ -168,7 +226,11 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
   }
 }
 
-// 提取指定月份的流水记录列表
+/**
+ * 提取指定月份的流水记录列表 (Get Simple Transactions)
+ * @param yearMonthQuery - 用于过滤的年月字符串，如 "2026-02"
+ * @returns 简化视图结构的数据列表，包含金额、方向、备注等核心指标
+ */
 export async function getSimpleTransactions(yearMonthQuery: string) {
   // 格式: "2026-02"
   const session = await auth();
@@ -212,7 +274,11 @@ export async function getSimpleTransactions(yearMonthQuery: string) {
   }
 }
 
-// 当月收支汇总计算
+/**
+ * 计算当月收支汇总概况 (Get Simple Summary)
+ * @param yearMonthQuery - 待统计的年月，例如 "2026-02"
+ * @returns 汇总成功并附带支出、收入、结余等核心关键聚合值
+ */
 export async function getSimpleSummary(yearMonthQuery: string) {
   const session = await auth();
   if (!session?.user?.tenantId) {

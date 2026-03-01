@@ -44,7 +44,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
     describe('createNewVersion (创建新版本)', () => {
         it('当报价单不存在时抛出异常 (Throw error if quote not found)', async () => {
             // 覆盖模拟使得 findFirst 返回 null
-            vi.mocked(db.transaction).mockImplementationOnce(async (callback: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (callback: (tx: Record<string, unknown>) => Promise<unknown>) => {
                 return callback({
                     query: {
                         quotes: {
@@ -70,7 +70,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
                 items: [{ id: 'item-1', tenantId: 'tenant-1', category: 'CURTAIN', roomId: 'room-1' }]
             };
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (callback: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (callback: (tx: Record<string, unknown>) => Promise<unknown>) => {
                 return callback({
                     query: {
                         quotes: {
@@ -108,7 +108,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
 
     describe('activate (设置为主版本)', () => {
         it('当报价单不存在时抛出异常 (Throw error if quote not found)', async () => {
-            vi.mocked(db.transaction).mockImplementationOnce(async (callback: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (callback: (tx: Record<string, unknown>) => Promise<unknown>) => {
                 return callback({
                     query: {
                         quotes: {
@@ -132,7 +132,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
                 version: 1,
             };
 
-            vi.mocked(db.transaction).mockImplementationOnce(async (callback: any) => {
+            vi.mocked(db.transaction).mockImplementationOnce(async (callback: (tx: Record<string, unknown>) => Promise<unknown>) => {
                 return callback({
                     query: {
                         quotes: {

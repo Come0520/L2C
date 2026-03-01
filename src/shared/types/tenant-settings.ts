@@ -30,9 +30,17 @@ export interface MfaConfig {
     method?: 'sms' | 'totp';
 }
 
+export interface OrderFlowConfig {
+    /** Whether finance confirmation is strictly required for prepayments before proceeding */
+    financeConfirmationRequired: boolean;
+    /** Whether manager/boss approval is required for low-deposit/debt orders */
+    managerApprovalRequired: boolean;
+}
+
 export interface TenantSettings {
     quoteConfig?: QuoteConfig;
     /** 多因素认证配置 */
     mfa?: MfaConfig;
+    orderFlowConfig?: OrderFlowConfig;
     [key: string]: unknown;
 }

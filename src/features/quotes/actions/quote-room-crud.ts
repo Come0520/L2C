@@ -33,20 +33,25 @@ import { logger } from '@/shared/lib/logger';
 export const createRoomActionInternal = createSafeAction(
   createQuoteRoomSchema,
   async (data, context) => {
+    console.log('[DEBUG] createRoomActionInternal 收到请求', data);
     const tenantId = context.session.user.tenantId;
     if (!tenantId) throw new Error('未授权访问：缺少租户信息');
     logger.info('[quotes] 开始创建房间', { quoteId: data.quoteId, name: data.name });
+    console.log('[DEBUG] createRoomActionInternal session校验通过', tenantId);
 
     // 安全检查：验证报价单的租户归属
+    console.log('[DEBUG] createRoomActionInternal 开始查询 existingQuote');
     const existingQuote = await db.query.quotes.findFirst({
       where: and(eq(quotes.id, data.quoteId), eq(quotes.tenantId, tenantId)),
       columns: { id: true },
     });
+    console.log('[DEBUG] createRoomActionInternal existingQuote 结果', !!existingQuote);
     if (!existingQuote) {
       logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId });
       throw new Error('报价单不存在或无权操作');
     }
 
+    console.log('[DEBUG] createRoomActionInternal 开始 insert');
     const [newRoom] = await db
       .insert(quoteRooms)
       .values({
@@ -56,14 +61,19 @@ export const createRoomActionInternal = createSafeAction(
         measureRoomId: data.measureRoomId,
       })
       .returning();
+    console.log('[DEBUG] createRoomActionInternal insert 完成');
 
     // 审计日志：记录报价单房间创建
+    console.log('[DEBUG] createRoomActionInternal 开始记录 AuditLog');
     await AuditService.recordFromSession(context.session, 'quoteRooms', newRoom.id, 'CREATE', {
       new: { quoteId: newRoom.quoteId, name: newRoom.name },
     });
+    console.log('[DEBUG] createRoomActionInternal 记录 AuditLog 完成');
 
+    console.log('[DEBUG] createRoomActionInternal 开始 revalidate');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
+    console.log('[DEBUG] createRoomActionInternal revalidate 完成并返回');
     logger.info('[quotes] 房间创建成功', { roomId: newRoom.id, quoteId: data.quoteId });
     return newRoom;
   }
@@ -119,7 +129,7 @@ export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, c
   });
 
   revalidatePath(`/quotes/${updated.quoteId}`);
-  revalidateTag('quotes', {});
+  revalidateTag('quotes', 'default');
   logger.info('[quotes] 房间更新成功', { roomId: updated.id });
   return updated;
 });
@@ -169,7 +179,7 @@ export const deleteRoom = createSafeAction(
     });
 
     revalidatePath(`/quotes/${existing.quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 房间删除成功', { roomId: data.id });
     return { success: true };
   }

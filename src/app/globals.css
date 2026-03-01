@@ -21,9 +21,9 @@
   --font-cute-body: 'Quicksand', sans-serif;
   --font-parchment: 'EB Garamond', 'Noto Serif SC', 'STKaiti', serif;
 
-  /* Color Palette - SaaS Premium (Mapped to Slate/Blue/Orange) */
-  --color-primary-500: #2563eb;
-  --color-primary-600: #1d4ed8;
+  /* Color Palette - SaaS Premium (Mapped to Slate/Indigo/Orange) */
+  --color-primary-500: #4f46e5;
+  --color-primary-600: #4338ca;
   --color-secondary-500: #3b82f6;
   --color-cta-500: #f97316;
   --color-background-light: #f8fafc;

@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2C 小程序角色模拟器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: #94a3b8;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* 角色选择器 */
+  .role-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  .role-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 2px solid #334155;
+    background: #1e293b;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .role-btn:hover {
+    border-color: #60a5fa;
+    color: #e2e8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
+  }
+
+  .role-btn.active {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+  }
+
+  .role-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .role-btn.active .role-label {
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* 手机模拟框 */
+  .phone-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .phone-frame {
+    width: 375px;
+    height: 780px;
+    background: #ffffff;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 0 0 8px #1e293b, 0 20px 60px rgba(0,0,0,0.5);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 手机状态栏 */
+  .status-bar {
+    height: 48px;
+    background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    flex-shrink: 0;
+  }
+
+  .status-bar .time { font-weight: 700; }
+  .status-bar .icons { display: flex; gap: 6px; font-size: 12px; }
+
+  /* 内容区 */
+  .phone-content {
+    flex: 1;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 30%, #ffffff 100%);
+    position: relative;
+  }
+
+  .phone-content::-webkit-scrollbar { width: 0; }
+
+  /* 弥散光背景 */
+  .glass-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 200px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .bg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.3;
+  }
+
+  .bg-blob.b1 { width: 150px; height: 150px; background: #60a5fa; top: -40px; left: -30px; }
+  .bg-blob.b2 { width: 120px; height: 120px; background: #a78bfa; top: 20px; right: -20px; }
+  .bg-blob.b3 { width: 100px; height: 100px; background: #f472b6; top: 60px; left: 50%; }
+
+  .content-inner {
+    position: relative;
+    z-index: 1;
+    padding: 20px 16px 100px;
+  }
+
+  /* 问候区 */
+  .greeting {
+    margin-bottom: 20px;
+  }
+
+  .greeting-text {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .greeting-date {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  /* 统计卡片 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 4), 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 12px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+  }
+
+  .stat-num.primary { color: #2563eb; }
+
+  .stat-desc {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* 区域标题 */
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 16px 0 12px;
+  }
+
+  /* 快捷入口 */
+  .quick-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 64px;
+  }
+
+  .action-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .action-icon-box.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+  .action-icon-box.green { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+  .action-icon-box.orange { background: linear-gradient(135deg, #ffedd5, #fed7aa); }
+  .action-icon-box.purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+  .action-icon-box.teal { background: linear-gradient(135deg, #ccfbf1, #99f6e4); }
+  .action-icon-box.gray { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); }
+
+  .action-text {
+    font-size: 11px;
+    color: #475569;
+    text-align: center;
+  }
+
+  /* 待办 / 列表项 */
+  .todo-item {
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .todo-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .todo-desc {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+
+  .badge-warning { background: #fef3c7; color: #b45309; }
+  .badge-danger { background: #fee2e2; color: #dc2626; }
+  .badge-info { background: #dbeafe; color: #2563eb; }
+  .badge-success { background: #dcfce7; color: #16a34a; }
+
+  .todo-time {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  /* 顾问卡 (客户视图) */
+  .advisor-card {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-radius: 16px;
+    padding: 16px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .advisor-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .advisor-info { flex: 1; }
+  .advisor-name { font-weight: 600; font-size: 16px; }
+  .advisor-title { font-size: 12px; opacity: 0.8; }
+
+  .advisor-call {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  /* 待签字卡 */
+  .pending-sign-card {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #92400e;
+  }
+
+  .pending-sign-badge {
+    display: inline-flex;
+    width: 24px; height: 24px;
+    background: #f59e0b;
+    color: white;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+
+  .pending-sign-text { font-size: 13px; font-weight: 500; display: inline; }
+  .pending-sign-arrow { font-size: 18px; font-weight: 700; }
+
+  /* 客户网格 */
+  .customer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .customer-grid-item {
+    background: white;
+    border-radius: 14px;
+    padding: 16px 8px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .grid-icon-box {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .grid-text {
+    font-size: 12px;
+    color: #475569;
+  }
+
+  /* TabBar */
+  .tab-bar {
+    height: 70px;
+    background: white;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tab-icon {
+    font-size: 20px;
+    opacity: 0.4;
+  }
+
+  .tab-item.active .tab-icon { opacity: 1; }
+
+  .tab-label {
+    font-size: 10px;
+    color: #6b7280;
+  }
+
+  .tab-item.active .tab-label {
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  /* 登录页 */
+  .login-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 24px;
+    text-align: center;
+  }
+
+  .brand-name {
+    font-size: 42px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -1px;
+  }
+
+  .brand-tag {
+    font-size: 14px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    font-weight: 600;
+    vertical-align: super;
+  }
+
+  .login-card {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 24px;
+    margin-top: 40px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+
+  .login-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .login-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+    display: block;
+  }
+
+  .btn-wechat {
+    width: 100%;
+    padding: 14px;
+    background: #07c160;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 24px;
+    cursor: pointer;
+  }
+
+  .login-footer {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .login-footer a { color: #2563eb; text-decoration: none; }
+
+  /* 信息面板 */
+  .info-panel {
+    width: 380px;
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 24px;
+    align-self: flex-start;
+    position: sticky;
+    top: 20px;
+  }
+
+  .info-panel h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #f8fafc;
+  }
+
+  .info-section {
+    margin-bottom: 16px;
+  }
+
+  .info-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .info-value {
+    font-size: 14px;
+    color: #e2e8f0;
+    line-height: 1.5;
+  }
+
+  .tab-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .tab-list li {
+    padding: 6px 10px;
+    background: #334155;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tab-list li .tab-emoji { font-size: 16px; }
+
+  .feature-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .feature-list li {
+    padding: 4px 0;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+
+  .feature-list li::before {
+    content: "✓";
+    color: #22c55e;
+    margin-right: 8px;
+    font-weight: 700;
+  }
+
+  .empty-msg {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    padding: 20px;
+  }
+
+  /* 动画 */
+  .fade-in {
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 响应式  */
+  @media (max-width: 900px) {
+    .phone-container {
+      flex-direction: column;
+      align-items: center;
+    }
+    .info-panel {
+      position: static;
+      width: 375px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>🔮 L2C 小程序角色模拟器</h1>
+<p class="subtitle">点击不同角色，查看他们在小程序中看到的界面</p>
+
+<div class="role-selector" id="roleSelector">
+  <div class="role-btn active" data-role="guest" onclick="switchRole('guest')">
+    <div>🔒 未登录</div>
+    <div class="role-label">Guest</div>
+  </div>
+  <div class="role-btn" data-role="boss" onclick="switchRole('boss')">
+    <div>👔 老板</div>
+    <div class="role-label">Boss / Admin</div>
+  </div>
+  <div class="role-btn" data-role="manager" onclick="switchRole('manager')">
+    <div>📋 经理</div>
+    <div class="role-label">Manager</div>
+  </div>
+  <div class="role-btn" data-role="sales" onclick="switchRole('sales')">
+    <div>💼 销售</div>
+    <div class="role-label">Sales</div>
+  </div>
+  <div class="role-btn" data-role="worker" onclick="switchRole('worker')">
+    <div>🔧 安装师傅</div>
+    <div class="role-label">Worker / Installer</div>
+  </div>
+  <div class="role-btn" data-role="customer" onclick="switchRole('customer')">
+    <div>🏠 客户</div>
+    <div class="role-label">Customer</div>
+  </div>
+  <div class="role-btn" data-role="tester" onclick="switchRole('tester')">
+    <div>🧪 测试员</div>
+    <div class="role-label">Tester</div>
+  </div>
+</div>
+
+<div class="phone-container">
+  <!-- 手机模拟 -->
+  <div class="phone-frame">
+    <div class="status-bar">
+      <span class="time">23:30</span>
+      <span class="icons">📶 📡 🔋</span>
+    </div>
+    <div class="phone-content" id="phoneContent">
+      <!-- 动态内容 -->
+    </div>
+    <div class="tab-bar" id="tabBar">
+      <!-- 动态 TabBar -->
+    </div>
+  </div>
+
+  <!-- 信息面板 -->
+  <div class="info-panel" id="infoPanel">
+    <!-- 角色描述 -->
+  </div>
+</div>
+
+<script>
+  // =====================================================
+  // 角色配置数据
+  // =====================================================
+
+  const roleData = {
+    guest: {
+      name: '未登录 / 游客',
+      desc: '用户还未通过微信登录，只能看到品牌页和登录入口。',
+      tabBar: [
+        { icon: '🏠', text: '主页', active: true },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: ['查看品牌展示页', '微信一键登录', '申请企业入驻'],
+      content: 'guest'
+    },
+    boss: {
+      name: '老板 / 管理员',
+      desc: '企业最高权限者，看到全局数据仪表盘、KPI 总览和管理入口。',
+      tabBar: [
+        { icon: '💼', text: '工作台', active: true },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '全局 KPI 仪表盘（目标达成率、新线索、订单量、回款额）',
+        '数据报表中心',
+        '销售目标设定',
+        '快速报价',
+        '云展厅管理',
+        '邀请员工',
+        '待办事项汇总',
+        '支付设置（仅管理员可见）'
+      ],
+      content: 'boss'
+    },
+    manager: {
+      name: '销售经理',
+      desc: '管理销售团队，关注团队目标完成情况，有线索管理和审批职能。',
+      tabBar: [
+        { icon: '💼', text: '工作台', active: true },
+        { icon: '📌', text: '线索', active: false },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '团队目标达成率',
+        '线索/报价/订单统计',
+        '销售目标管理',
+        '数据报表',
+        '快速报价',
+        '邀请员工',
+        '待办审批事项',
+        '线索列表 (TabBar直达)'
+      ],
+      content: 'manager'
+    },
+    sales: {
+      name: '销售人员',
+      desc: '一线销售，以线索跟进为核心，快速创建报价和客户。',
+      tabBar: [
+        { icon: '📌', text: '线索', active: false },
+        { icon: '💼', text: '工作台', active: true },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '个人业绩完成率',
+        '我的线索/报价单/订单数',
+        '新建报价（一键进入）',
+        '新建客户',
+        '云展厅分享',
+        '今日跟进事项',
+        '线索列表 (TabBar 第一位)'
+      ],
+      content: 'sales'
+    },
+    worker: {
+      name: '安装师傅 / 工人',
+      desc: '现场施工人员，以任务接单和打卡为核心工作流。',
+      tabBar: [
+        { icon: '📋', text: '任务', active: false },
+        { icon: '💼', text: '工作台', active: true },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '今日任务数量',
+        '待结算金额',
+        '查看任务详情',
+        '我的收益概览',
+        '任务列表 (TabBar直达)',
+        '安装打卡 / 完工确认'
+      ],
+      content: 'worker'
+    },
+    customer: {
+      name: '客户 / 业主',
+      desc: '终端消费者，拥有专属顾问、签字确认、展厅浏览等服务。',
+      tabBar: [
+        { icon: '🏠', text: '主页', active: true },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '专属顾问信息 + 一键联系',
+        '待签字文件提醒',
+        '产品展厅浏览',
+        '保修申请',
+        '完工评价',
+        '报价确认签字'
+      ],
+      content: 'customer'
+    },
+    tester: {
+      name: '测试员',
+      desc: '拥有全量菜单，可免登录查看所有角色的功能板块（叠加展示）。',
+      tabBar: [
+        { icon: '💼', text: '工作台', active: true },
+        { icon: '📌', text: '线索', active: false },
+        { icon: '📋', text: '任务', active: false },
+        { icon: '👤', text: '我的', active: false }
+      ],
+      features: [
+        '同时看到老板/经理/销售/工人/客户所有板块',
+        '全量 TabBar (4 个 Tab)',
+        '所有快捷入口',
+        '所有统计面板',
+        '用于功能测试和演示'
+      ],
+      content: 'tester'
+    }
+  };
+
+  // =====================================================
+  // 内容模板
+  // =====================================================
+
+  function getContentHTML(role) {
+    if (role === 'guest') {
+      return `
+        <div class="login-view fade-in">
+          <div>
+            <span class="brand-name">L2C</span>
+            <span class="brand-tag">PRO</span>
+          </div>
+          <div class="login-card">
+            <div class="login-title">欢迎使用 L2C</div>
+            <span class="login-desc">登录以访问您的企业工作台</span>
+            <button class="btn-wechat">🟢 微信一键登录</button>
+            <div class="login-footer">
+              还没有账号？<a href="#">申请入驻 →</a>
+            </div>
+          </div>
+          <div style="margin-top:40px; font-size:12px; color:#94a3b8;">
+            L2C Sales Management System v1.0
+          </div>
+        </div>
+      `;
+    }
+
+    let html = '<div class="glass-bg"><div class="bg-blob b1"></div><div class="bg-blob b2"></div><div class="bg-blob b3"></div></div>';
+    html += '<div class="content-inner fade-in">';
+
+    // 通用问候
+    const names = { boss: '王老板', manager: '陈经理', sales: '李销售', worker: '张师傅', customer: '赵女士', tester: '测试员' };
+    html += `
+      <div class="greeting">
+        <div class="greeting-text">你好，${names[role] || '用户'}</div>
+        <div class="greeting-date">2026年2月28日 星期六</div>
+      </div>
+    `;
+
+    if (role === 'boss') {
+      html += `
+        <div class="stats-grid" style="--cols: 4">
+          <div class="stat-card"><span class="stat-num primary">85%</span><span class="stat-desc">目标达成</span></div>
+          <div class="stat-card"><span class="stat-num">12</span><span class="stat-desc">新线索</span></div>
+          <div class="stat-card"><span class="stat-num">8</span><span class="stat-desc">订单</span></div>
+          <div class="stat-card"><span class="stat-num">45</span><span class="stat-desc">万元回款</span></div>
+        </div>
+        <div class="section-title">快捷入口</div>
+        <div class="quick-actions">
+          <div class="action-item"><div class="action-icon-box orange">📊</div><div class="action-text">数据报表</div></div>
+          <div class="action-item"><div class="action-icon-box green">🎯</div><div class="action-text">销售目标</div></div>
+          <div class="action-item"><div class="action-icon-box blue">⚡</div><div class="action-text">快速报价</div></div>
+          <div class="action-item"><div class="action-icon-box purple">🖼️</div><div class="action-text">云展厅</div></div>
+          <div class="action-item"><div class="action-icon-box green">👥</div><div class="action-text">邀请员工</div></div>
+        </div>
+        <div class="section-title">待办事项</div>
+        <div class="todo-item"><div><div class="todo-title">刘经理 报价审批</div><div class="todo-desc">瓷砖 + 铝合金方案 ¥38,500</div></div><div style="text-align:right"><span class="badge badge-danger">紧急</span><div class="todo-time">10分钟前</div></div></div>
+        <div class="todo-item"><div><div class="todo-title">王师傅 完工验收</div><div class="todo-desc">翠苑小区3栋2单元 安装完成</div></div><div style="text-align:right"><span class="badge badge-warning">待处理</span><div class="todo-time">1小时前</div></div></div>
+      `;
+    }
+
+    if (role === 'manager') {
+      html += `
+        <div class="stats-grid" style="--cols: 4">
+          <div class="stat-card"><span class="stat-num primary">72%</span><span class="stat-desc">团队目标</span></div>
+          <div class="stat-card"><span class="stat-num">28</span><span class="stat-desc">线索</span></div>
+          <div class="stat-card"><span class="stat-num">15</span><span class="stat-desc">报价</span></div>
+          <div class="stat-card"><span class="stat-num">6</span><span class="stat-desc">订单</span></div>
+        </div>
+        <div class="section-title">快捷入口</div>
+        <div class="quick-actions">
+          <div class="action-item"><div class="action-icon-box green">🎯</div><div class="action-text">销售目标</div></div>
+          <div class="action-item"><div class="action-icon-box orange">📊</div><div class="action-text">数据报表</div></div>
+          <div class="action-item"><div class="action-icon-box blue">⚡</div><div class="action-text">快速报价</div></div>
+          <div class="action-item"><div class="action-icon-box green">👥</div><div class="action-text">邀请员工</div></div>
+        </div>
+        <div class="section-title">待办事项</div>
+        <div class="todo-item"><div><div class="todo-title">小李 报价审批</div><div class="todo-desc">客户张某 全屋定制方案</div></div><div style="text-align:right"><span class="badge badge-warning">待审批</span><div class="todo-time">30分钟前</div></div></div>
+        <div class="todo-item"><div><div class="todo-title">新线索分配</div><div class="todo-desc">3条新线索待分配给销售</div></div><div style="text-align:right"><span class="badge badge-info">通知</span><div class="todo-time">2小时前</div></div></div>
+      `;
+    }
+
+    if (role === 'sales') {
+      html += `
+        <div class="stats-grid" style="--cols: 4">
+          <div class="stat-card"><span class="stat-num primary">68%</span><span class="stat-desc">本月业绩</span></div>
+          <div class="stat-card"><span class="stat-num">18</span><span class="stat-desc">我的线索</span></div>
+          <div class="stat-card"><span class="stat-num">5</span><span class="stat-desc">报价单</span></div>
+          <div class="stat-card"><span class="stat-num">3</span><span class="stat-desc">订单</span></div>
+        </div>
+        <div class="section-title">快捷入口</div>
+        <div class="quick-actions">
+          <div class="action-item"><div class="action-icon-box blue">⚡</div><div class="action-text">新建报价</div></div>
+          <div class="action-item"><div class="action-icon-box teal">📝</div><div class="action-text">新建客户</div></div>
+          <div class="action-item"><div class="action-icon-box purple">🖼️</div><div class="action-text">云展厅</div></div>
+        </div>
+        <div class="section-title">今日跟进</div>
+        <div class="todo-item"><div><div class="todo-title">赵女士 回访</div><div class="todo-desc">上周报价 ¥26,800 待跟进</div></div><div style="text-align:right"><span class="badge badge-info">跟进</span><div class="todo-time">今天 14:00</div></div></div>
+        <div class="todo-item"><div><div class="todo-title">孙先生 量房</div><div class="todo-desc">预约量房 翠苑小区</div></div><div style="text-align:right"><span class="badge badge-info">待办</span><div class="todo-time">今天 16:00</div></div></div>
+      `;
+    }
+
+    if (role === 'worker') {
+      html += `
+        <div class="stats-grid" style="--cols: 2">
+          <div class="stat-card"><span class="stat-num primary">3</span><span class="stat-desc">今日任务</span></div>
+          <div class="stat-card"><span class="stat-num">¥2,850</span><span class="stat-desc">待结算</span></div>
+        </div>
+        <div class="section-title">快捷操作</div>
+        <div class="quick-actions">
+          <div class="action-item"><div class="action-icon-box blue">📋</div><div class="action-text">查看任务</div></div>
+          <div class="action-item"><div class="action-icon-box green">💰</div><div class="action-text">我的收益</div></div>
+        </div>
+        <div class="section-title" style="margin-top:20px">今日任务</div>
+        <div class="todo-item"><div><div class="todo-title">翠苑3栋 瓷砖铺贴</div><div class="todo-desc">09:00 - 12:00 · 王先生</div></div><div style="text-align:right"><span class="badge badge-danger">进行中</span></div></div>
+        <div class="todo-item"><div><div class="todo-title">龙翔桥 橱柜安装</div><div class="todo-desc">14:00 - 17:00 · 李女士</div></div><div style="text-align:right"><span class="badge badge-warning">待开始</span></div></div>
+        <div class="todo-item"><div><div class="todo-title">西溪花园 验收复检</div><div class="todo-desc">17:30 - 18:00 · 张先生</div></div><div style="text-align:right"><span class="badge badge-info">验收</span></div></div>
+      `;
+    }
+
+    if (role === 'customer') {
+      html += `
+        <div class="advisor-card">
+          <div class="advisor-avatar">👨‍💼</div>
+          <div class="advisor-info">
+            <div class="advisor-name">刘顾问</div>
+            <div class="advisor-title">您的专属顾问</div>
+          </div>
+          <div class="advisor-call">📞 联系</div>
+        </div>
+        <div class="pending-sign-card">
+          <div>
+            <span class="pending-sign-badge">2</span>
+            <span class="pending-sign-text">份文件待您签字确认</span>
+          </div>
+          <div class="pending-sign-arrow">→</div>
+        </div>
+        <div class="section-title">我的服务</div>
+        <div class="customer-grid">
+          <div class="customer-grid-item"><div class="grid-icon-box">🛍️</div><div class="grid-text">产品展厅</div></div>
+          <div class="customer-grid-item"><div class="grid-icon-box">🔧</div><div class="grid-text">保修申请</div></div>
+          <div class="customer-grid-item"><div class="grid-icon-box">⭐</div><div class="grid-text">完工评价</div></div>
+        </div>
+      `;
+    }
+
+    if (role === 'tester') {
+      html += `
+        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; color: #92400e; font-size: 13px;">
+          🧪 <b>测试模式</b>：以下同时展示所有角色的工作台板块
+        </div>
+        <div style="font-size:12px; color:#2563eb; font-weight:600; margin-bottom:8px;">━━ 老板视图 ━━</div>
+        <div class="stats-grid" style="--cols: 4">
+          <div class="stat-card"><span class="stat-num primary">85%</span><span class="stat-desc">目标达成</span></div>
+          <div class="stat-card"><span class="stat-num">12</span><span class="stat-desc">新线索</span></div>
+          <div class="stat-card"><span class="stat-num">8</span><span class="stat-desc">订单</span></div>
+          <div class="stat-card"><span class="stat-num">45</span><span class="stat-desc">万元回款</span></div>
+        </div>
+        <div style="font-size:12px; color:#7c3aed; font-weight:600; margin:12px 0 8px;">━━ 销售视图 ━━</div>
+        <div class="stats-grid" style="--cols: 4">
+          <div class="stat-card"><span class="stat-num primary">68%</span><span class="stat-desc">本月业绩</span></div>
+          <div class="stat-card"><span class="stat-num">18</span><span class="stat-desc">我的线索</span></div>
+          <div class="stat-card"><span class="stat-num">5</span><span class="stat-desc">报价单</span></div>
+          <div class="stat-card"><span class="stat-num">3</span><span class="stat-desc">订单</span></div>
+        </div>
+        <div style="font-size:12px; color:#16a34a; font-weight:600; margin:12px 0 8px;">━━ 工人视图 ━━</div>
+        <div class="stats-grid" style="--cols: 2">
+          <div class="stat-card"><span class="stat-num primary">3</span><span class="stat-desc">今日任务</span></div>
+          <div class="stat-card"><span class="stat-num">¥2,850</span><span class="stat-desc">待结算</span></div>
+        </div>
+        <div style="font-size:12px; color:#ea580c; font-weight:600; margin:12px 0 8px;">━━ 客户视图 ━━</div>
+        <div class="advisor-card">
+          <div class="advisor-avatar">👨‍💼</div>
+          <div class="advisor-info"><div class="advisor-name">刘顾问</div><div class="advisor-title">您的专属顾问</div></div>
+          <div class="advisor-call">📞 联系</div>
+        </div>
+      `;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  // =====================================================
+  // 切换角色
+  // =====================================================
+
+  function switchRole(role) {
+    const data = roleData[role];
+    if (!data) return;
+
+    // 更新按钮状态
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.role === role);
+    });
+
+    // 更新手机内容
+    document.getElementById('phoneContent').innerHTML = getContentHTML(role);
+
+    // 更新 TabBar
+    const tabBar = document.getElementById('tabBar');
+    tabBar.innerHTML = data.tabBar.map(tab =>
+      `<div class="tab-item ${tab.active ? 'active' : ''}">
+        <span class="tab-icon">${tab.icon}</span>
+        <span class="tab-label">${tab.text}</span>
+      </div>`
+    ).join('');
+
+    // 更新信息面板
+    const panel = document.getElementById('infoPanel');
+    panel.innerHTML = `
+      <h3>📖 ${data.name}</h3>
+      <div class="info-section">
+        <div class="info-label">角色说明</div>
+        <div class="info-value">${data.desc}</div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">TabBar 配置 (${data.tabBar.length} 个标签)</div>
+        <ul class="tab-list">
+          ${data.tabBar.map(t => `<li><span class="tab-emoji">${t.icon}</span> ${t.text}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="info-section">
+        <div class="info-label">可用功能</div>
+        <ul class="feature-list">
+          ${data.features.map(f => `<li>${f}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  // 初始化
+  switchRole('guest');
+</script>
+
+</body>
+</html>

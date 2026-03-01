@@ -8,13 +8,9 @@ import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Trash2 from 'lucide-react/dist/esm/icons/trash';
-import Save from 'lucide-react/dist/esm/icons/save';
 import { updateQuoteItem } from '@/features/quotes/actions/mutations';
 import { toast } from 'sonner';
 
-import { QuoteItem as SharedQuoteItem } from '@/shared/api/schema/quotes';
 import { logger } from '@/shared/lib/logger';
 
 /**
@@ -31,21 +27,8 @@ interface AdvancedAttributes {
   sideLoss?: number; // 边损
   bottomLoss?: number; // 底边损耗
   headerLoss?: number; // 帘头损耗
+  customPanels?: { width: number }[]; // 自定义分片
   [key: string]: unknown;
-}
-
-/**
- * 附件行数据接口
- */
-export interface AttachmentItem {
-  id: string;
-  type: string; // 附件类型
-  productName: string; // 商品名称
-  remark?: string; // 备注
-  quantity: number; // 数量
-  unit: string; // 单位
-  unitPrice: number; // 单价
-  subtotal: number; // 小计
 }
 
 /**
@@ -66,8 +49,6 @@ interface QuoteItemExpandRowProps {
   processFee?: number;
   /** 备注 */
   remark?: string;
-  /** 附件列表 */
-  attachments?: (SharedQuoteItem & { amount?: number })[];
   /** 是否只读 */
   readOnly?: boolean;
   /** 是否展开 */
@@ -76,25 +57,9 @@ interface QuoteItemExpandRowProps {
   onToggle: () => void;
   /** 保存成功回调 */
   onSave?: () => void;
-  /** 添加附件回调 */
-  onAddAttachment?: () => void;
-  /** 删除附件回调 */
-  onDeleteAttachment?: (attachmentId: string) => void;
   /** 列数（用于 colSpan） */
-  colSpan?: number;
+  middleCols?: number;
 }
-
-/**
- * 附件类型选项
- */
-const ATTACHMENT_TYPES = [
-  { value: 'PILLOW', label: '抱枕' },
-  { value: 'TASSEL', label: '绑带' },
-  { value: 'VALANCE', label: '窗幔' },
-  { value: 'HOOK', label: '挂钩' },
-  { value: 'RING', label: '罗马环' },
-  { value: 'OTHER', label: '其他' },
-];
 
 /**
  * 安装位置选项
@@ -103,16 +68,6 @@ const INSTALL_POSITIONS = [
   { value: 'CURTAIN_BOX', label: '窗帘盒' },
   { value: 'INSIDE', label: '窗框内' },
   { value: 'OUTSIDE', label: '窗框外' },
-];
-
-/**
- * 拉动方式选项
- */
-const OPENING_STYLES = [
-  { value: 'SPLIT', label: '对开' },
-  { value: 'SINGLE_LEFT', label: '单开左' },
-  { value: 'SINGLE_RIGHT', label: '单开右' },
-  { value: 'MULTI', label: '多开' },
 ];
 
 /**
@@ -146,22 +101,17 @@ const BOTTOM_TYPES = [
  */
 export function QuoteItemExpandRow({
   itemId,
-  productName,
   category,
   attributes = {},
   foldRatio = 2,
   processFee: _processFee = 0,
   remark = '',
-  attachments = [],
   readOnly = false,
   isExpanded,
   onToggle,
   onSave,
-  onAddAttachment,
-  onDeleteAttachment,
-  colSpan = 10,
+  middleCols = 4,
 }: QuoteItemExpandRowProps) {
-  const [loading, setLoading] = useState(false);
   const [editedAttrs, setEditedAttrs] = useState<AdvancedAttributes>(attributes);
   const [editedFoldRatio, setEditedFoldRatio] = useState(foldRatio);
   const [editedRemark, setEditedRemark] = useState(remark);
@@ -175,331 +125,389 @@ export function QuoteItemExpandRow({
     setEditedAttrs((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  /**
-   * 保存高级配置
-   */
-  const handleSave = async () => {
-    setLoading(true);
+  const handleAutoSave = async (
+    updates: Partial<{ attrs: AdvancedAttributes; foldRatio: number; remark: string }> = {}
+  ) => {
+    const nextAttrs = updates.attrs ?? editedAttrs;
+    const nextFoldRatio = updates.foldRatio ?? editedFoldRatio;
+    const nextRemark = updates.remark ?? editedRemark;
+
     try {
-      await updateQuoteItem({
+      const mergedAttrs = {
+        ...nextAttrs,
+        fabricWidth: nextAttrs.fabricWidth ? Number(nextAttrs.fabricWidth) : undefined,
+        sideLoss: nextAttrs.sideLoss !== undefined ? Number(nextAttrs.sideLoss) : undefined,
+        bottomLoss: nextAttrs.bottomLoss !== undefined ? Number(nextAttrs.bottomLoss) : undefined,
+        headerLoss: nextAttrs.headerLoss !== undefined ? Number(nextAttrs.headerLoss) : undefined,
+        groundClearance:
+          nextAttrs.groundClearance !== undefined ? Number(nextAttrs.groundClearance) : undefined,
+      };
+
+      // Zod safeAttrValue does not allow undefined. Strip undefined values.
+      const cleanAttrs = Object.fromEntries(
+        Object.entries(mergedAttrs).filter(([_, v]) => v !== undefined)
+      );
+
+      const res = await updateQuoteItem({
         id: itemId,
-        foldRatio: isCurtain ? editedFoldRatio : undefined,
-        remark: editedRemark || undefined,
-        attributes: {
-          ...editedAttrs,
-          fabricWidth: editedAttrs.fabricWidth ? Number(editedAttrs.fabricWidth) : undefined,
-          sideLoss: editedAttrs.sideLoss !== undefined ? Number(editedAttrs.sideLoss) : undefined,
-          bottomLoss:
-            editedAttrs.bottomLoss !== undefined ? Number(editedAttrs.bottomLoss) : undefined,
-          headerLoss:
-            editedAttrs.headerLoss !== undefined ? Number(editedAttrs.headerLoss) : undefined,
-          groundClearance:
-            editedAttrs.groundClearance !== undefined
-              ? Number(editedAttrs.groundClearance)
-              : undefined,
-        } as Record<string, string | number | boolean | null>,
+        foldRatio: isCurtain ? nextFoldRatio : undefined,
+        remark: nextRemark || undefined,
+        attributes: cleanAttrs as Record<string, unknown>,
       });
-      toast.success('配置已保存');
+
+      if (res?.error) {
+        toast.error('自动保存失败: 参数有误');
+        logger.error('Auto save validation failed:', res.error);
+        return;
+      }
       onSave?.();
     } catch (error) {
-      toast.error('保存失败');
-      logger.error(error);
-    } finally {
-      setLoading(false);
+      toast.error('自动保存失败');
+      logger.error('Auto save failed:', error);
     }
+  };
+
+  /**
+   * 更新属性值并在选择变动时立刻保存
+   */
+  const updateAttrAndSave = (key: string, value: unknown) => {
+    const nextAttrs = { ...editedAttrs, [key]: value };
+    setEditedAttrs(nextAttrs);
+    handleAutoSave({ attrs: nextAttrs });
   };
 
   if (!isExpanded) {
     return null;
   }
 
+  // 计算渲染的空白占位 td 以修复列对齐
+  // 我们默认使用 4 个列的单元格来展示前两行。如果 middleCols 大于 4，我们要在每一行尾部补充空的 td，保证表格行不会塌缩。
+  const extraCols = Math.max(0, middleCols - 4);
+
+  // 如果不是窗帘类，直接只占一行显示备注
+  if (!isCurtain) {
+    return (
+      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b last:border-b-0">
+        <td colSpan={middleCols} className="p-4 align-top border-x border-border/50">
+          <div className="space-y-1.5 w-full">
+            <Label className="text-muted-foreground text-xs font-semibold">备注</Label>
+            <Input
+              value={editedRemark}
+              onChange={(e) => setEditedRemark(e.target.value)}
+              onBlur={() => handleAutoSave({ remark: editedRemark })}
+              placeholder="请输入关于此项的特殊要求、制作说明等备注信息..."
+              className="h-8 text-sm"
+              disabled={readOnly}
+            />
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  const isCustomPanel = editedAttrs.openingStyle === 'CUSTOM';
+
   return (
-    <tr className="bg-muted/30 border-t border-b border-dashed">
-      <td colSpan={colSpan} className="p-0">
-        <div className="animate-in slide-in-from-top-2 space-y-4 p-4 duration-200">
-          {/* 高级参数区域 */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-                📐 高级参数
-                <span className="text-muted-foreground/70 text-xs">({productName})</span>
-              </h4>
-              {!readOnly && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="gap-1"
-                >
-                  <Save className="h-3 w-3" />
-                  {loading ? '保存中...' : '保存'}
-                </Button>
-              )}
+    <>
+      {/* 展开内容的第一行 (Row 1) */}
+      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50 shadow-inner">
+        {/* Param 1: 幅宽 */}
+        <td className="p-3 align-top border-l border-border/50">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">幅宽</Label>
+            <div className="relative">
+              <Input
+                type="number"
+                onFocus={(e) => e.target.select()}
+                value={editedAttrs.fabricWidth || ''}
+                onChange={(e) => updateAttr('fabricWidth', e.target.value)}
+                onBlur={() => handleAutoSave()}
+                placeholder="280"
+                className="h-8 pr-8 text-sm w-full"
+                disabled={readOnly}
+              />
+              <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
             </div>
+          </div>
+        </td>
 
-            {/* 参数网格 - 窗帘类商品 */}
-            {isCurtain && (
-              <div className="grid grid-cols-8 gap-3">
-                {/* 幅宽 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">幅宽</Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      onFocus={(e) => e.target.select()}
-                      value={editedAttrs.fabricWidth || ''}
-                      onChange={(e) => updateAttr('fabricWidth', e.target.value)}
-                      placeholder="280"
-                      className="h-8 pr-8 text-sm"
-                      disabled={readOnly}
-                    />
-                    <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
-                  </div>
-                </div>
+        {/* Param 2: 拉动方式 */}
+        <td className="p-3 align-top">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">拉动方式</Label>
+            <Select
+              value={editedAttrs.openingStyle || 'SPLIT'}
+              onValueChange={(v) => {
+                const nextAttrs = { ...editedAttrs, openingStyle: v };
+                if (
+                  v === 'CUSTOM' &&
+                  (!editedAttrs.customPanels || !Array.isArray(editedAttrs.customPanels) || (editedAttrs.customPanels as { width: number }[]).length === 0)
+                ) {
+                  nextAttrs.customPanels = [{ width: 150 }, { width: 150 }];
+                }
+                setEditedAttrs(nextAttrs);
+                handleAutoSave({ attrs: nextAttrs });
+              }}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SPLIT">对开</SelectItem>
+                <SelectItem value="SINGLE_LEFT">左单开</SelectItem>
+                <SelectItem value="SINGLE_RIGHT">右单开</SelectItem>
+                <SelectItem value="CUSTOM">自定义选项</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </td>
 
-                {/* 拉动方式 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">拉动方式</Label>
-                  <Select
-                    value={editedAttrs.openingStyle || 'SPLIT'}
-                    onValueChange={(v) => updateAttr('openingStyle', v)}
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPENING_STYLES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Param 3: 安装位置 */}
+        <td className="p-3 align-top">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">安装位置</Label>
+            <Select
+              value={editedAttrs.installPosition || 'CURTAIN_BOX'}
+              onValueChange={(v) => updateAttrAndSave('installPosition', v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INSTALL_POSITIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </td>
 
-                {/* 安装位置 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">安装位置</Label>
-                  <Select
-                    value={editedAttrs.installPosition || 'CURTAIN_BOX'}
-                    onValueChange={(v) => updateAttr('installPosition', v)}
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INSTALL_POSITIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Param 4: 离地高度 */}
+        <td className="p-3 align-top border-r border-border/50">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">离地高度</Label>
+            <div className="relative">
+              <Input
+                type="number"
+                onFocus={(e) => e.target.select()}
+                value={editedAttrs.groundClearance ?? 2}
+                onChange={(e) => updateAttr('groundClearance', e.target.value)}
+                onBlur={() => handleAutoSave()}
+                className="h-8 pr-8 text-sm w-full"
+                disabled={readOnly}
+              />
+              <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
+            </div>
+          </div>
+        </td>
 
-                {/* 离地高度 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">离地高度</Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      onFocus={(e) => e.target.select()}
-                      value={editedAttrs.groundClearance ?? 2}
-                      onChange={(e) => updateAttr('groundClearance', e.target.value)}
-                      className="h-8 pr-8 text-sm"
-                      disabled={readOnly}
-                    />
-                    <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
-                  </div>
-                </div>
+        {extraCols > 0 && Array.from({ length: extraCols }).map((_, i) => (
+          <td key={`extra-1-${i}`} className="p-3 border-r border-border/50"></td>
+        ))}
+      </tr>
 
-                {/* 褶皱倍数 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">褶皱倍数</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    onFocus={(e) => e.target.select()}
-                    value={editedFoldRatio}
-                    onChange={(e) => setEditedFoldRatio(Number(e.target.value))}
-                    className="h-8 text-sm"
-                    disabled={readOnly}
-                  />
-                </div>
+      {/* 展开内容的第二行 (Row 2) */}
+      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50">
+        {/* Param 5: 褶皱倍数 */}
+        <td className="p-3 align-top border-l border-border/50">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">褶皱倍数</Label>
+            <Input
+              type="number"
+              step="0.1"
+              onFocus={(e) => e.target.select()}
+              value={editedFoldRatio}
+              onChange={(e) => setEditedFoldRatio(Number(e.target.value))}
+              onBlur={() => handleAutoSave({ foldRatio: editedFoldRatio })}
+              className="h-8 text-sm w-full"
+              disabled={readOnly}
+            />
+          </div>
+        </td>
 
-                {/* 算料方式 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">算料方式</Label>
-                  <Select
-                    value={editedAttrs.formula || 'FIXED_HEIGHT'}
-                    onValueChange={(v) => updateAttr('formula', v)}
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FORMULA_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Param 6: 算料方式 */}
+        <td className="p-3 align-top">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">算料方式</Label>
+            <Select
+              value={editedAttrs.formula || 'FIXED_HEIGHT'}
+              onValueChange={(v) => updateAttrAndSave('formula', v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FORMULA_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </td>
 
-                {/* 底边 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">底边</Label>
-                  <Select
-                    value={editedAttrs.bottomType || 'STANDARD'}
-                    onValueChange={(v) => updateAttr('bottomType', v)}
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BOTTOM_TYPES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Param 7: 底边 */}
+        <td className="p-3 align-top">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">底边</Label>
+            <Select
+              value={editedAttrs.bottomType || 'STANDARD'}
+              onValueChange={(v) => updateAttrAndSave('bottomType', v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BOTTOM_TYPES.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </td>
 
-                {/* 上带方式 */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">上带方式</Label>
-                  <Select
-                    value={editedAttrs.headerType || 'WRAPPED'}
-                    onValueChange={(v) => updateAttr('headerType', v)}
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HEADER_TYPES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {/* Param 8: 上带方式 */}
+        <td className="p-3 align-top border-r border-border/50">
+          <div className="space-y-1.5 w-full pr-4">
+            <Label className="text-muted-foreground text-xs font-semibold">上带方式</Label>
+            <Select
+              value={editedAttrs.headerType || 'WRAPPED'}
+              onValueChange={(v) => updateAttrAndSave('headerType', v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {HEADER_TYPES.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </td>
+
+        {extraCols > 0 && Array.from({ length: extraCols }).map((_, i) => (
+          <td key={`extra-2-${i}`} className="p-3 border-r border-border/50"></td>
+        ))}
+      </tr>
+
+      {/* 展开内容的第三行 (Row 3, Optional: Custom Panels) */}
+      {isCustomPanel && (() => {
+        const panels = Array.isArray(editedAttrs.customPanels)
+          ? (editedAttrs.customPanels as { width: number }[])
+          : [{ width: 0 }, { width: 0 }];
+
+        const updatePanel = (index: number, width: number) => {
+          const newPanels = [...panels];
+          newPanels[index] = { width };
+          updateAttr('customPanels', newPanels);
+        };
+        const savePanels = () => {
+          handleAutoSave();
+        };
+        const addPanel = () => {
+          const newPanels = [...panels, { width: 0 }];
+          updateAttr('customPanels', newPanels);
+          handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
+        };
+        const removePanel = (index: number) => {
+          if (panels.length <= 1) return;
+          const newPanels = panels.filter((_, i) => i !== index);
+          updateAttr('customPanels', newPanels);
+          handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
+        };
+
+        return (
+          <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50">
+            <td colSpan={middleCols} className="p-4 align-top border-x border-border/50">
+              <div className="space-y-3 rounded-lg border border-dashed p-4 bg-[var(--background)]">
+                <Label className="text-xs font-semibold text-muted-foreground">各片宽度 (cm)，高度和褶皱倍数共用</Label>
+                <div className="grid grid-cols-4 gap-4">
+                  {panels.map((panel, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-white dark:bg-slate-950 p-2 rounded-md shadow-sm border">
+                      <span className="text-xs font-medium text-slate-500 w-10 shrink-0">第{index + 1}片</span>
+                      <Input
+                        type="number"
+                        className="h-8 flex-1 text-sm border-none shadow-none focus-visible:ring-0 px-1"
+                        value={panel.width || ''}
+                        onChange={(e) => updatePanel(index, Number(e.target.value))}
+                        onBlur={savePanels}
+                        placeholder="宽度"
+                        disabled={readOnly}
+                      />
+                      <span className="text-xs text-muted-foreground">cm</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => removePanel(index)}
+                        disabled={panels.length <= 1 || readOnly}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  {!readOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-full min-h-[42px] border-dashed text-xs text-muted-foreground hover:text-primary"
+                      onClick={addPanel}
+                    >
+                      + 添加一片
+                    </Button>
+                  )}
                 </div>
               </div>
-            )}
+            </td>
+          </tr>
+        );
+      })()}
 
-            {/* 备注 */}
-            <div className="max-w-md">
-              <Label className="text-muted-foreground text-xs">备注</Label>
+      {/* 展开内容的最后一行 (Row 4 or 3: Remark & Collapse Button) */}
+      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b last:border-b-0 border-border/50">
+        <td colSpan={middleCols} className="p-0 border-x border-border/50">
+          <div className="p-3 px-4">
+            <div className="space-y-1.5 w-full">
+              <Label className="text-muted-foreground text-xs font-semibold">备注</Label>
               <Input
                 value={editedRemark}
                 onChange={(e) => setEditedRemark(e.target.value)}
-                placeholder="请输入备注信息..."
-                className="mt-1 h-8 text-sm"
+                onBlur={() => handleAutoSave({ remark: editedRemark })}
+                placeholder="请输入关于此项的特殊要求、制作说明等备注信息..."
+                className="h-8 text-sm"
                 disabled={readOnly}
               />
             </div>
-          </div>
 
-          {/* 附件区域 */}
-          <div className="space-y-2 border-t pt-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-                📦 附件
-                {attachments.length > 0 && (
-                  <span className="bg-muted rounded px-1.5 py-0.5 text-xs">
-                    {attachments.length}
-                  </span>
-                )}
-              </h4>
-              {!readOnly && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={onAddAttachment}
-                  className="h-7 gap-1 text-xs"
-                >
-                  <Plus className="h-3 w-3" />
-                  添加附件
-                </Button>
-              )}
+            {/* 折叠按钮 */}
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggle}
+                className="text-muted-foreground gap-1 text-xs"
+              >
+                <ChevronUp className="h-3 w-3" />
+                收起
+              </Button>
             </div>
-
-            {/* 附件列表表头 */}
-            {attachments.length > 0 && (
-              <div className="overflow-hidden rounded border">
-                <div className="bg-muted/50 text-muted-foreground grid grid-cols-[120px_1fr_100px_80px_80px_80px_80px_40px] gap-2 px-3 py-2 text-xs font-medium">
-                  <span>类型</span>
-                  <span>商品名称</span>
-                  <span>备注</span>
-                  <span className="text-right">数量</span>
-                  <span className="text-center">单位</span>
-                  <span className="text-right">单价</span>
-                  <span className="text-right">小计</span>
-                  <span></span>
-                </div>
-                {attachments.map((att) => (
-                  <div
-                    key={att.id}
-                    className="grid grid-cols-[120px_1fr_100px_80px_80px_80px_80px_40px] items-center gap-2 border-t px-3 py-2 text-sm"
-                  >
-                    <span className="text-muted-foreground">
-                      {ATTACHMENT_TYPES.find((t) => t.value === att.attributes?.attachmentType)?.label ||
-                        att.attributes?.attachmentType ||
-                        '辅料'}
-                    </span>
-                    <span className="truncate">{att.productName}</span>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {att.remark || '-'}
-                    </span>
-                    <span className="text-right">{att.quantity}</span>
-                    <span className="text-center">{att.unit}</span>
-                    <span className="text-right">¥{att.unitPrice}</span>
-                    <span className="text-right font-medium">¥{att.amount}</span>
-                    {!readOnly && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => onDeleteAttachment?.(att.id)}
-                      >
-                        <Trash2 className="text-destructive h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {attachments.length === 0 && (
-              <div className="text-muted-foreground rounded border border-dashed py-4 text-center text-sm">
-                暂无附件
-              </div>
-            )}
           </div>
-
-          {/* 折叠按钮 */}
-          <div className="flex justify-center pt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="text-muted-foreground gap-1 text-xs"
-            >
-              <ChevronUp className="h-3 w-3" />
-              收起
-            </Button>
-          </div>
-        </div>
-      </td>
-    </tr>
+        </td>
+      </tr>
+    </>
   );
 }
 

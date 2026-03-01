@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, Dispatch, SetStateAction } from 'react';
-import type { QuoteItem, WarningDialogState } from './types';
+import type { WarningDialogState } from './types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 
 interface UseTableStateReturn {
   advancedDrawerOpen: boolean;

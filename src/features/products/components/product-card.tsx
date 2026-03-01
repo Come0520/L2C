@@ -9,6 +9,7 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { Edit, MoreHorizontal, Power, PowerOff, Trash2, Box } from 'lucide-react';
 import Image from 'next/image';
+import { useMemo } from 'react';
 import { Product } from '../types';
 
 interface ProductCardProps {
@@ -16,6 +17,7 @@ interface ProductCardProps {
   onEdit: (product: Product) => void;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   onDelete: (id: string) => void;
+  priority?: boolean;
 }
 
 const getCategoryLabel = (category: string) => {
@@ -38,15 +40,41 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
-export function ProductCard({ item, onEdit, onToggleStatus, onDelete }: ProductCardProps) {
+export function ProductCard({ item, onEdit, onToggleStatus, onDelete, priority = false }: ProductCardProps) {
+  // 获取展示图片的回退逻辑：主图 -> 材质图 -> 场景图
+  const displayImage = useMemo(() => {
+    // 1. 首选主图
+    if (item.images && item.images.length > 0) {
+      return item.images[0];
+    }
+
+    // 2. 备选：材质图或场景图（存储在 specs 中）
+    const specs = (item.specs as Record<string, unknown>) || {};
+
+    const materialImages = specs.materialImages as string[] | undefined;
+    if (materialImages && materialImages.length > 0) {
+      return materialImages[0];
+    }
+
+    const sceneImages = specs.sceneImages as string[] | undefined;
+    if (sceneImages && sceneImages.length > 0) {
+      return sceneImages[0];
+    }
+
+    return null;
+  }, [item.images, item.specs]);
+
   return (
     <Card className="group border-border/50 bg-card/50 overflow-hidden backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
       <div className="bg-muted/30 relative flex aspect-square items-center justify-center overflow-hidden">
-        {item.images && item.images.length > 0 ? (
+        {displayImage ? (
           <Image
-            src={item.images[0]}
+            src={displayImage}
             alt={item.name}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={priority}
+            loading={priority ? undefined : "lazy"}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

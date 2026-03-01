@@ -247,7 +247,7 @@ export const createPurchaseOrder = createSafeAction(createPOSchema, async (data,
             return { id: po.id };
         });
     } catch (error) {
-        console.error('[supply-chain] 创建采购单失败:', error);
+        logger.error('[supply-chain] 创建采购单失败:', error);
         throw error;
     }
 });
@@ -279,14 +279,14 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
             columns: { status: true, supplierId: true }
         });
         if (!currentPO) {
-            console.error('[supply-chain] updatePoStatus 采购单不存在:', poId);
+            logger.error('[supply-chain] updatePoStatus 采购单不存在:', poId);
             return { success: false, error: '采购单不存在' };
         }
 
         // 校验状态转换合法性
         const allowed = VALID_PO_TRANSITIONS[currentPO.status!] || [];
         if (!allowed.includes(status)) {
-            console.error('[supply-chain] updatePoStatus 状态转换非法:', { from: currentPO.status, to: status });
+            logger.error('[supply-chain] updatePoStatus 状态转换非法:', { from: currentPO.status, to: status });
             return { success: false, error: `状态不允许从「${currentPO.status}」转换为「${status}」` };
         }
 
@@ -307,7 +307,7 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
             changed: { status }
         });
 
-        console.warn('[supply-chain] updatePoStatus 更新成功');
+        logger.info('[supply-chain] updatePoStatus 更新成功');
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         if (currentPO?.supplierId) {
             // revalidateTag 不支持多参数，这里修复
@@ -315,7 +315,7 @@ export async function updatePoStatus({ poId, status }: { poId: string; status: s
         }
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] updatePoStatus 更新失败:', error);
+        logger.error('[supply-chain] updatePoStatus 更新失败:', error);
         return { success: false, error: '更新采购单状态失败' };
     }
 }
@@ -413,7 +413,7 @@ export const batchUpdatePoStatus = createSafeAction(batchUpdateStatusSchema, asy
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 批量更新采购单状态失败:', error);
+        logger.error('[supply-chain] 批量更新采购单状态失败:', error);
         throw error;
     }
 });
@@ -476,7 +476,7 @@ export const batchDeleteDraftPOs = createSafeAction(batchDeleteSchema, async (da
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 批量删除草稿采购单失败:', error);
+        logger.error('[supply-chain] 批量删除草稿采购单失败:', error);
         throw error;
     }
 });
@@ -548,7 +548,7 @@ export const confirmPoQuote = createSafeAction(confirmQuoteSchema, async (data, 
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 确认采购单报价失败:', error);
+        logger.error('[supply-chain] 确认采购单报价失败:', error);
         throw error;
     }
 });
@@ -565,7 +565,7 @@ export const confirmPoQuote = createSafeAction(confirmQuoteSchema, async (data, 
 export const confirmPoPayment = createSafeAction(confirmPaymentSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 确认采购单付款:', { poId: data.poId, amount: data.paymentAmount, method: data.paymentMethod, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 确认采购单付款:', { poId: data.poId, amount: data.paymentAmount, method: data.paymentMethod, tenantId: session.user.tenantId });
 
         return await db.transaction(async (tx) => {
             const po = await tx.query.purchaseOrders.findFirst({
@@ -615,7 +615,7 @@ export const confirmPoPayment = createSafeAction(confirmPaymentSchema, async (da
             return { success: true };
         });
     } catch (error) {
-        console.error('[supply-chain] 确认采购单付款失败:', error);
+        logger.error('[supply-chain] 确认采购单付款失败:', error);
         throw error;
     }
 });
@@ -640,7 +640,7 @@ const confirmCompletionSchema = z.object({
 export const confirmPoCompletion = createSafeAction(confirmCompletionSchema, async (data, { session }) => {
     try {
         await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        console.warn('[supply-chain] 确认完工:', { poId: data.poId, tenantId: session.user.tenantId });
+        logger.info('[supply-chain] 确认完工:', { poId: data.poId, tenantId: session.user.tenantId });
 
         const po = await db.query.purchaseOrders.findFirst({
             where: and(
@@ -675,7 +675,7 @@ export const confirmPoCompletion = createSafeAction(confirmCompletionSchema, asy
         revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
         return { success: true };
     } catch (error) {
-        console.error('[supply-chain] 确认完工失败:', error);
+        logger.error('[supply-chain] 确认完工失败:', error);
         throw error;
     }
 });
@@ -841,7 +841,7 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
             return { success: true, data: { status: newStatus, allFullyReceived } };
         });
     } catch (error) {
-        console.error('[supply-chain] 确认采购单收货失败:', error);
+        logger.error('[supply-chain] 确认采购单收货失败:', error);
         throw error;
     }
 });

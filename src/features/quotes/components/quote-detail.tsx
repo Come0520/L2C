@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -28,6 +28,7 @@ import X from 'lucide-react/dist/esm/icons/x';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import Send from 'lucide-react/dist/esm/icons/send';
 import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import { SendToCustomerDialog } from '@/shared/components/send-to-customer-dialog';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { cn } from '@/shared/lib/utils';
 import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
@@ -39,7 +40,7 @@ const QuoteVersionCompare = dynamic(
 );
 
 import { QuoteConfig } from '@/services/quote-config.service';
-// toggleQuoteMode removed
+import { QuoteConfigDialog } from './quote-config-dialog';
 
 import { getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
 
@@ -55,9 +56,7 @@ import {
 } from './quote-category-tabs';
 import { QuoteSummaryTab } from './quote-summary-tab';
 import { QuoteExportMenu } from './quote-export-menu';
-import Download from 'lucide-react/dist/esm/icons/download';
 import Layout from 'lucide-react/dist/esm/icons/layout';
-import { DropdownMenuItem } from '@/shared/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
 
 import { QuoteExcelImportDialog } from './quote-excel-import-dialog';
@@ -75,18 +74,7 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 
-const QuotePdfDownloader = dynamic(
-  () => import('./quote-pdf-downloader').then((mod) => mod.QuotePdfDownloader),
-  {
-    ssr: false,
-    loading: () => (
-      <Button variant="outline" disabled>
-        <Download className="mr-2 h-4 w-4" />
-        Loading...
-      </Button>
-    ),
-  }
-);
+
 
 type QuoteData = NonNullable<Awaited<ReturnType<typeof getQuote>>['data']>;
 type QuoteVersion = Awaited<ReturnType<typeof getQuoteVersions>>[number];
@@ -106,7 +94,9 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
   const [activeCategory, setActiveCategory] = useState<QuoteCategory>('SUMMARY');
   const [viewMode, setViewMode] = useState<ViewMode>('category');
   const mode = config?.mode || 'simple';
-  const isReadOnly = !quote.isActive;
+  // 只有 DRAFT（草稿）状态才允许编辑；其他状态（待审批、已接受、已拒绝、已过期）均为只读
+  // 注意：isActive 是版本管理字段，表示是否为最新版本，与编辑权限无关，不应用于此处
+  const isReadOnly = quote.status !== 'DRAFT';
 
   // 添加空间对话框状态
   // Create Room Dialog State
@@ -152,15 +142,21 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
       return;
     }
     setAddRoomOpen(false);
-    toast.promise(createRoom({ quoteId: quote.id, name: newRoomName.trim() }), {
-      loading: '创建空间中...',
-      success: () => {
-        setNewRoomName('新空间');
-        router.refresh();
-        return '空间创建成功';
-      },
-      error: '创建失败',
-    });
+    toast.promise(
+      createRoom({ quoteId: quote.id, name: newRoomName.trim() }).then((res) => {
+        if (res.error) throw new Error(res.error);
+        return res.data;
+      }),
+      {
+        loading: '创建空间中...',
+        success: () => {
+          setNewRoomName('新空间');
+          router.refresh();
+          return '空间创建成功';
+        },
+        error: (err) => err.message || '创建失败',
+      }
+    );
   };
 
   // 计算品类汇总
@@ -194,6 +190,88 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
       subtotal: data.subtotal,
     }));
   }, [quote.items, quote.rooms]);
+
+  const handleItemUpdate = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const handleAddRoomEvent = useCallback((name: string) => {
+    toast.promise(
+      createRoom({ quoteId: quote.id, name }).then((res) => {
+        if (res.error) throw new Error(res.error);
+        return res.data;
+      }),
+      {
+        loading: '创建空间中...',
+        success: () => {
+          router.refresh();
+          return '空间创建成功';
+        },
+        error: (err) => err.message || '创建失败',
+      }
+    );
+  }, [quote.id, router]);
+
+  const allRawItems = useMemo(() => [
+    ...(quote.items || []),
+    ...(quote.rooms || []).flatMap((r) => r.items || []),
+  ], [quote.items, quote.rooms]);
+
+  const summaryItems = useMemo(() => allRawItems.map((item) => ({
+    id: item.id,
+    category: item.category,
+    roomId: item.roomId,
+    parentId: item.parentId,
+    subtotal: item.subtotal,
+    productName: item.productName,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    unit: item.unit ?? undefined,
+    width: item.width ?? undefined,
+    height: item.height ?? undefined,
+    foldRatio: item.foldRatio ?? undefined,
+    processFee: item.processFee ?? undefined,
+    remark: item.remark ?? undefined,
+  })), [allRawItems]);
+
+  const summaryRooms = useMemo(() => (quote.rooms || []).map((r) => ({ id: r.id, name: r.name })), [quote.rooms]);
+
+  const categoryViewItems = useMemo(() => {
+    if (activeCategory === 'SUMMARY') return [];
+    const cat = activeCategory as Exclude<QuoteCategory, 'SUMMARY'>;
+    const allowedCategories = CATEGORY_TO_PRODUCT_CATEGORIES[cat];
+    return allRawItems
+      .filter((item) => allowedCategories.includes(item.category))
+      .map((item) => ({
+        ...item,
+        productId: item.productId || '',
+        width: item.width || 0,
+        height: item.height || 0,
+        foldRatio: item.foldRatio ?? undefined,
+        processFee: item.processFee ?? undefined,
+        remark: item.remark ?? undefined,
+        roomId: item.roomId || null,
+        parentId: item.parentId || null,
+        unit: item.unit || undefined,
+        attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
+      })) as QuoteItem[];
+  }, [allRawItems, activeCategory]);
+
+  const roomViewItems = useMemo(() => {
+    return allRawItems.map((item) => ({
+      ...item,
+      productId: item.productId || '',
+      width: item.width || 0,
+      height: item.height || 0,
+      foldRatio: item.foldRatio ?? undefined,
+      processFee: item.processFee ?? undefined,
+      remark: item.remark ?? undefined,
+      roomId: item.roomId || null,
+      parentId: item.parentId || null,
+      unit: item.unit || undefined,
+      attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
+    })) as QuoteItem[];
+  }, [allRawItems]);
 
   // Mode toggle logic removed - mode is now derived from config on line 72
 
@@ -243,6 +321,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                     toast.promise(
                       (async () => {
                         const res = await copyQuote({ quoteId: quote.id });
+                        if (res?.error) throw new Error(res.error);
                         if (res?.data?.id) {
                           router.push(`/quotes/${res.data.id}`);
                         }
@@ -250,7 +329,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                       {
                         loading: '正在复制报价单...',
                         success: '复制成功！',
-                        error: '复制失败',
+                        error: (err) => err.message || '复制失败',
                       }
                     );
                   }}
@@ -317,7 +396,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                   </Button>
 
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     disabled={riskResult?.hardStop}
                     title={riskResult?.hardStop ? "存在严重风险，无法提交" : "提交审核"}
@@ -327,11 +406,17 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                         toast.error("报价单存在严重风险，请修正后再提交");
                         return;
                       }
-                      toast.promise(submitQuote({ id: quote.id }), {
-                        loading: '提交中...',
-                        success: '报价单已提交',
-                        error: (err) => `提交失败: ${err.message}`,
-                      });
+                      toast.promise(
+                        submitQuote({ id: quote.id }).then((res) => {
+                          if (res.error) throw new Error(res.error);
+                          return res.data;
+                        }),
+                        {
+                          loading: '提交中...',
+                          success: '报价单已提交',
+                          error: (err) => `提交失败: ${err.message}`,
+                        }
+                      );
                     }}
                   >
                     <Send className="h-4 w-4 mr-2" /> 提交审核
@@ -341,56 +426,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
 
               {/* ... other buttons ... */}
 
-              <QuoteExportMenu
-                quote={{
-                  id: quote.id,
-                  quoteNo: quote.quoteNo,
-                  title: quote.title,
-                  customer: quote.customer,
-                  items: quote.items?.map((item) => ({
-                    productName: item.productName || '未命名商品',
-                    width: item.width,
-                    height: item.height,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    subtotal: item.subtotal,
-                    roomId: item.roomId || '',
-                  })),
-                  rooms: quote.rooms?.map((r) => ({ id: r.id, name: r.name })),
-                  totalAmount: quote.totalAmount,
-                  discountAmount: quote.discountAmount,
-                  finalAmount: quote.finalAmount,
-                  notes: quote.notes,
-                }}
-                renderPdfButtons={
-                  <>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <QuotePdfDownloader
-                        quote={quote as unknown as React.ComponentProps<typeof QuotePdfDownloader>['quote']}
-                        mode="customer"
-                        className="focus:bg-accent focus:text-accent-foreground h-auto w-full justify-start border-0 px-2 py-1.5 text-sm font-normal"
-                      >
-                        <div className="flex w-full items-center">
-                          <Download className="mr-2 h-4 w-4" />
-                          <span>客户版 PDF</span>
-                        </div>
-                      </QuotePdfDownloader>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <QuotePdfDownloader
-                        quote={quote as unknown as React.ComponentProps<typeof QuotePdfDownloader>['quote']}
-                        mode="internal"
-                        className="focus:bg-accent focus:text-accent-foreground h-auto w-full justify-start border-0 px-2 py-1.5 text-sm font-normal"
-                      >
-                        <div className="flex w-full items-center">
-                          <Download className="mr-2 h-4 w-4" />
-                          <span>内部版 PDF</span>
-                        </div>
-                      </QuotePdfDownloader>
-                    </DropdownMenuItem>
-                  </>
-                }
-              />
+              <QuoteExportMenu quote={quote} />
 
               {quote.status === 'PENDING_APPROVAL' && (
                 <>
@@ -411,10 +447,20 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                 </>
               )}
 
+              {/* 审批通过或待客户确认：显示发送给客户确认按钮 */}
+              {(quote.status === 'APPROVED' || quote.status === 'PENDING_CUSTOMER') && (
+                <SendToCustomerDialog
+                  type="quote"
+                  id={quote.id}
+                  description={`将报价单 ${quote.quoteNo} 发送给客户，客户点击链接可在小程序中签字确认。`}
+                />
+              )}
+
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <QuoteToOrderButton
                   quoteId={quote.id}
+                  customerId={quote.customerId}
                   defaultAmount={quote.finalAmount || undefined}
                 />
               </div>
@@ -422,7 +468,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               <Button variant="outline" size="sm" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" /> 保存
               </Button>
-              {/* Mode Toggle Button Removed */}
+              <QuoteConfigDialog currentConfig={config} />
             </div>
           </div>
         </div>
@@ -455,11 +501,12 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
           onConfirm={async (reason) => {
             try {
               setActionLoading(true);
-              await rejectQuote({ id: quote.id, rejectReason: reason });
+              const res = await rejectQuote({ id: quote.id, rejectReason: reason });
+              if (res?.error) throw new Error(res.error);
               toast.success('报价单已驳回');
               setRejectDialogOpen(false);
-            } catch (_error) {
-              toast.error('操作失败');
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : '操作失败');
             } finally {
               setActionLoading(false);
             }
@@ -481,11 +528,12 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                   e.preventDefault();
                   try {
                     setActionLoading(true);
-                    await approveQuote({ id: quote.id });
+                    const res = await approveQuote({ id: quote.id });
+                    if (res?.error) throw new Error(res.error);
                     toast.success('报价单已批准');
                     setApproveDialogOpen(false);
-                  } catch (_error) {
-                    toast.error('操作失败');
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : '操作失败');
                   } finally {
                     setActionLoading(false);
                   }
@@ -533,17 +581,8 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
           {activeCategory === 'SUMMARY' ? (
             // 汇总视图
             <QuoteSummaryTab
-              items={[
-                ...(quote.items || []),
-                ...(quote.rooms || []).flatMap((r) => r.items || []),
-              ].map((item) => ({
-                id: item.id,
-                category: item.category,
-                roomId: item.roomId,
-                parentId: item.parentId,
-                subtotal: item.subtotal,
-              }))}
-              rooms={(quote.rooms || []).map((r) => ({ id: r.id, name: r.name }))}
+              items={summaryItems}
+              rooms={summaryRooms}
             />
           ) : viewMode === 'category' ? (
             // 品类优先视图：当前品类下的所有空间
@@ -551,45 +590,18 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               viewMode="category"
               quoteId={quote.id}
               rooms={quote.rooms || []}
-              items={[...(quote.items || []), ...(quote.rooms || []).flatMap((r) => r.items || [])]
-                .filter((item) => {
-                  // 按品类筛选商品（activeCategory 在此分支已排除 SUMMARY）
-                  const cat = activeCategory as Exclude<QuoteCategory, 'SUMMARY'>;
-                  const allowedCategories = CATEGORY_TO_PRODUCT_CATEGORIES[cat];
-                  return allowedCategories.includes(item.category);
-                })
-                .map((item) => ({
-                  ...item,
-                  productId: item.productId || '',
-                  width: item.width || 0,
-                  height: item.height || 0,
-                  foldRatio: item.foldRatio ?? undefined,
-                  processFee: item.processFee ?? undefined,
-                  remark: item.remark ?? undefined,
-                  roomId: item.roomId || null,
-                  parentId: item.parentId || null,
-                  unit: item.unit || undefined, // Fix unit nullability
-                  attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
-                }))}
+              items={categoryViewItems}
               mode={mode}
               visibleFields={config?.visibleFields}
               readOnly={isReadOnly}
+              onItemUpdate={handleItemUpdate}
               dimensionLimits={config?.dimensionLimits}
               allowedCategories={
                 CATEGORY_TO_PRODUCT_CATEGORIES[activeCategory as Exclude<QuoteCategory, 'SUMMARY'>]
               }
               activeCategory={activeCategory}
               onRowClick={setSelectedItemForPricing}
-              onAddRoom={(name) => {
-                toast.promise(createRoom({ quoteId: quote.id, name }), {
-                  loading: '创建空间中...',
-                  success: () => {
-                    router.refresh();
-                    return '空间创建成功';
-                  },
-                  error: '创建失败',
-                });
-              }}
+              onAddRoom={handleAddRoomEvent}
             />
           ) : (
             // 空间优先视图：按空间组织，每个空间内包含不同品类
@@ -597,37 +609,14 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               viewMode="room"
               quoteId={quote.id}
               rooms={quote.rooms || []}
-              items={[
-                ...(quote.items || []),
-                ...(quote.rooms || []).flatMap((r) => r.items || []),
-              ].map((item) => ({
-                ...item,
-                productId: item.productId || '',
-                width: item.width || 0,
-                height: item.height || 0,
-                foldRatio: item.foldRatio ?? undefined,
-                processFee: item.processFee ?? undefined,
-                remark: item.remark ?? undefined,
-                roomId: item.roomId || null,
-                parentId: item.parentId || null,
-                unit: item.unit || undefined, // Fix unit nullability
-                attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
-              }))}
+              items={roomViewItems}
               mode={mode}
               visibleFields={config?.visibleFields}
               readOnly={isReadOnly}
+              onItemUpdate={handleItemUpdate}
               dimensionLimits={config?.dimensionLimits}
               onRowClick={setSelectedItemForPricing}
-              onAddRoom={(name) => {
-                toast.promise(createRoom({ quoteId: quote.id, name }), {
-                  loading: '创建空间中...',
-                  success: () => {
-                    router.refresh();
-                    return '空间创建成功';
-                  },
-                  error: '创建失败',
-                });
-              }}
+              onAddRoom={handleAddRoomEvent}
             />
           )}
         </div>

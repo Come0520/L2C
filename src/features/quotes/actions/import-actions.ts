@@ -112,7 +112,7 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
     });
 
     revalidatePath(`/quotes/${quoteId}`);
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 批量导入报价行项目成功', { quoteId, itemCount: items.length });
     return { successCount: items.length, errors: [] };
   } catch (error: unknown) {

@@ -22,14 +22,21 @@ describe('配件联动服务 (Accessory Linkage Service)', () => {
             id: 'mock-product',
             name: '默认轨道',
             retailPrice: '50.00'
-        } as any);
+        } as never);
+
+        // 传入系统默认 BOM 模板（3 条窗帘规则）
+        const curtainTemplates = [
+            { mainCategory: 'CURTAIN', targetCategory: 'SERVICE', calcLogic: 'FINISHED_WIDTH' as const },
+            { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_TRACK', calcLogic: 'FINISHED_WIDTH' as const },
+            { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_ACCESSORY', calcLogic: 'FINISHED_WIDTH' as const },
+        ];
 
         const recommendations = await AccessoryLinkageService.getRecommendedAccessories({
             category: 'CURTAIN',
             width: 200,
             height: 250,
             foldRatio: 2.0
-        }, 'tenant-1');
+        }, 'tenant-1', curtainTemplates);
 
         // rule for curtain returns 3 items: SERVICE, CURTAIN_TRACK, CURTAIN_ACCESSORY
         expect(recommendations).toHaveLength(3);
@@ -44,12 +51,18 @@ describe('配件联动服务 (Accessory Linkage Service)', () => {
     it('墙纸主材联动 (Wallpaper linkage - Glue & Service proportional)', async () => {
         vi.mocked(db.query.products.findFirst).mockResolvedValue(null); // mock no default product found
 
+        // 传入系统默认 BOM 模板（2 条墙纸规则）
+        const wallpaperTemplates = [
+            { mainCategory: 'WALLPAPER', targetCategory: 'WALLCLOTH_ACCESSORY', calcLogic: 'PROPORTIONAL' as const, ratio: 0.2 },
+            { mainCategory: 'WALLPAPER', targetCategory: 'SERVICE', calcLogic: 'PROPORTIONAL' as const, ratio: 1.0 },
+        ];
+
         const recommendations = await AccessoryLinkageService.getRecommendedAccessories({
             category: 'WALLPAPER',
             width: 300,
             height: 250,
             quantity: 10 // 10 rolls
-        }, 'tenant-1');
+        }, 'tenant-1', wallpaperTemplates);
 
         // rule returns 2 items: WALLCLOTH_ACCESSORY (glue), SERVICE
         expect(recommendations).toHaveLength(2);

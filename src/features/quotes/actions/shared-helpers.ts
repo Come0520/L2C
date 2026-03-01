@@ -119,5 +119,5 @@ export const updateBundleTotal = async (bundleId: string, tenantId: string) => {
 
   revalidatePath(`/quotes/${bundleId}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', {});
+  revalidateTag('quotes', 'default');
 };

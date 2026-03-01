@@ -3,7 +3,7 @@
 import { toast } from 'sonner';
 import { useTransition } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { typedResolver } from '../utils/form-helpers';
 import { createJournalEntrySchema } from '../actions/schema';
 import { z } from 'zod';
 type CreateJournalEntryInput = z.infer<typeof createJournalEntrySchema>;
@@ -33,8 +33,8 @@ export function JournalEntryForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const form = useForm<any>({
-    resolver: zodResolver(createJournalEntrySchema) as any,
+  const form = useForm<CreateJournalEntryInput>({
+    resolver: typedResolver(createJournalEntrySchema),
     defaultValues: {
       periodId: '',
       entryDate: new Date(),
@@ -97,7 +97,7 @@ export function JournalEntryForm({
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="periodId"
               render={({ field }: any) => (
                 <FormItem>
@@ -126,7 +126,7 @@ export function JournalEntryForm({
             />
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="entryDate"
               render={({ field }: any) => (
                 <FormItem>
@@ -146,7 +146,7 @@ export function JournalEntryForm({
 
             <div className="md:col-span-2">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="description"
                 render={({ field }: any) => (
                   <FormItem>
@@ -202,7 +202,7 @@ export function JournalEntryForm({
                 <div key={field.id} className="grid grid-cols-12 items-start gap-2">
                   <div className="col-span-3">
                     <FormField
-                      control={form.control as any}
+                      control={form.control}
                       name={`lines.${index}.description`}
                       render={({ field: f }: any) => (
                         <FormItem>
@@ -216,7 +216,7 @@ export function JournalEntryForm({
                   </div>
                   <div className="col-span-4">
                     <FormField
-                      control={form.control as any}
+                      control={form.control}
                       name={`lines.${index}.accountId`}
                       render={({ field: f }: any) => (
                         <FormItem>
@@ -245,7 +245,7 @@ export function JournalEntryForm({
                   </div>
                   <div className="col-span-2">
                     <FormField
-                      control={form.control as any}
+                      control={form.control}
                       name={`lines.${index}.debitAmount`}
                       render={({ field: f }: any) => (
                         <FormItem>
@@ -269,7 +269,7 @@ export function JournalEntryForm({
                   </div>
                   <div className="col-span-2">
                     <FormField
-                      control={form.control as any}
+                      control={form.control}
                       name={`lines.${index}.creditAmount`}
                       render={({ field: f }: any) => (
                         <FormItem>

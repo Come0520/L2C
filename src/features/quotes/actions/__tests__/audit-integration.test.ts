@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuditService } from '@/shared/lib/audit-service';
 
 // ─── Mock Setup ─────────────────────────────────
-
-const mockChainable = (returnValue: any = []) => {
+// 简化版可链式调用的 mock 函数，返回值可以是任意类型
+const mockChainable = (returnValue: unknown = []) => {
     const chain = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
@@ -75,7 +75,7 @@ vi.mock('@/shared/lib/audit-service', () => ({
 }));
 
 vi.mock('@/shared/lib/server-action', () => ({
-    createSafeAction: (schema: any, handler: any) => async (data: any) => {
+    createSafeAction: (schema: unknown, handler: (data: unknown, context: { session: typeof MOCK_SESSION }) => Promise<unknown>) => async (data: unknown) => {
         // Mock Session matching MOCK_SESSION structure
         const session = {
             user: {

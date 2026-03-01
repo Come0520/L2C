@@ -4,7 +4,7 @@ import { memo } from 'react';
 import Image from 'next/image';
 import { TableCell } from '@/shared/ui/table';
 import { ImageIcon } from 'lucide-react';
-import type { QuoteItem } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 
 interface ImageCellProps {
     item: QuoteItem;

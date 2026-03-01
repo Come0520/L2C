@@ -20,10 +20,7 @@ export const metadata: Metadata = {
   },
 };
 
-import { auth } from '@/shared/lib/auth';
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
@@ -34,7 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <div className="liquid-mesh-bg fixed inset-0 -z-20" />
         <div className="aurora-animate fixed inset-0 -z-10" />
-        <AuthProvider session={session}>
+        <AuthProvider>
           <StyleProvider>
             <ThemeProvider
               attribute="class"

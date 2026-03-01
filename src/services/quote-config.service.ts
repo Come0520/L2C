@@ -5,6 +5,17 @@ import { eq, and } from 'drizzle-orm';
 import { DEFAULT_QUOTE_MODE_CONFIG, type QuoteModeConfig } from '@/features/settings/lib/quote-mode-constants';
 
 /**
+ * 联动规则定义 (Linkage Rule Definition)
+ */
+export interface LinkageRule {
+    mainCategory: string;
+    targetCategory: string;
+    matchPattern?: string; // 产品名称匹配模式 (可选)
+    calcLogic: 'FINISHED_WIDTH' | 'FINISHED_HEIGHT' | 'FIXED' | 'PROPORTIONAL';
+    ratio?: number; // 针对 PROPORTIONAL 或辅助计算
+}
+
+/**
  * 尺寸限制配置 (Dimension Limits Configuration)
  * 支持租户级自定义，但不能超过系统硬限制
  */
@@ -92,6 +103,9 @@ export interface QuoteConfig {
 
     /** 空间分组配置 (Room Groups for Space Selector) */
     roomGroups?: RoomGroup[];
+
+    /** BOM自动联动模板设定 (BOM Linkage Templates) */
+    bomTemplates?: LinkageRule[];
 }
 
 /**
@@ -136,6 +150,16 @@ const SYSTEM_DEFAULT_CONFIG: QuoteConfig = {
         minDiscountRate: 0.80,
         requireApprovalBelow: 0.90
     },
+    bomTemplates: [
+        // 窗帘联动
+        { mainCategory: 'CURTAIN', targetCategory: 'SERVICE', calcLogic: 'FINISHED_WIDTH' }, // 加工费(SERVICE)按成品宽
+        { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_TRACK', calcLogic: 'FINISHED_WIDTH' },      // 轨道按成品宽
+        { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_ACCESSORY', calcLogic: 'FINISHED_WIDTH' },       // 布带(ACCESSORY)按成品宽
+
+        // 墙纸联动
+        { mainCategory: 'WALLPAPER', targetCategory: 'WALLCLOTH_ACCESSORY', calcLogic: 'PROPORTIONAL', ratio: 0.2 }, // 胶水(ACCESSORY)按面积换算
+        { mainCategory: 'WALLPAPER', targetCategory: 'SERVICE', calcLogic: 'PROPORTIONAL', ratio: 1.0 } // 墙纸人工费(SERVICE)按卷
+    ],
     /**
      * 尺寸限制系统默认配置
      * - 系统级硬限制：高度 1000cm，宽度 2000cm（不可超过）
@@ -178,10 +202,52 @@ const SYSTEM_DEFAULT_CONFIG: QuoteConfig = {
 export class QuoteConfigService {
 
     /**
-     * 获取合并后的最终配置
+     * 内存配置缓存 (In-Memory Config Cache)
+     * 键格式：`${tenantId}:${userId}`，TTL 为 60 秒。
+     * 当租户或用户配置更新后，通过 `invalidateCache` 主动失效。
+     */
+    private static readonly _cache = new Map<string, { value: QuoteConfig; expiresAt: number }>();
+
+    /** 缓存 TTL 60 秒 */
+    private static readonly CACHE_TTL_MS = 60_000;
+
+    /**
+     * 使指定租户/用户的配置缓存立即失效 (Invalidate Cache)
+     * 应在 `updateTenantConfig`、`updateUserMode`、`updateUserPlan` 后调用。
+     *
+     * @param tenantId - 租户 ID
+     * @param userId - 用户 ID（可选，若不传则仅失效租户级缓存匹配项）
+     */
+    static invalidateCache(tenantId: string, userId?: string) {
+        if (userId) {
+            this._cache.delete(`${tenantId}:${userId}`);
+        } else {
+            // 失效该租户下所有缓存
+            for (const key of this._cache.keys()) {
+                if (key.startsWith(`${tenantId}:`)) this._cache.delete(key);
+            }
+        }
+    }
+
+    /**
+     * 获取合并后的最终配置 (Get Merged Config)
+     * 按优先级层次合并配置：系统默认 ← 租户全局配置 ← 用户个人偏好。
+     * 返回的配置项包含：报价模式、方案设置、尺寸限制、空间分组、联动规则等。
+     * 结果在 60 秒内使用内存缓存，避免高频页面加载时的重复 DB 查询。
+     *
+     * @param tenantId - 租户 ID
+     * @param userId - 用户 ID，用于加载用户级个人偏好（模式选择、默认方案）
+     * @returns 合并后的完整配置对象
      */
     static async getMergedConfig(tenantId: string, userId: string): Promise<QuoteConfig> {
-        // 1. Fetch Tenant Config
+        // 命中缓存则直接返回
+        const cacheKey = `${tenantId}:${userId}`;
+        const cached = this._cache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+            return cached.value;
+        }
+
+
         const tenantData = await db.query.quoteConfig.findFirst({
             where: and(
                 eq(quoteConfig.type, 'TENANT'),
@@ -264,7 +330,8 @@ export class QuoteConfigService {
                     SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
                 ),
                 enabled: tenantSettings.dimensionLimits?.enabled ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.enabled
-            }
+            },
+            bomTemplates: tenantSettings.bomTemplates ?? SYSTEM_DEFAULT_CONFIG.bomTemplates
         };
 
         // If advanced mode, ensure advanced fields are visible
@@ -277,11 +344,21 @@ export class QuoteConfigService {
             config.visibleFields = quickModeFields;
         }
 
+        // 写入缓存
+        this._cache.set(cacheKey, {
+            value: config,
+            expiresAt: Date.now() + this.CACHE_TTL_MS
+        });
+
         return config;
     }
 
     /**
-     * 获取租户配置
+     * 获取租户全局配置 (Get Tenant Config)
+     * 仅读取租户库中存储的配置，不应用系统默认。
+     *
+     * @param tenantId - 租户 ID
+     * @returns 租户配置（如未配置则返回系统默认）
      */
     static async getTenantConfig(tenantId: string): Promise<QuoteConfig> {
         const tenantData = await db.query.quoteConfig.findFirst({
@@ -317,12 +394,18 @@ export class QuoteConfigService {
                     SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
                 ),
                 enabled: tenantSettings.dimensionLimits?.enabled ?? SYSTEM_DEFAULT_CONFIG.dimensionLimits!.enabled
-            }
+            },
+            bomTemplates: tenantSettings.bomTemplates ?? SYSTEM_DEFAULT_CONFIG.bomTemplates
         };
     }
 
     /**
-     * 更新用户模式偏好
+     * 更新用户模式个人偏好 (Update User Mode)
+     * 将用户的报价模式选择（简单模式/高级模式）持久化到数据库。
+     *
+     * @param userId - 用户 ID
+     * @param mode - 目标模式: `'simple'` 简单模式 | `'advanced'` 高级模式
+     * @returns 更新操作结果
      */
     static async updateUserMode(userId: string, mode: 'simple' | 'advanced') {
         const existing = await db.query.quoteConfig.findFirst({
@@ -351,7 +434,14 @@ export class QuoteConfigService {
     }
 
     /**
-     * 更新租户全局配置 (仅限管理员)
+     * 更新租户全局配置 (Update Tenant Config)
+     * 覆盖租户在数据库中存储的全局配置，支持部分更新。
+     * 不影响系统默认配置。
+     *
+     * @param tenantId - 租户 ID
+     * @param config - 要更新的配置内容（支持部分覆盖）
+     * @returns 已应用的新配置
+     * @security 🔒 仅限管理员调用
      */
     static async updateTenantConfig(tenantId: string, config: Partial<QuoteConfig>) {
         const existing = await db.query.quoteConfig.findFirst({
@@ -381,6 +471,11 @@ export class QuoteConfigService {
 
     /**
      * 更新用户默认方案偏好 (Update User Plan Preference)
+     * 将用户选择的报价方案默认偏好（经济/舂适/奔华）持久化到数据库。
+     *
+     * @param userId - 用户 ID
+     * @param plan - 方案类型: `'ECONOMIC'` | `'COMFORT'` | `'LUXURY'`
+     * @returns 更新操作结果
      */
     static async updateUserPlan(userId: string, plan: 'ECONOMIC' | 'COMFORT' | 'LUXURY') {
         const existing = await db.query.quoteConfig.findFirst({

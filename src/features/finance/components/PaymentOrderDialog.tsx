@@ -1,8 +1,8 @@
 ﻿'use client';
 
 import { logger } from '@/shared/lib/logger';
-import { useForm, type Resolver } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { typedResolver } from '../utils/form-helpers';
 import { createPaymentOrderSchema } from '../actions/schema';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
@@ -80,7 +80,7 @@ export function PaymentOrderDialog({
   }, [open]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createPaymentOrderSchema) as Resolver<FormValues>,
+    resolver: typedResolver(createPaymentOrderSchema),
     defaultValues: {
       customerName: '',
       customerPhone: '',

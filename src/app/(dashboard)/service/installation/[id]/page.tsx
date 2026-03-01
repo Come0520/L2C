@@ -16,6 +16,7 @@ import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import Package from 'lucide-react/dist/esm/icons/package';
 import Star from 'lucide-react/dist/esm/icons/star';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
+import { SendToCustomerDialog } from '@/shared/components/send-to-customer-dialog';
 
 
 export const dynamic = 'force-dynamic';
@@ -237,6 +238,12 @@ export default async function InstallTaskDetailPage({
                                 estimatedFee={task.laborFee ? Number(task.laborFee) : undefined}
                             />
                             <RejectInstallDialog taskId={task.id} />
+                            {/* 发送客户远程签字确认链接 */}
+                            <SendToCustomerDialog
+                                type="task"
+                                id={task.id}
+                                description={`将安装单 ${task.taskNo} 的完工照片发送给客户，客户点击链接可在小程序中查看完工照片并远程签字确认。`}
+                            />
                         </>
                     )}
                 </CardContent>

@@ -74,7 +74,11 @@ vi.mock('@/services/quote-config.service', () => ({
             presetLoss: {
                 curtain: { defaultFoldRatio: 2, sideLoss: 0.1, bottomLoss: 0.1, headerLoss: 0.1 },
                 wallpaper: { widthLoss: 0.05, cutLoss: 0.05 }
-            }
+            },
+            // 确保配件联动条件成立（bomTemplates 非空）
+            bomTemplates: [
+                { mainCategory: 'CURTAIN', targetCategory: 'SERVICE', calcLogic: 'FINISHED_WIDTH' }
+            ]
         })
     }
 }));
@@ -144,9 +148,9 @@ describe('Quote Items CRUD Actions (L5)', () => {
     });
 
     it('createQuoteItem 应当成功记录并在通过计算策略获取到用量', async () => {
-        // 让推荐配件服务返回一个配件
+        // 将配件推荐 Mock 在测试内部设置（避免 clearAllMocks 冲洗后设置丧失）
         const { AccessoryLinkageService } = await import('../../services/accessory-linkage.service');
-        vi.mocked(AccessoryLinkageService.getRecommendedAccessories).mockResolvedValue([{
+        vi.mocked(AccessoryLinkageService.getRecommendedAccessories).mockResolvedValueOnce([{
             category: 'ACCESSORY',
             productId: 'acc-1',
             productName: '轨道',
@@ -158,6 +162,9 @@ describe('Quote Items CRUD Actions (L5)', () => {
         const { createQuoteItem } = await import('../quote-item-crud');
         const { updateQuoteTotal } = await import('../shared-helpers');
         const { StrategyFactory } = await import('../../calc-strategies/strategy-factory');
+
+        // 重置 插入 chain次数 (clearAllMocks 之后)
+        mockInsertChain.values.mockClear();
 
         const input = {
             quoteId: MOCK_QUOTE_ID,

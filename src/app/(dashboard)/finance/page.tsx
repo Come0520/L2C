@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { StatCard } from '@/shared/components/stat-card';
@@ -25,31 +24,42 @@ import { getAPSupplierStatements } from '@/features/finance/actions/ap';
 import { getFinanceAccounts } from '@/features/finance/actions/config';
 import { auth } from '@/shared/lib/auth';
 import { getFinanceMode } from '@/features/finance/actions/simple-mode-actions';
+import { FinanceModeCards } from '@/features/finance/components/finance-mode-cards';
 import { ROLES } from '@/shared/config/roles';
 import { Decimal } from 'decimal.js';
+import { redirect } from 'next/navigation';
 
 /**
  * 财务中心着陆页 — 任务导向型设计 + 权限动态渲染
- *
- * 复用项目已有组件：StatCard、DashboardPageHeader、Card
- * 保持与其他模块页面风格统一
  */
 export default async function FinancePage() {
   const modeRes = await getFinanceMode();
-  if (modeRes.success && modeRes.mode === 'simple') {
+
+  // 1. 如果尚未选择模式，只展示双卡片让用户选择
+  if (!modeRes.success || !modeRes.mode) {
+    return (
+      <div className="space-y-6">
+        <DashboardPageHeader title="财务中心" subtitle="一站式管理收付款、对账、凭证与报表" />
+        <FinanceModeCards currentMode={null} />
+      </div>
+    );
+  }
+
+  // 2. 如果是简单模式，直接跳到流水账页面
+  if (modeRes.mode === 'simple') {
     redirect('/finance/simple');
   }
 
+  // 3. 专业模式：渲染完整的专业看板视图
   const session = await auth();
   const userRoles = session?.user?.roles || [session?.user?.role || 'SALES'];
   const perms = getUserFinancePermissions(userRoles);
 
   return (
     <div className="space-y-6">
-      {/* 页头 — 使用统一的 DashboardPageHeader 组件 */}
-      <DashboardPageHeader title="财务中心" subtitle="一站式管理收付款、对账、凭证与报表" />
+      <DashboardPageHeader title="财务中心" subtitle="专业财务管理看板" />
 
-      {/* 数据看板 — 使用已有的 StatCard 组件 */}
+      {/* 数据看板 */}
       <div className="grid gap-4 md:grid-cols-3">
         {perms.has('finance.ar.view') && (
           <Suspense fallback={<StatCardSkeleton />}>
@@ -68,7 +78,7 @@ export default async function FinancePage() {
         )}
       </div>
 
-      {/* 收款中心 — 用 Card 包裹形成层次，仅销售/财务可见 */}
+      {/* 收款中心 */}
       {perms.has('finance.ar.view') && (
         <Card>
           <CardHeader className="pb-3">
@@ -112,7 +122,7 @@ export default async function FinancePage() {
         </Card>
       )}
 
-      {/* 付款中心 — 用 Card 包裹形成层次，仅采购/派单员/财务可见 */}
+      {/* 付款中心 */}
       {perms.has('finance.ap.view') && (
         <Card>
           <CardHeader className="pb-3">
@@ -156,7 +166,7 @@ export default async function FinancePage() {
         </Card>
       )}
 
-      {/* 更多工具 — 按权限动态过滤 */}
+      {/* 更多工具 */}
       {buildToolLinks(perms).length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -179,15 +189,10 @@ export default async function FinancePage() {
 // 权限辅助函数
 // ========================
 
-/**
- * 获取用户在财务模块拥有的所有权限集合
- * 支持通配符权限（** 和 *）
- */
 function getUserFinancePermissions(roles: string[]): Set<string> {
   const perms = new Set<string>();
 
   for (const roleCode of roles) {
-    // ADMIN/TENANT_ADMIN 拥有全部权限
     if (roleCode === 'ADMIN' || roleCode === 'TENANT_ADMIN') {
       return new Set([
         'finance.ar.view',
@@ -244,9 +249,6 @@ function getUserFinancePermissions(roles: string[]): Set<string> {
   return perms;
 }
 
-/**
- * 根据权限动态构建"更多工具"区的链接列表
- */
 function buildToolLinks(perms: Set<string>) {
   const links: { href: string; icon: React.ElementType; label: string }[] = [];
 
@@ -270,10 +272,9 @@ function buildToolLinks(perms: Set<string>) {
 }
 
 // ========================
-// 数据看板组件 — 复用 StatCard
+// 数据看板组件
 // ========================
 
-/** 应收统计卡片 */
 async function ARStatCard() {
   let totalAmount = new Decimal(0);
   let pendingAmount = new Decimal(0);
@@ -285,7 +286,7 @@ async function ARStatCard() {
       pendingAmount = pendingAmount.plus(s.pendingAmount || '0');
     }
   } catch {
-    // 权限不足或数据异常时静默降级
+    // 静默降级
   }
 
   return (
@@ -300,7 +301,6 @@ async function ARStatCard() {
   );
 }
 
-/** 应付统计卡片 */
 async function APStatCard() {
   let totalAmount = new Decimal(0);
   let pendingAmount = new Decimal(0);
@@ -327,7 +327,6 @@ async function APStatCard() {
   );
 }
 
-/** 账户余额统计卡片 */
 async function AccountBalanceCard() {
   let totalBalance = new Decimal(0);
   let accountCount = 0;
@@ -354,7 +353,6 @@ async function AccountBalanceCard() {
   );
 }
 
-/** 看板骨架屏 */
 function StatCardSkeleton() {
   return (
     <Card>
@@ -376,7 +374,6 @@ function StatCardSkeleton() {
 // 功能入口卡片组件
 // ========================
 
-/** 收款/付款中心的操作卡片 — 使用统一的 Card 样式 */
 function ActionCard({
   href,
   icon: Icon,
@@ -410,7 +407,6 @@ function ActionCard({
 // 快捷工具入口
 // ========================
 
-/** 更多工具区的简洁快捷入口 */
 function QuickLink({
   href,
   icon: Icon,

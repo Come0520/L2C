@@ -98,10 +98,14 @@ export function QuoteInlineAddRow({
         await createQuoteItem({
           quoteId,
           roomId: roomId || selectedRoomId || undefined,
-          category: product.category || category || 'STANDARD',
+          category: product.category || category || allowedCategories?.[0] || 'STANDARD',
           productId: product.id,
           productName: product.name,
-          unitPrice: product.unitPrice ? parseFloat(product.unitPrice) : 0,
+          unitPrice: product.retailPrice !== null
+            ? Number(product.retailPrice)
+            : product.unitPrice !== null
+              ? Number(product.unitPrice)
+              : 0,
           quantity: 1,
           width: 0,
           height: 0,
@@ -117,7 +121,7 @@ export function QuoteInlineAddRow({
         setIsSubmitting(false);
       }
     },
-    [quoteId, roomId, category, onSuccess, rooms, selectedRoomId]
+    [quoteId, roomId, category, allowedCategories, onSuccess, rooms, selectedRoomId]
   );
 
   /**

@@ -1,11 +1,14 @@
 Page({
     data: {
-        quoteId: '',
         quote: null as unknown as Record<string, any>,
         paymentConfig: null as unknown as Record<string, any>,
+        versions: [] as Array<{ id: string; version: number; status: string; createdAt: string }>,
+        versionOptions: [] as string[],
+        currentVersionIndex: 0,
         loading: true,
         signatureWidth: 300,
-        signatureHeight: 180
+        signatureHeight: 180,
+        showSignModal: false,  // 控制签字弹窗显示
     },
 
     onLoad(options: any) {
@@ -33,7 +36,34 @@ Page({
             const app = getApp<IAppOption>();
             const res = await app.request(`/quotes/${id}`);
             if (res.success) {
-                this.setData({ quote: res.data });
+                const quoteData = res.data;
+                const versions = quoteData.versions || [];
+
+                // 状态字典
+                const statusMap: Record<string, string> = {
+                    DRAFT: '草稿',
+                    SUBMITTED: '已提交',
+                    PENDING_APPROVAL: '待审批',
+                    PENDING_CUSTOMER: '待确认',
+                    ACCEPTED: '已接受',
+                    ORDERED: '已下单',
+                    REJECTED: '已拒绝',
+                    EXPIRED: '已过期',
+                };
+
+                const versionOptions = versions.map((v: any) => {
+                    const statusName = statusMap[v.status] || v.status;
+                    return `V${v.version} - ${statusName}${v.id === id ? ' (当前)' : ''}`;
+                });
+
+                const currentVersionIndex = versions.findIndex((v: any) => v.id === id);
+
+                this.setData({
+                    quote: quoteData,
+                    versions,
+                    versionOptions,
+                    currentVersionIndex: currentVersionIndex >= 0 ? currentVersionIndex : 0
+                });
             } else {
                 wx.showToast({ title: res.error || '加载失败', icon: 'none' });
             }
@@ -42,6 +72,15 @@ Page({
             wx.showToast({ title: '网络错误', icon: 'none' });
         } finally {
             this.setData({ loading: false });
+        }
+    },
+
+    onVersionChange(e: any) {
+        const index = e.detail.value;
+        const selectedVersion = this.data.versions[index];
+        if (selectedVersion && selectedVersion.id !== this.data.quoteId) {
+            this.setData({ quoteId: selectedVersion.id });
+            this.fetchQuote(selectedVersion.id);
         }
     },
 
@@ -55,6 +94,21 @@ Page({
         } catch (err) {
             console.error('Fetch payment config failed', err);
         }
+    },
+
+    /** 打开签字弹窗 */
+    openSignModal() {
+        this.setData({ showSignModal: true });
+    },
+
+    /** 关闭签字弹窗并重置画板 */
+    closeSignModal() {
+        this.setData({ showSignModal: false });
+        // 延迟重置防止动画冲突
+        setTimeout(() => {
+            const signature = this.selectComponent('#signature');
+            if (signature) signature.clear();
+        }, 300);
     },
 
     handleClear() {
@@ -95,7 +149,10 @@ Page({
                 wx.hideLoading();
                 wx.showToast({ title: '确认成功', icon: 'success' });
 
-                // Refresh Quote Status
+                // 关闭签字弹窗
+                this.setData({ showSignModal: false });
+
+                // 刷新报价单状态
                 this.fetchQuote(quoteId);
 
                 // Show Payment Instructions
@@ -180,7 +237,22 @@ Page({
                 fail: reject
             });
         });
-    }
+    },
+
+    /**
+     * 用户点击右上角分享
+     * 销售可将报价单分享给客户，客户打开后可在报价单底部签字确认
+     */
+    onShareAppMessage() {
+        const quote = this.data.quote;
+        const title = quote
+            ? `【报价单】${quote.quoteNo || ''} — 请查看并签字确认`
+            : '请查看报价单并签字确认';
+        return {
+            title,
+            path: `/pages/quotes/detail?id=${this.data.quoteId}`,
+        };
+    },
 });
 
 export { };

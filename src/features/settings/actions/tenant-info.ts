@@ -70,6 +70,7 @@ export async function getTenantInfo(): Promise<{ success: true; data: TenantInfo
                 code: tenant.code,
                 logoUrl: tenant.logoUrl,
                 contact,
+                settings,
             },
         };
     } catch {

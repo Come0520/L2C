@@ -10,7 +10,8 @@ import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
-import { requestPasswordReset, requestResetSchema } from '@/features/auth/actions/password-reset';
+import { requestPasswordReset } from '@/features/auth/actions/password-reset';
+import { requestResetSchema } from '@/features/auth/schemas/password-reset-schema';
 
 /**
  * 底部渐变动效 (Aceternity UI 特效)

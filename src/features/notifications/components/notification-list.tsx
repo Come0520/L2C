@@ -79,17 +79,36 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
         { label: '通知', value: 'INFO' },
     ];
 
-    // 过滤后的列表
-    const filteredList = list.filter(n => {
-        if (filter === 'ALL') return true;
-        return n.type === filter;
-    });
+    const prevFilterRef = React.useRef('ALL');
+
+    // 监听分类筛选变化，进行服务端查寻
+    useEffect(() => {
+        if (filter !== prevFilterRef.current) {
+            prevFilterRef.current = filter;
+            const loadFiltered = async () => {
+                setIsLoading(true);
+                try {
+                    const res = await getNotificationsAction({ page: 1, limit: 20, onlyUnread: false, type: filter });
+                    if (res?.data?.data) {
+                        setList(res.data.data);
+                        setPage(1);
+                        setHasMore(res.data.data.length < res.data.meta.total);
+                    }
+                } catch {
+                    toast.error('加载通知失败');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            loadFiltered();
+        }
+    }, [filter]);
 
     // D5 UI/UX 优化：增加客户端轮询机制，每 30 秒检查一次最新消息
     useEffect(() => {
         const pollInterval = setInterval(async () => {
             try {
-                const res = await getNotificationsAction({ page: 1, limit: 10, onlyUnread: false });
+                const res = await getNotificationsAction({ page: 1, limit: 10, onlyUnread: false, type: filter });
                 if (res?.data?.data) {
                     const latestItems = res.data.data;
                     setList(prev => {
@@ -104,13 +123,13 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
         }, 30000);
 
         return () => clearInterval(pollInterval);
-    }, []);
+    }, [filter]);
 
     const loadMore = async () => {
         if (isLoading || !hasMore) return;
         setIsLoading(true);
         try {
-            const res = await getNotificationsAction({ page: page + 1, limit: 20, onlyUnread: false });
+            const res = await getNotificationsAction({ page: page + 1, limit: 20, onlyUnread: false, type: filter });
             if (res?.data?.data) {
                 const newItems = res.data.data;
                 const metaTotal = res.data.meta.total;
@@ -148,7 +167,11 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
     };
 
     const handleMarkAllRead = async () => {
-        const res = await markAllAsReadAction();
+        if (!window.confirm("确定要将当前分类下的所有新通知标记为已读吗？")) {
+            return;
+        }
+
+        const res = await markAllAsReadAction({ type: filter });
         if (res?.data?.success) {
             setList(prev => prev.map(n => ({ ...n, isRead: true })));
             toast.success('全部已读');
@@ -176,7 +199,7 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
                             {type.label}
                             {filter === type.value && (
                                 <Badge variant="secondary" className="ml-1.5 h-4 px-1 bg-primary-foreground/20 text-white border-none">
-                                    {filteredList.length}
+                                    {list.length}
                                 </Badge>
                             )}
                         </button>
@@ -192,13 +215,13 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
             <ScrollArea className="h-[650px] px-2">
                 <NotificationErrorBoundary>
                     <div className="space-y-3 pb-4">
-                        {!filteredList.length ? (
+                        {!list.length ? (
                             <div className="flex flex-col items-center justify-center p-12 text-muted-foreground bg-slate-50/30 rounded-xl border border-dashed animate-in fade-in zoom-in duration-300">
                                 <Bell className="w-12 h-12 text-primary/20 mb-3" />
                                 <p className="text-sm">该分类下暂无通知</p>
                             </div>
                         ) : (
-                            filteredList.map((n, index) => (
+                            list.map((n, index) => (
                                 <div
                                     key={n.id}
                                     onClick={() => handleCardClick(n)}

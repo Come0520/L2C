@@ -53,7 +53,7 @@ export function ApprovalTaskDetails({
     flowNodes
 }: {
     task: Task;
-    flowNodes: Array<{ id: string; name: string; sortOrder: number | null }>;
+    flowNodes: Array<{ id: string; name: string; sortOrder: number | null; approverRole?: string | null; approverUserId?: string | null; }>;
 }) {
     const [comment, setComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);

@@ -16,9 +16,9 @@ describe('calc-strategies 边界和异常测试 (Boundary & Exception Tests)', (
                 unitPrice: 100,
             });
             expect(result.details.warning).toBeUndefined();
-            // 窗帘用量 = 200 * 2.0 (褶皱) + 10 (默认损耗) = 410 -> 4.1m
-            expect(result.usage).toBeCloseTo(4.1);
-            expect(result.subtotal).toBeCloseTo(410);
+            // 窗帘用量 = 200cm × 2.0（褂盖倍）+ 双开侧边损耗 5cm×2×2片 = 420cm → 4.2m
+            expect(result.usage).toBeCloseTo(4.2);
+            expect(result.subtotal).toBeCloseTo(420);
         });
 
         it('超高预警：建议让渡帘头 (Warning: Adjust header)', () => {

@@ -164,6 +164,26 @@ describe('Products Queries', () => {
             expect(result.data?.total).toBe(0);
         });
 
+        it('传入品类为 ALL 时不按品类过滤', async () => {
+            const mockProduct2 = { ...mockProduct, category: 'MATTRESS', sku: 'MAT-001' };
+            vi.mocked(db.query.products.findMany).mockResolvedValue([mockProduct, mockProduct2] as any);
+            vi.mocked(db.select).mockReturnValue({
+                from: vi.fn().mockReturnValue({
+                    where: vi.fn().mockResolvedValue([{ count: 2 }])
+                })
+            } as any);
+
+            const result = await getProducts({
+                page: 1,
+                pageSize: 10,
+                category: 'ALL',
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data?.data).toHaveLength(2);
+            expect(result.data?.total).toBe(2);
+        });
+
         it('支持搜索关键词', async () => {
             vi.mocked(db.query.products.findMany).mockResolvedValue([mockProduct] as any);
             vi.mocked(db.select).mockReturnValue({

@@ -1,8 +1,8 @@
 ﻿'use client';
 
 import { logger } from '@/shared/lib/logger';
-import { useForm, type Resolver } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { typedResolver } from '../utils/form-helpers';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -36,7 +36,7 @@ const createReceiptSchema = z.object({
   paymentMethod: z.string().min(1, '支付方式不能为空'),
   accountId: z.string().uuid().optional(),
   proofUrl: z.string().min(1, '支付凭证不能为空'),
-  receivedAt: z.coerce.date(),
+  receivedAt: z.date(),
   remark: z.string().optional(),
   items: z
     .array(
@@ -93,7 +93,7 @@ export function ReceiptBillDialog({
   }, [open]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createReceiptSchema) as Resolver<FormValues>,
+    resolver: typedResolver(createReceiptSchema),
     defaultValues: {
       customerName: '',
       customerPhone: '',
@@ -220,7 +220,7 @@ export function ReceiptBillDialog({
           <DialogTitle>登记收款 (需审批)</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit as Parameters<typeof form.handleSubmit>[0])} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

@@ -2,17 +2,7 @@ import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and } from 'drizzle-orm';
 import type { ProductCategory } from '@/shared/api/schema/types';
-
-/**
- * 联动规则定义 (Linkage Rule Definition)
- */
-export interface LinkageRule {
-    mainCategory: string;
-    targetCategory: string;
-    matchPattern?: string; // 产品名称匹配模式 (可选)
-    calcLogic: 'FINISHED_WIDTH' | 'FINISHED_HEIGHT' | 'FIXED' | 'PROPORTIONAL';
-    ratio?: number; // 针对 PROPORTIONAL 或辅助计算
-}
+import type { LinkageRule } from '@/services/quote-config.service';
 
 /**
  * 联动机结果 (Linkage Result)
@@ -31,17 +21,6 @@ export interface RecommendedAccessory {
  * 处理根据主材自动推荐配件（BOM 推荐）的逻辑
  */
 export class AccessoryLinkageService {
-    // 基础联动规则配置
-    private static RULES: LinkageRule[] = [
-        // 窗帘联动
-        { mainCategory: 'CURTAIN', targetCategory: 'SERVICE', calcLogic: 'FINISHED_WIDTH' }, // 加工费(SERVICE)按成品宽
-        { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_TRACK', calcLogic: 'FINISHED_WIDTH' },      // 轨道按成品宽
-        { mainCategory: 'CURTAIN', targetCategory: 'CURTAIN_ACCESSORY', calcLogic: 'FINISHED_WIDTH' },       // 布带(ACCESSORY)按成品宽
-
-        // 墙纸联动
-        { mainCategory: 'WALLPAPER', targetCategory: 'WALLCLOTH_ACCESSORY', calcLogic: 'PROPORTIONAL', ratio: 0.2 }, // 胶水(ACCESSORY)按面积换算
-        { mainCategory: 'WALLPAPER', targetCategory: 'SERVICE', calcLogic: 'PROPORTIONAL', ratio: 1.0 } // 墙纸人工费(SERVICE)按卷
-    ];
 
     /**
      * 根据主材条目推荐配件
@@ -52,8 +31,8 @@ export class AccessoryLinkageService {
         height: number;
         foldRatio?: number;
         quantity?: number;
-    }, tenantId: string): Promise<RecommendedAccessory[]> {
-        const applicableRules = this.RULES.filter(r => r.mainCategory === mainItem.category);
+    }, tenantId: string, bomTemplates: LinkageRule[] = []): Promise<RecommendedAccessory[]> {
+        const applicableRules = bomTemplates.filter(r => r.mainCategory === mainItem.category);
         const recommendations: RecommendedAccessory[] = [];
 
         for (const rule of applicableRules) {

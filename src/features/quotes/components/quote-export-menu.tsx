@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/button';
 import Download from 'lucide-react/dist/esm/icons/download';
 import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet';
 import ImageIcon from 'lucide-react/dist/esm/icons/image';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,18 +17,25 @@ interface QuoteData {
     id: string;
     quoteNo: string;
     title?: string | null;
+    createdAt?: Date | string | number | null;
     customer?: {
         name?: string | null;
         phone?: string | null;
+        address?: string | null;
     } | null;
+    deliveryAddress?: string | null;
     items?: Array<{
+        id?: string;
         productName: string;
         width?: string | number | null;
         height?: string | number | null;
         quantity?: string | number | null;
         unitPrice?: string | number | null;
         subtotal?: string | number | null;
+        costPrice?: string | number | null;
+        remark?: string | null;
         roomId?: string | null;
+        category?: string | null;
     }>;
     rooms?: Array<{
         id: string;
@@ -39,9 +47,8 @@ interface QuoteData {
     notes?: string | null;
 }
 
-interface QuoteExportMenuProps {
+export interface QuoteExportMenuProps {
     quote: QuoteData;
-    /** 渲染 PDF 下载按钮（由父组件提供，因为需要 @react-pdf/renderer） */
     renderPdfButtons?: React.ReactNode;
 }
 
@@ -185,8 +192,28 @@ async function exportToImage(quote: QuoteData): Promise<void> {
  * 报价单导出菜单组件
  */
 export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProps) {
+    const handlePdfExport = async () => {
+        toast.promise(
+            (async () => {
+                // Dynamic import to avoid SSR issues
+                const { pdf } = await import('@react-pdf/renderer');
+                const { QuotePdfDocument } = await import('./quote-pdf');
+                const { saveAs } = await import('file-saver');
+
+                const asPdf = pdf(<QuotePdfDocument quote={quote as any} mode="customer" />);
+                const blob = await asPdf.toBlob();
+                saveAs(blob, `专属报价方案-${quote.quoteNo}.pdf`);
+            })(),
+            {
+                loading: '正在生成 PDF...',
+                success: 'PDF 导出成功',
+                error: (err) => `PDF 导出失败: ${err.message}`,
+            }
+        );
+    };
+
     const handleExcelExport = async () => {
-        toast.promise(exportToExcel(quote), {
+        toast.promise(exportToExcel(quote as any), {
             loading: '正在生成 Excel...',
             success: 'Excel 导出成功',
             error: 'Excel 导出失败',
@@ -194,10 +221,10 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
     };
 
     const handleImageExport = async () => {
-        toast.promise(exportToImage(quote), {
-            loading: '正在生成图片...',
-            success: '图片导出成功',
-            error: '图片导出失败',
+        toast.promise(exportToImage(quote as any), {
+            loading: '正在生成长图...',
+            success: '长图导出成功',
+            error: '长图导出失败',
         });
     };
 
@@ -209,20 +236,20 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
                     导出
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-                {/* PDF 导出（由父组件提供） */}
-                {renderPdfButtons}
-
-                {/* Excel 导出 */}
+            <DropdownMenuContent align="end">
+                {renderPdfButtons || (
+                    <DropdownMenuItem onClick={handlePdfExport}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        导出报价单 (PDF)
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleExcelExport}>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    导出 Excel
+                    导出表格数据 (Excel)
                 </DropdownMenuItem>
-
-                {/* 图片导出（微信分享） */}
                 <DropdownMenuItem onClick={handleImageExport}>
                     <ImageIcon className="mr-2 h-4 w-4" />
-                    导出图片（微信分享）
+                    生成分享长图 (适合微信)
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

@@ -65,7 +65,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价套餐创建成功', {
       bundleId: newBundle.id,
       quoteNo: newBundle.quoteNo,
@@ -137,7 +137,7 @@ export const createQuoteActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
     return newQuote;
   }
@@ -267,7 +267,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', {});
+  revalidateTag('quotes', 'default');
   logger.info('[quotes] 报价单更新成功', { quoteId: id });
   return { success: true };
 });
@@ -316,7 +316,7 @@ export const copyQuote = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', {});
+    revalidateTag('quotes', 'default');
     logger.info('[quotes] 报价单复制成功', {
       sourceQuoteId: data.quoteId,
       newQuoteId: newQuote.id,

@@ -85,8 +85,10 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         const itemUpdate = itemUpdateCalls.find(call => call[0].quantity);
         expect(itemUpdate).toBeDefined();
         if (itemUpdate) {
-            expect(itemUpdate[0].quantity).toBe('6.1');
-            expect(itemUpdate[0].subtotal).toBe('610');
+            // 计算验证：成品宽 300cm × 2.0褂盖倍 + 双开侧边两组 (5cm×2×2) = 620cm → 6.2m
+            expect(itemUpdate[0].quantity).toBe('6.2');
+            // 小计 = 6.2m × 100元/m = 620
+            expect(itemUpdate[0].subtotal).toBe('620');
             expect(itemUpdate[0].attributes.calcResult.warning).toBeDefined();
         }
 
@@ -94,8 +96,8 @@ describe('Calculation Engine Integration (recalculateQuote)', () => {
         const quoteUpdate = itemUpdateCalls.find(call => call[0].totalAmount);
         expect(quoteUpdate).toBeDefined();
         if (quoteUpdate) {
-            expect(quoteUpdate[0].totalAmount).toBe('610'); // Sum of subtotals
-            expect(quoteUpdate[0].finalAmount).toBe('549'); // 610 * 0.9 = 549
+            expect(quoteUpdate[0].totalAmount).toBe('620'); // Sum of subtotals
+            expect(quoteUpdate[0].finalAmount).toBe('558'); // 620 * 0.9 = 558
         }
     });
 

@@ -22,13 +22,14 @@ export function ProductGrid({ data, onEdit, onToggleStatus, onDelete }: ProductG
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-      {data.map((item) => (
+      {data.map((item, index) => (
         <ProductCard
           key={item.id}
           item={item}
           onEdit={onEdit}
           onToggleStatus={onToggleStatus}
           onDelete={onDelete}
+          priority={index < 10}
         />
       ))}
     </div>

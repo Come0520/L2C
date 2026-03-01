@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
@@ -24,7 +24,8 @@ import { logger } from '@/shared/lib/logger';
 import { useTableState } from './use-table-state';
 import { useClientCalc } from './use-client-calc';
 import { CategoryView, RoomView } from './views';
-import type { QuoteItem, RoomData, ViewMode, WarningDialogState } from './types';
+import type { RoomData, ViewMode, WarningDialogState } from './types';
+import type { QuoteItem } from './types';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 
 const QuoteItemAdvancedDrawer = dynamic(
@@ -74,7 +75,7 @@ interface QuoteItemsTableProps {
   onRowClick?: (item: QuoteItem) => void;
 }
 
-export function QuoteItemsTable({
+export const QuoteItemsTable = React.memo(function QuoteItemsTable({
   quoteId,
   rooms,
   items,
@@ -111,11 +112,10 @@ export function QuoteItemsTable({
     warningDialog,
     expandedRoomIds,
     expandedItemIds,
-    handleAdvancedEdit,
     setAdvancedDrawerOpen,
     setWarningDialog,
-    handleToggleRoom,
     handleToggleItem,
+    handleToggleRoom,
     initializeExpandedRooms,
   } = useTableState(rooms);
 
@@ -207,11 +207,11 @@ export function QuoteItemsTable({
     }
   };
 
-  const handleAddAccessory = async (parentId: string, roomId: string | null) => {
+  const _handleAddAccessory = async (parentId: string, roomId: string | null) => {
     if (readOnly) return;
 
     try {
-      await createQuoteItem({
+      const res = await createQuoteItem({
         quoteId,
         roomId: roomId || undefined,
         parentId,
@@ -223,11 +223,21 @@ export function QuoteItemsTable({
         width: 0,
         height: 0,
       });
+
+      if (!res?.success) {
+        toast.error(res?.error || '添加附件失败');
+        return;
+      }
+
       toast.success('已添加附件行');
+
+      // 附件子行（children）始终渲染，无需展开父级的高级配置行
+      // 之前此处调用 handleToggleItem 会导致高级参数抽屉意外联动展开
+
       await onItemUpdate?.();
     } catch (_error) {
-      logger.error('添加附件失败', _error);
-      toast.error('添加失败');
+      logger.error('添加附件异常', _error);
+      toast.error('添加异常');
     }
   };
 
@@ -286,18 +296,21 @@ export function QuoteItemsTable({
         <CategoryView
           quoteId={quoteId}
           rooms={rooms}
-          items={items}
+          items={tree}
           allowedCategories={allowedCategories}
           readOnly={readOnly}
           {...columnVisibility}
           expandedItemIds={expandedItemIds}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-          handleAddAccessory={handleAddAccessory}
+
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
-          handleAdvancedEdit={handleAdvancedEdit}
+          handleAddAccessory={_handleAddAccessory}
           handleToggleItem={handleToggleItem}
+          handleToggleRoom={handleToggleRoom}
+          expandedRoomIds={expandedRoomIds}
+          onAddRoom={onAddRoom}
           onRowClick={onRowClick}
         />
       )}
@@ -315,12 +328,12 @@ export function QuoteItemsTable({
           onAddRoom={onAddRoom}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-          handleAddAccessory={handleAddAccessory}
+
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
-          handleAdvancedEdit={handleAdvancedEdit}
-          handleToggleRoom={handleToggleRoom}
+          handleAddAccessory={_handleAddAccessory}
           handleToggleItem={handleToggleItem}
+          handleToggleRoom={handleToggleRoom}
           handleRoomRename={handleRoomRename}
           handleDeleteRoom={handleDeleteRoom}
           getRoomSubtotal={getRoomSubtotal}
@@ -362,6 +375,6 @@ export function QuoteItemsTable({
       </Dialog>
     </div>
   );
-}
+});
 
 export type { QuoteItem, RoomData, ViewMode, CalcResult, QuoteItemAttributes } from './types';

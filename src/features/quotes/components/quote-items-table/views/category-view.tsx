@@ -1,14 +1,15 @@
 'use client';
 
-import { Table, TableBody } from '@/shared/ui/table';
-import { Badge } from '@/shared/ui/badge';
-import { CATEGORY_LABELS } from '@/features/quotes/constants';
+import { Fragment, useMemo } from 'react';
+import { Table, TableBody, TableRow, TableCell } from '@/shared/ui/table';
 import { QuoteTableHeader } from '../table-header';
 import { QuoteItemRow } from '../quote-item-row';
 import { QuoteInlineAddRow } from '../../quote-inline-add-row';
-import type { QuoteItem, ColumnVisibility, CalcResult, RoomData } from '../types';
-import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 import { RoomSelectorWithConfig } from '../../room-selector-popover';
+import { useRowSpanCalc } from '../use-rowspan-calc';
+import type { ColumnVisibility, CalcResult, RoomData } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
+import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 
 type CalcHandler = (
   item: QuoteItem,
@@ -25,11 +26,13 @@ interface CategoryViewProps extends ColumnVisibility {
   expandedItemIds: Set<string>;
   handleUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
-  handleAddAccessory: (parentId: string, roomId: string | null) => Promise<void>;
+
   handleProductSelect: (id: string, product: ProductSearchResult) => Promise<void>;
   handleClientCalc: CalcHandler;
-  handleAdvancedEdit: (item: QuoteItem) => void;
-  handleToggleItem: (itemId: string) => void;
+  handleAddAccessory: (parentId: string, roomId: string | null) => Promise<void>;
+  handleToggleItem: (id: string) => void;
+  handleToggleRoom: (id: string) => void;
+  expandedRoomIds: Set<string>;
   onAddRoom?: (name: string) => void;
   onRowClick?: (item: QuoteItem) => void;
 }
@@ -53,23 +56,49 @@ export function CategoryView({
   expandedItemIds,
   handleUpdate,
   handleDelete,
-  handleAddAccessory,
+
   handleProductSelect,
   handleClientCalc,
-  handleAdvancedEdit,
+  handleAddAccessory,
   handleToggleItem,
+  handleToggleRoom,
+  expandedRoomIds,
   onAddRoom,
   onRowClick,
 }: CategoryViewProps) {
-  const itemsByCategory: Record<string, QuoteItem[]> = {};
-  items.forEach((item) => {
-    const cat = item.category || 'OTHER';
-    if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
-    itemsByCategory[cat].push(item);
-  });
+  /**
+   * 按空间分组：将扁平 items 列表按 roomId 归入对应空间
+   * 逻辑与 RoomView 保持一致
+   */
+  const itemsByRoom = useMemo(() => {
+    const mapping: Record<string, QuoteItem[]> = {};
+    const unassigned: QuoteItem[] = [];
 
+    // 初始化每个空间的数组
+    rooms.forEach((r) => {
+      mapping[r.id] = [];
+    });
+
+    items.forEach((item) => {
+      if (item.parentId) return; // 附件由父商品的 children 属性承载，不单独分组
+      if (item.roomId && mapping[item.roomId]) {
+        mapping[item.roomId].push(item);
+      } else {
+        unassigned.push(item);
+      }
+    });
+
+    return { mapping, unassigned };
+  }, [items, rooms]);
+
+  /**
+   * RowSpan 计算：与 RoomView 完全一致
+   */
+  const rowSpanMap = useRowSpanCalc(rooms, itemsByRoom.mapping, expandedItemIds, readOnly);
+
+  /** 总列数 */
   const columnCount =
-    2 +
+    1 + // 商品列
     (showImage ? 1 : 0) +
     (showWidth || showHeight ? 1 : 0) +
     (showFold ? 1 : 0) +
@@ -78,20 +107,28 @@ export function CategoryView({
     (showUnit ? 1 : 0) +
     (showUnitPrice ? 1 : 0) +
     (showAmount ? 1 : 0) +
-    (showRemark ? 1 : 0);
+    (showRemark ? 1 : 0) +
+    1; // 操作列
 
-  const renderRows = (nodes: QuoteItem[], level = 0): React.ReactNode => {
+  /** 递归渲染商品行及其附件行 */
+  const renderRows = (
+    nodes: QuoteItem[],
+    level = 0,
+    roomName?: string
+  ): React.ReactNode => {
     return nodes.map((item) => {
       const isItemExpanded = expandedItemIds.has(item.id);
-      const room = rooms.find((r) => r.id === item.roomId);
+      const rowSpanInfo = rowSpanMap.get(item.id);
+
       return (
         <QuoteItemRow
           key={item.id}
           item={item}
           level={level}
           readOnly={readOnly}
+          roomName={roomName}
+          rowSpanInfo={rowSpanInfo}
           showImage={showImage}
-          roomName={room?.name}
           showWidth={showWidth}
           showHeight={showHeight}
           showFold={showFold}
@@ -105,74 +142,151 @@ export function CategoryView({
           colSpan={columnCount}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-          handleAddAccessory={handleAddAccessory}
+          hideRoomColumn
+
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
-          handleAdvancedEdit={handleAdvancedEdit}
+          handleAddAccessory={handleAddAccessory}
           onToggleExpand={() => handleToggleItem(item.id)}
-          renderChildren={renderRows}
+          renderChildren={(children, childLevel) => renderRows(children, childLevel, roomName)}
           onRowClick={onRowClick}
         />
       );
     });
   };
 
+  const hasRooms = rooms.length > 0;
+
   return (
-    <div className="space-y-6">
-      {Object.entries(itemsByCategory).map(([category, categoryItems]) => (
-        <div key={category} className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <h3 className="text-base font-semibold">{CATEGORY_LABELS[category] || category}</h3>
-            <Badge variant="secondary" className="text-xs">
-              {categoryItems.length} 项
-            </Badge>
-          </div>
-          <div className="glass-table overflow-hidden rounded-lg">
-            <Table>
-              <QuoteTableHeader
-                showWidth={showWidth}
-                showHeight={showHeight}
-                showFold={showFold}
-                showProcessFee={showProcessFee}
-                showQuantity={showQuantity}
-                showUnit={showUnit}
-                showUnitPrice={showUnitPrice}
-                showAmount={showAmount}
-                showRemark={showRemark}
-                showImage={showImage}
-              />
-              <TableBody>
-                {renderRows(categoryItems)}
-                {!readOnly && (
-                  <QuoteInlineAddRow
-                    quoteId={quoteId}
-                    roomId={null}
-                    rooms={rooms}
-                    onSuccess={undefined}
-                    readOnly={readOnly}
-                    showFold={showFold}
-                    showProcessFee={showProcessFee}
-                    showRemark={showRemark}
+    <div className="space-y-4">
+      {/* 顶部添加空间按钮 */}
+      {hasRooms && !readOnly && onAddRoom && (
+        <div className="flex justify-start">
+          <RoomSelectorWithConfig onSelect={onAddRoom} align="start" />
+        </div>
+      )}
+
+      {/* 空状态：无空间且无商品 */}
+      {!hasRooms && items.length === 0 && (
+        <div className="glass-empty-state text-muted-foreground py-12 text-center">
+          <p className="text-sm">暂无报价明细</p>
+          <p className="mt-1 text-xs opacity-60">请先添加空间，再在空间内添加商品</p>
+          {!readOnly && onAddRoom && (
+            <div className="mt-4">
+              <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 主体：按空间分块显示 */}
+      {(hasRooms || items.length > 0) && (
+        <div className="space-y-6">
+          {rooms.map((room) => {
+            const roomItems = itemsByRoom.mapping[room.id] || [];
+            const isExpanded = expandedRoomIds.has(room.id);
+
+            return (
+              <div key={room.id} className="glass-table overflow-hidden shadow-sm rounded-xl border border-border/50">
+                <div
+                  className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleToggleRoom(room.id)}
+                >
+                  <div className="font-semibold text-base flex items-center gap-2">
+                    <span className="text-muted-foreground mr-1">
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                    {room.name}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <QuoteTableHeader
+                        hideRoomColumn
+                        showImage={showImage}
+                        showWidth={showWidth}
+                        showHeight={showHeight}
+                        showFold={showFold}
+                        showProcessFee={showProcessFee}
+                        showQuantity={showQuantity}
+                        showUnit={showUnit}
+                        showUnitPrice={showUnitPrice}
+                        showAmount={showAmount}
+                        showRemark={showRemark}
+                      />
+                      <TableBody>
+                        {roomItems.length > 0 ? (
+                          renderRows(roomItems, 0)
+                        ) : (
+                          // 空空间占位行
+                          <TableRow key={`empty-${room.id}`}>
+                            <TableCell colSpan={columnCount} className="border-b text-muted-foreground text-center text-xs italic py-8">
+                              此空间暂无明细，请添加商品
+                            </TableCell>
+                          </TableRow>
+                        )}
+
+                        {/* 添加商品行 */}
+                        {!readOnly && (
+                          <QuoteInlineAddRow
+                            quoteId={quoteId}
+                            roomId={room.id}
+                            category={allowedCategories?.[0] || 'CURTAIN_CUSTOM'}
+                            allowedCategories={allowedCategories}
+                            showImage={showImage}
+                            showWidth={showWidth}
+                            showHeight={showHeight}
+                            showFold={showFold}
+                            showProcessFee={showProcessFee}
+                            showRemark={showRemark}
+                            showUnit={showUnit}
+                          />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* 未分配商品（兼容旧数据） */}
+          {itemsByRoom.unassigned.length > 0 && (
+            <div className="glass-table overflow-hidden shadow-sm rounded-xl border border-amber-500/20">
+              <div className="glass-section-header bg-amber-500/10 px-4 py-2 dark:bg-amber-500/10 border-b border-amber-500/20">
+                <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                  未分配空间商品（请将商品移至具体空间）
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <QuoteTableHeader
+                    hideRoomColumn
+                    showImage={showImage}
                     showWidth={showWidth}
                     showHeight={showHeight}
+                    showFold={showFold}
+                    showProcessFee={showProcessFee}
+                    showQuantity={showQuantity}
                     showUnit={showUnit}
-                    showImage={showImage}
-                    allowedCategories={allowedCategories || [category]}
+                    showUnitPrice={showUnitPrice}
+                    showAmount={showAmount}
+                    showRemark={showRemark}
                   />
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  <TableBody>{renderRows(itemsByRoom.unassigned, 0)}</TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </div>
-      ))}
-      {!readOnly && onAddRoom && (
-        <div className="pt-4 border-t border-dashed flex justify-center">
-          <RoomSelectorWithConfig
-            onSelect={(name) => {
-              onAddRoom(name);
-            }}
-            size="default"
-          />
+      )}
+
+      {/* 底部添加空间入口 */}
+      {!readOnly && onAddRoom && hasRooms && (
+        <div className="mt-4 flex items-center justify-center rounded-xl border-2 border-dashed border-muted bg-muted/20 p-6 transition-colors hover:bg-muted/40">
+          <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
         </div>
       )}
     </div>

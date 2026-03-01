@@ -6,6 +6,7 @@ import { db } from '@/shared/api/db';
 import { splitRouteRules, suppliers } from '@/shared/api/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { AuditService } from '@/shared/lib/audit-service';
+import { logger } from '@/shared/lib/logger';
 
 import { requireAuth, requireManagePermission, requireViewPermission } from '../helpers';
 import { SUPPLY_CHAIN_PATHS } from '../constants';
@@ -28,13 +29,13 @@ export async function getSplitRules() {
   const permResult = await requireViewPermission(session); // 或 requireManagePermission? 原代码是 VIEW
   if (!permResult.success) throw new Error(permResult.error);
 
-  console.warn('[supply-chain] getSplitRules 开始执行');
+  logger.info('[supply-chain] getSplitRules 开始执行');
   const result = await db
     .select()
     .from(splitRouteRules)
     .where(eq(splitRouteRules.tenantId, session.user.tenantId))
     .orderBy(desc(splitRouteRules.priority));
-  console.warn('[supply-chain] getSplitRules 执行成功:', { count: result.length });
+  logger.info('[supply-chain] getSplitRules 执行成功:', { count: result.length });
   return result;
 }
 
@@ -54,7 +55,7 @@ export async function createSplitRule(input: SplitRuleInput) {
   if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
-  console.warn('[supply-chain] createSplitRule 开始执行:', { name: validated.name, priority: validated.priority });
+  logger.info('[supply-chain] createSplitRule 开始执行:', { name: validated.name, priority: validated.priority });
 
   await db.insert(splitRouteRules).values({
     tenantId: session.user.tenantId,
@@ -93,7 +94,7 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
   if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
-  console.warn('[supply-chain] updateSplitRule 开始执行:', { id, name: validated.name });
+  logger.info('[supply-chain] updateSplitRule 开始执行:', { id, name: validated.name });
 
   // 安全检查：验证规则属于当前租户
   const existingRule = await db.query.splitRouteRules.findFirst({
@@ -170,7 +171,7 @@ export async function getAllSuppliers() {
   if (!authResult.success) throw new Error(authResult.error);
   const session = authResult.session;
 
-  console.warn('[supply-chain] getAllSuppliers 开始执行');
+  logger.info('[supply-chain] getAllSuppliers 开始执行');
   const result = await db
     .select({
       id: suppliers.id,
@@ -179,6 +180,6 @@ export async function getAllSuppliers() {
     })
     .from(suppliers)
     .where(eq(suppliers.tenantId, session.user.tenantId));
-  console.warn('[supply-chain] getAllSuppliers 执行成功:', { count: result.length });
+  logger.info('[supply-chain] getAllSuppliers 执行成功:', { count: result.length });
   return result;
 }

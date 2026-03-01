@@ -1,9 +1,11 @@
 'use client';
 
 import { memo } from 'react';
+import { cn } from '@/shared/lib/utils';
 import { TableCell } from '@/shared/ui/table';
 import { Input } from '@/shared/ui/input';
-import type { QuoteItem, CalcResult } from '../types';
+import type { CalcResult } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 
 type CalcHandler = (
   item: QuoteItem,
@@ -101,7 +103,7 @@ export const UnitCell = memo(function UnitCell({ item, readOnly, onUpdate }: Uni
     <TableCell className="p-2">
       <Input
         disabled={readOnly}
-        className="h-8 w-12 bg-transparent/50 px-1 text-center text-xs"
+        className="h-8 w-12 mx-auto bg-transparent/50 px-1 text-center text-xs"
         defaultValue={item.unit || '-'}
         placeholder="单位"
         onBlur={handleBlur}
@@ -130,8 +132,10 @@ export const UnitPriceCell = memo(function UnitPriceCell({
   return (
     <TableCell className="p-2 text-right">
       <Input
+        key={item.unitPrice}
         disabled={readOnly}
         type="number"
+        onFocus={(e) => e.target.select()}
         className="h-8 w-20 bg-transparent/50 px-1 text-right ml-auto"
         defaultValue={Number(item.unitPrice)}
         onBlur={handleBlur}
@@ -142,11 +146,13 @@ export const UnitPriceCell = memo(function UnitPriceCell({
 
 interface AmountCellProps {
   item: QuoteItem;
+  rowSpan?: number;
+  className?: string;
 }
 
-export const AmountCell = memo(function AmountCell({ item }: AmountCellProps) {
+export const AmountCell = memo(function AmountCell({ item, rowSpan, className }: AmountCellProps) {
   return (
-    <TableCell className="p-2 text-right font-medium">
+    <TableCell rowSpan={rowSpan} className={cn("p-2 text-right font-medium align-middle", className)}>
       <span className="font-mono text-slate-700 dark:text-slate-100">
         ¥{Number(item.subtotal).toFixed(2)}
       </span>

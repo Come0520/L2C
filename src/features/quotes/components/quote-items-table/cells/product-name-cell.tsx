@@ -7,7 +7,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import CornerDownRight from 'lucide-react/dist/esm/icons/corner-down-right';
 import { ProductAutocomplete } from '../../product-autocomplete';
-import type { QuoteItem } from '../types';
+import type { QuoteItem } from '@/shared/api/schema/quotes';
 import type { ProductSearchResult } from '@/features/quotes/actions/product-actions';
 
 interface ProductNameCellProps {
@@ -17,6 +17,7 @@ interface ProductNameCellProps {
   showImage: boolean;
   roomName?: string;
   onProductSelect: (id: string, product: ProductSearchResult) => Promise<void>;
+  rowSpan?: number;
 }
 
 export const ProductNameCell = memo(function ProductNameCell({
@@ -26,11 +27,12 @@ export const ProductNameCell = memo(function ProductNameCell({
   showImage,
   roomName,
   onProductSelect,
+  rowSpan,
 }: ProductNameCellProps) {
   const warning = item.attributes?.calcResult?.warning || item.attributes?._warnings;
 
   return (
-    <TableCell className="p-2 font-medium">
+    <TableCell rowSpan={rowSpan} className="p-2 font-medium">
       <div className="flex items-center" style={{ paddingLeft: `${level * 24}px` }}>
         {level > 0 && (
           <div className="relative mr-2 flex h-full items-center">

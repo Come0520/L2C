@@ -112,12 +112,12 @@ describe('Quote Bundle Aggregation', () => {
         // Setup default mocks for auth/db queries used by secondary logic
         vi.mocked(auth).mockResolvedValue({
             user: { id: USER_ID, tenantId: TENANT_ID, role: 'USER' }
-        } as any);
+        } as never);
 
         vi.mocked(db.query.users.findFirst).mockResolvedValue({
             id: USER_ID,
             tenantId: TENANT_ID
-        } as any);
+        } as never);
     });
 
     it('should aggregate totals when adding quotes', async () => {

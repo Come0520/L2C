@@ -1,9 +1,7 @@
-// @ts-nocheck
 'use client';
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
@@ -23,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import { createExpenseSchema } from '../schemas';
 import { createExpenseRecord } from '../actions/expense-actions';
+import { typedResolver } from '../utils/form-helpers';
 
 type FormValues = z.infer<typeof createExpenseSchema>;
 
@@ -34,8 +33,8 @@ interface ExpenseFormProps {
 export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const form = useForm<any>({
-    resolver: zodResolver(createExpenseSchema) as any,
+  const form = useForm<FormValues>({
+    resolver: typedResolver(createExpenseSchema),
     defaultValues: {
       accountId: '',
       amount: 0,
@@ -73,7 +72,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <FormField
-            control={form.control as any}
+            control={form.control}
             name="accountId"
             render={({ field }: any) => (
               <FormItem>
@@ -98,7 +97,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
           />
 
           <FormField
-            control={form.control as any}
+            control={form.control}
             name="amount"
             render={({ field }: any) => (
               <FormItem>
@@ -121,7 +120,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
           />
 
           <FormField
-            control={form.control as any}
+            control={form.control}
             name="expenseDate"
             render={({ field }: any) => (
               <FormItem>
@@ -144,7 +143,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
 
           <div className="md:col-span-2">
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="description"
               render={({ field }: any) => (
                 <FormItem>
@@ -160,7 +159,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
 
           <div className="bg-muted/30 rounded-md border p-4 md:col-span-2">
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="createVoucher"
               render={({ field }: any) => (
                 <FormItem className="flex flex-row items-center justify-between">

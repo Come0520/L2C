@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
@@ -168,6 +168,7 @@ export function ImageGallery({ images, alt = '商品图片', className }: ImageG
             {/* Lightbox 全屏预览 */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
                 <DialogContent className="flex max-w-[95vw] items-center justify-center border-none bg-black/95 p-0 sm:max-w-[90vw]">
+                    <DialogTitle className="sr-only">全屏预览</DialogTitle>
                     <div className="relative flex h-[85vh] w-full items-center justify-center">
                         {/* 关闭按钮 */}
                         <button

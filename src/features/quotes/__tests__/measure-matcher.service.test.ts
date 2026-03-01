@@ -13,9 +13,9 @@ describe('尺量匹配服务 (Measure Matcher Service)', () => {
             roomName: '主卧',
             width: 300,
             height: 250
-        } as any];
+        } as unknown as MeasureItem];
 
-        const existingQuoteItems: any[] = [{
+        const existingQuoteItems: Record<string, unknown>[] = [{
             id: 'q1',
             roomName: '主卧',
             category: 'CURTAIN'
@@ -33,9 +33,9 @@ describe('尺量匹配服务 (Measure Matcher Service)', () => {
         const measureItems: MeasureItem[] = [{
             id: 'm2',
             roomName: '次卧A',
-        } as any];
+        } as unknown as MeasureItem];
 
-        const existingQuoteItems: any[] = [{
+        const existingQuoteItems: Record<string, unknown>[] = [{
             id: 'q2',
             roomName: '次卧',
         }];
@@ -48,7 +48,7 @@ describe('尺量匹配服务 (Measure Matcher Service)', () => {
         const measureItems: MeasureItem[] = [{
             id: 'm3',
             roomName: '阳台',
-        } as any];
+        } as unknown as MeasureItem];
 
         const results = MeasureMatcherService.autoMatch(measureItems, []);
         expect(results).toHaveLength(1);
@@ -57,11 +57,11 @@ describe('尺量匹配服务 (Measure Matcher Service)', () => {
 
     it('防止同一个报价单项目被重复匹配 (Prevent duplicate matching)', () => {
         const measureItems: MeasureItem[] = [
-            { id: 'm4', roomName: '客厅' } as any,
-            { id: 'm5', roomName: '客厅' } as any
+            { id: 'm4', roomName: '客厅' } as unknown as MeasureItem,
+            { id: 'm5', roomName: '客厅' } as unknown as MeasureItem
         ];
 
-        const existingQuoteItems: any[] = [
+        const existingQuoteItems: Record<string, unknown>[] = [
             { id: 'q4', roomName: '客厅' }
         ];
 

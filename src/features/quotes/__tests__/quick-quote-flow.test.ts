@@ -70,7 +70,7 @@ describe('快捷报价流程 (Quick Quote Flow)', () => {
     });
 
     it('缺乏必填参数：套餐类型 (Missing Plan Type)', () => {
-        const payload = { leadId: 'lead-1', rooms: [] } as any;
+        const payload = { leadId: 'lead-1', rooms: [] } as never;
         expect(payload.planType).toBeUndefined();
     });
 
@@ -80,7 +80,7 @@ describe('快捷报价流程 (Quick Quote Flow)', () => {
             tenantId: 'tenant-1',
             customerName: 'Test Customer',
             customerId: null
-        } as any);
+        } as never);
 
         expect(CustomerService.createCustomer).toBeDefined();
     });

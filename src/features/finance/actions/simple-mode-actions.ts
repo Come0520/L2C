@@ -57,7 +57,7 @@ export async function toggleFinanceMode(newMode: 'simple' | 'professional') {
   if (!session?.user?.tenantId) {
     return { error: '未授权访问' };
   }
-  if (!await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE)) {
+  if (!(await checkPermission(session, PERMISSIONS.FINANCE.CONFIG_MANAGE))) {
     return { error: '权限不足：需要财务管理权限' };
   }
 
@@ -84,23 +84,26 @@ export async function toggleFinanceMode(newMode: 'simple' | 'professional') {
           recordId: config.id,
           action: 'UPDATE',
           newValues: { configValue: newMode },
-          oldValues: { configValue: config.configValue }
+          oldValues: { configValue: config.configValue },
         });
       });
     } else {
       await db.transaction(async (tx) => {
-        const inserted = await tx.insert(financeConfigs).values({
-          tenantId,
-          configKey: 'finance_mode',
-          configValue: newMode,
-        }).returning();
+        const inserted = await tx
+          .insert(financeConfigs)
+          .values({
+            tenantId,
+            configKey: 'finance_mode',
+            configValue: newMode,
+          })
+          .returning();
         await AuditService.log(tx, {
           tenantId: tenantId,
           userId: session.user!.id!,
           tableName: 'finance_configs',
           recordId: inserted[0].id,
           action: 'INSERT',
-          newValues: inserted[0]
+          newValues: inserted[0],
         });
       });
     }
@@ -199,14 +202,17 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
      * 当用户从简易模式升级到专业模式时，可通过数据迁移服务批量生成对应凭证。
      */
     await db.transaction(async (tx) => {
-      const inserted = await tx.insert(expenseRecords).values({
-        tenantId,
-        accountId: targetAccountId,
-        amount: amount.toString(), // DB decimal
-        description,
-        expenseDate: expenseDate.toISOString(),
-        createdBy: session.user!.id,
-      }).returning();
+      const inserted = await tx
+        .insert(expenseRecords)
+        .values({
+          tenantId,
+          accountId: targetAccountId,
+          amount: amount.toString(), // DB decimal
+          description,
+          expenseDate: expenseDate.toISOString(),
+          createdBy: session.user!.id,
+        })
+        .returning();
 
       await AuditService.log(tx, {
         tenantId: tenantId,
@@ -214,7 +220,7 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
         tableName: 'expense_records',
         recordId: inserted[0].id,
         action: 'INSERT',
-        newValues: inserted[0]
+        newValues: inserted[0],
       });
     });
 

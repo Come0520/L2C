@@ -89,7 +89,9 @@ export const createQuoteItemSchema = z.object({
 
   // P1-08 安全修复：限制 attributes 值类型，禁止注入任意对象
   // P1-08/P1-R5-01 安全修复：使用统一的安全校验规则
-  attributes: safeAttributesSchema.describe('用于各种产品分类计算策略的动态属性(如布幅、拼接损耗等)'),
+  attributes: safeAttributesSchema.describe(
+    '用于各种产品分类计算策略的动态属性(如布幅、拼接损耗等)'
+  ),
   remark: z.string().optional().describe('本行备注'),
 });
 
@@ -118,12 +120,14 @@ export const updateQuoteItemSchema = z.object({
 export const reorderQuoteItemsSchema = z.object({
   quoteId: z.string().uuid().describe('所属报价单ID'),
   roomId: z.string().uuid().nullable().describe('归属于哪个房间的重新排序'),
-  items: z.array(
-    z.object({
-      id: z.string().uuid().describe('行项目ID'),
-      sortOrder: z.number().int().describe('新的排序顺位'),
-    })
-  ).describe('由前端传递的新顺序数组'),
+  items: z
+    .array(
+      z.object({
+        id: z.string().uuid().describe('行项目ID'),
+        sortOrder: z.number().int().describe('新的排序顺位'),
+      })
+    )
+    .describe('由前端传递的新顺序数组'),
 });
 
 export const deleteQuoteItemSchema = z.object({
@@ -144,15 +148,17 @@ export const rejectQuoteDiscountSchema = z.object({
 export const createQuickQuoteSchema = z.object({
   leadId: z.string().uuid().describe('发起快捷报价的线索ID'),
   planType: z.string().describe('一键全屋的套餐包类型(如：全屋三室一厅标配)'),
-  rooms: z.array(
-    z.object({
-      name: z.string().describe('房间名称'),
-      width: z.number().positive().describe('开间测量宽度'),
-      height: z.number().positive().describe('开间测量高度'),
-      hasSheer: z.boolean().default(false).describe('是否需要配套纱帘'),
-      hasBox: z.boolean().default(false).describe('是否有窗套(影响安装形态)'),
-      windowType: z.string().default('STRAIGHT').describe('窗户物理类型(如：一字窗、L型窗)'),
-      hasFabric: z.boolean().default(true).describe('是否需要包含主布'),
-    })
-  ).describe('批量录入的房间尺寸列表'),
+  rooms: z
+    .array(
+      z.object({
+        name: z.string().describe('房间名称'),
+        width: z.number().positive().describe('开间测量宽度'),
+        height: z.number().positive().describe('开间测量高度'),
+        hasSheer: z.boolean().default(false).describe('是否需要配套纱帘'),
+        hasBox: z.boolean().default(false).describe('是否有窗套(影响安装形态)'),
+        windowType: z.string().default('STRAIGHT').describe('窗户物理类型(如：一字窗、L型窗)'),
+        hasFabric: z.boolean().default(true).describe('是否需要包含主布'),
+      })
+    )
+    .describe('批量录入的房间尺寸列表'),
 });

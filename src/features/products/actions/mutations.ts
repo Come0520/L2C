@@ -362,7 +362,7 @@ const batchUpdateProductImagesActionInternal = createSafeAction(
       const data = items[i];
       try {
         const productMatch = await db.query.products.findFirst({
-          where: and(eq(products.tenantId, tenantId), eq(products.sku, data.sku))
+          where: and(eq(products.tenantId, tenantId), eq(products.sku, data.sku)),
         });
 
         if (!productMatch) {
@@ -370,14 +370,17 @@ const batchUpdateProductImagesActionInternal = createSafeAction(
         }
 
         // 合并或覆盖新增的图库
-        const updatedImages = data.images && data.images.length > 0
-          ? [...(productMatch.images ? (productMatch.images as string[]) : []), ...data.images]
-          : productMatch.images;
+        const updatedImages =
+          data.images && data.images.length > 0
+            ? [...(productMatch.images ? (productMatch.images as string[]) : []), ...data.images]
+            : productMatch.images;
 
         const existingSpecs = (productMatch.specs as Record<string, unknown>) || {};
 
         if (Array.isArray(data.materialImages) && data.materialImages.length > 0) {
-          const arr = Array.isArray(existingSpecs.materialImages) ? existingSpecs.materialImages : [];
+          const arr = Array.isArray(existingSpecs.materialImages)
+            ? existingSpecs.materialImages
+            : [];
           existingSpecs.materialImages = [...arr, ...data.materialImages];
         }
         if (Array.isArray(data.sceneImages) && data.sceneImages.length > 0) {
@@ -421,6 +424,8 @@ const batchUpdateProductImagesActionInternal = createSafeAction(
   }
 );
 
-export async function batchUpdateProductImages(params: z.infer<typeof batchUpdateProductImagesSchema>) {
+export async function batchUpdateProductImages(
+  params: z.infer<typeof batchUpdateProductImagesSchema>
+) {
   return batchUpdateProductImagesActionInternal(params);
 }

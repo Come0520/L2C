@@ -7,7 +7,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { AuditService } from '@/shared/lib/audit-service';
 import { OrderStateMachine } from '../logic/order-state-machine';
 import { logger } from '@/shared/lib/logger';
@@ -94,8 +94,7 @@ const updateOrderStatusActionInternal = createSafeAction(
       newStatus: data.status,
     });
 
-    revalidateTag('orders', {});
-    revalidateTag(`order-${data.id}`, {});
+    updateTag(`order-${data.id}`);
 
     return { success: true, id: data.id, newStatus: data.status };
   }
@@ -135,8 +134,7 @@ const requestOrderCancellationActionInternal = createSafeAction(
       data.reason
     );
 
-    revalidateTag('orders', {});
-    revalidateTag(`order-${data.orderId}`, {});
+    updateTag(`order-${data.orderId}`);
 
     logger.info('[orders] 申请取消订单提交成功:', {
       orderId: data.orderId,
@@ -184,8 +182,7 @@ const pauseOrderActionInternal = createSafeAction(pauseOrderSchema, async (data,
     newValues: { reason: data.reason },
   });
 
-  revalidateTag('orders', {});
-  revalidateTag(`order-${data.orderId}`, {});
+  updateTag(`order-${data.orderId}`);
 
   logger.info('[orders] 订单已被叫停:', {
     orderId: data.orderId,
@@ -229,8 +226,7 @@ const resumeOrderActionInternal = createSafeAction(resumeOrderSchema, async (dat
     newValues: { remark: data.remark },
   });
 
-  revalidateTag('orders', {});
-  revalidateTag(`order-${data.orderId}`, {});
+  updateTag(`order-${data.orderId}`);
 
   logger.info('[orders] 订单已恢复运行:', {
     orderId: data.orderId,

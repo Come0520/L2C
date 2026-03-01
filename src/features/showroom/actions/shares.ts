@@ -11,7 +11,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
-import { revalidateTag } from 'next/cache';
+import {} from 'next/cache';
 import { ShowroomShareItemSnapshot } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { createLogger } from '@/shared/lib/logger';
@@ -246,7 +246,6 @@ export async function deactivateShareLink(input: z.input<typeof deactivateShareS
         tenantId: session.user.tenantId,
         newValues: { isActive: 0 } as Record<string, unknown>,
       });
-      revalidateTag('showroom-list', {});
       logger.info('停用分享链接成功', { shareId, tenantId: session.user.tenantId });
     }
 

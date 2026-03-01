@@ -125,7 +125,10 @@ export function Navbar() {
             {isLoggedIn ? (
               /* 已登录：移动端进入工作台 */
               <button
-                onClick={() => { setMobileOpen(false); handleEnterDashboard(); }}
+                onClick={() => {
+                  setMobileOpen(false);
+                  handleEnterDashboard();
+                }}
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2.5 text-center text-base font-medium text-white"
               >
                 <LayoutDashboard size={16} />

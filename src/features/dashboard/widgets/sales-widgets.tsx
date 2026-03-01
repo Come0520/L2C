@@ -6,7 +6,7 @@ import Percent from 'lucide-react/dist/esm/icons/percent';
 import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { cn } from '@/shared/lib/utils';
-import { createLogger } from "@/shared/lib/logger";
+import { createLogger } from '@/shared/lib/logger';
 import useSWR from 'swr';
 import { fetcher } from '@/shared/lib/fetcher';
 import { DashboardStats } from '@/features/sales/actions/dashboard';
@@ -15,22 +15,18 @@ const logger = createLogger('SalesWidgets');
 
 // Helper hook to fetch stats using SWR
 function useSalesStats() {
-    const { data, isLoading } = useSWR<DashboardStats>(
-        '/api/sales/dashboard/stats',
-        fetcher,
-        {
-            refreshInterval: 300000, // 每5分钟刷新一次
-            revalidateOnFocus: true,
-            onError: (err) => {
-                logger.error("Failed to fetch sales stats via SWR", { error: err.message });
-            }
-        }
-    );
+  const { data, isLoading } = useSWR<DashboardStats>('/api/sales/dashboard/stats', fetcher, {
+    refreshInterval: 300000, // 每5分钟刷新一次
+    revalidateOnFocus: true,
+    onError: (err) => {
+      logger.error('Failed to fetch sales stats via SWR', { error: err.message });
+    },
+  });
 
-    return {
-        stats: data || null,
-        loading: isLoading
-    };
+  return {
+    stats: data || null,
+    loading: isLoading,
+  };
 }
 
 /**
@@ -38,54 +34,55 @@ function useSalesStats() {
  * 显示：本月目标 / 已完成金额 / 完成百分比
  */
 export function SalesTargetWidget() {
-    const { stats, loading } = useSalesStats();
+  const { stats, loading } = useSalesStats();
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const { target } = stats || { target: { amount: 0, achieved: 0, percentage: 0 } };
-
-    const progressColor = target.percentage >= 100 ? 'bg-emerald-500' :
-        target.percentage >= 80 ? 'bg-blue-500' :
-            target.percentage >= 50 ? 'bg-amber-500' : 'bg-rose-500';
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    目标完成率
-                </CardTitle>
-                <Target className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                        {target.percentage.toFixed(1)}%
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                        已完成
-                    </span>
-                </div>
-                <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                        className={cn("h-full transition-all", progressColor)}
-                        style={{ width: `${Math.min(target.percentage, 100)}%` }}
-                    />
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                    <span>¥{(target.achieved / 10000).toFixed(1)}万</span>
-                    <span>目标 ¥{(target.amount / 10000).toFixed(1)}万</span>
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  const { target } = stats || { target: { amount: 0, achieved: 0, percentage: 0 } };
+
+  const progressColor =
+    target.percentage >= 100
+      ? 'bg-emerald-500'
+      : target.percentage >= 80
+        ? 'bg-blue-500'
+        : target.percentage >= 50
+          ? 'bg-amber-500'
+          : 'bg-rose-500';
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-sm font-medium">目标完成率</CardTitle>
+        <Target className="h-4 w-4 text-emerald-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-baseline gap-2">
+          <span className="text-foreground text-2xl font-bold">
+            {target.percentage.toFixed(1)}%
+          </span>
+          <span className="text-muted-foreground text-sm">已完成</span>
+        </div>
+        <div className="bg-muted mt-2 h-2 w-full overflow-hidden rounded-full">
+          <div
+            className={cn('h-full transition-all', progressColor)}
+            style={{ width: `${Math.min(target.percentage, 100)}%` }}
+          />
+        </div>
+        <div className="text-muted-foreground mt-2 flex justify-between text-xs">
+          <span>¥{(target.achieved / 10000).toFixed(1)}万</span>
+          <span>目标 ¥{(target.amount / 10000).toFixed(1)}万</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -93,38 +90,39 @@ export function SalesTargetWidget() {
  * 显示：待跟进 / 跟进中 / 已成交
  */
 export function SalesLeadsWidget() {
-    const { stats, loading } = useSalesStats();
+  const { stats, loading } = useSalesStats();
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const { leadsBreakdown, leads } = stats?.stats || { leads: 0, leadsBreakdown: { pending: 0, following: 0, won: 0 } };
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    我的线索
-                </CardTitle>
-                <Users className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-foreground">{leads}</div>
-                <div className="flex gap-3 mt-2 text-xs">
-                    <span className="text-amber-500">待跟进 {leadsBreakdown.pending}</span>
-                    <span className="text-blue-500">跟进中 {leadsBreakdown.following}</span>
-                    <span className="text-emerald-500">已成交 {leadsBreakdown.won}</span>
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  const { leadsBreakdown, leads } = stats?.stats || {
+    leads: 0,
+    leadsBreakdown: { pending: 0, following: 0, won: 0 },
+  };
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-sm font-medium">我的线索</CardTitle>
+        <Users className="h-4 w-4 text-blue-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-2xl font-bold">{leads}</div>
+        <div className="mt-2 flex gap-3 text-xs">
+          <span className="text-amber-500">待跟进 {leadsBreakdown.pending}</span>
+          <span className="text-blue-500">跟进中 {leadsBreakdown.following}</span>
+          <span className="text-emerald-500">已成交 {leadsBreakdown.won}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -136,36 +134,32 @@ export function SalesLeadsWidget() {
  * @returns {JSX.Element} 转化率统计卡片组件
  */
 export function SalesConversionWidget() {
-    const { stats, loading } = useSalesStats();
+  const { stats, loading } = useSalesStats();
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const { conversionRate } = stats?.stats || { conversionRate: '0.0' };
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    转化率
-                </CardTitle>
-                <Percent className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-foreground">{conversionRate}%</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    线索 → 成交
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  const { conversionRate } = stats?.stats || { conversionRate: '0.0' };
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-sm font-medium">转化率</CardTitle>
+        <Percent className="h-4 w-4 text-purple-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-2xl font-bold">{conversionRate}%</div>
+        <p className="text-muted-foreground mt-1 text-xs">线索 → 成交</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -177,36 +171,32 @@ export function SalesConversionWidget() {
  * @returns {JSX.Element} 客单价统计卡片组件
  */
 export function SalesAvgOrderWidget() {
-    const { stats, loading } = useSalesStats();
+  const { stats, loading } = useSalesStats();
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const { avgOrderValue } = stats?.stats || { avgOrderValue: '0' };
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    客单价
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                    ¥{parseInt(avgOrderValue).toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    平均订单金额
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  const { avgOrderValue } = stats?.stats || { avgOrderValue: '0' };
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-sm font-medium">客单价</CardTitle>
+        <DollarSign className="h-4 w-4 text-amber-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-2xl font-bold">
+          ¥{parseInt(avgOrderValue).toLocaleString()}
+        </div>
+        <p className="text-muted-foreground mt-1 text-xs">平均订单金额</p>
+      </CardContent>
+    </Card>
+  );
 }

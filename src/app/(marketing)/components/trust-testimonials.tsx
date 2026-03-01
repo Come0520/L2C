@@ -111,7 +111,7 @@ export function TrustTestimonials({ stats, growthTrend }: TrustTestimonialsProps
             >
               {/* 卡片头部：标签 + macOS 三点 */}
               <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
                   {stat.label}
                 </p>
                 <MacDots />

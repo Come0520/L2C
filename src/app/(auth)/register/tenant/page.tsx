@@ -18,7 +18,6 @@ import { Loader2, Building2, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide
 import { submitTenantApplication } from '@/features/platform/actions/tenant-registration';
 import { logger } from '@/shared/lib/logger';
 
-
 // 中国省份列表
 const REGIONS = [
   '北京市',
@@ -84,7 +83,7 @@ export default function TenantRegisterPage() {
   // 计算密码强度
   /**
    * 业务级密码强度算法
-   * 
+   *
    * @description
    * 评分规则：
    * 0 分：空或不符合基本格式
@@ -103,15 +102,33 @@ export default function TenantRegisterPage() {
 
   const strengthScore = calculateStrength(formData.password);
   const strengthColor =
-    strengthScore === 0 ? 'bg-transparent' : strengthScore === 1 ? 'bg-red-500' : strengthScore === 2 ? 'bg-yellow-500' : 'bg-green-500';
+    strengthScore === 0
+      ? 'bg-transparent'
+      : strengthScore === 1
+        ? 'bg-red-500'
+        : strengthScore === 2
+          ? 'bg-yellow-500'
+          : 'bg-green-500';
   const strengthText =
-    strengthScore === 0 ? '' : strengthScore === 1 ? '较弱 (请混合字母和数字)' : strengthScore === 2 ? '中等 (符合注册要求)' : '高强度';
+    strengthScore === 0
+      ? ''
+      : strengthScore === 1
+        ? '较弱 (请混合字母和数字)'
+        : strengthScore === 2
+          ? '中等 (符合注册要求)'
+          : '高强度';
   const strengthColorText =
-    strengthScore === 0 ? 'text-transparent' : strengthScore === 1 ? 'text-red-500' : strengthScore === 2 ? 'text-yellow-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500';
+    strengthScore === 0
+      ? 'text-transparent'
+      : strengthScore === 1
+        ? 'text-red-500'
+        : strengthScore === 2
+          ? 'text-yellow-600 dark:text-yellow-500'
+          : 'text-green-600 dark:text-green-500';
 
   /**
    * 提交注册申请逻辑
-   * 
+   *
    * @description
    * 1. 客户端校验：二次密码验证、基本长度及复杂度 (Zod 可选)。
    * 2. 调用 Server Action: `submitTenantApplication` 写入 DB。
@@ -146,7 +163,7 @@ export default function TenantRegisterPage() {
 
     logger.info('[Auth:Registration] 开始提交租户注册申请', {
       companyName: formData.companyName,
-      applicant: formData.applicantName
+      applicant: formData.applicantName,
     });
 
     try {
@@ -164,13 +181,13 @@ export default function TenantRegisterPage() {
         setSuccess(true);
         logger.info('[Auth:Registration] 租户注册申请提交成功', {
           tenantId: result.tenantId,
-          companyName: formData.companyName
+          companyName: formData.companyName,
         });
       } else {
         setError(result.error || '提交失败，请稍后重试');
         logger.warn('[Auth:Registration] 租户注册申请被拒', {
           reason: result.error,
-          companyName: formData.companyName
+          companyName: formData.companyName,
         });
       }
     } catch (err: unknown) {
@@ -178,34 +195,33 @@ export default function TenantRegisterPage() {
       setError(errorMsg);
       logger.error('[Auth:Registration] 租户注册请求崩溃', {
         error: errorMsg,
-        companyName: formData.companyName
+        companyName: formData.companyName,
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-
   // 提交成功页面
   if (success) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
-        <Card className="w-full max-w-md glass-liquid border-white/40 shadow-xl">
+        <Card className="glass-liquid w-full max-w-md border-white/40 shadow-xl">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20">
               <CheckCircle2 className="h-10 w-10 text-green-500" />
             </div>
-            <CardTitle className="text-2xl text-foreground">申请已提交</CardTitle>
-            <CardDescription className="mt-2 text-muted-foreground">
+            <CardTitle className="text-foreground text-2xl">申请已提交</CardTitle>
+            <CardDescription className="text-muted-foreground mt-2">
               您的企业入驻申请已成功提交！
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-secondary/50 p-4 text-center">
-              <p className="text-sm text-foreground">
+            <div className="bg-secondary/50 rounded-lg p-4 text-center">
+              <p className="text-foreground text-sm">
                 我们将在 <span className="font-semibold">1-3 个工作日</span> 内完成审核
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">审核结果将通过短信和邮件通知您</p>
+              <p className="text-muted-foreground mt-2 text-sm">审核结果将通过短信和邮件通知您</p>
             </div>
             <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -220,12 +236,12 @@ export default function TenantRegisterPage() {
   // 注册表单
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 py-8">
-      <Card className="w-full max-w-lg glass-liquid border-white/40 shadow-xl">
+      <Card className="glass-liquid w-full max-w-lg border-white/40 shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary-500/10">
-            <Building2 className="h-8 w-8 text-primary-600" />
+          <div className="bg-primary-500/10 mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full">
+            <Building2 className="text-primary-600 h-8 w-8" />
           </div>
-          <CardTitle className="text-xl text-foreground">企业入驻申请</CardTitle>
+          <CardTitle className="text-foreground text-xl">企业入驻申请</CardTitle>
           <CardDescription className="text-muted-foreground">
             填写以下信息申请开通 L2C 销售管理系统
           </CardDescription>
@@ -336,7 +352,7 @@ export default function TenantRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
                     tabIndex={-1}
                     aria-label={showPassword ? '隐藏密码' : '显示密码'}
                   >
@@ -346,7 +362,7 @@ export default function TenantRegisterPage() {
                 {/* 密码强度检测进度条 */}
                 {formData.password && (
                   <div className="mt-1.5 space-y-1 transition-all">
-                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                    <div className="bg-secondary flex h-1.5 w-full overflow-hidden rounded-full">
                       <div
                         className={`h-full transition-all duration-300 ${strengthColor}`}
                         style={{ width: `${(strengthScore / 3) * 100}%` }}
@@ -375,11 +391,15 @@ export default function TenantRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
                     tabIndex={-1}
                     aria-label={showConfirmPassword ? '隐藏密码' : '显示密码'}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -395,7 +415,7 @@ export default function TenantRegisterPage() {
                 placeholder="请简要介绍您的主营业务..."
                 value={formData.businessDescription}
                 onChange={(e) => handleChange('businessDescription', e.target.value)}
-                className="min-h-[80px] input-base"
+                className="input-base min-h-[80px]"
               />
             </div>
 
@@ -409,7 +429,7 @@ export default function TenantRegisterPage() {
             {/* 提交按钮 */}
             <Button
               type="submit"
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-500/30"
+              className="bg-primary-600 hover:bg-primary-700 shadow-primary-500/30 w-full text-white shadow-lg"
               disabled={submitting}
             >
               {submitting ? (

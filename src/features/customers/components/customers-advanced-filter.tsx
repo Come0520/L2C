@@ -1,2 +1,4 @@
 'use client';
-export function CustomersAdvancedFilter() { return null; }
+export function CustomersAdvancedFilter() {
+  return null;
+}

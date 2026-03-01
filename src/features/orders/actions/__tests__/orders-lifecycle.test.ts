@@ -6,107 +6,107 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock 闭包：数据库、鉴权、服务层
 // ---------------------------------------------------------
 const {
-    mockUpdate,
-    mockQueryFindFirst,
-    mockConfirmInstallation,
-    mockCustomerAccept,
-    mockRequestCustomerConfirmation,
-    mockCustomerReject,
-    mockAuditRecord
+  mockUpdate,
+  mockQueryFindFirst,
+  mockConfirmInstallation,
+  mockCustomerAccept,
+  mockRequestCustomerConfirmation,
+  mockCustomerReject,
+  mockAuditRecord,
 } = vi.hoisted(() => {
-    const fnUpdate = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }])
-            })
-        })
-    });
-    return {
-        mockUpdate: fnUpdate,
-        mockQueryFindFirst: vi.fn(),
-        mockConfirmInstallation: vi.fn().mockResolvedValue(undefined),
-        mockCustomerAccept: vi.fn().mockResolvedValue(undefined),
-        mockRequestCustomerConfirmation: vi.fn().mockResolvedValue(undefined),
-        mockCustomerReject: vi.fn().mockResolvedValue(undefined),
-        mockAuditRecord: vi.fn().mockResolvedValue(undefined),
-    };
+  const fnUpdate = vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }]),
+      }),
+    }),
+  });
+  return {
+    mockUpdate: fnUpdate,
+    mockQueryFindFirst: vi.fn(),
+    mockConfirmInstallation: vi.fn().mockResolvedValue(undefined),
+    mockCustomerAccept: vi.fn().mockResolvedValue(undefined),
+    mockRequestCustomerConfirmation: vi.fn().mockResolvedValue(undefined),
+    mockCustomerReject: vi.fn().mockResolvedValue(undefined),
+    mockAuditRecord: vi.fn().mockResolvedValue(undefined),
+  };
 });
 
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        query: {
-            orders: { findFirst: mockQueryFindFirst, findMany: vi.fn() },
-        },
-        update: mockUpdate,
-    }
+  db: {
+    query: {
+      orders: { findFirst: mockQueryFindFirst, findMany: vi.fn() },
+    },
+    update: mockUpdate,
+  },
 }));
 
 vi.mock('@/shared/api/schema/orders', () => ({
-    orders: {
-        id: 'orders.id',
-        tenantId: 'orders.tenantId',
-        status: 'orders.status',
-        version: 'orders.version',
-        updatedAt: 'orders.updatedAt',
-    },
-    orderChanges: {
-        id: 'orderChanges.id',
-    }
+  orders: {
+    id: 'orders.id',
+    tenantId: 'orders.tenantId',
+    status: 'orders.status',
+    version: 'orders.version',
+    updatedAt: 'orders.updatedAt',
+  },
+  orderChanges: {
+    id: 'orderChanges.id',
+  },
 }));
 
 vi.mock('@/shared/api/schema', () => ({
-    orders: {
-        id: 'orders.id',
-        tenantId: 'orders.tenantId',
-        status: 'orders.status',
-        version: 'orders.version',
-    },
+  orders: {
+    id: 'orders.id',
+    tenantId: 'orders.tenantId',
+    status: 'orders.status',
+    version: 'orders.version',
+  },
 }));
 
 // Mock OrderService
 vi.mock('@/services/order.service', () => ({
-    OrderService: {
-        confirmInstallation: mockConfirmInstallation,
-        customerAccept: mockCustomerAccept,
-        requestCustomerConfirmation: mockRequestCustomerConfirmation,
-        customerReject: mockCustomerReject,
-    }
+  OrderService: {
+    confirmInstallation: mockConfirmInstallation,
+    customerAccept: mockCustomerAccept,
+    requestCustomerConfirmation: mockRequestCustomerConfirmation,
+    customerReject: mockCustomerReject,
+  },
 }));
 
 // Mock AuditService
 vi.mock('@/shared/lib/audit-service', () => ({
-    AuditService: {
-        record: mockAuditRecord,
-    }
+  AuditService: {
+    record: mockAuditRecord,
+  },
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(),
-    checkPermission: vi.fn().mockResolvedValue(undefined),
+  auth: vi.fn(),
+  checkPermission: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/shared/config/permissions', () => ({
-    PERMISSIONS: {
-        ORDER: {
-            VIEW: 'order:view',
-            EDIT: 'order:edit',
-            MANAGE: 'order:manage',
-        }
-    }
+  PERMISSIONS: {
+    ORDER: {
+      VIEW: 'order:view',
+      EDIT: 'order:edit',
+      MANAGE: 'order:manage',
+    },
+  },
 }));
 
 vi.mock('next/cache', () => ({
-    revalidateTag: vi.fn(),
-    revalidateTag: vi.fn()
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 import {
-    cancelOrderAction,
-    confirmInstallationAction,
-    customerAcceptAction,
-    closeOrderAction,
-    requestCustomerConfirmationAction,
-    customerRejectAction,
+  cancelOrderAction,
+  confirmInstallationAction,
+  customerAcceptAction,
+  closeOrderAction,
+  requestCustomerConfirmationAction,
+  customerRejectAction,
 } from '../orders';
 import { auth, checkPermission } from '@/shared/lib/auth';
 
@@ -117,205 +117,191 @@ const mockTenantId = '880e8400-e29b-41d4-a716-446655440000';
 const mockOrderId = '550e8400-e29b-41d4-a716-446655440001';
 
 const mockSession = {
-    user: {
-        id: 'u-001',
-        tenantId: mockTenantId,
-        roles: ['ADMIN'],
-        role: 'MANAGER',
-    }
+  user: {
+    id: 'u-001',
+    tenantId: mockTenantId,
+    roles: ['ADMIN'],
+    role: 'MANAGER',
+  },
 };
 
 describe('Orders Lifecycle Actions', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        // @ts-expect-error - 测试环境下简化 Session 类型
-        vi.mocked(auth).mockResolvedValue(mockSession);
-        vi.mocked(checkPermission).mockResolvedValue(undefined);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // @ts-expect-error - 测试环境下简化 Session 类型
+    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(checkPermission).mockResolvedValue(undefined);
+  });
+
+  // =========================================================
+  // cancelOrderAction
+  // =========================================================
+  describe('cancelOrderAction', () => {
+    it('成功取消订单', async () => {
+      const result = await cancelOrderAction({
+        orderId: mockOrderId,
+        reason: '客户要求取消',
+        version: 1,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ORDER_CANCELLED',
+          recordId: mockOrderId,
+        })
+      );
     });
 
-    // =========================================================
-    // cancelOrderAction
-    // =========================================================
-    describe('cancelOrderAction', () => {
-        it('成功取消订单', async () => {
-            const result = await cancelOrderAction({
-                orderId: mockOrderId,
-                reason: '客户要求取消',
-                version: 1,
-            });
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
 
-            expect(result).toEqual({ success: true });
-            expect(mockUpdate).toHaveBeenCalled();
-            expect(mockAuditRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    action: 'ORDER_CANCELLED',
-                    recordId: mockOrderId,
-                })
-            );
-        });
+      await expect(
+        cancelOrderAction({ orderId: mockOrderId, reason: '测试', version: 1 })
+      ).rejects.toThrow();
+    });
+  });
 
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
+  // =========================================================
+  // confirmInstallationAction
+  // =========================================================
+  describe('confirmInstallationAction', () => {
+    it('成功确认安装完成', async () => {
+      const result = await confirmInstallationAction({ orderId: mockOrderId, version: 1 });
 
-            await expect(
-                cancelOrderAction({ orderId: mockOrderId, reason: '测试', version: 1 })
-            ).rejects.toThrow();
-        });
+      expect(result).toEqual({ success: true });
+      expect(mockConfirmInstallation).toHaveBeenCalledWith(mockOrderId, mockTenantId, 1, 'u-001');
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ORDER_INSTALLED',
+        })
+      );
     });
 
-    // =========================================================
-    // confirmInstallationAction
-    // =========================================================
-    describe('confirmInstallationAction', () => {
-        it('成功确认安装完成', async () => {
-            const result = await confirmInstallationAction({ orderId: mockOrderId, version: 1 });
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
 
-            expect(result).toEqual({ success: true });
-            expect(mockConfirmInstallation).toHaveBeenCalledWith(
-                mockOrderId,
-                mockTenantId,
-                1,
-                'u-001'
-            );
-            expect(mockAuditRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    action: 'ORDER_INSTALLED',
-                })
-            );
-        });
-
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
-
-            await expect(confirmInstallationAction({ orderId: mockOrderId, version: 1 }))
-                .rejects.toThrow();
-        });
-
-        it('Service 异常时正确传播', async () => {
-            mockConfirmInstallation.mockRejectedValueOnce(new Error('安装确认失败'));
-
-            await expect(confirmInstallationAction({ orderId: mockOrderId, version: 1 }))
-                .rejects.toThrow('安装确认失败');
-        });
+      await expect(
+        confirmInstallationAction({ orderId: mockOrderId, version: 1 })
+      ).rejects.toThrow();
     });
 
-    // =========================================================
-    // customerAcceptAction
-    // =========================================================
-    describe('customerAcceptAction', () => {
-        it('成功验收通过', async () => {
-            const result = await customerAcceptAction({ orderId: mockOrderId, version: 1 });
+    it('Service 异常时正确传播', async () => {
+      mockConfirmInstallation.mockRejectedValueOnce(new Error('安装确认失败'));
 
-            expect(result).toEqual({ success: true });
-            expect(mockCustomerAccept).toHaveBeenCalledWith(
-                mockOrderId,
-                mockTenantId,
-                1
-            );
-            expect(mockAuditRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    action: 'ORDER_CUSTOMER_ACCEPTED',
-                })
-            );
-        });
+      await expect(confirmInstallationAction({ orderId: mockOrderId, version: 1 })).rejects.toThrow(
+        '安装确认失败'
+      );
+    });
+  });
 
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
+  // =========================================================
+  // customerAcceptAction
+  // =========================================================
+  describe('customerAcceptAction', () => {
+    it('成功验收通过', async () => {
+      const result = await customerAcceptAction({ orderId: mockOrderId, version: 1 });
 
-            await expect(customerAcceptAction({ orderId: mockOrderId, version: 1 }))
-                .rejects.toThrow();
-        });
+      expect(result).toEqual({ success: true });
+      expect(mockCustomerAccept).toHaveBeenCalledWith(mockOrderId, mockTenantId, 1);
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ORDER_CUSTOMER_ACCEPTED',
+        })
+      );
     });
 
-    // =========================================================
-    // closeOrderAction
-    // =========================================================
-    describe('closeOrderAction', () => {
-        it('成功关闭订单', async () => {
-            const result = await closeOrderAction({ orderId: mockOrderId, version: 1 });
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
 
-            expect(result).toEqual({ success: true });
-            expect(mockUpdate).toHaveBeenCalled();
-            expect(mockAuditRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    action: 'ORDER_CLOSED',
-                })
-            );
-        });
+      await expect(customerAcceptAction({ orderId: mockOrderId, version: 1 })).rejects.toThrow();
+    });
+  });
 
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
+  // =========================================================
+  // closeOrderAction
+  // =========================================================
+  describe('closeOrderAction', () => {
+    it('成功关闭订单', async () => {
+      const result = await closeOrderAction({ orderId: mockOrderId, version: 1 });
 
-            await expect(closeOrderAction({ orderId: mockOrderId, version: 1 }))
-                .rejects.toThrow();
-        });
+      expect(result).toEqual({ success: true });
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ORDER_CLOSED',
+        })
+      );
     });
 
-    // =========================================================
-    // requestCustomerConfirmationAction
-    // =========================================================
-    describe('requestCustomerConfirmationAction', () => {
-        it('成功请求客户确认', async () => {
-            const result = await requestCustomerConfirmationAction({
-                orderId: mockOrderId,
-                version: 1,
-            });
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
 
-            expect(result).toEqual({ success: true });
-            expect(mockRequestCustomerConfirmation).toHaveBeenCalledWith(
-                mockOrderId,
-                mockTenantId,
-                1,
-                'u-001'
-            );
-        });
+      await expect(closeOrderAction({ orderId: mockOrderId, version: 1 })).rejects.toThrow();
+    });
+  });
 
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
+  // =========================================================
+  // requestCustomerConfirmationAction
+  // =========================================================
+  describe('requestCustomerConfirmationAction', () => {
+    it('成功请求客户确认', async () => {
+      const result = await requestCustomerConfirmationAction({
+        orderId: mockOrderId,
+        version: 1,
+      });
 
-            await expect(
-                requestCustomerConfirmationAction({ orderId: mockOrderId, version: 1 })
-            ).rejects.toThrow();
-        });
+      expect(result).toEqual({ success: true });
+      expect(mockRequestCustomerConfirmation).toHaveBeenCalledWith(
+        mockOrderId,
+        mockTenantId,
+        1,
+        'u-001'
+      );
     });
 
-    // =========================================================
-    // customerRejectAction
-    // =========================================================
-    describe('customerRejectAction', () => {
-        it('成功处理客户拒绝', async () => {
-            const result = await customerRejectAction({
-                orderId: mockOrderId,
-                reason: '颜色不对',
-                version: 1,
-            });
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
 
-            expect(result).toEqual({ success: true });
-            expect(mockCustomerReject).toHaveBeenCalledWith(
-                mockOrderId,
-                mockTenantId,
-                1,
-                '颜色不对'
-            );
-            expect(mockAuditRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    action: 'ORDER_CUSTOMER_REJECTED',
-                })
-            );
-        });
-
-        it('未登录时抛出异常', async () => {
-            // @ts-expect-error - 模拟未登录状态
-            vi.mocked(auth).mockResolvedValueOnce(null);
-
-            await expect(
-                customerRejectAction({ orderId: mockOrderId, reason: '测试', version: 1 })
-            ).rejects.toThrow();
-        });
+      await expect(
+        requestCustomerConfirmationAction({ orderId: mockOrderId, version: 1 })
+      ).rejects.toThrow();
     });
+  });
+
+  // =========================================================
+  // customerRejectAction
+  // =========================================================
+  describe('customerRejectAction', () => {
+    it('成功处理客户拒绝', async () => {
+      const result = await customerRejectAction({
+        orderId: mockOrderId,
+        reason: '颜色不对',
+        version: 1,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(mockCustomerReject).toHaveBeenCalledWith(mockOrderId, mockTenantId, 1, '颜色不对');
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ORDER_CUSTOMER_REJECTED',
+        })
+      );
+    });
+
+    it('未登录时抛出异常', async () => {
+      // @ts-expect-error - 模拟未登录状态
+      vi.mocked(auth).mockResolvedValueOnce(null);
+
+      await expect(
+        customerRejectAction({ orderId: mockOrderId, reason: '测试', version: 1 })
+      ).rejects.toThrow();
+    });
+  });
 });

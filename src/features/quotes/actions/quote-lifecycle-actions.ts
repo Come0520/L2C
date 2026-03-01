@@ -8,11 +8,12 @@
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
+import crypto from 'crypto';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and, sql } from 'drizzle-orm';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
-import { QuoteService } from '@/services/quote.service';
+import { QuoteVersionService } from '@/features/quotes/services/quote-version.service';
 import { rejectQuoteDiscountSchema } from './schema';
 import { checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
@@ -77,10 +78,14 @@ export async function submitQuoteAction(params: z.infer<typeof submitQuoteSchema
  * @param context 执行上下文
  */
 export const submitQuote = createSafeAction(submitQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   // P2-01: 权限校验
   const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
-    logger.warn('无权执行此操作：提交报价单', { userId: context.session.user.id });
+    logger.warn(`[${traceId}] [quotes] 无权执行此操作：提交报价单`, {
+      userId: context.session.user.id,
+      traceId,
+    });
     throw new Error('无权执行此操作');
   }
 
@@ -100,8 +105,8 @@ export const submitQuote = createSafeAction(submitQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${data.id}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
-  logger.info('[quotes] 报价单提交成功', { quoteId: data.id });
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 报价单提交成功`, { quoteId: data.id, traceId });
   return { success: true };
 });
 
@@ -133,10 +138,14 @@ export async function rejectQuoteAction(params: z.infer<typeof rejectQuoteSchema
  * @param context 执行上下文
  */
 export const rejectQuote = createSafeAction(rejectQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   // P2-01: 权限校验
   const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
   if (!hasPermission) {
-    logger.warn('无权执行此操作：拒绝报价单', { userId: context.session.user.id });
+    logger.warn(`[${traceId}] [quotes] 无权执行此操作：拒绝报价单`, {
+      userId: context.session.user.id,
+      traceId,
+    });
     throw new Error('无权执行此操作');
   }
 
@@ -153,8 +162,8 @@ export const rejectQuote = createSafeAction(rejectQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${data.id}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
-  logger.info('[quotes] 报价单拒绝成功', { quoteId: data.id });
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 报价单拒绝成功`, { quoteId: data.id, traceId });
   return { success: true };
 });
 
@@ -182,12 +191,16 @@ export async function lockQuoteAction(params: z.infer<typeof lockQuoteSchema>) {
  * @param context 执行上下文
  */
 export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   const userTenantId = context.session.user.tenantId;
 
   // P2-01: 权限校验
   const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
-    logger.warn('无权执行此操作：锁定报价单', { userId: context.session.user.id });
+    logger.warn(`[${traceId}] [quotes] 无权执行此操作：锁定报价单`, {
+      userId: context.session.user.id,
+      traceId,
+    });
     throw new Error('无权执行此操作');
   }
 
@@ -196,11 +209,15 @@ export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context)
   });
 
   if (!quote) {
-    logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
+    logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+      quoteId: data.id,
+      tenantId: userTenantId,
+      traceId,
+    });
     throw new Error('报价单不存在或无权操作');
   }
   if (quote.lockedAt) {
-    logger.warn('试图锁定已经锁定的报价单', { quoteId: data.id });
+    logger.warn(`[${traceId}] [quotes] 试图锁定已经锁定的报价单`, { quoteId: data.id, traceId });
     throw new Error('该报价单已锁定');
   }
 
@@ -233,8 +250,8 @@ export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context)
   });
 
   revalidatePath(`/quotes/${data.id}`);
-  revalidateTag('quotes', 'default');
-  logger.info('[quotes] 报价单锁定成功', { quoteId: data.id });
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 报价单锁定成功`, { quoteId: data.id, traceId });
   return updated;
 });
 
@@ -260,12 +277,16 @@ export async function unlockQuoteAction(params: z.infer<typeof unlockQuoteSchema
  * @param context 执行上下文
  */
 export const unlockQuote = createSafeAction(unlockQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   const userTenantId = context.session.user.tenantId;
 
   // P2-01: 权限校验
   const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
   if (!hasPermission) {
-    logger.warn('无权执行此操作：解锁报价单', { userId: context.session.user.id });
+    logger.warn(`[${traceId}] [quotes] 无权执行此操作：解锁报价单`, {
+      userId: context.session.user.id,
+      traceId,
+    });
     throw new Error('无权执行此操作');
   }
 
@@ -274,7 +295,11 @@ export const unlockQuote = createSafeAction(unlockQuoteSchema, async (data, cont
   });
 
   if (!quote) {
-    logger.warn('报价单不存在或无权操作', { quoteId: data.id, tenantId: userTenantId });
+    logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+      quoteId: data.id,
+      tenantId: userTenantId,
+      traceId,
+    });
     throw new Error('报价单不存在或无权操作');
   }
 
@@ -307,8 +332,8 @@ export const unlockQuote = createSafeAction(unlockQuoteSchema, async (data, cont
   });
 
   revalidatePath(`/quotes/${data.id}`);
-  revalidateTag('quotes', 'default');
-  logger.info('[quotes] 报价单解锁成功', { quoteId: data.id });
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 报价单解锁成功`, { quoteId: data.id, traceId });
   return updated;
 });
 
@@ -335,10 +360,14 @@ export async function approveQuoteAction(params: z.infer<typeof approveQuoteSche
  * @param context 执行上下文
  */
 export const approveQuote = createSafeAction(approveQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   // P2-01: 权限校验
   const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
   if (!hasPermission) {
-    logger.warn('无权执行此操作：审批通过报价单', { userId: context.session.user.id });
+    logger.warn(`[${traceId}] [quotes] 无权执行此操作：审批通过报价单`, {
+      userId: context.session.user.id,
+      traceId,
+    });
     throw new Error('无权执行此操作');
   }
 
@@ -359,8 +388,8 @@ export const approveQuote = createSafeAction(approveQuoteSchema, async (data, co
 
   revalidatePath(`/quotes/${data.id}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
-  logger.info('[quotes] 报价单审批成功', { quoteId: data.id });
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 报价单审批成功`, { quoteId: data.id, traceId });
   return { success: true };
 });
 
@@ -375,10 +404,14 @@ export const approveQuote = createSafeAction(approveQuoteSchema, async (data, co
 export const rejectQuoteDiscount = createSafeAction(
   rejectQuoteDiscountSchema,
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     // P2-01: 权限校验
     const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.APPROVE);
     if (!hasPermission) {
-      logger.warn('无权执行此操作：拒绝折扣', { userId: context.session.user.id });
+      logger.warn(`[${traceId}] [quotes] 无权执行此操作：拒绝折扣`, {
+        userId: context.session.user.id,
+        traceId,
+      });
       throw new Error('无权执行此操作');
     }
 
@@ -392,7 +425,7 @@ export const rejectQuoteDiscount = createSafeAction(
 
     revalidatePath(`/quotes/${data.id}`);
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     return { success: true };
   }
 );
@@ -425,11 +458,19 @@ export async function convertQuoteToOrderAction(params: z.infer<typeof convertQu
 export const convertQuoteToOrder = createSafeAction(
   convertQuoteToOrderSchema,
   async (data, context) => {
-    logger.info('[quotes] 开始转订单', { quoteId: data.quoteId, version: data.version });
+    const traceId = crypto.randomUUID().slice(0, 8);
+    logger.info(`[${traceId}] [quotes] 开始转订单`, {
+      quoteId: data.quoteId,
+      version: data.version,
+      traceId,
+    });
     // P2-01: 权限校验 (转订单需要创建订单权限)
     const hasPermission = await checkPermission(context.session, PERMISSIONS.ORDER.OWN_EDIT);
     if (!hasPermission) {
-      logger.warn('无权执行此操作：转订单', { userId: context.session.user.id });
+      logger.warn(`[${traceId}] [quotes] 无权执行此操作：转订单`, {
+        userId: context.session.user.id,
+        traceId,
+      });
       throw new Error('无权执行此操作');
     }
 
@@ -449,8 +490,12 @@ export const convertQuoteToOrder = createSafeAction(
 
     revalidatePath('/orders');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 报价转订单成功', { quoteId: data.quoteId, orderId: order?.id });
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 报价转订单成功`, {
+      quoteId: data.quoteId,
+      orderId: order?.id,
+      traceId,
+    });
     return order;
   }
 );
@@ -484,18 +529,26 @@ export async function createNextVersionAction(params: z.infer<typeof createNextV
 export const createNextVersion = createSafeAction(
   createNextVersionSchema,
   async (data, context) => {
-    logger.info('[quotes] 开始创建新版本', { quoteId: data.quoteId, version: data.version });
+    const traceId = crypto.randomUUID().slice(0, 8);
+    logger.info(`[${traceId}] [quotes] 开始创建新版本`, {
+      quoteId: data.quoteId,
+      version: data.version,
+      traceId,
+    });
     // P2-01: 权限校验 (创建新版本视为创建报价)
     const hasPermission = await checkPermission(context.session, PERMISSIONS.QUOTE.OWN_EDIT);
     if (!hasPermission) {
-      logger.warn('无权执行此操作：创建新版本', { userId: context.session.user.id });
+      logger.warn(`[${traceId}] [quotes] 无权执行此操作：创建新版本`, {
+        userId: context.session.user.id,
+        traceId,
+      });
       throw new Error('无权执行此操作');
     }
 
     // 【乐观锁】前置版本检查
     await preflightVersionCheck(data.quoteId, context.session.user.tenantId, data.version);
 
-    const newQuote = await QuoteService.createNextVersion(
+    const newQuote = await QuoteVersionService.createNextVersion(
       data.quoteId,
       context.session.user.id,
       context.session.user.tenantId
@@ -509,10 +562,11 @@ export const createNextVersion = createSafeAction(
     revalidatePath('/quotes');
     revalidatePath(`/quotes/${newQuote.id}`);
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 报价新版本创建成功', {
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 报价新版本创建成功`, {
       sourceQuoteId: data.quoteId,
       newQuoteId: newQuote.id,
+      traceId,
     });
     return newQuote;
   }

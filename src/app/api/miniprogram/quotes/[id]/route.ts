@@ -11,8 +11,6 @@ import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { getMiniprogramUser } from '../../auth-utils';
 
-
-
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // 1. 认证检查
@@ -42,20 +40,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     let customerName = '未知客户';
     if (quote.customerId) {
       const customer = await db.query.customers.findFirst({
-        where: and(
-          eq(customers.id, quote.customerId),
-          eq(customers.tenantId, user.tenantId)
-        ),
+        where: and(eq(customers.id, quote.customerId), eq(customers.tenantId, user.tenantId)),
       });
       if (customer) customerName = customer.name;
     }
 
     // 3. 查询报价项（添加 tenantId 过滤）
     const items = await db.query.quoteItems.findMany({
-      where: and(
-        eq(quoteItems.quoteId, id),
-        eq(quoteItems.tenantId, user.tenantId)
-      ),
+      where: and(eq(quoteItems.quoteId, id), eq(quoteItems.tenantId, user.tenantId)),
       orderBy: [quoteItems.sortOrder],
     });
 
@@ -67,7 +59,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         or(eq(quotes.rootQuoteId, rootId), eq(quotes.id, rootId)),
         eq(quotes.tenantId, user.tenantId)
       ),
-      orderBy: desc(quotes.version)
+      orderBy: desc(quotes.version),
     });
 
     // 5. Format Response

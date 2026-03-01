@@ -8,30 +8,30 @@ export type { WidgetMeta } from './registry';
 
 // 销售专属 Widget
 export {
-    SalesTargetWidget,
-    SalesLeadsWidget,
-    SalesConversionWidget,
-    SalesAvgOrderWidget,
+  SalesTargetWidget,
+  SalesLeadsWidget,
+  SalesConversionWidget,
+  SalesAvgOrderWidget,
 } from './sales-widgets';
 
 // 管理层 Widget
 export {
-    TeamSalesWidget,
-    TeamTargetWidget,
-    TeamLeaderboardWidget,
-    PendingApprovalWidget,
-    SalesTrendWidget,
+  TeamSalesWidget,
+  TeamTargetWidget,
+  TeamLeaderboardWidget,
+  PendingApprovalWidget,
+  SalesTrendWidget,
 } from './manager-widgets';
 
 // 派单员和财务 Widget
 export {
-    PendingMeasureWidget,
-    PendingInstallWidget,
-    TodayScheduleWidget,
-    ARSummaryWidget,
-    APSummaryWidget,
-    CashFlowWidget,
-    ConversionFunnelWidget,
+  PendingMeasureWidget,
+  PendingInstallWidget,
+  TodayScheduleWidget,
+  ARSummaryWidget,
+  APSummaryWidget,
+  CashFlowWidget,
+  ConversionFunnelWidget,
 } from './service-widgets';
 
 // Widget 渲染器

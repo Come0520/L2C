@@ -29,7 +29,7 @@ export const QuantityCell = memo(function QuantityCell({
 
   return (
     <TableCell className="p-2">
-      <div className="flex justify-center items-center gap-1">
+      <div className="flex items-center justify-center gap-1">
         <Input
           key={item.quantity}
           disabled={readOnly}

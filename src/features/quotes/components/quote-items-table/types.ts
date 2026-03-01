@@ -18,8 +18,6 @@ export interface CalcResult {
   warning?: string;
 }
 
-
-
 export interface RoomData {
   id: string;
   name: string;

@@ -85,14 +85,23 @@ export async function applyTemplate(
     const sessionUserId = session.user.id;
 
     // --- Dynamic Routing Config Logic ---
-    const hasDedicatedFinance = template.roles.some(r => r.name.includes('财务') || r.name.includes('内勤'));
-    const hasDedicatedDispatch = template.roles.some(r => r.name.includes('派单'));
-    const hasDedicatedProcurement = template.roles.some(r => r.name.includes('采购'));
-    const isLargeManaged = ['LARGE_MANAGED', 'MULTI_BRANCH', 'MANAGED_STORE', 'MANAGED_5', 'MANAGED_4', 'MANAGED_3'].includes(templateId);
+    const hasDedicatedFinance = template.roles.some(
+      (r) => r.name.includes('财务') || r.name.includes('内勤')
+    );
+    const hasDedicatedDispatch = template.roles.some((r) => r.name.includes('派单'));
+    const hasDedicatedProcurement = template.roles.some((r) => r.name.includes('采购'));
+    const isLargeManaged = [
+      'LARGE_MANAGED',
+      'MULTI_BRANCH',
+      'MANAGED_STORE',
+      'MANAGED_5',
+      'MANAGED_4',
+      'MANAGED_3',
+    ].includes(templateId);
 
     const orderFlowConfig = {
       financeConfirmationRequired: hasDedicatedFinance,
-      managerApprovalRequired: isLargeManaged
+      managerApprovalRequired: isLargeManaged,
     };
 
     await db.transaction(async (tx) => {
@@ -122,7 +131,7 @@ export async function applyTemplate(
         .set({
           onboardingStatus: 'completed',
           settings: { ...currentSettings, orderFlowConfig },
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(tenants.id, sessionTenantId));
     });

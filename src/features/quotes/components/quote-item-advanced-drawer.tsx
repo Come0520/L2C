@@ -81,7 +81,10 @@ export function QuoteItemAdvancedDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
-      const processedAttributes: Record<string, string | number | boolean | null | { width: number }[]> = {};
+      const processedAttributes: Record<
+        string,
+        string | number | boolean | null | { width: number }[]
+      > = {};
       Object.keys(attributes).forEach((key) => {
         const val = attributes[key];
         if (val !== undefined && val !== null) {
@@ -94,15 +97,29 @@ export function QuoteItemAdvancedDrawer({
         }
       });
       // 将可能会产生 undefined 的字段转为 null
-      processedAttributes.fabricWidth = attributes.fabricWidth ? Number(attributes.fabricWidth) : null;
-      processedAttributes.sideLoss = attributes.sideLoss !== undefined && attributes.sideLoss !== '' ? Number(attributes.sideLoss) : null;
-      processedAttributes.bottomLoss = attributes.bottomLoss !== undefined && attributes.bottomLoss !== '' ? Number(attributes.bottomLoss) : null;
-      processedAttributes.headerLoss = attributes.headerLoss !== undefined && attributes.headerLoss !== '' ? Number(attributes.headerLoss) : null;
+      processedAttributes.fabricWidth = attributes.fabricWidth
+        ? Number(attributes.fabricWidth)
+        : null;
+      processedAttributes.sideLoss =
+        attributes.sideLoss !== undefined && attributes.sideLoss !== ''
+          ? Number(attributes.sideLoss)
+          : null;
+      processedAttributes.bottomLoss =
+        attributes.bottomLoss !== undefined && attributes.bottomLoss !== ''
+          ? Number(attributes.bottomLoss)
+          : null;
+      processedAttributes.headerLoss =
+        attributes.headerLoss !== undefined && attributes.headerLoss !== ''
+          ? Number(attributes.headerLoss)
+          : null;
       processedAttributes.rollLength = attributes.rollLength ? Number(attributes.rollLength) : null;
-      processedAttributes.patternRepeat = attributes.patternRepeat !== undefined && attributes.patternRepeat !== '' ? Number(attributes.patternRepeat) : null;
+      processedAttributes.patternRepeat =
+        attributes.patternRepeat !== undefined && attributes.patternRepeat !== ''
+          ? Number(attributes.patternRepeat)
+          : null;
 
       // 清理原先的 undefined 避免 ts 报错
-      Object.keys(processedAttributes).forEach(key => {
+      Object.keys(processedAttributes).forEach((key) => {
         if (processedAttributes[key] === undefined) {
           delete processedAttributes[key];
         }
@@ -216,9 +233,17 @@ export function QuoteItemAdvancedDrawer({
                         onValueChange={(v) => {
                           updateAttribute('openingStyle', v);
                           // 选择"自定义"时，初始化默认 2 片（各取一半宽度）
-                          if (v === 'CUSTOM' && (!attributes.customPanels || !Array.isArray(attributes.customPanels) || (attributes.customPanels as { width: number }[]).length === 0)) {
-                            const halfWidth = Math.round(Number(item.width || 0) * 100 / 2); // m→cm 再除2
-                            updateAttribute('customPanels', [{ width: halfWidth }, { width: halfWidth }]);
+                          if (
+                            v === 'CUSTOM' &&
+                            (!attributes.customPanels ||
+                              !Array.isArray(attributes.customPanels) ||
+                              (attributes.customPanels as { width: number }[]).length === 0)
+                          ) {
+                            const halfWidth = Math.round((Number(item.width || 0) * 100) / 2); // m→cm 再除2
+                            updateAttribute('customPanels', [
+                              { width: halfWidth },
+                              { width: halfWidth },
+                            ]);
                           }
                         }}
                       >
@@ -245,63 +270,68 @@ export function QuoteItemAdvancedDrawer({
                   </div>
 
                   {/* 自定义片数编辑器 */}
-                  {attributes.openingStyle === 'CUSTOM' && (() => {
-                    const panels = Array.isArray(attributes.customPanels)
-                      ? (attributes.customPanels as { width: number }[])
-                      : [{ width: 0 }, { width: 0 }];
+                  {attributes.openingStyle === 'CUSTOM' &&
+                    (() => {
+                      const panels = Array.isArray(attributes.customPanels)
+                        ? (attributes.customPanels as { width: number }[])
+                        : [{ width: 0 }, { width: 0 }];
 
-                    const updatePanel = (index: number, width: number) => {
-                      const newPanels = [...panels];
-                      newPanels[index] = { width };
-                      updateAttribute('customPanels', newPanels);
-                    };
-                    const addPanel = () => {
-                      updateAttribute('customPanels', [...panels, { width: 0 }]);
-                    };
-                    const removePanel = (index: number) => {
-                      if (panels.length <= 1) return;
-                      const newPanels = panels.filter((_, i) => i !== index);
-                      updateAttribute('customPanels', newPanels);
-                    };
+                      const updatePanel = (index: number, width: number) => {
+                        const newPanels = [...panels];
+                        newPanels[index] = { width };
+                        updateAttribute('customPanels', newPanels);
+                      };
+                      const addPanel = () => {
+                        updateAttribute('customPanels', [...panels, { width: 0 }]);
+                      };
+                      const removePanel = (index: number) => {
+                        if (panels.length <= 1) return;
+                        const newPanels = panels.filter((_, i) => i !== index);
+                        updateAttribute('customPanels', newPanels);
+                      };
 
-                    return (
-                      <div className="space-y-2 rounded-lg border border-dashed p-3">
-                        <Label className="text-xs text-muted-foreground">各片宽度 (cm)，高度和褶皱倍数共用</Label>
-                        <div className="space-y-2">
-                          {panels.map((panel, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground w-14 shrink-0">第{index + 1}片</span>
-                              <Input
-                                type="number"
-                                className="h-8 flex-1"
-                                value={panel.width || ''}
-                                onChange={(e) => updatePanel(index, Number(e.target.value))}
-                                placeholder="宽度"
-                              />
-                              <span className="text-xs text-muted-foreground">cm</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => removePanel(index)}
-                                disabled={panels.length <= 1}
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          ))}
+                      return (
+                        <div className="space-y-2 rounded-lg border border-dashed p-3">
+                          <Label className="text-muted-foreground text-xs">
+                            各片宽度 (cm)，高度和褶皱倍数共用
+                          </Label>
+                          <div className="space-y-2">
+                            {panels.map((panel, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <span className="text-muted-foreground w-14 shrink-0 text-xs">
+                                  第{index + 1}片
+                                </span>
+                                <Input
+                                  type="number"
+                                  className="h-8 flex-1"
+                                  value={panel.width || ''}
+                                  onChange={(e) => updatePanel(index, Number(e.target.value))}
+                                  placeholder="宽度"
+                                />
+                                <span className="text-muted-foreground text-xs">cm</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                                  onClick={() => removePanel(index)}
+                                  disabled={panels.length <= 1}
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 w-full text-xs"
+                            onClick={addPanel}
+                          >
+                            + 添加一片
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full h-7 text-xs"
-                          onClick={addPanel}
-                        >
-                          + 添加一片
-                        </Button>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

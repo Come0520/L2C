@@ -12,32 +12,32 @@ import type { QuoteItem } from '@/shared/api/schema/quotes';
  * @returns 包含状态（items, spaces 等）及各类内部状态操作方法的对象
  */
 export function useCategoryQuoteForm(category: string, initialData: Record<string, unknown> = {}) {
-    const [items, setItems] = useState<QuoteItem[]>([]);
-    const [spaces, setSpaces] = useState<string[]>(['Master Bedroom', 'Living Room']);
+  const [items, setItems] = useState<QuoteItem[]>([]);
+  const [spaces, setSpaces] = useState<string[]>(['Master Bedroom', 'Living Room']);
 
-    return {
-        items,
-        spaces,
-        expandedSpace: null,
-        setExpandedSpace: () => { },
-        expandedItemId: null,
-        setExpandedItemId: () => { },
-        deleteItemConfirm: { open: false, itemId: null, itemName: '' },
-        setDeleteItemConfirm: () => { },
-        handleDeleteItem: () => { },
-        attachmentFormOpenState: {},
-        handleUpdateItem: () => { },
-        handleUpdateSpecs: () => { },
-        handleSelectProduct: () => { },
-        handleAddSpace: () => { },
-        handleRemoveSpace: () => { },
-        handleSpaceNameChange: () => { },
-        handleAddItem: () => { },
-        handleRemoveItemClick: () => { },
-        handleToggleAttachmentForm: () => { },
-        handleAddAttachment: () => { },
-        handleRemoveAttachment: () => { },
-        handleSelectAttachmentProduct: () => { },
-        isWallpaperCategory: category === 'WALLPAPER'
-    };
+  return {
+    items,
+    spaces,
+    expandedSpace: null,
+    setExpandedSpace: () => {},
+    expandedItemId: null,
+    setExpandedItemId: () => {},
+    deleteItemConfirm: { open: false, itemId: null, itemName: '' },
+    setDeleteItemConfirm: () => {},
+    handleDeleteItem: () => {},
+    attachmentFormOpenState: {},
+    handleUpdateItem: () => {},
+    handleUpdateSpecs: () => {},
+    handleSelectProduct: () => {},
+    handleAddSpace: () => {},
+    handleRemoveSpace: () => {},
+    handleSpaceNameChange: () => {},
+    handleAddItem: () => {},
+    handleRemoveItemClick: () => {},
+    handleToggleAttachmentForm: () => {},
+    handleAddAttachment: () => {},
+    handleRemoveAttachment: () => {},
+    handleSelectAttachmentProduct: () => {},
+    isWallpaperCategory: category === 'WALLPAPER',
+  };
 }

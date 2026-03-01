@@ -95,28 +95,33 @@ export function QuoteInlineAddRow({
 
       setIsSubmitting(true);
       try {
-        await createQuoteItem({
+        const result = (await createQuoteItem({
           quoteId,
           roomId: roomId || selectedRoomId || undefined,
           category: product.category || category || allowedCategories?.[0] || 'STANDARD',
           productId: product.id,
           productName: product.name,
-          unitPrice: product.retailPrice !== null
-            ? Number(product.retailPrice)
-            : product.unitPrice !== null
-              ? Number(product.unitPrice)
-              : 0,
+          unitPrice:
+            product.retailPrice !== null
+              ? Number(product.retailPrice)
+              : product.unitPrice !== null
+                ? Number(product.unitPrice)
+                : 0,
           quantity: 1,
           width: 0,
           height: 0,
-        });
+        })) as any;
 
-        toast.success(`已添加：${product.name}`);
-        setIsEditing(false);
-        onSuccess?.();
+        if (result?.success) {
+          toast.success(`已添加：${product.name}`);
+          setIsEditing(false);
+          onSuccess?.();
+        } else {
+          toast.error(result?.error || '添加商品失败');
+        }
       } catch (error) {
-        logger.error('添加商品失败:', error);
-        toast.error('添加商品失败');
+        logger.error('添加商品异常:', error);
+        toast.error('添加商品发生异常');
       } finally {
         setIsSubmitting(false);
       }
@@ -177,7 +182,7 @@ export function QuoteInlineAddRow({
                     onValueChange={setSelectedRoomId}
                     disabled={isSubmitting}
                   >
-                    <SelectTrigger className="h-8 text-xs bg-white/50 border-dashed">
+                    <SelectTrigger className="h-8 border-dashed bg-white/50 text-xs">
                       <SelectValue placeholder="空间" />
                     </SelectTrigger>
                     <SelectContent>

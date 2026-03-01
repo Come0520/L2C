@@ -61,8 +61,9 @@ export function FinanceModeCards({ currentMode }: FinanceModeCardsProps) {
     <div className="grid gap-6 md:grid-cols-2">
       {/* 极简模式卡片 */}
       <Card
-        className={`hover:border-primary-500 relative cursor-pointer transition-all hover:shadow-md ${activeMode === 'simple' ? 'border-primary-500 bg-primary-50/50 border-2' : 'border'
-          }`}
+        className={`hover:border-primary-500 relative cursor-pointer transition-all hover:shadow-md ${
+          activeMode === 'simple' ? 'border-primary-500 bg-primary-50/50 border-2' : 'border'
+        }`}
         onClick={() => handleSelectMode('simple')}
       >
         {activeMode === 'simple' && (
@@ -100,8 +101,9 @@ export function FinanceModeCards({ currentMode }: FinanceModeCardsProps) {
 
       {/* 专业模式卡片 */}
       <Card
-        className={`relative cursor-pointer transition-all hover:border-blue-500 hover:shadow-md ${activeMode === 'professional' ? 'border-2 border-blue-500 bg-blue-50/50' : 'border'
-          }`}
+        className={`relative cursor-pointer transition-all hover:border-blue-500 hover:shadow-md ${
+          activeMode === 'professional' ? 'border-2 border-blue-500 bg-blue-50/50' : 'border'
+        }`}
         onClick={() => handleSelectMode('professional')}
       >
         {activeMode === 'professional' && (

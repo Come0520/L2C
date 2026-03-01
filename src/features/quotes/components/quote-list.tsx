@@ -158,7 +158,7 @@ export function QuoteList() {
         <DataTableToolbar
           searchProps={{
             value: '',
-            onChange: () => { },
+            onChange: () => {},
             placeholder: '搜索报价单...',
           }}
           onRefresh={handleRefresh}
@@ -192,12 +192,12 @@ export function QuoteList() {
               ) : quotes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-[400px] text-center">
-                    <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
-                      <div className="rounded-full bg-muted/50 p-6">
+                    <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-4">
+                      <div className="bg-muted/50 rounded-full p-6">
                         <Layout className="h-10 w-10 opacity-50" />
                       </div>
                       <div className="space-y-1">
-                        <h3 className="text-lg font-semibold text-foreground">暂无报价单</h3>
+                        <h3 className="text-foreground text-lg font-semibold">暂无报价单</h3>
                         <p className="text-sm">
                           {activeTab === 'ALL'
                             ? '当前还没有任何报价单，创建一个新的开始吧。'

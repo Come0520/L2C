@@ -70,7 +70,7 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
         .select({ count: count(afterSalesTickets.id) })
         .from(afterSalesTickets)
         .leftJoin(customers, eq(afterSalesTickets.customerId, customers.id))
-        .where(and(...whereConditions)!)
+        .where(and(...whereConditions)!),
     ]);
 
     const total = countResult[0]?.count || 0;
@@ -112,7 +112,15 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
  */
 export async function updateTicketStatus(
   id: string,
-  status: 'PENDING' | 'INVESTIGATING' | 'PROCESSING' | 'PENDING_VISIT' | 'PENDING_CALLBACK' | 'PENDING_VERIFY' | 'CLOSED' | 'REJECTED',
+  status:
+    | 'PENDING'
+    | 'INVESTIGATING'
+    | 'PROCESSING'
+    | 'PENDING_VISIT'
+    | 'PENDING_CALLBACK'
+    | 'PENDING_VERIFY'
+    | 'CLOSED'
+    | 'REJECTED',
   result?: string
 ) {
   const session = await auth();
@@ -127,7 +135,7 @@ export async function updateTicketStatus(
       where: and(
         eq(afterSalesTickets.id, id),
         eq(afterSalesTickets.tenantId, session.user.tenantId)
-      )
+      ),
     });
 
     if (!existingTicket) {
@@ -139,7 +147,10 @@ export async function updateTicketStatus(
     }
 
     if (!isValidTransition(existingTicket.status, status)) {
-      return { success: false, error: `非法状态流转: 从 ${existingTicket.status} 到 ${status} 是不被允许的。` };
+      return {
+        success: false,
+        error: `非法状态流转: 从 ${existingTicket.status} 到 ${status} 是不被允许的。`,
+      };
     }
 
     await db.transaction(async (tx) => {
@@ -165,7 +176,7 @@ export async function updateTicketStatus(
             from: existingTicket.status,
             to: status,
             resolution: result,
-          }
+          },
         },
         tx
       );

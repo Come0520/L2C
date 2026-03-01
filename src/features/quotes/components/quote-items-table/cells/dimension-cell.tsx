@@ -37,7 +37,9 @@ export const DimensionCell = memo(function DimensionCell({
     if (isNaN(val)) return;
 
     // 竞争状态修复：直接从DOM获取最新的高，无视可能过期的 item.height
-    const currentHeight = heightRef.current ? parseFloat(heightRef.current.value) : Number(item.height);
+    const currentHeight = heightRef.current
+      ? parseFloat(heightRef.current.value)
+      : Number(item.height);
     const syntheticItem = {
       ...item,
       height: isNaN(currentHeight) ? String(item.height) : String(currentHeight),
@@ -84,7 +86,7 @@ export const DimensionCell = memo(function DimensionCell({
 
   return (
     <TableCell className="p-2">
-      <div className="flex justify-center items-center space-x-1">
+      <div className="flex items-center justify-center space-x-1">
         {showWidth && (
           <Input
             ref={widthRef}

@@ -12,8 +12,6 @@ import { eq } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../auth-utils';
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
 
-
-
 export async function GET(request: NextRequest) {
   try {
     const user = await getMiniprogramUser(request);
@@ -23,19 +21,25 @@ export async function GET(request: NextRequest) {
     }
 
     const cacheKey = `payment-config:${tenantId}`;
-    const paymentConfig = await CacheService.getOrSet(cacheKey, async () => {
-      const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, tenantId),
-        columns: { settings: true },
-      });
+    const paymentConfig = await CacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const tenant = await db.query.tenants.findFirst({
+          where: eq(tenants.id, tenantId),
+          columns: { settings: true },
+        });
 
-      const settings = (tenant?.settings as Record<string, unknown>) || {};
-      return (settings.payment as Record<string, unknown>) || {
-        enabled: true,
-        offline: { enabled: true, instructions: '' },
-        online: { enabled: false },
-      };
-    }, 300000); // 5分钟长效缓存
+        const settings = (tenant?.settings as Record<string, unknown>) || {};
+        return (
+          (settings.payment as Record<string, unknown>) || {
+            enabled: true,
+            offline: { enabled: true, instructions: '' },
+            online: { enabled: false },
+          }
+        );
+      },
+      300000
+    ); // 5分钟长效缓存
 
     const response = apiSuccess(paymentConfig);
     response.headers.set('Cache-Control', 'private, max-age=300');

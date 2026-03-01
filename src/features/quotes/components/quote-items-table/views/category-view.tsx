@@ -111,11 +111,7 @@ export function CategoryView({
     1; // 操作列
 
   /** 递归渲染商品行及其附件行 */
-  const renderRows = (
-    nodes: QuoteItem[],
-    level = 0,
-    roomName?: string
-  ): React.ReactNode => {
+  const renderRows = (nodes: QuoteItem[], level = 0, roomName?: string): React.ReactNode => {
     return nodes.map((item) => {
       const isItemExpanded = expandedItemIds.has(item.id);
       const rowSpanInfo = rowSpanMap.get(item.id);
@@ -143,7 +139,6 @@ export function CategoryView({
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
           hideRoomColumn
-
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
           handleAddAccessory={handleAddAccessory}
@@ -187,15 +182,16 @@ export function CategoryView({
             const isExpanded = expandedRoomIds.has(room.id);
 
             return (
-              <div key={room.id} className="glass-table overflow-hidden shadow-sm rounded-xl border border-border/50">
+              <div
+                key={room.id}
+                className="glass-table border-border/50 overflow-hidden rounded-xl border shadow-sm"
+              >
                 <div
-                  className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="bg-muted/30 hover:bg-muted/50 flex cursor-pointer items-center justify-between border-b px-4 py-3 transition-colors"
                   onClick={() => handleToggleRoom(room.id)}
                 >
-                  <div className="font-semibold text-base flex items-center gap-2">
-                    <span className="text-muted-foreground mr-1">
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
+                  <div className="flex items-center gap-2 text-base font-semibold">
+                    <span className="text-muted-foreground mr-1">{isExpanded ? '▼' : '▶'}</span>
                     {room.name}
                   </div>
                 </div>
@@ -222,7 +218,10 @@ export function CategoryView({
                         ) : (
                           // 空空间占位行
                           <TableRow key={`empty-${room.id}`}>
-                            <TableCell colSpan={columnCount} className="border-b text-muted-foreground text-center text-xs italic py-8">
+                            <TableCell
+                              colSpan={columnCount}
+                              className="text-muted-foreground border-b py-8 text-center text-xs italic"
+                            >
                               此空间暂无明细，请添加商品
                             </TableCell>
                           </TableRow>
@@ -254,8 +253,8 @@ export function CategoryView({
 
           {/* 未分配商品（兼容旧数据） */}
           {itemsByRoom.unassigned.length > 0 && (
-            <div className="glass-table overflow-hidden shadow-sm rounded-xl border border-amber-500/20">
-              <div className="glass-section-header bg-amber-500/10 px-4 py-2 dark:bg-amber-500/10 border-b border-amber-500/20">
+            <div className="glass-table overflow-hidden rounded-xl border border-amber-500/20 shadow-sm">
+              <div className="glass-section-header border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 dark:bg-amber-500/10">
                 <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
                   未分配空间商品（请将商品移至具体空间）
                 </span>
@@ -285,7 +284,7 @@ export function CategoryView({
 
       {/* 底部添加空间入口 */}
       {!readOnly && onAddRoom && hasRooms && (
-        <div className="mt-4 flex items-center justify-center rounded-xl border-2 border-dashed border-muted bg-muted/20 p-6 transition-colors hover:bg-muted/40">
+        <div className="border-muted bg-muted/20 hover:bg-muted/40 mt-4 flex items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors">
           <RoomSelectorWithConfig onSelect={onAddRoom} align="center" />
         </div>
       )}

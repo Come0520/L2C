@@ -23,9 +23,7 @@ import { AppError, ERROR_CODES } from '@/shared/lib/errors';
  *
  * 安全检查：自动从 session 获取 tenantId 实现租户隔离
  */
-export async function getCustomers(
-  params: z.input<typeof getCustomersSchema>
-): Promise<{
+export async function getCustomers(params: z.input<typeof getCustomersSchema>): Promise<{
   data: CustomerListItem[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 }> {

@@ -44,13 +44,16 @@ export const ProductNameCell = memo(function ProductNameCell({
           <div className="flex items-center">
             <span className="block max-w-[200px] truncate">{item.productName}</span>
             {roomName && (
-              <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground font-normal bg-muted/30 whitespace-nowrap">
+              <Badge
+                variant="outline"
+                className="text-muted-foreground bg-muted/30 ml-2 text-[10px] font-normal whitespace-nowrap"
+              >
                 {roomName}
               </Badge>
             )}
           </div>
         ) : (
-          <div className="flex items-center w-full max-w-[300px]">
+          <div className="flex w-full max-w-[300px] items-center">
             <div className="w-48">
               <ProductAutocomplete
                 value={item.productName}
@@ -64,7 +67,10 @@ export const ProductNameCell = memo(function ProductNameCell({
                 }
               />
               {roomName && (
-                <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground font-normal bg-muted/30 whitespace-nowrap shrink-0">
+                <Badge
+                  variant="outline"
+                  className="text-muted-foreground bg-muted/30 ml-2 shrink-0 text-[10px] font-normal whitespace-nowrap"
+                >
                   {roomName}
                 </Badge>
               )}

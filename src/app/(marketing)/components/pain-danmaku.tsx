@@ -50,9 +50,7 @@ export function PainDanmaku() {
         </h2>
         <p className="mt-4 text-lg text-gray-400">
           你是否正在经历？
-          <span className="ml-2 text-sm text-gray-500">
-            点击弹幕查看解决方案，还能点燃 🔥
-          </span>
+          <span className="ml-2 text-sm text-gray-500">点击弹幕查看解决方案，还能点燃 🔥</span>
         </p>
       </div>
 
@@ -60,12 +58,7 @@ export function PainDanmaku() {
       <div className="relative space-y-3 sm:space-y-4">
         {tracks.map((trackItems, trackIdx) => {
           // 每条轨道复制 4 份数据，保证内容足够长，视觉上永不出现空白
-          const repeatedItems = [
-            ...trackItems,
-            ...trackItems,
-            ...trackItems,
-            ...trackItems,
-          ];
+          const repeatedItems = [...trackItems, ...trackItems, ...trackItems, ...trackItems];
 
           return (
             <div key={trackIdx} className="relative flex overflow-hidden">
@@ -73,15 +66,13 @@ export function PainDanmaku() {
               <div
                 className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20"
                 style={{
-                  background:
-                    'linear-gradient(to right, rgb(3,7,18) 0%, transparent 100%)',
+                  background: 'linear-gradient(to right, rgb(3,7,18) 0%, transparent 100%)',
                 }}
               />
               <div
                 className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20"
                 style={{
-                  background:
-                    'linear-gradient(to left, rgb(3,7,18) 0%, transparent 100%)',
+                  background: 'linear-gradient(to left, rgb(3,7,18) 0%, transparent 100%)',
                 }}
               />
 
@@ -111,12 +102,10 @@ export function PainDanmaku() {
                         'border-gray-700/50 bg-gray-800/60 text-gray-300 backdrop-blur-sm',
                         'hover:scale-105 hover:border-orange-500/50 hover:bg-orange-900/30 hover:text-white hover:shadow-lg hover:shadow-orange-500/10',
                         // 已被点赞的弹幕微微发光
-                        fireCount > 0 &&
-                        'border-orange-600/40 bg-orange-950/40 text-orange-100'
+                        fireCount > 0 && 'border-orange-600/40 bg-orange-950/40 text-orange-100'
                       )}
                     >
                       &ldquo;{item.pain}&rdquo;
-
                       {/* 小火苗角标：有点击记录才显示 */}
                       {fireCount > 0 && (
                         <span
@@ -163,7 +152,7 @@ export function PainDanmaku() {
                 {selectedPain.category}
               </span>
               {(fireCounts[selectedPain.id] ?? 0) > 0 && (
-                <span className="flex items-center gap-1 text-sm text-orange-500 font-semibold">
+                <span className="flex items-center gap-1 text-sm font-semibold text-orange-500">
                   🔥 {fireCounts[selectedPain.id]} 人觉得痛
                 </span>
               )}

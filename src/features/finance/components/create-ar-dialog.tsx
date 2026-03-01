@@ -1,3 +1,5 @@
 ﻿'use client';
 
-export function CreateARDialog() { return null; }
+export function CreateARDialog() {
+  return null;
+}

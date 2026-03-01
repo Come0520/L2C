@@ -7,16 +7,13 @@ import { WorkflowConfigForm } from './workflow-config-form';
  * 根据租户规模配置不同的业务流程模式
  */
 export default async function WorkflowSettingsPage() {
-    const config = await getTenantBusinessConfig();
+  const config = await getTenantBusinessConfig();
 
-    return (
-        <div className="space-y-6">
-            <DashboardPageHeader
-                title="业务流程模式"
-                subtitle="根据团队规模配置业务流程"
-            />
+  return (
+    <div className="space-y-6">
+      <DashboardPageHeader title="业务流程模式" subtitle="根据团队规模配置业务流程" />
 
-            <WorkflowConfigForm initialConfig={config.workflowMode} />
-        </div>
-    );
+      <WorkflowConfigForm initialConfig={config.workflowMode} />
+    </div>
+  );
 }

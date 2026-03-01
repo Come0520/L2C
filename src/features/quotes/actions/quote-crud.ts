@@ -8,12 +8,13 @@
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
+import crypto from 'crypto';
 import { AuditService } from '@/shared/lib/audit-service';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and, sql } from 'drizzle-orm';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
-import { revalidatePath, revalidateTag } from 'next/cache';
-import { QuoteService } from '@/services/quote.service';
+import { revalidatePath, updateTag } from 'next/cache';
+import { QuoteVersionService } from '@/features/quotes/services/quote-version.service';
 import { DiscountControlService } from '@/services/discount-control.service';
 import Decimal from 'decimal.js';
 import { createQuoteSchema, updateQuoteSchema, createQuoteBundleSchema } from './schema';
@@ -32,13 +33,18 @@ import { logger } from '@/shared/lib/logger';
 export const createQuoteBundleActionInternal = createSafeAction(
   createQuoteBundleSchema,
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     const tenantId = context.session.user.tenantId;
     if (!tenantId) {
-      logger.error('未授权访问：缺少租户信息');
+      logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
       throw new Error('未授权访问：缺少租户信息');
     }
 
-    logger.info('[quotes] 开始创建报价套餐', { customerId: data.customerId, leadId: data.leadId });
+    logger.info(`[${traceId}] [quotes] 开始创建报价套餐`, {
+      customerId: data.customerId,
+      leadId: data.leadId,
+      traceId,
+    });
 
     const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
@@ -65,7 +71,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     logger.info('[quotes] 报价套餐创建成功', {
       bundleId: newBundle.id,
       quoteNo: newBundle.quoteNo,
@@ -92,17 +98,19 @@ export const createQuoteBundleActionInternal = createSafeAction(
 export const createQuoteActionInternal = createSafeAction(
   createQuoteSchema,
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     const tenantId = context.session.user.tenantId;
     if (!tenantId) {
-      logger.error('未授权访问：缺少租户信息');
+      logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
       throw new Error('未授权访问：缺少租户信息');
     }
 
     const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    logger.info('[quotes] 开始创建报价单', {
+    logger.info(`[${traceId}] [quotes] 开始创建报价单`, {
       customerId: data.customerId,
       bundleId: data.bundleId,
       title: data.title,
+      traceId,
     });
 
     const [newQuote] = await db
@@ -137,8 +145,12 @@ export const createQuoteActionInternal = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 报价单创建成功', { quoteId: newQuote.id, quoteNo: newQuote.quoteNo });
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 报价单创建成功`, {
+      quoteId: newQuote.id,
+      quoteNo: newQuote.quoteNo,
+      traceId,
+    });
     return newQuote;
   }
 );
@@ -191,12 +203,14 @@ export async function updateQuoteAction(params: z.infer<typeof updateQuoteSchema
  * @throws {AppError} 如果发生乐观锁冲突（`ERROR_CODES.CONCURRENCY_CONFLICT`）。
  */
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   const { id, version, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
-  logger.info('[quotes] 开始更新报价单', {
+  logger.info(`[${traceId}] [quotes] 开始更新报价单`, {
     quoteId: id,
     version,
     updateKeys: Object.keys(updateData),
+    traceId,
   });
 
   // 安全检查：验证报价单属于当前租户
@@ -205,7 +219,11 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   });
 
   if (!quote) {
-    logger.warn('报价单不存在或无权操作', { quoteId: id, tenantId: userTenantId });
+    logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+      quoteId: id,
+      tenantId: userTenantId,
+      traceId,
+    });
     throw new Error('报价单不存在或无权操作');
   }
 
@@ -251,7 +269,11 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   // 【乐观锁】版本不匹配时抛出并发冲突错误
   if (!updated && version !== undefined) {
-    logger.warn('乐观锁冲突：报价数据已被修改', { quoteId: id, currentVersion: version });
+    logger.warn(`[${traceId}] [quotes] 乐观锁冲突：报价数据已被修改`, {
+      quoteId: id,
+      currentVersion: version,
+      traceId,
+    });
     throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
 
@@ -267,7 +289,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
 
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
   logger.info('[quotes] 报价单更新成功', { quoteId: id });
   return { success: true };
 });
@@ -286,10 +308,12 @@ export const copyQuote = createSafeAction(
     targetCustomerId: z.string().optional(),
   }),
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     const userTenantId = context.session.user.tenantId;
-    logger.info('[quotes] 开始复制报价单', {
+    logger.info(`[${traceId}] [quotes] 开始复制报价单`, {
       quoteId: data.quoteId,
       targetCustomerId: data.targetCustomerId,
+      traceId,
     });
 
     // 安全检查：验证源报价单归属
@@ -299,11 +323,15 @@ export const copyQuote = createSafeAction(
     });
 
     if (!sourceQuote) {
-      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId: userTenantId });
+      logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+        quoteId: data.quoteId,
+        tenantId: userTenantId,
+        traceId,
+      });
       throw new Error('报价单不存在或无权操作');
     }
 
-    const newQuote = await QuoteService.copyQuote(
+    const newQuote = await QuoteVersionService.copyQuote(
       data.quoteId,
       context.session.user.id,
       userTenantId,
@@ -316,10 +344,11 @@ export const copyQuote = createSafeAction(
     });
 
     revalidatePath('/quotes');
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 报价单复制成功', {
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 报价单复制成功`, {
       sourceQuoteId: data.quoteId,
       newQuoteId: newQuote.id,
+      traceId,
     });
     return newQuote;
   }

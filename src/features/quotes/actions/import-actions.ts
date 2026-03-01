@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms, NewQuoteItem } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import Decimal from 'decimal.js';
 import { logger } from '@/shared/lib/logger';
 
@@ -112,7 +112,7 @@ export async function batchImportQuoteItems(quoteId: string, items: ImportItem[]
     });
 
     revalidatePath(`/quotes/${quoteId}`);
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     logger.info('[quotes] 批量导入报价行项目成功', { quoteId, itemCount: items.length });
     return { successCount: items.length, errors: [] };
   } catch (error: unknown) {

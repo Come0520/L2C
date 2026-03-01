@@ -81,7 +81,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
 }: QuoteItemRowProps) {
   const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
   const isAccessory = item.category === 'CURTAIN_ACCESSORY';
-  const productImage = (item.attributes?.productImage as string | undefined);
+  const productImage = item.attributes?.productImage as string | undefined;
 
   const middleSectionColSpan =
     (showWidth || showHeight ? 1 : 0) + (showFold ? 1 : 0) + (showProcessFee ? 1 : 0);
@@ -116,7 +116,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
       <TableRow
         key={item.id}
         className={cn(
-          'glass-row-hover transition-all duration-200 cursor-pointer',
+          'glass-row-hover cursor-pointer transition-all duration-200',
           level > 0 ? 'bg-white/5 hover:bg-white/10' : 'hover:bg-white/5'
         )}
         onClick={(e) => {

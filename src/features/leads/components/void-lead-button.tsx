@@ -11,30 +11,25 @@ import Ban from 'lucide-react/dist/esm/icons/ban';
 import { VoidLeadDialog } from './void-lead-dialog';
 
 interface VoidLeadButtonProps {
-    leadId: string;
-    userId: string;
+  leadId: string;
+  userId: string;
 }
 
 export function VoidLeadButton({ leadId, userId }: VoidLeadButtonProps) {
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
-    return (
-        <>
-            <Button
-                variant="outline"
-                size="sm"
-                className="text-error-600 border-error-200 hover:bg-error-50"
-                onClick={() => setOpen(true)}
-            >
-                <Ban className="h-4 w-4 mr-2" />
-                标记作废
-            </Button>
-            <VoidLeadDialog
-                leadId={leadId}
-                userId={userId}
-                open={open}
-                onOpenChange={setOpen}
-            />
-        </>
-    );
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-error-600 border-error-200 hover:bg-error-50"
+        onClick={() => setOpen(true)}
+      >
+        <Ban className="mr-2 h-4 w-4" />
+        标记作废
+      </Button>
+      <VoidLeadDialog leadId={leadId} userId={userId} open={open} onOpenChange={setOpen} />
+    </>
+  );
 }

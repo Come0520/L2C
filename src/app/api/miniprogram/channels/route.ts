@@ -23,77 +23,78 @@ import { CacheService } from '@/shared/services/miniprogram/cache.service';
  * @cache 内存缓存 3 分钟，Key 格式: `miniprogram:channels:{tenantId}`
  */
 export async function GET(request: NextRequest) {
-    try {
-        const user = await getMiniprogramUser(request);
-        if (!user || !user.tenantId) {
-            return apiError('未授权', 401);
-        }
-
-        // 缓存策略：渠道树变更频率极低，适合中长期缓存
-        const cacheKey = `miniprogram:channels:${user.tenantId}`;
-
-        const result = await CacheService.getOrSet(cacheKey, async () => {
-            // 1. 获取所有活跃渠道
-            const allChannels = await db.query.channels.findMany({
-                where: and(
-                    eq(channels.tenantId, user.tenantId),
-                    eq(channels.status, 'ACTIVE')
-                ),
-                orderBy: [asc(channels.name)],
-                columns: {
-                    id: true,
-                    name: true,
-                    parentId: true,
-                    hierarchyLevel: true,
-                }
-            });
-
-            // 2. 获取所有联系人
-            const allContacts = await db.query.channelContacts.findMany({
-                where: eq(channelContacts.tenantId, user.tenantId),
-                orderBy: [asc(channelContacts.name)],
-                columns: {
-                    id: true,
-                    name: true,
-                    channelId: true,
-                }
-            });
-
-            // 3. 内存组装树结构
-            const contactsMap = new Map<string, typeof allContacts>();
-            allContacts.forEach(contact => {
-                if (!contact.channelId) return;
-                const list = contactsMap.get(contact.channelId) || [];
-                list.push(contact);
-                contactsMap.set(contact.channelId, list);
-            });
-
-            const level1Channels = allChannels.filter(c => !c.parentId);
-
-            return level1Channels.map(parent => {
-                const children = allChannels.filter(c => c.parentId === parent.id);
-
-                const childrenWithContacts = children.map(child => ({
-                    id: child.id,
-                    name: child.name,
-                    level: child.hierarchyLevel,
-                    contacts: contactsMap.get(child.id) || []
-                }));
-
-                return {
-                    id: parent.id,
-                    name: parent.name,
-                    level: parent.hierarchyLevel,
-                    children: childrenWithContacts
-                };
-            });
-        }, 180000); // 3 分钟缓存 —— 渠道树低频变更
-
-        const response = apiSuccess(result);
-        response.headers.set('Cache-Control', 'private, max-age=180');
-        return response;
-    } catch (error) {
-        logger.error('[Channels] 获取渠道树失败', { route: 'channels', error });
-        return apiError('获取渠道失败', 500);
+  try {
+    const user = await getMiniprogramUser(request);
+    if (!user || !user.tenantId) {
+      return apiError('未授权', 401);
     }
+
+    // 缓存策略：渠道树变更频率极低，适合中长期缓存
+    const cacheKey = `miniprogram:channels:${user.tenantId}`;
+
+    const result = await CacheService.getOrSet(
+      cacheKey,
+      async () => {
+        // 1. 获取所有活跃渠道
+        const allChannels = await db.query.channels.findMany({
+          where: and(eq(channels.tenantId, user.tenantId), eq(channels.status, 'ACTIVE')),
+          orderBy: [asc(channels.name)],
+          columns: {
+            id: true,
+            name: true,
+            parentId: true,
+            hierarchyLevel: true,
+          },
+        });
+
+        // 2. 获取所有联系人
+        const allContacts = await db.query.channelContacts.findMany({
+          where: eq(channelContacts.tenantId, user.tenantId),
+          orderBy: [asc(channelContacts.name)],
+          columns: {
+            id: true,
+            name: true,
+            channelId: true,
+          },
+        });
+
+        // 3. 内存组装树结构
+        const contactsMap = new Map<string, typeof allContacts>();
+        allContacts.forEach((contact) => {
+          if (!contact.channelId) return;
+          const list = contactsMap.get(contact.channelId) || [];
+          list.push(contact);
+          contactsMap.set(contact.channelId, list);
+        });
+
+        const level1Channels = allChannels.filter((c) => !c.parentId);
+
+        return level1Channels.map((parent) => {
+          const children = allChannels.filter((c) => c.parentId === parent.id);
+
+          const childrenWithContacts = children.map((child) => ({
+            id: child.id,
+            name: child.name,
+            level: child.hierarchyLevel,
+            contacts: contactsMap.get(child.id) || [],
+          }));
+
+          return {
+            id: parent.id,
+            name: parent.name,
+            level: parent.hierarchyLevel,
+            children: childrenWithContacts,
+          };
+        });
+      },
+      180000
+    ); // 3 分钟缓存 —— 渠道树低频变更
+
+    const response = apiSuccess(result);
+    response.headers.set('Cache-Control', 'private, max-age=180');
+    return response;
+  } catch (error) {
+    logger.error('[Channels] 获取渠道树失败', { route: 'channels', error });
+    return apiError('获取渠道失败', 500);
+  }
 }

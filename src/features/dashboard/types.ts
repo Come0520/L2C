@@ -7,49 +7,49 @@
  * Widget 配置类型定义
  */
 export type WidgetType =
-    | 'sales-target'       // 销售目标完成率
-    | 'sales-leads'        // 我的线索数
-    | 'sales-conversion'   // 我的转化率
-    | 'sales-avg-order'    // 我的客单价
-    | 'team-sales'         // 团队销售额
-    | 'team-target'        // 团队目标完成率
-    | 'team-leaderboard'   // 销售排行榜
-    | 'conversion-funnel'  // 销售漏斗
-    | 'pending-measure'    // 待派发测量
-    | 'pending-install'    // 待派发安装
-    | 'today-schedule'     // 今日排班
-    | 'ar-summary'         // 待收款
-    | 'ap-summary'         // 待付款
-    | 'cash-flow'          // 现金流
-    | 'pending-approval'   // 待审批
-    | 'sales-trend'        // 销售趋势
-    | 'channel-performance' // 渠道业绩
-    | 'executive-summary'    // 总经理摘要
-    | 'cash-flow-forecast'   // 现金流预测
-    | 'ar-aging'             // 应收账龄
-    | 'enhanced-funnel'      // 增强型漏斗
-    | 'kpi-sales'
-    | 'kpi-leads'
-    | 'kpi-orders'
-    | 'kpi-conversion'
-    | 'ar-ap-summary'
-    | 'delivery-efficiency'
-    | 'customer-source'
-    | 'sales-funnel';
+  | 'sales-target' // 销售目标完成率
+  | 'sales-leads' // 我的线索数
+  | 'sales-conversion' // 我的转化率
+  | 'sales-avg-order' // 我的客单价
+  | 'team-sales' // 团队销售额
+  | 'team-target' // 团队目标完成率
+  | 'team-leaderboard' // 销售排行榜
+  | 'conversion-funnel' // 销售漏斗
+  | 'pending-measure' // 待派发测量
+  | 'pending-install' // 待派发安装
+  | 'today-schedule' // 今日排班
+  | 'ar-summary' // 待收款
+  | 'ap-summary' // 待付款
+  | 'cash-flow' // 现金流
+  | 'pending-approval' // 待审批
+  | 'sales-trend' // 销售趋势
+  | 'channel-performance' // 渠道业绩
+  | 'executive-summary' // 总经理摘要
+  | 'cash-flow-forecast' // 现金流预测
+  | 'ar-aging' // 应收账龄
+  | 'enhanced-funnel' // 增强型漏斗
+  | 'kpi-sales'
+  | 'kpi-leads'
+  | 'kpi-orders'
+  | 'kpi-conversion'
+  | 'ar-ap-summary'
+  | 'delivery-efficiency'
+  | 'customer-source'
+  | 'sales-funnel';
 
 export interface WidgetConfig {
-    id: string;
-    type: WidgetType;
-    title: string; // Widget 显示标题
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    visible: boolean;
+  id: string;
+  type: WidgetType;
+  title: string; // Widget 显示标题
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  visible: boolean;
 }
 
 export interface UserDashboardConfig {
-    version: number;
-    columns: number;
-    widgets: WidgetConfig[];
+  version: number;
+  columns: number;
+  widgets: WidgetConfig[];
 }

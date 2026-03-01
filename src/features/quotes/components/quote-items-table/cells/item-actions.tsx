@@ -36,7 +36,6 @@ export const ItemActionsCell = memo(function ItemActionsCell({
   return (
     <TableCell rowSpan={rowSpan} className="p-2 text-center">
       <div className="flex items-center justify-center space-x-1">
-
         {level === 0 && isCurtain && (
           <>
             <Button
@@ -53,7 +52,9 @@ export const ItemActionsCell = memo(function ItemActionsCell({
               variant="ghost"
               className={cn(
                 'h-7 w-7',
-                isExpanded ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary'
+                isExpanded
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-primary'
               )}
               onClick={onToggleExpand}
               title={isExpanded ? '收起高级配置' : '展开高级配置'}

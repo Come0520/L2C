@@ -219,7 +219,6 @@ const createRoleInternal = createSafeAction(createRoleSchema, async (data, { ses
   );
 
   // 使 RBAC 缓存失效
-  revalidateTag('roles', {});
   revalidatePath('/admin/settings/roles');
 
   return { success: true, data: newRole };
@@ -292,7 +291,6 @@ const updateRolePermissionsInternal = createSafeAction(
     );
 
     // 使 RBAC 缓存失效
-    revalidateTag('roles', {});
     revalidatePath('/admin/settings/roles');
 
     return { success: true, data: updated };
@@ -371,7 +369,6 @@ const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { ses
   logger.info(`[Admin] 用户 ${session.user.id} 删除了角色: ${targetRole.name} (${roleId})`);
 
   // 使 RBAC 缓存失效
-  revalidateTag('roles', {});
   revalidatePath('/admin/settings/roles');
 
   return { success: true };

@@ -8,10 +8,11 @@
 import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
+import crypto from 'crypto';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and } from 'drizzle-orm';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { QuoteConfigService } from '@/services/quote-config.service';
 import {
   createQuoteItemSchema,
@@ -56,15 +57,17 @@ export async function createQuoteItem(params: z.infer<typeof createQuoteItemSche
 const createQuoteItemActionInternal = createSafeAction(
   createQuoteItemSchema,
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     const tenantId = context.session.user.tenantId;
     if (!tenantId) {
-      logger.error('未授权访问：缺少租户信息');
+      logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
       throw new Error('未授权访问：缺少租户信息');
     }
-    logger.info('[quotes] 开始创建行项目', {
+    logger.info(`[${traceId}] [quotes] 开始创建行项目`, {
       quoteId: data.quoteId,
       productName: data.productName,
       category: data.category,
+      traceId,
     });
 
     // 安全检查：验证关联报价单归属
@@ -73,7 +76,11 @@ const createQuoteItemActionInternal = createSafeAction(
       columns: { id: true, tenantId: true, createdBy: true },
     });
     if (!quote) {
-      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId });
+      logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+        quoteId: data.quoteId,
+        tenantId,
+        traceId,
+      });
       throw new Error('报价单不存在或无权操作');
     }
 
@@ -122,18 +129,15 @@ const createQuoteItemActionInternal = createSafeAction(
     const { presetLoss } = config;
 
     // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
-    const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(data.category) || data.category.includes('CURTAIN');
+    const isCurtain =
+      ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(data.category) ||
+      data.category.includes('CURTAIN');
     const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(data.category);
 
-    if (
-      data.width &&
-      data.height &&
-      (isCurtain || isWallpaper)
-    ) {
+    if (data.width && data.height && (isCurtain || isWallpaper)) {
       // Common setup
       const strategy = StrategyFactory.getStrategy(data.category);
-      const fabricWidthCm =
-        (attributes.fabricWidth as number) || (isCurtain ? 280 : 53);
+      const fabricWidthCm = (attributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
       const calcParams: Record<string, unknown> = {
         measuredWidth: Number(data.width),
@@ -148,7 +152,9 @@ const createQuoteItemActionInternal = createSafeAction(
         sideLoss: (attributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
         bottomLoss: (attributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
         headerLoss: (attributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
-        customPanels: Array.isArray(attributes.customPanels) ? attributes.customPanels as { width: number }[] : undefined,
+        customPanels: Array.isArray(attributes.customPanels)
+          ? (attributes.customPanels as { width: number }[])
+          : undefined,
         // Wallpaper specifics
         rollLength: (attributes.rollLength as number) || 10,
         patternRepeat: (attributes.patternRepeat as number) || 0,
@@ -208,7 +214,7 @@ const createQuoteItemActionInternal = createSafeAction(
           width: Number(data.width || 0),
           height: Number(data.height || 0),
           foldRatio: Number(data.foldRatio || config.presetLoss.curtain.defaultFoldRatio),
-          quantity: quantity
+          quantity: quantity,
         },
         tenantId,
         config.bomTemplates
@@ -244,8 +250,12 @@ const createQuoteItemActionInternal = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 行项目创建成功', { itemId: newItem.id, quoteId: data.quoteId });
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 行项目创建成功`, {
+      itemId: newItem.id,
+      quoteId: data.quoteId,
+      traceId,
+    });
     return newItem;
   }
 );
@@ -272,12 +282,13 @@ export async function updateQuoteItemAction(params: z.infer<typeof updateQuoteIt
  * @returns 包含成功状态的响应
  */
 export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   const userTenantId = context.session.user.tenantId;
   if (!userTenantId) {
-    logger.error('未授权访问：缺少租户信息');
+    logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
     throw new Error('未授权访问：缺少租户信息');
   }
-  logger.info('[quotes] 开始更新行项目', { itemId: data.id });
+  logger.info(`[${traceId}] [quotes] 开始更新行项目`, { itemId: data.id, traceId });
 
   const { id, productId, productName: productNameFromUI, ...updateData } = data;
 
@@ -287,7 +298,11 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   });
 
   if (!existing) {
-    logger.warn('行项目不存在或无权操作', { itemId: id, tenantId: userTenantId });
+    logger.warn(`[${traceId}] [quotes] 行项目不存在或无权操作`, {
+      itemId: id,
+      tenantId: userTenantId,
+      traceId,
+    });
     throw new Error('行项目不存在或无权操作');
   }
 
@@ -382,18 +397,15 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 
   const finalUnitPrice = updateData.unitPrice !== undefined ? updateData.unitPrice : unitPrice;
 
-  const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) || category.includes('CURTAIN');
+  const isCurtain =
+    ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(category) ||
+    category.includes('CURTAIN');
   const isWallpaper = ['WALLPAPER', 'WALLCLOTH'].includes(category);
 
   // P1-R6-01: Migrated to StrategyFactory for unified calculation logic
-  if (
-    width &&
-    height &&
-    (isCurtain || isWallpaper)
-  ) {
+  if (width && height && (isCurtain || isWallpaper)) {
     const strategy = StrategyFactory.getStrategy(category);
-    const fabricWidthCm =
-      (mergedAttributes.fabricWidth as number) || (isCurtain ? 280 : 53);
+    const fabricWidthCm = (mergedAttributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
     const calcParams: Record<string, unknown> = {
       measuredWidth: Number(width),
@@ -408,7 +420,9 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
       sideLoss: (mergedAttributes.sideLoss as number) ?? presetLoss.curtain.sideLoss,
       bottomLoss: (mergedAttributes.bottomLoss as number) ?? presetLoss.curtain.bottomLoss,
       headerLoss: (mergedAttributes.headerLoss as number) ?? presetLoss.curtain.headerLoss,
-      customPanels: Array.isArray(mergedAttributes.customPanels) ? mergedAttributes.customPanels as { width: number }[] : undefined,
+      customPanels: Array.isArray(mergedAttributes.customPanels)
+        ? (mergedAttributes.customPanels as { width: number }[])
+        : undefined,
       // Wallpaper specifics
       rollLength: (mergedAttributes.rollLength as number) || 10,
       patternRepeat: (mergedAttributes.patternRepeat as number) || 0,
@@ -471,7 +485,8 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   });
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 行项目更新成功`, { itemId: data.id, traceId });
   return { success: true };
 });
 
@@ -494,15 +509,20 @@ export async function deleteQuoteItemAction(params: z.infer<typeof deleteQuoteIt
  * @returns 包含成功状态的响应
  */
 export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (data, context) => {
+  const traceId = crypto.randomUUID().slice(0, 8);
   const userTenantId = context.session.user.tenantId;
-  logger.info('[quotes] 开始删除行项目', { itemId: data.id });
+  logger.info(`[${traceId}] [quotes] 开始删除行项目`, { itemId: data.id, traceId });
 
   // 安全检查：验证行项目属于当前租户
   const existing = await db.query.quoteItems.findFirst({
     where: and(eq(quoteItems.id, data.id), eq(quoteItems.tenantId, userTenantId)),
   });
   if (!existing) {
-    logger.warn('行项目不存在或无权操作', { itemId: data.id, tenantId: userTenantId });
+    logger.warn(`[${traceId}] [quotes] 行项目不存在或无权操作`, {
+      itemId: data.id,
+      tenantId: userTenantId,
+      traceId,
+    });
     return { success: false, error: '行项目不存在或无权操作' };
   }
 
@@ -521,7 +541,8 @@ export const deleteQuoteItem = createSafeAction(deleteQuoteItemSchema, async (da
   await updateQuoteTotal(existing.quoteId, userTenantId);
 
   revalidatePath(`/quotes/${existing.quoteId}`);
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
+  logger.info(`[${traceId}] [quotes] 行项目删除成功`, { itemId: data.id, traceId });
   return { success: true };
 });
 
@@ -546,14 +567,16 @@ export async function reorderQuoteItemsAction(params: z.infer<typeof reorderQuot
 export const reorderQuoteItems = createSafeAction(
   reorderQuoteItemsSchema,
   async (data, context) => {
+    const traceId = crypto.randomUUID().slice(0, 8);
     const userTenantId = context.session.user.tenantId;
     if (!userTenantId) {
-      logger.error('未授权访问：缺少租户信息');
+      logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
       throw new Error('未授权访问：缺少租户信息');
     }
-    logger.info('[quotes] 开始对行项目排序', {
+    logger.info(`[${traceId}] [quotes] 开始对行项目排序`, {
       quoteId: data.quoteId,
       itemCount: data.items.length,
+      traceId,
     });
 
     // 安全检查：验证报价单归属
@@ -562,7 +585,11 @@ export const reorderQuoteItems = createSafeAction(
       columns: { id: true },
     });
     if (!quote) {
-      logger.warn('报价单不存在或无权操作', { quoteId: data.quoteId, tenantId: userTenantId });
+      logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+        quoteId: data.quoteId,
+        tenantId: userTenantId,
+        traceId,
+      });
       throw new Error('报价单不存在或无权操作');
     }
 
@@ -582,8 +609,8 @@ export const reorderQuoteItems = createSafeAction(
     });
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
-    logger.info('[quotes] 行项目排序完成', { quoteId: data.quoteId });
+    updateTag('quotes');
+    logger.info(`[${traceId}] [quotes] 行项目排序完成`, { quoteId: data.quoteId, traceId });
     return { success: true };
   }
 );

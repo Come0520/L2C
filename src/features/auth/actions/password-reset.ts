@@ -9,7 +9,10 @@ import { hash } from 'bcryptjs';
 import { logger } from '@/shared/lib/logger';
 import { z } from 'zod';
 import { ActionState as ActionResponse } from '@/shared/lib/server-action';
-import { requestResetSchema, resetPasswordSchema } from '@/features/auth/schemas/password-reset-schema';
+import {
+  requestResetSchema,
+  resetPasswordSchema,
+} from '@/features/auth/schemas/password-reset-schema';
 
 /**
  * 发起密码重置请求：生成 token 并发送邮件

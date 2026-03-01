@@ -30,77 +30,76 @@ import { RateLimiter } from '@/shared/services/miniprogram/security.service';
  * @rateLimit 单用户每 5 秒最多 2 次
  */
 export async function POST(request: NextRequest) {
-    try {
-        const user = await getMiniprogramUser(request);
-        if (!user || !user.tenantId) {
-            return apiError('未授权', 401);
-        }
-
-        // 频控：单用户每 5 秒最多 2 个工单
-        if (!RateLimiter.allow(`create_ticket_${user.id}`, 2, 5000)) {
-            return apiError('提交太频繁，请稍后再试', 429);
-        }
-
-        const body = await request.json();
-        const { orderId, type, description, photos } = body;
-
-        if (!orderId || !type || !description) {
-            return apiError('缺少必填字段（orderId, type, description）', 400);
-        }
-
-        // 验证订单归属权（租户隔离）
-        const order = await db.query.orders.findFirst({
-            where: and(eq(orders.id, orderId), eq(orders.tenantId, user.tenantId)),
-            columns: { id: true, customerId: true }
-        });
-
-        if (!order) {
-            return apiError('订单不存在', 404);
-        }
-
-        const ticketNo = generateNo('TKT');
-
-        await db.insert(afterSalesTickets).values({
-            tenantId: user.tenantId,
-            ticketNo: ticketNo,
-            orderId: orderId,
-            customerId: order.customerId,
-            type,
-            description,
-            photos: photos || [],
-            status: 'PENDING',
-            createdBy: user.id
-        });
-
-        // 审计日志（容灾设计：审计故障不应中断核心业务）
-        try {
-            const { AuditService } = await import('@/shared/services/audit-service');
-            await AuditService.log(db, {
-                tableName: 'after_sales_tickets',
-                recordId: ticketNo,
-                action: 'CREATE',
-                userId: user.id,
-                tenantId: user.tenantId,
-                details: { orderId, type }
-            });
-        } catch (auditError) {
-            logger.warn('[ServiceTicket] 审计日志记录失败', { error: auditError, ticketNo });
-        }
-
-        logger.info('[ServiceTicket] 售后工单创建成功', {
-            route: 'service/tickets',
-            ticketNo,
-            orderId,
-            userId: user.id,
-            tenantId: user.tenantId,
-        });
-
-        return apiSuccess({ ticketNo });
-
-    } catch (error) {
-        logger.error('[ServiceTicket] 创建售后工单故障', { route: 'service/tickets', error });
-        return apiError('创建工单失败', 500);
+  try {
+    const user = await getMiniprogramUser(request);
+    if (!user || !user.tenantId) {
+      return apiError('未授权', 401);
     }
+
+    // 频控：单用户每 5 秒最多 2 个工单
+    if (!RateLimiter.allow(`create_ticket_${user.id}`, 2, 5000)) {
+      return apiError('提交太频繁，请稍后再试', 429);
+    }
+
+    const body = await request.json();
+    const { orderId, type, description, photos } = body;
+
+    if (!orderId || !type || !description) {
+      return apiError('缺少必填字段（orderId, type, description）', 400);
+    }
+
+    // 验证订单归属权（租户隔离）
+    const order = await db.query.orders.findFirst({
+      where: and(eq(orders.id, orderId), eq(orders.tenantId, user.tenantId)),
+      columns: { id: true, customerId: true },
+    });
+
+    if (!order) {
+      return apiError('订单不存在', 404);
+    }
+
+    const ticketNo = generateNo('TKT');
+
+    await db.insert(afterSalesTickets).values({
+      tenantId: user.tenantId,
+      ticketNo: ticketNo,
+      orderId: orderId,
+      customerId: order.customerId,
+      type,
+      description,
+      photos: photos || [],
+      status: 'PENDING',
+      createdBy: user.id,
+    });
+
+    // 审计日志（容灾设计：审计故障不应中断核心业务）
+    try {
+      const { AuditService } = await import('@/shared/services/audit-service');
+      await AuditService.log(db, {
+        tableName: 'after_sales_tickets',
+        recordId: ticketNo,
+        action: 'CREATE',
+        userId: user.id,
+        tenantId: user.tenantId,
+        details: { orderId, type },
+      });
+    } catch (auditError) {
+      logger.warn('[ServiceTicket] 审计日志记录失败', { error: auditError, ticketNo });
+    }
+
+    logger.info('[ServiceTicket] 售后工单创建成功', {
+      route: 'service/tickets',
+      ticketNo,
+      orderId,
+      userId: user.id,
+      tenantId: user.tenantId,
+    });
+
+    return apiSuccess({ ticketNo });
+  } catch (error) {
+    logger.error('[ServiceTicket] 创建售后工单故障', { route: 'service/tickets', error });
+    return apiError('创建工单失败', 500);
+  }
 }
 
 /**
@@ -111,24 +110,23 @@ export async function POST(request: NextRequest) {
  * @returns 按创建时间倒序排列的售后工单数组
  */
 export async function GET(request: NextRequest) {
-    try {
-        const user = await getMiniprogramUser(request);
-        if (!user || !user.tenantId) {
-            return apiError('未授权', 401);
-        }
-
-        const list = await db.query.afterSalesTickets.findMany({
-            where: and(
-                eq(afterSalesTickets.tenantId, user.tenantId),
-                eq(afterSalesTickets.createdBy, user.id)
-            ),
-            orderBy: [desc(afterSalesTickets.createdAt)]
-        });
-
-        return apiSuccess(list);
-
-    } catch (error) {
-        logger.error('[ServiceTicket] 获取工单列表异常', { route: 'service/tickets', error });
-        return apiError('获取工单列表失败', 500);
+  try {
+    const user = await getMiniprogramUser(request);
+    if (!user || !user.tenantId) {
+      return apiError('未授权', 401);
     }
+
+    const list = await db.query.afterSalesTickets.findMany({
+      where: and(
+        eq(afterSalesTickets.tenantId, user.tenantId),
+        eq(afterSalesTickets.createdBy, user.id)
+      ),
+      orderBy: [desc(afterSalesTickets.createdAt)],
+    });
+
+    return apiSuccess(list);
+  } catch (error) {
+    logger.error('[ServiceTicket] 获取工单列表异常', { route: 'service/tickets', error });
+    return apiError('获取工单列表失败', 500);
+  }
 }

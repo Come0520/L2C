@@ -21,120 +21,129 @@ import { auth } from '@/shared/lib/auth';
 
 // ===== Mock 定义 =====
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        transaction: vi.fn(),
-        query: {
-            measureTasks: { findFirst: vi.fn() }
-        }
-    }
+  db: {
+    transaction: vi.fn(),
+    query: {
+      measureTasks: { findFirst: vi.fn() },
+    },
+  },
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(),
+  auth: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
-    AuditService: { record: vi.fn() }
+  AuditService: { record: vi.fn() },
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
-    revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/gps-utils', () => ({
-    validateGpsCheckIn: vi.fn().mockReturnValue({ valid: true, distance: 50 }),
-    calculateLateMinutes: vi.fn().mockReturnValue(0),
+  validateGpsCheckIn: vi.fn().mockReturnValue({ valid: true, distance: 50 }),
+  calculateLateMinutes: vi.fn().mockReturnValue(0),
 }));
 
 vi.mock('@/features/settings/actions/system-settings-actions', () => ({
-    getSetting: vi.fn().mockResolvedValue(15),
+  getSetting: vi.fn().mockResolvedValue(15),
 }));
 
 // ===== 测试主体 =====
 describe('checkInMeasureTask', () => {
-    const TASK_UUID = '123e4567-e89b-12d3-a456-426614174000';
-    const mockSession = { user: { id: 'user-1', tenantId: 'tenant-1' } };
+  const TASK_UUID = '123e4567-e89b-12d3-a456-426614174000';
+  const mockSession = { user: { id: 'user-1', tenantId: 'tenant-1' } };
 
-    const baseMockTask = {
-        id: TASK_UUID,
-        tenantId: 'tenant-1',
-        assignedWorkerId: 'user-1',
-        status: 'PENDING_VISIT',
-        scheduledAt: new Date(Date.now() + 3600_000),
+  const baseMockTask = {
+    id: TASK_UUID,
+    tenantId: 'tenant-1',
+    assignedWorkerId: 'user-1',
+    status: 'PENDING_VISIT',
+    scheduledAt: new Date(Date.now() + 3600_000),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (auth as unknown as Mock).mockResolvedValue(mockSession);
+  });
+
+  /** 辅助：创建 transaction mock，自动注入 txMock */
+  function setupTx(findFirstResult: unknown, opts?: { throwOnUpdate?: boolean }) {
+    const txMock: Record<string, unknown> = {
+      query: {
+        measureTasks: {
+          findFirst: vi.fn().mockResolvedValue(findFirstResult),
+        },
+      },
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined),
+        }),
+      }),
     };
+    (db.transaction as unknown as Mock).mockImplementation(async (cb) => cb(txMock));
+    return txMock;
+  }
 
-    beforeEach(() => {
-        vi.clearAllMocks();
-        (auth as unknown as Mock).mockResolvedValue(mockSession);
+  it('签到成功 - 正常流程', async () => {
+    const txMock = setupTx(baseMockTask);
+
+    const result = await checkInMeasureTask({
+      taskId: TASK_UUID,
+      latitude: 30.0,
+      longitude: 120.0,
     });
 
-    /** 辅助：创建 transaction mock，自动注入 txMock */
-    function setupTx(findFirstResult: unknown, opts?: { throwOnUpdate?: boolean }) {
-        const txMock: Record<string, unknown> = {
-            query: {
-                measureTasks: {
-                    findFirst: vi.fn().mockResolvedValue(findFirstResult),
-                }
-            },
-            update: vi.fn().mockReturnValue({
-                set: vi.fn().mockReturnValue({
-                    where: vi.fn().mockResolvedValue(undefined),
-                }),
-            }),
-        };
-        (db.transaction as unknown as Mock).mockImplementation(async (cb) => cb(txMock));
-        return txMock;
-    }
+    // createSafeAction 外层 success=true，内层 data 包含 handler 结果
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.data?.success).toBe(true);
+    expect(result.data?.data).toBeDefined();
+  });
 
-    it('签到成功 - 正常流程', async () => {
-        const txMock = setupTx(baseMockTask);
+  it('签到失败 - 任务不存在', async () => {
+    setupTx(null); // findFirst 返回 null
 
-        const result = await checkInMeasureTask({
-            taskId: TASK_UUID, latitude: 30.0, longitude: 120.0,
-        });
-
-        // createSafeAction 外层 success=true，内层 data 包含 handler 结果
-        expect(result.success).toBe(true);
-        expect(result.data).toBeDefined();
-        expect(result.data?.success).toBe(true);
-        expect(result.data?.data).toBeDefined();
+    const result = await checkInMeasureTask({
+      taskId: TASK_UUID,
+      latitude: 30.0,
+      longitude: 120.0,
     });
 
-    it('签到失败 - 任务不存在', async () => {
-        setupTx(null); // findFirst 返回 null
+    // handler 返回 { success: false, error: ... }，外层仍是 success: true
+    expect(result.success).toBe(true);
+    expect(result.data?.success).toBe(false);
+    expect(result.data?.error).toContain('任务不存在');
+  });
 
-        const result = await checkInMeasureTask({
-            taskId: TASK_UUID, latitude: 30.0, longitude: 120.0,
-        });
+  it('签到失败 - 非指派测量师', async () => {
+    setupTx({ ...baseMockTask, assignedWorkerId: 'other-user-id' });
 
-        // handler 返回 { success: false, error: ... }，外层仍是 success: true
-        expect(result.success).toBe(true);
-        expect(result.data?.success).toBe(false);
-        expect(result.data?.error).toContain('任务不存在');
+    const result = await checkInMeasureTask({
+      taskId: TASK_UUID,
+      latitude: 30.0,
+      longitude: 120.0,
     });
 
-    it('签到失败 - 非指派测量师', async () => {
-        setupTx({ ...baseMockTask, assignedWorkerId: 'other-user-id' });
+    expect(result.success).toBe(true);
+    expect(result.data?.success).toBe(false);
+    expect(result.data?.error).toContain('只有被指派的测量师才能签到');
+  });
 
-        const result = await checkInMeasureTask({
-            taskId: TASK_UUID, latitude: 30.0, longitude: 120.0,
-        });
+  it('签到失败 - 任务已结束', async () => {
+    setupTx({ ...baseMockTask, status: 'COMPLETED' });
 
-        expect(result.success).toBe(true);
-        expect(result.data?.success).toBe(false);
-        expect(result.data?.error).toContain('只有被指派的测量师才能签到');
+    const result = await checkInMeasureTask({
+      taskId: TASK_UUID,
+      latitude: 30.0,
+      longitude: 120.0,
     });
 
-    it('签到失败 - 任务已结束', async () => {
-        setupTx({ ...baseMockTask, status: 'COMPLETED' });
-
-        const result = await checkInMeasureTask({
-            taskId: TASK_UUID, latitude: 30.0, longitude: 120.0,
-        });
-
-        expect(result.success).toBe(true);
-        expect(result.data?.success).toBe(false);
-        expect(result.data?.error).toContain('任务已结束');
-    });
+    expect(result.success).toBe(true);
+    expect(result.data?.success).toBe(false);
+    expect(result.data?.error).toContain('任务已结束');
+  });
 });

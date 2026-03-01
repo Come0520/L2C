@@ -123,6 +123,7 @@ vi.mock('../../../../shared/services/audit-service', () => ({
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/utils', () => ({

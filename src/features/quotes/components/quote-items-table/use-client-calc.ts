@@ -40,7 +40,10 @@ export function useClientCalc() {
     const upperCategory = category.toUpperCase();
 
     let strategyCategory = '';
-    if (['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(upperCategory) || upperCategory.includes('CURTAIN')) {
+    if (
+      ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(upperCategory) ||
+      upperCategory.includes('CURTAIN')
+    ) {
       strategyCategory = 'CURTAIN';
     } else if (['WALLPAPER'].includes(upperCategory)) {
       strategyCategory = 'WALLPAPER';
@@ -55,7 +58,8 @@ export function useClientCalc() {
       // Construct calcParams based on category
       // Unified params as StrategyFactory expects generic params, but we know the specific keys needed
 
-      const fabricWidthCm = Number(attributes.fabricWidth) || (strategyCategory === 'CURTAIN' ? 280 : 53);
+      const fabricWidthCm =
+        Number(attributes.fabricWidth) || (strategyCategory === 'CURTAIN' ? 280 : 53);
 
       const calcParams: UnifiedCalcParams = {
         measuredWidth: width * 100, // 转换 UI 上的米(m)为厘米(cm)以匹配 CurtainStrategy 定义
@@ -70,7 +74,9 @@ export function useClientCalc() {
         openingType: (attributes.openingStyle as string) || 'DOUBLE',
         sideLoss: attributes.sideLoss !== undefined ? Number(attributes.sideLoss) : undefined,
         bottomLoss: attributes.bottomLoss !== undefined ? Number(attributes.bottomLoss) : 10,
-        customPanels: Array.isArray(attributes.customPanels) ? attributes.customPanels as { width: number }[] : undefined,
+        customPanels: Array.isArray(attributes.customPanels)
+          ? (attributes.customPanels as { width: number }[])
+          : undefined,
 
         // Wallpaper specific
         rollLength: Number(attributes.rollLength) || 10, // Default 10m
@@ -78,7 +84,7 @@ export function useClientCalc() {
         widthLoss: attributes.widthLoss !== undefined ? Number(attributes.widthLoss) : undefined,
         cutLoss: attributes.cutLoss !== undefined ? Number(attributes.cutLoss) : undefined,
 
-        calcType: strategyCategory
+        calcType: strategyCategory,
       };
 
       const result = strategy.calculate(calcParams);

@@ -244,7 +244,8 @@ export interface TestimonialItem {
 export const testimonialItems: TestimonialItem[] = [
   {
     id: 't1',
-    content: '用了 L2C 之后，报价效率提升了至少 3 倍，客户也觉得我们更专业了。以前手算要半天，现在五分钟搞定，还不出错！',
+    content:
+      '用了 L2C 之后，报价效率提升了至少 3 倍，客户也觉得我们更专业了。以前手算要半天，现在五分钟搞定，还不出错！',
     author: '张经理',
     role: '店长',
     company: '城东窗帘旗舰店',
@@ -252,7 +253,8 @@ export const testimonialItems: TestimonialItem[] = [
   },
   {
     id: 't2',
-    content: '以前最头疼的就是订单跟踪，现在打开手机一目了然，再也没丢过单。安装师傅也说任务单清楚多了，省了好多电话。',
+    content:
+      '以前最头疼的就是订单跟踪，现在打开手机一目了然，再也没丢过单。安装师傅也说任务单清楚多了，省了好多电话。',
     author: '李总',
     role: '总经理',
     company: '锦绣家居',
@@ -260,7 +262,8 @@ export const testimonialItems: TestimonialItem[] = [
   },
   {
     id: 't3',
-    content: '最惊喜的是居然免费！功能比我们之前用的付费软件还全面，果断全店切换。员工上手也快，给个赞！',
+    content:
+      '最惊喜的是居然免费！功能比我们之前用的付费软件还全面，果断全店切换。员工上手也快，给个赞！',
     author: '王姐',
     role: '创始人',
     company: '品致窗饰',
@@ -268,7 +271,8 @@ export const testimonialItems: TestimonialItem[] = [
   },
   {
     id: 't4',
-    content: '云展厅真的很好用，客户自己扫码就能看我们所有产品，还能 24 小时浏览。有次半夜客户发来"我要这款"，第二天直接签单了哈哈。',
+    content:
+      '云展厅真的很好用，客户自己扫码就能看我们所有产品，还能 24 小时浏览。有次半夜客户发来"我要这款"，第二天直接签单了哈哈。',
     author: '陈老板',
     role: '老板娘',
     company: '新家窗帘定制',
@@ -276,7 +280,8 @@ export const testimonialItems: TestimonialItem[] = [
   },
   {
     id: 't5',
-    content: '供应商对账以前每月要花三四天，现在直接出报表，半小时就结束了。时间省下来，可以多谈几个大客户。',
+    content:
+      '供应商对账以前每月要花三四天，现在直接出报表，半小时就结束了。时间省下来，可以多谈几个大客户。',
     author: '刘会计',
     role: '财务主管',
     company: '和美布艺',
@@ -284,7 +289,8 @@ export const testimonialItems: TestimonialItem[] = [
   },
   {
     id: 't6',
-    content: '测量师用手机录数据，直接传回来，完全不用再靠纸条传来传去。出错少了，客户投诉也少了，真的省心！',
+    content:
+      '测量师用手机录数据，直接传回来，完全不用再靠纸条传来传去。出错少了，客户投诉也少了，真的省心！',
     author: '赵师傅',
     role: '首席测量师',
     company: '阳光窗帘工程',
@@ -374,7 +380,40 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.2.4',
+    version: 'v1.2.4',
+    date: '2026-03-01',
+    title: '报价单缓存修复与全站稳定性提升',
+    description:
+      '修复报价单添加/删除商品后界面不刷新、金额显示为 ¥0.00 的核心缺陷，根因为 Next.js 16 缓存机制变更。同步修复邮箱发送无响应问题，并完成全站缓存策略统一重构。',
+    contributors: ['安琪', '聂老师'],
+    updates: [
+      {
+        type: 'fix',
+        content: '修复报价单添加/删除商品后界面不实时刷新的问题（感谢安琪反馈）',
+      },
+      {
+        type: 'fix',
+        content: '修复报价单总金额与最终金额显示为 ¥0.00 的缓存脏数据问题',
+      },
+      {
+        type: 'fix',
+        content: '修复忘记密码邮件发送点击无响应的问题（感谢聂老师反馈）',
+      },
+      {
+        type: 'optimize',
+        content:
+          '全站缓存策略重构：将 Server Action 中的 revalidateTag（SWR 模式）统一替换为 updateTag（立即清除），确保写后读一致性',
+      },
+      {
+        type: 'optimize',
+        content: '新增 Next.js 16 缓存失效最佳实践文档，杜绝同类问题复发',
+      },
+    ],
+  },
+  {
     id: 'v1.2.3',
+
     version: 'v1.2.3',
     date: '2026-03-01',
     title: '全模块成熟度升级与安全加固',
@@ -413,7 +452,8 @@ export const versionHistory: VersionRecord[] = [
     version: 'v1.2.2',
     date: '2026-02-28',
     title: '架构健壮性与测试引擎升级',
-    description: '全面解决 Vitest 测试中的 ESM 死锁与并发超时问题，极大提升了开发环境下的测试执行效率与稳定性。',
+    description:
+      '全面解决 Vitest 测试中的 ESM 死锁与并发超时问题，极大提升了开发环境下的测试执行效率与稳定性。',
     contributors: ['Antigravity'],
     updates: [
       {

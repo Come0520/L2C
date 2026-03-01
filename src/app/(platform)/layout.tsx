@@ -6,41 +6,37 @@ import { eq } from 'drizzle-orm';
 import { Sidebar } from '@/widgets/layout/sidebar';
 import { Header } from '@/widgets/layout/header';
 
-export default async function PlatformLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    const session = await auth();
+export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
 
-    // 未登录，重定向到登录页
-    if (!session?.user?.id) {
-        redirect('/login?callbackUrl=/admin/tenants');
-    }
+  // 未登录，重定向到登录页
+  if (!session?.user?.id) {
+    redirect('/login?callbackUrl=/admin/tenants');
+  }
 
-    // 验证是否为平台管理员
-    const user = await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-        columns: { isPlatformAdmin: true },
-    });
+  // 验证是否为平台管理员
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+    columns: { isPlatformAdmin: true },
+  });
 
-    if (!user?.isPlatformAdmin) {
-        // 非管理员，重定向到首页
-        redirect('/dashboard');
-    }
+  if (!user?.isPlatformAdmin) {
+    // 非管理员，重定向到首页
+    redirect('/dashboard');
+  }
 
-    return (
-        <div className="flex h-screen w-full overflow-hidden bg-transparent">
-            {/* 侧边栏导航 */}
-            <Sidebar />
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-transparent">
+      {/* 侧边栏导航 */}
+      <Sidebar />
 
-            {/* 主内容区域 */}
-            <div className="flex flex-col flex-1 overflow-hidden relative">
-                <Header session={session} />
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 relative md:ml-[60px]">
-                    {children}
-                </main>
-            </div>
-        </div>
-    );
+      {/* 主内容区域 */}
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        <Header session={session} />
+        <main className="relative flex-1 overflow-x-hidden overflow-y-auto p-6 md:ml-[60px]">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 }

@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { orders, paymentSchedules } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/lib/audit-service';
 import Decimal from 'decimal.js';
@@ -132,8 +132,8 @@ export async function createOrderPayment(data: {
         amount: actualAmount,
       });
 
-      revalidateTag(`order-${orderId}`, {});
-      revalidateTag(`orders`, {});
+      updateTag(`order-${orderId}`);
+      updateTag(`orders`);
 
       return { success: true };
     });

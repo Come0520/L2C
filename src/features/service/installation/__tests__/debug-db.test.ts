@@ -1,1 +1,4 @@
-import { describe, it } from 'vitest'; describe.skip('DB Debug', () => { it('dummy', () => {}) });
+import { describe, it } from 'vitest';
+describe.skip('DB Debug', () => {
+  it('dummy', () => {});
+});

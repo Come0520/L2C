@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 interface PageProps {
-    params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export const dynamic = 'force-dynamic';
@@ -17,36 +17,33 @@ export const dynamic = 'force-dynamic';
  * 渠道详情页
  */
 export default async function ChannelDetailPage({ params }: PageProps) {
-    const resolvedParams = await params;
-    const session = await auth();
-    const tenantId = session?.user?.tenantId;
+  const resolvedParams = await params;
+  const session = await auth();
+  const tenantId = session?.user?.tenantId;
 
-    if (!tenantId) {
-        return <div>请先登录</div>;
-    }
+  if (!tenantId) {
+    return <div>请先登录</div>;
+  }
 
-    const channel = await getChannelById(resolvedParams.id);
+  const channel = await getChannelById(resolvedParams.id);
 
-    if (!channel) {
-        notFound();
-    }
+  if (!channel) {
+    notFound();
+  }
 
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild>
-                    <Link href="/channels">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Link>
-                </Button>
-                <DashboardPageHeader
-                    title={channel.name}
-                    subtitle={`渠道编号：${channel.channelNo}`}
-                />
-            </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/channels">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <DashboardPageHeader title={channel.name} subtitle={`渠道编号：${channel.channelNo}`} />
+      </div>
 
-            {/* Prisma 查询返回类型与组件接口存在枚举/字符串差异，此处断言安全 */}
-            <ChannelDetail channel={channel as any} />
-        </div>
-    );
+      {/* Prisma 查询返回类型与组件接口存在枚举/字符串差异，此处断言安全 */}
+      <ChannelDetail channel={channel as any} />
+    </div>
+  );
 }

@@ -1,3 +1,5 @@
 ﻿'use client';
 
-export function CreateAPDialog() { return null; }
+export function CreateAPDialog() {
+  return null;
+}

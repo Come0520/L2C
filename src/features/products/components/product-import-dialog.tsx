@@ -1,16 +1,33 @@
 'use client';
 
-import { logger } from "@/shared/lib/logger";
+import { logger } from '@/shared/lib/logger';
 
 import { useState } from 'react';
 import { ExcelImporter } from '@/shared/components/excel-import/excel-importer';
-import { getImportConfigByCategory, BaseProductImportItem } from '@/features/products/import-config';
+import {
+  getImportConfigByCategory,
+  BaseProductImportItem,
+} from '@/features/products/import-config';
 import { batchCreateProducts } from '@/features/products/actions/mutations';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { FileUp, Info } from 'lucide-react';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 import { CATEGORY_LABELS, CATEGORY_GROUPS } from '@/features/quotes/constants';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 
@@ -41,7 +58,9 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
       }));
 
       // 暂时用 unknown 断言，因为我们在 import-config 中移除了强类型转成的 payload
-      const result = await batchCreateProducts(payload as unknown as Parameters<typeof batchCreateProducts>[0]);
+      const result = await batchCreateProducts(
+        payload as unknown as Parameters<typeof batchCreateProducts>[0]
+      );
 
       if (result.success && result.data) {
         const { successCount, errorCount, errors } = result.data;
@@ -87,16 +106,16 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl border-0 bg-transparent p-0 shadow-none">
-        <div className="bg-background rounded-lg border shadow-lg overflow-hidden flex flex-col h-[80vh]">
-          <DialogHeader className="p-6 border-b bg-muted/30">
+        <div className="bg-background flex h-[80vh] flex-col overflow-hidden rounded-lg border shadow-lg">
+          <DialogHeader className="bg-muted/30 border-b p-6">
             <DialogTitle className="text-xl">批量导入商品</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 space-y-6 overflow-y-auto p-6">
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">第一步：选择商品类型</label>
-                <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-4">
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger className="w-[280px]">
                       <SelectValue placeholder="选择要导入的商品类型..." />
@@ -104,7 +123,9 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
                     <SelectContent>
                       {CATEGORY_GROUPS.map((group) => (
                         <SelectGroup key={group.value}>
-                          <SelectLabel className="font-bold text-primary bg-muted/30">{group.label}</SelectLabel>
+                          <SelectLabel className="text-primary bg-muted/30 font-bold">
+                            {group.label}
+                          </SelectLabel>
                           {group.categories.map((cat) => (
                             <SelectItem key={cat} value={cat} className="ml-2">
                               {CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] || cat}
@@ -125,7 +146,7 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
             </div>
 
             {selectedCategory ? (
-              <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-4 border-t pt-4">
                 <label className="text-sm font-medium">第二步：下载模板并上传数据</label>
                 <ExcelImporter<BaseProductImportItem & Record<string, unknown>>
                   {...getImportConfigByCategory(selectedCategory)}
@@ -133,8 +154,10 @@ export function ProductImportDialog({ onSuccess }: ProductImportDialogProps) {
                 />
               </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg bg-muted/10">
-                <p className="text-muted-foreground text-sm">请先选择商品类型以获取专属的导入模板</p>
+              <div className="bg-muted/10 flex h-[300px] items-center justify-center rounded-lg border-2 border-dashed">
+                <p className="text-muted-foreground text-sm">
+                  请先选择商品类型以获取专属的导入模板
+                </p>
               </div>
             )}
           </div>

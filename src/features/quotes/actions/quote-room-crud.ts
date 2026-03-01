@@ -10,7 +10,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { quoteRooms, quoteItems, quotes } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { createQuoteRoomSchema, updateQuoteRoomSchema } from './schema';
 import { updateQuoteTotal } from './shared-helpers';
 /**
@@ -72,7 +72,7 @@ export const createRoomActionInternal = createSafeAction(
 
     console.log('[DEBUG] createRoomActionInternal 开始 revalidate');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     console.log('[DEBUG] createRoomActionInternal revalidate 完成并返回');
     logger.info('[quotes] 房间创建成功', { roomId: newRoom.id, quoteId: data.quoteId });
     return newRoom;
@@ -129,7 +129,7 @@ export const updateRoom = createSafeAction(updateQuoteRoomSchema, async (data, c
   });
 
   revalidatePath(`/quotes/${updated.quoteId}`);
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
   logger.info('[quotes] 房间更新成功', { roomId: updated.id });
   return updated;
 });
@@ -179,7 +179,7 @@ export const deleteRoom = createSafeAction(
     });
 
     revalidatePath(`/quotes/${existing.quoteId}`);
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     logger.info('[quotes] 房间删除成功', { roomId: data.id });
     return { success: true };
   }

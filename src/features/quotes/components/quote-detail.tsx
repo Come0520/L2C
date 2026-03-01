@@ -33,7 +33,6 @@ import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { cn } from '@/shared/lib/utils';
 import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
-import { PriceReferencePanel } from '@/features/pricing/components/price-reference-panel';
 const QuoteVersionCompare = dynamic(
   () => import('./quote-version-compare').then((mod) => mod.QuoteVersionCompare),
   { ssr: false, loading: () => <div className="bg-muted h-96 w-full animate-pulse rounded-lg" /> }
@@ -44,9 +43,7 @@ import { QuoteConfigDialog } from './quote-config-dialog';
 
 import { getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
 
-import { MeasureDataImportDialog } from './measure-data-import-dialog';
 import { QuoteBottomSummaryBar, CategoryBreakdown } from './quote-bottom-summary-bar';
-import { CustomerInfoDrawer } from './customer-info-drawer';
 import {
   QuoteCategoryTabs,
   QuoteCategory,
@@ -59,10 +56,7 @@ import { QuoteExportMenu } from './quote-export-menu';
 import Layout from 'lucide-react/dist/esm/icons/layout';
 import dynamic from 'next/dynamic';
 
-import { QuoteExcelImportDialog } from './quote-excel-import-dialog';
 import { QuoteExpirationBanner } from './quote-expiration-banner';
-import { SaveAsTemplateDialog } from './save-as-template-dialog';
-import { RejectQuoteDialog } from './reject-quote-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,7 +68,33 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 
-
+const MeasureDataImportDialog = dynamic(
+  () => import('./measure-data-import-dialog').then((mod) => mod.MeasureDataImportDialog),
+  { ssr: false }
+);
+const QuoteExcelImportDialog = dynamic(
+  () => import('./quote-excel-import-dialog').then((mod) => mod.QuoteExcelImportDialog),
+  { ssr: false }
+);
+const SaveAsTemplateDialog = dynamic(
+  () => import('./save-as-template-dialog').then((mod) => mod.SaveAsTemplateDialog),
+  { ssr: false }
+);
+const RejectQuoteDialog = dynamic(
+  () => import('./reject-quote-dialog').then((mod) => mod.RejectQuoteDialog),
+  { ssr: false }
+);
+const CustomerInfoDrawer = dynamic(
+  () => import('./customer-info-drawer').then((mod) => mod.CustomerInfoDrawer),
+  { ssr: false }
+);
+const PriceReferencePanel = dynamic(
+  () =>
+    import('@/features/pricing/components/price-reference-panel').then(
+      (mod) => mod.PriceReferencePanel
+    ),
+  { ssr: false }
+);
 
 type QuoteData = NonNullable<Awaited<ReturnType<typeof getQuote>>['data']>;
 type QuoteVersion = Awaited<ReturnType<typeof getQuoteVersions>>[number];
@@ -117,10 +137,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
   const riskResult = useMemo<RiskCheckResult | null>(() => {
     if (!quote) return null;
 
-    const allItems = [
-      ...(quote.items || []),
-      ...(quote.rooms || []).flatMap((r) => r.items || []),
-    ];
+    const allItems = [...(quote.items || []), ...(quote.rooms || []).flatMap((r) => r.items || [])];
 
     return checkDiscountRisk(
       allItems as Parameters<typeof checkDiscountRisk>[0],
@@ -129,8 +146,8 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
       {
         quoteConfig: {
           minDiscountRate: config?.discountControl?.minDiscountRate,
-          minProfitMargin: 0.15 // Default as it's not in QuoteConfigService yet
-        }
+          minProfitMargin: 0.15, // Default as it's not in QuoteConfigService yet
+        },
       }
     );
   }, [quote, config]);
@@ -195,46 +212,56 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     router.refresh();
   }, [router]);
 
-  const handleAddRoomEvent = useCallback((name: string) => {
-    toast.promise(
-      createRoom({ quoteId: quote.id, name }).then((res) => {
-        if (res.error) throw new Error(res.error);
-        return res.data;
-      }),
-      {
-        loading: '创建空间中...',
-        success: () => {
-          router.refresh();
-          return '空间创建成功';
-        },
-        error: (err) => err.message || '创建失败',
-      }
-    );
-  }, [quote.id, router]);
+  const handleAddRoomEvent = useCallback(
+    (name: string) => {
+      toast.promise(
+        createRoom({ quoteId: quote.id, name }).then((res) => {
+          if (res.error) throw new Error(res.error);
+          return res.data;
+        }),
+        {
+          loading: '创建空间中...',
+          success: () => {
+            router.refresh();
+            return '空间创建成功';
+          },
+          error: (err) => err.message || '创建失败',
+        }
+      );
+    },
+    [quote.id, router]
+  );
 
-  const allRawItems = useMemo(() => [
-    ...(quote.items || []),
-    ...(quote.rooms || []).flatMap((r) => r.items || []),
-  ], [quote.items, quote.rooms]);
+  const allRawItems = useMemo(
+    () => [...(quote.items || []), ...(quote.rooms || []).flatMap((r) => r.items || [])],
+    [quote.items, quote.rooms]
+  );
 
-  const summaryItems = useMemo(() => allRawItems.map((item) => ({
-    id: item.id,
-    category: item.category,
-    roomId: item.roomId,
-    parentId: item.parentId,
-    subtotal: item.subtotal,
-    productName: item.productName,
-    quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    unit: item.unit ?? undefined,
-    width: item.width ?? undefined,
-    height: item.height ?? undefined,
-    foldRatio: item.foldRatio ?? undefined,
-    processFee: item.processFee ?? undefined,
-    remark: item.remark ?? undefined,
-  })), [allRawItems]);
+  const summaryItems = useMemo(
+    () =>
+      allRawItems.map((item) => ({
+        id: item.id,
+        category: item.category,
+        roomId: item.roomId,
+        parentId: item.parentId,
+        subtotal: item.subtotal,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        unit: item.unit ?? undefined,
+        width: item.width ?? undefined,
+        height: item.height ?? undefined,
+        foldRatio: item.foldRatio ?? undefined,
+        processFee: item.processFee ?? undefined,
+        remark: item.remark ?? undefined,
+      })),
+    [allRawItems]
+  );
 
-  const summaryRooms = useMemo(() => (quote.rooms || []).map((r) => ({ id: r.id, name: r.name })), [quote.rooms]);
+  const summaryRooms = useMemo(
+    () => (quote.rooms || []).map((r) => ({ id: r.id, name: r.name })),
+    [quote.rooms]
+  );
 
   const categoryViewItems = useMemo(() => {
     if (activeCategory === 'SUMMARY') return [];
@@ -278,22 +305,31 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
   const handleSave = () => toast.success('Saved');
 
   return (
-    <div className="flex bg-muted/5 min-h-screen relative">
-      <div className={cn("flex-1 space-y-6 p-8 min-w-0 transition-all duration-300", selectedItemForPricing && "mr-80")}>
-
+    <div className="bg-muted/5 relative flex min-h-screen">
+      <div
+        className={cn(
+          'min-w-0 flex-1 space-y-6 p-8 transition-all duration-300',
+          selectedItemForPricing && 'mr-80'
+        )}
+      >
         {/* Risk Alert Bar */}
         {riskResult?.isRisk && (
-          <Alert variant={riskResult.hardStop ? "destructive" : "default"} className="mb-4 shadow-sm border-l-4">
+          <Alert
+            variant={riskResult.hardStop ? 'destructive' : 'default'}
+            className="mb-4 border-l-4 shadow-sm"
+          >
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="font-bold">风险提示</AlertTitle>
             <AlertDescription>
-              <ul className="list-disc list-inside space-y-1 mt-1 text-sm">
+              <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
                 {riskResult.reason.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}
               </ul>
               {riskResult.hardStop && (
-                <div className="mt-2 font-bold text-destructive-foreground">此报价单包含严重风险，必须修正后才能提交。</div>
+                <div className="text-destructive-foreground mt-2 font-bold">
+                  此报价单包含严重风险，必须修正后才能提交。
+                </div>
               )}
             </AlertDescription>
           </Alert>
@@ -388,22 +424,22 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               {quote.status === 'DRAFT' && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
-                    <Ruler className="h-4 w-4 mr-2" /> 导入测量
+                    <Ruler className="mr-2 h-4 w-4" /> 导入测量
                   </Button>
 
                   <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}>
-                    <Layout className="h-4 w-4 mr-2" /> 保存为模板
+                    <Layout className="mr-2 h-4 w-4" /> 保存为模板
                   </Button>
 
                   <Button
                     variant="default"
                     size="sm"
                     disabled={riskResult?.hardStop}
-                    title={riskResult?.hardStop ? "存在严重风险，无法提交" : "提交审核"}
-                    className={riskResult?.hardStop ? "opacity-50 cursor-not-allowed" : ""}
+                    title={riskResult?.hardStop ? '存在严重风险，无法提交' : '提交审核'}
+                    className={riskResult?.hardStop ? 'cursor-not-allowed opacity-50' : ''}
                     onClick={async () => {
                       if (riskResult?.hardStop) {
-                        toast.error("报价单存在严重风险，请修正后再提交");
+                        toast.error('报价单存在严重风险，请修正后再提交');
                         return;
                       }
                       toast.promise(
@@ -419,7 +455,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
                       );
                     }}
                   >
-                    <Send className="h-4 w-4 mr-2" /> 提交审核
+                    <Send className="mr-2 h-4 w-4" /> 提交审核
                   </Button>
                 </>
               )}
@@ -430,19 +466,11 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
 
               {quote.status === 'PENDING_APPROVAL' && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRejectDialogOpen(true)}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" /> 驳回
+                  <Button variant="outline" size="sm" onClick={() => setRejectDialogOpen(true)}>
+                    <XCircle className="mr-2 h-4 w-4" /> 驳回
                   </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setApproveDialogOpen(true)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" /> 批准
+                  <Button variant="default" size="sm" onClick={() => setApproveDialogOpen(true)}>
+                    <CheckCircle className="mr-2 h-4 w-4" /> 批准
                   </Button>
                 </>
               )}
@@ -466,7 +494,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
               </div>
 
               <Button variant="outline" size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" /> 保存
+                <Save className="mr-2 h-4 w-4" /> 保存
               </Button>
               <QuoteConfigDialog currentConfig={config} />
             </div>
@@ -580,10 +608,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
         <div className="pb-24">
           {activeCategory === 'SUMMARY' ? (
             // 汇总视图
-            <QuoteSummaryTab
-              items={summaryItems}
-              rooms={summaryRooms}
-            />
+            <QuoteSummaryTab items={summaryItems} rooms={summaryRooms} />
           ) : viewMode === 'category' ? (
             // 品类优先视图：当前品类下的所有空间
             <QuoteItemsTable
@@ -666,25 +691,23 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
       {/* Price Reference Panel Sidebar */}
       <div
         className={cn(
-          "fixed right-0 top-[64px] bottom-0 w-80 bg-background border-l shadow-xl z-20 transition-transform duration-300 ease-in-out transform",
-          selectedItemForPricing ? "translate-x-0" : "translate-x-full"
+          'bg-background fixed top-[64px] right-0 bottom-0 z-20 w-80 transform border-l shadow-xl transition-transform duration-300 ease-in-out',
+          selectedItemForPricing ? 'translate-x-0' : 'translate-x-full'
         )}
       >
-        <div className="p-4 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              💡 价格参考
-            </h3>
+        <div className="flex h-full flex-col p-4">
+          <div className="mb-4 flex shrink-0 items-center justify-between">
+            <h3 className="flex items-center gap-2 text-lg font-semibold">💡 价格参考</h3>
             <Button variant="ghost" size="icon" onClick={() => setSelectedItemForPricing(null)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex-1 overflow-y-auto -mx-4 px-4">
+          <div className="-mx-4 flex-1 overflow-y-auto px-4">
             <PriceReferencePanel
               productId={selectedItemForPricing?.productId || undefined}
               sku={selectedItemForPricing?.productSku || undefined} // Fallback to SKU if productId missing
               periodDays={180}
-              className="border-none shadow-none p-0"
+              className="border-none p-0 shadow-none"
             />
           </div>
         </div>

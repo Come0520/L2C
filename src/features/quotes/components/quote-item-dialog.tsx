@@ -399,7 +399,7 @@ export function QuoteItemDialog({
                     className={cn(
                       widthStatus.status === 'error' && 'border-red-500 focus-visible:ring-red-500',
                       widthStatus.status === 'warning' &&
-                      'border-yellow-500 focus-visible:ring-yellow-500'
+                        'border-yellow-500 focus-visible:ring-yellow-500'
                     )}
                     value={width}
                     onChange={(e) => setWidth(Number(e.target.value))}
@@ -430,9 +430,9 @@ export function QuoteItemDialog({
                     type="number"
                     className={cn(
                       heightStatus.status === 'error' &&
-                      'border-red-500 focus-visible:ring-red-500',
+                        'border-red-500 focus-visible:ring-red-500',
                       heightStatus.status === 'warning' &&
-                      'border-yellow-500 focus-visible:ring-yellow-500'
+                        'border-yellow-500 focus-visible:ring-yellow-500'
                     )}
                     value={height}
                     onChange={(e) => setHeight(Number(e.target.value))}

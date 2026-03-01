@@ -16,8 +16,6 @@ import { measureTasks, installTasks, customers } from '@/shared/api/schema';
 import { eq, and, or, desc } from 'drizzle-orm';
 import { getMiniprogramUser } from '../auth-utils';
 
-
-
 export async function GET(request: NextRequest) {
   try {
     const user = await getMiniprogramUser(request);
@@ -60,12 +58,15 @@ export async function GET(request: NextRequest) {
             eq(measureTasks.tenantId, user.tenantId),
             eq(measureTasks.assignedWorkerId, user.id),
             statusFilter
-              ? eq(measureTasks.status, statusFilter as 'PENDING' | 'PENDING_VISIT' | 'PENDING_CONFIRM')
+              ? eq(
+                  measureTasks.status,
+                  statusFilter as 'PENDING' | 'PENDING_VISIT' | 'PENDING_CONFIRM'
+                )
               : or(
-                eq(measureTasks.status, 'PENDING'),
-                eq(measureTasks.status, 'PENDING_VISIT'),
-                eq(measureTasks.status, 'PENDING_CONFIRM')
-              )
+                  eq(measureTasks.status, 'PENDING'),
+                  eq(measureTasks.status, 'PENDING_VISIT'),
+                  eq(measureTasks.status, 'PENDING_CONFIRM')
+                )
           )
         )
         .orderBy(desc(measureTasks.scheduledAt));
@@ -97,12 +98,15 @@ export async function GET(request: NextRequest) {
             eq(installTasks.tenantId, user.tenantId),
             eq(installTasks.installerId, user.id),
             statusFilter
-              ? eq(installTasks.status, statusFilter as 'PENDING_DISPATCH' | 'PENDING_VISIT' | 'PENDING_CONFIRM')
+              ? eq(
+                  installTasks.status,
+                  statusFilter as 'PENDING_DISPATCH' | 'PENDING_VISIT' | 'PENDING_CONFIRM'
+                )
               : or(
-                eq(installTasks.status, 'PENDING_DISPATCH'),
-                eq(installTasks.status, 'PENDING_VISIT'),
-                eq(installTasks.status, 'PENDING_CONFIRM')
-              )
+                  eq(installTasks.status, 'PENDING_DISPATCH'),
+                  eq(installTasks.status, 'PENDING_VISIT'),
+                  eq(installTasks.status, 'PENDING_CONFIRM')
+                )
           )
         )
         .orderBy(desc(installTasks.scheduledDate));

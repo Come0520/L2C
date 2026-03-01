@@ -1,13 +1,6 @@
 ﻿'use client';
 
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from '@/shared/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Plus, Eye, CheckCircle2, XCircle } from 'lucide-react';
@@ -20,129 +13,140 @@ import { reconciliations } from '@/shared/api/schema/finance';
 type Reconciliation = InferSelectModel<typeof reconciliations>;
 
 interface ReconciliationTableProps {
-    data: Reconciliation[];
+  data: Reconciliation[];
 }
 
 /**
  * 对账单核心数据表格 (Reconciliation Table)
- * 
+ *
  * 展示所有财务发起的对账记录列表，支持多维度的业务对象（客户、供应商、渠道、内部）。
  * 提供差异金额的直观高亮，以及确认、驳回及查看详情等快捷流转操作入口。
- * 
+ *
  * @param {ReconciliationTableProps} props - 需渲染的对账单数据数组
  * @returns {JSX.Element} 对账单表格组件
  */
 export function ReconciliationTable({ data }: ReconciliationTableProps) {
-    const getStatusVariant = (status: string): "success" | "info" | "warning" | "error" | "secondary" | "default" => {
-        const variants: Record<string, "success" | "info" | "warning" | "error" | "secondary" | "default"> = {
-            DRAFT: 'secondary',
-            PENDING: 'warning',
-            PENDING_CONFIRM: 'warning',
-            RECONCILING: 'warning',
-            MATCHED: 'info',
-            CONFIRMED: 'success',
-            COMPLETED: 'success',
-            REJECTED: 'error',
-            VOIDED: 'error',
-        };
-        return variants[status] || 'secondary';
+  const getStatusVariant = (
+    status: string
+  ): 'success' | 'info' | 'warning' | 'error' | 'secondary' | 'default' => {
+    const variants: Record<
+      string,
+      'success' | 'info' | 'warning' | 'error' | 'secondary' | 'default'
+    > = {
+      DRAFT: 'secondary',
+      PENDING: 'warning',
+      PENDING_CONFIRM: 'warning',
+      RECONCILING: 'warning',
+      MATCHED: 'info',
+      CONFIRMED: 'success',
+      COMPLETED: 'success',
+      REJECTED: 'error',
+      VOIDED: 'error',
     };
+    return variants[status] || 'secondary';
+  };
 
-    const getStatusLabel = (status: string) => {
-        const labels: Record<string, string> = {
-            DRAFT: '草稿',
-            PENDING: '待处理',
-            PENDING_CONFIRM: '待确认',
-            RECONCILING: '对账中',
-            MATCHED: '已匹配',
-            CONFIRMED: '已确认',
-            COMPLETED: '已完成',
-            REJECTED: '已驳回',
-            VOIDED: '已作废',
-        };
-        return labels[status] || status;
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      DRAFT: '草稿',
+      PENDING: '待处理',
+      PENDING_CONFIRM: '待确认',
+      RECONCILING: '对账中',
+      MATCHED: '已匹配',
+      CONFIRMED: '已确认',
+      COMPLETED: '已完成',
+      REJECTED: '已驳回',
+      VOIDED: '已作废',
     };
+    return labels[status] || status;
+  };
 
-    const getTypeLabel = (type: string) => {
-        const labels: Record<string, string> = {
-            CUSTOMER: '客户对账',
-            SUPPLIER: '供应商对账',
-            CHANNEL: '渠道对账',
-            INTERNAL: '内部对账',
-        };
-        return labels[type] || type;
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      CUSTOMER: '客户对账',
+      SUPPLIER: '供应商对账',
+      CHANNEL: '渠道对账',
+      INTERNAL: '内部对账',
     };
+    return labels[type] || type;
+  };
 
-    return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">对账单管理</h3>
-                <Button size="sm">
-                    <Plus className="w-4 h-4 mr-1" />
-                    新建对账单
-                </Button>
-            </div>
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">对账单管理</h3>
+        <Button size="sm">
+          <Plus className="mr-1 h-4 w-4" />
+          新建对账单
+        </Button>
+      </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>对账单号</TableHead>
-                            <TableHead>类型</TableHead>
-                            <TableHead>对账单位/人</TableHead>
-                            <TableHead>核对金额</TableHead>
-                            <TableHead>差异金额</TableHead>
-                            <TableHead>状态</TableHead>
-                            <TableHead>日期</TableHead>
-                            <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                    暂无对账记录
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            data.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.reconciliationNo}</TableCell>
-                                    <TableCell>{getTypeLabel(item.reconciliationType)}</TableCell>
-                                    <TableCell>{item.targetName}</TableCell>
-                                    <TableCell>¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
-                                    <TableCell className={parseFloat(item.unmatchedAmount) !== 0 ? 'text-red-500 font-semibold' : ''}>
-                                        ¥{parseFloat(item.unmatchedAmount).toLocaleString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={getStatusVariant(item.status)}>
-                                            {getStatusLabel(item.status)}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{item.createdAt ? format(new Date(item.createdAt), 'yyyy-MM-dd') : '-'}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" title="查看明细" asChild>
-                                            <Link href={`/finance/reconciliation/${item.id}`}>
-                                                <Eye className="w-4 h-4" />
-                                            </Link>
-                                        </Button>
-                                        {item.status === 'PENDING_CONFIRM' && (
-                                            <>
-                                                <Button variant="ghost" size="icon" className="text-green-600" title="确认">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-red-600" title="驳回">
-                                                    <XCircle className="w-4 h-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-        </div>
-    );
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>对账单号</TableHead>
+              <TableHead>类型</TableHead>
+              <TableHead>对账单位/人</TableHead>
+              <TableHead>核对金额</TableHead>
+              <TableHead>差异金额</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead>日期</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-muted-foreground py-8 text-center">
+                  暂无对账记录
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.reconciliationNo}</TableCell>
+                  <TableCell>{getTypeLabel(item.reconciliationType)}</TableCell>
+                  <TableCell>{item.targetName}</TableCell>
+                  <TableCell>¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
+                  <TableCell
+                    className={
+                      parseFloat(item.unmatchedAmount) !== 0 ? 'font-semibold text-red-500' : ''
+                    }
+                  >
+                    ¥{parseFloat(item.unmatchedAmount).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(item.status)}>
+                      {getStatusLabel(item.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {item.createdAt ? format(new Date(item.createdAt), 'yyyy-MM-dd') : '-'}
+                  </TableCell>
+                  <TableCell className="space-x-2 text-right">
+                    <Button variant="ghost" size="icon" title="查看明细" asChild>
+                      <Link href={`/finance/reconciliation/${item.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {item.status === 'PENDING_CONFIRM' && (
+                      <>
+                        <Button variant="ghost" size="icon" className="text-green-600" title="确认">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-red-600" title="驳回">
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }

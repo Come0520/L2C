@@ -18,7 +18,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // 频控：防暴力撞库邀请码 5 秒 2 次
-    if (!RateLimiter.allow(`accept_invite_${request.headers.get('x-forwarded-for') || 'anon'}`, 2, 5000)) {
+    if (
+      !RateLimiter.allow(
+        `accept_invite_${request.headers.get('x-forwarded-for') || 'anon'}`,
+        2,
+        5000
+      )
+    ) {
       return apiError('尝试次数过多，请稍后再试', 429);
     }
 
@@ -114,7 +120,7 @@ export async function POST(request: NextRequest) {
       action: 'ACCEPT_INVITE',
       userId: user!.id,
       tenantId: invite.tenantId,
-      details: { code, role: invite.role }
+      details: { code, role: invite.role },
     });
 
     return apiSuccess({

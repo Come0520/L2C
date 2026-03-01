@@ -12,7 +12,11 @@ export const metadata = {
   title: '库存查询',
 };
 
-async function InventoryData({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+async function InventoryData({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const page = Number(searchParams?.page) || 1;
   const pageSize = 20;
 

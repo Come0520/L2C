@@ -7,10 +7,10 @@ export { confirmOrderProduction, splitOrder } from './production';
 export { requestDelivery, updateLogistics } from './logistics';
 
 export {
-    confirmInstallationAction,
-    requestCustomerConfirmationAction,
-    customerAcceptAction,
-    customerRejectAction
+  confirmInstallationAction,
+  requestCustomerConfirmationAction,
+  customerAcceptAction,
+  customerRejectAction,
 } from './orders';
 
 // Re-export getOrderById as getOrderDetail for compatibility

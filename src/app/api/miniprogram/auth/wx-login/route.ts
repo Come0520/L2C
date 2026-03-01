@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         action: 'LOGIN',
         userId: existingUser.id,
         tenantId: existingUser.tenantId,
-        details: { method: 'WECHAT', openId }
+        details: { method: 'WECHAT', openId },
       });
 
       logger.info('[WxLogin] 已有用户微信登录成功', {

@@ -1,31 +1,34 @@
 export default function TasksSkeleton() {
-    return (
-        <div className="p-4 space-y-4 max-w-lg mx-auto bg-gray-50 dark:bg-zinc-950 min-h-screen">
-            <div className="flex justify-between items-center mb-6">
-                <div className="h-6 w-24 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse" />
+  return (
+    <div className="mx-auto min-h-screen max-w-lg space-y-4 bg-gray-50 p-4 dark:bg-zinc-950">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="h-6 w-24 animate-pulse rounded bg-gray-200 dark:bg-zinc-800" />
+      </div>
+
+      {[1, 2, 3, 4].map((item) => (
+        <div
+          key={item}
+          className="animate-pulse rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <div className="mb-4 flex items-start justify-between">
+            <div className="flex w-2/3 flex-col gap-2">
+              <div className="h-5 w-full rounded bg-gray-200 dark:bg-zinc-800" />
+              <div className="h-4 w-3/4 rounded bg-gray-100 dark:bg-zinc-800" />
             </div>
+            <div className="h-6 w-16 rounded-full bg-orange-100 dark:bg-orange-900/30" />
+          </div>
 
-            {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-5 shadow-sm animate-pulse">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex flex-col gap-2 w-2/3">
-                            <div className="h-5 w-full bg-gray-200 dark:bg-zinc-800 rounded" />
-                            <div className="h-4 w-3/4 bg-gray-100 dark:bg-zinc-800 rounded" />
-                        </div>
-                        <div className="h-6 w-16 bg-orange-100 dark:bg-orange-900/30 rounded-full" />
-                    </div>
+          <div className="mb-4 flex items-center gap-2">
+            <div className="h-4 w-4 rounded-full bg-gray-200 dark:bg-zinc-800" />
+            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-zinc-800" />
+          </div>
 
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="h-4 w-4 bg-gray-200 dark:bg-zinc-800 rounded-full" />
-                        <div className="h-4 w-32 bg-gray-200 dark:bg-zinc-800 rounded" />
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-gray-100 dark:border-zinc-800 pt-3">
-                        <div className="h-4 w-24 bg-gray-100 dark:bg-zinc-800 rounded" />
-                        <div className="h-9 w-24 bg-blue-100 dark:bg-blue-900/20 rounded-md" />
-                    </div>
-                </div>
-            ))}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-zinc-800">
+            <div className="h-4 w-24 rounded bg-gray-100 dark:bg-zinc-800" />
+            <div className="h-9 w-24 rounded-md bg-blue-100 dark:bg-blue-900/20" />
+          </div>
         </div>
-    );
+      ))}
+    </div>
+  );
 }

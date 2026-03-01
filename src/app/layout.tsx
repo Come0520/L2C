@@ -24,9 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
-        className={cn(
-          'selection:bg-primary/20 min-h-screen font-sans antialiased'
-        )}
+        className={cn('selection:bg-primary/20 min-h-screen font-sans antialiased')}
         suppressHydrationWarning
       >
         <div className="liquid-mesh-bg fixed inset-0 -z-20" />

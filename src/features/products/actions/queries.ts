@@ -21,7 +21,9 @@ import { getProductsSchema, getProductSchema } from '../schema';
  * @returns 分页产品列表，含关联供应商信息、总数与总页数
  * @throws 当用户缺少 `PRODUCTS.VIEW` 权限时抛出权限异常
  */
-const getProductsActionInternal = createSafeAction(getProductsSchema, async (params, { session }) => {
+const getProductsActionInternal = createSafeAction(
+  getProductsSchema,
+  async (params, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.VIEW);
 
     const tenantId = session.user!.tenantId;
@@ -29,67 +31,82 @@ const getProductsActionInternal = createSafeAction(getProductsSchema, async (par
     const conditions = [eq(products.tenantId, tenantId)];
 
     if (params.search) {
-        conditions.push(
-            sql`(${products.name} ILIKE ${`%${params.search}%`} OR ${products.sku} ILIKE ${`%${params.search}%`})`
-        );
+      conditions.push(
+        sql`(${products.name} ILIKE ${`%${params.search}%`} OR ${products.sku} ILIKE ${`%${params.search}%`})`
+      );
     }
 
     if (params.category && params.category !== 'ALL') {
-        conditions.push(eq(products.category, params.category as "CURTAIN" | "WALLPAPER" | "WALLCLOTH" | "MATTRESS" | "OTHER" | "CURTAIN_FABRIC" | "CURTAIN_SHEER" | "CURTAIN_TRACK" | "MOTOR" | "CURTAIN_ACCESSORY"));
+      conditions.push(
+        eq(
+          products.category,
+          params.category as
+            | 'CURTAIN'
+            | 'WALLPAPER'
+            | 'WALLCLOTH'
+            | 'MATTRESS'
+            | 'OTHER'
+            | 'CURTAIN_FABRIC'
+            | 'CURTAIN_SHEER'
+            | 'CURTAIN_TRACK'
+            | 'MOTOR'
+            | 'CURTAIN_ACCESSORY'
+        )
+      );
     }
 
     if (params.isActive !== undefined) {
-        conditions.push(eq(products.isActive, params.isActive));
+      conditions.push(eq(products.isActive, params.isActive));
     }
 
     const whereClause = and(...conditions);
 
     const dataPromise = db.query.products.findMany({
-        where: whereClause,
-        orderBy: [desc(products.createdAt)],
-        limit: params.pageSize,
-        offset: offset,
+      where: whereClause,
+      orderBy: [desc(products.createdAt)],
+      limit: params.pageSize,
+      offset: offset,
     });
 
     const totalPromise = db
-        .select({ count: sql<number>`count(*)` })
-        .from(products)
-        .where(whereClause);
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .where(whereClause);
 
     const [data, totalResult] = await Promise.all([dataPromise, totalPromise]);
 
     // 手动关联供应商信息 (批量查询解决 N+1 性能问题)
-    const supplierIds = Array.from(new Set(data.map(p => p.defaultSupplierId).filter(Boolean))) as string[];
+    const supplierIds = Array.from(
+      new Set(data.map((p) => p.defaultSupplierId).filter(Boolean))
+    ) as string[];
     const supplierMap = new Map();
 
     if (supplierIds.length > 0) {
-        const suppliersData = await db.query.suppliers.findMany({
-            where: and(
-                inArray(suppliers.id, supplierIds),
-                eq(suppliers.tenantId, tenantId)
-            )
-        });
-        suppliersData.forEach(s => supplierMap.set(s.id, s));
+      const suppliersData = await db.query.suppliers.findMany({
+        where: and(inArray(suppliers.id, supplierIds), eq(suppliers.tenantId, tenantId)),
+      });
+      suppliersData.forEach((s) => supplierMap.set(s.id, s));
     }
 
-    const productWithSuppliers = data.map(p => ({
-        ...p,
-        supplier: p.defaultSupplierId ? (supplierMap.get(p.defaultSupplierId) || null) : null
+    const productWithSuppliers = data.map((p) => ({
+      ...p,
+      supplier: p.defaultSupplierId ? supplierMap.get(p.defaultSupplierId) || null : null,
     }));
 
     const total = Number(totalResult[0]?.count || 0);
 
     return {
-        data: productWithSuppliers,
-        total,
-        page: params.page,
-        pageSize: params.pageSize,
-        totalPages: Math.ceil(total / params.pageSize),
+      data: productWithSuppliers,
+      total,
+      page: params.page,
+      pageSize: params.pageSize,
+      totalPages: Math.ceil(total / params.pageSize),
     };
-});
+  }
+);
 
 export async function getProducts(params: z.infer<typeof getProductsSchema>) {
-    return getProductsActionInternal(params);
+  return getProductsActionInternal(params);
 }
 
 /**
@@ -103,31 +120,30 @@ export async function getProducts(params: z.infer<typeof getProductsSchema>) {
  * @throws 当产品不存在时抛出 `产品不存在` 错误
  * @throws 当用户缺少 `PRODUCTS.VIEW` 权限时抛出权限异常
  */
-const getProductByIdActionInternal = createSafeAction(getProductSchema, async ({ id }, { session }) => {
+const getProductByIdActionInternal = createSafeAction(
+  getProductSchema,
+  async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.VIEW);
 
     const productPromise = db.query.products.findFirst({
-        where: and(
-            eq(products.tenantId, session.user!.tenantId),
-            eq(products.id, id)
-        )
+      where: and(eq(products.tenantId, session.user!.tenantId), eq(products.id, id)),
     });
 
     // 拉取该产品的审计操作日志
-    const logsPromise = db.select().from(auditLogs).where(
-        and(
-            eq(auditLogs.tableName, 'products'),
-            eq(auditLogs.recordId, id)
-        )
-    ).orderBy(desc(auditLogs.createdAt));
+    const logsPromise = db
+      .select()
+      .from(auditLogs)
+      .where(and(eq(auditLogs.tableName, 'products'), eq(auditLogs.recordId, id)))
+      .orderBy(desc(auditLogs.createdAt));
 
     const [product, logs] = await Promise.all([productPromise, logsPromise]);
 
     if (!product) throw new Error('产品不存在');
 
     return { ...product, logs };
-});
+  }
+);
 
 export async function getProductById(params: z.infer<typeof getProductSchema>) {
-    return getProductByIdActionInternal(params);
+  return getProductByIdActionInternal(params);
 }

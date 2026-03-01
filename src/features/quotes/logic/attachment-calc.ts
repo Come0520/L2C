@@ -4,27 +4,46 @@ import Decimal from 'decimal.js';
  * 附件项类型定义
  */
 export interface AttachmentItem {
-    type: string;
-    quantity: number;
-    unitPrice: number;
-    inheritParentPrice: boolean;
+  type: string;
+  quantity: number;
+  unitPrice: number;
+  inheritParentPrice: boolean;
 }
 
-export const calculateAttachmentAmount = (attachments: AttachmentItem[], parentUnitPrice: number): number => {
-    return attachments.reduce((sum, att) => {
-        const price = new Decimal(att.inheritParentPrice ? parentUnitPrice : (att.unitPrice || 0));
-        const quantity = new Decimal(att.quantity || 0);
-        return sum.plus(price.times(quantity));
-    }, new Decimal(0)).toNumber();
+export const calculateAttachmentAmount = (
+  attachments: AttachmentItem[],
+  parentUnitPrice: number
+): number => {
+  return attachments
+    .reduce((sum, att) => {
+      const price = new Decimal(att.inheritParentPrice ? parentUnitPrice : att.unitPrice || 0);
+      const quantity = new Decimal(att.quantity || 0);
+      return sum.plus(price.times(quantity));
+    }, new Decimal(0))
+    .toNumber();
 };
 
-export const generateWallpaperAttachmentRecommendations = (areaSqm: number, gluePrice: number = 0, primerPrice: number = 0) => {
-    return [
-        { type: 'GLUE', quantity: Math.ceil(areaSqm / 10), unitPrice: gluePrice, inheritParentPrice: false },
-        { type: 'PRIMER', quantity: Math.ceil(areaSqm / 15), unitPrice: primerPrice, inheritParentPrice: false }
-    ];
+export const generateWallpaperAttachmentRecommendations = (
+  areaSqm: number,
+  gluePrice: number = 0,
+  primerPrice: number = 0
+) => {
+  return [
+    {
+      type: 'GLUE',
+      quantity: Math.ceil(areaSqm / 10),
+      unitPrice: gluePrice,
+      inheritParentPrice: false,
+    },
+    {
+      type: 'PRIMER',
+      quantity: Math.ceil(areaSqm / 15),
+      unitPrice: primerPrice,
+      inheritParentPrice: false,
+    },
+  ];
 };
 
 export const calculateAttachments = () => {
-    return [];
+  return [];
 };

@@ -24,32 +24,35 @@ import { CacheService } from '@/shared/services/miniprogram/cache.service';
  * @returns 按预约日期、创建时间倒序排列的任务数组，含任务明细项
  */
 export async function GET(request: NextRequest) {
-    try {
-        const user = await getMiniprogramUser(request);
-        if (!user || !user.tenantId) {
-            return apiError('未授权', 401);
-        }
-
-        // 缓存策略：工程师频繁刷新任务列表，30 秒短缓存平衡实时性
-        const cacheKey = `miniprogram:engineer:tasks:${user.tenantId}:${user.id}`;
-
-        const list = await CacheService.getOrSet(cacheKey, async () => {
-            return db.query.installTasks.findMany({
-                where: and(
-                    eq(installTasks.tenantId, user.tenantId),
-                    eq(installTasks.installerId, user.id)
-                ),
-                orderBy: [desc(installTasks.scheduledDate), desc(installTasks.createdAt)],
-                with: {
-                    items: true
-                }
-            });
-        }, 30000); // 30 秒短期缓存
-
-        return apiSuccess(list);
-
-    } catch (error) {
-        logger.error('[Engineer] 获取任务列表失败', { route: 'engineer/tasks', error });
-        return apiError('获取任务列表失败', 500);
+  try {
+    const user = await getMiniprogramUser(request);
+    if (!user || !user.tenantId) {
+      return apiError('未授权', 401);
     }
+
+    // 缓存策略：工程师频繁刷新任务列表，30 秒短缓存平衡实时性
+    const cacheKey = `miniprogram:engineer:tasks:${user.tenantId}:${user.id}`;
+
+    const list = await CacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return db.query.installTasks.findMany({
+          where: and(
+            eq(installTasks.tenantId, user.tenantId),
+            eq(installTasks.installerId, user.id)
+          ),
+          orderBy: [desc(installTasks.scheduledDate), desc(installTasks.createdAt)],
+          with: {
+            items: true,
+          },
+        });
+      },
+      30000
+    ); // 30 秒短期缓存
+
+    return apiSuccess(list);
+  } catch (error) {
+    logger.error('[Engineer] 获取任务列表失败', { route: 'engineer/tasks', error });
+    return apiError('获取任务列表失败', 500);
+  }
 }

@@ -1,15 +1,15 @@
 'use client';
 
 import {
-    LeadSettingsConfig,
-    ChannelSettingsConfig,
-    PaymentSettingsConfig,
-    MeasureSettingsConfig,
-    OrderSettingsConfig,
-    ApprovalSettingsConfig,
-    NotificationSettingsConfig,
-    ReportSettingsConfig,
-    ShowroomSettingsConfig,
+  LeadSettingsConfig,
+  ChannelSettingsConfig,
+  PaymentSettingsConfig,
+  MeasureSettingsConfig,
+  OrderSettingsConfig,
+  ApprovalSettingsConfig,
+  NotificationSettingsConfig,
+  ReportSettingsConfig,
+  ShowroomSettingsConfig,
 } from './system-settings-index';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import Users from 'lucide-react/dist/esm/icons/users';
@@ -28,38 +28,38 @@ import LayoutTemplate from 'lucide-react/dist/esm/icons/layout-template';
  */
 
 const SETTING_TABS = [
-    { id: 'lead', label: '线索', icon: Users, component: LeadSettingsConfig },
-    { id: 'channel', label: '渠道', icon: Share2, component: ChannelSettingsConfig },
-    { id: 'payment', label: '收款', icon: CreditCard, component: PaymentSettingsConfig },
-    { id: 'measure', label: '测量', icon: Ruler, component: MeasureSettingsConfig },
-    { id: 'order', label: '订单', icon: Package, component: OrderSettingsConfig },
-    { id: 'approval', label: '审批流', icon: CheckCircle, component: ApprovalSettingsConfig },
-    { id: 'notification', label: '通知', icon: Bell, component: NotificationSettingsConfig },
-    { id: 'report', label: '报表', icon: BarChart3, component: ReportSettingsConfig },
-    { id: 'showroom', label: '云展厅', icon: LayoutTemplate, component: ShowroomSettingsConfig },
+  { id: 'lead', label: '线索', icon: Users, component: LeadSettingsConfig },
+  { id: 'channel', label: '渠道', icon: Share2, component: ChannelSettingsConfig },
+  { id: 'payment', label: '收款', icon: CreditCard, component: PaymentSettingsConfig },
+  { id: 'measure', label: '测量', icon: Ruler, component: MeasureSettingsConfig },
+  { id: 'order', label: '订单', icon: Package, component: OrderSettingsConfig },
+  { id: 'approval', label: '审批流', icon: CheckCircle, component: ApprovalSettingsConfig },
+  { id: 'notification', label: '通知', icon: Bell, component: NotificationSettingsConfig },
+  { id: 'report', label: '报表', icon: BarChart3, component: ReportSettingsConfig },
+  { id: 'showroom', label: '云展厅', icon: LayoutTemplate, component: ShowroomSettingsConfig },
 ];
 
 export function SystemSettingsPanel() {
-    return (
-        <Tabs defaultValue="lead" className="w-full">
-            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
-                {SETTING_TABS.map(tab => (
-                    <TabsTrigger
-                        key={tab.id}
-                        value={tab.id}
-                        className="flex flex-col items-center gap-1 py-2 text-xs"
-                    >
-                        <tab.icon className="h-4 w-4" />
-                        {tab.label}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
+  return (
+    <Tabs defaultValue="lead" className="w-full">
+      <TabsList className="grid h-auto w-full grid-cols-9 p-1">
+        {SETTING_TABS.map((tab) => (
+          <TabsTrigger
+            key={tab.id}
+            value={tab.id}
+            className="flex flex-col items-center gap-1 py-2 text-xs"
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
 
-            {SETTING_TABS.map(tab => (
-                <TabsContent key={tab.id} value={tab.id} className="mt-4">
-                    <tab.component />
-                </TabsContent>
-            ))}
-        </Tabs>
-    );
+      {SETTING_TABS.map((tab) => (
+        <TabsContent key={tab.id} value={tab.id} className="mt-4">
+          <tab.component />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
 }

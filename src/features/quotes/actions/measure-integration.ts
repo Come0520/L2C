@@ -1,10 +1,8 @@
 'use server';
 import { logger } from '@/shared/lib/logger';
-import { revalidateTag } from 'next/cache';
-
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
 import { quotes } from '@/shared/api/schema/quotes';
@@ -58,7 +56,7 @@ const createMeasureFromQuoteActionInternal = createSafeAction(
 
     revalidatePath('/measurements');
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
 
     logger.info('[quotes] 从报价单成功触发测量任务创建', {
       quoteId: data.quoteId,

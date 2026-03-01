@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { customerActivities, customers } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { activitySchema } from '../schemas';
 import { trimInput } from '@/shared/lib/utils';
@@ -160,7 +160,7 @@ export async function createActivity(
     }
 
     // 精确清除客户详情缓存
-    revalidateTag(`customer-detail-${data.customerId}`, {});
+    updateTag(`customer-detail-${data.customerId}`);
 
     const returnData: ActivityDTO = {
       id: newActivity['id']?.toString() || '',

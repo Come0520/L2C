@@ -24,10 +24,7 @@ export async function GET(request: NextRequest) {
       .select()
       .from(apLaborStatements)
       .where(
-        and(
-          eq(apLaborStatements.tenantId, user.tenantId),
-          eq(apLaborStatements.workerId, user.id)
-        )
+        and(eq(apLaborStatements.tenantId, user.tenantId), eq(apLaborStatements.workerId, user.id))
       )
       .orderBy(desc(apLaborStatements.createdAt));
 

@@ -91,22 +91,26 @@ const baseColumnMapping = {
 /**
  * 生成各品类的配置工厂
  */
-export function getImportConfigByCategory(category: string): Omit<ExcelImporterProps<BaseProductImportItem & Record<string, unknown>>, 'onImport'> {
+export function getImportConfigByCategory(
+  category: string
+): Omit<ExcelImporterProps<BaseProductImportItem & Record<string, unknown>>, 'onImport'> {
   const categoryLabel = CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || '其它商品';
 
   // ========== 窗帘类 (成品/面料) ==========
   if (category === 'CURTAIN' || category === 'CURTAIN_FABRIC') {
     // 扩展规格：幅宽、由于是动态属性，需在 preprocess 把它们压入 attributes，这里先直接拉平校验
-    const schema = baseProductImportSchema.extend({
-      fabricWidthType: z.enum(['WIDTH', 'HEIGHT']).optional().default('WIDTH'),
-      fabricWidthValue: z.string().optional(),
-      material: z.string().optional(),
-    }).transform(data => {
-      data.attributes.fabricWidthType = data.fabricWidthType;
-      data.attributes.fabricWidthValue = data.fabricWidthValue;
-      data.attributes.material = data.material;
-      return data;
-    });
+    const schema = baseProductImportSchema
+      .extend({
+        fabricWidthType: z.enum(['WIDTH', 'HEIGHT']).optional().default('WIDTH'),
+        fabricWidthValue: z.string().optional(),
+        material: z.string().optional(),
+      })
+      .transform((data) => {
+        data.attributes.fabricWidthType = data.fabricWidthType;
+        data.attributes.fabricWidthValue = data.fabricWidthValue;
+        data.attributes.material = data.material;
+        return data;
+      });
 
     return {
       title: `批量导入: ${String(categoryLabel)}`,
@@ -114,8 +118,8 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
       schema,
       columnMapping: {
         ...baseColumnMapping,
-        '计价单位': 'unit',
-        '预估加工费': 'processingCost',
+        计价单位: 'unit',
+        预估加工费: 'processingCost',
         '损耗率(0-1)': 'lossRate',
         '风格/材质': 'material',
         '幅宽类型(WIDTH/HEIGHT)': 'fabricWidthType',
@@ -139,7 +143,7 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
         fabricWidthType: 'WIDTH',
         fabricWidthValue: '280',
         description: '一级遮光面料，垂感好',
-      }
+      },
     };
   }
 
@@ -147,16 +151,18 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
   if (category === 'WALLPAPER' || category === 'WALLCLOTH') {
     const isPaper = category === 'WALLPAPER';
 
-    const schema = baseProductImportSchema.extend({
-      fabricWidthValue: z.string().optional(), // 墙布
-      wallpaperWidth: z.string().optional(), // 墙纸
-      rollLength: z.string().optional(),     // 墙纸
-    }).transform(data => {
-      if (data.fabricWidthValue) data.attributes.fabricWidthValue = data.fabricWidthValue;
-      if (data.wallpaperWidth) data.attributes.wallpaperWidth = data.wallpaperWidth;
-      if (data.rollLength) data.attributes.rollLength = data.rollLength;
-      return data;
-    });
+    const schema = baseProductImportSchema
+      .extend({
+        fabricWidthValue: z.string().optional(), // 墙布
+        wallpaperWidth: z.string().optional(), // 墙纸
+        rollLength: z.string().optional(), // 墙纸
+      })
+      .transform((data) => {
+        if (data.fabricWidthValue) data.attributes.fabricWidthValue = data.fabricWidthValue;
+        if (data.wallpaperWidth) data.attributes.wallpaperWidth = data.wallpaperWidth;
+        if (data.rollLength) data.attributes.rollLength = data.rollLength;
+        return data;
+      });
 
     const categoryMapping: Record<string, string> = isPaper
       ? { '墙纸宽度(cm)': 'wallpaperWidth', '卷长(米)': 'rollLength' }
@@ -168,7 +174,7 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
       schema,
       columnMapping: {
         ...baseColumnMapping,
-        '计价单位': 'unit',
+        计价单位: 'unit',
         '施工/铺贴费': 'processingCost',
         '损耗率(0-1)': 'lossRate',
         ...categoryMapping,
@@ -183,7 +189,7 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
         purchasePrice: 150,
         logisticsCost: 20,
         processingCost: 30, // 一卷的施工大概30~50
-        lossRate: 0.1,      // 墙纸墙布损耗相对大一点
+        lossRate: 0.1, // 墙纸墙布损耗相对大一点
         isStockable: '否',
         isToBEnabled: '是',
         isToCEnabled: '是',
@@ -191,7 +197,7 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
         rollLength: isPaper ? '10' : undefined,
         fabricWidthValue: isPaper ? undefined : '280',
         description: '环保透气，易打理',
-      }
+      },
     };
   }
 
@@ -202,7 +208,7 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
     schema: baseProductImportSchema,
     columnMapping: {
       ...baseColumnMapping,
-      '计价单位': 'unit',
+      计价单位: 'unit',
       '损耗率(0-1)': 'lossRate',
     },
     exampleData: {
@@ -220,6 +226,6 @@ export function getImportConfigByCategory(category: string): Omit<ExcelImporterP
       isToBEnabled: '是',
       isToCEnabled: '是',
       description: '通用型加厚铝合金滑轨',
-    }
+    },
   };
 }

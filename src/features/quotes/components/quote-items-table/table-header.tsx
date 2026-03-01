@@ -30,7 +30,9 @@ export function QuoteTableHeader({
         {/* 第3列：图片（独立列） */}
         {showImage && <TableHead className="h-9 w-[80px] text-center">图片</TableHead>}
         {/* 第4列：尺寸 */}
-        {(showWidth || showHeight) && <TableHead className="h-9 w-[15%] text-center">尺寸 (cm)</TableHead>}
+        {(showWidth || showHeight) && (
+          <TableHead className="h-9 w-[15%] text-center">尺寸 (cm)</TableHead>
+        )}
         {/* 折叠列 */}
         {showFold && <TableHead className="h-9 w-[8%] text-center">倍数</TableHead>}
         {showProcessFee && <TableHead className="h-9 w-[10%] text-center">加工费</TableHead>}

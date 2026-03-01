@@ -48,7 +48,7 @@ export const FoldRatioCell = memo(function FoldRatioCell({
       <Input
         disabled={readOnly}
         type="number"
-        className="h-8 w-14 bg-transparent/50 px-1 text-right ml-auto"
+        className="ml-auto h-8 w-14 bg-transparent/50 px-1 text-right"
         defaultValue={Number(item.foldRatio) || ''}
         placeholder="倍数"
         onBlur={handleBlur}
@@ -79,7 +79,7 @@ export const ProcessFeeCell = memo(function ProcessFeeCell({
       <Input
         disabled={readOnly}
         type="number"
-        className="h-8 w-16 bg-transparent/50 px-1 text-right ml-auto"
+        className="ml-auto h-8 w-16 bg-transparent/50 px-1 text-right"
         defaultValue={Number(item.processFee) || ''}
         placeholder="工费"
         onBlur={handleBlur}
@@ -103,7 +103,7 @@ export const UnitCell = memo(function UnitCell({ item, readOnly, onUpdate }: Uni
     <TableCell className="p-2">
       <Input
         disabled={readOnly}
-        className="h-8 w-12 mx-auto bg-transparent/50 px-1 text-center text-xs"
+        className="mx-auto h-8 w-12 bg-transparent/50 px-1 text-center text-xs"
         defaultValue={item.unit || '-'}
         placeholder="单位"
         onBlur={handleBlur}
@@ -136,7 +136,7 @@ export const UnitPriceCell = memo(function UnitPriceCell({
         disabled={readOnly}
         type="number"
         onFocus={(e) => e.target.select()}
-        className="h-8 w-20 bg-transparent/50 px-1 text-right ml-auto"
+        className="ml-auto h-8 w-20 bg-transparent/50 px-1 text-right"
         defaultValue={Number(item.unitPrice)}
         onBlur={handleBlur}
       />
@@ -152,7 +152,10 @@ interface AmountCellProps {
 
 export const AmountCell = memo(function AmountCell({ item, rowSpan, className }: AmountCellProps) {
   return (
-    <TableCell rowSpan={rowSpan} className={cn("p-2 text-right font-medium align-middle", className)}>
+    <TableCell
+      rowSpan={rowSpan}
+      className={cn('p-2 text-right align-middle font-medium', className)}
+    >
       <span className="font-mono text-slate-700 dark:text-slate-100">
         ¥{Number(item.subtotal).toFixed(2)}
       </span>

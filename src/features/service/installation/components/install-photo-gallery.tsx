@@ -8,95 +8,101 @@ import Image from 'next/image';
  * 现场照片接口定义
  */
 interface Photo {
-    id: string;
-    /** 照片类型：施工前、施工后、细节图 */
-    photoType: 'BEFORE' | 'AFTER' | 'DETAIL';
-    /** OSS 访问地址 */
-    photoUrl: string;
-    /** 照片备注 */
-    remark?: string | null;
-    /** 上传时间 */
-    createdAt: Date | null;
+  id: string;
+  /** 照片类型：施工前、施工后、细节图 */
+  photoType: 'BEFORE' | 'AFTER' | 'DETAIL';
+  /** OSS 访问地址 */
+  photoUrl: string;
+  /** 照片备注 */
+  remark?: string | null;
+  /** 上传时间 */
+  createdAt: Date | null;
 }
 
 /**
  * 现场照片墙组件属性
  */
 interface InstallPhotoGalleryProps {
-    /** 照片列表 */
-    photos: Photo[];
-    /** 是否允许上传（预留） */
-    allowUpload: boolean;
+  /** 照片列表 */
+  photos: Photo[];
+  /** 是否允许上传（预留） */
+  allowUpload: boolean;
 }
 
 const PHOTO_TYPE_MAP = {
-    BEFORE: '施工前',
-    AFTER: '施工后',
-    DETAIL: '细节图',
+  BEFORE: '施工前',
+  AFTER: '施工后',
+  DETAIL: '细节图',
 };
 
 /**
  * 现场照片墙组件
- * 
+ *
  * 分类展示现场施工前、施工后及细节照片。
  */
-export function InstallPhotoGallery({ photos, allowUpload: _allowUpload }: InstallPhotoGalleryProps) {
-    const renderPhotoSection = (type: keyof typeof PHOTO_TYPE_MAP) => {
-        const filteredPhotos = photos.filter(p => p.photoType === type);
-
-        return (
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                        {PHOTO_TYPE_MAP[type]}
-                        <span className="text-muted-foreground text-xs font-normal">({filteredPhotos.length})</span>
-                    </h4>
-                    {/* Add Upload Button Here if allowUpload */}
-                </div>
-
-                {filteredPhotos.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {filteredPhotos.map(photo => (
-                            <div key={photo.id} className="group relative aspect-square rounded-md overflow-hidden bg-secondary/20 border">
-                                <Image
-                                    src={photo.photoUrl}
-                                    alt={photo.remark || type}
-                                    fill
-                                    className="object-cover transition-transform hover:scale-105"
-                                />
-                                {photo.remark && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                                        {photo.remark}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="h-20 flex items-center justify-center border border-dashed rounded bg-secondary/10 text-muted-foreground text-sm">
-                        暂无照片
-                    </div>
-                )}
-            </div>
-        );
-    };
+export function InstallPhotoGallery({
+  photos,
+  allowUpload: _allowUpload,
+}: InstallPhotoGalleryProps) {
+  const renderPhotoSection = (type: keyof typeof PHOTO_TYPE_MAP) => {
+    const filteredPhotos = photos.filter((p) => p.photoType === type);
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    现场照片
-                </CardTitle>
-                <CardDescription>
-                    共 {photos.length} 张照片
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {renderPhotoSection('BEFORE')}
-                {renderPhotoSection('AFTER')}
-                {renderPhotoSection('DETAIL')}
-            </CardContent>
-        </Card>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="flex items-center gap-2 text-sm font-medium">
+            {PHOTO_TYPE_MAP[type]}
+            <span className="text-muted-foreground text-xs font-normal">
+              ({filteredPhotos.length})
+            </span>
+          </h4>
+          {/* Add Upload Button Here if allowUpload */}
+        </div>
+
+        {filteredPhotos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {filteredPhotos.map((photo) => (
+              <div
+                key={photo.id}
+                className="group bg-secondary/20 relative aspect-square overflow-hidden rounded-md border"
+              >
+                <Image
+                  src={photo.photoUrl}
+                  alt={photo.remark || type}
+                  fill
+                  className="object-cover transition-transform hover:scale-105"
+                />
+                {photo.remark && (
+                  <div className="absolute right-0 bottom-0 left-0 truncate bg-black/60 p-1 text-xs text-white">
+                    {photo.remark}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-secondary/10 text-muted-foreground flex h-20 items-center justify-center rounded border border-dashed text-sm">
+            暂无照片
+          </div>
+        )}
+      </div>
     );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ImageIcon className="h-4 w-4" />
+          现场照片
+        </CardTitle>
+        <CardDescription>共 {photos.length} 张照片</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {renderPhotoSection('BEFORE')}
+        {renderPhotoSection('AFTER')}
+        {renderPhotoSection('DETAIL')}
+      </CardContent>
+    </Card>
+  );
 }

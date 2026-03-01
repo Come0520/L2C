@@ -128,9 +128,9 @@ export function TeamTargetWidget() {
 export function TeamLeaderboardWidget() {
   const [leaders, setLeaders] = useState<
     | {
-      name: string;
-      amount: number;
-    }[]
+        name: string;
+        amount: number;
+      }[]
     | null
   >(null);
   const [loading, setLoading] = useState(true);

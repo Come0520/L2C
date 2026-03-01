@@ -12,274 +12,273 @@ import { logger } from '@/shared/lib/logger';
 
 /**
  * 获取已设置渠道底价的商品列表
- * 
+ *
  * @returns {Promise<{success: boolean, data: Array<{id: string, name: string, sku: string, channelPrice: string | null}>, error?: string}>} 返回包含数据的商品列表响应
  */
 export async function getChannelProducts() {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权', data: [] };
-    }
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, error: '未授权', data: [] };
+  }
 
-    logger.info('[channels] Fetching channel products', { userId: session.user.id });
+  logger.info('[channels] Fetching channel products', { userId: session.user.id });
 
-    // P2 Fix: Add permission check
-    try {
-        await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
-    } catch {
-        return { success: false, error: '无权限查看渠道商品', data: [] };
-    }
+  // P2 Fix: Add permission check
+  try {
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+  } catch {
+    return { success: false, error: '无权限查看渠道商品', data: [] };
+  }
 
-    const data = await db.query.products.findMany({
-        where: and(
-            eq(products.tenantId, session.user.tenantId),
-            eq(products.isActive, true),
-            isNotNull(products.channelPrice),
-            gt(products.channelPrice, '0')
-        ),
-        columns: {
-            id: true,
-            sku: true,
-            name: true,
-            category: true,
-            retailPrice: true,
-            channelPrice: true,
-            channelPriceMode: true,
-            channelDiscountRate: true,
-        },
-        orderBy: [desc(products.updatedAt)],
-    });
+  const data = await db.query.products.findMany({
+    where: and(
+      eq(products.tenantId, session.user.tenantId),
+      eq(products.isActive, true),
+      isNotNull(products.channelPrice),
+      gt(products.channelPrice, '0')
+    ),
+    columns: {
+      id: true,
+      sku: true,
+      name: true,
+      category: true,
+      retailPrice: true,
+      channelPrice: true,
+      channelPriceMode: true,
+      channelDiscountRate: true,
+    },
+    orderBy: [desc(products.updatedAt)],
+  });
 
-    return { success: true, data };
+  return { success: true, data };
 }
 
 /**
  * 获取所有可用商品（用于添加到渠道选品池）
- * 
+ *
  * 获取当前租户下活跃的且没有特定渠道价格约束的通用商品。
- * 
+ *
  * @returns {Promise<{success: boolean, data: Array<{id: string, name: string, sku: string, channelPrice: string | null}>, error?: string}>} 结构包含通用商品池的内容
  */
 export async function getAvailableProducts() {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权', data: [] };
-    }
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, error: '未授权', data: [] };
+  }
 
-    // P2 Fix: Add permission check
-    try {
-        await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
-    } catch {
-        return { success: false, error: '无权限查看可用商品', data: [] };
-    }
+  // P2 Fix: Add permission check
+  try {
+    await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+  } catch {
+    return { success: false, error: '无权限查看可用商品', data: [] };
+  }
 
-    const data = await db.query.products.findMany({
-        where: and(
-            eq(products.tenantId, session.user.tenantId),
-            eq(products.isActive, true)
-        ),
-        columns: {
-            id: true,
-            sku: true,
-            name: true,
-            category: true,
-            retailPrice: true,
-            channelPrice: true,
-        },
-        orderBy: [desc(products.updatedAt)],
-    });
+  const data = await db.query.products.findMany({
+    where: and(eq(products.tenantId, session.user.tenantId), eq(products.isActive, true)),
+    columns: {
+      id: true,
+      sku: true,
+      name: true,
+      category: true,
+      retailPrice: true,
+      channelPrice: true,
+    },
+    orderBy: [desc(products.updatedAt)],
+  });
 
-    logger.info('[channels] Fetching available products for channel pool', { userId: session.user.id });
+  logger.info('[channels] Fetching available products for channel pool', {
+    userId: session.user.id,
+  });
 
-    return { success: true, data };
+  return { success: true, data };
 }
 
 const updateChannelPriceSchema = z.object({
-    productId: z.string().uuid(),
-    channelPrice: z.number().min(0),
+  productId: z.string().uuid(),
+  channelPrice: z.number().min(0),
 });
 
 /**
  * 更新商品渠道底价
- * 
+ *
  * 依照给定的商品ID，为其更新底价并产生审计流水。
- * 
+ *
  * @param {z.infer<typeof updateChannelPriceSchema>} input - 待更新底价的商品信息
  * @returns {Promise<{success: boolean, error?: string}>} 更新事务的结果
  */
 export async function updateProductChannelPrice(input: z.infer<typeof updateChannelPriceSchema>) {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权' };
-    }
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, error: '未授权' };
+  }
 
-    try {
-        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-    } catch {
-        return { success: false, error: '无权限执行此操作' };
-    }
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, error: '无权限执行此操作' };
+  }
 
-    const validated = updateChannelPriceSchema.safeParse(input);
-    if (!validated.success) {
-        return { success: false, error: validated.error.message };
-    }
+  const validated = updateChannelPriceSchema.safeParse(input);
+  if (!validated.success) {
+    return { success: false, error: validated.error.message };
+  }
 
-    // 验证商品归属
-    const product = await db.query.products.findFirst({
-        where: and(
-            eq(products.id, validated.data.productId),
-            eq(products.tenantId, session.user.tenantId)
-        ),
+  // 验证商品归属
+  const product = await db.query.products.findFirst({
+    where: and(
+      eq(products.id, validated.data.productId),
+      eq(products.tenantId, session.user.tenantId)
+    ),
+  });
+
+  if (!product) {
+    return { success: false, error: '商品不存在' };
+  }
+
+  const [updated] = await db
+    .update(products)
+    .set({
+      channelPrice: validated.data.channelPrice.toString(),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(products.id, validated.data.productId), eq(products.tenantId, session.user.tenantId))
+    )
+    .returning();
+
+  // P1 Fix: Audit log
+  if (updated) {
+    await AuditService.log(db, {
+      tableName: 'products',
+      recordId: validated.data.productId,
+      action: 'UPDATE',
+      userId: session.user.id,
+      tenantId: session.user.tenantId,
+      newValues: { channelPrice: validated.data.channelPrice },
+      details: { reason: 'Update channel price' },
     });
+  }
 
-    if (!product) {
-        return { success: false, error: '商品不存在' };
-    }
-
-    const [updated] = await db.update(products)
-        .set({
-            channelPrice: validated.data.channelPrice.toString(),
-            updatedAt: new Date(),
-        })
-        .where(and(
-            eq(products.id, validated.data.productId),
-            eq(products.tenantId, session.user.tenantId)
-        ))
-        .returning();
-
-    // P1 Fix: Audit log
-    if (updated) {
-        await AuditService.log(db, {
-            tableName: 'products',
-            recordId: validated.data.productId,
-            action: 'UPDATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: { channelPrice: validated.data.channelPrice },
-            details: { reason: 'Update channel price' }
-        });
-    }
-
-    revalidatePath('/settings/channels/products');
-    return { success: true };
+  revalidatePath('/settings/channels/products');
+  return { success: true };
 }
 
 const batchUpdateSchema = z.object({
-    updates: z.array(z.object({
+  updates: z
+    .array(
+      z.object({
         productId: z.string().uuid(),
         channelPrice: z.number().min(0),
-    })).max(100, '批量更新数量不能超过100条'), // P2 Fix: Batch size limit
+      })
+    )
+    .max(100, '批量更新数量不能超过100条'), // P2 Fix: Batch size limit
 });
 
 /**
  * 批量更新商品渠道底价
- * 
+ *
  * 通过事务来原子化更新数组中批量的商品底价配置记录。
- * 
+ *
  * @param {z.infer<typeof batchUpdateSchema>} input - 包含多个更新实体的对象
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function batchUpdateChannelPrices(input: z.infer<typeof batchUpdateSchema>) {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权' };
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, error: '未授权' };
+  }
+
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, error: '无权限执行此操作' };
+  }
+
+  // The max(100) validation is now handled by the schema
+  const validated = batchUpdateSchema.safeParse(input);
+  if (!validated.success) {
+    return { success: false, error: validated.error.message };
+  }
+
+  // 批量更新
+  await db.transaction(async (tx) => {
+    for (const update of validated.data.updates) {
+      const [updated] = await tx
+        .update(products)
+        .set({
+          channelPrice: update.channelPrice.toString(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(products.id, update.productId), eq(products.tenantId, session.user.tenantId)))
+        .returning();
+
+      // P1 Fix: Audit log for each update in batch
+      if (updated) {
+        await AuditService.log(tx, {
+          tableName: 'products',
+          recordId: update.productId,
+          action: 'UPDATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: { channelPrice: update.channelPrice },
+          details: { reason: 'Batch update channel price' },
+        });
+      }
     }
+  });
 
-    try {
-        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-    } catch {
-        return { success: false, error: '无权限执行此操作' };
-    }
-
-    // The max(100) validation is now handled by the schema
-    const validated = batchUpdateSchema.safeParse(input);
-    if (!validated.success) {
-        return { success: false, error: validated.error.message };
-    }
-
-    // 批量更新
-    await db.transaction(async (tx) => {
-        for (const update of validated.data.updates) {
-            const [updated] = await tx.update(products)
-                .set({
-                    channelPrice: update.channelPrice.toString(),
-                    updatedAt: new Date(),
-                })
-                .where(and(
-                    eq(products.id, update.productId),
-                    eq(products.tenantId, session.user.tenantId)
-                ))
-                .returning();
-
-            // P1 Fix: Audit log for each update in batch
-            if (updated) {
-                await AuditService.log(tx, {
-                    tableName: 'products',
-                    recordId: update.productId,
-                    action: 'UPDATE',
-                    userId: session.user.id,
-                    tenantId: session.user.tenantId,
-                    newValues: { channelPrice: update.channelPrice },
-                    details: { reason: 'Batch update channel price' }
-                });
-            }
-        }
-    });
-
-    revalidatePath('/settings/channels/products');
-    return { success: true };
+  revalidatePath('/settings/channels/products');
+  return { success: true };
 }
 
 /**
  * 移除商品的渠道底价（从选品池移除）
- * 
+ *
  * 将该商品的 channelPrice 字段重新置空且登记至渠道产品审计。
- * 
+ *
  * @param {string} productId - 商品ID
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function removeFromChannelPool(productId: string) {
-    const session = await auth();
-    if (!session?.user?.tenantId) {
-        return { success: false, error: '未授权' };
-    }
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return { success: false, error: '未授权' };
+  }
 
-    try {
-        await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
-    } catch {
-        return { success: false, error: '无权限执行此操作' };
-    }
+  try {
+    await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+  } catch {
+    return { success: false, error: '无权限执行此操作' };
+  }
 
-    // P2 Fix: UUID 校验
-    const parseResult = z.string().uuid().safeParse(productId);
-    if (!parseResult.success) {
-        return { success: false, error: '无效的商品ID' };
-    }
+  // P2 Fix: UUID 校验
+  const parseResult = z.string().uuid().safeParse(productId);
+  if (!parseResult.success) {
+    return { success: false, error: '无效的商品ID' };
+  }
 
-    const [updated] = await db.update(products)
-        .set({
-            channelPrice: null,
-            updatedAt: new Date(),
-        })
-        .where(and(
-            eq(products.id, productId),
-            eq(products.tenantId, session.user.tenantId)
-        ))
-        .returning();
+  const [updated] = await db
+    .update(products)
+    .set({
+      channelPrice: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(products.id, productId), eq(products.tenantId, session.user.tenantId)))
+    .returning();
 
-    // P1 Fix: Audit log
-    if (updated) {
-        await AuditService.log(db, {
-            tableName: 'products',
-            recordId: productId,
-            action: 'UPDATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: { channelPrice: null },
-            details: { reason: 'Remove from channel pool' }
-        });
-    }
+  // P1 Fix: Audit log
+  if (updated) {
+    await AuditService.log(db, {
+      tableName: 'products',
+      recordId: productId,
+      action: 'UPDATE',
+      userId: session.user.id,
+      tenantId: session.user.tenantId,
+      newValues: { channelPrice: null },
+      details: { reason: 'Remove from channel pool' },
+    });
+  }
 
-    revalidatePath('/settings/channels/products');
-    return { success: true };
+  revalidatePath('/settings/channels/products');
+  return { success: true };
 }

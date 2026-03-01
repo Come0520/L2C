@@ -47,6 +47,14 @@ const contributors: Contributor[] = [
     avatarColor: '#14B8A6',
     verified: true,
   },
+  {
+    id: 'c4',
+    name: '安琪',
+    role: '质量卫士',
+    contribution: '首发报告报价单添加商品后总价不更新的缓存 Bug，推动全站缓存策略统一重构。',
+    avatarColor: '#EC4899',
+    verified: true,
+  },
 ];
 
 /** 获取姓名首字（用于头像显示） */
@@ -56,7 +64,16 @@ function getInitial(name: string): string {
 
 /** 随机生成一个头像颜色 */
 function getRandomColor(str: string) {
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E', '#8B5CF6'];
+  const colors = [
+    '#3B82F6',
+    '#10B981',
+    '#F59E0B',
+    '#8B5CF6',
+    '#EC4899',
+    '#14B8A6',
+    '#F43F5E',
+    '#8B5CF6',
+  ];
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -65,8 +82,17 @@ function getRandomColor(str: string) {
 }
 
 /** 微信风格头像组件 */
-function WechatAvatar({ name, color, size = 'md' }: { name: string; color?: string; size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClass = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
+function WechatAvatar({
+  name,
+  color,
+  size = 'md',
+}: {
+  name: string;
+  color?: string;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClass =
+    size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
   const bgColor = color || getRandomColor(name);
   return (
     <div
@@ -110,29 +136,34 @@ function MessageBubble({
 
       <div className={`flex max-w-[78%] flex-col gap-1 ${isRight ? 'items-end' : 'items-start'}`}>
         {/* 发件人信息 */}
-        <div className={`flex items-center gap-1.5 text-xs text-slate-400 ${isRight ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center gap-1.5 text-xs text-slate-400 ${isRight ? 'flex-row-reverse' : ''}`}
+        >
           <span className="font-medium text-slate-600">{author}</span>
           {verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-500" />}
           {(role || company) && <span className="text-slate-400">·</span>}
           <span>
-            {role}{role && company ? ' · ' : ''}{company}
+            {role}
+            {role && company ? ' · ' : ''}
+            {company}
           </span>
         </div>
 
         {/* 气泡主体 */}
         <div className="relative">
           {!isRight && (
-            <div className="absolute -left-1.5 bottom-3 h-0 w-0 border-t-[6px] border-r-8 border-t-transparent border-r-white" />
+            <div className="absolute bottom-3 -left-1.5 h-0 w-0 border-t-[6px] border-r-8 border-t-transparent border-r-white" />
           )}
           {isRight && (
             <div className="absolute -right-1.5 bottom-3 h-0 w-0 border-t-[6px] border-l-8 border-t-transparent border-l-blue-500" />
           )}
 
           <div
-            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isRight
-              ? 'rounded-br-sm bg-blue-500 text-white'
-              : 'rounded-bl-sm bg-white text-slate-700 ring-1 ring-slate-100'
-              }`}
+            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+              isRight
+                ? 'rounded-br-sm bg-blue-500 text-white'
+                : 'rounded-bl-sm bg-white text-slate-700 ring-1 ring-slate-100'
+            }`}
           >
             {content}
           </div>
@@ -152,7 +183,18 @@ function MessageBubble({
 }
 
 /** 提交表单组件 */
-function MessageForm({ onSubmit, onCancel }: { onSubmit: (data: { content: string; authorName: string; authorRole?: string; authorCompany?: string; }) => Promise<void>; onCancel: () => void }) {
+function MessageForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (data: {
+    content: string;
+    authorName: string;
+    authorRole?: string;
+    authorCompany?: string;
+  }) => Promise<void>;
+  onCancel: () => void;
+}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -210,10 +252,20 @@ function MessageForm({ onSubmit, onCancel }: { onSubmit: (data: { content: strin
           </div>
         </div>
         <div className="mt-5 flex items-center justify-end gap-3">
-          <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-700" onClick={onCancel} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-slate-500 hover:text-slate-700"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
             取消
           </Button>
-          <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -230,18 +282,17 @@ function MessageForm({ onSubmit, onCancel }: { onSubmit: (data: { content: strin
 }
 
 export function ContributorsWall({
-  initialTestimonials = []
+  initialTestimonials = [],
 }: {
-  initialTestimonials?: LandingTestimonialData[]
+  initialTestimonials?: LandingTestimonialData[];
 }) {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 组装要在页面上展示的留言（真实优先，如果不够则用静态补齐，保证页面不空）
-  const displayTestimonials = initialTestimonials.length > 0
-    ? initialTestimonials
-    : staticTestimonials;
+  const displayTestimonials =
+    initialTestimonials.length > 0 ? initialTestimonials : staticTestimonials;
 
   // 如果打开了表单，自动滚动到底部
   useEffect(() => {
@@ -249,13 +300,18 @@ export function ContributorsWall({
       setTimeout(() => {
         scrollRef.current?.scrollTo({
           top: scrollRef.current.scrollHeight,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }, 100);
     }
   }, [showForm]);
 
-  const handleFormSubmit = async (data: { content: string; authorName: string; authorRole?: string; authorCompany?: string; }) => {
+  const handleFormSubmit = async (data: {
+    content: string;
+    authorName: string;
+    authorRole?: string;
+    authorCompany?: string;
+  }) => {
     const res = await submitTestimonial(data);
     if (res.success) {
       toast.success('留言发送成功！', {
@@ -295,7 +351,8 @@ export function ContributorsWall({
             听听他们怎么说
           </h2>
           <p className="mt-4 text-base leading-relaxed text-slate-500 dark:text-slate-400">
-            来自一线门店老板、财务、测量师的真实反馈。每一条留言，都是他们用 L2C 改变生意的亲身经历。
+            来自一线门店老板、财务、测量师的真实反馈。每一条留言，都是他们用 L2C
+            改变生意的亲身经历。
           </p>
         </motion.div>
 
@@ -310,7 +367,10 @@ export function ContributorsWall({
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
                   <span className="h-2.5 w-2.5 rounded-full bg-green-400/80" />
                 </div>
-                <span className="text-xs font-medium text-slate-400">L2C 用户群&nbsp;&nbsp;·&nbsp;&nbsp;{contributors.length + displayTestimonials.length} 位成员</span>
+                <span className="text-xs font-medium text-slate-400">
+                  L2C 用户群&nbsp;&nbsp;·&nbsp;&nbsp;
+                  {contributors.length + displayTestimonials.length} 位成员
+                </span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
@@ -321,7 +381,7 @@ export function ContributorsWall({
             {/* 聊天消息流（限制高度，支持滚动） */}
             <div
               ref={scrollRef}
-              className="flex max-h-[600px] flex-col gap-5 overflow-y-auto px-5 py-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300"
+              className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 flex max-h-[600px] flex-col gap-5 overflow-y-auto px-5 py-6"
             >
               {/* 微信风格：查看看历史消息 */}
               <div className="flex justify-center pb-2">
@@ -379,7 +439,7 @@ export function ContributorsWall({
                     isRight={index % 2 !== 0}
                     delay={0.2 + (index % 5) * 0.08}
                   />
-                )
+                );
               })}
 
               {/* 表单互动区 */}
@@ -403,9 +463,7 @@ export function ContributorsWall({
                         <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                           你也在用 L2C？来聊聊你的故事 👋
                         </p>
-                        <p className="mt-1 text-xs text-blue-600/70">
-                          加入对话，写下你的真实感受
-                        </p>
+                        <p className="mt-1 text-xs text-blue-600/70">加入对话，写下你的真实感受</p>
                       </div>
                     </button>
                   </motion.div>
@@ -419,8 +477,6 @@ export function ContributorsWall({
               </AnimatePresence>
             </div>
           </div>
-
-
         </div>
       </div>
 

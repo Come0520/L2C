@@ -12,12 +12,12 @@ import { AuditService } from '@/shared/lib/audit-service';
  */
 
 const saveQuoteAsTemplateSchema = z.object({
-    quoteId: z.string().uuid(),
-    name: z.string().min(1, '模板名称不能为空').max(200),
-    description: z.string().optional(),
-    category: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    isPublic: z.boolean().optional()
+  quoteId: z.string().uuid(),
+  name: z.string().min(1, '模板名称不能为空').max(200),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  isPublic: z.boolean().optional(),
 });
 
 /**
@@ -26,37 +26,37 @@ const saveQuoteAsTemplateSchema = z.object({
  * @param context 执行上下文，包含租户信息
  */
 const saveQuoteAsTemplateActionInternal = createSafeAction(
-    saveQuoteAsTemplateSchema,
-    async (data, context) => {
-        const tenantId = context.session.user.tenantId; // Get tenantId
-        if (!tenantId) throw new Error('Unauthorized');
+  saveQuoteAsTemplateSchema,
+  async (data, context) => {
+    const tenantId = context.session.user.tenantId; // Get tenantId
+    if (!tenantId) throw new Error('Unauthorized');
 
-        const template = await QuoteTemplateService.saveAsTemplate(
-            data.quoteId,
-            data.name,
-            data.description,
-            context.session.user.id,
-            tenantId, // Pass tenantId
-            {
-                category: data.category,
-                tags: data.tags,
-                isPublic: data.isPublic
-            }
-        );
+    const template = await QuoteTemplateService.saveAsTemplate(
+      data.quoteId,
+      data.name,
+      data.description,
+      context.session.user.id,
+      tenantId, // Pass tenantId
+      {
+        category: data.category,
+        tags: data.tags,
+        isPublic: data.isPublic,
+      }
+    );
 
-        revalidatePath('/quotes/templates');
+    revalidatePath('/quotes/templates');
 
-        // 审计日志：记录模板保存
-        await AuditService.recordFromSession(context.session, 'quoteTemplates', template.id, 'CREATE', {
-            new: { name: data.name, sourceQuoteId: data.quoteId },
-        });
+    // 审计日志：记录模板保存
+    await AuditService.recordFromSession(context.session, 'quoteTemplates', template.id, 'CREATE', {
+      new: { name: data.name, sourceQuoteId: data.quoteId },
+    });
 
-        return {
-            success: true,
-            templateId: template.id,
-            message: `模板 "${data.name}" 保存成功`
-        };
-    }
+    return {
+      success: true,
+      templateId: template.id,
+      message: `模板 "${data.name}" 保存成功`,
+    };
+  }
 );
 
 /**
@@ -64,12 +64,12 @@ const saveQuoteAsTemplateActionInternal = createSafeAction(
  * @param params 模板配置参数
  */
 export async function saveQuoteAsTemplate(params: z.infer<typeof saveQuoteAsTemplateSchema>) {
-    return saveQuoteAsTemplateActionInternal(params);
+  return saveQuoteAsTemplateActionInternal(params);
 }
 
 const createQuoteFromTemplateSchema = z.object({
-    templateId: z.string().uuid(),
-    customerId: z.string().uuid()
+  templateId: z.string().uuid(),
+  customerId: z.string().uuid(),
 });
 
 /**
@@ -78,45 +78,47 @@ const createQuoteFromTemplateSchema = z.object({
  * @param context 执行上下文
  */
 const createQuoteFromTemplateActionInternal = createSafeAction(
-    createQuoteFromTemplateSchema,
-    async (data, context) => {
-        const tenantId = context.session.user.tenantId; // Get tenantId
-        if (!tenantId) throw new Error('Unauthorized');
+  createQuoteFromTemplateSchema,
+  async (data, context) => {
+    const tenantId = context.session.user.tenantId; // Get tenantId
+    if (!tenantId) throw new Error('Unauthorized');
 
-        const quote = await QuoteTemplateService.createQuoteFromTemplate(
-            data.templateId,
-            data.customerId,
-            context.session.user.id,
-            tenantId // Pass tenantId
-        );
+    const quote = await QuoteTemplateService.createQuoteFromTemplate(
+      data.templateId,
+      data.customerId,
+      context.session.user.id,
+      tenantId // Pass tenantId
+    );
 
-        revalidatePath('/quotes');
-        revalidatePath(`/quotes/${quote.id}`);
+    revalidatePath('/quotes');
+    revalidatePath(`/quotes/${quote.id}`);
 
-        // 审计日志：记录从模板创建报价
-        await AuditService.recordFromSession(context.session, 'quotes', quote.id, 'CREATE', {
-            new: { templateId: data.templateId, customerId: data.customerId },
-        });
+    // 审计日志：记录从模板创建报价
+    await AuditService.recordFromSession(context.session, 'quotes', quote.id, 'CREATE', {
+      new: { templateId: data.templateId, customerId: data.customerId },
+    });
 
-        return {
-            success: true,
-            quoteId: quote.id,
-            quoteNo: quote.quoteNo
-        };
-    }
+    return {
+      success: true,
+      quoteId: quote.id,
+      quoteNo: quote.quoteNo,
+    };
+  }
 );
 
 /**
  * 客户端调用：从模板创建报价单
  * @param params 包含模板ID和客户ID的参数
  */
-export async function createQuoteFromTemplate(params: z.infer<typeof createQuoteFromTemplateSchema>) {
-    return createQuoteFromTemplateActionInternal(params);
+export async function createQuoteFromTemplate(
+  params: z.infer<typeof createQuoteFromTemplateSchema>
+) {
+  return createQuoteFromTemplateActionInternal(params);
 }
 
 const getQuoteTemplatesSchema = z.object({
-    excludeId: z.string().uuid().optional(),
-    category: z.string().optional()
+  excludeId: z.string().uuid().optional(),
+  category: z.string().optional(),
 });
 
 /**
@@ -125,32 +127,32 @@ const getQuoteTemplatesSchema = z.object({
  * @param context 执行上下文
  */
 const getQuoteTemplatesActionInternal = createSafeAction(
-    getQuoteTemplatesSchema,
-    async (data, context) => {
-        const tenantId = context.session.user.tenantId;
-        if (!tenantId) throw new Error('Unauthorized');
+  getQuoteTemplatesSchema,
+  async (data, context) => {
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('Unauthorized');
 
-        const result = await QuoteTemplateService.getTemplates(tenantId, data);
+    const result = await QuoteTemplateService.getTemplates(tenantId, data);
 
-        // Map to UI model
-        const mappedTemplates = result.templates.map(t => ({
-            id: t.id,
-            name: t.name,
-            description: t.description,
-            category: t.category,
-            tags: t.tags,
-            isPublic: t.isPublic,
-            createdAt: t.createdAt,
-            creator: t.creator,
-            itemCount: t.items.length,
-            roomCount: t.rooms.length
-        }));
+    // Map to UI model
+    const mappedTemplates = result.templates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      isPublic: t.isPublic,
+      createdAt: t.createdAt,
+      creator: t.creator,
+      itemCount: t.items.length,
+      roomCount: t.rooms.length,
+    }));
 
-        return {
-            templates: mappedTemplates,
-            categories: result.categories
-        };
-    }
+    return {
+      templates: mappedTemplates,
+      categories: result.categories,
+    };
+  }
 );
 
 /**
@@ -158,11 +160,11 @@ const getQuoteTemplatesActionInternal = createSafeAction(
  * @param params 过滤参数
  */
 export async function getQuoteTemplates(params: z.infer<typeof getQuoteTemplatesSchema>) {
-    return getQuoteTemplatesActionInternal(params);
+  return getQuoteTemplatesActionInternal(params);
 }
 
 const getQuoteTemplateSchema = z.object({
-    templateId: z.string().uuid()
+  templateId: z.string().uuid(),
 });
 
 /**
@@ -171,17 +173,18 @@ const getQuoteTemplateSchema = z.object({
  * @param context 执行上下文
  */
 const getQuoteTemplateActionInternal = createSafeAction(
-    getQuoteTemplateSchema,
-    async (data, context) => { // Rename _context to context
-        const tenantId = context.session.user.tenantId;
-        if (!tenantId) throw new Error('Unauthorized');
+  getQuoteTemplateSchema,
+  async (data, context) => {
+    // Rename _context to context
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('Unauthorized');
 
-        const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
-        if (!template) {
-            throw new Error('模板不存在');
-        }
-        return template;
+    const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
+    if (!template) {
+      throw new Error('模板不存在');
     }
+    return template;
+  }
 );
 
 /**
@@ -189,11 +192,11 @@ const getQuoteTemplateActionInternal = createSafeAction(
  * @param params 包含模板ID的参数
  */
 export async function getQuoteTemplate(params: z.infer<typeof getQuoteTemplateSchema>) {
-    return getQuoteTemplateActionInternal(params);
+  return getQuoteTemplateActionInternal(params);
 }
 
 const deleteQuoteTemplateSchema = z.object({
-    templateId: z.string().uuid()
+  templateId: z.string().uuid(),
 });
 
 /**
@@ -202,19 +205,25 @@ const deleteQuoteTemplateSchema = z.object({
  * @param context 执行上下文
  */
 const deleteQuoteTemplateActionInternal = createSafeAction(
-    deleteQuoteTemplateSchema,
-    async (data, context) => { // Rename _context to context
-        const tenantId = context.session.user.tenantId;
-        if (!tenantId) throw new Error('Unauthorized');
+  deleteQuoteTemplateSchema,
+  async (data, context) => {
+    // Rename _context to context
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('Unauthorized');
 
-        await QuoteTemplateService.deleteTemplate(data.templateId, tenantId); // Pass tenantId
+    await QuoteTemplateService.deleteTemplate(data.templateId, tenantId); // Pass tenantId
 
-        // 审计日志：记录模板删除
-        await AuditService.recordFromSession(context.session, 'quoteTemplates', data.templateId, 'DELETE');
+    // 审计日志：记录模板删除
+    await AuditService.recordFromSession(
+      context.session,
+      'quoteTemplates',
+      data.templateId,
+      'DELETE'
+    );
 
-        revalidatePath('/quotes/templates');
-        return { success: true, message: '模板已删除' };
-    }
+    revalidatePath('/quotes/templates');
+    return { success: true, message: '模板已删除' };
+  }
 );
 
 /**
@@ -222,11 +231,11 @@ const deleteQuoteTemplateActionInternal = createSafeAction(
  * @param params 包含模板ID的参数
  */
 export async function deleteQuoteTemplate(params: z.infer<typeof deleteQuoteTemplateSchema>) {
-    return deleteQuoteTemplateActionInternal(params);
+  return deleteQuoteTemplateActionInternal(params);
 }
 
 const applyQuoteTemplateSchema = z.object({
-    templateId: z.string().uuid()
+  templateId: z.string().uuid(),
 });
 
 /**
@@ -235,40 +244,41 @@ const applyQuoteTemplateSchema = z.object({
  * @param context 执行上下文
  */
 const applyQuoteTemplateActionInternal = createSafeAction(
-    applyQuoteTemplateSchema,
-    async (data, context) => { // Rename _context to context
-        const tenantId = context.session.user.tenantId;
-        if (!tenantId) throw new Error('Unauthorized');
+  applyQuoteTemplateSchema,
+  async (data, context) => {
+    // Rename _context to context
+    const tenantId = context.session.user.tenantId;
+    if (!tenantId) throw new Error('Unauthorized');
 
-        const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
-        if (!template) {
-            throw new Error('模板不存在');
-        }
-
-        // 返回模板数据用于前端预填充
-        return {
-            template: {
-                id: template.id,
-                name: template.name,
-                rooms: template.rooms.map(room => ({
-                    name: room.name,
-                    sortOrder: room.sortOrder
-                })),
-                items: template.items.map(item => ({
-                    roomId: item.roomId,
-                    category: item.category,
-                    productId: item.productId,
-                    productName: item.productName,
-                    defaultWidth: item.defaultWidth,
-                    defaultHeight: item.defaultHeight,
-                    defaultFoldRatio: item.defaultFoldRatio,
-                    unitPrice: item.unitPrice,
-                    attributes: item.attributes
-                }))
-            },
-            message: `已应用模板 "${template.name}"`
-        };
+    const template = await QuoteTemplateService.getTemplate(data.templateId, tenantId); // Pass tenantId
+    if (!template) {
+      throw new Error('模板不存在');
     }
+
+    // 返回模板数据用于前端预填充
+    return {
+      template: {
+        id: template.id,
+        name: template.name,
+        rooms: template.rooms.map((room) => ({
+          name: room.name,
+          sortOrder: room.sortOrder,
+        })),
+        items: template.items.map((item) => ({
+          roomId: item.roomId,
+          category: item.category,
+          productId: item.productId,
+          productName: item.productName,
+          defaultWidth: item.defaultWidth,
+          defaultHeight: item.defaultHeight,
+          defaultFoldRatio: item.defaultFoldRatio,
+          unitPrice: item.unitPrice,
+          attributes: item.attributes,
+        })),
+      },
+      message: `已应用模板 "${template.name}"`,
+    };
+  }
 );
 
 /**
@@ -276,5 +286,5 @@ const applyQuoteTemplateActionInternal = createSafeAction(
  * @param params 包含模板ID的参数
  */
 export async function applyQuoteTemplate(params: z.infer<typeof applyQuoteTemplateSchema>) {
-    return applyQuoteTemplateActionInternal(params);
+  return applyQuoteTemplateActionInternal(params);
 }

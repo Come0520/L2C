@@ -9,27 +9,22 @@ import { useRouter } from 'next/navigation';
 import { CustomerForm } from './customer-form';
 
 interface NewCustomerFormWrapperProps {
-    tenantId: string;
+  tenantId: string;
 }
 
 export function NewCustomerFormWrapper({ tenantId }: NewCustomerFormWrapperProps) {
-    const router = useRouter();
+  const router = useRouter();
 
-    /**
-     * 客户创建成功后跳转到客户详情页
-     */
-    const handleSuccess = (customer?: { id: string }) => {
-        if (customer?.id) {
-            router.push(`/customers/${customer.id}`);
-        } else {
-            router.push('/customers');
-        }
-    };
+  /**
+   * 客户创建成功后跳转到客户详情页
+   */
+  const handleSuccess = (customer?: { id: string }) => {
+    if (customer?.id) {
+      router.push(`/customers/${customer.id}`);
+    } else {
+      router.push('/customers');
+    }
+  };
 
-    return (
-        <CustomerForm
-            tenantId={tenantId}
-            onSuccess={handleSuccess}
-        />
-    );
+  return <CustomerForm tenantId={tenantId} onSuccess={handleSuccess} />;
 }

@@ -11,35 +11,35 @@ import { notificationPreferences } from '@/shared/api/schema';
 import { slaChecker } from './sla-checker';
 
 const getNotificationsSchema = z.object({
-    page: z.number().default(1),
-    limit: z.number().default(20),
-    onlyUnread: z.boolean().default(false),
-    type: z.string().optional(),
+  page: z.number().default(1),
+  limit: z.number().default(20),
+  onlyUnread: z.boolean().default(false),
+  type: z.string().optional(),
 });
 
 const markAsReadSchema = z.object({
-    ids: z.array(z.string()),
+  ids: z.array(z.string()),
 });
 
 interface SessionUser {
-    id: string;
-    tenantId: string;
+  id: string;
+  tenantId: string;
 }
 
 interface GetNotificationsParams {
-    page: number;
-    limit: number;
-    onlyUnread: boolean;
-    type?: string;
+  page: number;
+  limit: number;
+  onlyUnread: boolean;
+  type?: string;
 }
 
 interface NotificationResult {
-    data: Notification[];
-    meta: {
-        total: number;
-        page: number;
-        limit: number;
-    };
+  data: Notification[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+  };
 }
 
 /**
@@ -49,59 +49,79 @@ interface NotificationResult {
  * @param params - 分页与过滤参数
  * @returns 通知列表及分页元数据
  */
-export async function getNotificationsPure(session: SessionUser, params: GetNotificationsParams): Promise<NotificationResult> {
-    const { page, limit, onlyUnread, type } = params;
-    const tenantId = session.tenantId;
-    const userId = session.id;
+export async function getNotificationsPure(
+  session: SessionUser,
+  params: GetNotificationsParams
+): Promise<NotificationResult> {
+  const { page, limit, onlyUnread, type } = params;
+  const tenantId = session.tenantId;
+  const userId = session.id;
 
-    try {
-        const whereCondition = and(
-            eq(notifications.tenantId, tenantId),
-            eq(notifications.userId, userId),
-            onlyUnread ? eq(notifications.isRead, false) : undefined,
-            type && type !== 'ALL' ? eq(notifications.type, type as 'SYSTEM' | 'ORDER_STATUS' | 'APPROVAL' | 'ALERT' | 'MENTION' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR') : undefined
-        );
+  try {
+    const whereCondition = and(
+      eq(notifications.tenantId, tenantId),
+      eq(notifications.userId, userId),
+      onlyUnread ? eq(notifications.isRead, false) : undefined,
+      type && type !== 'ALL'
+        ? eq(
+            notifications.type,
+            type as
+              | 'SYSTEM'
+              | 'ORDER_STATUS'
+              | 'APPROVAL'
+              | 'ALERT'
+              | 'MENTION'
+              | 'INFO'
+              | 'SUCCESS'
+              | 'WARNING'
+              | 'ERROR'
+          )
+        : undefined
+    );
 
-        const data = await db.query.notifications.findMany({
-            where: whereCondition,
-            orderBy: [desc(notifications.createdAt)],
-            limit: limit,
-            offset: (page - 1) * limit,
-        });
+    const data = await db.query.notifications.findMany({
+      where: whereCondition,
+      orderBy: [desc(notifications.createdAt)],
+      limit: limit,
+      offset: (page - 1) * limit,
+    });
 
-        const [{ count }] = await db
-            .select({ count: sql<number>`cast(count(*) as int)` })
-            .from(notifications)
-            .where(whereCondition);
+    const [{ count }] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(notifications)
+      .where(whereCondition);
 
-        return {
-            data: data,
-            meta: {
-                total: count,
-                page,
-                limit,
-            }
-        };
-    } catch (error) {
-        logger.error('getNotificationsPure safe fallback:', { error });
-        return {
-            data: [],
-            meta: {
-                total: 0,
-                page,
-                limit,
-            }
-        };
-    }
+    return {
+      data: data,
+      meta: {
+        total: count,
+        page,
+        limit,
+      },
+    };
+  } catch (error) {
+    logger.error('getNotificationsPure safe fallback:', { error });
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page,
+        limit,
+      },
+    };
+  }
 }
 
-const getNotificationsActionInternal = createSafeAction(getNotificationsSchema, async (params, { session }) => {
+const getNotificationsActionInternal = createSafeAction(
+  getNotificationsSchema,
+  async (params, { session }) => {
     const result = await getNotificationsPure(session.user, params);
     return {
-        success: true,
-        ...result
+      success: true,
+      ...result,
     };
-});
+  }
+);
 
 /**
  * 获取当前用户的通知列表（Server Action 入口）
@@ -112,24 +132,29 @@ const getNotificationsActionInternal = createSafeAction(getNotificationsSchema, 
  * @returns 包含通知数据和分页信息的安全操作结果
  */
 export async function getNotifications(params: z.infer<typeof getNotificationsSchema>) {
-    return getNotificationsActionInternal(params);
+  return getNotificationsActionInternal(params);
 }
 
-const getUnreadCountActionInternal = createSafeAction(z.object({}), async (_params, { session }) => {
+const getUnreadCountActionInternal = createSafeAction(
+  z.object({}),
+  async (_params, { session }) => {
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
 
     const [{ count }] = await db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(notifications)
-        .where(and(
-            eq(notifications.tenantId, tenantId),
-            eq(notifications.userId, userId),
-            eq(notifications.isRead, false)
-        ));
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.tenantId, tenantId),
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        )
+      );
 
     return { success: true, data: { count } };
-});
+  }
+);
 
 /**
  * 获取当前用户的未读通知数量
@@ -141,24 +166,27 @@ const getUnreadCountActionInternal = createSafeAction(z.object({}), async (_para
  * 常用于 Header 铃铛图标的红点提示
  */
 export async function getUnreadCount() {
-    return getUnreadCountActionInternal({});
+  return getUnreadCountActionInternal({});
 }
 
 const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (params, { session }) => {
-    const { ids } = params;
-    const userId = session.user.id;
+  const { ids } = params;
+  const userId = session.user.id;
 
-    if (ids.length === 0) return { success: true };
+  if (ids.length === 0) return { success: true };
 
-    await db.update(notifications)
-        .set({ isRead: true, readAt: new Date() })
-        .where(and(
-            eq(notifications.userId, userId),
-            eq(notifications.tenantId, session.user.tenantId),
-            inArray(notifications.id, ids)
-        ));
+  await db
+    .update(notifications)
+    .set({ isRead: true, readAt: new Date() })
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.tenantId, session.user.tenantId),
+        inArray(notifications.id, ids)
+      )
+    );
 
-    return { success: true };
+  return { success: true };
 });
 
 /**
@@ -168,25 +196,45 @@ const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (param
  * @returns 操作结果
  */
 export async function markAsRead(params: z.infer<typeof markAsReadSchema>) {
-    return markAsReadActionInternal(params);
+  return markAsReadActionInternal(params);
 }
 
-const markAllAsReadActionInternal = createSafeAction(z.object({
+const markAllAsReadActionInternal = createSafeAction(
+  z.object({
     type: z.string().optional(),
-}), async (params, { session }) => {
+  }),
+  async (params, { session }) => {
     const userId = session.user.id;
 
-    await db.update(notifications)
-        .set({ isRead: true, readAt: new Date() })
-        .where(and(
-            eq(notifications.userId, userId),
-            eq(notifications.tenantId, session.user.tenantId),
-            eq(notifications.isRead, false),
-            params.type && params.type !== 'ALL' ? eq(notifications.type, params.type as 'SYSTEM' | 'ORDER_STATUS' | 'APPROVAL' | 'ALERT' | 'MENTION' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR') : undefined
-        ));
+    await db
+      .update(notifications)
+      .set({ isRead: true, readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.tenantId, session.user.tenantId),
+          eq(notifications.isRead, false),
+          params.type && params.type !== 'ALL'
+            ? eq(
+                notifications.type,
+                params.type as
+                  | 'SYSTEM'
+                  | 'ORDER_STATUS'
+                  | 'APPROVAL'
+                  | 'ALERT'
+                  | 'MENTION'
+                  | 'INFO'
+                  | 'SUCCESS'
+                  | 'WARNING'
+                  | 'ERROR'
+              )
+            : undefined
+        )
+      );
 
     return { success: true };
-});
+  }
+);
 
 /**
  * 标记当前用户的所有未读通知为已读
@@ -194,19 +242,17 @@ const markAllAsReadActionInternal = createSafeAction(z.object({
  * @returns 操作结果
  */
 export async function markAllAsRead(params?: { type?: string }) {
-    return markAllAsReadActionInternal(params || {});
+  return markAllAsReadActionInternal(params || {});
 }
 
-
-
 const runSLACheckActionInternal = createSafeAction(z.object({}), async (params, { session }) => {
-    const role = session.user.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-        throw new Error('Unauthorized: Only Admin or Manager can run SLA checks.');
-    }
+  const role = session.user.role;
+  if (role !== 'ADMIN' && role !== 'MANAGER') {
+    throw new Error('Unauthorized: Only Admin or Manager can run SLA checks.');
+  }
 
-    const results = await slaChecker.runAllChecks();
-    return { success: true, data: results };
+  const results = await slaChecker.runAllChecks();
+  return { success: true, data: results };
 });
 
 /**
@@ -218,189 +264,192 @@ const runSLACheckActionInternal = createSafeAction(z.object({}), async (params, 
  * @throws 非管理员调用时抛出未授权错误
  */
 export async function runSLACheck() {
-    return runSLACheckActionInternal({});
+  return runSLACheckActionInternal({});
 }
 
 // ============================================
 // [Notify-04] 通知偏好设置 Actions
 // ============================================
 
-
-
 /**
  * 通知类型定义
  */
 const NOTIFICATION_TYPES = [
-    'SYSTEM',      // 系统通知
-    'ORDER_STATUS',// 订单状态
-    'APPROVAL',    // 审批通知
-    'ALERT',       // 预警通知
-    'MENTION',     // @提及
-    'INFO',        // 信息通知
-    'SUCCESS',     // 成功通知
-    'WARNING',     // 警告通知
-    'ERROR'        // 错误通知
+  'SYSTEM', // 系统通知
+  'ORDER_STATUS', // 订单状态
+  'APPROVAL', // 审批通知
+  'ALERT', // 预警通知
+  'MENTION', // @提及
+  'INFO', // 信息通知
+  'SUCCESS', // 成功通知
+  'WARNING', // 警告通知
+  'ERROR', // 错误通知
 ] as const;
 
 /**
  * 通知渠道定义
  */
 const NOTIFICATION_CHANNELS = [
-    'IN_APP',      // 站内通知
-    'SMS',         // 短信
-    'WECHAT',      // 微信服务号
-    'WECHAT_MINI', // 微信小程序
-    'LARK',        // 飞书
-    'EMAIL'        // 邮件
+  'IN_APP', // 站内通知
+  'SMS', // 短信
+  'WECHAT', // 微信服务号
+  'WECHAT_MINI', // 微信小程序
+  'LARK', // 飞书
+  'EMAIL', // 邮件
 ] as const;
 
 /**
  * 获取用户的通知偏好设置
  */
 const getNotificationPreferencesActionInternal = createSafeAction(
-    z.object({}),
-    async (params, { session }) => {
-        const userId = session.user.id;
+  z.object({}),
+  async (params, { session }) => {
+    const userId = session.user.id;
 
-        const prefs = await db.query.notificationPreferences.findMany({
-            where: and(
-                eq(notificationPreferences.userId, userId),
-                eq(notificationPreferences.tenantId, session.user.tenantId)
-            )
-        });
+    const prefs = await db.query.notificationPreferences.findMany({
+      where: and(
+        eq(notificationPreferences.userId, userId),
+        eq(notificationPreferences.tenantId, session.user.tenantId)
+      ),
+    });
 
-        // 构建完整的偏好映射（包含未设置的类型，默认使用 IN_APP）
-        const prefsMap: Record<string, string[]> = {};
-        for (const type of NOTIFICATION_TYPES) {
-            const existing = prefs.find(p => p.notificationType === type);
-            let channels = existing?.channels || ['IN_APP'];
+    // 构建完整的偏好映射（包含未设置的类型，默认使用 IN_APP）
+    const prefsMap: Record<string, string[]> = {};
+    for (const type of NOTIFICATION_TYPES) {
+      const existing = prefs.find((p) => p.notificationType === type);
+      let channels = existing?.channels || ['IN_APP'];
 
-            // 确保 IN_APP 始终在列表中
-            if (!channels.includes('IN_APP')) {
-                channels = ['IN_APP', ...channels];
-            }
+      // 确保 IN_APP 始终在列表中
+      if (!channels.includes('IN_APP')) {
+        channels = ['IN_APP', ...channels];
+      }
 
-            prefsMap[type] = channels;
-        }
-
-        return {
-            success: true,
-            data: {
-                preferences: prefsMap,
-                notificationTypes: NOTIFICATION_TYPES,
-                channels: NOTIFICATION_CHANNELS
-            }
-        };
+      prefsMap[type] = channels;
     }
+
+    return {
+      success: true,
+      data: {
+        preferences: prefsMap,
+        notificationTypes: NOTIFICATION_TYPES,
+        channels: NOTIFICATION_CHANNELS,
+      },
+    };
+  }
 );
 
 export async function getNotificationPreferencesAction() {
-    return getNotificationPreferencesActionInternal({});
+  return getNotificationPreferencesActionInternal({});
 }
 
 /**
  * 更新用户的通知偏好设置
  */
 const updatePreferenceSchema = z.object({
-    notificationType: z.enum(NOTIFICATION_TYPES),
-    channels: z.array(z.enum(NOTIFICATION_CHANNELS))
+  notificationType: z.enum(NOTIFICATION_TYPES),
+  channels: z.array(z.enum(NOTIFICATION_CHANNELS)),
 });
 
 const updateNotificationPreferenceActionInternal = createSafeAction(
-    updatePreferenceSchema,
-    async (data, { session }) => {
-        const userId = session.user.id;
-        const tenantId = session.user.tenantId;
+  updatePreferenceSchema,
+  async (data, { session }) => {
+    const userId = session.user.id;
+    const tenantId = session.user.tenantId;
 
-        // 确保 IN_APP 始终开启（站内通知不可关闭）
-        const channels = data.channels.includes('IN_APP')
-            ? data.channels
-            : ['IN_APP', ...data.channels];
+    // 确保 IN_APP 始终开启（站内通知不可关闭）
+    const channels = data.channels.includes('IN_APP')
+      ? data.channels
+      : ['IN_APP', ...data.channels];
 
-        // 查找是否已有该类型的偏好设置
-        const existing = await db.query.notificationPreferences.findFirst({
-            where: and(
-                eq(notificationPreferences.userId, userId),
-                eq(notificationPreferences.tenantId, tenantId),
-                eq(notificationPreferences.notificationType, data.notificationType)
-            )
-        });
+    // 查找是否已有该类型的偏好设置
+    const existing = await db.query.notificationPreferences.findFirst({
+      where: and(
+        eq(notificationPreferences.userId, userId),
+        eq(notificationPreferences.tenantId, tenantId),
+        eq(notificationPreferences.notificationType, data.notificationType)
+      ),
+    });
 
-        if (existing) {
-            // 更新现有记录
-            await db.update(notificationPreferences)
-                .set({
-                    channels: channels,
-                    updatedAt: new Date()
-                })
-                .where(eq(notificationPreferences.id, existing.id));
-        } else {
-            // 创建新记录
-            await db.insert(notificationPreferences).values({
-                tenantId: tenantId,
-                userId: userId,
-                notificationType: data.notificationType,
-                channels: channels
-            });
-        }
-
-        return { success: true };
+    if (existing) {
+      // 更新现有记录
+      await db
+        .update(notificationPreferences)
+        .set({
+          channels: channels,
+          updatedAt: new Date(),
+        })
+        .where(eq(notificationPreferences.id, existing.id));
+    } else {
+      // 创建新记录
+      await db.insert(notificationPreferences).values({
+        tenantId: tenantId,
+        userId: userId,
+        notificationType: data.notificationType,
+        channels: channels,
+      });
     }
+
+    return { success: true };
+  }
 );
 
 export async function updateNotificationPreference(data: z.infer<typeof updatePreferenceSchema>) {
-    return updateNotificationPreferenceActionInternal(data);
+  return updateNotificationPreferenceActionInternal(data);
 }
 
 /**
  * 批量更新用户的通知偏好设置
  */
 const batchUpdatePreferencesSchema = z.object({
-    preferences: z.record(
-        z.enum(NOTIFICATION_TYPES),
-        z.array(z.enum(NOTIFICATION_CHANNELS))
-    )
+  preferences: z.record(z.enum(NOTIFICATION_TYPES), z.array(z.enum(NOTIFICATION_CHANNELS))),
 });
 
 const batchUpdateNotificationPreferencesActionInternal = createSafeAction(
-    batchUpdatePreferencesSchema,
-    async (data, { session }) => {
-        const userId = session.user.id;
-        const tenantId = session.user.tenantId;
+  batchUpdatePreferencesSchema,
+  async (data, { session }) => {
+    const userId = session.user.id;
+    const tenantId = session.user.tenantId;
 
-        // P1 优化：使用 onConflictDoUpdate 批量 upsert，消除 N+1 查询
-        await db.transaction(async (tx) => {
-            const upsertPromises = Object.entries(data.preferences).map(([notificationType, channels]) => {
-                // 确保 IN_APP 始终开启
-                const finalChannels = channels.includes('IN_APP')
-                    ? channels
-                    : ['IN_APP', ...channels];
+    // P1 优化：使用 onConflictDoUpdate 批量 upsert，消除 N+1 查询
+    await db.transaction(async (tx) => {
+      const upsertPromises = Object.entries(data.preferences).map(
+        ([notificationType, channels]) => {
+          // 确保 IN_APP 始终开启
+          const finalChannels = channels.includes('IN_APP') ? channels : ['IN_APP', ...channels];
 
-                return tx.insert(notificationPreferences)
-                    .values({
-                        tenantId: tenantId,
-                        userId: userId,
-                        notificationType: notificationType,
-                        channels: finalChannels
-                    })
-                    .onConflictDoUpdate({
-                        target: [notificationPreferences.tenantId, notificationPreferences.userId, notificationPreferences.notificationType],
-                        set: {
-                            channels: finalChannels,
-                            updatedAt: new Date()
-                        }
-                    });
+          return tx
+            .insert(notificationPreferences)
+            .values({
+              tenantId: tenantId,
+              userId: userId,
+              notificationType: notificationType,
+              channels: finalChannels,
+            })
+            .onConflictDoUpdate({
+              target: [
+                notificationPreferences.tenantId,
+                notificationPreferences.userId,
+                notificationPreferences.notificationType,
+              ],
+              set: {
+                channels: finalChannels,
+                updatedAt: new Date(),
+              },
             });
+        }
+      );
 
-            await Promise.all(upsertPromises);
-        });
+      await Promise.all(upsertPromises);
+    });
 
-        return { success: true };
-    }
+    return { success: true };
+  }
 );
 
-export async function batchUpdateNotificationPreferences(data: z.infer<typeof batchUpdatePreferencesSchema>) {
-    return batchUpdateNotificationPreferencesActionInternal(data);
+export async function batchUpdateNotificationPreferences(
+  data: z.infer<typeof batchUpdatePreferencesSchema>
+) {
+  return batchUpdateNotificationPreferencesActionInternal(data);
 }
 
 // 别名导出，兼容旧的消费方命名

@@ -6,113 +6,117 @@ import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet';
 import ImageIcon from 'lucide-react/dist/esm/icons/image';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 interface QuoteData {
+  id: string;
+  quoteNo: string;
+  title?: string | null;
+  createdAt?: Date | string | number | null;
+  customer?: {
+    name?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  } | null;
+  deliveryAddress?: string | null;
+  items?: Array<{
+    id?: string;
+    productName: string;
+    width?: string | number | null;
+    height?: string | number | null;
+    quantity?: string | number | null;
+    unitPrice?: string | number | null;
+    subtotal?: string | number | null;
+    costPrice?: string | number | null;
+    remark?: string | null;
+    roomId?: string | null;
+    category?: string | null;
+  }>;
+  rooms?: Array<{
     id: string;
-    quoteNo: string;
-    title?: string | null;
-    createdAt?: Date | string | number | null;
-    customer?: {
-        name?: string | null;
-        phone?: string | null;
-        address?: string | null;
-    } | null;
-    deliveryAddress?: string | null;
-    items?: Array<{
-        id?: string;
-        productName: string;
-        width?: string | number | null;
-        height?: string | number | null;
-        quantity?: string | number | null;
-        unitPrice?: string | number | null;
-        subtotal?: string | number | null;
-        costPrice?: string | number | null;
-        remark?: string | null;
-        roomId?: string | null;
-        category?: string | null;
-    }>;
-    rooms?: Array<{
-        id: string;
-        name: string;
-    }>;
-    totalAmount?: string | number | null;
-    discountAmount?: string | number | null;
-    finalAmount?: string | number | null;
-    notes?: string | null;
+    name: string;
+  }>;
+  totalAmount?: string | number | null;
+  discountAmount?: string | number | null;
+  finalAmount?: string | number | null;
+  notes?: string | null;
 }
 
 export interface QuoteExportMenuProps {
-    quote: QuoteData;
-    renderPdfButtons?: React.ReactNode;
+  quote: QuoteData;
+  renderPdfButtons?: React.ReactNode;
 }
 
 /**
  * 导出报价单为 Excel 格式
  */
 async function exportToExcel(quote: QuoteData): Promise<void> {
-    // 动态导入 xlsx 库
-    const XLSX = await import('xlsx');
+  // 动态导入 xlsx 库
+  const XLSX = await import('xlsx');
 
-    // 准备数据
-    const roomMap = new Map((quote.rooms || []).map(r => [r.id, r.name]));
+  // 准备数据
+  const roomMap = new Map((quote.rooms || []).map((r) => [r.id, r.name]));
 
-    const rows = (quote.items || []).map(item => ({
-        '空间': roomMap.get(item.roomId || '') || '未分配',
-        '商品名称': item.productName,
-        '宽度(cm)': item.width || '-',
-        '高度(cm)': item.height || '-',
-        '数量': item.quantity || '-',
-        '单价(¥)': item.unitPrice || '-',
-        '小计(¥)': item.subtotal || '-',
-    }));
+  const rows = (quote.items || []).map((item) => ({
+    空间: roomMap.get(item.roomId || '') || '未分配',
+    商品名称: item.productName,
+    '宽度(cm)': item.width || '-',
+    '高度(cm)': item.height || '-',
+    数量: item.quantity || '-',
+    '单价(¥)': item.unitPrice || '-',
+    '小计(¥)': item.subtotal || '-',
+  }));
 
-    // 创建工作表
-    const ws = XLSX.utils.json_to_sheet(rows);
+  // 创建工作表
+  const ws = XLSX.utils.json_to_sheet(rows);
 
-    // 设置列宽
-    ws['!cols'] = [
-        { wch: 15 }, // 空间
-        { wch: 25 }, // 商品名称
-        { wch: 10 }, // 宽度
-        { wch: 10 }, // 高度
-        { wch: 10 }, // 数量
-        { wch: 12 }, // 单价
-        { wch: 12 }, // 小计
-    ];
+  // 设置列宽
+  ws['!cols'] = [
+    { wch: 15 }, // 空间
+    { wch: 25 }, // 商品名称
+    { wch: 10 }, // 宽度
+    { wch: 10 }, // 高度
+    { wch: 10 }, // 数量
+    { wch: 12 }, // 单价
+    { wch: 12 }, // 小计
+  ];
 
-    // 添加汇总行
-    const totalRowIndex = rows.length + 2;
-    XLSX.utils.sheet_add_aoa(ws, [
-        [],
-        ['', '', '', '', '', '商品合计:', quote.totalAmount || 0],
-        ['', '', '', '', '', '折扣:', quote.discountAmount || 0],
-        ['', '', '', '', '', '最终报价:', quote.finalAmount || 0],
-    ], { origin: `A${totalRowIndex}` });
+  // 添加汇总行
+  const totalRowIndex = rows.length + 2;
+  XLSX.utils.sheet_add_aoa(
+    ws,
+    [
+      [],
+      ['', '', '', '', '', '商品合计:', quote.totalAmount || 0],
+      ['', '', '', '', '', '折扣:', quote.discountAmount || 0],
+      ['', '', '', '', '', '最终报价:', quote.finalAmount || 0],
+    ],
+    { origin: `A${totalRowIndex}` }
+  );
 
-    // 创建工作簿
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '报价明细');
+  // 创建工作簿
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '报价明细');
 
-    // 导出文件
-    XLSX.writeFile(wb, `报价单_${quote.quoteNo}.xlsx`);
+  // 导出文件
+  XLSX.writeFile(wb, `报价单_${quote.quoteNo}.xlsx`);
 }
 
 /**
  * 导出报价单为图片格式（用于微信分享）
  */
 async function exportToImage(quote: QuoteData): Promise<void> {
-    // 动态导入 html2canvas
-    const html2canvas = (await import('html2canvas')).default;
+  // 动态导入 html2canvas
+  const html2canvas = (await import('html2canvas')).default;
 
-    // 创建临时容器
-    const container = document.createElement('div');
-    container.style.cssText = `
+  // 创建临时容器
+  const container = document.createElement('div');
+  container.style.cssText = `
         position: fixed;
         left: -9999px;
         top: 0;
@@ -122,10 +126,10 @@ async function exportToImage(quote: QuoteData): Promise<void> {
         font-family: system-ui, -apple-system, sans-serif;
     `;
 
-    const roomMap = new Map((quote.rooms || []).map(r => [r.id, r.name]));
+  const roomMap = new Map((quote.rooms || []).map((r) => [r.id, r.name]));
 
-    // 生成 HTML 内容
-    container.innerHTML = `
+  // 生成 HTML 内容
+  container.innerHTML = `
         <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="font-size: 24px; margin: 0;">报价单</h1>
             <p style="color: #666; margin-top: 10px;">${quote.quoteNo}</p>
@@ -147,7 +151,9 @@ async function exportToImage(quote: QuoteData): Promise<void> {
                 </tr>
             </thead>
             <tbody>
-                ${(quote.items || []).map(item => `
+                ${(quote.items || [])
+                  .map(
+                    (item) => `
                     <tr>
                         <td style="padding: 10px; border: 1px solid #ddd;">${roomMap.get(item.roomId || '') || '-'}</td>
                         <td style="padding: 10px; border: 1px solid #ddd;">${item.productName}</td>
@@ -155,7 +161,9 @@ async function exportToImage(quote: QuoteData): Promise<void> {
                         <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.quantity || '-'}</td>
                         <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">¥${Number(item.subtotal || 0).toFixed(2)}</td>
                     </tr>
-                `).join('')}
+                `
+                  )
+                  .join('')}
             </tbody>
         </table>
         
@@ -170,88 +178,88 @@ async function exportToImage(quote: QuoteData): Promise<void> {
         ${quote.notes ? `<p style="margin-top: 20px; color: #666; font-size: 14px;">备注：${quote.notes}</p>` : ''}
     `;
 
-    document.body.appendChild(container);
+  document.body.appendChild(container);
 
-    try {
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            backgroundColor: '#ffffff',
-        });
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+    });
 
-        // 转换为图片并下载
-        const link = document.createElement('a');
-        link.download = `报价单_${quote.quoteNo}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    } finally {
-        document.body.removeChild(container);
-    }
+    // 转换为图片并下载
+    const link = document.createElement('a');
+    link.download = `报价单_${quote.quoteNo}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 /**
  * 报价单导出菜单组件
  */
 export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProps) {
-    const handlePdfExport = async () => {
-        toast.promise(
-            (async () => {
-                // Dynamic import to avoid SSR issues
-                const { pdf } = await import('@react-pdf/renderer');
-                const { QuotePdfDocument } = await import('./quote-pdf');
-                const { saveAs } = await import('file-saver');
+  const handlePdfExport = async () => {
+    toast.promise(
+      (async () => {
+        // Dynamic import to avoid SSR issues
+        const { pdf } = await import('@react-pdf/renderer');
+        const { QuotePdfDocument } = await import('./quote-pdf');
+        const { saveAs } = await import('file-saver');
 
-                const asPdf = pdf(<QuotePdfDocument quote={quote as any} mode="customer" />);
-                const blob = await asPdf.toBlob();
-                saveAs(blob, `专属报价方案-${quote.quoteNo}.pdf`);
-            })(),
-            {
-                loading: '正在生成 PDF...',
-                success: 'PDF 导出成功',
-                error: (err) => `PDF 导出失败: ${err.message}`,
-            }
-        );
-    };
-
-    const handleExcelExport = async () => {
-        toast.promise(exportToExcel(quote as any), {
-            loading: '正在生成 Excel...',
-            success: 'Excel 导出成功',
-            error: 'Excel 导出失败',
-        });
-    };
-
-    const handleImageExport = async () => {
-        toast.promise(exportToImage(quote as any), {
-            loading: '正在生成长图...',
-            success: '长图导出成功',
-            error: '长图导出失败',
-        });
-    };
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    导出
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                {renderPdfButtons || (
-                    <DropdownMenuItem onClick={handlePdfExport}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        导出报价单 (PDF)
-                    </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={handleExcelExport}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    导出表格数据 (Excel)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleImageExport}>
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    生成分享长图 (适合微信)
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        const asPdf = pdf(<QuotePdfDocument quote={quote as any} mode="customer" />);
+        const blob = await asPdf.toBlob();
+        saveAs(blob, `专属报价方案-${quote.quoteNo}.pdf`);
+      })(),
+      {
+        loading: '正在生成 PDF...',
+        success: 'PDF 导出成功',
+        error: (err) => `PDF 导出失败: ${err.message}`,
+      }
     );
+  };
+
+  const handleExcelExport = async () => {
+    toast.promise(exportToExcel(quote as any), {
+      loading: '正在生成 Excel...',
+      success: 'Excel 导出成功',
+      error: 'Excel 导出失败',
+    });
+  };
+
+  const handleImageExport = async () => {
+    toast.promise(exportToImage(quote as any), {
+      loading: '正在生成长图...',
+      success: '长图导出成功',
+      error: '长图导出失败',
+    });
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Download className="mr-2 h-4 w-4" />
+          导出
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {renderPdfButtons || (
+          <DropdownMenuItem onClick={handlePdfExport}>
+            <FileText className="mr-2 h-4 w-4" />
+            导出报价单 (PDF)
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={handleExcelExport}>
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          导出表格数据 (Excel)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleImageExport}>
+          <ImageIcon className="mr-2 h-4 w-4" />
+          生成分享长图 (适合微信)
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

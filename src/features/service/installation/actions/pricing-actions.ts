@@ -5,7 +5,7 @@ import { laborRates } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import { revalidateTag } from 'next/cache';
+import {} from 'next/cache';
 import { AuditService } from '@/shared/lib/audit-service';
 import { logger } from '@/shared/lib/logger';
 
@@ -158,7 +158,6 @@ export async function upsertLaborRate(data: z.infer<typeof upsertLaborRateSchema
       );
     });
 
-    revalidateTag('labor-rate', {});
     return { success: true };
   } catch (error: unknown) {
     logger.error('保存工费规则失败:', error);
@@ -220,7 +219,6 @@ export async function batchUpsertTenantLaborRates(
       );
     });
 
-    revalidateTag('labor-rate', {});
     return { success: true };
   } catch (error: unknown) {
     logger.error('批量保存工费规则失败:', error);

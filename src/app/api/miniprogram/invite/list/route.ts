@@ -6,8 +6,6 @@ import { getMiniprogramUser } from '../../auth-utils';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 
-
-
 export async function GET(request: NextRequest) {
   try {
     const tokenData = await getMiniprogramUser(request);

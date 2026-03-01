@@ -41,9 +41,19 @@ export async function GET(request: NextRequest) {
       ? pagination.data
       : { page: 1, limit: 50, cursor: undefined };
 
-    const result = await CustomerService.getCustomers(user.tenantId, { keyword, page, limit, cursor });
+    const result = await CustomerService.getCustomers(user.tenantId, {
+      keyword,
+      page,
+      limit,
+      cursor,
+    });
 
-    const response = apiSuccess({ list: result.data, total: result.total, page: result.page, limit: result.limit });
+    const response = apiSuccess({
+      list: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    });
     response.headers.set('Cache-Control', 'private, max-age=30');
     return response;
   } catch (error) {

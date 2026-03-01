@@ -5,32 +5,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 
 /** 提醒规则表单初始数据类型 */
 interface ReminderRuleData {
-    id?: string;
-    name: string;
-    triggerType: string;
-    triggerValue: number;
-    notificationChannels: string[];
+  id?: string;
+  name: string;
+  triggerType: string;
+  triggerValue: number;
+  notificationChannels: string[];
 }
 
 interface ReminderRuleFormProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    initialData?: ReminderRuleData;
-    onSuccess: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialData?: ReminderRuleData;
+  onSuccess: () => void;
 }
 
-export function ReminderRuleForm({ open, onOpenChange, initialData, onSuccess }: ReminderRuleFormProps) {
-    const form = useForm();
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{initialData ? 'Edit Rule' : 'Create Rule'}</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                    <p className="text-muted-foreground">Reminder rule form not available in recovery mode.</p>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
+export function ReminderRuleForm({
+  open,
+  onOpenChange,
+  initialData,
+  onSuccess,
+}: ReminderRuleFormProps) {
+  const form = useForm();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{initialData ? 'Edit Rule' : 'Create Rule'}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-muted-foreground">
+            Reminder rule form not available in recovery mode.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

@@ -6,7 +6,7 @@ import { Check } from 'lucide-react';
 
 /**
  * 安装任务状态进度条
- * 
+ *
  * 展示任务从待分配到完成的流转进度
  */
 
@@ -14,96 +14,92 @@ import { Check } from 'lucide-react';
  * 状态流转步骤定义
  */
 const INSTALL_STEPS = [
-    { key: 'PENDING_DISPATCH', label: '待分配', order: 1 },
-    { key: 'DISPATCHING', label: '分配中', order: 2 },
-    { key: 'PENDING_VISIT', label: '待上门', order: 3 },
-    { key: 'PENDING_CONFIRM', label: '待验收', order: 4 },
-    { key: 'COMPLETED', label: '已完成', order: 5 },
+  { key: 'PENDING_DISPATCH', label: '待分配', order: 1 },
+  { key: 'DISPATCHING', label: '分配中', order: 2 },
+  { key: 'PENDING_VISIT', label: '待上门', order: 3 },
+  { key: 'PENDING_CONFIRM', label: '待验收', order: 4 },
+  { key: 'COMPLETED', label: '已完成', order: 5 },
 ] as const;
 
 /**
  * 获取当前状态的序号
  */
 function getStatusOrder(status: string): number {
-    const step = INSTALL_STEPS.find((s) => s.key === status);
-    return step?.order ?? 0;
+  const step = INSTALL_STEPS.find((s) => s.key === status);
+  return step?.order ?? 0;
 }
 
 /**
  * 安装状态进度条组件属性
  */
 interface InstallStatusProgressProps {
-    /** 当前任务状态 */
-    currentStatus: string;
-    /** 自定义样式类 */
-    className?: string;
+  /** 当前任务状态 */
+  currentStatus: string;
+  /** 自定义样式类 */
+  className?: string;
 }
 
 /**
  * 安装任务状态进度条
- * 
+ *
  * 可视化展示安装任务从“待分配”到“已完成”的完整生命周期进度。
  * 支持取消状态（红色显示）。
  */
 export function InstallStatusProgress({ currentStatus, className }: InstallStatusProgressProps) {
-    const currentOrder = getStatusOrder(currentStatus);
-    const isCancelled = currentStatus === 'CANCELLED';
+  const currentOrder = getStatusOrder(currentStatus);
+  const isCancelled = currentStatus === 'CANCELLED';
 
-    return (
-        <div className={cn('flex items-center justify-between', className)}>
-            {INSTALL_STEPS.map((step, index) => {
-                const isCompleted = currentOrder > step.order;
-                const isCurrent = step.key === currentStatus;
-                const isLast = index === INSTALL_STEPS.length - 1;
+  return (
+    <div className={cn('flex items-center justify-between', className)}>
+      {INSTALL_STEPS.map((step, index) => {
+        const isCompleted = currentOrder > step.order;
+        const isCurrent = step.key === currentStatus;
+        const isLast = index === INSTALL_STEPS.length - 1;
 
-                return (
-                    <React.Fragment key={step.key}>
-                        {/* 步骤圆圈 */}
-                        <div className="flex flex-col items-center">
-                            <div
-                                className={cn(
-                                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
-                                    isCompleted && 'bg-green-500 text-white',
-                                    isCurrent && !isCancelled && 'bg-blue-500 text-white ring-4 ring-blue-100',
-                                    !isCompleted && !isCurrent && 'bg-gray-200 text-gray-500',
-                                    isCancelled && isCurrent && 'bg-red-500 text-white'
-                                )}
-                            >
-                                {isCompleted ? (
-                                    <Check className="h-4 w-4" />
-                                ) : (
-                                    step.order
-                                )}
-                            </div>
-                            {/* 步骤标签 */}
-                            <span
-                                className={cn(
-                                    'mt-2 text-xs font-medium',
-                                    isCompleted && 'text-green-600',
-                                    isCurrent && !isCancelled && 'text-blue-600',
-                                    !isCompleted && !isCurrent && 'text-gray-400'
-                                )}
-                            >
-                                {step.label}
-                            </span>
-                        </div>
+        return (
+          <React.Fragment key={step.key}>
+            {/* 步骤圆圈 */}
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
+                  isCompleted && 'bg-green-500 text-white',
+                  isCurrent && !isCancelled && 'bg-blue-500 text-white ring-4 ring-blue-100',
+                  !isCompleted && !isCurrent && 'bg-gray-200 text-gray-500',
+                  isCancelled && isCurrent && 'bg-red-500 text-white'
+                )}
+              >
+                {isCompleted ? <Check className="h-4 w-4" /> : step.order}
+              </div>
+              {/* 步骤标签 */}
+              <span
+                className={cn(
+                  'mt-2 text-xs font-medium',
+                  isCompleted && 'text-green-600',
+                  isCurrent && !isCancelled && 'text-blue-600',
+                  !isCompleted && !isCurrent && 'text-gray-400'
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
 
-                        {/* 连接线 */}
-                        {!isLast && (
-                            <div
-                                className={cn(
-                                    'flex-1 h-0.5 mx-2',
-                                    currentOrder > step.order + 1 && 'bg-green-500',
-                                    currentOrder === step.order + 1 && 'bg-gradient-to-r from-green-500 to-gray-200',
-                                    currentOrder <= step.order && 'bg-gray-200'
-                                )}
-                            />
-                        )}
-                    </React.Fragment>
-                );
-            })}
-        </div>
-    );
+            {/* 连接线 */}
+            {!isLast && (
+              <div
+                className={cn(
+                  'mx-2 h-0.5 flex-1',
+                  currentOrder > step.order + 1 && 'bg-green-500',
+                  currentOrder === step.order + 1 && 'bg-gradient-to-r from-green-500 to-gray-200',
+                  currentOrder <= step.order && 'bg-gray-200'
+                )}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
 }
 
 export default InstallStatusProgress;

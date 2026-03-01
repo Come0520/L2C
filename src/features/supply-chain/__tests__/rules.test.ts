@@ -17,199 +17,196 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ============ 模拟依赖 ============
 
 vi.mock('../helpers', () => ({
-    requireAuth: vi.fn().mockResolvedValue({
-        success: true,
-        session: { user: { id: 'user-1', tenantId: 'tenant-1' } },
-    }),
-    requireManagePermission: vi.fn().mockResolvedValue({ success: true }),
-    requireViewPermission: vi.fn().mockResolvedValue({ success: true }),
+  requireAuth: vi.fn().mockResolvedValue({
+    success: true,
+    session: { user: { id: 'user-1', tenantId: 'tenant-1' } },
+  }),
+  requireManagePermission: vi.fn().mockResolvedValue({ success: true }),
+  requireViewPermission: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
-    revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/audit-service', () => ({
-    AuditService: {
-        recordFromSession: vi.fn(),
-    },
+  AuditService: {
+    recordFromSession: vi.fn(),
+  },
 }));
 
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                    orderBy: vi.fn().mockResolvedValue([]),
-                }),
-            }),
+  db: {
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue([]),
         }),
-        insert: vi.fn().mockReturnValue({
-            values: vi.fn().mockResolvedValue([]),
-        }),
-        update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue([]),
-            }),
-        }),
-        delete: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-        }),
-        query: {
-            splitRouteRules: {
-                findFirst: vi.fn(),
-            },
-        },
+      }),
+    }),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockResolvedValue([]),
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }),
+    delete: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    }),
+    query: {
+      splitRouteRules: {
+        findFirst: vi.fn(),
+      },
     },
+  },
 }));
 
 import {
-    getSplitRules,
-    createSplitRule,
-    updateSplitRule,
-    deleteSplitRule,
-    getAllSuppliers,
+  getSplitRules,
+  createSplitRule,
+  updateSplitRule,
+  deleteSplitRule,
+  getAllSuppliers,
 } from '../actions/rules';
 import { db } from '@/shared/api/db';
 
 // ============ 测试用例 ============
 
 describe('拆单路由规则 (Split Route Rules)', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getSplitRules - 获取规则列表', () => {
+    it('成功返回按优先级排序的规则列表', async () => {
+      const mockRules = [
+        { id: 'r-1', name: '窗帘规则', priority: 1 },
+        { id: 'r-2', name: '百叶帘规则', priority: 2 },
+      ];
+
+      (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(mockRules),
+          }),
+        }),
+      });
+
+      const result = await getSplitRules();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('窗帘规则');
+    });
+  });
+
+  describe('createSplitRule - 创建规则', () => {
+    it('成功创建新规则', async () => {
+      const input = {
+        name: '测试规则',
+        priority: 10,
+        conditions: '[{"field":"category","op":"eq","value":"CURTAIN"}]',
+        targetType: 'PURCHASE_ORDER' as const,
+        targetSupplierId: 'supplier-1',
+        isActive: true,
+      };
+
+      const result = await createSplitRule(input);
+
+      expect(result.success).toBe(true);
+      expect(db.insert).toHaveBeenCalled();
     });
 
-    describe('getSplitRules - 获取规则列表', () => {
-        it('成功返回按优先级排序的规则列表', async () => {
-            const mockRules = [
-                { id: 'r-1', name: '窗帘规则', priority: 1 },
-                { id: 'r-2', name: '百叶帘规则', priority: 2 },
-            ];
+    it('名称为空时应抛出 Zod 验证错误', async () => {
+      const input = {
+        name: '', // 空名称 — 违反 .min(1)
+        priority: 1,
+        conditions: '[]',
+        targetType: 'PURCHASE_ORDER' as const,
+        isActive: true,
+      };
 
-            (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
-                from: vi.fn().mockReturnValue({
-                    where: vi.fn().mockReturnValue({
-                        orderBy: vi.fn().mockResolvedValue(mockRules),
-                    }),
-                }),
-            });
+      await expect(createSplitRule(input)).rejects.toThrow();
+    });
+  });
 
-            const result = await getSplitRules();
+  describe('updateSplitRule - 更新规则', () => {
+    it('成功更新已存在的规则', async () => {
+      (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
+        id: 'r-1',
+        tenantId: 'tenant-1',
+        name: '旧规则',
+      });
 
-            expect(result).toHaveLength(2);
-            expect(result[0].name).toBe('窗帘规则');
-        });
+      const input = {
+        name: '更新后的规则',
+        priority: 20,
+        conditions: '[{"field":"category","op":"eq","value":"BLIND"}]',
+        targetType: 'SERVICE_TASK' as const,
+        isActive: true,
+      };
+
+      const result = await updateSplitRule('r-1', input);
+
+      expect(result.success).toBe(true);
+      expect(db.update).toHaveBeenCalled();
     });
 
-    describe('createSplitRule - 创建规则', () => {
-        it('成功创建新规则', async () => {
-            const input = {
-                name: '测试规则',
-                priority: 10,
-                conditions: '[{"field":"category","op":"eq","value":"CURTAIN"}]',
-                targetType: 'PURCHASE_ORDER' as const,
-                targetSupplierId: 'supplier-1',
-                isActive: true,
-            };
+    it('规则不存在时应抛出异常', async () => {
+      (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
 
-            const result = await createSplitRule(input);
+      const input = {
+        name: '不存在的规则',
+        priority: 1,
+        conditions: '[]',
+        targetType: 'PURCHASE_ORDER' as const,
+        isActive: true,
+      };
 
-            expect(result.success).toBe(true);
-            expect(db.insert).toHaveBeenCalled();
-        });
+      await expect(updateSplitRule('non-existent', input)).rejects.toThrow('规则不存在或无权操作');
+    });
+  });
 
-        it('名称为空时应抛出 Zod 验证错误', async () => {
-            const input = {
-                name: '', // 空名称 — 违反 .min(1)
-                priority: 1,
-                conditions: '[]',
-                targetType: 'PURCHASE_ORDER' as const,
-                isActive: true,
-            };
+  describe('deleteSplitRule - 删除规则', () => {
+    it('成功删除已存在的规则', async () => {
+      (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
+        id: 'r-1',
+        tenantId: 'tenant-1',
+      });
 
-            await expect(createSplitRule(input)).rejects.toThrow();
-        });
+      const result = await deleteSplitRule('r-1');
+
+      expect(result.success).toBe(true);
+      expect(db.delete).toHaveBeenCalled();
     });
 
-    describe('updateSplitRule - 更新规则', () => {
-        it('成功更新已存在的规则', async () => {
-             
-            (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
-                id: 'r-1',
-                tenantId: 'tenant-1',
-                name: '旧规则',
-            });
+    it('删除不存在的规则应抛出异常', async () => {
+      (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
 
-            const input = {
-                name: '更新后的规则',
-                priority: 20,
-                conditions: '[{"field":"category","op":"eq","value":"BLIND"}]',
-                targetType: 'SERVICE_TASK' as const,
-                isActive: true,
-            };
-
-            const result = await updateSplitRule('r-1', input);
-
-            expect(result.success).toBe(true);
-            expect(db.update).toHaveBeenCalled();
-        });
-
-        it('规则不存在时应抛出异常', async () => {
-             
-            (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
-
-            const input = {
-                name: '不存在的规则',
-                priority: 1,
-                conditions: '[]',
-                targetType: 'PURCHASE_ORDER' as const,
-                isActive: true,
-            };
-
-            await expect(updateSplitRule('non-existent', input)).rejects.toThrow('规则不存在或无权操作');
-        });
+      await expect(deleteSplitRule('non-existent')).rejects.toThrow('规则不存在或无权操作');
     });
+  });
 
-    describe('deleteSplitRule - 删除规则', () => {
-        it('成功删除已存在的规则', async () => {
-             
-            (db.query as any).splitRouteRules.findFirst.mockResolvedValue({
-                id: 'r-1',
-                tenantId: 'tenant-1',
-            });
+  describe('getAllSuppliers - 获取供应商列表', () => {
+    it('成功返回当前租户的供应商列表', async () => {
+      const mockSuppliers = [
+        { id: 's-1', name: '供应商A', supplierNo: 'SUP-001' },
+        { id: 's-2', name: '供应商B', supplierNo: 'SUP-002' },
+      ];
 
-            const result = await deleteSplitRule('r-1');
+      (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(mockSuppliers),
+        }),
+      });
 
-            expect(result.success).toBe(true);
-            expect(db.delete).toHaveBeenCalled();
-        });
+      const result = await getAllSuppliers();
 
-        it('删除不存在的规则应抛出异常', async () => {
-             
-            (db.query as any).splitRouteRules.findFirst.mockResolvedValue(null);
-
-            await expect(deleteSplitRule('non-existent')).rejects.toThrow('规则不存在或无权操作');
-        });
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('供应商A');
     });
-
-    describe('getAllSuppliers - 获取供应商列表', () => {
-        it('成功返回当前租户的供应商列表', async () => {
-            const mockSuppliers = [
-                { id: 's-1', name: '供应商A', supplierNo: 'SUP-001' },
-                { id: 's-2', name: '供应商B', supplierNo: 'SUP-002' },
-            ];
-
-            (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
-                from: vi.fn().mockReturnValue({
-                    where: vi.fn().mockResolvedValue(mockSuppliers),
-                }),
-            });
-
-            const result = await getAllSuppliers();
-
-            expect(result).toHaveLength(2);
-            expect(result[0].name).toBe('供应商A');
-        });
-    });
+  });
 });

@@ -5,103 +5,114 @@ import { OrderService } from '@/services/order.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 
 vi.mock('@/shared/api/db', () => ({
-    db: {
-        query: {
-            orders: {
-                findMany: vi.fn(),
-            },
-        },
+  db: {
+    query: {
+      orders: {
+        findMany: vi.fn(),
+      },
     },
+  },
 }));
 
 vi.mock('@/services/order.service', () => ({
-    OrderService: {
-        haltOrder: vi.fn(),
-        resumeOrder: vi.fn(),
-    },
+  OrderService: {
+    haltOrder: vi.fn(),
+    resumeOrder: vi.fn(),
+  },
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(),
-    checkPermission: vi.fn(),
+  auth: vi.fn(),
+  checkPermission: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({
-    revalidateTag: vi.fn(),
-    revalidateTag: vi.fn(),
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 describe('Halt Actions', () => {
-    const mockSession = {
-        user: { id: 'u1', tenantId: 't1' }
+  const mockSession = {
+    user: { id: 'u1', tenantId: 't1' },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (auth as any).mockResolvedValue(mockSession);
+    (checkPermission as any).mockResolvedValue(undefined);
+  });
+
+  describe('haltOrderAction', () => {
+    const input = {
+      orderId: '22222222-2222-4222-8222-222222222222',
+      reason: 'MATERIAL_SHORTAGE' as const,
+      remark: 'Wait for panel',
+      version: 1,
     };
 
-    beforeEach(() => {
-        vi.clearAllMocks();
-        (auth as any).mockResolvedValue(mockSession);
-        (checkPermission as any).mockResolvedValue(undefined);
+    it('应成功叫停订单', async () => {
+      (OrderService.haltOrder as any).mockResolvedValue({
+        orderNo: 'ORD-001',
+        snapshotData: '{"previousStatus":"IN_PRODUCTION"}',
+      });
+
+      const result = await haltOrderAction(input);
+
+      expect(result.success).toBe(true);
+      expect(OrderService.haltOrder).toHaveBeenCalledWith(
+        input.orderId,
+        mockSession.user.tenantId,
+        1,
+        mockSession.user.id,
+        expect.stringContaining('MATERIAL_SHORTAGE')
+      );
     });
 
-    describe('haltOrderAction', () => {
-        const input = { orderId: '22222222-2222-4222-8222-222222222222', reason: 'MATERIAL_SHORTAGE' as const, remark: 'Wait for panel', version: 1 };
-
-        it('应成功叫停订单', async () => {
-            (OrderService.haltOrder as any).mockResolvedValue({ orderNo: 'ORD-001', snapshotData: '{"previousStatus":"IN_PRODUCTION"}' });
-
-            const result = await haltOrderAction(input);
-
-            expect(result.success).toBe(true);
-            expect(OrderService.haltOrder).toHaveBeenCalledWith(
-                input.orderId,
-                mockSession.user.tenantId,
-                1,
-                mockSession.user.id,
-                expect.stringContaining('MATERIAL_SHORTAGE')
-            );
-        });
-
-        it('权限不足时应拒绝', async () => {
-            (checkPermission as any).mockRejectedValue(new Error('Forbidden'));
-            const result = await haltOrderAction(input);
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Forbidden');
-        });
+    it('权限不足时应拒绝', async () => {
+      (checkPermission as any).mockRejectedValue(new Error('Forbidden'));
+      const result = await haltOrderAction(input);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Forbidden');
     });
+  });
 
-    describe('getHaltedOrders', () => {
-        it('应返回带叫停天数信息的列表', async () => {
-            const mockOrders = [
-                {
-                    id: 'o1',
-                    orderNo: 'ORD-01',
-                    pausedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-                    pauseReason: '{"reason":"SHORTAGE"}',
-                    customer: { name: 'Alice', phone: '123' }
-                }
-            ];
-            (db.query.orders.findMany as any).mockResolvedValue(mockOrders);
+  describe('getHaltedOrders', () => {
+    it('应返回带叫停天数信息的列表', async () => {
+      const mockOrders = [
+        {
+          id: 'o1',
+          orderNo: 'ORD-01',
+          pausedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+          pauseReason: '{"reason":"SHORTAGE"}',
+          customer: { name: 'Alice', phone: '123' },
+        },
+      ];
+      (db.query.orders.findMany as any).mockResolvedValue(mockOrders);
 
-            const result = await getHaltedOrders();
+      const result = await getHaltedOrders();
 
-            expect(result.success).toBe(true);
-            expect((result.data as any)[0].daysHalted).toBe(10);
-            expect((result.data as any)[0].alertLevel).toBe('WARNING'); // > 7 days
-        });
+      expect(result.success).toBe(true);
+      expect((result.data as any)[0].daysHalted).toBe(10);
+      expect((result.data as any)[0].alertLevel).toBe('WARNING'); // > 7 days
     });
+  });
 
-    describe('resumeOrderAction', () => {
-        it('应成功恢复叫停的订单', async () => {
-            (OrderService.resumeOrder as any).mockResolvedValue({ success: true });
+  describe('resumeOrderAction', () => {
+    it('应成功恢复叫停的订单', async () => {
+      (OrderService.resumeOrder as any).mockResolvedValue({ success: true });
 
-            const result = await resumeOrderAction({ orderId: '22222222-2222-4222-8222-222222222222', version: 1 });
+      const result = await resumeOrderAction({
+        orderId: '22222222-2222-4222-8222-222222222222',
+        version: 1,
+      });
 
-            expect(result.success).toBe(true);
-            expect(OrderService.resumeOrder).toHaveBeenCalledWith(
-                '22222222-2222-4222-8222-222222222222',
-                mockSession.user.tenantId,
-                1,
-                mockSession.user.id
-            );
-        });
+      expect(result.success).toBe(true);
+      expect(OrderService.resumeOrder).toHaveBeenCalledWith(
+        '22222222-2222-4222-8222-222222222222',
+        mockSession.user.tenantId,
+        1,
+        mockSession.user.id
+      );
     });
+  });
 });

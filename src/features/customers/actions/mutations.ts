@@ -6,7 +6,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { customerSchema, updateCustomerSchema, mergeCustomersSchema } from '../schemas';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -88,7 +88,7 @@ export async function createCustomer(input: z.input<typeof customerSchema>) {
     }
 
     // 精确清除客户列表缓存
-    revalidateTag(`customers-list-${tenantId}`, {});
+    updateTag(`customers-list-${tenantId}`);
     return result.customer;
   } catch (e: unknown) {
     logger.error('[customers] 创建客户失败:', e);
@@ -162,7 +162,7 @@ export async function deleteCustomer(id: string) {
     await CustomerService.deleteCustomer(id, session.user.tenantId, session.user.id);
 
     // 精确清除客户列表缓存
-    revalidateTag(`customers-list-${session.user.tenantId}`, {});
+    updateTag(`customers-list-${session.user.tenantId}`);
   } catch (error) {
     logger.error('[customers] 删除客户失败:', error);
     throw error;
@@ -235,7 +235,7 @@ export async function addCustomerAddress(input: z.infer<typeof createAddressSche
         return newAddr;
       })
       .then((res) => {
-        revalidateTag(`customer-detail-${data.customerId}`, {});
+        updateTag(`customer-detail-${data.customerId}`);
         return res;
       });
   } catch (error) {
@@ -482,7 +482,7 @@ export async function setDefaultAddress(id: string, customerId: string, version?
         tenantId,
       });
     });
-    revalidateTag(`customer-detail-${customerId}`, {});
+    updateTag(`customer-detail-${customerId}`);
   } catch (error) {
     logger.error('[customers] 设置默认地址失败:', {
       error,

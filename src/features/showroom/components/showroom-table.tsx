@@ -23,14 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { Input } from '@/shared/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 
 export type ShowroomItem = {
@@ -163,7 +156,7 @@ export const columns: ColumnDef<ShowroomItem>[] = [
 /**
  * 展厅素材列表视图 (表格模式)
  * 供管理后台使用的备选展示方案。
- * 
+ *
  * [TODO] 当前使用硬编码演示数据，生产环境下应接入 getShowroomItems Action。
  */
 export function ShowroomTable() {
@@ -219,9 +212,9 @@ export function ShowroomTable() {
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-[400px] text-center">
                   <div className="flex flex-col items-center justify-center space-y-4 py-10">
-                    <span className="text-4xl text-muted-foreground/30">🕸️</span>
-                    <h3 className="text-lg font-medium text-muted-foreground">空空如也</h3>
-                    <p className="text-sm text-muted-foreground/60 max-w-sm text-center">
+                    <span className="text-muted-foreground/30 text-4xl">🕸️</span>
+                    <h3 className="text-muted-foreground text-lg font-medium">空空如也</h3>
+                    <p className="text-muted-foreground/60 max-w-sm text-center text-sm">
                       这里还没有任何展厅素材数据，试着添加一些或者清除筛选条件吧。
                     </p>
                   </div>
@@ -233,7 +226,7 @@ export function ShowroomTable() {
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="text-muted-foreground flex-1 text-sm">
-          已选 {table.getFilteredSelectedRowModel().rows.length} / 共 {' '}
+          已选 {table.getFilteredSelectedRowModel().rows.length} / 共{' '}
           {table.getFilteredRowModel().rows.length} 行数据
         </div>
         <div className="space-x-2">

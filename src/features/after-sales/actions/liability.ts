@@ -2,7 +2,7 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { eq, and, sql, sum } from 'drizzle-orm';
 import { afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
@@ -189,8 +189,6 @@ const confirmLiabilityNoticeAction = createSafeAction(
     if (!result.success) return result;
 
     revalidatePath(`/after-sales/${result.afterSalesId}`);
-    revalidateTag('after-sales-analytics', {});
-
     // P0 FIX (R2-04): 财务联动移至事务外部，确保幂等性和副作用一致性
     if (
       result.notice &&

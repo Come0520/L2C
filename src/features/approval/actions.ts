@@ -7,10 +7,9 @@
 export { submitApproval } from './actions/submission';
 export { processApproval, addApprover } from './actions/processing';
 export {
-    getPendingApprovals,
-    getApprovalHistory,
-    getApprovalDetails,
-    getApprovalFlows
+  getPendingApprovals,
+  getApprovalHistory,
+  getApprovalDetails,
+  getApprovalFlows,
 } from './actions/queries';
 export { processTimeouts, checkTimeoutsManually } from './actions/timeout';
-

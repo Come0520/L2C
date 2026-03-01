@@ -58,6 +58,7 @@ vi.mock('@/shared/lib/auth', () => ({
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
@@ -101,10 +102,7 @@ describe('Privacy Actions (Phone View Logs)', () => {
 
     it('创建成功后应精确刷新客户详情缓存 (revalidateTag)', async () => {
       await logPhoneView(validInput);
-      expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(
-        `customer-detail-${MOCK_CUSTOMER_ID}`,
-        expect.anything()
-      );
+      expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`);
     });
   });
 

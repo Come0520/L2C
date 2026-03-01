@@ -1,5 +1,5 @@
 'use server';
-import { unstable_cache, revalidateTag } from 'next/cache';
+import { unstable_cache, updateTag } from 'next/cache';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -176,7 +176,7 @@ export async function generateStatementConfirmation(
         },
       });
 
-      revalidateTag(`finance-confirmation-${tenantId}`, {});
+      updateTag(`finance-confirmation-${tenantId}`);
 
       logger.info('[finance] generateStatementConfirmation 执行成功', {
         confirmationNo: confirmation.confirmationNo,
@@ -307,7 +307,7 @@ export async function confirmStatement(
         details: { confirmedBy },
       });
 
-      revalidateTag(`finance-confirmation-${tenantId}`, {});
+      updateTag(`finance-confirmation-${tenantId}`);
 
       logger.info('[finance] confirmStatement 执行成功', { confirmationId });
 

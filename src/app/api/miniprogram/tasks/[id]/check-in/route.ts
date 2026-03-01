@@ -6,8 +6,6 @@ import { measureTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../../auth-utils';
 
-
-
 /**
  * POST /api/miniprogram/tasks/[id]/check-in
  * GPS 签到

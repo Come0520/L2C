@@ -8,11 +8,11 @@ import { z } from 'zod';
 
 /** 请求重置密码的校验 schema */
 export const requestResetSchema = z.object({
-    email: z.string().email('请输入有效的邮箱地址'),
+  email: z.string().email('请输入有效的邮箱地址'),
 });
 
 /** 执行密码重置的校验 schema */
 export const resetPasswordSchema = z.object({
-    token: z.string().min(1, '重置链接无效，缺失令牌'),
-    newPassword: z.string().min(8, '密码长度不能少于 8 位'),
+  token: z.string().min(1, '重置链接无效，缺失令牌'),
+  newPassword: z.string().min(8, '密码长度不能少于 8 位'),
 });

@@ -5,7 +5,7 @@ import { users } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { eq } from 'drizzle-orm';
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { revalidatePath, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
@@ -103,7 +103,6 @@ const updateUserPreferencesActionInternal = createSafeAction(
       });
 
       // 清除偏好设置缓存
-      revalidateTag('user-preferences', {});
       revalidatePath('/settings/preferences');
 
       return { success: true, message: '偏好设置已更新' };

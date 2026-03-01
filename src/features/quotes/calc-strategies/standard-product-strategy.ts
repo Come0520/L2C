@@ -7,10 +7,10 @@ import { BaseCalcStrategy, type CalcParams, type CalcResult } from './base-strat
 
 /** 标品计算参数 */
 export interface StandardCalcParams extends CalcParams {
-    /** 数量 */
-    quantity?: number;
-    /** 单价 */
-    unitPrice?: number;
+  /** 数量 */
+  quantity?: number;
+  /** 单价 */
+  unitPrice?: number;
 }
 
 /**
@@ -19,14 +19,14 @@ export interface StandardCalcParams extends CalcParams {
  * 计算逻辑：subtotal = quantity × unitPrice
  */
 export class StandardProductStrategy extends BaseCalcStrategy<StandardCalcParams, CalcResult> {
-    calculate(params: StandardCalcParams): CalcResult {
-        const quantity = params.quantity ?? 0;
-        const unitPrice = params.unitPrice ?? 0;
-        // 使用整数运算避免浮点精度问题
-        const subtotal = Math.round(quantity * unitPrice * 100) / 100;
-        return {
-            usage: quantity,
-            subtotal,
-        };
-    }
+  calculate(params: StandardCalcParams): CalcResult {
+    const quantity = params.quantity ?? 0;
+    const unitPrice = params.unitPrice ?? 0;
+    // 使用整数运算避免浮点精度问题
+    const subtotal = Math.round(quantity * unitPrice * 100) / 100;
+    return {
+      usage: quantity,
+      subtotal,
+    };
+  }
 }

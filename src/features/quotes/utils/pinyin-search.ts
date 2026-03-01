@@ -10,8 +10,8 @@ import { pinyin } from 'pinyin-pro';
  * 例如：'棉麻浅灰飘窗垫' -> 'mmqhpcd'
  */
 export function getPinyinInitials(text: string): string {
-    if (!text) return '';
-    return pinyin(text, { pattern: 'first', toneType: 'none' }).replace(/\s/g, '').toLowerCase();
+  if (!text) return '';
+  return pinyin(text, { pattern: 'first', toneType: 'none' }).replace(/\s/g, '').toLowerCase();
 }
 
 /**
@@ -19,8 +19,8 @@ export function getPinyinInitials(text: string): string {
  * 例如：'棉麻浅灰飘窗垫' -> 'mianmaqianhuipiaochuangdian'
  */
 export function getFullPinyin(text: string): string {
-    if (!text) return '';
-    return pinyin(text, { toneType: 'none' }).replace(/\s/g, '').toLowerCase();
+  if (!text) return '';
+  return pinyin(text, { toneType: 'none' }).replace(/\s/g, '').toLowerCase();
 }
 
 /**
@@ -28,29 +28,29 @@ export function getFullPinyin(text: string): string {
  * 支持：中文匹配、拼音首字母匹配、完整拼音匹配
  */
 export function matchesPinyin(text: string, query: string): boolean {
-    if (!text || !query) return false;
+  if (!text || !query) return false;
 
-    const normalizedQuery = query.toLowerCase().trim();
-    const normalizedText = text.toLowerCase();
+  const normalizedQuery = query.toLowerCase().trim();
+  const normalizedText = text.toLowerCase();
 
-    // 1. 直接文本匹配（包含中文）
-    if (normalizedText.includes(normalizedQuery)) {
-        return true;
-    }
+  // 1. 直接文本匹配（包含中文）
+  if (normalizedText.includes(normalizedQuery)) {
+    return true;
+  }
 
-    // 2. 拼音首字母匹配
-    const initials = getPinyinInitials(text);
-    if (initials.includes(normalizedQuery)) {
-        return true;
-    }
+  // 2. 拼音首字母匹配
+  const initials = getPinyinInitials(text);
+  if (initials.includes(normalizedQuery)) {
+    return true;
+  }
 
-    // 3. 完整拼音匹配
-    const fullPinyin = getFullPinyin(text);
-    if (fullPinyin.includes(normalizedQuery)) {
-        return true;
-    }
+  // 3. 完整拼音匹配
+  const fullPinyin = getFullPinyin(text);
+  if (fullPinyin.includes(normalizedQuery)) {
+    return true;
+  }
 
-    return false;
+  return false;
 }
 
 /**
@@ -58,11 +58,6 @@ export function matchesPinyin(text: string, query: string): boolean {
  * 包含：名称 + 拼音首字母 + SKU
  */
 export function generateSearchIndex(name: string, sku?: string): string {
-    const parts = [
-        name,
-        getPinyinInitials(name),
-        getFullPinyin(name),
-        sku || ''
-    ];
-    return parts.join(' ').toLowerCase();
+  const parts = [name, getPinyinInitials(name), getFullPinyin(name), sku || ''];
+  return parts.join(' ').toLowerCase();
 }

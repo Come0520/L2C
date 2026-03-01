@@ -220,7 +220,10 @@ export function ReceiptBillDialog({
           <DialogTitle>登记收款 (需审批)</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit as Parameters<typeof form.handleSubmit>[0])} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit as Parameters<typeof form.handleSubmit>[0])}
+            className="space-y-4"
+          >
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

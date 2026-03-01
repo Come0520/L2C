@@ -10,115 +10,117 @@ import { getInstallWorkersAction } from '../actions';
 
 /** 安装师傅数据类型 */
 interface InstallWorker {
-    id: string;
-    name: string | null;
-    workload: number;
+  id: string;
+  name: string | null;
+  workload: number;
 }
 
 /** 智能安装师选择器属性 */
 interface SmartWorkerSelectorProps {
-    value?: string;
-    onSelect: (workerId: string) => void;
-    scheduledDate?: Date;
+  value?: string;
+  onSelect: (workerId: string) => void;
+  scheduledDate?: Date;
 }
 
 /**
  * 智能安装师选择器
- * 
+ *
  * 核心功能：
  * 1. 自动从服务端加载具备安装资质的师傅列表。
  * 2. 实时显示师傅当前的工作负载（待集成详细负载算法）。
  * 3. 提供直观的选中交互体验。
  */
-export function SmartWorkerSelector({ value, onSelect, scheduledDate: _scheduledDate }: SmartWorkerSelectorProps) {
-    const [workers, setWorkers] = useState<InstallWorker[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function SmartWorkerSelector({
+  value,
+  onSelect,
+  scheduledDate: _scheduledDate,
+}: SmartWorkerSelectorProps) {
+  const [workers, setWorkers] = useState<InstallWorker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // 从 API 加载安装师列表
-    useEffect(() => {
-        async function loadWorkers() {
-            setLoading(true);
-            setError(null);
+  // 从 API 加载安装师列表
+  useEffect(() => {
+    async function loadWorkers() {
+      setLoading(true);
+      setError(null);
 
-            try {
-                const result = await getInstallWorkersAction();
-                if (result.success && result.data) {
-                    // 转换为组件需要的格式
-                    const workerList = result.data.map(user => ({
-                        id: user.id,
-                        name: user.name,
-                        workload: 0,  // NOTE: 后续可从 API 获取实际工作负载
-                    }));
-                    setWorkers(workerList);
-                } else {
-                    setError(result.error || '加载失败');
-                }
-            } catch (_err) {
-                setError('网络错误，请重试');
-            } finally {
-                setLoading(false);
-            }
+      try {
+        const result = await getInstallWorkersAction();
+        if (result.success && result.data) {
+          // 转换为组件需要的格式
+          const workerList = result.data.map((user) => ({
+            id: user.id,
+            name: user.name,
+            workload: 0, // NOTE: 后续可从 API 获取实际工作负载
+          }));
+          setWorkers(workerList);
+        } else {
+          setError(result.error || '加载失败');
         }
-
-        loadWorkers();
-    }, []);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">加载安装师列表...</span>
-            </div>
-        );
+      } catch (_err) {
+        setError('网络错误，请重试');
+      } finally {
+        setLoading(false);
+      }
     }
 
-    if (error) {
-        return (
-            <div className="flex items-center justify-center py-8 text-destructive">
-                <AlertCircle className="h-5 w-5 mr-2" />
-                <span className="text-sm">{error}</span>
-            </div>
-        );
-    }
+    loadWorkers();
+  }, []);
 
-    if (workers.length === 0) {
-        return (
-            <div className="text-center py-8 text-muted-foreground">
-                <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">暂无可用安装师</p>
-            </div>
-        );
-    }
-
+  if (loading) {
     return (
-        <div className="space-y-2">
-            <h4 className="text-sm font-medium">选择安装师</h4>
-            <div className="grid grid-cols-1 gap-2">
-                {workers.map((worker) => (
-                    <div
-                        key={worker.id}
-                        className={cn(
-                            "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
-                            value === worker.id ? "border-primary bg-primary/5" : "hover:bg-accent"
-                        )}
-                        onClick={() => onSelect(worker.id)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                <User className="h-4 w-4" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium">{worker.name || '未命名'}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    当日任务: {worker.workload || 0} 个
-                                </p>
-                            </div>
-                        </div>
-                        {value === worker.id && <Check className="h-4 w-4 text-primary" />}
-                    </div>
-                ))}
-            </div>
-        </div>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <span className="text-muted-foreground ml-2 text-sm">加载安装师列表...</span>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="text-destructive flex items-center justify-center py-8">
+        <AlertCircle className="mr-2 h-5 w-5" />
+        <span className="text-sm">{error}</span>
+      </div>
+    );
+  }
+
+  if (workers.length === 0) {
+    return (
+      <div className="text-muted-foreground py-8 text-center">
+        <User className="mx-auto mb-2 h-8 w-8 opacity-50" />
+        <p className="text-sm">暂无可用安装师</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium">选择安装师</h4>
+      <div className="grid grid-cols-1 gap-2">
+        {workers.map((worker) => (
+          <div
+            key={worker.id}
+            className={cn(
+              'flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors',
+              value === worker.id ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+            )}
+            onClick={() => onSelect(worker.id)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                <User className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{worker.name || '未命名'}</p>
+                <p className="text-muted-foreground text-xs">当日任务: {worker.workload || 0} 个</p>
+              </div>
+            </div>
+            {value === worker.id && <Check className="text-primary h-4 w-4" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

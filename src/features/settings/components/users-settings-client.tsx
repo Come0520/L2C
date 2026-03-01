@@ -19,7 +19,11 @@ interface UsersSettingsClientProps {
  * 用户管理客户端组件
  * 管理编辑、禁用、删除等用户操作
  */
-export function UsersSettingsClient({ userData, availableRoles = [], totalPages = 1 }: UsersSettingsClientProps) {
+export function UsersSettingsClient({
+  userData,
+  availableRoles = [],
+  totalPages = 1,
+}: UsersSettingsClientProps) {
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();

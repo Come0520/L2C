@@ -27,7 +27,7 @@ export async function getQuarterlyComparison(params: { year: number }) {
       recordId: `quarterly-comparison-${year}`,
       userId: session.user.id,
       tenantId,
-      details: { reportName: 'QuarterlyComparison', params: { year } }
+      details: { reportName: 'QuarterlyComparison', params: { year } },
     });
 
     const data = await unstable_cache(
@@ -117,7 +117,7 @@ export async function getAnnualTargetProgress(params: { year: number }) {
       recordId: `annual-target-progress-${year}`,
       userId: session.user.id,
       tenantId,
-      details: { reportName: 'AnnualTargetProgress', params: { year } }
+      details: { reportName: 'AnnualTargetProgress', params: { year } },
     });
 
     const data = await unstable_cache(

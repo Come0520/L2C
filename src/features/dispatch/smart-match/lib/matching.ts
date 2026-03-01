@@ -3,6 +3,7 @@
  * 扩展功能：距离因子、可用时间因子、批量匹配排序
  */
 import { calculateWorkerScore } from './scoring';
+import { logger } from '@/shared/lib/logger';
 
 // ============================================================
 // 类型定义
@@ -10,44 +11,44 @@ import { calculateWorkerScore } from './scoring';
 
 /** 地理坐标 */
 interface GeoLocation {
-    lat: number;
-    lng: number;
+  lat: number;
+  lng: number;
 }
 
 /** 工人档案（扩展版） */
 interface WorkerProfile {
-    id: string;
-    skills: string[];
-    activeTaskCount: number;
-    avgRating?: number;
-    /** 工人当前位置（可选） */
-    location?: GeoLocation;
-    /** 工人当日已排班时间段（ISO 8601 字符串对）*/
-    scheduledSlots?: Array<{ start: string; end: string }>;
+  id: string;
+  skills: string[];
+  activeTaskCount: number;
+  avgRating?: number;
+  /** 工人当前位置（可选） */
+  location?: GeoLocation;
+  /** 工人当日已排班时间段（ISO 8601 字符串对）*/
+  scheduledSlots?: Array<{ start: string; end: string }>;
 }
 
 /** 任务需求（扩展版） */
 interface TaskRequirement {
-    category: string;
-    /** 任务地点（可选） */
-    location?: GeoLocation;
-    /** 任务计划开始时间（可选，ISO 8601 字符串） */
-    scheduledAt?: string;
-    /** 预计耗时（分钟，默认 120） */
-    durationMinutes?: number;
+  category: string;
+  /** 任务地点（可选） */
+  location?: GeoLocation;
+  /** 任务计划开始时间（可选，ISO 8601 字符串） */
+  scheduledAt?: string;
+  /** 预计耗时（分钟，默认 120） */
+  durationMinutes?: number;
 }
 
 /** 匹配结果 */
 export interface MatchResult {
-    worker: WorkerProfile;
-    /** 综合评分（0-100，越高越优） */
-    score: number;
-    /** 评分明细 */
-    scoreBreakdown: {
-        base: number;       // 基础算法分（技能+负载+评价）
-        distance: number;   // 距离加权（0-10）
-        availability: number; // 可用时间加权（0 或 10）
-    };
+  worker: WorkerProfile;
+  /** 综合评分（0-100，越高越优） */
+  score: number;
+  /** 评分明细 */
+  scoreBreakdown: {
+    base: number; // 基础算法分（技能+负载+评价）
+    distance: number; // 距离加权（0-10）
+    availability: number; // 可用时间加权（0 或 10）
+  };
 }
 
 // ============================================================
@@ -61,19 +62,18 @@ export interface MatchResult {
  * @returns 距离（公里）
  */
 export function calculateDistance(a: GeoLocation, b: GeoLocation): number {
-    const R = 6371; // 地球半径（公里）
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // 地球半径（公里）
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
 
-    const dLat = toRad(b.lat - a.lat);
-    const dLng = toRad(b.lng - a.lng);
-    const sinDLat = Math.sin(dLat / 2);
-    const sinDLng = Math.sin(dLng / 2);
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
 
-    const a2 =
-        sinDLat * sinDLat +
-        Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinDLng * sinDLng;
+  const a2 =
+    sinDLat * sinDLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinDLng * sinDLng;
 
-    return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
+  return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
 }
 
 /**
@@ -90,17 +90,17 @@ export function calculateDistance(a: GeoLocation, b: GeoLocation): number {
  * @returns 距离加分
  */
 export function getDistanceScore(
-    workerLocation: GeoLocation | undefined,
-    taskLocation: GeoLocation | undefined
+  workerLocation: GeoLocation | undefined,
+  taskLocation: GeoLocation | undefined
 ): number {
-    // 若缺少任一位置信息，给中性分
-    if (!workerLocation || !taskLocation) return 5;
+  // 若缺少任一位置信息，给中性分
+  if (!workerLocation || !taskLocation) return 5;
 
-    const distanceKm = calculateDistance(workerLocation, taskLocation);
+  const distanceKm = calculateDistance(workerLocation, taskLocation);
 
-    if (distanceKm <= 5) return 10;
-    if (distanceKm <= 20) return 5;
-    return 0;
+  if (distanceKm <= 5) return 10;
+  if (distanceKm <= 20) return 5;
+  return 0;
 }
 
 // ============================================================
@@ -115,21 +115,21 @@ export function getDistanceScore(
  * @returns true = 有冲突，false = 无冲突
  */
 export function hasScheduleConflict(
-    scheduledSlots: Array<{ start: string; end: string }> | undefined,
-    scheduledAt: string,
-    durationMinutes: number = 120
+  scheduledSlots: Array<{ start: string; end: string }> | undefined,
+  scheduledAt: string,
+  durationMinutes: number = 120
 ): boolean {
-    if (!scheduledSlots || scheduledSlots.length === 0) return false;
+  if (!scheduledSlots || scheduledSlots.length === 0) return false;
 
-    const taskStart = new Date(scheduledAt).getTime();
-    const taskEnd = taskStart + durationMinutes * 60 * 1000;
+  const taskStart = new Date(scheduledAt).getTime();
+  const taskEnd = taskStart + durationMinutes * 60 * 1000;
 
-    return scheduledSlots.some(slot => {
-        const slotStart = new Date(slot.start).getTime();
-        const slotEnd = new Date(slot.end).getTime();
-        // 时间段重叠判断：任务开始 < 排班结束 AND 任务结束 > 排班开始
-        return taskStart < slotEnd && taskEnd > slotStart;
-    });
+  return scheduledSlots.some((slot) => {
+    const slotStart = new Date(slot.start).getTime();
+    const slotEnd = new Date(slot.end).getTime();
+    // 时间段重叠判断：任务开始 < 排班结束 AND 任务结束 > 排班开始
+    return taskStart < slotEnd && taskEnd > slotStart;
+  });
 }
 
 /**
@@ -142,19 +142,16 @@ export function hasScheduleConflict(
  * @param task - 任务需求
  * @returns 时间可用性加分
  */
-export function getAvailabilityScore(
-    worker: WorkerProfile,
-    task: TaskRequirement
-): number {
-    if (!task.scheduledAt) return 5; // 未指定时间，中性分
+export function getAvailabilityScore(worker: WorkerProfile, task: TaskRequirement): number {
+  if (!task.scheduledAt) return 5; // 未指定时间，中性分
 
-    const conflict = hasScheduleConflict(
-        worker.scheduledSlots,
-        task.scheduledAt,
-        task.durationMinutes ?? 120
-    );
+  const conflict = hasScheduleConflict(
+    worker.scheduledSlots,
+    task.scheduledAt,
+    task.durationMinutes ?? 120
+  );
 
-    return conflict ? 0 : 10;
+  return conflict ? 0 : 10;
 }
 
 // ============================================================
@@ -177,43 +174,55 @@ export function getAvailabilityScore(
  * @returns 排序后的匹配结果列表（分高者先）
  */
 export function matchWorkersForTask(
-    task: TaskRequirement,
-    workers: WorkerProfile[],
-    options: { excludeConflicts?: boolean } = {}
+  task: TaskRequirement,
+  workers: WorkerProfile[],
+  options: { excludeConflicts?: boolean } = {}
 ): MatchResult[] {
-    const { excludeConflicts = true } = options;
+  const { excludeConflicts = true } = options;
 
-    const results: MatchResult[] = [];
+  logger.info('[Dispatch] 开始为任务匹配最优工人', {
+    category: task.category,
+    workerCount: workers.length,
+    hasLocation: !!task.location,
+    scheduledAt: task.scheduledAt,
+  });
 
-    for (const worker of workers) {
-        // 计算基础算法分
-        const base = calculateWorkerScore(worker, task);
+  const results: MatchResult[] = [];
 
-        // 技能不匹配（得 0 分）直接跳过
-        if (base === 0) continue;
+  for (const worker of workers) {
+    // 计算基础算法分
+    const base = calculateWorkerScore(worker, task);
 
-        // 计算距离加分
-        const distance = getDistanceScore(worker.location, task.location);
+    // 技能不匹配（得 0 分）直接跳过
+    if (base === 0) continue;
 
-        // 计算可用时间加分
-        const availability = getAvailabilityScore(worker, task);
+    // 计算距离加分
+    const distance = getDistanceScore(worker.location, task.location);
 
-        // 处理时间冲突
-        if (excludeConflicts && availability === 0 && task.scheduledAt) {
-            continue; // 排除冲突工人
-        }
+    // 计算可用时间加分
+    const availability = getAvailabilityScore(worker, task);
 
-        const totalScore = Math.min(100, base + distance + availability);
-
-        results.push({
-            worker,
-            score: totalScore,
-            scoreBreakdown: { base, distance, availability },
-        });
+    // 处理时间冲突
+    if (excludeConflicts && availability === 0 && task.scheduledAt) {
+      continue; // 排除冲突工人
     }
 
-    // 按综合评分降序排列
-    results.sort((a, b) => b.score - a.score);
+    const totalScore = Math.min(100, base + distance + availability);
 
-    return results;
+    results.push({
+      worker,
+      score: totalScore,
+      scoreBreakdown: { base, distance, availability },
+    });
+  }
+
+  // 按综合评分降序排列
+  results.sort((a, b) => b.score - a.score);
+
+  logger.info('[Dispatch] 任务匹配完成', {
+    matchCount: results.length,
+    topScore: results[0]?.score,
+  });
+
+  return results;
 }

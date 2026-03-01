@@ -3,9 +3,9 @@
 import { useState } from 'react';
 
 export interface QuoteTab {
-    id: string;
-    title: string;
-    [key: string]: unknown;
+  id: string;
+  title: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -15,26 +15,26 @@ export interface QuoteTab {
  * @returns 包含状态（tabs, isSubmitting 等）及操作方法的对象
  */
 export function useQuoteBundle(initialData: Record<string, unknown> = {}) {
-    const [tabs, setTabs] = useState<QuoteTab[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tabs, setTabs] = useState<QuoteTab[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async () => {
-        setIsSubmitting(true);
-        setTimeout(() => setIsSubmitting(false), 1000);
-    };
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setTimeout(() => setIsSubmitting(false), 1000);
+  };
 
-    return {
-        tabs,
-        isSubmitting,
-        handleSubmit,
-        grandTotal: 0,
-        handleSaveDraft: async () => { },
-        handleAddCategory: () => { },
-        updateTabFormData: () => { },
-        handleTabClose: () => { },
-        setActiveTabId: () => { },
-        activeTabId: null,
-        customerId: null,
-        setCustomerId: () => { },
-    };
+  return {
+    tabs,
+    isSubmitting,
+    handleSubmit,
+    grandTotal: 0,
+    handleSaveDraft: async () => {},
+    handleAddCategory: () => {},
+    updateTabFormData: () => {},
+    handleTabClose: () => {},
+    setActiveTabId: () => {},
+    activeTabId: null,
+    customerId: null,
+    setCustomerId: () => {},
+  };
 }

@@ -76,15 +76,16 @@ export function AddResourceDialog() {
           <Plus className="mr-2 h-4 w-4" /> 新增素材
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] overflow-y-auto max-h-[80vh]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>新增素材</DialogTitle>
           <DialogDescription>添加商品图或案例到云展厅，供销售分享。</DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="type" className="text-right">类型</Label>
+            <Label htmlFor="type" className="text-right">
+              类型
+            </Label>
             <div className="col-span-3">
               <Controller
                 control={form.control}
@@ -107,22 +108,35 @@ export function AddResourceDialog() {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">标题</Label>
+            <Label htmlFor="title" className="text-right">
+              标题
+            </Label>
             <div className="col-span-3">
               <Input id="title" {...form.register('title')} />
               {form.formState.errors.title && (
-                <span className="text-red-500 text-xs mt-1 block">{form.formState.errors.title.message}</span>
+                <span className="mt-1 block text-xs text-red-500">
+                  {form.formState.errors.title.message}
+                </span>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="content" className="text-right pt-2">详情</Label>
-            <Textarea id="content" className="col-span-3 min-h-[100px]" {...form.register('content')} placeholder="支持简单的文本描述..." />
+            <Label htmlFor="content" className="pt-2 text-right">
+              详情
+            </Label>
+            <Textarea
+              id="content"
+              className="col-span-3 min-h-[100px]"
+              {...form.register('content')}
+              placeholder="支持简单的文本描述..."
+            />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="tags-input" className="text-right">标签</Label>
+            <Label htmlFor="tags-input" className="text-right">
+              标签
+            </Label>
             <div className="col-span-3">
               <Controller
                 control={form.control}
@@ -136,36 +150,37 @@ export function AddResourceDialog() {
                     onChange={(e) => {
                       const val = e.target.value;
                       // Split by comma (english or chinese), trim, filter empty
-                      const tags = val.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+                      const tags = val
+                        .split(/[,，]/)
+                        .map((t) => t.trim())
+                        .filter(Boolean);
                       field.onChange(tags);
                     }}
                   />
                 )}
               />
-              <p className="text-xs text-muted-foreground mt-1">多个标签用逗号分隔</p>
+              <p className="text-muted-foreground mt-1 text-xs">多个标签用逗号分隔</p>
             </div>
           </div>
 
           <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">图片</Label>
+            <Label className="pt-2 text-right">图片</Label>
             <div className="col-span-3">
               <Controller
                 control={form.control}
                 name="images"
                 render={({ field }) => (
-                  <PhotoUpload
-                    value={field.value}
-                    onChange={field.onChange}
-                    maxFiles={9}
-                  />
+                  <PhotoUpload value={field.value} onChange={field.onChange} maxFiles={9} />
                 )}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <div className="flex justify-end gap-2 w-full">
-              <Button variant="ghost" onClick={() => setOpen(false)} type="button">取消</Button>
+            <div className="flex w-full justify-end gap-2">
+              <Button variant="ghost" onClick={() => setOpen(false)} type="button">
+                取消
+              </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 保存并上架

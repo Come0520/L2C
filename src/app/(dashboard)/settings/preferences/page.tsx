@@ -7,17 +7,13 @@ import { getUserPreferences } from '@/features/settings/actions/preference-actio
  * 个性化用户使用体验
  */
 export default async function PreferencesSettingsPage() {
-    const prefs = await getUserPreferences();
+  const prefs = await getUserPreferences();
 
-    return (
-        <div className="space-y-6">
-            <DashboardPageHeader
-                title="偏好设置"
-                subtitle="个性化您的使用体验"
-            />
+  return (
+    <div className="space-y-6">
+      <DashboardPageHeader title="偏好设置" subtitle="个性化您的使用体验" />
 
-            <UserPreferenceSettings initialQuoteMode={prefs.quoteMode ?? 'PRODUCT_FIRST'} />
-        </div>
-    );
+      <UserPreferenceSettings initialQuoteMode={prefs.quoteMode ?? 'PRODUCT_FIRST'} />
+    </div>
+  );
 }
-

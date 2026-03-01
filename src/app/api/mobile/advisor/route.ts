@@ -17,57 +17,58 @@ import { createLogger } from '@/shared/lib/logger';
 const log = createLogger('mobile/advisor');
 
 export async function GET(request: NextRequest) {
-    // 1. 认证
-    const authResult = await authenticateMobile(request);
-    if (!authResult.success) {
-        return authResult.response;
+  // 1. 认证
+  const authResult = await authenticateMobile(request);
+  if (!authResult.success) {
+    return authResult.response;
+  }
+  const { session } = authResult;
+
+  // 2. 权限检查：仅客户角色可访问
+  const roleCheck = requireCustomer(session);
+  if (!roleCheck.allowed) {
+    return roleCheck.response;
+  }
+
+  try {
+    // 3. 查询当前客户的 assignedSalesId
+    const customer = await db.query.customers.findFirst({
+      where: eq(customers.id, session.userId),
+      columns: {
+        assignedSalesId: true,
+      },
+    });
+
+    if (!customer?.assignedSalesId) {
+      // 客户存在但尚未分配销售顾问
+      return apiSuccess(null, '暂未分配专属顾问');
     }
-    const { session } = authResult;
 
-    // 2. 权限检查：仅客户角色可访问
-    const roleCheck = requireCustomer(session);
-    if (!roleCheck.allowed) {
-        return roleCheck.response;
+    // 4. 查询销售顾问信息
+    const advisor = await db.query.users.findFirst({
+      where: eq(users.id, customer.assignedSalesId),
+      columns: {
+        id: true,
+        name: true,
+        phone: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!advisor) {
+      log.warn(
+        `客户 ${session.userId} 的 assignedSalesId(${customer.assignedSalesId}) 对应用户不存在`
+      );
+      return apiSuccess(null, '顾问信息异常');
     }
 
-    try {
-        // 3. 查询当前客户的 assignedSalesId
-        const customer = await db.query.customers.findFirst({
-            where: eq(customers.id, session.userId),
-            columns: {
-                assignedSalesId: true,
-            },
-        });
-
-        if (!customer?.assignedSalesId) {
-            // 客户存在但尚未分配销售顾问
-            return apiSuccess(null, '暂未分配专属顾问');
-        }
-
-        // 4. 查询销售顾问信息
-        const advisor = await db.query.users.findFirst({
-            where: eq(users.id, customer.assignedSalesId),
-            columns: {
-                id: true,
-                name: true,
-                phone: true,
-                avatarUrl: true,
-            },
-        });
-
-        if (!advisor) {
-            log.warn(`客户 ${session.userId} 的 assignedSalesId(${customer.assignedSalesId}) 对应用户不存在`);
-            return apiSuccess(null, '顾问信息异常');
-        }
-
-        return apiSuccess({
-            name: advisor.name || '销售顾问',
-            phone: advisor.phone,
-            avatarUrl: advisor.avatarUrl || null,
-        });
-
-    } catch (error) {
-        log.error('查询顾问信息失败', { customerId: session.userId }, error);
-        return apiError('查询顾问信息失败', 500);
-    }
+    return apiSuccess({
+      name: advisor.name || '销售顾问',
+      phone: advisor.phone,
+      avatarUrl: advisor.avatarUrl || null,
+    });
+  } catch (error) {
+    log.error('查询顾问信息失败', { customerId: session.userId }, error);
+    return apiError('查询顾问信息失败', 500);
+  }
 }

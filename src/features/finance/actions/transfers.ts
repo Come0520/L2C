@@ -1,5 +1,5 @@
 'use server';
-import { unstable_cache, revalidateTag } from 'next/cache';
+import { unstable_cache, updateTag } from 'next/cache';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -235,7 +235,7 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
         })
         .where(eq(internalTransfers.id, transfer.id));
 
-      revalidateTag(`finance-transfer-${tenantId}`, {});
+      updateTag(`finance-transfer-${tenantId}`);
 
       logger.info('[finance] createInternalTransfer 执行成功', { transferNo });
 
@@ -518,8 +518,8 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         })
         .where(eq(internalTransfers.id, transferId));
 
-      revalidateTag(`finance-transfer-${tenantId}`, {});
-      revalidateTag(`finance-transfer-detail-${transfer.id}`, {});
+      updateTag(`finance-transfer-${tenantId}`);
+      updateTag(`finance-transfer-detail-${transfer.id}`);
 
       logger.info('[finance] cancelInternalTransfer 执行成功', { transferNo: transfer.transferNo });
 

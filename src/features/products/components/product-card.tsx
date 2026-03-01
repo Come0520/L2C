@@ -40,7 +40,13 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
-export function ProductCard({ item, onEdit, onToggleStatus, onDelete, priority = false }: ProductCardProps) {
+export function ProductCard({
+  item,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  priority = false,
+}: ProductCardProps) {
   // 获取展示图片的回退逻辑：主图 -> 材质图 -> 场景图
   const displayImage = useMemo(() => {
     // 1. 首选主图
@@ -74,7 +80,7 @@ export function ProductCard({ item, onEdit, onToggleStatus, onDelete, priority =
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             priority={priority}
-            loading={priority ? undefined : "lazy"}
+            loading={priority ? undefined : 'lazy'}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

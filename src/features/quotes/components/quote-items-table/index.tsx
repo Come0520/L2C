@@ -161,109 +161,152 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
     return { mapping, unassigned };
   }, [tree]);
 
-  const getRoomSubtotal = (roomId: string) => {
-    const roomItems = items.filter((item) => item.roomId === roomId);
-    return roomItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
-  };
+  const getRoomSubtotal = React.useCallback(
+    (roomId: string) => {
+      const roomItems = items.filter((item) => item.roomId === roomId);
+      return roomItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+    },
+    [items]
+  );
 
-  const handleDelete = async (id: string) => {
-    if (readOnly) return;
-    if (confirm('确定删除此项吗？')) {
-      await deleteQuoteItem({ id });
-      toast.success('已删除');
-      onItemUpdate?.();
-    }
-  };
+  const handleDelete = React.useCallback(
+    async (id: string) => {
+      if (readOnly) return;
+      if (confirm('确定删除此项吗？')) {
+        try {
+          const result = await deleteQuoteItem({ id });
+          if (result?.success) {
+            toast.success('已删除');
+            onItemUpdate?.();
+          } else {
+            toast.error(result?.error || '删除失败');
+          }
+        } catch (_error) {
+          toast.error('删除发生异常');
+        }
+      }
+    },
+    [readOnly, onItemUpdate]
+  );
 
-  const handleUpdate = async (id: string, data: Record<string, unknown>) => {
-    if (readOnly) return;
-    try {
-      await updateQuoteItem({ id, ...data });
-      toast.success('已更新');
-      onItemUpdate?.();
-    } catch (_error) {
-      logger.error('Failed to update item', _error);
-      toast.error('更新失败');
-    }
-  };
+  const handleUpdate = React.useCallback(
+    async (id: string, data: Record<string, unknown>) => {
+      if (readOnly) return;
+      try {
+        const result = await updateQuoteItem({ id, ...data });
+        if (result?.success) {
+          toast.success('已更新');
+          onItemUpdate?.();
+        } else {
+          toast.error(result?.error || '更新失败');
+        }
+      } catch (_error) {
+        console.error('Failed to update item', _error);
+        toast.error('更新发生异常');
+      }
+    },
+    [readOnly, onItemUpdate]
+  );
 
-  const handleRoomRename = async (id: string, name: string) => {
-    if (readOnly) return;
-    try {
-      await updateRoom({ id, name });
-      toast.success('空间已重命名');
-      onItemUpdate?.();
-    } catch (_error) {
-      toast.error('重命名失败');
-    }
-  };
+  const handleRoomRename = React.useCallback(
+    async (id: string, name: string) => {
+      if (readOnly) return;
+      try {
+        const result = await updateRoom({ id, name });
+        if (result?.success) {
+          toast.success('空间已重命名');
+          onItemUpdate?.();
+        } else {
+          toast.error(result?.error || '重命名失败');
+        }
+      } catch (_error) {
+        toast.error('重命名发生异常');
+      }
+    },
+    [readOnly, onItemUpdate]
+  );
 
-  const handleDeleteRoom = async (id: string) => {
-    if (readOnly) return;
-    if (confirm('确定删除此空间及其所有明细吗？此操作不可恢复。')) {
-      await deleteRoom({ id });
-      toast.success('空间及其明细已删除');
-      onItemUpdate?.();
-    }
-  };
+  const handleDeleteRoom = React.useCallback(
+    async (id: string) => {
+      if (readOnly) return;
+      if (confirm('确定删除此空间及其所有明细吗？此操作不可恢复。')) {
+        try {
+          const result = await deleteRoom({ id });
+          if (result?.success) {
+            toast.success('空间及其明细已删除');
+            onItemUpdate?.();
+          } else {
+            toast.error(result?.error || '删除空间失败');
+          }
+        } catch (_error) {
+          toast.error('删除空间发生异常');
+        }
+      }
+    },
+    [readOnly, onItemUpdate]
+  );
 
-  const _handleAddAccessory = async (parentId: string, roomId: string | null) => {
-    if (readOnly) return;
+  const _handleAddAccessory = React.useCallback(
+    async (parentId: string, roomId: string | null) => {
+      if (readOnly) return;
 
-    try {
-      const res = await createQuoteItem({
-        quoteId,
-        roomId: roomId || undefined,
-        parentId,
-        category: 'CURTAIN_ACCESSORY',
-        productName: '(点击选择附件)',
-        unit: '个',
-        unitPrice: 0,
-        quantity: 1,
-        width: 0,
-        height: 0,
-      });
+      try {
+        const res = (await createQuoteItem({
+          quoteId,
+          roomId: roomId || undefined,
+          parentId,
+          category: 'CURTAIN_ACCESSORY',
+          productName: '(点击选择附件)',
+          unit: '个',
+          unitPrice: 0,
+          quantity: 1,
+          width: 0,
+          height: 0,
+        })) as any;
 
-      if (!res?.success) {
-        toast.error(res?.error || '添加附件失败');
-        return;
+        if (res?.data?.id || res?.data?.success || res?.success || res?.id) {
+          toast.success('已添加附件行');
+          await onItemUpdate?.();
+        } else {
+          toast.error(res?.data?.error || res?.error || res?.serverError || '添加附件失败');
+        }
+      } catch (_error) {
+        logger.error('添加附件异常', _error);
+        toast.error('添加异常');
+      }
+    },
+    [readOnly, quoteId, onItemUpdate]
+  );
+
+  const handleProductSelect = React.useCallback(
+    async (id: string, product: ProductSearchResult) => {
+      if (readOnly) return;
+
+      const parsedPrice = product.unitPrice ? parseFloat(String(product.unitPrice)) : 0;
+
+      if (parsedPrice <= 0) {
+        toast.warning('该商品未设置价格，请手动输入单价');
       }
 
-      toast.success('已添加附件行');
+      await handleUpdate(id, {
+        productId: product.id,
+        productName: product.name,
+        unitPrice: parsedPrice > 0 ? parsedPrice : undefined,
+        attributes: {
+          ...product.specs,
+          productImage: product.images?.[0],
+        },
+      });
+    },
+    [readOnly, handleUpdate]
+  );
 
-      // 附件子行（children）始终渲染，无需展开父级的高级配置行
-      // 之前此处调用 handleToggleItem 会导致高级参数抽屉意外联动展开
-
-      await onItemUpdate?.();
-    } catch (_error) {
-      logger.error('添加附件异常', _error);
-      toast.error('添加异常');
-    }
-  };
-
-  const handleProductSelect = async (id: string, product: ProductSearchResult) => {
-    if (readOnly) return;
-
-    const parsedPrice = product.unitPrice ? parseFloat(String(product.unitPrice)) : 0;
-
-    if (parsedPrice <= 0) {
-      toast.warning('该商品未设置价格，请手动输入单价');
-    }
-
-    await handleUpdate(id, {
-      productId: product.id,
-      productName: product.name,
-      unitPrice: parsedPrice > 0 ? parsedPrice : undefined,
-      attributes: {
-        ...product.specs,
-        productImage: product.images?.[0],
-      },
-    });
-  };
-
-  const handleClientCalc = (item: QuoteItem, field: string, value: number) => {
-    return calculate(item, field, value);
-  };
+  const handleClientCalc = React.useCallback(
+    (item: QuoteItem, field: string, value: number) => {
+      return calculate(item, field, value);
+    },
+    [calculate]
+  );
 
   const columnVisibility = {
     showImage,
@@ -303,7 +346,6 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
           expandedItemIds={expandedItemIds}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
           handleAddAccessory={_handleAddAccessory}
@@ -328,7 +370,6 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
           onAddRoom={onAddRoom}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
-
           handleProductSelect={handleProductSelect}
           handleClientCalc={handleClientCalc}
           handleAddAccessory={_handleAddAccessory}
@@ -367,7 +408,11 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
             您可以通过修改"高级配置"调整工艺（如：改用贴布带），或确认此尺寸进行生产（可能需要拼接）。
           </div>
           <DialogFooter>
-            <Button onClick={() => setWarningDialog((prev: WarningDialogState) => ({ ...prev, open: false }))}>
+            <Button
+              onClick={() =>
+                setWarningDialog((prev: WarningDialogState) => ({ ...prev, open: false }))
+              }
+            >
               知道了
             </Button>
           </DialogFooter>

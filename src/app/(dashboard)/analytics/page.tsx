@@ -181,7 +181,9 @@ export default function AnalyticsPage() {
    * 客户端内存缓存：以「开始日-结束日」为 Key。
    * 命中缓存时直接返回，不发起任何网络请求。
    */
-  const clientCache = useRef<Map<string, { data: Record<string, unknown>; expiresAt: number }>>(new Map());
+  const clientCache = useRef<Map<string, { data: Record<string, unknown>; expiresAt: number }>>(
+    new Map()
+  );
 
   // ==================== 数据加载 ====================
   const loadData = useCallback(async () => {
@@ -246,12 +248,13 @@ export default function AnalyticsPage() {
 
       if (metricsRes?.success && metricsRes.data) setMetrics(metricsRes.data as KeyMetrics);
       if (funnelRes?.success && funnelRes.data) setFunnelData(funnelRes.data as FunnelResponse);
-      const parsedTrend = (trendRes?.success && trendRes.data)
-        ? (trendRes.data as unknown as TrendData[]).map((item: TrendData) => ({
-          ...item,
-          amount: Number(item.amount),
-        }))
-        : null;
+      const parsedTrend =
+        trendRes?.success && trendRes.data
+          ? (trendRes.data as unknown as TrendData[]).map((item: TrendData) => ({
+              ...item,
+              amount: Number(item.amount),
+            }))
+          : null;
       if (parsedTrend) setTrendData(parsedTrend);
       if (leaderboardRes?.success && leaderboardRes.data)
         setLeaderboardData(leaderboardRes.data as LeaderboardItem[]);
@@ -330,79 +333,104 @@ export default function AnalyticsPage() {
   // ==================== 各模块内容定义 ====================
 
   const gridItems = {
-    'stat-sales': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
-      <StatCard
-        title="总销售额"
-        value={`¥${Number(metrics?.totalSales || 0).toLocaleString()}`}
-        icon={DollarSign}
-        description="时间段内成交金额"
-        className="h-full"
-      />
-    ),
-    'stat-leads': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
-      <StatCard
-        title="活跃线索"
-        value={metrics?.newLeads || 0}
-        icon={Users}
-        description="新增线索数量"
-        className="h-full"
-      />
-    ),
-    'stat-orders': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
-      <StatCard
-        title="成交订单"
-        value={metrics?.orderCount || 0}
-        icon={ShoppingCart}
-        description="已确认订单数"
-        className="h-full"
-      />
-    ),
-    'stat-rate': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
-      <StatCard
-        title="线索转化率"
-        value={`${metrics?.conversionRate || 0}%`}
-        icon={Percent}
-        description="线索到订单"
-        className="h-full"
-      />
-    ),
-    'trend': loading && !trendData.length ? <AnalyticsCardSkeleton /> : (
-      <OrderTrendChart data={trendData} className="h-full" />
-    ),
-    'funnel': loading && !funnelData ? <AnalyticsCardSkeleton /> : (
-      <SalesFunnelChart
-        data={funnelData?.stages || []}
-        summary={funnelData?.summary}
-        className="h-full"
-      />
-    ),
-    'ar-aging': loading ? <AnalyticsCardSkeleton /> : (
-      <ARAgingWidget className="h-full" />
-    ),
-    'payables': loading && !metrics ? <Skeleton className="h-full w-full min-h-[120px] rounded-xl" /> : (
-      <StatCard
-        title="待付账款"
-        value={`¥${Number(metrics?.pendingPayables || 0).toLocaleString()}`}
-        icon={Wallet}
-        description="未支付采购订单总额"
-        className="h-full"
-      />
-    ),
-    'leaderboard': loading && !leaderboardData.length ? <AnalyticsCardSkeleton /> : (
-      <LeaderboardTable data={leaderboardData} className="h-full" />
-    ),
-    'targets': loading && !targetOverview ? <AnalyticsCardSkeleton /> : (
-      <div className="h-full space-y-2 overflow-auto p-1">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">🎯 目标达成分析</h2>
-        <TargetAchievementSection
-          overview={targetOverview}
-          trend={targetTrend}
-          warnings={targetWarnings}
-          quarterly={quarterlyData}
-          annualProgress={annualProgressData}
+    'stat-sales':
+      loading && !metrics ? (
+        <Skeleton className="h-full min-h-[120px] w-full rounded-xl" />
+      ) : (
+        <StatCard
+          title="总销售额"
+          value={`¥${Number(metrics?.totalSales || 0).toLocaleString()}`}
+          icon={DollarSign}
+          description="时间段内成交金额"
+          className="h-full"
         />
-      </div>
-    ),
+      ),
+    'stat-leads':
+      loading && !metrics ? (
+        <Skeleton className="h-full min-h-[120px] w-full rounded-xl" />
+      ) : (
+        <StatCard
+          title="活跃线索"
+          value={metrics?.newLeads || 0}
+          icon={Users}
+          description="新增线索数量"
+          className="h-full"
+        />
+      ),
+    'stat-orders':
+      loading && !metrics ? (
+        <Skeleton className="h-full min-h-[120px] w-full rounded-xl" />
+      ) : (
+        <StatCard
+          title="成交订单"
+          value={metrics?.orderCount || 0}
+          icon={ShoppingCart}
+          description="已确认订单数"
+          className="h-full"
+        />
+      ),
+    'stat-rate':
+      loading && !metrics ? (
+        <Skeleton className="h-full min-h-[120px] w-full rounded-xl" />
+      ) : (
+        <StatCard
+          title="线索转化率"
+          value={`${metrics?.conversionRate || 0}%`}
+          icon={Percent}
+          description="线索到订单"
+          className="h-full"
+        />
+      ),
+    trend:
+      loading && !trendData.length ? (
+        <AnalyticsCardSkeleton />
+      ) : (
+        <OrderTrendChart data={trendData} className="h-full" />
+      ),
+    funnel:
+      loading && !funnelData ? (
+        <AnalyticsCardSkeleton />
+      ) : (
+        <SalesFunnelChart
+          data={funnelData?.stages || []}
+          summary={funnelData?.summary}
+          className="h-full"
+        />
+      ),
+    'ar-aging': loading ? <AnalyticsCardSkeleton /> : <ARAgingWidget className="h-full" />,
+    payables:
+      loading && !metrics ? (
+        <Skeleton className="h-full min-h-[120px] w-full rounded-xl" />
+      ) : (
+        <StatCard
+          title="待付账款"
+          value={`¥${Number(metrics?.pendingPayables || 0).toLocaleString()}`}
+          icon={Wallet}
+          description="未支付采购订单总额"
+          className="h-full"
+        />
+      ),
+    leaderboard:
+      loading && !leaderboardData.length ? (
+        <AnalyticsCardSkeleton />
+      ) : (
+        <LeaderboardTable data={leaderboardData} className="h-full" />
+      ),
+    targets:
+      loading && !targetOverview ? (
+        <AnalyticsCardSkeleton />
+      ) : (
+        <div className="h-full space-y-2 overflow-auto p-1">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">🎯 目标达成分析</h2>
+          <TargetAchievementSection
+            overview={targetOverview}
+            trend={targetTrend}
+            warnings={targetWarnings}
+            quarterly={quarterlyData}
+            annualProgress={annualProgressData}
+          />
+        </div>
+      ),
   };
 
   return (
@@ -461,7 +489,12 @@ export default function AnalyticsPage() {
           {/* ---- 布局控制按钮 ---- */}
           {isEditMode ? (
             <>
-              <Button variant="ghost" size="sm" onClick={handleResetLayout} className="text-amber-600 hover:text-amber-700 gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetLayout}
+                className="gap-1.5 text-amber-600 hover:text-amber-700"
+              >
                 <RotateCcw className="h-4 w-4" />
                 重置布局
               </Button>
@@ -471,7 +504,12 @@ export default function AnalyticsPage() {
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditMode(true)}
+              className="gap-1.5"
+            >
               <LayoutGrid className="h-4 w-4" />
               编辑布局
             </Button>

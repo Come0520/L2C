@@ -9,7 +9,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { revalidatePath, unstable_cache, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
 import { parseSettingValue, validateValueType } from './setting-utils';
@@ -213,8 +213,7 @@ export async function updateSetting(key: string, value: unknown) {
     await updateSettingInternal(tx, key, value, tenantId, userId);
   });
 
-  revalidateTag('all-settings', {});
-  revalidateTag(`all-settings-${tenantId}`, {});
+  updateTag(`all-settings-${tenantId}`);
   revalidatePath('/settings');
   return { success: true };
 }
@@ -252,8 +251,7 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
     }
   });
 
-  revalidateTag('all-settings', {});
-  revalidateTag(`all-settings-${tenantId}`, {});
+  updateTag(`all-settings-${tenantId}`);
   revalidatePath('/settings');
   return { success: true };
 }

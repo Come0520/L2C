@@ -80,7 +80,9 @@ export async function POST(request: NextRequest) {
     // 6. 返回相对 URL（使用环境变量或请求头获取 base URL）
     const fileUrl = `/uploads/${filename}`;
     // 优先使用环境变量，否则回退到请求头侦测
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host') || 'localhost:3000'}`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host') || 'localhost:3000'}`;
     const fullUrl = `${baseUrl}${fileUrl}`;
 
     return apiSuccess({

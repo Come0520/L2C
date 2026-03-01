@@ -19,43 +19,41 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader';
  * @returns {JSX.Element} 待派测量任务统计卡片组件
  */
 export function PendingMeasureWidget() {
-    const [count, setCount] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setCount(5);
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCount(5);
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    待派测量
-                </CardTitle>
-                <ClipboardCheck className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-foreground">{count}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    待派发任务
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          待派测量
+        </CardTitle>
+        <ClipboardCheck className="h-4 w-4 text-amber-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-2xl font-bold">{count}</div>
+        <p className="text-muted-foreground mt-1 text-xs">待派发任务</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -67,43 +65,41 @@ export function PendingMeasureWidget() {
  * @returns {JSX.Element} 待派安装任务统计卡片组件
  */
 export function PendingInstallWidget() {
-    const [count, setCount] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setCount(3);
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCount(3);
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    待派安装
-                </CardTitle>
-                <Wrench className="h-4 w-4 text-cyan-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-foreground">{count}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    待派发任务
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          待派安装
+        </CardTitle>
+        <Wrench className="h-4 w-4 text-cyan-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-2xl font-bold">{count}</div>
+        <p className="text-muted-foreground mt-1 text-xs">待派发任务</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -115,41 +111,41 @@ export function PendingInstallWidget() {
  * @returns {JSX.Element} 今日排班图示卡片组件
  */
 export function TodayScheduleWidget() {
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    今日排班
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent className="flex items-center justify-center h-[calc(100%-3rem)]">
-                <div className="text-center text-muted-foreground">
-                    <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">排班功能开发中...</p>
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          今日排班
+        </CardTitle>
+        <Calendar className="h-4 w-4 text-blue-500" />
+      </CardHeader>
+      <CardContent className="flex h-[calc(100%-3rem)] items-center justify-center">
+        <div className="text-muted-foreground text-center">
+          <Calendar className="mx-auto mb-2 h-10 w-10 opacity-50" />
+          <p className="text-sm">排班功能开发中...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -161,45 +157,43 @@ export function TodayScheduleWidget() {
  * @returns {JSX.Element} 待收款金额统计卡片组件
  */
 export function ARSummaryWidget() {
-    const [data, setData] = useState<{ amount: number; count: number } | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<{ amount: number; count: number } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setData({ amount: 32500, count: 8 });
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setData({ amount: 32500, count: 8 });
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    待收款
-                </CardTitle>
-                <CreditCard className="h-4 w-4 text-rose-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-foreground">
-                    ¥{data!.amount.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    共 {data!.count} 笔
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          待收款
+        </CardTitle>
+        <CreditCard className="h-4 w-4 text-rose-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-xl font-bold sm:text-2xl">
+          ¥{data!.amount.toLocaleString()}
+        </div>
+        <p className="text-muted-foreground mt-1 text-xs">共 {data!.count} 笔</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -211,45 +205,43 @@ export function ARSummaryWidget() {
  * @returns {JSX.Element} 待付款金额统计卡片组件
  */
 export function APSummaryWidget() {
-    const [data, setData] = useState<{ amount: number; count: number } | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<{ amount: number; count: number } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setData({ amount: 18200, count: 5 });
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setData({ amount: 18200, count: 5 });
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    待付款
-                </CardTitle>
-                <Truck className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-foreground">
-                    ¥{data!.amount.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                    共 {data!.count} 笔
-                </p>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          待付款
+        </CardTitle>
+        <Truck className="h-4 w-4 text-orange-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-foreground text-xl font-bold sm:text-2xl">
+          ¥{data!.amount.toLocaleString()}
+        </div>
+        <p className="text-muted-foreground mt-1 text-xs">共 {data!.count} 笔</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -261,41 +253,41 @@ export function APSummaryWidget() {
  * @returns {JSX.Element} 现金流趋势卡片组件
  */
 export function CashFlowWidget() {
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    现金流
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent className="flex items-center justify-center h-[calc(100%-3rem)]">
-                <div className="text-center text-muted-foreground">
-                    <TrendingUp className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">现金流图表开发中...</p>
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium sm:text-sm">
+          现金流
+        </CardTitle>
+        <TrendingUp className="h-4 w-4 text-emerald-500" />
+      </CardHeader>
+      <CardContent className="flex h-[calc(100%-3rem)] items-center justify-center">
+        <div className="text-muted-foreground text-center">
+          <TrendingUp className="mx-auto mb-2 h-10 w-10 opacity-50" />
+          <p className="text-sm">现金流图表开发中...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
@@ -307,60 +299,58 @@ export function CashFlowWidget() {
  * @returns {JSX.Element} 销售漏斗图表卡片组件
  */
 export function ConversionFunnelWidget() {
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (loading) {
-        return (
-            <Card className="glass-liquid border-white/10 h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-            </Card>
-        );
-    }
-
-    // 模拟漏斗数据
-    const funnelData = [
-        { stage: '线索', count: 100, color: 'bg-blue-500' },
-        { stage: '意向', count: 65, color: 'bg-cyan-500' },
-        { stage: '报价', count: 40, color: 'bg-amber-500' },
-        { stage: '成交', count: 25, color: 'bg-emerald-500' },
-    ];
-
+  if (loading) {
     return (
-        <Card className="glass-liquid border-white/10 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    销售漏斗
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-                {funnelData.map((item, index) => (
-                    <div key={item.stage} className="flex items-center gap-3">
-                        <span className="w-12 text-xs text-muted-foreground">{item.stage}</span>
-                        <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
-                            <div
-                                className={`h-full ${item.color} transition-all flex items-center justify-end pr-2`}
-                                style={{ width: `${item.count}%` }}
-                            >
-                                <span className="text-xs text-white font-medium">{item.count}</span>
-                            </div>
-                        </div>
-                        {index < funnelData.length - 1 && (
-                            <span className="text-xs text-muted-foreground w-10">
-                                {Math.round((funnelData[index + 1].count / item.count) * 100)}%
-                            </span>
-                        )}
-                    </div>
-                ))}
-            </CardContent>
-        </Card>
+      <Card className="glass-liquid h-full border-white/10">
+        <CardContent className="flex h-full items-center justify-center">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
+  }
+
+  // 模拟漏斗数据
+  const funnelData = [
+    { stage: '线索', count: 100, color: 'bg-blue-500' },
+    { stage: '意向', count: 65, color: 'bg-cyan-500' },
+    { stage: '报价', count: 40, color: 'bg-amber-500' },
+    { stage: '成交', count: 25, color: 'bg-emerald-500' },
+  ];
+
+  return (
+    <Card className="glass-liquid h-full border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-muted-foreground text-sm font-medium">销售漏斗</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {funnelData.map((item, index) => (
+          <div key={item.stage} className="flex items-center gap-3">
+            <span className="text-muted-foreground w-12 text-xs">{item.stage}</span>
+            <div className="bg-muted h-6 flex-1 overflow-hidden rounded">
+              <div
+                className={`h-full ${item.color} flex items-center justify-end pr-2 transition-all`}
+                style={{ width: `${item.count}%` }}
+              >
+                <span className="text-xs font-medium text-white">{item.count}</span>
+              </div>
+            </div>
+            {index < funnelData.length - 1 && (
+              <span className="text-muted-foreground w-10 text-xs">
+                {Math.round((funnelData[index + 1].count / item.count) * 100)}%
+              </span>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
 }

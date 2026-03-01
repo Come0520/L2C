@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { measureTasks, measureTaskSplits } from '@/shared/api/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { splitMeasureTaskSchema } from '../schemas';
 import { generateMeasureNo } from '../utils'; // 修复无效 import
@@ -72,7 +72,6 @@ export async function dispatchMeasureTask(input: unknown) {
     },
   });
 
-  revalidateTag('measure-task', {});
   revalidatePath('/service/measurement');
   return { success: true };
 }
@@ -108,7 +107,6 @@ export async function acceptMeasureTask(id: string) {
     })
     .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, session.user.tenantId)));
 
-  revalidateTag('measure-task', {});
   revalidatePath('/service/measurement');
   return { success: true };
 }
@@ -255,7 +253,6 @@ export async function splitMeasureTask(input: unknown) {
       );
     });
 
-    revalidateTag('measure-task', {});
     revalidatePath('/service/measurement');
     logger.info(`[MeasureSplit] 任务拆分成功: 原ID ${originalTaskId}, 新任务数: ${createdCount}`);
     return { success: true };
@@ -311,7 +308,6 @@ export async function requestFeeWaiver(input: unknown) {
     },
   });
 
-  revalidateTag('measure-task', {});
   revalidatePath('/service/measurement');
   return { success: true };
 }

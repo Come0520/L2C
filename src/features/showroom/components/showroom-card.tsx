@@ -20,7 +20,10 @@ import { toast } from 'sonner';
 // 安全的 HTML 清洗函数
 function stripHtml(html: string | null | undefined) {
   if (!html) return '';
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS: [] }).substring(0, 80) + (html.length > 80 ? '...' : '');
+  return (
+    DOMPurify.sanitize(html, { ALLOWED_TAGS: [] }).substring(0, 80) +
+    (html.length > 80 ? '...' : '')
+  );
 }
 
 interface ShowroomItem {
@@ -42,12 +45,12 @@ interface ShowroomCardProps {
 /**
  * 展厅素材卡片组件
  * 渲染缩略图、标题、描述摘要及属性标签，支持卡片悬浮动效
- * 
+ *
  * @param props { item: ShowroomItem } 展厅素材简要信息
  */
 export function ShowroomCard({ item }: ShowroomCardProps) {
   const isCompact = item.type === 'KNOWLEDGE' || item.type === 'TRAINING';
-  const images = Array.isArray(item.images) ? item.images as string[] : [];
+  const images = Array.isArray(item.images) ? (item.images as string[]) : [];
   const coverImage = images[0] || 'https://via.placeholder.com/400x300?text=No+Image';
   const description = stripHtml(item.content);
   const price = item.product?.unitPrice;
@@ -79,11 +82,7 @@ export function ShowroomCard({ item }: ShowroomCardProps) {
         <div className="absolute top-2 left-2 flex gap-1">
           <Badge
             variant={
-              item.type === 'PRODUCT'
-                ? 'default'
-                : item.type === 'CASE'
-                  ? 'secondary'
-                  : 'outline'
+              item.type === 'PRODUCT' ? 'default' : item.type === 'CASE' ? 'secondary' : 'outline'
             }
             className="border-white/20 bg-white/10 text-white shadow-sm backdrop-blur-md"
           >

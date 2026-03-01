@@ -1,87 +1,87 @@
-import { db } from "@/shared/api/db";
-import { approvalTasks, approvals } from "@/shared/api/schema";
-import { eq, and } from "drizzle-orm";
-import { notificationService } from "@/features/notifications/service";
-import { logger } from "@/shared/lib/logger";
+import { db } from '@/shared/api/db';
+import { approvalTasks, approvals } from '@/shared/api/schema';
+import { eq, and } from 'drizzle-orm';
+import { notificationService } from '@/features/notifications/service';
+import { logger } from '@/shared/lib/logger';
 
 export class ApprovalNotificationService {
-    /**
-     * 向审批人发送新任务通知
-     * 
-     * @param taskId - 需要处理的审批任务 ID
-     * @param tenantId - 租户 ID（可选，用于安全隔离）
-     */
-    static async notifyNewTask(taskId: string, tenantId?: string) {
-        try {
-            const task = await db.query.approvalTasks.findFirst({
-                where: and(
-                    eq(approvalTasks.id, taskId),
-                    tenantId ? eq(approvalTasks.tenantId, tenantId) : undefined
-                ),
-                with: {
-                    approval: true,
-                    approver: true,
-                    node: true,
-                }
-            });
+  /**
+   * 向审批人发送新任务通知
+   *
+   * @param taskId - 需要处理的审批任务 ID
+   * @param tenantId - 租户 ID（可选，用于安全隔离）
+   */
+  static async notifyNewTask(taskId: string, tenantId?: string) {
+    try {
+      const task = await db.query.approvalTasks.findFirst({
+        where: and(
+          eq(approvalTasks.id, taskId),
+          tenantId ? eq(approvalTasks.tenantId, tenantId) : undefined
+        ),
+        with: {
+          approval: true,
+          approver: true,
+          node: true,
+        },
+      });
 
-            if (!task || !task.approverId) return;
+      if (!task || !task.approverId) return;
 
-            await notificationService.send({
-                tenantId: task.tenantId,
-                userId: task.approverId,
-                title: '待审批任务提醒',
-                content: `您有一个新的审批任务: [${task.node?.name || '审批'}]`,
-                type: 'SYSTEM',
-                metadata: {
-                    type: 'APPROVAL_TASK',
-                    id: task.id,
-                    approvalId: task.approvalId
-                }
-            });
-        } catch (error) {
-            logger.error(`[ApprovalNotification] Failed to notify new task: ${taskId}`, error);
-        }
+      await notificationService.send({
+        tenantId: task.tenantId,
+        userId: task.approverId,
+        title: '待审批任务提醒',
+        content: `您有一个新的审批任务: [${task.node?.name || '审批'}]`,
+        type: 'SYSTEM',
+        metadata: {
+          type: 'APPROVAL_TASK',
+          id: task.id,
+          approvalId: task.approvalId,
+        },
+      });
+    } catch (error) {
+      logger.error(`[ApprovalNotification] Failed to notify new task: ${taskId}`, error);
     }
+  }
 
-    /**
-     * 向申请人发送审批结果通知
-     * 
-     * 在整个审批流实例完结（全部通过或被驳回）时触发。
-     * 
-     * @param approvalId - 审批实例 ID
-     * @param tenantId - 租户 ID（可选，用于安全隔离）
-     */
-    static async notifyResult(approvalId: string, tenantId?: string) {
-        try {
-            const approval = await db.query.approvals.findFirst({
-                where: and(
-                    eq(approvals.id, approvalId),
-                    tenantId ? eq(approvals.tenantId, tenantId) : undefined
-                ),
-                with: {
-                    requester: true
-                }
-            });
+  /**
+   * 向申请人发送审批结果通知
+   *
+   * 在整个审批流实例完结（全部通过或被驳回）时触发。
+   *
+   * @param approvalId - 审批实例 ID
+   * @param tenantId - 租户 ID（可选，用于安全隔离）
+   */
+  static async notifyResult(approvalId: string, tenantId?: string) {
+    try {
+      const approval = await db.query.approvals.findFirst({
+        where: and(
+          eq(approvals.id, approvalId),
+          tenantId ? eq(approvals.tenantId, tenantId) : undefined
+        ),
+        with: {
+          requester: true,
+        },
+      });
 
-            if (!approval || !approval.requesterId) return;
+      if (!approval || !approval.requesterId) return;
 
-            const statusText = approval.status === 'APPROVED' ? '通过' : '驳回';
+      const statusText = approval.status === 'APPROVED' ? '通过' : '驳回';
 
-            await notificationService.send({
-                tenantId: approval.tenantId,
-                userId: approval.requesterId,
-                title: '审批结果提醒',
-                content: `您的申请 [${approval.entityType}] 已处理，结果为: ${statusText}`,
-                type: 'SYSTEM',
-                metadata: {
-                    type: 'APPROVAL_RESULT',
-                    id: approval.id,
-                    status: approval.status
-                }
-            });
-        } catch (error) {
-            logger.error(`[ApprovalNotification] Failed to notify result: ${approvalId}`, error);
-        }
+      await notificationService.send({
+        tenantId: approval.tenantId,
+        userId: approval.requesterId,
+        title: '审批结果提醒',
+        content: `您的申请 [${approval.entityType}] 已处理，结果为: ${statusText}`,
+        type: 'SYSTEM',
+        metadata: {
+          type: 'APPROVAL_RESULT',
+          id: approval.id,
+          status: approval.status,
+        },
+      });
+    } catch (error) {
+      logger.error(`[ApprovalNotification] Failed to notify result: ${approvalId}`, error);
     }
+  }
 }

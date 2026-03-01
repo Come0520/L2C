@@ -6,15 +6,13 @@
 import type { ReactNode } from 'react';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] relative overflow-hidden">
-            {/* 全局背景动画 */}
-            <div className="liquid-mesh-bg" />
-            <div className="aurora-animate" />
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)]">
+      {/* 全局背景动画 */}
+      <div className="liquid-mesh-bg" />
+      <div className="aurora-animate" />
 
-            <div className="w-full max-w-md px-4 relative z-10">
-                {children}
-            </div>
-        </div>
-    );
+      <div className="relative z-10 w-full max-w-md px-4">{children}</div>
+    </div>
+  );
 }

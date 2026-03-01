@@ -7,7 +7,7 @@
 
 import { db } from '@/shared/api/db';
 import { phoneViewLogs } from '@/shared/api/schema/customers';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
@@ -67,7 +67,7 @@ export async function logPhoneView(input: ViewPhoneLogInput) {
     });
 
     // 精确清除客户详情缓存（手机号查看日志不影响客户列表）
-    revalidateTag(`customer-detail-${customerId}`, {});
+    updateTag(`customer-detail-${customerId}`);
   } catch (error) {
     logger.error('[customers] 记录手机号查看日志失败:', error);
     throw error;

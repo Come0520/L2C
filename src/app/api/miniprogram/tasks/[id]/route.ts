@@ -22,8 +22,6 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { getMiniprogramUser } from '../../auth-utils';
 
-
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> } // Next.js 15+ params is async
@@ -54,8 +52,7 @@ export async function GET(
         .from(measureTasks)
         .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, user.tenantId)))
         .limit(1);
-      if (!rawTask.length)
-        return apiError('任务不存在', 404);
+      if (!rawTask.length) return apiError('任务不存在', 404);
 
       const t = rawTask[0];
 
@@ -63,12 +60,7 @@ export async function GET(
       const customer = await db
         .select()
         .from(customers)
-        .where(
-          and(
-            eq(customers.id, t.customerId),
-            eq(customers.tenantId, user.tenantId)
-          )
-        )
+        .where(and(eq(customers.id, t.customerId), eq(customers.tenantId, user.tenantId)))
         .limit(1);
 
       // Fetch Measure Sheets (if any)
@@ -76,12 +68,7 @@ export async function GET(
       const sheets = await db
         .select()
         .from(measureSheets)
-        .where(
-          and(
-            eq(measureSheets.taskId, t.id),
-            eq(measureSheets.tenantId, user.tenantId)
-          )
-        );
+        .where(and(eq(measureSheets.taskId, t.id), eq(measureSheets.tenantId, user.tenantId)));
 
       // 查询工费定价规则
       let laborFeeRule = null;
@@ -170,10 +157,10 @@ export async function GET(
         sheets: sheets,
         laborFeeRule: laborFeeRule
           ? {
-            unitType: laborFeeRule.unitType,
-            unitPrice: laborFeeRule.unitPrice,
-            baseFee: laborFeeRule.baseFee,
-          }
+              unitType: laborFeeRule.unitType,
+              unitPrice: laborFeeRule.unitPrice,
+              baseFee: laborFeeRule.baseFee,
+            }
           : null,
         quoteSummary,
       };
@@ -183,8 +170,7 @@ export async function GET(
         .from(installTasks)
         .where(and(eq(installTasks.id, id), eq(installTasks.tenantId, user.tenantId)))
         .limit(1);
-      if (!rawTask.length)
-        return apiError('任务不存在', 404);
+      if (!rawTask.length) return apiError('任务不存在', 404);
 
       taskData = {
         ...rawTask[0],
@@ -215,12 +201,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await db
           .update(measureTasks)
           .set({ status: data.status, updatedAt: new Date() })
-          .where(
-            and(
-              eq(measureTasks.id, id),
-              eq(measureTasks.tenantId, user.tenantId)
-            )
-          );
+          .where(and(eq(measureTasks.id, id), eq(measureTasks.tenantId, user.tenantId)));
       }
       // Add more actions as needed
     } else if (type === 'install') {
@@ -228,12 +209,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await db
           .update(installTasks)
           .set({ status: data.status, updatedAt: new Date() })
-          .where(
-            and(
-              eq(installTasks.id, id),
-              eq(installTasks.tenantId, user.tenantId)
-            )
-          );
+          .where(and(eq(installTasks.id, id), eq(installTasks.tenantId, user.tenantId)));
       }
     }
 

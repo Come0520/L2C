@@ -5,7 +5,7 @@ import { db } from '@/shared/api/db';
 import { showroomItems } from '@/shared/api/schema/showroom';
 import { eq, and, desc, sql, or, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import {
   createShowroomItemSchema,
   updateShowroomItemSchema,
@@ -218,7 +218,6 @@ export async function createShowroomItem(input: z.input<typeof createShowroomIte
       newValues: newItem as Record<string, unknown>,
     });
 
-    revalidateTag('showroom-list', {});
     await invalidateShowroomCache(session.user.tenantId);
 
     logger.info('创建展厅素材成功', {
@@ -295,8 +294,7 @@ export async function updateShowroomItem(input: z.input<typeof updateShowroomIte
       newValues: updatedItem as Record<string, unknown>,
     });
 
-    revalidateTag('showroom-list', {});
-    revalidateTag(`showroom-item-${id}`, {});
+    updateTag(`showroom-item-${id}`);
     await invalidateShowroomCache(session.user.tenantId);
 
     logger.info('更新展厅素材成功', {
@@ -349,8 +347,7 @@ export async function deleteShowroomItem(input: z.input<typeof deleteShowroomIte
       oldValues: existing as Record<string, unknown>,
     });
 
-    revalidateTag('showroom-list', {});
-    revalidateTag(`showroom-item-${id}`, {});
+    updateTag(`showroom-item-${id}`);
     await invalidateShowroomCache(session.user.tenantId);
 
     logger.info('软删除展厅素材成功', {

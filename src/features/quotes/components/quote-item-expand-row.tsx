@@ -187,9 +187,9 @@ export function QuoteItemExpandRow({
   // 如果不是窗帘类，直接只占一行显示备注
   if (!isCurtain) {
     return (
-      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b last:border-b-0">
-        <td colSpan={middleCols} className="p-4 align-top border-x border-border/50">
-          <div className="space-y-1.5 w-full">
+      <tr className="group/advanced relative border-b bg-slate-50/40 last:border-b-0 dark:bg-slate-900/40">
+        <td colSpan={middleCols} className="border-border/50 border-x p-4 align-top">
+          <div className="w-full space-y-1.5">
             <Label className="text-muted-foreground text-xs font-semibold">备注</Label>
             <Input
               value={editedRemark}
@@ -210,10 +210,10 @@ export function QuoteItemExpandRow({
   return (
     <>
       {/* 展开内容的第一行 (Row 1) */}
-      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50 shadow-inner">
+      <tr className="group/advanced border-border/50 relative border-b border-dashed bg-slate-50/40 shadow-inner dark:bg-slate-900/40">
         {/* Param 1: 幅宽 */}
-        <td className="p-3 align-top border-l border-border/50">
-          <div className="space-y-1.5 w-full pr-4">
+        <td className="border-border/50 border-l p-3 align-top">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">幅宽</Label>
             <div className="relative">
               <Input
@@ -223,7 +223,7 @@ export function QuoteItemExpandRow({
                 onChange={(e) => updateAttr('fabricWidth', e.target.value)}
                 onBlur={() => handleAutoSave()}
                 placeholder="280"
-                className="h-8 pr-8 text-sm w-full"
+                className="h-8 w-full pr-8 text-sm"
                 disabled={readOnly}
               />
               <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
@@ -233,7 +233,7 @@ export function QuoteItemExpandRow({
 
         {/* Param 2: 拉动方式 */}
         <td className="p-3 align-top">
-          <div className="space-y-1.5 w-full pr-4">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">拉动方式</Label>
             <Select
               value={editedAttrs.openingStyle || 'SPLIT'}
@@ -241,7 +241,9 @@ export function QuoteItemExpandRow({
                 const nextAttrs = { ...editedAttrs, openingStyle: v };
                 if (
                   v === 'CUSTOM' &&
-                  (!editedAttrs.customPanels || !Array.isArray(editedAttrs.customPanels) || (editedAttrs.customPanels as { width: number }[]).length === 0)
+                  (!editedAttrs.customPanels ||
+                    !Array.isArray(editedAttrs.customPanels) ||
+                    (editedAttrs.customPanels as { width: number }[]).length === 0)
                 ) {
                   nextAttrs.customPanels = [{ width: 150 }, { width: 150 }];
                 }
@@ -250,7 +252,7 @@ export function QuoteItemExpandRow({
               }}
               disabled={readOnly}
             >
-              <SelectTrigger className="h-8 text-sm w-full">
+              <SelectTrigger className="h-8 w-full text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -265,14 +267,14 @@ export function QuoteItemExpandRow({
 
         {/* Param 3: 安装位置 */}
         <td className="p-3 align-top">
-          <div className="space-y-1.5 w-full pr-4">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">安装位置</Label>
             <Select
               value={editedAttrs.installPosition || 'CURTAIN_BOX'}
               onValueChange={(v) => updateAttrAndSave('installPosition', v)}
               disabled={readOnly}
             >
-              <SelectTrigger className="h-8 text-sm w-full">
+              <SelectTrigger className="h-8 w-full text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -287,8 +289,8 @@ export function QuoteItemExpandRow({
         </td>
 
         {/* Param 4: 离地高度 */}
-        <td className="p-3 align-top border-r border-border/50">
-          <div className="space-y-1.5 w-full pr-4">
+        <td className="border-border/50 border-r p-3 align-top">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">离地高度</Label>
             <div className="relative">
               <Input
@@ -297,7 +299,7 @@ export function QuoteItemExpandRow({
                 value={editedAttrs.groundClearance ?? 2}
                 onChange={(e) => updateAttr('groundClearance', e.target.value)}
                 onBlur={() => handleAutoSave()}
-                className="h-8 pr-8 text-sm w-full"
+                className="h-8 w-full pr-8 text-sm"
                 disabled={readOnly}
               />
               <span className="text-muted-foreground absolute top-2 right-2 text-xs">cm</span>
@@ -305,16 +307,17 @@ export function QuoteItemExpandRow({
           </div>
         </td>
 
-        {extraCols > 0 && Array.from({ length: extraCols }).map((_, i) => (
-          <td key={`extra-1-${i}`} className="p-3 border-r border-border/50"></td>
-        ))}
+        {extraCols > 0 &&
+          Array.from({ length: extraCols }).map((_, i) => (
+            <td key={`extra-1-${i}`} className="border-border/50 border-r p-3"></td>
+          ))}
       </tr>
 
       {/* 展开内容的第二行 (Row 2) */}
-      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50">
+      <tr className="group/advanced border-border/50 relative border-b border-dashed bg-slate-50/40 dark:bg-slate-900/40">
         {/* Param 5: 褶皱倍数 */}
-        <td className="p-3 align-top border-l border-border/50">
-          <div className="space-y-1.5 w-full pr-4">
+        <td className="border-border/50 border-l p-3 align-top">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">褶皱倍数</Label>
             <Input
               type="number"
@@ -323,7 +326,7 @@ export function QuoteItemExpandRow({
               value={editedFoldRatio}
               onChange={(e) => setEditedFoldRatio(Number(e.target.value))}
               onBlur={() => handleAutoSave({ foldRatio: editedFoldRatio })}
-              className="h-8 text-sm w-full"
+              className="h-8 w-full text-sm"
               disabled={readOnly}
             />
           </div>
@@ -331,14 +334,14 @@ export function QuoteItemExpandRow({
 
         {/* Param 6: 算料方式 */}
         <td className="p-3 align-top">
-          <div className="space-y-1.5 w-full pr-4">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">算料方式</Label>
             <Select
               value={editedAttrs.formula || 'FIXED_HEIGHT'}
               onValueChange={(v) => updateAttrAndSave('formula', v)}
               disabled={readOnly}
             >
-              <SelectTrigger className="h-8 text-sm w-full">
+              <SelectTrigger className="h-8 w-full text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -354,14 +357,14 @@ export function QuoteItemExpandRow({
 
         {/* Param 7: 底边 */}
         <td className="p-3 align-top">
-          <div className="space-y-1.5 w-full pr-4">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">底边</Label>
             <Select
               value={editedAttrs.bottomType || 'STANDARD'}
               onValueChange={(v) => updateAttrAndSave('bottomType', v)}
               disabled={readOnly}
             >
-              <SelectTrigger className="h-8 text-sm w-full">
+              <SelectTrigger className="h-8 w-full text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -376,15 +379,15 @@ export function QuoteItemExpandRow({
         </td>
 
         {/* Param 8: 上带方式 */}
-        <td className="p-3 align-top border-r border-border/50">
-          <div className="space-y-1.5 w-full pr-4">
+        <td className="border-border/50 border-r p-3 align-top">
+          <div className="w-full space-y-1.5 pr-4">
             <Label className="text-muted-foreground text-xs font-semibold">上带方式</Label>
             <Select
               value={editedAttrs.headerType || 'WRAPPED'}
               onValueChange={(v) => updateAttrAndSave('headerType', v)}
               disabled={readOnly}
             >
-              <SelectTrigger className="h-8 text-sm w-full">
+              <SelectTrigger className="h-8 w-full text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -398,89 +401,98 @@ export function QuoteItemExpandRow({
           </div>
         </td>
 
-        {extraCols > 0 && Array.from({ length: extraCols }).map((_, i) => (
-          <td key={`extra-2-${i}`} className="p-3 border-r border-border/50"></td>
-        ))}
+        {extraCols > 0 &&
+          Array.from({ length: extraCols }).map((_, i) => (
+            <td key={`extra-2-${i}`} className="border-border/50 border-r p-3"></td>
+          ))}
       </tr>
 
       {/* 展开内容的第三行 (Row 3, Optional: Custom Panels) */}
-      {isCustomPanel && (() => {
-        const panels = Array.isArray(editedAttrs.customPanels)
-          ? (editedAttrs.customPanels as { width: number }[])
-          : [{ width: 0 }, { width: 0 }];
+      {isCustomPanel &&
+        (() => {
+          const panels = Array.isArray(editedAttrs.customPanels)
+            ? (editedAttrs.customPanels as { width: number }[])
+            : [{ width: 0 }, { width: 0 }];
 
-        const updatePanel = (index: number, width: number) => {
-          const newPanels = [...panels];
-          newPanels[index] = { width };
-          updateAttr('customPanels', newPanels);
-        };
-        const savePanels = () => {
-          handleAutoSave();
-        };
-        const addPanel = () => {
-          const newPanels = [...panels, { width: 0 }];
-          updateAttr('customPanels', newPanels);
-          handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
-        };
-        const removePanel = (index: number) => {
-          if (panels.length <= 1) return;
-          const newPanels = panels.filter((_, i) => i !== index);
-          updateAttr('customPanels', newPanels);
-          handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
-        };
+          const updatePanel = (index: number, width: number) => {
+            const newPanels = [...panels];
+            newPanels[index] = { width };
+            updateAttr('customPanels', newPanels);
+          };
+          const savePanels = () => {
+            handleAutoSave();
+          };
+          const addPanel = () => {
+            const newPanels = [...panels, { width: 0 }];
+            updateAttr('customPanels', newPanels);
+            handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
+          };
+          const removePanel = (index: number) => {
+            if (panels.length <= 1) return;
+            const newPanels = panels.filter((_, i) => i !== index);
+            updateAttr('customPanels', newPanels);
+            handleAutoSave({ attrs: { ...editedAttrs, customPanels: newPanels } });
+          };
 
-        return (
-          <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b border-dashed border-border/50">
-            <td colSpan={middleCols} className="p-4 align-top border-x border-border/50">
-              <div className="space-y-3 rounded-lg border border-dashed p-4 bg-[var(--background)]">
-                <Label className="text-xs font-semibold text-muted-foreground">各片宽度 (cm)，高度和褶皱倍数共用</Label>
-                <div className="grid grid-cols-4 gap-4">
-                  {panels.map((panel, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-white dark:bg-slate-950 p-2 rounded-md shadow-sm border">
-                      <span className="text-xs font-medium text-slate-500 w-10 shrink-0">第{index + 1}片</span>
-                      <Input
-                        type="number"
-                        className="h-8 flex-1 text-sm border-none shadow-none focus-visible:ring-0 px-1"
-                        value={panel.width || ''}
-                        onChange={(e) => updatePanel(index, Number(e.target.value))}
-                        onBlur={savePanels}
-                        placeholder="宽度"
-                        disabled={readOnly}
-                      />
-                      <span className="text-xs text-muted-foreground">cm</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                        onClick={() => removePanel(index)}
-                        disabled={panels.length <= 1 || readOnly}
+          return (
+            <tr className="group/advanced border-border/50 relative border-b border-dashed bg-slate-50/40 dark:bg-slate-900/40">
+              <td colSpan={middleCols} className="border-border/50 border-x p-4 align-top">
+                <div className="space-y-3 rounded-lg border border-dashed bg-[var(--background)] p-4">
+                  <Label className="text-muted-foreground text-xs font-semibold">
+                    各片宽度 (cm)，高度和褶皱倍数共用
+                  </Label>
+                  <div className="grid grid-cols-4 gap-4">
+                    {panels.map((panel, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 rounded-md border bg-white p-2 shadow-sm dark:bg-slate-950"
                       >
-                        ×
+                        <span className="w-10 shrink-0 text-xs font-medium text-slate-500">
+                          第{index + 1}片
+                        </span>
+                        <Input
+                          type="number"
+                          className="h-8 flex-1 border-none px-1 text-sm shadow-none focus-visible:ring-0"
+                          value={panel.width || ''}
+                          onChange={(e) => updatePanel(index, Number(e.target.value))}
+                          onBlur={savePanels}
+                          placeholder="宽度"
+                          disabled={readOnly}
+                        />
+                        <span className="text-muted-foreground text-xs">cm</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive h-6 w-6 shrink-0 p-0"
+                          onClick={() => removePanel(index)}
+                          disabled={panels.length <= 1 || readOnly}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                    {!readOnly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-muted-foreground hover:text-primary h-full min-h-[42px] border-dashed text-xs"
+                        onClick={addPanel}
+                      >
+                        + 添加一片
                       </Button>
-                    </div>
-                  ))}
-                  {!readOnly && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-full min-h-[42px] border-dashed text-xs text-muted-foreground hover:text-primary"
-                      onClick={addPanel}
-                    >
-                      + 添加一片
-                    </Button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            </td>
-          </tr>
-        );
-      })()}
+              </td>
+            </tr>
+          );
+        })()}
 
       {/* 展开内容的最后一行 (Row 4 or 3: Remark & Collapse Button) */}
-      <tr className="bg-slate-50/40 dark:bg-slate-900/40 relative group/advanced border-b last:border-b-0 border-border/50">
-        <td colSpan={middleCols} className="p-0 border-x border-border/50">
+      <tr className="group/advanced border-border/50 relative border-b bg-slate-50/40 last:border-b-0 dark:bg-slate-900/40">
+        <td colSpan={middleCols} className="border-border/50 border-x p-0">
           <div className="p-3 px-4">
-            <div className="space-y-1.5 w-full">
+            <div className="w-full space-y-1.5">
               <Label className="text-muted-foreground text-xs font-semibold">备注</Label>
               <Input
                 value={editedRemark}

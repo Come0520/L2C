@@ -29,7 +29,7 @@ export async function getTargetAchievementOverview(params: { year: number; month
       recordId: `target-achievement-overview-${year}-${month}`,
       userId: session.user.id,
       tenantId,
-      details: { reportName: 'TargetAchievementOverview', params: { year, month } }
+      details: { reportName: 'TargetAchievementOverview', params: { year, month } },
     });
 
     const data = await unstable_cache(
@@ -50,7 +50,9 @@ export async function getTargetAchievementOverview(params: { year: number; month
               eq(salesTargets.month, month)
             )
           )
-          .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
+          .where(
+            and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true))
+          );
 
         // 查询该月 ACCEPTED 报价
         const startDate = new Date(year, month - 1, 1);
@@ -94,7 +96,8 @@ export async function getTargetAchievementOverview(params: { year: number; month
 
         const totalTarget = details.reduce((s, d) => s + d.targetAmount, 0);
         const totalAchieved = details.reduce((s, d) => s + d.achievedAmount, 0);
-        const totalRate = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 1000) / 10 : 0;
+        const totalRate =
+          totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 1000) / 10 : 0;
 
         return {
           totalTarget,
@@ -133,7 +136,7 @@ export async function getTargetCompletionTrend(params: { year: number; month: nu
       recordId: `target-completion-trend-${year}-${month}`,
       userId: session.user.id,
       tenantId,
-      details: { reportName: 'TargetCompletionTrend', params: { year, month } }
+      details: { reportName: 'TargetCompletionTrend', params: { year, month } },
     });
 
     const data = await unstable_cache(
@@ -156,7 +159,14 @@ export async function getTargetCompletionTrend(params: { year: number; month: nu
           .where(eq(salesTargets.tenantId, tenantId));
 
         const queryStartDate = new Date(months[0].year, months[0].month - 1, 1);
-        const queryEndDate = new Date(months[months.length - 1].year, months[months.length - 1].month, 0, 23, 59, 59);
+        const queryEndDate = new Date(
+          months[months.length - 1].year,
+          months[months.length - 1].month,
+          0,
+          23,
+          59,
+          59
+        );
 
         // 查询所有 ACCEPTED 报价（筛选最近12个月范围）
         const acceptedQuotes = await db.query.quotes.findMany({
@@ -229,7 +239,7 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
       recordId: `target-risk-warnings-${year}-${month}`,
       userId: session.user.id,
       tenantId,
-      details: { reportName: 'TargetRiskWarnings', params: { year, month } }
+      details: { reportName: 'TargetRiskWarnings', params: { year, month } },
     });
 
     const data = await unstable_cache(
@@ -256,7 +266,9 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
               eq(salesTargets.month, month)
             )
           )
-          .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
+          .where(
+            and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true))
+          );
 
         // 查询该月完成
         const startDate = new Date(year, month - 1, 1);
@@ -289,7 +301,8 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
             const achieved = achievedMap.get(r.userId) || 0;
             const dailyRate = currentDay > 0 ? achieved / currentDay : 0;
             const predictedAmount = dailyRate * totalDays;
-            const predictedRate = target > 0 ? Math.round((predictedAmount / target) * 1000) / 10 : 0;
+            const predictedRate =
+              target > 0 ? Math.round((predictedAmount / target) * 1000) / 10 : 0;
             const currentRate = target > 0 ? Math.round((achieved / target) * 1000) / 10 : 0;
 
             let riskLevel: 'high' | 'medium' | 'low' = 'low';

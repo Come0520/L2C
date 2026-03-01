@@ -5,7 +5,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import { and, eq } from 'drizzle-orm';
 import { installTasks } from '@/shared/api/schema/service';
-import { revalidateTag } from 'next/cache';
+import {} from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 
 /** 现场发现 Schema */
@@ -55,7 +55,6 @@ const submitFieldDiscoveryActionInternal = createSafeAction(
           and(eq(installTasks.id, data.taskId), eq(installTasks.tenantId, session.user.tenantId))
         );
 
-      revalidateTag('install-task', {});
       return { success: true, message: '现场发现已记录' };
     } catch (error) {
       logger.error('Submit field discovery failed:', error);

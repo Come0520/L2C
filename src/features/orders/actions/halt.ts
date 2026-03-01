@@ -14,7 +14,7 @@ import { orders } from '@/shared/api/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import { OrderService } from '@/services/order.service';
 import { logger } from '@/shared/lib/logger';
@@ -46,8 +46,7 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
       session.user.id,
       JSON.stringify({ reason: data.reason, remark: data.remark })
     );
-    revalidateTag('orders', {});
-    revalidateTag(`order-${data.orderId}`, {});
+    updateTag(`order-${data.orderId}`);
 
     return {
       success: true,
@@ -91,8 +90,7 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
       session.user.id
     );
 
-    revalidateTag('orders', {});
-    revalidateTag(`order-${data.orderId}`, {});
+    updateTag(`order-${data.orderId}`);
 
     return {
       success: true,

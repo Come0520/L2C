@@ -6,7 +6,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { OrderService } from '@/services/order.service';
 import { auth } from '@/shared/lib/auth';
 import { subDays } from 'date-fns';
-import { revalidateTag } from 'next/cache';
+import {} from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 
 /**
@@ -79,8 +79,6 @@ export async function autoCloseOrdersAction() {
     }
 
     // 统一清除缓存
-    revalidateTag('orders', {});
-
     return {
       success: true,
       message: `成功处理 ${results.filter((r) => r.success).length} 个订单`,

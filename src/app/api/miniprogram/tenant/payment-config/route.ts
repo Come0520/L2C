@@ -18,13 +18,17 @@ import { sql } from 'drizzle-orm';
 // 定义支付配置 Schema，防御 JSON 注入
 const PaymentConfigSchema = z.object({
   enabled: z.boolean().default(true),
-  offline: z.object({
-    enabled: z.boolean().default(true),
-    instructions: z.string().max(1000, '说明文字过长').default(''),
-  }).optional(),
-  online: z.object({
-    enabled: z.boolean().default(false),
-  }).optional(),
+  offline: z
+    .object({
+      enabled: z.boolean().default(true),
+      instructions: z.string().max(1000, '说明文字过长').default(''),
+    })
+    .optional(),
+  online: z
+    .object({
+      enabled: z.boolean().default(false),
+    })
+    .optional(),
 });
 
 // Helper: 验证管理员权限
@@ -62,11 +66,13 @@ export async function GET(request: NextRequest) {
     const settings = (tenant?.settings as Record<string, unknown>) || {};
     // 使用 safeParse 确保返回的数据符合结构
     const paymentParse = PaymentConfigSchema.safeParse(settings.payment);
-    const paymentConfig = paymentParse.success ? paymentParse.data : {
-      enabled: true,
-      offline: { enabled: true, instructions: '' },
-      online: { enabled: false },
-    };
+    const paymentConfig = paymentParse.success
+      ? paymentParse.data
+      : {
+          enabled: true,
+          offline: { enabled: true, instructions: '' },
+          online: { enabled: false },
+        };
 
     return apiSuccess(paymentConfig);
   } catch (error) {
@@ -93,9 +99,9 @@ export async function POST(request: NextRequest) {
     // 2. 事务中执行读写锁 (FOR UPDATE)
     await db.transaction(async (tx) => {
       // 获取当前租户配置并加锁
-      const [tenant] = await tx.execute(
+      const [tenant] = (await tx.execute(
         sql`SELECT settings FROM ${tenants} WHERE id = ${user.tenantId!} FOR UPDATE`
-      ) as unknown as [{ settings: Record<string, unknown> }];
+      )) as unknown as [{ settings: Record<string, unknown> }];
 
       if (!tenant) throw new Error('租户不存在');
 
@@ -110,7 +116,7 @@ export async function POST(request: NextRequest) {
         .update(tenants)
         .set({
           settings: newSettings,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(tenants.id, user.tenantId!));
     });
@@ -123,7 +129,7 @@ export async function POST(request: NextRequest) {
       action: 'UPDATE_PAYMENT_CONFIG',
       userId: user.id,
       tenantId: user.tenantId!,
-      details: validation.data
+      details: validation.data,
     });
 
     return apiSuccess(null);

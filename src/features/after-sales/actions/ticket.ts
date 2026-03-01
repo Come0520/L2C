@@ -2,7 +2,7 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { cache } from 'react';
 import { db } from '@/shared/api/db';
 import { eq, desc, and, ilike, sql } from 'drizzle-orm';
@@ -167,7 +167,6 @@ const createAfterSalesTicketAction = createSafeAction(createTicketSchema, async 
     );
 
     revalidatePath('/after-sales');
-    revalidateTag('after-sales-analytics', {});
     return { success: true, data: newTicket, message: '售后工单创建成功' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '服务器内部错误';
@@ -301,9 +300,7 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
     `[After Sales] Ticket ${data.ticketId} status updated to ${data.status} by user ${session.user.id}`
   );
 
-  revalidateTag(`after-sales-ticket-${data.ticketId}`, {});
-  revalidateTag('after-sales-list', {});
-  revalidateTag('after-sales-analytics', {});
+  updateTag(`after-sales-ticket-${data.ticketId}`);
   return { success: true, message: '状态更新成功' };
 });
 
@@ -397,7 +394,7 @@ export async function closeResolutionCostClosure(ticketId: string) {
       `[After Sales] Ticket ${ticketId} financially closed with internal loss: ${internalLoss}`
     );
 
-    revalidateTag(`after-sales-ticket-${ticketId}`, {});
+    updateTag(`after-sales-ticket-${ticketId}`);
     return { success: true, message: '成本结案成功' };
   } catch (err) {
     logger.error(`[After Sales] Failed to close cost for ticket ${ticketId}:`, { error: err });

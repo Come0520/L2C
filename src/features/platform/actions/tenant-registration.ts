@@ -58,7 +58,7 @@ export interface TenantApplicationResult {
 
 /**
  * 租户入驻申请表单校验模式
- * 
+ *
  * 校验规则：
  * - 企业名称：2-100字符
  * - 联系人：2-100字符
@@ -90,7 +90,7 @@ const tenantApplicationSchema = z.object({
  * 4. 【标识】使用 nanoid 生成 8 位大写的唯一租户代码 (Tenant Code)。
  * 5. 【持久化】在数据库事务中创建租户记录（状态：pending_approval）及对应的 BOSS 管理员账号（状态：未激活）。
  * 6. 【通知】异步向所有平台管理员发送入驻申请邮件，内含快速审批链接。
- * 
+ *
  * @param {TenantApplicationData} data - 入驻申请表单数据
  * @returns {Promise<TenantApplicationResult>} 处理结果
  */
@@ -114,7 +114,10 @@ export async function submitTenantApplication(
       const rateLimitResult = await checkRateLimit(clientIP, 'registration');
 
       if (!rateLimitResult.allowed) {
-        logger.warn('租户注册被限流拦截 (IP)', { ip: clientIP, remaining: rateLimitResult.remaining });
+        logger.warn('租户注册被限流拦截 (IP)', {
+          ip: clientIP,
+          remaining: rateLimitResult.remaining,
+        });
         return {
           success: false,
           error: '操作过于频繁，请稍后再试',
@@ -129,15 +132,12 @@ export async function submitTenantApplication(
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const [recentApplications, existingUser] = await Promise.all([
       db.query.tenants.findMany({
-        where: and(
-          eq(tenants.applicantPhone, data.phone),
-          gte(tenants.createdAt, oneDayAgo),
-        ),
+        where: and(eq(tenants.applicantPhone, data.phone), gte(tenants.createdAt, oneDayAgo)),
         columns: { id: true },
       }),
       db.query.users.findFirst({
         where: or(eq(users.phone, data.phone), eq(users.email, data.email)),
-      })
+      }),
     ]);
 
     if (recentApplications.length >= 3) {
@@ -198,8 +198,8 @@ export async function submitTenantApplication(
           applicantName: data.applicantName,
           phone: data.phone,
           region: data.region,
-          method: 'self_registration'
-        }
+          method: 'self_registration',
+        },
       });
     } catch (auditErr) {
       logger.error('记录租户注册审计日志失败:', auditErr);
@@ -207,7 +207,7 @@ export async function submitTenantApplication(
 
     logger.info('新租户入驻申请提交成功', {
       tenantId: result.id,
-      companyName: data.companyName
+      companyName: data.companyName,
     });
 
     // 5. 异步发送管理员通知（邮件 + 站内通知，增加简单重试机制以提高可靠性）
@@ -282,7 +282,7 @@ export async function submitTenantApplication(
           attempt++;
           logger.error(`发送管理员通知失败 (尝试 ${attempt}/${MAX_RETRIES}):`, err);
           if (attempt < MAX_RETRIES) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 等待 2 秒后重试
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // 等待 2 秒后重试
           }
         }
       }

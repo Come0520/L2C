@@ -7,7 +7,7 @@ import { leads, leadStatusHistory } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { restoreLeadSchema } from '../schemas';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
@@ -159,8 +159,8 @@ export async function restoreLeadAction(
     // 清除缓存
     revalidatePath('/leads');
     revalidatePath(`/leads/${id}`);
-    revalidateTag(`leads-${tenantId}`, {});
-    revalidateTag(`lead-${tenantId}-${id}`, {});
+    updateTag(`leads-${tenantId}`);
+    updateTag(`lead-${tenantId}-${id}`);
 
     logger.info('[leads] 恢复作废线索成功:', {
       leadId: id,

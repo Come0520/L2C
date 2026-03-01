@@ -41,15 +41,15 @@ export async function submitApproval(
     requesterId?: string;
     flowCode: string;
     entityType:
-    | 'QUOTE'
-    | 'ORDER'
-    | 'PAYMENT_BILL'
-    | 'RECEIPT_BILL'
-    | 'MEASURE_TASK'
-    | 'ORDER_CHANGE'
-    | 'LEAD_RESTORE'
-    | 'ORDER_CANCEL'
-    | 'CUSTOMER_MERGE';
+      | 'QUOTE'
+      | 'ORDER'
+      | 'PAYMENT_BILL'
+      | 'RECEIPT_BILL'
+      | 'MEASURE_TASK'
+      | 'ORDER_CHANGE'
+      | 'LEAD_RESTORE'
+      | 'ORDER_CANCEL'
+      | 'CUSTOMER_MERGE';
     entityId: string;
     amount?: string | number;
     comment?: string;

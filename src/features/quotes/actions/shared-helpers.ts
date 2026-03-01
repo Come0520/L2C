@@ -7,7 +7,7 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema/quotes';
 import { eq, and } from 'drizzle-orm';
 import { DiscountControlService } from '@/services/discount-control.service';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 /**
  * 计算行项目小计 (Calculate Item Subtotal)
@@ -119,5 +119,5 @@ export const updateBundleTotal = async (bundleId: string, tenantId: string) => {
 
   revalidatePath(`/quotes/${bundleId}`);
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
 };

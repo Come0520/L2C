@@ -14,7 +14,7 @@ import {
 import { eq, and, sql, lte, isNull, or, inArray } from 'drizzle-orm';
 import { getCachedAnnouncements, getCachedTemplates } from './notification-cache';
 import { getSetting } from '@/features/settings/actions/system-settings-actions';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
@@ -188,7 +188,9 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
     return items;
   });
 
-  logger.info(`[NotificationService] Template ${input.templateCode} enqueued ${queueItems.length} messages for user ${input.userId}.`);
+  logger.info(
+    `[NotificationService] Template ${input.templateCode} enqueued ${queueItems.length} messages for user ${input.userId}.`
+  );
   if (template.priority === 'URGENT' || template.priority === 'HIGH') {
     try {
       await AuditService.log(db, {
@@ -197,7 +199,12 @@ export async function sendNotificationByTemplate(input: SendNotificationParams) 
         action: 'CREATE',
         userId: session.user.id || input.userId,
         tenantId: tenantId,
-        newValues: { templateCode: input.templateCode, channels, queuedCount: queueItems.length, priority: template.priority }
+        newValues: {
+          templateCode: input.templateCode,
+          channels,
+          queuedCount: queueItems.length,
+          priority: template.priority,
+        },
       });
     } catch (auditErr) {
       logger.error('Failed to write audit log for urgent notification:', { error: auditErr });
@@ -341,7 +348,9 @@ export async function processNotificationQueue(batchSize: number = 50) {
   }
 
   if (stats.processed > 0) {
-    logger.info(`[NotificationQueue] Processed ${stats.processed} items. Success: ${stats.success}, Failed: ${stats.failed}`);
+    logger.info(
+      `[NotificationQueue] Processed ${stats.processed} items. Success: ${stats.success}, Failed: ${stats.failed}`
+    );
   }
 
   return stats;
@@ -425,7 +434,6 @@ export async function createAnnouncement(input: z.infer<typeof createAnnouncemen
   });
 
   // P4 优化：失效相关缓存
-  revalidateTag('announcements', {});
   revalidatePath('/');
 
   return { success: true, data: announcement };
@@ -549,7 +557,5 @@ export async function upsertNotificationTemplate(input: z.infer<typeof upsertTem
   });
 
   // P4 优化：失效相关缓存
-  revalidateTag('notification-templates', {});
-
   return { success: true, data: result };
 }

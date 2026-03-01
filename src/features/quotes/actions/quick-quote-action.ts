@@ -1,7 +1,5 @@
 'use server';
 import { logger } from '@/shared/lib/logger';
-import { revalidateTag } from 'next/cache';
-
 /**
  * 快速报价 Actions
  * 包含：createQuickQuote
@@ -12,7 +10,7 @@ import { db } from '@/shared/api/db';
 import { quotes, quoteItems, quoteRooms } from '@/shared/api/schema/quotes';
 import { StrategyFactory } from '@/features/quotes/calc-strategies';
 import { eq, and, type InferSelectModel } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { CustomerService } from '@/services/customer.service';
 import { createQuickQuoteSchema } from './schema';
 import { updateQuoteTotal } from './shared-helpers';
@@ -174,7 +172,7 @@ export const createQuickQuote = createSafeAction(createQuickQuoteSchema, async (
   await updateQuoteTotal(newQuote.id, tenantId);
 
   revalidatePath('/quotes');
-  revalidateTag('quotes', 'default');
+  updateTag('quotes');
   logger.info('[quotes] 快速报价单创建成功', {
     quoteId: newQuote.id,
     quoteNo,

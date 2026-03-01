@@ -5,22 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Form } from '@/shared/ui/form';
 
 export function WallpaperQuickQuoteConfig() {
-    const form = useForm();
-    return (
-        <Form {...form}>
-            <form>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Wallpaper Quote Config</CardTitle>
-                        <CardDescription>Configure quick quote parameters for wallpaper.</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                        <div className="py-4 text-center text-muted-foreground">
-                            Configuration not available in recovery mode.
-                        </div>
-                    </CardContent>
-                </Card>
-            </form>
-        </Form>
-    );
+  const form = useForm();
+  return (
+    <Form {...form}>
+      <form>
+        <Card>
+          <CardHeader>
+            <CardTitle>Wallpaper Quote Config</CardTitle>
+            <CardDescription>Configure quick quote parameters for wallpaper.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-muted-foreground py-4 text-center">
+              Configuration not available in recovery mode.
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
+  );
 }

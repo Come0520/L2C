@@ -61,9 +61,9 @@ export default async function LeadsPage({
     const dateRange =
       dateFrom || dateTo
         ? {
-          from: dateFrom ? new Date(dateFrom) : undefined,
-          to: dateTo ? new Date(dateTo) : undefined,
-        }
+            from: dateFrom ? new Date(dateFrom) : undefined,
+            to: dateTo ? new Date(dateTo) : undefined,
+          }
         : undefined;
 
     const [leadsResult, salesList] = await Promise.all([
@@ -82,20 +82,20 @@ export default async function LeadsPage({
 
     return (
       <LeadsErrorBoundary>
-        <div className="w-full h-full flex flex-col gap-6 p-8 perspective-[1000px]">
+        <div className="flex h-full w-full flex-col gap-6 p-8 perspective-[1000px]">
           {/* Top Section: Tabs and Actions */}
           <div className="flex w-full items-center justify-between">
             <div className="flex-1">
               <LeadsFilterBar />
             </div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
               <ExcelImportDialog />
               <CreateLeadDialog tenantId={tenantId} />
             </div>
           </div>
 
           {/* Content Card */}
-          <div className="w-full flex-1 overflow-hidden relative h-full rounded-2xl p-6 glass-liquid border border-white/10 flex flex-col gap-4">
+          <div className="glass-liquid relative flex h-full w-full flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/10 p-6">
             {statusParam === 'ANALYTICS' ? (
               <LeadAnalyticsDashboard />
             ) : (

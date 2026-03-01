@@ -1,5 +1,5 @@
-import { db, type DbTransaction } from "@/shared/api/db";
-import { afterSalesTickets, liabilityNotices, debtLedgers } from "@/shared/api/schema/after-sales";
+import { db, type DbTransaction } from '@/shared/api/db';
+import { afterSalesTickets, liabilityNotices, debtLedgers } from '@/shared/api/schema/after-sales';
 import { sql, and, eq, desc } from 'drizzle-orm';
 
 /**
@@ -8,29 +8,32 @@ import { sql, and, eq, desc } from 'drizzle-orm';
  * @param tx 可选的数据库事务对象
  */
 export async function generateTicketNo(tenantId: string, tx?: DbTransaction): Promise<string> {
-    const executor = tx || db;
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const prefix = `AS${year}${month}${day}`;
+  const executor = tx || db;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const prefix = `AS${year}${month}${day}`;
 
-    const [latest] = await executor.select({ ticketNo: afterSalesTickets.ticketNo })
-        .from(afterSalesTickets)
-        .where(and(
-            eq(afterSalesTickets.tenantId, tenantId),
-            sql`${afterSalesTickets.ticketNo} LIKE ${prefix + '%'}`
-        ))
-        .orderBy(desc(afterSalesTickets.ticketNo))
-        .limit(1);
+  const [latest] = await executor
+    .select({ ticketNo: afterSalesTickets.ticketNo })
+    .from(afterSalesTickets)
+    .where(
+      and(
+        eq(afterSalesTickets.tenantId, tenantId),
+        sql`${afterSalesTickets.ticketNo} LIKE ${prefix + '%'}`
+      )
+    )
+    .orderBy(desc(afterSalesTickets.ticketNo))
+    .limit(1);
 
-    if (latest && latest.ticketNo) {
-        const currentSeq = parseInt(latest.ticketNo.slice(-4));
-        const nextSeq = String(currentSeq + 1).padStart(4, '0');
-        return `${prefix}${nextSeq}`;
-    }
+  if (latest && latest.ticketNo) {
+    const currentSeq = parseInt(latest.ticketNo.slice(-4));
+    const nextSeq = String(currentSeq + 1).padStart(4, '0');
+    return `${prefix}${nextSeq}`;
+  }
 
-    return `${prefix}0001`;
+  return `${prefix}0001`;
 }
 
 /**
@@ -39,29 +42,27 @@ export async function generateTicketNo(tenantId: string, tx?: DbTransaction): Pr
  * @param tx 可选的数据库事务对象
  */
 export async function generateDebtNo(tenantId: string, tx?: DbTransaction): Promise<string> {
-    const executor = tx || db;
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const prefix = `DT${year}${month}${day}`;
+  const executor = tx || db;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const prefix = `DT${year}${month}${day}`;
 
-    const [latest] = await executor.select({ debtNo: debtLedgers.debtNo })
-        .from(debtLedgers)
-        .where(and(
-            eq(debtLedgers.tenantId, tenantId),
-            sql`${debtLedgers.debtNo} LIKE ${prefix + '%'}`
-        ))
-        .orderBy(desc(debtLedgers.debtNo))
-        .limit(1);
+  const [latest] = await executor
+    .select({ debtNo: debtLedgers.debtNo })
+    .from(debtLedgers)
+    .where(and(eq(debtLedgers.tenantId, tenantId), sql`${debtLedgers.debtNo} LIKE ${prefix + '%'}`))
+    .orderBy(desc(debtLedgers.debtNo))
+    .limit(1);
 
-    if (latest && latest.debtNo) {
-        const currentSeq = parseInt(latest.debtNo.slice(-4));
-        const nextSeq = String(currentSeq + 1).padStart(4, '0');
-        return `${prefix}${nextSeq}`;
-    }
+  if (latest && latest.debtNo) {
+    const currentSeq = parseInt(latest.debtNo.slice(-4));
+    const nextSeq = String(currentSeq + 1).padStart(4, '0');
+    return `${prefix}${nextSeq}`;
+  }
 
-    return `${prefix}0001`;
+  return `${prefix}0001`;
 }
 
 /**
@@ -70,29 +71,32 @@ export async function generateDebtNo(tenantId: string, tx?: DbTransaction): Prom
  * @param tx 可选的数据库事务对象
  */
 export async function generateNoticeNo(tenantId: string, tx?: DbTransaction): Promise<string> {
-    const executor = tx || db;
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const prefix = `LN${year}${month}${day}`;
+  const executor = tx || db;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const prefix = `LN${year}${month}${day}`;
 
-    const [latest] = await executor.select({ noticeNo: liabilityNotices.noticeNo })
-        .from(liabilityNotices)
-        .where(and(
-            eq(liabilityNotices.tenantId, tenantId),
-            sql`${liabilityNotices.noticeNo} LIKE ${prefix + '%'}`
-        ))
-        .orderBy(desc(liabilityNotices.noticeNo))
-        .limit(1);
+  const [latest] = await executor
+    .select({ noticeNo: liabilityNotices.noticeNo })
+    .from(liabilityNotices)
+    .where(
+      and(
+        eq(liabilityNotices.tenantId, tenantId),
+        sql`${liabilityNotices.noticeNo} LIKE ${prefix + '%'}`
+      )
+    )
+    .orderBy(desc(liabilityNotices.noticeNo))
+    .limit(1);
 
-    if (latest && latest.noticeNo) {
-        const currentSeq = parseInt(latest.noticeNo.slice(-4));
-        const nextSeq = String(currentSeq + 1).padStart(4, '0');
-        return `${prefix}${nextSeq}`;
-    }
+  if (latest && latest.noticeNo) {
+    const currentSeq = parseInt(latest.noticeNo.slice(-4));
+    const nextSeq = String(currentSeq + 1).padStart(4, '0');
+    return `${prefix}${nextSeq}`;
+  }
 
-    return `${prefix}0001`;
+  return `${prefix}0001`;
 }
 
 /**
@@ -100,7 +104,7 @@ export async function generateNoticeNo(tenantId: string, tx?: DbTransaction): Pr
  * 转义字符包括 %, _, \
  */
 export function escapeLikePattern(input: string): string {
-    return input.replace(/[%_\\]/g, '\\$&');
+  return input.replace(/[%_\\]/g, '\\$&');
 }
 
 /**
@@ -110,8 +114,8 @@ export function escapeLikePattern(input: string): string {
  * 若长度不足7位，则不处理（或根据实际需求调整）
  */
 export function maskPhoneNumber(phone: string | null | undefined): string {
-    if (!phone) return '';
-    const s = String(phone);
-    if (s.length < 7) return s;
-    return s.substring(0, 3) + '****' + s.substring(s.length - 4);
+  if (!phone) return '';
+  const s = String(phone);
+  if (s.length < 7) return s;
+  return s.substring(0, 3) + '****' + s.substring(s.length - 4);
 }

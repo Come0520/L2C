@@ -13,7 +13,7 @@ import { db } from '@/shared/api/db';
 import { orders, orderChanges } from '@/shared/api/schema/orders';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { checkPermission } from '@/shared/lib/auth';
@@ -102,8 +102,7 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
       return { success: false, error: errorMsg || '审批提交失败' };
     }
 
-    revalidateTag('orders', {});
-    revalidateTag(`order-${orderId}`, {});
+    updateTag(`order-${orderId}`);
 
     // 记录审计日志
     await AuditService.record({
@@ -185,8 +184,7 @@ async function executeCancelOrder(
         .where(eq(orderChanges.id, changeRecordId));
     });
 
-    revalidateTag('orders', {});
-    revalidateTag(`order-${orderId}`, {});
+    updateTag(`order-${orderId}`);
 
     return {
       success: true,

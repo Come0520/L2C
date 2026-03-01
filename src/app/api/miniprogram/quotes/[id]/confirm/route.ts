@@ -15,10 +15,7 @@ import { ConfirmQuoteSchema } from '../../../miniprogram-schemas';
 import { AuditService } from '@/shared/services/audit-service';
 import { RateLimiter } from '@/shared/services/miniprogram/security.service';
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await getMiniprogramUser(request);
     if (!user) {
@@ -75,7 +72,7 @@ export async function POST(
       action: 'CUSTOMER_CONFIRM',
       userId: user.id,
       tenantId: user.tenantId,
-      details: { signatureUrl }
+      details: { signatureUrl },
     });
 
     logger.info('[Quotes] 报价单确认成功', {

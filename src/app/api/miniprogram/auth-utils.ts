@@ -12,12 +12,12 @@ import { logger } from '@/shared/lib/logger';
  * Miniprogram 用户身份信息
  */
 export interface AuthUser {
-    /** 用户 ID */
-    id: string;
-    /** 租户 ID */
-    tenantId: string;
-    /** 用户角色 */
-    role?: string;
+  /** 用户 ID */
+  id: string;
+  /** 租户 ID */
+  tenantId: string;
+  /** 用户角色 */
+  role?: string;
 }
 
 /**
@@ -30,38 +30,38 @@ export interface AuthUser {
  * @returns 解析后的用户信息，失败返回 null
  */
 export async function getMiniprogramUser(request: NextRequest): Promise<AuthUser | null> {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) return null;
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
 
-    const token = authHeader.slice(7);
+  const token = authHeader.slice(7);
 
-    // 开发环境 Mock 登录支持（使用独立测试 ID，禁止使用生产数据）
-    if (process.env.NODE_ENV === 'development' && token.startsWith('dev-mock-token-')) {
-        return {
-            id: 'test-user-00000000-0000-0000-0000-000000000001',
-            tenantId: 'test-tenant-00000000-0000-0000-0000-000000000001',
-            role: 'admin',
-        };
-    }
+  // 开发环境 Mock 登录支持（使用独立测试 ID，禁止使用生产数据）
+  if (process.env.NODE_ENV === 'development' && token.startsWith('dev-mock-token-')) {
+    return {
+      id: 'test-user-00000000-0000-0000-0000-000000000001',
+      tenantId: 'test-tenant-00000000-0000-0000-0000-000000000001',
+      role: 'admin',
+    };
+  }
 
-    try {
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    const { payload } = await jwtVerify(token, secret);
 
-        // 确保关键字段存在
-        const userId = payload.userId as string | undefined;
-        const tenantId = payload.tenantId as string | undefined;
+    // 确保关键字段存在
+    const userId = payload.userId as string | undefined;
+    const tenantId = payload.tenantId as string | undefined;
 
-        if (!userId || !tenantId) return null;
+    if (!userId || !tenantId) return null;
 
-        return {
-            id: userId,
-            tenantId,
-            role: (payload.role as string) || undefined,
-        };
-    } catch {
-        return null;
-    }
+    return {
+      id: userId,
+      tenantId,
+      role: (payload.role as string) || undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -75,37 +75,37 @@ export async function getMiniprogramUser(request: NextRequest): Promise<AuthUser
  * @returns 签名后的 JWT Token
  */
 export async function generateMiniprogramToken(
-    userId: string,
-    tenantId: string,
-    options?: {
-        /** Token 类型标识，默认 'miniprogram' */
-        type?: string;
-        /** 过期时间，默认 '7d' */
-        expiresIn?: string;
-    }
+  userId: string,
+  tenantId: string,
+  options?: {
+    /** Token 类型标识，默认 'miniprogram' */
+    type?: string;
+    /** 过期时间，默认 '7d' */
+    expiresIn?: string;
+  }
 ): Promise<string> {
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const type = options?.type ?? 'miniprogram';
-    const expiresIn = options?.expiresIn ?? '7d';
+  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+  const type = options?.type ?? 'miniprogram';
+  const expiresIn = options?.expiresIn ?? '7d';
 
-    const token = await new SignJWT({
-        userId,
-        tenantId,
-        type,
-    })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime(expiresIn)
-        .sign(secret);
-    logger.info('[Auth] Token 已签发', {
-        route: 'auth-utils',
-        userId,
-        tenantId,
-        type,
-        expiresIn,
-    });
+  const token = await new SignJWT({
+    userId,
+    tenantId,
+    type,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(secret);
+  logger.info('[Auth] Token 已签发', {
+    route: 'auth-utils',
+    userId,
+    tenantId,
+    type,
+    expiresIn,
+  });
 
-    return token;
+  return token;
 }
 
 /**
@@ -116,17 +116,17 @@ export async function generateMiniprogramToken(
  * @param unionId 可选，微信生态跨应用唯一标识
  */
 export async function generateRegisterToken(openId: string, unionId?: string): Promise<string> {
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 
-    return new SignJWT({
-        openId,
-        unionId,
-        type: 'REGISTER',
-    })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('10m') // 10分钟后过期
-        .sign(secret);
+  return new SignJWT({
+    openId,
+    unionId,
+    type: 'REGISTER',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m') // 10分钟后过期
+    .sign(secret);
 }
 
 /**
@@ -135,20 +135,22 @@ export async function generateRegisterToken(openId: string, unionId?: string): P
  * @param token 前端传入的寄存态 Register Token
  * @returns 验证通过的 openId 字典，若失效或伪造则返回 null
  */
-export async function verifyRegisterToken(token: string): Promise<{ openId: string; unionId?: string } | null> {
-    try {
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
+export async function verifyRegisterToken(
+  token: string
+): Promise<{ openId: string; unionId?: string } | null> {
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    const { payload } = await jwtVerify(token, secret);
 
-        if (payload.type !== 'REGISTER' || !payload.openId) {
-            return null;
-        }
-
-        return {
-            openId: payload.openId as string,
-            unionId: payload.unionId as string | undefined,
-        };
-    } catch {
-        return null; // 过期或签名无效
+    if (payload.type !== 'REGISTER' || !payload.openId) {
+      return null;
     }
+
+    return {
+      openId: payload.openId as string,
+      unionId: payload.unionId as string | undefined,
+    };
+  } catch {
+    return null; // 过期或签名无效
+  }
 }

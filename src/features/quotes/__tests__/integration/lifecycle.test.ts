@@ -84,7 +84,7 @@ describe('Quote Lifecycle E2E Integration', () => {
         requiresApproval: false,
         blockSubmission: false,
         reasons: [],
-      } as unknown as Awaited<ReturnType<typeof RealRiskControlService['checkQuoteRisk']>>);
+      } as unknown as Awaited<ReturnType<(typeof RealRiskControlService)['checkQuoteRisk']>>);
 
       // Action: Submit
       const result = await QuoteLifecycleService.submit(mockQuoteId, mockTenantId, mockUserId);
@@ -160,7 +160,7 @@ describe('Quote Lifecycle E2E Integration', () => {
         requiresApproval: true,
         blockSubmission: false,
         reasons: ['Gross profit too low'],
-      } as unknown as Awaited<ReturnType<typeof RealRiskControlService['checkQuoteRisk']>>);
+      } as unknown as Awaited<ReturnType<(typeof RealRiskControlService)['checkQuoteRisk']>>);
 
       // Action: Submit
       const result = await QuoteLifecycleService.submit(mockQuoteId, mockTenantId, mockUserId);

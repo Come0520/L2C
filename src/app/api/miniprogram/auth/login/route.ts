@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       action: 'LOGIN',
       userId: user.id,
       tenantId: user.tenantId,
-      details: { method: 'PASSWORD', account }
+      details: { method: 'PASSWORD', account },
     });
 
     logger.info('[Login] 用户登录成功', {

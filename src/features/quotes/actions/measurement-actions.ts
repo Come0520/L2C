@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { QuoteService, type ImportAction } from '@/services/quote.service';
 import { auth } from '@/shared/lib/auth';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { measureTasks } from '@/shared/api/schema/service';
 import { eq, and, desc } from 'drizzle-orm';
@@ -131,7 +131,7 @@ const executeMeasurementImportActionInternal = createSafeAction(
     await updateQuoteTotal(data.quoteId, session.user.tenantId);
 
     revalidatePath(`/quotes/${data.quoteId}`);
-    revalidateTag('quotes', 'default');
+    updateTag('quotes');
     logger.info('[quotes] 测量数据成功导入报价单', {
       quoteId: data.quoteId,
       actionCount: data.actions.length,

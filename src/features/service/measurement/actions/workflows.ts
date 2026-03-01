@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { measureSheetSchema, reviewMeasureTaskSchema } from '../schemas';
 import { auth } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/lib/audit-service';
@@ -103,7 +103,6 @@ export async function submitMeasureData(input: z.infer<typeof measureSheetSchema
         },
       });
 
-      revalidateTag('measure-task', {});
       revalidatePath('/service/measurement');
       revalidatePath(`/service/measurement/${data.taskId}`);
       return { success: true, data: res };
@@ -197,7 +196,6 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
         },
       });
 
-      revalidateTag('measure-task', {});
       revalidatePath('/service/measurement');
       revalidatePath(`/service/measurement/${id}`);
       return { success: true };
@@ -285,7 +283,6 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
     },
   });
 
-  revalidateTag('measure-task', {});
   revalidatePath(`/service/measurement/${taskId}`);
   return { success: true, round: newRound, variant: newVariant };
 }

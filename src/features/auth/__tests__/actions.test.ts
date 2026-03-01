@@ -13,36 +13,59 @@ import { LoginForm } from '../components/login-form';
 // 以下测试验证模块的结构正确性和业务逻辑。
 
 vi.mock('next-auth/react', () => ({
-    signIn: vi.fn(),
+  signIn: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
-    useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
+  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
-    logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+  logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
 describe('Auth 模块结构测试', () => {
-    it('LoginForm 组件应可导入', () => {
-        expect(LoginForm).toBeDefined();
-        expect(typeof LoginForm).toBe('function');
+  it('LoginForm 组件应可导入', () => {
+    expect(LoginForm).toBeDefined();
+    expect(typeof LoginForm).toBe('function');
+  });
+
+  it('LoginForm 是一个 React 组件函数', () => {
+    expect(LoginForm.name).toBe('LoginForm');
+  });
+
+  it('模块应包含 components 和 actions 相关结构', () => {
+    // auth 模块现在包含了 password-reset 等 server action
+    const authDir = path.resolve(__dirname, '..');
+    const entries = fs.readdirSync(authDir);
+    expect(entries).toContain('components');
+    expect(entries).toContain('actions');
+  });
+});
+
+describe('password-reset actions', () => {
+  it('resetPassword returns error for invalid token', async () => {
+    // Mock DB for resetPassword
+    vi.mock('@/shared/api/db', () => ({
+      db: {
+        query: {
+          verificationCodes: { findFirst: vi.fn().mockResolvedValue(null) },
+        },
+      },
+    }));
+
+    const { resetPassword } = await import('../actions/password-reset');
+    const result = await resetPassword({
+      token: 'invalid-token-123',
+      newPassword: 'Password123!',
+      confirmPassword: 'Password123!',
     });
 
-    it('LoginForm 是一个 React 组件函数', () => {
-        expect(LoginForm.name).toBe('LoginForm');
-    });
-
-    it('模块应包含 components 和 actions 相关结构', () => {
-        // auth 模块现在包含了 password-reset 等 server action
-        const authDir = path.resolve(__dirname, '..');
-        const entries = fs.readdirSync(authDir);
-        expect(entries).toContain('components');
-        expect(entries).toContain('actions');
-    });
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('重置链接无效或已使用');
+  });
 });

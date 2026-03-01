@@ -11,16 +11,16 @@ import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
 import FileEdit from 'lucide-react/dist/esm/icons/file-edit';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { toast } from 'sonner';
 import {
-    confirmInstallationAction,
-    requestCustomerConfirmationAction,
-    customerAcceptAction,
+  confirmInstallationAction,
+  requestCustomerConfirmationAction,
+  customerAcceptAction,
 } from '../actions/orders';
 import { useRouter } from 'next/navigation';
 import { ChangeOrderDialog } from '@/features/orders/components/change-order-dialog';
@@ -30,152 +30,163 @@ import { CancelOrderDialog } from '@/features/orders/components/cancel-order-dia
 import { RejectOrderDialog } from './reject-order-dialog';
 
 interface OrderDetailActionsProps {
-    order: {
-        id: string;
-        orderNo?: string;
-        status: string;
-        version?: number;
-        items?: Array<{
-            id: string;
-            productName: string;
-            quantity: string;
-            unitPrice: string;
-            subtotal: string;
-            supplierId?: string;
-            poId?: string;
-        }>;
-    };
-    suppliers?: Array<{ id: string; name: string }>;
+  order: {
+    id: string;
+    orderNo?: string;
+    status: string;
+    version?: number;
+    items?: Array<{
+      id: string;
+      productName: string;
+      quantity: string;
+      unitPrice: string;
+      subtotal: string;
+      supplierId?: string;
+      poId?: string;
+    }>;
+  };
+  suppliers?: Array<{ id: string; name: string }>;
 }
 
 export function OrderDetailActions({ order, suppliers = [] }: OrderDetailActionsProps) {
-    const [splitDialogOpen, setSplitDialogOpen] = useState(false);
-    const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
 
-    const handleSplit = () => {
-        setSplitDialogOpen(true);
-    };
+  const handleSplit = () => {
+    setSplitDialogOpen(true);
+  };
 
-    const handleDelivery = () => {
-        setDeliveryDialogOpen(true);
-    };
+  const handleDelivery = () => {
+    setDeliveryDialogOpen(true);
+  };
 
-    const router = useRouter();
+  const router = useRouter();
 
-    const handleConfirmInstall = async () => {
-        try {
-            await confirmInstallationAction({ orderId: order.id, version: order.version || 0 });
-            toast.success('安装已确认完成');
-            router.refresh();
-        } catch { toast.error('操作失败'); }
-    };
+  const handleConfirmInstall = async () => {
+    try {
+      await confirmInstallationAction({ orderId: order.id, version: order.version || 0 });
+      toast.success('安装已确认完成');
+      router.refresh();
+    } catch {
+      toast.error('操作失败');
+    }
+  };
 
-    const handleRequestConfirmation = async () => {
-        try {
-            await requestCustomerConfirmationAction({ orderId: order.id, version: order.version || 0 });
-            toast.success('已通知客户验收');
-            router.refresh();
-        } catch { toast.error('操作失败'); }
-    };
+  const handleRequestConfirmation = async () => {
+    try {
+      await requestCustomerConfirmationAction({ orderId: order.id, version: order.version || 0 });
+      toast.success('已通知客户验收');
+      router.refresh();
+    } catch {
+      toast.error('操作失败');
+    }
+  };
 
-    const handleAccept = async () => {
-        try {
-            await customerAcceptAction({ orderId: order.id, version: order.version || 0 });
-            toast.success('订单已验收完成');
-            router.refresh();
-        } catch { toast.error('操作失败'); }
-    };
+  const handleAccept = async () => {
+    try {
+      await customerAcceptAction({ orderId: order.id, version: order.version || 0 });
+      toast.success('订单已验收完成');
+      router.refresh();
+    } catch {
+      toast.error('操作失败');
+    }
+  };
 
-    return (
-        <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-                <Printer className="h-4 w-4 mr-2" /> 打印
-            </Button>
-            <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" /> 导出
-            </Button>
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm">
+        <Printer className="mr-2 h-4 w-4" /> 打印
+      </Button>
+      <Button variant="outline" size="sm">
+        <Download className="mr-2 h-4 w-4" /> 导出
+      </Button>
 
-            {order.status === 'PENDING_PO' && (
-                <Button size="sm" onClick={handleSplit}>
-                    <SplitSquareVertical className="h-4 w-4 mr-2" /> 生成采购单
-                </Button>
-            )}
+      {order.status === 'PENDING_PO' && (
+        <Button size="sm" onClick={handleSplit}>
+          <SplitSquareVertical className="mr-2 h-4 w-4" /> 生成采购单
+        </Button>
+      )}
 
-            {order.status === 'PENDING_DELIVERY' && (
-                <Button size="sm" onClick={handleDelivery}>
-                    <Truck className="h-4 w-4 mr-2" /> 申请发货
-                </Button>
-            )}
+      {order.status === 'PENDING_DELIVERY' && (
+        <Button size="sm" onClick={handleDelivery}>
+          <Truck className="mr-2 h-4 w-4" /> 申请发货
+        </Button>
+      )}
 
-            {order.status === 'PENDING_INSTALL' && (
-                <Button size="sm" onClick={handleConfirmInstall}>
-                    <CheckCircle className="h-4 w-4 mr-2" /> 确认安装完成
-                </Button>
-            )}
+      {order.status === 'PENDING_INSTALL' && (
+        <Button size="sm" onClick={handleConfirmInstall}>
+          <CheckCircle className="mr-2 h-4 w-4" /> 确认安装完成
+        </Button>
+      )}
 
-            {order.status === 'INSTALLATION_COMPLETED' && (
-                <Button size="sm" onClick={handleRequestConfirmation} variant="secondary">
-                    <CheckCircle className="h-4 w-4 mr-2" /> 通知客户验收
-                </Button>
-            )}
+      {order.status === 'INSTALLATION_COMPLETED' && (
+        <Button size="sm" onClick={handleRequestConfirmation} variant="secondary">
+          <CheckCircle className="mr-2 h-4 w-4" /> 通知客户验收
+        </Button>
+      )}
 
-            {order.status === 'PENDING_CONFIRMATION' && (
-                <>
-                    <Button size="sm" variant="default" onClick={handleAccept} className="bg-green-600 hover:bg-green-700">
-                        <CheckCircle className="h-4 w-4 mr-2" /> 确认验收
-                    </Button>
-                    <RejectOrderDialog orderId={order.id} version={order.version || 0} />
-                </>
-            )}
+      {order.status === 'PENDING_CONFIRMATION' && (
+        <>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleAccept}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" /> 确认验收
+          </Button>
+          <RejectOrderDialog orderId={order.id} version={order.version || 0} />
+        </>
+      )}
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <div className="px-2 py-1.5 outline-none">
-                        <ChangeOrderDialog
-                            orderId={order.id}
-                            trigger={
-                                <div className="relative flex select-none items-center rounded-sm text-sm outline-none transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer p-1">
-                                    <FileEdit className="mr-2 h-4 w-4" />
-                                    <span>发起变更</span>
-                                </div>
-                            }
-                        />
-                    </div>
-                    <DropdownMenuItem>编辑订单</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* 撤单按钮 */}
-            <CancelOrderDialog
-                orderId={order.id}
-                orderNo={order.orderNo || order.id}
-                orderStatus={order.status}
-                version={order.version || 0}
-                onSuccess={() => router.refresh()}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <div className="px-2 py-1.5 outline-none">
+            <ChangeOrderDialog
+              orderId={order.id}
+              trigger={
+                <div className="relative flex cursor-pointer items-center rounded-sm p-1 text-sm transition-colors outline-none select-none hover:bg-slate-100 hover:text-slate-900">
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  <span>发起变更</span>
+                </div>
+              }
             />
+          </div>
+          <DropdownMenuItem>编辑订单</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-            {/* 拆单对话框 */}
-            <SplitOrderDialog
-                open={splitDialogOpen}
-                onOpenChange={setSplitDialogOpen}
-                orderId={order.id}
-                version={order.version || 0}
-                orderItems={order.items || []}
-                suppliers={suppliers}
-            />
+      {/* 撤单按钮 */}
+      <CancelOrderDialog
+        orderId={order.id}
+        orderNo={order.orderNo || order.id}
+        orderStatus={order.status}
+        version={order.version || 0}
+        onSuccess={() => router.refresh()}
+      />
 
-            {/* 发货申请对话框 */}
-            <DeliveryRequestDialog
-                open={deliveryDialogOpen}
-                onOpenChange={setDeliveryDialogOpen}
-                orderId={order.id}
-                version={order.version || 0}
-            />
-        </div>
-    );
+      {/* 拆单对话框 */}
+      <SplitOrderDialog
+        open={splitDialogOpen}
+        onOpenChange={setSplitDialogOpen}
+        orderId={order.id}
+        version={order.version || 0}
+        orderItems={order.items || []}
+        suppliers={suppliers}
+      />
+
+      {/* 发货申请对话框 */}
+      <DeliveryRequestDialog
+        open={deliveryDialogOpen}
+        onOpenChange={setDeliveryDialogOpen}
+        orderId={order.id}
+        version={order.version || 0}
+      />
+    </div>
+  );
 }

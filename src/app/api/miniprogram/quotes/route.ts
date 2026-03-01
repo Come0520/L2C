@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE',
         userId: user.id,
         tenantId: user.tenantId,
-        details: { customerId, totalAmount: result.totalAmount }
+        details: { customerId, totalAmount: result.totalAmount },
       });
     } catch (auditError) {
       logger.warn('[Quotes] 审计日志记录失败', { error: auditError, quoteId: result.id });

@@ -18,7 +18,7 @@ import {
   confirmInstallationSchema,
   closeOrderSchema,
   requestCustomerConfirmationSchema,
-  customerRejectSchema
+  customerRejectSchema,
 } from '../action-schemas';
 
 /**
@@ -34,7 +34,7 @@ function getTenantId(session: Session | null): string {
 
 /**
  * 获取订单列表 Action
- * 
+ *
  * @param params 包含分页参数（page、pageSize）及状态过滤条件（status）
  * @returns 包含查询结果数组的 Promise
  */
@@ -62,7 +62,7 @@ export async function getOrders(params: { page?: number; pageSize?: number; stat
 
 /**
  * 取消订单 Action
- * 
+ *
  * @param input 包含需取消的订单 ID (`orderId`) 及其关联的版本号 (`version`) 还有取消原因 (`reason`)
  * @returns 操作成功则返回 `{ success: true }`
  */
@@ -77,17 +77,20 @@ export async function cancelOrderAction(input: z.infer<typeof cancelOrderSchema>
   const validated = cancelOrderSchema.parse(input);
 
   try {
-    const [updatedOrder] = await db.update(orders)
+    const [updatedOrder] = await db
+      .update(orders)
       .set({
         status: 'CANCELLED',
         version: validated.version + 1,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(orders.id, validated.orderId),
-        eq(orders.tenantId, tenantId),
-        eq(orders.version, validated.version)
-      ))
+      .where(
+        and(
+          eq(orders.id, validated.orderId),
+          eq(orders.tenantId, tenantId),
+          eq(orders.version, validated.version)
+        )
+      )
       .returning({ id: orders.id });
 
     if (!updatedOrder) {
@@ -103,7 +106,11 @@ export async function cancelOrderAction(input: z.infer<typeof cancelOrderSchema>
       newValues: { status: 'CANCELLED', reason: validated.reason },
     });
 
-    logger.info('[orders] 取消订单:', { orderId: validated.orderId, tenantId, reason: validated.reason });
+    logger.info('[orders] 取消订单:', {
+      orderId: validated.orderId,
+      tenantId,
+      reason: validated.reason,
+    });
 
     return { success: true };
   } catch (e: unknown) {
@@ -115,7 +122,7 @@ export async function cancelOrderAction(input: z.infer<typeof cancelOrderSchema>
 
 /**
  * 确认安装完成 Action
- * 
+ *
  * @param input 包含已安装订单的 ID (`orderId`) 及其版本号 (`version`)
  * @returns 操作成功则返回 `{ success: true }`
  */
@@ -152,11 +159,13 @@ export async function confirmInstallationAction(input: z.infer<typeof confirmIns
 
 /**
  * 顾客通过验收 Action
- * 
+ *
  * @param input 包含要确认的订单 ID (`orderId`) 及版本号 (`version`)
  * @returns 操作成功则返回 `{ success: true }`
  */
-export async function customerAcceptAction(input: z.infer<typeof requestCustomerConfirmationSchema>) {
+export async function customerAcceptAction(
+  input: z.infer<typeof requestCustomerConfirmationSchema>
+) {
   const session = await auth();
   const user = session?.user;
   if (!user || !user.id) throw new Error('Unauthorized');
@@ -189,7 +198,7 @@ export async function customerAcceptAction(input: z.infer<typeof requestCustomer
 
 /**
  * 关闭订单 Action
- * 
+ *
  * @param input 包含需关闭的订单 ID (`orderId`) 及其版本号 (`version`) 和关闭原因 (`reason`)
  * @returns 操作成功则返回 `{ success: true }`
  */
@@ -204,17 +213,20 @@ export async function closeOrderAction(input: z.infer<typeof closeOrderSchema>) 
   const validated = closeOrderSchema.parse(input);
 
   try {
-    const [updatedOrder] = await db.update(orders)
+    const [updatedOrder] = await db
+      .update(orders)
       .set({
         status: 'COMPLETED' as typeof orders.status._.data,
         version: validated.version + 1,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(orders.id, validated.orderId),
-        eq(orders.tenantId, tenantId),
-        eq(orders.version, validated.version)
-      ))
+      .where(
+        and(
+          eq(orders.id, validated.orderId),
+          eq(orders.tenantId, tenantId),
+          eq(orders.version, validated.version)
+        )
+      )
       .returning({ id: orders.id });
 
     if (!updatedOrder) {
@@ -242,11 +254,13 @@ export async function closeOrderAction(input: z.infer<typeof closeOrderSchema>) 
 
 /**
  * 请求客户确认 Action
- * 
+ *
  * @param input 包含被请求确认的订单 ID (`orderId`) 及版本号 (`version`)
  * @returns 操作成功则返回 `{ success: true }`
  */
-export async function requestCustomerConfirmationAction(input: z.infer<typeof requestCustomerConfirmationSchema>) {
+export async function requestCustomerConfirmationAction(
+  input: z.infer<typeof requestCustomerConfirmationSchema>
+) {
   const session = await auth();
   const user = session?.user;
   if (!user || !user.id) throw new Error('Unauthorized');
@@ -255,7 +269,12 @@ export async function requestCustomerConfirmationAction(input: z.infer<typeof re
   const validated = requestCustomerConfirmationSchema.parse(input);
 
   try {
-    await OrderService.requestCustomerConfirmation(validated.orderId, tenantId, validated.version, user.id);
+    await OrderService.requestCustomerConfirmation(
+      validated.orderId,
+      tenantId,
+      validated.version,
+      user.id
+    );
 
     await AuditService.record({
       tenantId,
@@ -278,7 +297,7 @@ export async function requestCustomerConfirmationAction(input: z.infer<typeof re
 
 /**
  * 客户拒绝 Action
- * 
+ *
  * @param input 包含被拒绝的订单 ID (`orderId`) 以及拒绝验收的原因 (`reason`) 和版本号 (`version`)
  * @returns 操作成功则返回 `{ success: true }`
  */
@@ -291,7 +310,12 @@ export async function customerRejectAction(input: z.infer<typeof customerRejectS
   const validated = customerRejectSchema.parse(input);
 
   try {
-    await OrderService.customerReject(validated.orderId, tenantId, validated.version, validated.reason);
+    await OrderService.customerReject(
+      validated.orderId,
+      tenantId,
+      validated.version,
+      validated.reason
+    );
 
     await AuditService.record({
       tenantId,
@@ -302,7 +326,11 @@ export async function customerRejectAction(input: z.infer<typeof customerRejectS
       newValues: { status: 'INSTALLATION_REJECTED', reason: validated.reason },
     });
 
-    logger.info('[orders] 客户决绝并退回:', { orderId: validated.orderId, tenantId, reason: validated.reason });
+    logger.info('[orders] 客户决绝并退回:', {
+      orderId: validated.orderId,
+      tenantId,
+      reason: validated.reason,
+    });
 
     return { success: true };
   } catch (e: unknown) {

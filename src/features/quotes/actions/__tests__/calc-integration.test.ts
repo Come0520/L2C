@@ -1,37 +1,39 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockSession } from '@/shared/tests/mock-factory';
 import { recalculateQuote } from '../calc-actions';
 
 const MOCK_SESSION = createMockSession();
 
 const mocks = vi.hoisted(() => {
-    return {
-        db: {
-            query: {
-                quotes: {
-                    findFirst: vi.fn()
-                }
-            },
-            update: vi.fn(() => ({
-                set: vi.fn(() => ({
-                    where: vi.fn(() => Promise.resolve())
-                }))
-            }))
-        }
-    };
+  return {
+    db: {
+      query: {
+        quotes: {
+          findFirst: vi.fn(),
+        },
+      },
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => Promise.resolve()),
+        })),
+      })),
+    },
+  };
 });
 
 vi.mock('@/shared/api/db', () => ({
-    db: mocks.db
+  db: mocks.db,
 }));
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
-    revalidateTag: vi.fn()
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+  unstable_cache: vi.fn((fn) => fn),
 }));
 
 vi.mock('@/shared/lib/auth', () => ({
-    auth: vi.fn(() => Promise.resolve(MOCK_SESSION))
+  auth: vi.fn(() => Promise.resolve(MOCK_SESSION)),
 }));
 
 const QUOTE_1_UUID = '33100000-0000-4000-a000-000000000013';
@@ -40,99 +42,99 @@ const ITEM_1_UUID = '33100000-0000-4000-a000-000000000015';
 const ITEM_2_UUID = '33100000-0000-4000-a000-000000000016';
 
 describe('Calculation Engine Integration (recalculateQuote)', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    it('should calculate Curtain quantity and update DB', async () => {
-        // Setup: Quote with 1 Curtain Item
-        const mockItem = {
-            id: ITEM_1_UUID,
-            width: '300', // 300 cm
-            height: '270', // 270 cm
-            unitPrice: '100',
-            category: 'CURTAIN',
-            attributes: {
-                foldRatio: 2.0,
-                fabricWidth: 2.8, // meters
-                fabricType: 'FIXED_HEIGHT'
-            }
-        };
+  it('should calculate Curtain quantity and update DB', async () => {
+    // Setup: Quote with 1 Curtain Item
+    const mockItem = {
+      id: ITEM_1_UUID,
+      width: '300', // 300 cm
+      height: '270', // 270 cm
+      unitPrice: '100',
+      category: 'CURTAIN',
+      attributes: {
+        foldRatio: 2.0,
+        fabricWidth: 2.8, // meters
+        fabricType: 'FIXED_HEIGHT',
+      },
+    };
 
-        const mockQuote = {
-            id: QUOTE_1_UUID,
-            discountRate: '0.9', // 90% discount
-            items: [mockItem]
-        };
+    const mockQuote = {
+      id: QUOTE_1_UUID,
+      discountRate: '0.9', // 90% discount
+      items: [mockItem],
+    };
 
-        // Mock DB Response
-        mocks.db.query.quotes.findFirst.mockResolvedValue(mockQuote);
+    // Mock DB Response
+    mocks.db.query.quotes.findFirst.mockResolvedValue(mockQuote);
 
-        // Mock Update Chain capture
-        const updateSetSpy = vi.fn().mockReturnValue({ where: vi.fn() });
-        mocks.db.update.mockReturnValue({ set: updateSetSpy });
+    // Mock Update Chain capture
+    const updateSetSpy = vi.fn().mockReturnValue({ where: vi.fn() });
+    mocks.db.update.mockReturnValue({ set: updateSetSpy });
 
-        // Execute
-        const result = await recalculateQuote(QUOTE_1_UUID);
+    // Execute
+    const result = await recalculateQuote(QUOTE_1_UUID);
 
-        // Assert
-        expect(result.success).toBe(true);
-        expect(mocks.db.query.quotes.findFirst).toHaveBeenCalled();
+    // Assert
+    expect(result.success).toBe(true);
+    expect(mocks.db.query.quotes.findFirst).toHaveBeenCalled();
 
-        // Check Item Update
-        const itemUpdateCalls = updateSetSpy.mock.calls;
+    // Check Item Update
+    const itemUpdateCalls = updateSetSpy.mock.calls;
 
-        const itemUpdate = itemUpdateCalls.find(call => call[0].quantity);
-        expect(itemUpdate).toBeDefined();
-        if (itemUpdate) {
-            // 计算验证：成品宽 300cm × 2.0褂盖倍 + 双开侧边两组 (5cm×2×2) = 620cm → 6.2m
-            expect(itemUpdate[0].quantity).toBe('6.2');
-            // 小计 = 6.2m × 100元/m = 620
-            expect(itemUpdate[0].subtotal).toBe('620');
-            expect(itemUpdate[0].attributes.calcResult.warning).toBeDefined();
-        }
+    const itemUpdate = itemUpdateCalls.find((call) => call[0].quantity);
+    expect(itemUpdate).toBeDefined();
+    if (itemUpdate) {
+      // 计算验证：成品宽 300cm × 2.0褂盖倍 + 双开侧边两组 (5cm×2×2) = 620cm → 6.2m
+      expect(itemUpdate[0].quantity).toBe('6.2');
+      // 小计 = 6.2m × 100元/m = 620
+      expect(itemUpdate[0].subtotal).toBe('620');
+      expect(itemUpdate[0].attributes.calcResult.warning).toBeDefined();
+    }
 
-        // Check Quote Update
-        const quoteUpdate = itemUpdateCalls.find(call => call[0].totalAmount);
-        expect(quoteUpdate).toBeDefined();
-        if (quoteUpdate) {
-            expect(quoteUpdate[0].totalAmount).toBe('620'); // Sum of subtotals
-            expect(quoteUpdate[0].finalAmount).toBe('558'); // 620 * 0.9 = 558
-        }
-    });
+    // Check Quote Update
+    const quoteUpdate = itemUpdateCalls.find((call) => call[0].totalAmount);
+    expect(quoteUpdate).toBeDefined();
+    if (quoteUpdate) {
+      expect(quoteUpdate[0].totalAmount).toBe('620'); // Sum of subtotals
+      expect(quoteUpdate[0].finalAmount).toBe('558'); // 620 * 0.9 = 558
+    }
+  });
 
-    it('should calculate Wallcloth usage (Perimeter) and update DB', async () => {
-        const mockItem = {
-            id: ITEM_2_UUID,
-            width: '400',  // 400 cm
-            height: '260', // 260 cm
-            unitPrice: '50',
-            category: 'WALLCLOTH',
-            attributes: {
-                calcType: 'WALLCLOTH',
-                fabricWidth: 2.8,
-                widthLoss: 20,
-                heightLoss: 10
-            }
-        };
+  it('should calculate Wallcloth usage (Perimeter) and update DB', async () => {
+    const mockItem = {
+      id: ITEM_2_UUID,
+      width: '400', // 400 cm
+      height: '260', // 260 cm
+      unitPrice: '50',
+      category: 'WALLCLOTH',
+      attributes: {
+        calcType: 'WALLCLOTH',
+        fabricWidth: 2.8,
+        widthLoss: 20,
+        heightLoss: 10,
+      },
+    };
 
-        const mockQuote = {
-            id: QUOTE_2_UUID,
-            discountRate: '1.0',
-            items: [mockItem]
-        };
+    const mockQuote = {
+      id: QUOTE_2_UUID,
+      discountRate: '1.0',
+      items: [mockItem],
+    };
 
-        mocks.db.query.quotes.findFirst.mockResolvedValue(mockQuote);
-        const updateSetSpy = vi.fn().mockReturnValue({ where: vi.fn() });
-        mocks.db.update.mockReturnValue({ set: updateSetSpy });
+    mocks.db.query.quotes.findFirst.mockResolvedValue(mockQuote);
+    const updateSetSpy = vi.fn().mockReturnValue({ where: vi.fn() });
+    mocks.db.update.mockReturnValue({ set: updateSetSpy });
 
-        await recalculateQuote(QUOTE_2_UUID);
+    await recalculateQuote(QUOTE_2_UUID);
 
-        const itemUpdate = updateSetSpy.mock.calls.find(call => call[0].quantity);
-        expect(itemUpdate).toBeDefined();
-        if (itemUpdate) {
-            expect(itemUpdate[0].quantity).toBe('11.76');
-            expect(itemUpdate[0].subtotal).toBe('588');
-        }
-    });
+    const itemUpdate = updateSetSpy.mock.calls.find((call) => call[0].quantity);
+    expect(itemUpdate).toBeDefined();
+    if (itemUpdate) {
+      expect(itemUpdate[0].quantity).toBe('11.76');
+      expect(itemUpdate[0].subtotal).toBe('588');
+    }
+  });
 });

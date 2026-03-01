@@ -63,7 +63,7 @@ function PermissionInfoBubble({ code }: { code: string }) {
     <>
       {/* 触发器：蓝色 ⓘ 图标 */}
       <span
-        className="text-blue-400/60 hover:text-blue-500 inline-flex cursor-help items-center transition-colors duration-150"
+        className="inline-flex cursor-help items-center text-blue-400/60 transition-colors duration-150 hover:text-blue-500"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -71,7 +71,8 @@ function PermissionInfoBubble({ code }: { code: string }) {
       </span>
 
       {/* 气泡弹窗：用 Portal 渲染到 body，position:fixed 确保层级最高 */}
-      {visible && typeof document !== 'undefined' &&
+      {visible &&
+        typeof document !== 'undefined' &&
         createPortal(
           <div
             style={{
@@ -105,24 +106,32 @@ function PermissionInfoBubble({ code }: { code: string }) {
               <div style={{ background: '#dbeafe', borderRadius: 6, padding: 4 }}>
                 <Info style={{ width: 12, height: 12, color: '#2563eb' }} />
               </div>
-              <code style={{ fontFamily: 'monospace', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
+              <code
+                style={{ fontFamily: 'monospace', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}
+              >
                 {code}
               </code>
             </div>
             {/* 正文：纯白底色，深灰文字 */}
             <div style={{ background: '#ffffff', padding: '12px 14px' }}>
-              <p style={{ fontSize: 13, lineHeight: 1.65, color: '#1f2937', margin: 0, fontWeight: 400 }}>
+              <p
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.65,
+                  color: '#1f2937',
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
                 {description || '暂无权限说明'}
               </p>
             </div>
           </div>,
           document.body
-        )
-      }
+        )}
     </>
   );
 }
-
 
 export function PermissionMatrix({ data }: PermissionMatrixProps) {
   // 折叠状态：groupKey -> boolean

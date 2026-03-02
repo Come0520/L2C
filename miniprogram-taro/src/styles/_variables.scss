@@ -1,0 +1,63 @@
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+
+// ---------- 颜色系统 (Color System) ----------
+$apple-blue: #0071E3;
+$apple-blue-light: #e0f0ff; // 浅蓝底色 (bg-tint)
+$apple-blue-active: #0062c3;
+
+$apple-green: #34C759;
+$apple-orange: #FF9500;
+$apple-red: #FF3B30;
+
+// ---------- 层级背景色 (Background Colors) ----------
+$bg-base: #F2F2F7; // App 根背景 (System Gray 6)
+$bg-card: #FFFFFF; // 悬浮卡片、表单行
+$bg-elevated: #FFFFFF; // 弹窗等最高层级
+
+// ---------- 文本颜色 (Typography Colors) ----------
+$text-title: #1D1D1F; // 极高对比度的深灰亮黑
+$text-body: #1D1D1F; // 正文默认色
+$text-secondary: #6E6E73; // 次级描述 (Label)
+$text-placeholder: #AEAEB2; // 占位符、边框辅助色
+
+// ---------- 边框与分割线 (Borders & Dividers) ----------
+$border-separator: rgba(60, 60, 67, 0.1);
+
+// ---------- 字体尺寸 (Typography Scale) ----------
+// 基准：在 750rpx 体系下，与 iOS UIKit 对照
+// UIKit Body = 17pt → 34rpx, Caption = 12pt → 24rpx
+$font-xs: 22px; // 11pt — 极小辅助文字
+$font-sm: 24px; // 12pt — Caption、标签辅助
+$font-base: 28px; // 14pt — Body 正文
+$font-md: 30px; // 15pt — Callout / 按钮文字
+$font-lg: 32px; // 16pt — 列表标题 / 大按钮
+$font-title3: 36px; // 18pt — Section Header
+$font-title2: 40px; // 20pt — 页面标题
+$font-title1: 44px; // 22pt — 大标题 (Large Title)
+$font-hero: 56px; // 28pt — 特大号 Hero 展示
+
+// ---------- 圆角与阴影 (Squircle & Shadows) ----------
+$radius-sm: 16px; // Input、小 Icon
+$radius-md: 20px; // 表单卡片、Block
+$radius-lg: 28px; // 弹窗、容器卡片
+$radius-full: 100px; // 主按钮 (胶囊形)
+
+$shadow-soft: 0 1px 4px rgba(0, 0, 0, 0.05);
+$shadow-elegant: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+// ---------- 间距 (Spacing) ----------
+$spacing-xs: 8px;
+$spacing-sm: 16px;
+$spacing-md: 24px;
+$spacing-lg: 32px;
+$spacing-xl: 48px;

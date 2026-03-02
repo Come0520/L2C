@@ -1,23 +1,25 @@
+@import '../../styles/variables';
+
 .reports-page {
-    background: var(--color-bg);
+    background: $bg-base;
     min-height: 100vh;
     padding-bottom: 40px;
 
     .period-tabs {
         display: flex;
-        padding: var(--spacing-md);
-        gap: var(--spacing-sm);
+        padding: $spacing-md;
+        gap: $spacing-sm;
 
         .period-tab {
             padding: 8px 32px;
-            border-radius: var(--radius-full);
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            background: var(--color-bg-card);
+            border-radius: $radius-full;
+            font-size: $font-sm;
+            color: $text-secondary;
+            background: $bg-card;
             transition: all 0.2s;
 
             &--active {
-                background: var(--color-primary);
+                background: $apple-blue;
                 color: #FFFFFF;
                 font-weight: 600;
             }
@@ -26,48 +28,48 @@
 
     .reports-scroll {
         height: calc(100vh - 120px);
-        padding: 0 var(--spacing-md);
+        padding: 0 $spacing-md;
     }
 
     .kpi-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
 
         .kpi-card {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: var(--spacing-md);
+            padding: $spacing-md;
 
             .kpi-value {
-                font-size: var(--font-size-xxl);
+                font-size: $font-title2;
                 font-weight: 700;
-                color: var(--color-primary);
+                color: $apple-blue;
 
                 .kpi-unit {
-                    font-size: var(--font-size-sm);
+                    font-size: $font-sm;
                     font-weight: 400;
                 }
             }
 
             .kpi-label {
-                font-size: var(--font-size-xs);
-                color: var(--color-text-secondary);
+                font-size: $font-xs;
+                color: $text-secondary;
                 margin-top: 4px;
             }
 
             .kpi-trend {
-                font-size: var(--font-size-xs);
+                font-size: $font-xs;
                 margin-top: 4px;
 
                 &--up {
-                    color: var(--color-success);
+                    color: $apple-green;
                 }
 
                 &--down {
-                    color: var(--color-danger);
+                    color: $apple-red;
                 }
             }
         }
@@ -75,61 +77,61 @@
 
     .section-title {
         display: block;
-        font-size: var(--font-size-lg);
+        font-size: $font-lg;
         font-weight: 600;
-        margin-bottom: var(--spacing-sm);
+        margin-bottom: $spacing-sm;
     }
 
     .rank-item {
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-xs);
+        gap: $spacing-sm;
+        margin-bottom: $spacing-xs;
 
         .rank-no {
-            font-size: var(--font-size-xl);
+            font-size: $font-title3;
             font-weight: 900;
-            color: var(--color-primary);
+            color: $apple-blue;
             width: 40px;
             text-align: center;
         }
 
         .rank-name {
-            font-size: var(--font-size-base);
+            font-size: $font-base;
         }
 
         .rank-amount {
             display: block;
-            font-size: var(--font-size-base);
+            font-size: $font-base;
             font-weight: 700;
-            color: var(--color-primary);
+            color: $apple-blue;
             text-align: right;
         }
 
         .rank-count {
             display: block;
-            font-size: var(--font-size-xs);
-            color: var(--color-text-secondary);
+            font-size: $font-xs;
+            color: $text-secondary;
             text-align: right;
         }
     }
 
     .web-guide {
-        margin-top: var(--spacing-md);
+        margin-top: $spacing-md;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: var(--spacing-lg);
+        padding: $spacing-lg;
         text-align: center;
 
         .web-guide-title {
-            font-size: var(--font-size-base);
+            font-size: $font-base;
             font-weight: 600;
         }
 
         .web-guide-desc {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
+            font-size: $font-sm;
+            color: $text-secondary;
             margin-top: 4px;
         }
     }

@@ -1,3 +1,5 @@
+@import '../../../styles/variables';
+
 /* ==============================
  * 落地页 - 预约表单样式
  *
@@ -5,57 +7,57 @@
  * ============================== */
 
 .booking-page {
-    background: var(--color-bg);
+    background: $bg-base;
     min-height: 100vh;
-    padding: 0 var(--spacing-lg) var(--spacing-xl);
+    padding: 0 $spacing-lg $spacing-xl;
 }
 
 .booking-header {
-    padding: var(--spacing-xl) 0 var(--spacing-lg);
+    padding: $spacing-xl 0 $spacing-lg;
 
     .header-title {
         display: block;
-        font-size: var(--font-size-xl);
+        font-size: $font-title3;
         font-weight: 700;
-        color: var(--color-text);
-        margin-bottom: var(--spacing-xs);
+        color: $text-body;
+        margin-bottom: $spacing-xs;
     }
 
     .header-desc {
         display: block;
-        font-size: var(--font-size-base);
-        color: var(--color-text-secondary);
+        font-size: $font-base;
+        color: $text-secondary;
     }
 }
 
 .form-card {
-    background: var(--color-bg-card);
-    border-radius: var(--radius-md);
-    padding: 0 var(--spacing-md);
+    background: $bg-card;
+    border-radius: $radius-md;
+    padding: 0 $spacing-md;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 
     .form-item {
-        padding: var(--spacing-md) 0;
+        padding: $spacing-md 0;
 
         &:not(:last-child) {
-            border-bottom: 1px solid var(--color-border);
+            border-bottom: 1px solid $border-separator;
         }
 
         .form-label {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            margin-bottom: var(--spacing-sm);
+            font-size: $font-sm;
+            color: $text-secondary;
+            margin-bottom: $spacing-sm;
 
             .required {
-                color: var(--color-danger);
+                color: $apple-red;
                 margin-left: 4px;
             }
         }
 
         .form-input {
-            font-size: var(--font-size-lg);
-            color: var(--color-text);
+            font-size: $font-lg;
+            color: $text-body;
             height: 60px;
             min-height: 60px;
         }
@@ -65,28 +67,28 @@
             line-height: 60px;
 
             &.placeholder {
-                color: var(--color-text-placeholder);
+                color: $text-placeholder;
             }
         }
     }
 }
 
 .booking-actions {
-    margin-top: var(--spacing-xl);
+    margin-top: $spacing-xl;
 
     .btn-primary {
-        background: var(--color-primary);
+        background: $apple-blue;
         color: #FFFFFF;
         font-weight: 600;
         height: 104px;
         line-height: 104px;
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-lg);
+        border-radius: $radius-md;
+        font-size: $font-lg;
         border: none;
         box-shadow: 0 4px 16px rgba(0, 122, 255, 0.25);
 
         &[disabled] {
-            background: var(--color-primary-light);
+            background: $apple-blue-light;
             opacity: 0.6;
             box-shadow: none;
         }
@@ -106,25 +108,25 @@
 
     .success-icon {
         font-size: 100px;
-        margin-bottom: var(--spacing-md);
+        margin-bottom: $spacing-md;
     }
 
     .success-title {
-        font-size: var(--font-size-xl);
+        font-size: $font-title3;
         font-weight: 700;
-        color: var(--color-text);
-        margin-bottom: var(--spacing-sm);
+        color: $text-body;
+        margin-bottom: $spacing-sm;
     }
 
     .success-desc {
-        font-size: var(--font-size-base);
-        color: var(--color-text-secondary);
+        font-size: $font-base;
+        color: $text-secondary;
         line-height: 1.6;
-        padding: 0 var(--spacing-xl);
+        padding: 0 $spacing-xl;
     }
 
     .mt-xl {
-        margin-top: var(--spacing-xl);
+        margin-top: $spacing-xl;
         width: 60%;
     }
 }

@@ -38,22 +38,25 @@ describe('MobileTasksPage', () => {
 
     (mobileGet as any).mockResolvedValue({
       success: true,
-      data: [
-        {
-          id: 't-1',
-          type: 'measure',
-          status: 'PENDING_VISIT',
-          customer: { name: '李四' },
-          address: '朝阳区',
-        },
-        {
-          id: 't-2',
-          type: 'install',
-          status: 'IN_PROGRESS',
-          customer: { name: '王五' },
-          address: '海淀区',
-        },
-      ],
+      data: {
+        items: [
+          {
+            id: 't-1',
+            type: 'measure',
+            status: 'PENDING_VISIT',
+            customer: { name: '李四' },
+            address: '朝阳区',
+          },
+          {
+            id: 't-2',
+            type: 'install',
+            status: 'IN_PROGRESS',
+            customer: { name: '王五' },
+            address: '海淀区',
+          },
+        ],
+        pagination: { total: 2 },
+      },
     });
 
     render(<MobileTasksPage />);
@@ -78,7 +81,10 @@ describe('MobileTasksPage', () => {
 
     (mobileGet as any).mockResolvedValue({
       success: true,
-      data: [],
+      data: {
+        items: [],
+        pagination: { total: 0 },
+      },
     });
 
     render(<MobileTasksPage />);

@@ -1,13 +1,15 @@
+@import '../../styles/variables';
+
 .tasks-page {
-    background: var(--color-bg);
+    background: $bg-base;
     min-height: 100vh;
     padding-bottom: 120px;
 
     /* 顶部 Tab 切换 */
     .tasks-tabs {
         display: flex;
-        background: var(--color-bg);
-        border-bottom: 1px solid var(--color-border);
+        background: $bg-base;
+        border-bottom: 1px solid $border-separator;
         position: sticky;
         top: 0;
         z-index: 10;
@@ -15,14 +17,14 @@
         .tasks-tab {
             flex: 1;
             text-align: center;
-            padding: var(--spacing-sm) 0;
-            font-size: var(--font-size-base);
-            color: var(--color-text-secondary);
+            padding: $spacing-sm 0;
+            font-size: $font-base;
+            color: $text-secondary;
             position: relative;
             transition: color 0.2s;
 
             &--active {
-                color: var(--color-primary);
+                color: $apple-blue;
                 font-weight: 600;
 
                 &::after {
@@ -32,7 +34,7 @@
                     left: 25%;
                     right: 25%;
                     height: 3px;
-                    background: var(--color-primary);
+                    background: $apple-blue;
                     border-radius: 3px;
                 }
             }
@@ -42,7 +44,7 @@
     /* 任务列表 */
     .tasks-list {
         height: calc(100vh - 90px - 120px);
-        padding: var(--spacing-sm) var(--spacing-md);
+        padding: $spacing-sm $spacing-md;
     }
 
     /* 空状态 */
@@ -52,12 +54,12 @@
 
         .empty-icon {
             font-size: 80px;
-            margin-bottom: var(--spacing-md);
+            margin-bottom: $spacing-md;
         }
 
         .empty-text {
-            font-size: var(--font-size-base);
-            color: var(--color-text-secondary);
+            font-size: $font-base;
+            color: $text-secondary;
         }
     }
 
@@ -67,68 +69,68 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: $spacing-sm;
         }
 
         .task-type-badge {
-            font-size: var(--font-size-xs);
+            font-size: $font-xs;
             padding: 4px 16px;
-            border-radius: var(--radius-full);
+            border-radius: $radius-full;
             font-weight: 600;
 
             &--measure {
                 background: rgba(103, 194, 58, 0.15);
-                color: var(--color-success);
+                color: $apple-green;
             }
 
             &--install {
                 background: rgba(230, 162, 60, 0.15);
-                color: var(--color-warning);
+                color: $apple-orange;
             }
         }
 
         .task-date {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-secondary);
+            font-size: $font-xs;
+            color: $text-secondary;
         }
 
         .task-customer {
             display: block;
-            font-size: var(--font-size-lg);
+            font-size: $font-lg;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .task-address {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            margin-bottom: var(--spacing-xs);
+            font-size: $font-sm;
+            color: $text-secondary;
+            margin-bottom: $spacing-xs;
         }
 
         .task-rooms {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-placeholder);
+            font-size: $font-xs;
+            color: $text-placeholder;
         }
 
         .task-actions {
-            margin-top: var(--spacing-sm);
+            margin-top: $spacing-sm;
             display: flex;
             justify-content: flex-end;
 
             .btn-accept {
-                background: var(--color-primary);
+                background: $apple-blue;
                 color: #FFFFFF;
                 font-weight: 700;
-                font-size: var(--font-size-sm);
+                font-size: $font-sm;
                 padding: 8px 32px;
-                border-radius: var(--radius-md);
+                border-radius: $radius-md;
             }
         }
     }
 
     .loading {
-        padding: var(--spacing-xl);
-        color: var(--color-text-secondary);
+        padding: $spacing-xl;
+        color: $text-secondary;
     }
 }

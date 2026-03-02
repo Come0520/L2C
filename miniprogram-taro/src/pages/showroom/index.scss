@@ -1,21 +1,23 @@
+@import '../../styles/variables';
+
 .showroom-page {
-    background: var(--color-bg);
+    background: $bg-base;
     min-height: 100vh;
     padding-bottom: 120px;
 
     .showroom-header {
-        padding: var(--spacing-lg) var(--spacing-md) var(--spacing-sm);
+        padding: $spacing-lg $spacing-md $spacing-sm;
 
         .header-title {
             display: block;
-            font-size: var(--font-size-xxl);
+            font-size: $font-title2;
             font-weight: 700;
         }
 
         .header-subtitle {
             display: block;
-            font-size: var(--font-size-xs);
-            color: var(--color-text-secondary);
+            font-size: $font-xs;
+            color: $text-secondary;
             margin-top: 4px;
         }
     }
@@ -23,20 +25,20 @@
     /* 分类 Tab */
     .category-tabs {
         display: flex;
-        padding: 0 var(--spacing-md);
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
+        padding: 0 $spacing-md;
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
 
         .category-tab {
             padding: 8px 24px;
-            border-radius: var(--radius-full);
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            background: var(--color-bg-card);
+            border-radius: $radius-full;
+            font-size: $font-sm;
+            color: $text-secondary;
+            background: $bg-card;
             transition: all 0.2s;
 
             &--active {
-                background: var(--color-primary);
+                background: $apple-blue;
                 color: #FFFFFF;
                 font-weight: 600;
             }
@@ -46,7 +48,7 @@
     /* 内容列表 */
     .content-list {
         height: calc(100vh - 200px - 120px);
-        padding: 0 var(--spacing-md);
+        padding: 0 $spacing-md;
     }
 
     /* 空状态 */
@@ -56,11 +58,11 @@
 
         .empty-icon {
             font-size: 80px;
-            margin-bottom: var(--spacing-md);
+            margin-bottom: $spacing-md;
         }
 
         .empty-text {
-            color: var(--color-text-secondary);
+            color: $text-secondary;
         }
     }
 
@@ -68,7 +70,7 @@
     .showroom-card {
         padding: 0;
         overflow: hidden;
-        margin-bottom: var(--spacing-md);
+        margin-bottom: $spacing-md;
 
         .card-cover {
             width: 100%;
@@ -76,20 +78,20 @@
         }
 
         .card-body {
-            padding: var(--spacing-md);
+            padding: $spacing-md;
         }
 
         .card-meta {
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-xs);
+            gap: $spacing-sm;
+            margin-bottom: $spacing-xs;
         }
 
         .type-badge {
-            font-size: var(--font-size-xs);
+            font-size: $font-xs;
             padding: 2px 12px;
-            border-radius: var(--radius-sm);
+            border-radius: $radius-sm;
 
             &--article {
                 background: rgba(64, 158, 255, 0.15);
@@ -98,48 +100,48 @@
 
             &--case {
                 background: rgba(103, 194, 58, 0.15);
-                color: var(--color-success);
+                color: $apple-green;
             }
 
             &--product {
                 background: rgba(230, 180, 80, 0.15);
-                color: var(--color-primary);
+                color: $apple-blue;
             }
         }
 
         .view-count {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-placeholder);
+            font-size: $font-xs;
+            color: $text-placeholder;
         }
 
         .card-title {
             display: block;
-            font-size: var(--font-size-lg);
+            font-size: $font-lg;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .card-desc {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
+            font-size: $font-sm;
+            color: $text-secondary;
         }
 
         .btn-share {
-            margin-top: var(--spacing-sm);
+            margin-top: $spacing-sm;
             display: inline-flex;
             align-items: center;
             background: rgba(230, 180, 80, 0.1);
             border: 1px solid rgba(230, 180, 80, 0.3);
-            color: var(--color-primary);
-            font-size: var(--font-size-sm);
+            color: $apple-blue;
+            font-size: $font-sm;
             padding: 8px 24px;
-            border-radius: var(--radius-md);
+            border-radius: $radius-md;
         }
     }
 
     .loading {
-        padding: var(--spacing-xl);
-        color: var(--color-text-secondary);
+        padding: $spacing-xl;
+        color: $text-secondary;
     }
 }

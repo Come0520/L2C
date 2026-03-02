@@ -1,51 +1,53 @@
+@import '../../styles/variables';
+
 .workbench-page {
-    background: var(--color-bg);
+    background: $bg-base;
     min-height: 100vh;
     padding-bottom: 120px;
     /* TabBar 高度 */
 
     .workbench-header {
-        padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
+        padding: $spacing-xl $spacing-md $spacing-lg;
         background: radial-gradient(circle at top right, #fdfbfb 0%, #ebedee 100%);
 
         .header-date {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
+            font-size: $font-sm;
+            color: $text-secondary;
         }
 
         .header-greeting {
             display: block;
-            font-size: var(--font-size-xxl);
+            font-size: $font-title2;
             font-weight: 700;
-            margin-top: var(--spacing-xs);
+            margin-top: $spacing-xs;
         }
 
         .header-role {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-primary);
+            font-size: $font-sm;
+            color: $apple-blue;
             margin-top: 4px;
         }
     }
 
     .manager-view,
     .sales-view {
-        padding: 0 var(--spacing-md);
+        padding: 0 $spacing-md;
     }
 
     /* Manager 指标卡 */
     .metrics-row {
         display: flex;
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
     }
 
     .metric-card {
         flex: 1;
-        background: var(--color-bg-card);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-md) var(--spacing-sm);
+        background: $bg-card;
+        border-radius: $radius-md;
+        padding: $spacing-md $spacing-sm;
         text-align: center;
 
         &--highlight {
@@ -55,15 +57,15 @@
 
         .metric-value {
             display: block;
-            font-size: var(--font-size-xl);
+            font-size: $font-title3;
             font-weight: 700;
-            color: var(--color-primary);
+            color: $apple-blue;
         }
 
         .metric-label {
             display: block;
-            font-size: var(--font-size-xs);
-            color: var(--color-text-secondary);
+            font-size: $font-xs;
+            color: $text-secondary;
             margin-top: 4px;
         }
     }
@@ -72,59 +74,59 @@
     .web-guide-card {
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: $spacing-sm;
 
         .web-guide-icon {
-            font-size: var(--font-size-xl);
+            font-size: $font-title3;
         }
 
         .web-guide-title {
             display: block;
-            font-size: var(--font-size-base);
+            font-size: $font-base;
             font-weight: 600;
         }
 
         .web-guide-desc {
             display: block;
-            font-size: var(--font-size-xs);
-            color: var(--color-text-secondary);
+            font-size: $font-xs;
+            color: $text-secondary;
             margin-top: 4px;
         }
 
         .web-guide-arrow {
             margin-left: auto;
-            font-size: var(--font-size-xl);
-            color: var(--color-text-secondary);
+            font-size: $font-title3;
+            color: $text-secondary;
         }
     }
 
     /* Sales 快捷入口 */
     .quick-actions {
         display: flex;
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
 
         .quick-action {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: var(--spacing-md) var(--spacing-sm);
+            padding: $spacing-md $spacing-sm;
 
             .quick-action-icon {
-                font-size: var(--font-size-xl);
+                font-size: $font-title3;
             }
 
             .quick-action-text {
-                font-size: var(--font-size-sm);
-                color: var(--color-text-secondary);
-                margin-top: var(--spacing-xs);
+                font-size: $font-sm;
+                color: $text-secondary;
+                margin-top: $spacing-xs;
             }
 
             .quick-action-count {
-                font-size: var(--font-size-lg);
+                font-size: $font-lg;
                 font-weight: 700;
-                color: var(--color-primary);
+                color: $apple-blue;
                 margin-top: 4px;
             }
         }
@@ -134,9 +136,9 @@
     .todos-section {
         .section-title {
             display: block;
-            font-size: var(--font-size-lg);
+            font-size: $font-lg;
             font-weight: 600;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: $spacing-sm;
         }
 
         .todo-item {
@@ -145,24 +147,24 @@
             align-items: center;
 
             .todo-title {
-                font-size: var(--font-size-base);
+                font-size: $font-base;
             }
 
             .todo-type {
-                font-size: var(--font-size-xs);
-                color: var(--color-primary);
+                font-size: $font-xs;
+                color: $apple-blue;
                 background: rgba(230, 180, 80, 0.1);
                 padding: 4px 8px;
-                border-radius: var(--radius-sm);
+                border-radius: $radius-sm;
             }
         }
     }
 
     .loading {
-        padding: var(--spacing-xl);
+        padding: $spacing-xl;
 
         .loading-text {
-            color: var(--color-text-secondary);
+            color: $text-secondary;
         }
     }
 }

@@ -1,5 +1,7 @@
+@import '../../styles/variables';
+
 /**
- * 自定义 TabBar 样式
+ * 自定义 TabBar 样式 — Apple iOS 风格
  */
 
 .tab-bar {
@@ -12,12 +14,13 @@
     align-items: center;
     justify-content: space-around;
     height: 100px;
-    background-color: rgba(255, 255, 255, 0.75);
-    /* 半透白 */
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border-top: var(--glass-border);
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 1px solid $border-separator;
     z-index: 999;
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
 
     &__item {
         flex: 1;
@@ -25,7 +28,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: var(--spacing-xs) 0;
+        padding: $spacing-xs 0;
         transition: opacity 0.2s;
 
         &:active {
@@ -34,7 +37,7 @@
 
         &--active {
             .tab-bar__text {
-                color: var(--color-primary);
+                color: $apple-blue;
             }
         }
     }
@@ -46,8 +49,8 @@
     }
 
     &__text {
-        font-size: var(--font-size-xs);
-        color: var(--color-text-secondary);
+        font-size: $font-xs;
+        color: $text-secondary;
         transition: color 0.2s;
     }
 }

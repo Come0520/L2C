@@ -110,7 +110,7 @@ scp next-build.tar.gz ecs:/root/L2C/
 # 2. SSH 远程：备份旧产物 → 解压新产物 → 重建镜像 → 重启服务
 ssh ecs "cd /root/L2C && \
   git fetch origin main && \
-  git checkout FETCH_HEAD -- .dockerignore docker-compose.prod.yml Dockerfile.prebuilt nginx/ package.json && \
+  git checkout FETCH_HEAD -- .dockerignore docker-compose.prod.yml Dockerfile.prebuilt nginx/ package.json pnpm-lock.yaml drizzle/ drizzle.config.ts src/shared/api/schema.ts src/shared/api/schema/ tsconfig.json && \
   [ -f next-build.tar.gz ] && cp next-build.tar.gz next-build-backup-\$(date +%Y%m%d-%H%M%S).tar.gz || true && \
   rm -rf .next/standalone .next/static && \
   tar -xzf next-build.tar.gz && \

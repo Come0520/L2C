@@ -60,8 +60,14 @@ export default function LandingPage() {
   })
 
   // ========== 导航方法 ==========
-  const goLogin = () => Taro.navigateTo({ url: '/pages/login/index' })
-  const goRegister = () => Taro.navigateTo({ url: '/pages/register/index' })
+  const goLogin = () => {
+    console.log('[Landing] 点击登录')
+    Taro.navigateTo({ url: '/pages/login/index' })
+  }
+  const goRegister = () => {
+    console.log('[Landing] 点击申请入驻')
+    Taro.navigateTo({ url: '/pages/register/index' })
+  }
 
   /** 复制 Web 管理端链接 */
   const openWebAdmin = () => {
@@ -172,17 +178,18 @@ export default function LandingPage() {
 
       <View className='landing-actions'>
         {!isLoggedIn ? (
-          <>
-            <Button className='btn-primary' onClick={goLogin}>立即登录</Button>
-            <Button className='btn-secondary' onClick={goRegister}>申请入驻</Button>
-          </>
+          <View>
+            <Button className='apple-btn-primary' onClick={goLogin}>立即登录</Button>
+            <View style={{ height: 16 }} />
+            <Button className='apple-btn-secondary' onClick={goRegister}>申请入驻</Button>
+          </View>
         ) : (
-          <>
+          <View>
             <Text className='already-login'>已登录为 {currentRole}</Text>
-            <Button className='btn-secondary' onClick={openWebAdmin}>
+            <Button className='apple-btn-secondary' onClick={openWebAdmin}>
               💻 复制 Web 管理端链接
             </Button>
-          </>
+          </View>
         )}
       </View>
 

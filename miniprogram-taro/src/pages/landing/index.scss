@@ -1,13 +1,11 @@
-/* ====================================================
- * 落地页样式 — Apple HIG 风格（硬编码值确保小程序兼容）
- * 颜色参考：#F2F2F7 系统背景 | #1D1D1F 主文字 | #6E6E73 次级色 | #0071E3 Apple 蓝
- * ==================================================== */
+@import '../../styles/variables';
+@import '../../styles/mixins';
 
 .landing-page {
-    background: #F2F2F7;
+    background: $bg-base;
     min-height: 100vh;
-    padding: 0 32px 60px;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    padding: 0 $spacing-lg 60px;
+    @include apple-body;
 
     /* ── Hero 区域 ── */
     .landing-hero {
@@ -16,80 +14,44 @@
 
         .hero-logo {
             display: block;
-            font-size: 80px;
+            font-size: $font-hero;
             font-weight: 800;
-            color: #1D1D1F;
+            color: $text-title;
             letter-spacing: -2px;
             line-height: 1.1;
-            margin-bottom: 16px;
+            margin-bottom: $spacing-sm;
         }
 
         .hero-title {
             display: block;
-            font-size: 36px;
-            font-weight: 600;
-            color: #1D1D1F;
-            letter-spacing: -0.5px;
+            @include apple-title1;
+            font-size: $font-title3;
             margin-bottom: 12px;
         }
 
         .hero-desc {
             display: block;
-            font-size: 28px;
-            font-weight: 400;
-            color: #6E6E73;
-            line-height: 1.4;
+            @include apple-body;
+            color: $text-secondary;
             max-width: 80%;
             margin: 0 auto;
         }
     }
 
-    /* ── 操作按钮 ── */
+    /* ── 按钮区 ── */
     .landing-actions {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: $spacing-sm;
         margin-bottom: 80px;
-
-        button {
-            width: 100%;
-            max-width: 600px;
-            height: 100px;
-            line-height: 100px;
-            border-radius: 50px;
-            font-size: 28px;
-            font-weight: 600;
-            padding: 0;
-            margin: 0;
-            transition: opacity 0.2s ease;
-
-            &::after {
-                border: none;
-            }
-
-            &:active {
-                opacity: 0.7;
-            }
-        }
-
-        .btn-primary {
-            background: #0071E3;
-            color: #FFFFFF;
-        }
-
-        .btn-secondary {
-            background: rgba(0, 113, 227, 0.08);
-            color: #0071E3;
-        }
 
         .already-login {
             display: block;
             text-align: center;
-            color: #6E6E73;
-            font-size: 24px;
-            margin-bottom: 8px;
-            font-weight: 500;
+            @include apple-caption;
+            font-size: $font-xs;
+            margin-bottom: $spacing-xs;
         }
     }
 
@@ -97,29 +59,27 @@
     .features {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        gap: $spacing-sm;
         padding-bottom: 60px;
 
         .feature-item {
+            @include apple-card;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 24px;
+            padding: 40px $spacing-md;
             text-align: center;
-            background: #FFFFFF;
-            border-radius: 24px;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-            box-sizing: border-box;
 
             .feature-icon-wrap {
                 width: 96px;
                 height: 96px;
-                background-color: #F2F2F7;
-                border-radius: 20px;
+                background-color: $bg-base;
+                border-radius: $radius-md;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 16px;
+                margin-bottom: $spacing-sm;
 
                 .feature-icon {
                     font-size: 56px;
@@ -128,16 +88,14 @@
             }
 
             .feature-title {
+                @include apple-title2;
                 font-size: 26px;
-                font-weight: 600;
-                color: #1D1D1F;
                 margin-bottom: 12px;
-                letter-spacing: -0.3px;
             }
 
             .feature-desc {
+                @include apple-caption;
                 font-size: 22px;
-                color: #6E6E73;
                 line-height: 1.5;
                 white-space: normal;
                 word-wrap: break-word;
@@ -148,9 +106,10 @@
 
 /* ── 租户模式落地页（商家品牌专属） ── */
 .tenant-landing {
-    background: #F2F2F7;
+    background: $bg-base;
     min-height: 100vh;
-    padding: 40px 32px 100px;
+    padding: 40px $spacing-lg 100px;
+    @include apple-body;
 
     .tenant-header {
         text-align: center;
@@ -159,56 +118,30 @@
         .tenant-logo {
             width: 160px;
             height: 160px;
-            border-radius: 36px;
-            margin: 0 auto 24px;
+            border-radius: 36px; // squircle
+            margin: 0 auto $spacing-md;
             display: block;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
         }
 
         .tenant-name {
             display: block;
+            @include apple-title1;
             font-size: 40px;
-            font-weight: 700;
-            color: #1D1D1F;
-            letter-spacing: -1px;
             margin-bottom: 12px;
         }
 
         .tenant-desc {
             display: block;
-            font-size: 26px;
-            color: #6E6E73;
-            line-height: 1.5;
-        }
-    }
-
-    .book-btn {
-        display: block;
-        width: 100%;
-        height: 100px;
-        line-height: 100px;
-        background: #0071E3;
-        color: #FFFFFF;
-        border-radius: 50px;
-        font-size: 30px;
-        font-weight: 600;
-        text-align: center;
-        border: none;
-        margin-bottom: 24px;
-
-        &::after {
-            border: none;
-        }
-
-        &:active {
-            opacity: 0.8;
+            @include apple-body;
+            color: $text-secondary;
         }
     }
 
     .powered-by {
         text-align: center;
-        color: #AEAEB2;
-        font-size: 22px;
+        @include apple-caption;
+        color: $text-placeholder;
         margin-top: 40px;
     }
 }

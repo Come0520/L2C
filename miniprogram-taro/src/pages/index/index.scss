@@ -1,36 +1,38 @@
+@import '../../styles/variables';
+
 /**
  * 首页/工作台样式
  */
 .index-page {
-    padding: var(--spacing-md);
+    padding: $spacing-md;
     min-height: 100vh;
 
     .header {
-        padding: var(--spacing-lg) 0;
+        padding: $spacing-lg 0;
 
         .date {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
+            font-size: $font-sm;
+            color: $text-secondary;
         }
 
         .title {
             display: block;
-            font-size: var(--font-size-xxl);
+            font-size: $font-title2;
             font-weight: 700;
-            margin-top: var(--spacing-xs);
+            margin-top: $spacing-xs;
         }
     }
 
     .login-prompt {
         text-align: center;
-        padding: var(--spacing-xl);
-        color: var(--color-text-secondary);
+        padding: $spacing-xl;
+        color: $text-secondary;
     }
 
     .stats-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-sm);
+        gap: $spacing-sm;
     }
 
     .stat-item {
@@ -38,21 +40,21 @@
 
         .stat-value {
             display: block;
-            font-size: var(--font-size-xxl);
+            font-size: $font-title2;
             font-weight: 700;
-            color: var(--color-primary);
+            color: $apple-blue;
         }
 
         .stat-label {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            margin-top: var(--spacing-xs);
+            font-size: $font-sm;
+            color: $text-secondary;
+            margin-top: $spacing-xs;
         }
     }
 
     .loading-container {
-        padding: var(--spacing-xl);
-        color: var(--color-text-secondary);
+        padding: $spacing-xl;
+        color: $text-secondary;
     }
 }

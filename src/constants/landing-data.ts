@@ -393,6 +393,41 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.0',
+    version: 'v1.3.0',
+    date: '2026-03-03',
+    title: '用户多租户切换支持与全业务架构升级',
+    description:
+      '核心功能里程碑：正式上线多租户切换系统，支持用户在多个企业/门店间无缝身份切换与数据隔离。同步修复报价单展示、落地页交互、密码找回系统以及云展厅多项核心缺陷。',
+    contributors: ['安琪', '一枝花', '聂老师', '长城（开发者）'],
+    updates: [
+      {
+        type: 'feature',
+        content: '重大更新：上线用户多租户切换系统，支持多身份管理与业务隔离',
+      },
+      {
+        type: 'fix',
+        content: '修复报价单显示 Bug，优化算价引擎稳定性（感谢安琪反馈）',
+      },
+      {
+        type: 'fix',
+        content: '修复落地页样式与交互 Bug（感谢一枝花反馈）',
+      },
+      {
+        type: 'feature',
+        content: '重构密码找回系统，提升账户安全性与找回效率（感谢一枝花反馈）',
+      },
+      {
+        type: 'feature',
+        content: '云展厅 2.1 升级：优化产品展示逻辑与加载性能（感谢聂老师反馈）',
+      },
+      {
+        type: 'optimize',
+        content: '同步完成全站多租户权限校验加固与后端 API 路由隔离',
+      },
+    ],
+  },
+  {
     id: 'v1.2.6',
     version: 'v1.2.6',
     date: '2026-03-02',

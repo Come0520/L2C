@@ -1,0 +1,135 @@
+/* ====================================================
+ * Apple Design System - 公共类 (Utilities)
+ *
+ * @description 根据 Mixins 导出的全局原子级或组件级 Class。
+ * 供全项目在 .tsx 中直接加 className 使用，彻底避免硬编码。
+ * ==================================================== */
+
+@import './variables';
+@import './mixins';
+
+/* ── Typography (文字排版) ── */
+.apple-hero {
+    @include apple-title1;
+    font-size: $font-hero;
+    letter-spacing: -1px;
+}
+
+.apple-page-title {
+    @include apple-title1;
+}
+
+.apple-title-2 {
+    @include apple-title2;
+}
+
+.apple-title-3 {
+    @include apple-title3;
+}
+
+.apple-body {
+    @include apple-body;
+}
+
+.apple-desc {
+    @include apple-body;
+    color: $text-secondary;
+}
+
+.apple-caption {
+    @include apple-caption;
+}
+
+/* ── Shapes & Cards (卡片容器) ── */
+.apple-card {
+    @include apple-card;
+    padding: $spacing-lg $spacing-md;
+}
+
+/* ── Grouped List Forms (iOS 设置/表单列表) ── */
+.apple-grouped-list {
+    @include apple-grouped-list;
+}
+
+.apple-list-row {
+    @include apple-list-row;
+}
+
+.apple-list-label {
+    width: 160px;
+    font-size: $font-base;
+    font-weight: 500;
+    color: $text-title;
+    flex-shrink: 0;
+}
+
+.apple-list-input {
+    flex: 1;
+    height: 88px;
+    font-size: $font-base;
+    color: $text-body;
+    text-align: right;
+    background: transparent;
+    border: none;
+}
+
+/* 占位符颜色类 */
+.ph-color {
+    color: $text-placeholder;
+}
+
+/* ── Buttons (按钮系统) ── */
+.apple-btn-primary {
+    @include apple-btn-primary;
+}
+
+.apple-btn-secondary {
+    @include apple-btn-secondary;
+}
+
+/* 幽灵/文字按钮 */
+.apple-btn-ghost {
+    @include btn-reset;
+    color: $text-secondary;
+    font-size: $font-base;
+    padding: $spacing-sm;
+
+    &.primary-color {
+        color: $apple-blue;
+    }
+}
+
+/* ── Section Header (分组标题) ── */
+.apple-section-header {
+    @include apple-caption;
+    display: block;
+    padding: $spacing-md $spacing-md $spacing-xs;
+    text-transform: uppercase;
+}
+
+/* ── Common Layout Utilities ── */
+.apple-header-padding {
+    padding: $spacing-lg $spacing-md $spacing-sm;
+}
+
+.apple-safe-area-bottom {
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── 状态颜色 ── */
+.text-success {
+    color: $apple-green;
+}
+
+.text-warning {
+    color: $apple-orange;
+}
+
+.text-danger {
+    color: $apple-red;
+}
+
+.text-primary {
+    color: $apple-blue;
+}

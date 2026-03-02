@@ -1,138 +1,117 @@
-/* ====================================================
- * 注册/入驻申请页面样式 — iOS Grouped List 风格
- * 硬编码值确保微信小程序环境兼容
- * ==================================================== */
+@import '../../styles/variables';
+@import '../../styles/mixins';
 
 .register-page {
-    background-color: #F2F2F7;
     min-height: 100vh;
+    background: $bg-base;
+    padding: 0 $spacing-md calc(env(safe-area-inset-bottom) + 120px);
+    @include apple-body;
     box-sizing: border-box;
-    padding: 16px 0 80px;
-    padding-bottom: constant(safe-area-inset-bottom);
-    padding-bottom: env(safe-area-inset-bottom);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 
-    /* ── 页面标题区 ── */
     .page-header {
-        padding: 32px 32px 16px;
+        padding: $spacing-xl $spacing-xs $spacing-sm;
 
         .page-title {
             display: block;
-            font-size: 64px;
-            font-weight: 700;
-            color: #1D1D1F;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
+            @include apple-title1;
+            font-size: $font-title1;
+            margin-bottom: $spacing-xs;
         }
 
         .page-desc {
             display: block;
-            font-size: 24px;
-            color: #6E6E73;
-            line-height: 1.5;
+            @include apple-caption;
+            font-size: $font-base;
         }
     }
 
-    /* ── 分组标题 ── */
+    /* 组标题：仿 iOS 设置页的 Section Header */
     .form-group-title {
-        padding: 16px 32px 8px;
-        font-size: 22px;
-        color: #6E6E73;
-        letter-spacing: 0.5px;
+        display: block;
+        margin: $spacing-md $spacing-xs $spacing-xs 28px;
+        @include apple-caption;
+        text-transform: uppercase;
 
-        text {
-            font-size: 22px;
-            color: #6E6E73;
+        .optional {
+            font-weight: normal;
+            font-size: 80%;
         }
     }
 
-    /* ── 输入组（白色圆角卡片） ── */
+    /* iOS Grouped List */
     .form-group {
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        margin: 0 24px 24px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-        overflow: hidden;
+        @include apple-grouped-list;
+        margin-bottom: $spacing-sm;
+    }
 
-        /* 单行 */
-        .form-row {
-            display: flex;
-            align-items: center;
-            min-height: 88px;
-            padding: 0 24px 0 28px;
-            position: relative;
-        }
+    .required {
+        color: $apple-red;
+        margin-left: 4px;
+    }
 
-        /* 分割线 */
-        .form-divider {
-            height: 1px;
-            background-color: rgba(60, 60, 67, 0.1);
-            margin-left: 28px;
-        }
+    /* 覆盖部分定制需求 */
+    .picker-input {
+        flex: 1;
+        height: 88px;
+        line-height: 88px;
+        text-align: right;
+    }
 
-        /* 标签 */
-        .form-label {
-            width: 160px;
-            font-size: 28px;
-            font-weight: 500;
-            color: #1D1D1F;
-            flex-shrink: 0;
-        }
+    .picker-value {
+        width: 100%;
+        text-align: right;
+    }
 
-        /* 输入框 */
-        .form-input {
-            flex: 1;
-            height: 88px;
-            font-size: 28px;
-            color: #1D1D1F;
-            text-align: right;
-            padding-right: 4px;
-            background: transparent;
-            border: none;
-        }
+    .textarea-row {
+        padding: $spacing-md 24px;
+        min-height: 200px;
+        align-items: flex-start;
 
-        /* Picker（地区选择） */
-        .picker-input {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-
-            view {
-                font-size: 28px;
-                color: #1D1D1F;
-                text-align: right;
-            }
-        }
-
-        /* 占位符颜色 */
-        .ph-color {
-            color: #AEAEB2;
+        .textarea-input {
+            width: 100%;
+            height: 160px;
+            text-align: left;
         }
     }
 
-    /* ── 底部按钮区 ── */
+    /* 密码强度条 */
+    .strength-bar-wrap {
+        padding: $spacing-xs 24px $spacing-sm 28px;
+        background: $bg-card;
+
+        .strength-bar-bg {
+            height: 6px;
+            background: $bg-base;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .strength-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .strength-text {
+            @include apple-caption;
+            font-size: $font-sm;
+            font-weight: 500;
+        }
+    }
+
+    /* 提交栏 */
     .form-footer {
-        padding: 32px 24px 16px;
+        margin-top: $spacing-xl;
+        padding: 0 $spacing-sm;
 
-        .btn-submit {
-            width: 100%;
-            height: 96px;
-            line-height: 96px;
-            background-color: #0071E3;
-            color: #FFFFFF;
-            border-radius: 50px;
-            font-size: 30px;
-            font-weight: 600;
+        .error-box {
+            margin-bottom: $spacing-md;
             text-align: center;
-            border: none;
-            letter-spacing: 0.5px;
 
-            &::after {
-                border: none;
-            }
-
-            &:active {
-                opacity: 0.8;
+            .error-text {
+                @include apple-caption;
+                color: $apple-red;
             }
         }
     }

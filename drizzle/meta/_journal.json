@@ -281,6 +281,13 @@
       "when": 1772453656807,
       "tag": "0039_icy_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1772467177690,
+      "tag": "0040_silent_shatterstar",
+      "breakpoints": true
     }
   ]
 }

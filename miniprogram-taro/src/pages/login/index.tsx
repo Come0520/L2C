@@ -4,7 +4,7 @@
  * @description 支持三种登录方式：账号密码 / 微信授权 / 手机号一键登录
  * 登录成功后根据用户角色跳转至对应落地页（ROLE_HOME）。
  */
-import { View, Text, Input, Button, Image } from '@tarojs/components'
+import { View, Text, Input, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { useAuthStore, ROLE_HOME } from '@/stores/auth'
@@ -32,11 +32,11 @@ export default function LoginPage() {
     setError('')
     try {
       const res = await api.post('/auth/login', {
-        data: { phone, password },
+        data: { account: phone, password },
       })
       if (res.success) {
-        setLogin(res.data.token, res.data.userInfo)
-        const home = ROLE_HOME[res.data.userInfo.role] || '/pages/workbench/index'
+        setLogin(res.data.token, res.data.user)
+        const home = ROLE_HOME[res.data.user.role] || '/pages/workbench/index'
         Taro.switchTab({ url: home })
       } else {
         setError(res.error || '登录失败，请检查账号密码')
@@ -56,8 +56,8 @@ export default function LoginPage() {
         data: { code: loginRes.code },
       })
       if (res.success) {
-        setLogin(res.data.token, res.data.userInfo)
-        const home = ROLE_HOME[res.data.userInfo.role] || '/pages/workbench/index'
+        setLogin(res.data.token, res.data.user)
+        const home = ROLE_HOME[res.data.user.role] || '/pages/workbench/index'
         Taro.switchTab({ url: home })
       } else {
         setError(res.error || '微信登录失败')
@@ -100,54 +100,58 @@ export default function LoginPage() {
 
       {/* 账号密码登录表单 */}
       {activeTab === 'password' && (
-        <View className='login-form'>
-          <View className='form-field'>
+        <View className='login-form-container'>
+          <View className='apple-list-row'>
+            <Text className='apple-list-label'>手机号</Text>
             <Input
-              className='form-input'
+              className='apple-list-input'
               type='number'
               maxlength={11}
-              placeholder='手机号'
+              placeholder='请输入手机号码'
+              placeholder-class='ph-color'
               value={phone}
               onInput={(e) => setPhone(e.detail.value)}
             />
           </View>
-          <View className='form-field'>
+          <View className='apple-list-row'>
+            <Text className='apple-list-label'>安全密码</Text>
             <Input
-              className='form-input'
+              className='apple-list-input'
               password
-              placeholder='密码'
+              placeholder='请输入密码'
+              placeholder-class='ph-color'
               value={password}
               onInput={(e) => setPassword(e.detail.value)}
             />
           </View>
+        </View>
+      )}
 
-          {error && <Text className='error-text'>{error}</Text>}
+      {/* 提交按钮区域 */}
+      <View className='login-actions'>
+        {error && <Text className='error-text'>{error}</Text>}
 
+        {activeTab === 'password' ? (
           <Button
-            className='btn-primary'
+            className='apple-btn-primary'
             loading={loading}
             disabled={loading}
             onClick={handlePasswordLogin}
           >
             登 录
           </Button>
-        </View>
-      )}
-
-      {/* 微信一键登录 */}
-      {activeTab === 'wechat' && (
-        <View className='login-wechat'>
+        ) : (
           <Button
-            className='btn-wechat'
+            className='apple-btn-primary'
+            style={{ backgroundColor: '#21C042' }} // WeChat Green
             loading={loading}
             disabled={loading}
             onClick={handleWechatLogin}
           >
             微信一键登录
           </Button>
-          {error && <Text className='error-text'>{error}</Text>}
-        </View>
-      )}
+        )}
+      </View>
 
       {/* 底部注册入口 */}
       <View className='login-footer'>

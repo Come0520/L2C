@@ -1,0 +1,137 @@
+/* ====================================================
+ * Apple Design System - 核心 Mixin 库
+ *
+ * @description 将高频出现的 UI 组合封装为 Mixin，方便复用或二次扩展。
+ * 所有尺寸已适配微信小程序 750rpx 基准（px = rpx）。
+ * ==================================================== */
+
+@import './variables';
+
+// ---------- 文字层次 (Typography Hierarchy) ----------
+@mixin apple-title1 {
+    font-size: $font-title1;
+    font-weight: 700;
+    color: $text-title;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+@mixin apple-title2 {
+    font-size: $font-title2;
+    font-weight: 600;
+    color: $text-title;
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+}
+
+@mixin apple-title3 {
+    font-size: $font-title3;
+    font-weight: 600;
+    color: $text-title;
+    line-height: 1.3;
+}
+
+@mixin apple-body {
+    font-size: $font-base;
+    color: $text-body;
+    line-height: 1.5;
+}
+
+@mixin apple-caption {
+    font-size: $font-sm;
+    color: $text-secondary;
+    letter-spacing: 0.3px;
+}
+
+// ---------- 布局 & 形态 (Shapes) ----------
+
+// 悬浮式 Apple 圆角卡片
+@mixin apple-card {
+    background-color: $bg-card;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-soft;
+    overflow: hidden;
+}
+
+// Grouped List 表单容器
+@mixin apple-grouped-list {
+    background-color: $bg-card;
+    border-radius: $radius-md;
+    box-shadow: $shadow-soft;
+    overflow: hidden;
+    margin: 0 $spacing-md $spacing-sm;
+}
+
+// Grouped List 单行元素 (含底边线)
+@mixin apple-list-row {
+    display: flex;
+    align-items: center;
+    min-height: 88px;
+    padding: 0 $spacing-md 0 $spacing-md;
+    position: relative;
+    background-color: transparent;
+
+    &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: $spacing-md;
+        right: 0;
+        height: 1px;
+        background-color: $border-separator;
+        transform: scaleY(0.5); // Retina 1px
+    }
+}
+
+// ---------- 按钮体系 (Buttons) ----------
+
+// 基础按钮复位
+@mixin btn-reset {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    line-height: 1;
+    text-align: center;
+
+    &::after {
+        border: none;
+    }
+
+    &:active {
+        opacity: 0.7;
+    }
+
+    &[disabled] {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+}
+
+// Apple 蓝宽按钮
+@mixin apple-btn-primary {
+    @include btn-reset;
+    width: 100%;
+    height: 88px;
+    line-height: 88px;
+    background-color: $apple-blue;
+    color: #FFFFFF;
+    border-radius: $radius-full;
+    font-size: $font-md;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+// 轻量次级宽按钮 (浅蓝底蓝字)
+@mixin apple-btn-secondary {
+    @include btn-reset;
+    width: 100%;
+    height: 88px;
+    line-height: 88px;
+    background-color: $apple-blue-light;
+    color: $apple-blue;
+    border-radius: $radius-full;
+    font-size: $font-md;
+    font-weight: 600;
+}

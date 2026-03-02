@@ -129,9 +129,10 @@ export default function MobileTasksPage() {
       if (!isAuthenticated) return;
 
       setIsLoading(true);
-      const response = await mobileGet<Task[]>('/tasks');
+      // API 返回分页结构 { success, data: { items, pagination } }，需从 data.items 中提取数组
+      const response = await mobileGet<{ items: Task[]; pagination: unknown }>('/tasks');
       if (response.success && response.data) {
-        setTasks(response.data);
+        setTasks(response.data.items ?? []);
       }
       setIsLoading(false);
     }

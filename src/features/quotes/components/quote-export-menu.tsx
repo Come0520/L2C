@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { getTenantInfo } from '@/features/settings/actions/tenant-info';
 
 interface QuoteData {
   id: string;
@@ -45,6 +46,46 @@ interface QuoteData {
   discountAmount?: string | number | null;
   finalAmount?: string | number | null;
   notes?: string | null;
+  /** 租户品牌信息，由导出时动态注入 */
+  tenant?: {
+    name: string;
+    logoUrl: string | null;
+    phone: string;
+    address: string;
+    wechatQrcodeUrl: string | null;
+  };
+}
+
+/**
+ * 条件注入租户品牌信息
+ * 仅当租户有实质品牌数据（Logo/地址/电话）时注入
+ */
+function injectTenantBranding(
+  quote: QuoteData,
+  tenantResult: {
+    success: boolean;
+    data?: {
+      name: string;
+      logoUrl: string | null;
+      contact: { address: string; phone: string; email: string };
+      wechatQrcodeUrl: string | null;
+    };
+  }
+): QuoteData {
+  if (!tenantResult.success || !tenantResult.data) return quote;
+  const t = tenantResult.data;
+  const hasBranding = t.logoUrl || t.contact.address || t.contact.phone;
+  if (!hasBranding) return quote;
+  return {
+    ...quote,
+    tenant: {
+      name: t.name,
+      logoUrl: t.logoUrl,
+      phone: t.contact.phone,
+      address: t.contact.address,
+      wechatQrcodeUrl: t.wechatQrcodeUrl,
+    },
+  };
 }
 
 export interface QuoteExportMenuProps {
@@ -72,22 +113,40 @@ async function exportToExcel(quote: QuoteData): Promise<void> {
     '小计(¥)': item.subtotal || '-',
   }));
 
-  // 创建工作表
-  const ws = XLSX.utils.json_to_sheet(rows);
+  // 创建空工作表
+  const ws = XLSX.utils.aoa_to_sheet([]);
+
+  // 条件插入品牌信息首行
+  let dataStartRow = 0;
+  if (quote.tenant) {
+    const brandRows: (string | number)[][] = [[quote.tenant.name, '', '', '', '', '', '']];
+    const contactParts: string[] = [];
+    if (quote.tenant.phone) contactParts.push(`电话: ${quote.tenant.phone}`);
+    if (quote.tenant.address) contactParts.push(`地址: ${quote.tenant.address}`);
+    if (contactParts.length > 0) {
+      brandRows.push([contactParts.join('  |  '), '', '', '', '', '', '']);
+    }
+    brandRows.push([]); // 空行分隔
+    XLSX.utils.sheet_add_aoa(ws, brandRows, { origin: 'A1' });
+    dataStartRow = brandRows.length;
+  }
+
+  // 插入数据
+  XLSX.utils.sheet_add_json(ws, rows, { origin: `A${dataStartRow + 1}` });
 
   // 设置列宽
   ws['!cols'] = [
-    { wch: 15 }, // 空间
-    { wch: 25 }, // 商品名称
-    { wch: 10 }, // 宽度
-    { wch: 10 }, // 高度
-    { wch: 10 }, // 数量
-    { wch: 12 }, // 单价
-    { wch: 12 }, // 小计
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 12 },
   ];
 
   // 添加汇总行
-  const totalRowIndex = rows.length + 2;
+  const totalRowIndex = dataStartRow + rows.length + 3;
   XLSX.utils.sheet_add_aoa(
     ws,
     [
@@ -129,7 +188,32 @@ async function exportToImage(quote: QuoteData): Promise<void> {
   const roomMap = new Map((quote.rooms || []).map((r) => [r.id, r.name]));
 
   // 生成 HTML 内容
+  const brandHtml = quote.tenant
+    ? `
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #f0f4ff, #e8f0fe); border-radius: 12px;">
+            ${quote.tenant.logoUrl ? `<img src="${quote.tenant.logoUrl}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 8px;" />` : ''}
+            <div style="flex: 1;">
+                <h2 style="font-size: 20px; margin: 0; color: #1a73e8;">${quote.tenant.name}</h2>
+                <p style="color: #666; margin: 5px 0 0; font-size: 13px;">
+                    ${[quote.tenant.phone ? `电话: ${quote.tenant.phone}` : '', quote.tenant.address ? `地址: ${quote.tenant.address}` : ''].filter(Boolean).join(' | ')}
+                </p>
+            </div>
+            ${
+              quote.tenant.wechatQrcodeUrl
+                ? `
+                <div style="text-align: center;">
+                    <img src="${quote.tenant.wechatQrcodeUrl}" style="width: 70px; height: 70px; object-fit: contain;" />
+                    <p style="font-size: 10px; color: #999; margin: 3px 0 0;">扫码添加微信</p>
+                </div>
+            `
+                : ''
+            }
+        </div>
+    `
+    : '';
+
   container.innerHTML = `
+        ${brandHtml}
         <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="font-size: 24px; margin: 0;">报价单</h1>
             <p style="color: #666; margin-top: 10px;">${quote.quoteNo}</p>
@@ -203,12 +287,17 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
   const handlePdfExport = async () => {
     toast.promise(
       (async () => {
-        // Dynamic import to avoid SSR issues
-        const { pdf } = await import('@react-pdf/renderer');
-        const { QuotePdfDocument } = await import('./quote-pdf');
-        const { saveAs } = await import('file-saver');
+        // 动态导入 + 获取租户品牌信息
+        const [{ pdf }, { QuotePdfDocument }, { saveAs }, tenantResult] = await Promise.all([
+          import('@react-pdf/renderer'),
+          import('./quote-pdf'),
+          import('file-saver'),
+          getTenantInfo(),
+        ]);
 
-        const asPdf = pdf(<QuotePdfDocument quote={quote as any} mode="customer" />);
+        // 条件注入品牌信息
+        const quoteWithTenant = injectTenantBranding(quote, tenantResult);
+        const asPdf = pdf(<QuotePdfDocument quote={quoteWithTenant as any} mode="customer" />);
         const blob = await asPdf.toBlob();
         saveAs(blob, `专属报价方案-${quote.quoteNo}.pdf`);
       })(),
@@ -221,19 +310,33 @@ export function QuoteExportMenu({ quote, renderPdfButtons }: QuoteExportMenuProp
   };
 
   const handleExcelExport = async () => {
-    toast.promise(exportToExcel(quote as any), {
-      loading: '正在生成 Excel...',
-      success: 'Excel 导出成功',
-      error: 'Excel 导出失败',
-    });
+    toast.promise(
+      (async () => {
+        const tenantResult = await getTenantInfo();
+        const quoteWithTenant = injectTenantBranding(quote, tenantResult);
+        await exportToExcel(quoteWithTenant as any);
+      })(),
+      {
+        loading: '正在生成 Excel...',
+        success: 'Excel 导出成功',
+        error: 'Excel 导出失败',
+      }
+    );
   };
 
   const handleImageExport = async () => {
-    toast.promise(exportToImage(quote as any), {
-      loading: '正在生成长图...',
-      success: '长图导出成功',
-      error: '长图导出失败',
-    });
+    toast.promise(
+      (async () => {
+        const tenantResult = await getTenantInfo();
+        const quoteWithTenant = injectTenantBranding(quote, tenantResult);
+        await exportToImage(quoteWithTenant as any);
+      })(),
+      {
+        loading: '正在生成长图...',
+        success: '长图导出成功',
+        error: '长图导出失败',
+      }
+    );
   };
 
   return (

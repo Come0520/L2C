@@ -75,7 +75,11 @@ const statusConfig: Record<
  * 企业认证表单组件
  * 用于提交企业认证申请
  */
-export function VerificationForm({ tenantName, tenantCode, canEdit }: VerificationFormProps) {
+export function VerificationForm({
+  tenantName,
+  tenantCode: _tenantCode,
+  canEdit,
+}: VerificationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
@@ -83,6 +87,7 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
 
   // 表单数据
   const [formData, setFormData] = useState({
+    creditCode: '',
     legalRepName: '',
     registeredCapital: '',
     businessScope: '',
@@ -99,6 +104,7 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
           setVerificationInfo(result.data);
           // 填充已有数据
           setFormData({
+            creditCode: result.data.creditCode || '',
             legalRepName: result.data.legalRepName || '',
             registeredCapital: result.data.registeredCapital || '',
             businessScope: result.data.businessScope || '',
@@ -153,6 +159,10 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
 
   /** 提交认证申请 */
   const handleSubmit = () => {
+    if (!formData.creditCode.trim()) {
+      toast.error('请填写统一社会信用代码');
+      return;
+    }
     if (!licenseUrl) {
       toast.error('请上传营业执照');
       return;
@@ -235,15 +245,23 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
             <CardDescription>请填写企业信息并上传营业执照</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* 只读信息 */}
+            {/* 企业基本信息 */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>企业名称</Label>
                 <Input value={tenantName} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
-                <Label>统一社会信用代码</Label>
-                <Input value={tenantCode} disabled className="bg-muted" />
+                <Label htmlFor="creditCode">
+                  统一社会信用代码 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="creditCode"
+                  value={formData.creditCode}
+                  onChange={(e) => handleChange('creditCode', e.target.value)}
+                  placeholder="请输入18位统一社会信用代码"
+                  maxLength={50}
+                />
               </div>
             </div>
 
@@ -327,7 +345,12 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
             <div className="flex justify-end">
               <Button
                 onClick={handleSubmit}
-                disabled={isPending || !licenseUrl || !formData.legalRepName.trim()}
+                disabled={
+                  isPending ||
+                  !licenseUrl ||
+                  !formData.legalRepName.trim() ||
+                  !formData.creditCode.trim()
+                }
               >
                 {isPending ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -352,6 +375,10 @@ export function VerificationForm({ tenantName, tenantCode, canEdit }: Verificati
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-muted-foreground text-sm">统一社会信用代码</p>
+                <p className="font-medium">{verificationInfo?.creditCode || '-'}</p>
+              </div>
               <div>
                 <p className="text-muted-foreground text-sm">法定代表人</p>
                 <p className="font-medium">{verificationInfo?.legalRepName || '-'}</p>

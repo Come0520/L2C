@@ -27,11 +27,11 @@ describe('ErrorReporter', () => {
         // 模拟 getCurrentPages
         (global as any).getCurrentPages = jest.fn().mockReturnValue([{ route: 'pages/index/index' }]);
 
-        vi.useFakeTimers();
+        jest.useFakeTimers();
     });
 
     afterEach(() => {
-        vi.useRealTimers();
+        jest.useRealTimers();
     });
 
     test('should capture JS errors', () => {

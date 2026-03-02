@@ -1,0 +1,5 @@
+export default definePageConfig({
+    navigationBarTitleText: '工作台',
+    navigationBarBackgroundColor: '#F2F2F7',
+    navigationBarTextStyle: 'black',
+})

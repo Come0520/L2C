@@ -46,7 +46,9 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
     const whereConditions = [eq(afterSalesTickets.tenantId, session.user.tenantId)];
 
     if (status && status !== 'all') {
-      whereConditions.push(eq(afterSalesTickets.status, status as any));
+      whereConditions.push(
+        eq(afterSalesTickets.status, status as (typeof afterSalesTickets.status.enumValues)[number])
+      );
     }
 
     if (search) {

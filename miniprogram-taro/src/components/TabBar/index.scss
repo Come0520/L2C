@@ -1,0 +1,53 @@
+/**
+ * 自定义 TabBar 样式
+ */
+
+.tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    height: 100px;
+    background-color: rgba(255, 255, 255, 0.75);
+    /* 半透白 */
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-top: var(--glass-border);
+    z-index: 999;
+
+    &__item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-xs) 0;
+        transition: opacity 0.2s;
+
+        &:active {
+            opacity: 0.7;
+        }
+
+        &--active {
+            .tab-bar__text {
+                color: var(--color-primary);
+            }
+        }
+    }
+
+    &__icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 4px;
+    }
+
+    &__text {
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
+        transition: color 0.2s;
+    }
+}

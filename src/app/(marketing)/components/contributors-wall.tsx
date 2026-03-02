@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { History, MessageSquarePlus, Star, BadgeCheck, Loader2 } from 'lucide-react';
 import { VersionHistoryModal } from './version-history-modal';
@@ -186,6 +187,7 @@ function MessageBubble({
 function MessageForm({
   onSubmit,
   onCancel,
+  defaultName,
 }: {
   onSubmit: (data: {
     content: string;
@@ -194,6 +196,8 @@ function MessageForm({
     authorCompany?: string;
   }) => Promise<void>;
   onCancel: () => void;
+  /** 已登录用户的姓名，用于预填 */
+  defaultName?: string;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -213,10 +217,10 @@ function MessageForm({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 12 }}
+      className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-lg"
     >
       <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
         <h4 className="text-sm font-semibold text-slate-700">✍️ 留下你的故事</h4>
@@ -235,6 +239,7 @@ function MessageForm({
             <Input
               name="authorName"
               placeholder="怎么称呼您？ *"
+              defaultValue={defaultName}
               className="border-slate-200 bg-slate-50 focus-visible:ring-blue-500"
               required
               minLength={2}
@@ -286,6 +291,7 @@ export function ContributorsWall({
 }: {
   initialTestimonials?: LandingTestimonialData[];
 }) {
+  const { data: session } = useSession();
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -447,9 +453,9 @@ export function ContributorsWall({
                 {!showForm ? (
                   <motion.div
                     key="cta-btn"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
                     className="mt-6 flex justify-center"
                   >
                     <button
@@ -472,6 +478,7 @@ export function ContributorsWall({
                     key="form"
                     onSubmit={handleFormSubmit}
                     onCancel={() => setShowForm(false)}
+                    defaultName={session?.user?.name || undefined}
                   />
                 )}
               </AnimatePresence>

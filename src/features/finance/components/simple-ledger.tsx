@@ -1,9 +1,9 @@
-// @ts-nocheck
 'use client';
 
 import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { typedResolver } from '../utils/form-helpers';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { PlusCircle } from 'lucide-react';
@@ -44,7 +44,7 @@ export function SimpleLedgerClient({ initialData }: SimpleLedgerProps) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof SimpleTransactionSchema>>({
-    resolver: zodResolver(SimpleTransactionSchema),
+    resolver: typedResolver(SimpleTransactionSchema),
     defaultValues: {
       type: 'EXPENSE',
       amount: 0,

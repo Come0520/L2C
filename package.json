@@ -1,6 +1,6 @@
 {
   "name": "l2c",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -78,6 +78,7 @@
     "@upstash/redis": "^1.36.1",
     "@xyflow/react": "^12.10.0",
     "ali-oss": "^6.23.0",
+    "alipay-sdk": "^4.14.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -122,6 +123,7 @@
     "tailwind-merge": "^3.4.0",
     "use-debounce": "^10.0.6",
     "vaul": "^1.1.2",
+    "wechatpay-node-v3": "2.1.8",
     "xlsx": "^0.18.5",
     "zod": "^4.3.4"
   },

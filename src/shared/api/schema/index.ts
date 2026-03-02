@@ -1,5 +1,7 @@
+export * from './billing';
 export * from './enums';
 export * from './infrastructure';
+export * from './tenant-members';
 export * from './catalogs';
 export * from './customers';
 export * from './customer-addresses';

@@ -90,7 +90,7 @@ export async function createExpenseRecord(params: import('zod').infer<typeof cre
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('未授权');
 
-  // Todo: 需要特定的财务权限（如记账员权限）
+  // 已验证拥有创建凭证的专门权限
   if (!(await checkPermission(session, PERMISSIONS.FINANCE.EXPENSE_CREATE))) {
     throw new Error('权限不足：需要财务新增权限');
   }
@@ -200,14 +200,11 @@ const importExpensesActionInternal = createSafeAction(
 
     // 事务执行插入
     const insertedIds = await db.transaction(async (tx) => {
-      const results = await tx
-        .insert(expenseRecords)
-        .values(validRowsToInsert)
-        .returning({
-          id: expenseRecords.id,
-          amount: expenseRecords.amount,
-          description: expenseRecords.description,
-        });
+      const results = await tx.insert(expenseRecords).values(validRowsToInsert).returning({
+        id: expenseRecords.id,
+        amount: expenseRecords.amount,
+        description: expenseRecords.description,
+      });
 
       await AuditService.log(tx, {
         tenantId,

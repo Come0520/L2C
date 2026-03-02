@@ -274,6 +274,13 @@
       "when": 1772266516136,
       "tag": "0038_upgrade_role_override_jsonb",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1772453656807,
+      "tag": "0039_icy_abomination",
+      "breakpoints": true
     }
   ]
 }

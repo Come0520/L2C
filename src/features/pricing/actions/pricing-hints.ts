@@ -44,7 +44,7 @@ const pricingHintsSchema = z.object({
  * @param {string} startISO - 统计回溯的开始时间（ISO 8601 格式字符串）
  * @param {string} trendStartISO - 趋势图表的开始时间（通常更早，如半年前）
  *
- * @returns {Promise<[any[], any[], any[], any[]]>} 返回包含 4 个查询结果数组的 Promise
+ * @returns {Promise<[unknown[], unknown[], unknown[], unknown[]]>} 返回包含 4 个查询结果数组的 Promise
  *
  * @security 使用 Drizzle ORM 构建查询，内置 SQL 注入防护
  * @security 强制在所有查询中附加 eq(tenantId, tId) 条件实现租户数据隔离
@@ -214,7 +214,11 @@ export const getPricingHintsAction = cache(
       });
 
       if (!productInfo) {
-        logger.warn('未找到指定商品的定价信息', { productId: params.productId, sku: params.sku, tenantId });
+        logger.warn('未找到指定商品的定价信息', {
+          productId: params.productId,
+          sku: params.sku,
+          tenantId,
+        });
         return { success: false, error: 'Product not found' };
       }
 
@@ -297,12 +301,21 @@ export const getPricingHintsAction = cache(
       ].some((m) => m < LOW_MARGIN_THRESHOLD);
 
       if (isLowMargin) {
-        logger.info('毛利率分析：检测到较低毛利率', { targetProductId, currentMargin, historicMargin, estimatedMargin });
+        logger.info('毛利率分析：检测到较低毛利率', {
+          targetProductId,
+          currentMargin,
+          historicMargin,
+          estimatedMargin,
+        });
       }
 
       /** 低于成本价的最高级别告警 */
       if (suggestedPriceNum < cost) {
-        logger.warn('即将触发定价底线告警：建议价格低于采购成本', { targetProductId, suggestedPriceNum, cost });
+        logger.warn('即将触发定价底线告警：建议价格低于采购成本', {
+          targetProductId,
+          suggestedPriceNum,
+          cost,
+        });
       }
 
       const totalEndTime = performance.now();
@@ -391,7 +404,7 @@ export const getPricingHintsAction = cache(
  * 用于组件或前端请求中获取经过合法性与安全过滤的定价数据。
  *
  * @param {z.input<typeof pricingHintsSchema>} params - 包含产品识别与追溯日期的入参对象
- * @returns {Promise<any>} 安全代理层返回的序列化产品预估结果对象
+ * @returns {Promise<unknown>} 安全代理层返回的序列化产品预估结果对象
  */
 export async function getPricingHints(params: z.input<typeof pricingHintsSchema>) {
   return getPricingHintsAction(params as z.infer<typeof pricingHintsSchema>);

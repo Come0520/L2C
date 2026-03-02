@@ -28,7 +28,7 @@ interface PriceReferencePanelProps {
  * 定价参考面板依赖的完整数据结构
  *
  * @description 与后端 getPricingHintsAction 接口返回的 data 字段严格对齐。
- * 此处通过明确显式提供类型定义字典，降低使用 any 及 infer 中带来的 TypeScript 类型逃逸问题。
+ * 此处通过明确显式提供类型定义字典，降低使用任意类型及 infer 中带来的 TypeScript 类型逃逸问题。
  */
 export interface PricingData {
   /** 产品的基础数据基准 */
@@ -322,7 +322,7 @@ export function PriceReferencePanel({
           </div>
         )}
 
-        {/* 
+        {/*
          * 模块 4：同类对齐雷达阵列
          * 展示同门其它产品的行业价范围参考。
          */}
@@ -395,7 +395,7 @@ export function PriceReferencePanel({
           )}
         </div>
 
-        {/* 
+        {/*
          * 模块 6：底价突破最后通牒示警！被拦截或不理智报给比成本还低的金额强制触发红黑提示框。
          */}
         {isBelowCost && (

@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { toast } from 'sonner';
@@ -58,7 +57,7 @@ export function AccountFormDialog({
     },
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CreateAccountInput | UpdateAccountInput) => {
     startTransition(async () => {
       try {
         let result;
@@ -101,7 +100,7 @@ export function AccountFormDialog({
               <FormField
                 control={form.control}
                 name="category"
-                render={({ field }: { field: any }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>科目大类</FormLabel>
                     <Select
@@ -167,7 +166,7 @@ export function AccountFormDialog({
             <FormField
               control={form.control}
               name="description"
-              render={({ field }: any) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>科目说明</FormLabel>
                   <FormControl>

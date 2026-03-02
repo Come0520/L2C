@@ -47,21 +47,21 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
-      const res: any = await createExpenseRecord(values);
+      const res = await createExpenseRecord(values);
 
       if (res?.error) {
         toast.error(res.error);
         return;
       }
 
-      const data: any = res;
+      const data = res?.data as { success?: boolean; voucherId?: string } | undefined;
       if (data?.success) {
         toast.success('费用记录已保存' + (data.voucherId ? '，已自动生成凭证' : ''));
         form.reset();
         onSuccess?.();
       }
-    } catch (error: any) {
-      toast.error(error.message || '系统错误，请重试');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '系统错误，请重试');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +74,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
           <FormField
             control={form.control}
             name="accountId"
-            render={({ field }: any) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>费用科目</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -99,7 +99,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
           <FormField
             control={form.control}
             name="amount"
-            render={({ field }: any) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>发生金额</FormLabel>
                 <FormControl>
@@ -122,7 +122,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
           <FormField
             control={form.control}
             name="expenseDate"
-            render={({ field }: any) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>发生日期</FormLabel>
                 <FormControl>
@@ -145,7 +145,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
             <FormField
               control={form.control}
               name="description"
-              render={({ field }: any) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>费用摘要</FormLabel>
                   <FormControl>
@@ -161,7 +161,7 @@ export function ExpenseForm({ accounts, onSuccess }: ExpenseFormProps) {
             <FormField
               control={form.control}
               name="createVoucher"
-              render={({ field }: any) => (
+              render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">自动生成凭证</FormLabel>

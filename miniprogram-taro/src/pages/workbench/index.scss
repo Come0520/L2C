@@ -1,0 +1,168 @@
+.workbench-page {
+    background: var(--color-bg);
+    min-height: 100vh;
+    padding-bottom: 120px;
+    /* TabBar 高度 */
+
+    .workbench-header {
+        padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
+        background: radial-gradient(circle at top right, #fdfbfb 0%, #ebedee 100%);
+
+        .header-date {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+        }
+
+        .header-greeting {
+            display: block;
+            font-size: var(--font-size-xxl);
+            font-weight: 700;
+            margin-top: var(--spacing-xs);
+        }
+
+        .header-role {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--color-primary);
+            margin-top: 4px;
+        }
+    }
+
+    .manager-view,
+    .sales-view {
+        padding: 0 var(--spacing-md);
+    }
+
+    /* Manager 指标卡 */
+    .metrics-row {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .metric-card {
+        flex: 1;
+        background: var(--color-bg-card);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md) var(--spacing-sm);
+        text-align: center;
+
+        &--highlight {
+            background: rgba(230, 180, 80, 0.1);
+            border: 1px solid rgba(230, 180, 80, 0.3);
+        }
+
+        .metric-value {
+            display: block;
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+
+        .metric-label {
+            display: block;
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            margin-top: 4px;
+        }
+    }
+
+    /* Web 端引导卡 */
+    .web-guide-card {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+
+        .web-guide-icon {
+            font-size: var(--font-size-xl);
+        }
+
+        .web-guide-title {
+            display: block;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+        }
+
+        .web-guide-desc {
+            display: block;
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            margin-top: 4px;
+        }
+
+        .web-guide-arrow {
+            margin-left: auto;
+            font-size: var(--font-size-xl);
+            color: var(--color-text-secondary);
+        }
+    }
+
+    /* Sales 快捷入口 */
+    .quick-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+
+        .quick-action {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--spacing-md) var(--spacing-sm);
+
+            .quick-action-icon {
+                font-size: var(--font-size-xl);
+            }
+
+            .quick-action-text {
+                font-size: var(--font-size-sm);
+                color: var(--color-text-secondary);
+                margin-top: var(--spacing-xs);
+            }
+
+            .quick-action-count {
+                font-size: var(--font-size-lg);
+                font-weight: 700;
+                color: var(--color-primary);
+                margin-top: 4px;
+            }
+        }
+    }
+
+    /* 今日待办 */
+    .todos-section {
+        .section-title {
+            display: block;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .todo-title {
+                font-size: var(--font-size-base);
+            }
+
+            .todo-type {
+                font-size: var(--font-size-xs);
+                color: var(--color-primary);
+                background: rgba(230, 180, 80, 0.1);
+                padding: 4px 8px;
+                border-radius: var(--radius-sm);
+            }
+        }
+    }
+
+    .loading {
+        padding: var(--spacing-xl);
+
+        .loading-text {
+            color: var(--color-text-secondary);
+        }
+    }
+}

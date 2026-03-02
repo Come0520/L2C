@@ -18,7 +18,7 @@ describe('Graph Utils - flattenApprovalGraph', () => {
         id: 'start',
         type: 'start',
         position: { x: 0, y: 0 },
-        data: { label: 'Start', isStart: true } as any,
+        data: { label: 'Start', isStart: true } as unknown as ApprovalNode['data'],
       },
       {
         id: 'node1',
@@ -42,7 +42,7 @@ describe('Graph Utils - flattenApprovalGraph', () => {
         id: 'start',
         type: 'start',
         position: { x: 0, y: 0 },
-        data: { label: 'Start', isStart: true } as any,
+        data: { label: 'Start', isStart: true } as unknown as ApprovalNode['data'],
       },
       {
         id: 'cond1',
@@ -80,7 +80,7 @@ describe('Graph Utils - flattenApprovalGraph', () => {
         id: 'start',
         type: 'start',
         position: { x: 0, y: 0 },
-        data: { label: 'Start', isStart: true } as any,
+        data: { label: 'Start', isStart: true } as unknown as ApprovalNode['data'],
       },
       { id: 'node1', type: 'approver', position: { x: 100, y: 0 }, data: { label: 'N1' } },
       { id: 'node2', type: 'approver', position: { x: 200, y: 0 }, data: { label: 'N2' } },
@@ -103,7 +103,7 @@ describe('Graph Utils - flattenApprovalGraph', () => {
         id: 'start',
         type: 'start',
         position: { x: 0, y: 0 },
-        data: { label: 'Start', isStart: true } as any,
+        data: { label: 'Start', isStart: true } as unknown as ApprovalNode['data'],
       },
       {
         id: 'c1',

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 
 // Register a font that supports Chinese
@@ -117,6 +117,49 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     textAlign: 'center',
   },
+  // 品牌相关样式
+  brandHeader: {
+    marginBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: '#1a73e8',
+    paddingBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  brandLogo: {
+    width: 60,
+    height: 60,
+    objectFit: 'contain',
+  },
+  brandInfo: {
+    alignItems: 'flex-end',
+  },
+  brandName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1a73e8',
+    marginBottom: 3,
+  },
+  brandContact: {
+    fontSize: 9,
+    color: '#666',
+    marginBottom: 1,
+  },
+  qrcodeSection: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  qrcodeImage: {
+    width: 70,
+    height: 70,
+  },
+  qrcodeLabel: {
+    fontSize: 8,
+    color: '#666',
+    marginTop: 3,
+    textAlign: 'center',
+  },
 });
 
 import { QuotePdfData } from '../types';
@@ -150,20 +193,41 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>报价单</Text>
-            <Text style={styles.subTitle}>单号: {quote.quoteNo}</Text>
-            <Text style={styles.subTitle}>
-              日期: {format(new Date(quote.createdAt), 'yyyy-MM-dd')}
-            </Text>
+        {/* Header —— 条件渲染品牌信息 */}
+        {quote.tenant ? (
+          <View style={styles.brandHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {quote.tenant.logoUrl && (
+                <Image src={quote.tenant.logoUrl} style={styles.brandLogo} />
+              )}
+              <View>
+                <Text style={styles.brandName}>{quote.tenant.name}</Text>
+                <Text style={styles.subTitle}>报价单 | {quote.quoteNo}</Text>
+                <Text style={styles.subTitle}>
+                  日期: {format(new Date(quote.createdAt), 'yyyy-MM-dd')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.brandInfo}>
+              {quote.tenant.phone ? (
+                <Text style={styles.brandContact}>电话: {quote.tenant.phone}</Text>
+              ) : null}
+              {quote.tenant.address ? (
+                <Text style={styles.brandContact}>地址: {quote.tenant.address}</Text>
+              ) : null}
+            </View>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.subTitle}>L2C System</Text>
-            {/* <Image src="/l2c-logo.png" style={{ width: 50, height: 50 }} /> */}
+        ) : (
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.title}>报价单</Text>
+              <Text style={styles.subTitle}>单号: {quote.quoteNo}</Text>
+              <Text style={styles.subTitle}>
+                日期: {format(new Date(quote.createdAt), 'yyyy-MM-dd')}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Customer Info */}
         <View style={{ marginBottom: 20 }}>
@@ -332,6 +396,13 @@ export const QuotePdfDocument = ({ quote, mode }: QuotePdfProps) => {
               <Text>客户签字</Text>
             </View>
           </View>
+          {/* 微信二维码（居中展示） */}
+          {quote.tenant?.wechatQrcodeUrl && (
+            <View style={styles.qrcodeSection}>
+              <Image src={quote.tenant.wechatQrcodeUrl} style={styles.qrcodeImage} />
+              <Text style={styles.qrcodeLabel}>扫码添加微信</Text>
+            </View>
+          )}
           <View>
             <View style={styles.signBox}>
               <Text>公司盖章/销售签字</Text>

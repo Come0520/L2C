@@ -288,14 +288,28 @@ export async function approveTenant(tenantId: string): Promise<{
         })
         .where(eq(tenants.id, tenantId));
 
-      // 3. 激活所有用户
-      await tx
-        .update(users)
-        .set({
-          isActive: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.tenantId, tenantId));
+      // 3. 激活所有用户，并同步初始化 roles 数组
+      // BUG-2 修复：注册时 roles 默认为 []，审批激活时必须同步设置 roles，
+      // 否则 RBAC 权限系统会因 roles 为空数组而无法正确校验权限。
+      // 由于 roles 需要基于每个用户的 role 字段，先查询再批量更新。
+      const tenantUsers = await tx.query.users.findMany({
+        where: eq(users.tenantId, tenantId),
+        columns: { id: true, role: true, roles: true },
+      });
+
+      for (const u of tenantUsers) {
+        const currentRoles = (u.roles as string[]) || [];
+        // 仅当 roles 为空时才初始化，避免覆盖已有的多角色配置
+        const rolesUpdate = currentRoles.length > 0 ? currentRoles : [u.role || 'BOSS'];
+        await tx
+          .update(users)
+          .set({
+            isActive: true,
+            roles: rolesUpdate,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, u.id));
+      }
 
       // 4. 记录审计日志
       await AuditService.log(tx, {
@@ -768,8 +782,8 @@ export async function generateMagicLink(tenantId: string): Promise<{
       .where(
         and(
           eq(verificationCodes.userId, bossUser.id),
-          eq(verificationCodes.type, 'MAGIC_LOGIN' as any),
-          eq(verificationCodes.used, false as any)
+          eq(verificationCodes.type, 'MAGIC_LOGIN'),
+          eq(verificationCodes.used, false)
         )
       );
 
@@ -781,7 +795,7 @@ export async function generateMagicLink(tenantId: string): Promise<{
       userId: bossUser.id,
       code: Math.floor(100000 + Math.random() * 900000).toString(), // 占位，必填字段
       token: magicToken,
-      type: 'MAGIC_LOGIN' as any,
+      type: 'MAGIC_LOGIN',
       expiresAt,
     });
 

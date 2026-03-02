@@ -162,6 +162,7 @@ describe('Tenant Info Actions', () => {
       mocks.logAudit.mockResolvedValue(undefined);
 
       const result = await submitVerification({
+        creditCode: '91110000MA0XXXXX1X',
         legalRepName: 'John Doe',
         businessLicenseUrl: '/lic.pdf',
       });
@@ -170,7 +171,11 @@ describe('Tenant Info Actions', () => {
     });
 
     it('should validate verification input', async () => {
-      const result = await submitVerification({ legalRepName: '', businessLicenseUrl: '/lic.pdf' });
+      const result = await submitVerification({
+        creditCode: '91110000MA0XXXXX1X',
+        legalRepName: '',
+        businessLicenseUrl: '/lic.pdf',
+      });
       expect(result.success).toBe(false);
       expect(result.error).toBe('法定代表人不能为空');
     });

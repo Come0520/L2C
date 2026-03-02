@@ -317,39 +317,52 @@ export interface PricingPlan {
 
 export const pricingPlans: PricingPlan[] = [
   {
-    id: 'free',
-    name: '基础版',
+    id: 'base',
+    name: '基础版 (Base)',
     price: '¥0',
     period: '永久免费',
-    description: '适合中小门店，核心功能全面开放',
+    description: '核心模块全开放、限额满足小店初试',
     features: [
-      { text: '不限用户数', included: true },
-      { text: 'CRM 客户管理', included: true },
-      { text: '智能报价系统', included: true },
-      { text: '订单与供应链管理', included: true },
-      { text: '云展厅', included: true },
-      { text: '数据驾驶舱', included: true },
-      { text: '移动端适配', included: true },
-      { text: '无隐藏费用', included: true },
+      { text: '5个协作账户', included: true },
+      { text: '50次报价单/月', included: true },
+      { text: '录入200个客户档案', included: true },
+      { text: '200个商品云展厅', included: true },
+      { text: '基础订单与财务流', included: true },
     ],
-    cta: { text: '立即免费注册', href: '/register' },
+    cta: { text: '免费注册', href: '/register' },
+    highlighted: false,
+  },
+  {
+    id: 'pro',
+    name: '专业版 (Pro)',
+    price: '¥9.9',
+    period: '/ 月',
+    description: '无限报价能力、更大容量、解锁高级功能',
+    features: [
+      { text: '15个协作账户', included: true },
+      { text: '无限制创建报价', included: true },
+      { text: '5000个客户与商品档案', included: true },
+      { text: '多级审批流与审核', included: true },
+      { text: '数据文件导出权限', included: true },
+    ],
+    cta: { text: '立即升级', href: '/dashboard/settings/billing' },
     highlighted: true,
   },
   {
     id: 'enterprise',
-    name: '企业版',
-    price: '即将推出',
+    name: '企业版 (Enterprise)',
+    price: '定制',
     period: '',
-    description: '适合连锁品牌，高级定制功能',
+    description: '适合规模化企业、专属集群与大客户增值',
     features: [
-      { text: '包含基础版所有功能', included: true },
-      { text: '多门店管理', included: true },
-      { text: '高级数据分析', included: true },
-      { text: '自定义审批流程', included: true },
-      { text: 'API 对接', included: true },
-      { text: '专属客户成功经理', included: true },
+      { text: '包含专业版所有功能', included: true },
+      { text: '无限制账户与存储', included: true },
+      { text: '专属一对一客服支持', included: true },
+      { text: '支持 API 对接开发', included: true },
+      { text: '支持本地化私有化部署', included: true },
+      { text: '系统品牌定制与专属功能', included: true },
     ],
-    cta: { text: '联系我们', href: '#contact' },
+    cta: { text: '联系商务', href: '#contact' },
     highlighted: false,
   },
 ];
@@ -380,17 +393,54 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.2.6',
+    version: 'v1.2.6',
+    date: '2026-03-02',
+    title: '认证安全修复与多模块类型安全加固',
+    description:
+      '修复管理员"登录链接"功能因数据库枚举缺失 MAGIC_LOGIN 值而完全不可用的严重 Bug，修复登录后循环重定向问题。同步完成认证与定价模块类型安全加固、订阅计费 Schema 基础设施搭建、租户信息扩展。',
+    contributors: ['聂老师', '长城（开发者）'],
+    updates: [
+      {
+        type: 'fix',
+        content:
+          '修复"登录链接"功能：数据库枚举 verification_code_type 缺失 MAGIC_LOGIN 值导致功能完全不可用',
+      },
+      {
+        type: 'fix',
+        content: '修复登录后循环重定向的严重 Bug（感谢聂老师反馈）',
+      },
+      {
+        type: 'optimize',
+        content: '认证 (Auth) 与定价 (Pricing) 模块类型安全加固：消除 any / @ts-ignore',
+      },
+      {
+        type: 'feature',
+        content: '订阅计费系统 Schema 基础设施搭建 (tenantPlanType / subscriptionStatus 等)',
+      },
+      {
+        type: 'feature',
+        content: '租户信息扩展：新增标语、详细地址、微信号、封面图等字段，支持品牌定制',
+      },
+      {
+        type: 'optimize',
+        content: '报价单导出增强：支持租户品牌 Logo、公司信息与微信二维码的条件化展示',
+      },
+    ],
+  },
+  {
     id: 'v1.2.5',
     version: 'v1.2.5',
     date: '2026-03-02',
     title: '小程序多角色架构重构与全模块成熟度升级',
     description:
       '完成小程序四角色（管理/销售/工人/客户）TabBar 架构重构，展厅提升为主包 Tab 页，任务页扩展为三段式交互。同步批量升级各业务模块成熟度至 L4，增强报价性能缓存、调度监控安全隔离与测试基础设施。',
-    contributors: ['Antigravity'],
+    contributors: ['长城（开发者）'],
     updates: [
       {
         type: 'feature',
-        content: '小程序 custom-tab-bar 按四角色（管理/销售/工人/客户）全面重构，展厅提升为主包 Tab 入口',
+        content:
+          '小程序 custom-tab-bar 按四角色（管理/销售/工人/客户）全面重构，展厅提升为主包 Tab 入口',
       },
       {
         type: 'feature',
@@ -398,11 +448,13 @@ export const versionHistory: VersionRecord[] = [
       },
       {
         type: 'optimize',
-        content: '调度 (Dispatch) 与监控 (Monitoring) 模块升级至 L4：新增骨架屏、ErrorBoundary、tenantId 安全隔离',
+        content:
+          '调度 (Dispatch) 与监控 (Monitoring) 模块升级至 L4：新增骨架屏、ErrorBoundary、tenantId 安全隔离',
       },
       {
         type: 'optimize',
-        content: '报价 (Quotes) 模块性能增强：unstable_cache 高频查询缓存、React.memo 组件渲染优化、边界测试补全',
+        content:
+          '报价 (Quotes) 模块性能增强：unstable_cache 高频查询缓存、React.memo 组件渲染优化、边界测试补全',
       },
       {
         type: 'fix',
@@ -410,7 +462,8 @@ export const versionHistory: VersionRecord[] = [
       },
       {
         type: 'optimize',
-        content: '仪表盘产品模块清理：统一 AuditService 实现、消除重复代码、强化 TypeScript 类型安全',
+        content:
+          '仪表盘产品模块清理：统一 AuditService 实现、消除重复代码、强化 TypeScript 类型安全',
       },
     ],
   },
@@ -454,7 +507,7 @@ export const versionHistory: VersionRecord[] = [
     title: '全模块成熟度升级与安全加固',
     description:
       '完成多模块 L3→L4 成熟度批量升级，新增分析模块缓存与审计集成、调度模块 tenantId 硬隔离安全补丁、仪表盘懒加载重构，并修复报价导出与登录重定向等关键 Bug。',
-    contributors: ['Antigravity'],
+    contributors: ['长城（开发者）'],
     updates: [
       {
         type: 'feature',
@@ -489,7 +542,7 @@ export const versionHistory: VersionRecord[] = [
     title: '架构健壮性与测试引擎升级',
     description:
       '全面解决 Vitest 测试中的 ESM 死锁与并发超时问题，极大提升了开发环境下的测试执行效率与稳定性。',
-    contributors: ['Antigravity'],
+    contributors: ['长城（开发者）'],
     updates: [
       {
         type: 'fix',

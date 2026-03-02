@@ -10,6 +10,7 @@ import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { z } from 'zod';
 import { hash } from 'bcryptjs';
+import { BCRYPT_ROUNDS } from '@/shared/lib/auth-constants';
 import { nanoid } from 'nanoid';
 import { eq, or, and, gte } from 'drizzle-orm';
 import { sendEmail } from '@/shared/lib/email';
@@ -170,7 +171,9 @@ export async function submitTenantApplication(
         .returning({ id: tenants.id });
 
       // 创建待激活的 BOSS 用户
-      const passwordHash = await hash(data.password, 12);
+      // BUG-4 修复：使用共享常量 BCRYPT_ROUNDS（auth-constants.ts）替代硬编码的 12 轮，
+      // 与密码重置模块保持一致。
+      const passwordHash = await hash(data.password, BCRYPT_ROUNDS);
       await tx.insert(users).values({
         tenantId: newTenant.id,
         name: data.applicantName,

@@ -1,362 +1,386 @@
 ---
 name: miniprogram-best-practices
-description: 在处理任何微信小程序或多端应用(App)相关问题之前必须阅读此文件。包含基于微信官方文档的铁律、L2C 项目特有的开发规范以及多端应用 API 兼容限制，严格遵守可避免常见的导航、分包、编译、性能等陷阱。
+description: 在处理任何微信小程序或 Taro 跨端应用相关问题之前必须阅读此文件。包含基于 Taro 4.x + React 的开发规范、微信小程序官方铁律、L2C 项目特有的四角色架构约束，严格遵守可避免常见的导航、分包、编译、性能等陷阱。
 ---
 
-# L2C 微信小程序开发最佳实践
+# L2C Taro + 微信小程序开发最佳实践
 
-> **使用时机**：任何涉及小程序的问题（导航、TabBar、分包、页面跳转、组件、性能优化等）都必须先阅读本文档，再开始操作。
+> **使用时机**：任何涉及小程序的问题（Taro 组件、导航、TabBar、分包、路由、样式、状态管理、性能优化等）都必须先阅读本文档，再开始操作。
 
 ---
 
-## 一、TypeScript 编译铁律
+## 一、技术栈概览
+
+| 层次     | 技术                  | 版本   |
+| -------- | --------------------- | ------ |
+| 跨端框架 | Taro                  | 4.1.11 |
+| UI 框架  | React                 | 18.3.x |
+| 状态管理 | Zustand               | 5.x    |
+| 样式方案 | SCSS Modules          | —      |
+| 构建工具 | Webpack 5 (Taro 内置) | —      |
+| 类型系统 | TypeScript            | 5.x    |
+| 目标平台 | 微信小程序 (weapp)    | —      |
+
+**项目路径**：`miniprogram-taro/`（Taro 新架构），原生代码在 `miniprogram/`（逐步废弃）。
+
+---
+
+## 二、Taro + React 编码铁律
+
+### 2.1 文件组织规范
 
 > [!CAUTION]
-> **永远只修改 `.ts` 源文件，绝不直接修改 `.js` 编译产物！**
-
-微信开发者工具的"重新编译"会将 `.ts` 文件重新编译为 `.js`，覆盖对 `.js` 的任何手动修改。
+> **每个页面必须包含三个文件（缺一不可），且 import 路径必须精确！**
 
 ```
-✅ 正确：修改 miniprogram/custom-tab-bar/index.ts
-❌ 错误：修改 miniprogram/custom-tab-bar/index.js
+pages/workbench/
+  ├── index.tsx         ← React 组件（页面本体）
+  ├── index.config.ts   ← 页面配置（导航栏标题等）
+  └── index.scss        ← 页面样式
 ```
 
-**项目 TypeScript 文件列表（只改这些）：**
-- `custom-tab-bar/index.ts`
-- `pages/*/index.ts` 或 `pages/*/*/index.ts`
-- `stores/auth-store.ts`
-- `app.ts`
+**SCSS import 路径铁律**：
+
+```tsx
+// ✅ 正确：文件在当前目录，import 当前目录的 scss
+import './index.scss';
+
+// ❌ 错误：多嵌套一层目录名（最常见错误！）
+import './create/index.scss'; // 如果文件已在 create/ 目录内
+import './detail/index.scss'; // 如果文件已在 detail/ 目录内
+```
+
+### 2.2 Taro 组件使用规范
+
+```tsx
+// ✅ 正确：从 @tarojs/components 导入内置组件
+import { View, Text, Image, Input, Button, ScrollView } from '@tarojs/components';
+
+// ✅ 正确：从 @tarojs/taro 导入 API 和 Hooks
+import Taro, { useDidShow, useLoad, usePullDownRefresh, useReachBottom } from '@tarojs/taro';
+
+// ✅ 正确：React Hooks 从 react 导入
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+// ❌ 错误：不要使用 HTML 标签
+import { div, span } from 'react'; // 禁止！
+```
+
+### 2.3 事件处理差异（Taro vs 原生 React）
+
+```tsx
+// ✅ Taro 中 Input 事件用 onInput（不是 onChange）
+<Input onInput={(e) => setKeyword(e.detail.value)} />
+
+// ✅ Taro 中点击事件用 onClick
+<View onClick={() => handleClick()}>
+
+// ✅ 阻止事件冒泡（Taro 3.x 支持 stopPropagation）
+onClick={(e) => { e.stopPropagation(); doSomething() }}
+
+// ❌ 错误：不要用 onChange 处理 Input（Taro 小程序端不触发）
+<Input onChange={(e) => setKeyword(e.target.value)} />  // 不会生效！
+```
+
+### 2.4 路径别名
+
+```tsx
+// ✅ 使用 @/ 别名引用 src/ 下的模块
+import { useAuthStore } from '@/stores/auth';
+import { api } from '@/services/api';
+import TabBar from '@/components/TabBar/index';
+```
+
+对应 `tsconfig.json` 配置：
+
+```json
+{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }
+```
+
+### 2.5 页面生命周期（Taro Hooks vs 原生小程序）
+
+| 原生小程序            | Taro React Hook                | 说明                     |
+| --------------------- | ------------------------------ | ------------------------ |
+| `onLoad(options)`     | `useLoad((params) => {})`      | 页面加载，获取路由参数   |
+| `onShow()`            | `useDidShow(() => {})`         | 页面显示（含从后台切回） |
+| `onPullDownRefresh()` | `usePullDownRefresh(() => {})` | 下拉刷新                 |
+| `onReachBottom()`     | `useReachBottom(() => {})`     | 滚动触底                 |
+| `Page.data`           | `useState()`                   | 状态管理                 |
+| `this.setData({})`    | `setState()`                   | 更新状态                 |
 
 ---
 
-## 二、自定义 TabBar（custom-tab-bar）官方规范
+## 三、四角色 TabBar 架构（2026-03-02 已审批）
 
-### 2.1 核心约束（来自官方文档）
+### 3.1 TabBar 5 槽位配置
+
+| 槽位 | Tab 名称 | 页面路径                    | 可见角色        |
+| ---- | -------- | --------------------------- | --------------- |
+| 0    | 工作台   | `pages/workbench/index`     | Manager, Sales  |
+| 1    | 线索     | `pages/leads/index`         | Sales           |
+| 2    | 展厅     | `pages/showroom/index`      | Sales, Customer |
+| 3    | 任务     | `pages/tasks/index`         | Worker          |
+| 4    | 我的     | `pages/users/profile/index` | 全部角色        |
+
+### 3.2 角色可见 Tab 索引（ROLE_TABS 常量）
+
+```typescript
+// src/stores/auth.ts
+export const ROLE_TABS: Record<UserRole, number[]> = {
+  manager: [0, 4], // 工作台、我的
+  admin: [0, 4], // 同 manager
+  sales: [0, 1, 2, 4], // 工作台、线索、展厅、我的
+  worker: [3, 4], // 任务、我的
+  customer: [2, 4], // 展厅、我的
+  guest: [], // 未登录
+};
+```
+
+### 3.3 角色落地页（ROLE_HOME 常量）
+
+```typescript
+export const ROLE_HOME: Record<UserRole, string> = {
+  manager: '/pages/workbench/index',
+  sales: '/pages/workbench/index',
+  worker: '/pages/tasks/index',
+  customer: '/pages/showroom/index',
+  guest: '/pages/login/index',
+};
+```
 
 > [!IMPORTANT]
-> **tabBar.list 中的页面 path 必须且只能是主包（main package）页面，分包页面不能进入 tabBar.list。**
+> **`installer` 角色已废弃！** 统一使用 `worker`，与数据库 `userRoleEnum` 一致。
 
-| 规则 | 说明 |
-|------|------|
-| tabBar.list 最多 5 个 | 超过5个会报错 |
-| **只能是主包页面** | 分包页面不得出现在 tabBar.list 中 |
-| custom-tab-bar 自动注入 | 框架只在 tabBar.list 的页面上自动注入，非 tabBar 页面无自动注入 |
-| 导航只用 wx.switchTab | tabBar.list 内的页面跳转必须用 wx.switchTab，navigateTo 无效 |
-| app.json 须声明 custom: true | 同时必须保留 color/selectedColor/backgroundColor/list 配置 |
+### 3.4 自定义 TabBar 实现
 
-### 2.2 当前 L2C tabBar.list 配置（主包 5 个）
+Taro 中自定义 TabBar 是一个普通 React 组件，在每个 TabBar 页面手动引入：
 
-```json
-"list": [
-  { "pagePath": "pages/index/index",     "text": "首页" },
-  { "pagePath": "pages/workbench/index", "text": "工作台" },
-  { "pagePath": "pages/leads/index",     "text": "线索" },
-  { "pagePath": "pages/quotes/index",    "text": "报价" },
-  { "pagePath": "pages/users/profile",   "text": "我的" }
-]
+```tsx
+// 每个 TabBar 页面底部添加
+import TabBar from '@/components/TabBar/index';
+
+<TabBar selected="/pages/workbench/index" />;
 ```
 
-> `pages/leads/index` 是**主包**页面（已通过重构从分包提升）。
-
-### 2.3 custom-tab-bar 官方最简实现（switchTab）
-
-```typescript
-// custom-tab-bar/index.ts
-methods: {
-    switchTab(e: any) {
-        const data = e.currentTarget.dataset;
-        const url = data.path;
-        // 官方推荐：所有 tab 页均在 tabBar.list 中，直接用 switchTab
-        wx.switchTab({ url });
-        this.setData({ selected: data.index });
-    }
-}
-```
-
-### 2.4 WXML 必须用普通 view，不用 cover-view
-
-```xml
-<!-- ✅ 正确 -->
-<view bindtap="switchTab" data-path="..." data-index="...">
-  <image src="..." />
-  <view>文字</view>
-</view>
-
-<!-- ❌ 错误：cover-view 的 bindtap 不可靠，会导致点击失效 -->
-<cover-view bindtap="switchTab">...</cover-view>
-```
-
-> `cover-view` 仅用于遮盖 map/video 原生组件，在普通 TabBar 场景会导致事件失效。
-
-### 2.5 每个 tabBar 页的 onShow 高亮设置
-
-**关键**：`selected` 的值是**当前角色 tab 列表中的索引**，不是 tabBar.list 的槽位索引。
-
-```typescript
-// pages/workbench/index.ts
-onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-        this.getTabBar().setData({ selected: 0 }); // workbench 是 adminTabs[0]
-    }
-}
-```
-
-**L2C 各角色 tab 列表与对应 selected 索引：**
-
-| 角色 | tab 列表 | selected 值 |
-|------|---------|------------|
-| admin/boss | 工作台(0), 线索(1), 报价(2), 我的(3) | 对应 0/1/2/3 |
-| sales | 工作台(0), 线索(1), 报价(2), 我的(3) | 对应 0/1/2/3 |
-| installer | 任务(0), 我的(1) | 对应 0/1 |
-| customer | 首页(0), 报价(1), 我的(2) | 对应 0/1/2 |
+**不同于原生小程序**：原生小程序的 `custom-tab-bar` 由框架自动注入，Taro 中必须手动引用。
 
 ---
 
-## 三、分包（Subpackage）规范
+## 四、微信小程序官方规范（在 Taro 中依然生效）
 
-### 3.1 官方分包打包原则
+### 4.1 tabBar.list 核心约束
+
+| 规则                                | 说明                              |
+| ----------------------------------- | --------------------------------- |
+| tabBar.list 最多 5 个               | 超过5个报错                       |
+| **只能是主包页面**                  | 分包页面不得出现在 tabBar.list    |
+| 导航用 `Taro.switchTab`             | tabBar 页面间跳转必须用 switchTab |
+| app.config.ts 须声明 `custom: true` | 同时保留 list 配置                |
+
+### 4.2 分包规范
 
 - `subPackages` 配置路径外的目录自动打包到**主包**
-- `subPackages` 的根目录不能是另一个 `subPackages` 内的子目录
-- **tabBar 页面必须在主包内**（官方原文）
-- 分包之间不能互相引用 JS/template/资源，只能引用主包内容
+- tabBar 页面必须在主包内
+- 分包之间不能互相引用 JS/资源，只能引用主包内容
+- 跳转分包页面用 `Taro.navigateTo`（不用 switchTab）
 
-### 3.2 官方分包引用原则
+```tsx
+// ✅ 正确：跳转分包页面用 navigateTo
+Taro.navigateTo({ url: '/pages/leads-sub/detail/index?id=xxx' });
 
-- packageA 无法 require packageB 的 JS，只能 require 主包或自身的
-- packageA 无法使用 packageB 的资源（图片/WXSS），只能用主包或自身的
-- 如需跨分包复用，使用[分包异步化](https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/async.html)
-
-### 3.3 L2C 当前分包结构（10个分包）
-
-```
-主包 pages/        ← 所有 tabBar 页面和高频页面
-├── index/         ← ✅ tabBar（首页）
-├── workbench/     ← ✅ tabBar（工作台）
-├── leads/index    ← ✅ tabBar（线索列表，已提升到主包）
-├── quotes/        ← ✅ tabBar（报价）
-├── users/profile  ← ✅ tabBar（我的）
-├── crm/           ← 主包（高频）
-└── login/register/landing/status/
-
-分包 pages/leads-sub/   ← 线索的 create/detail
-分包 pages/tasks/       ← 任务列表/详情/量房
-分包 pages/showroom/    ← 云展厅
-分包 pages/service/     ← 服务申请/列表
-分包 pages/projects/    ← 项目任务详情
-分包 pages/invite/      ← 邀请
-分包 pages/manager/     ← 销售目标管理
-分包 pages/tenant/      ← 租户支付设置
-分包 pages/reports/     ← 数据报表
-分包 pages/orders/      ← 订单列表/详情
+// ❌ 错误：分包页面不能用 switchTab
+Taro.switchTab({ url: '/pages/leads-sub/detail/index' });
 ```
 
-### 3.4 分包页面导航
-
-分包页面用 `wx.navigateTo` 或 `wx.reLaunch`（不能用 `wx.switchTab`）：
-
-```typescript
-// 正确：跳转到分包页面
-wx.navigateTo({ url: '/pages/leads-sub/create/index' });
-wx.navigateTo({ url: '/pages/leads-sub/detail/index?id=xxx' });
-wx.navigateTo({ url: '/pages/orders/detail/index?id=xxx' });
-wx.navigateTo({ url: '/pages/tasks/index' });
-```
-
----
-
-## 四、性能优化规范（官方最佳实践）
-
-### 4.1 按需注入（lazyCodeLoading）⚠️ L2C 特殊限制
-
-> [!WARNING]
-> **官方强烈推荐开启 `lazyCodeLoading: "requiredComponents"`，但 L2C 项目暂时禁用！**
-
-**官方建议**：按需注入可显著降低启动时间和内存占用（基础库 2.11.1+，**推荐所有小程序使用**）。
-
-**L2C 项目限制**：在 Windows 开发者工具中，`lazyCodeLoading` 与 `WAAccelerateWorker` 存在兼容性问题，会导致：
-- `worker.js 500 Internal Server Error`
-- 所有组件 tap 事件完全失效
-
-```json
-// ❌ L2C 项目当前禁止使用（Windows 开发环境兼容性问题）
-"lazyCodeLoading": "requiredComponents"
-```
-
-> 待微信开发者工具修复此兼容性问题后，应第一时间重新开启。
-
-### 4.2 初始渲染缓存（initialRenderingCache）✅ L2C 已启用
-
-官方推荐（基础库 2.11.1+）：非首次启动时，视图层直接展示缓存的渲染结果，不等待逻辑层初始化，大幅提前首屏可见时间。
-
-```json
-// ✅ L2C 已在 app.json window 中配置
-"window": {
-  "initialRenderingCache": "static"
-}
-```
-
-### 4.3 启动过程减少同步 API 调用（官方重要建议）
-
-在 `App.onLaunch`、`App.onShow`、`Page.onLoad`、`Page.onShow` 及初始化代码中：
-
-```typescript
-// ❌ 错误：启动时同步调用，阻塞 JS 线程
-const info = wx.getSystemInfoSync();
-const token = wx.getStorageSync('token');
-
-// ✅ 正确：使用异步 API
-wx.getSystemInfo({ success: (info) => { ... } });
-wx.getStorage({ key: 'token', success: (res) => { ... } });
-```
-
-**特别注意**：`getSystemInfo` 是同步 API（名字没有 Sync 后缀，但实际上是同步阻塞）。
-
-### 4.4 分包预下载（preloadRule）—— L2C 待实现
-
-官方建议：分包加载后进入分包页面需要等待下载，影响体验。使用 `preloadRule` 可在指定页面加载时预先下载分包。
-
-```json
-// app.json 示例：在工作台页面预下载 tasks 分包
-"preloadRule": {
-  "pages/workbench/index": {
-    "network": "all",
-    "packages": ["tasks", "orders"]
-  }
-}
-```
-
-> L2C 目前有 10 个分包，建议为高频跳转路径添加预下载规则以提升用户体验。
-
-### 4.5 精简首屏数据（官方最佳实践）
-
-- 与视图层渲染无关的数据**不要放在 `data` 中**，避免影响渲染时间
-- 首屏优先展示关键部分，非关键内容延迟更新（渐进式渲染）
-- 及时从 `usingComponents` 移除未使用的自定义组件
-
----
-
-## 五、常见陷阱与解决方案
-
-### 5.1 lazyCodeLoading 与 WAAccelerateWorker 冲突（L2C 历史 Bug）
-
-**症状**：启动时 `worker.js 500 Internal Server Error`，所有组件的 tap 事件完全失效。
-
-**原因**：`"lazyCodeLoading": "requiredComponents"` 与 Windows 开发者工具存在兼容性问题。
-
-**解决方案**：移除 `app.json` 中的 `lazyCodeLoading` 字段。
-
-### 5.2 preloadRule 与 lazyCodeLoading 叠加冲突
-
-**症状**：模拟器启动失败，`fd argument must be a file descriptor`。
-
-**解决方案**：`preloadRule` 和 `lazyCodeLoading` 不要同时使用（绝对禁止叠加）。
-
-### 5.3 路径冲突导致模拟器 crash
-
-**症状**：模拟器无法启动，无明显错误信息。
-
-**原因**：同一路径前缀既出现在主包 `pages` 数组中，又用作分包 `root`。
-
-```json
-// ❌ 会 crash 的配置
-"pages": ["pages/leads/index"],    // 主包
-"subpackages": [{ "root": "pages/leads", ... }]  // 分包
-
-// ✅ 正确做法：重命名分包 root
-"pages": ["pages/leads/index"],
-"subpackages": [{ "root": "pages/leads-sub", ... }]
-```
-
-### 5.4 non-tabBar 页面无 custom-tab-bar 显示
-
-**症状**：navigateTo 跳转到分包页面后，底部 TabBar 消失。
-
-**说明**：框架只在 tabBar.list 中的页面自动注入 custom-tab-bar，分包页面需要手动添加。
-
-**解决方案**：
-1. 在分包页面的 `.json` 中注册 `custom-tab-bar` 组件
-2. 在 `.wxml` 中添加 `<custom-tab-bar />`
-3. 在 `.ts` 的 `onShow` 中手动调用 `this.getTabBar().setData({ selected: N })`
-
-> 注意：这种手动注入要通过 `wx.switchTab` 而非 `wx.navigateTo` 返回 tabBar 页，否则视觉图标会错乱。
-
----
-
-## 六、操作检查清单
-
-每次修改小程序代码后，按以下顺序操作：
-
-1. **只修改 `.ts` 文件**，绝不改 `.js`
-2. 微信开发者工具 → **工具** → **清除全部缓存**
-3. **重新编译**（让 TypeScript 重新编译 .ts → .js）
-4. 在模拟器中测试各角色的 Tab 切换
-5. 验证分包页面跳转不使用 switchTab
-
----
-
-## 七、参考链接（官方文档）
-
-| 主题 | 链接 |
-|------|------|
-| 自定义 tabBar | https://developers.weixin.qq.com/miniprogram/dev/framework/ability/custom-tabbar.html |
-| 分包加载 | https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/basic.html |
-| 分包预下载 | https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/preload.html |
-| 独立分包 | https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/independent.html |
-| 分包异步化 | https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/async.html |
-| 页面路由 | https://developers.weixin.qq.com/miniprogram/dev/framework/app-service/route.html |
-| 代码包体积优化 | https://developers.weixin.qq.com/miniprogram/dev/framework/performance/tips/start_optimizeA.html |
-| 代码注入优化（按需注入）| https://developers.weixin.qq.com/miniprogram/dev/framework/performance/tips/start_optimizeB.html |
-| 首屏渲染优化 | https://developers.weixin.qq.com/miniprogram/dev/framework/performance/tips/start_optimizeC.html |
-| 初始渲染缓存 | https://developers.weixin.qq.com/miniprogram/dev/framework/view/initial-rendering-cache.html |
-| app.json 全局配置 | https://developers.weixin.qq.com/miniprogram/dev/reference/configuration/app.html |
-
----
-
-## 八、多端应用（App）开发兼容性铁律
-
-因项目启用“多端应用模式”（将小程序编译为 Android/iOS App），底层环境脱离了微信客户端，因此在进行 API 调用时必须遵守以下铁律：
-
-### 8.1 核心 API 替换与条件编译
-
-在开发**登录、支付、分享、关联跳转**等涉及微信生态能力的功能时，**必须**进行环境判断或使用 `wx.miniapp` 系的新接口，否则在 App 端会直接抛错甚至崩溃：
-
-| 原生小程序 API | 多端应用 (App) 替代方案 | 重要限制与说明 |
-|--------------|-------------------------|--------------|
-| `wx.login` | APP端无此概念，须走统一手机号验证，或由 App 原生接入微信 SDK 授权登录。 | 未绑定开放平台移动应用账号前，App 端无法拉起微信登录。 |
-| `wx.requestPayment` | `wx.miniapp.requestPayment` | iOS 端涉及虚拟物品支付必须高度注意，有可能被 Apple 要求走 IAP (内购) 机制。 |
-| `wx.showShareMenu` / `<button open-type="share">` | `wx.miniapp.shareToWechat` (分享到微信) | 需要集成相关 SDK，且只能将内容分享**回**微信对话或朋友圈。 |
-| 跳转其他小程序 | `wx.miniapp.launchMiniProgram` | 接口签名和逻辑均发生变化。 |
-| `wx.openCustomerServiceChat` | `wx.miniapp.openCustomerServiceChat` | 用于在 App 中唤起微信客服组件。 |
-
-### 8.2 完全不可用的废弃能力
+### 4.3 路径冲突检测
 
 > [!CAUTION]
-> 绝对禁止在 App 端强依赖以下能力处理核心业务，因为它们在非微信客户端环境下根本不存在！
-
-1. **消息订阅 (`wx.requestSubscribeMessage`)**：小程序内的订阅模板消息在 App 中完全无效。若需在 App 侧推送通知，必须自行集成 Android/iOS 的第三方 Push 推送服务（如极光推送等）。
-2. **特定私有接口**：脱离微信环境后，单纯依赖 open-type 获取的用户私有信息可能会失效。
-
-### 8.3 网络请求与基础能力
-
-- `wx.getSystemInfo` 及其衍生接口的返回值结构会发生改变。处理安全区 (Safe Area) 时需考虑 App 层的异形屏及设备特定高度适配（不能无脑假定微信顶部的 NavigationBar 高度）。
-- 自定义 TabBar (custom-tab-bar) 的限制在多端模式下依然完全生效（见第二章）。这不仅为了小程序，更是保证在 App 编译时不产生路由与渲染树崩溃的核心依据。
-
-### 8.4 兼容性处理范例
-
-在所有涉及上述受促 API 的业务逻辑层（如 `src/features` 等）调用微信 API 时，请严格预判运行环境：
+> **主包 pages 和分包 root 的路径前缀不能重复，否则模拟器 crash！**
 
 ```typescript
-// 检查业务是否处于 App 端环境 (建议在项目中封装集中式的判断工具，而不是散落在各处)
-const sysInfo = wx.getSystemInfoSync();
-// 注意：依据所使用的多端框架不同，environment 判断条件可能是 'miniapp' 或包含 'App' 字样
-const isApp = sysInfo.environment === 'miniapp' || sysInfo.platform === 'android' || sysInfo.platform === 'ios';
+// ❌ 会 crash
+pages: ['pages/leads/index'],
+subPackages: [{ root: 'pages/leads', ... }]
 
-if (isApp) {
-  // 👉 走 App 端的原生微信 SDK 能力
-  // wx.miniapp.requestPayment({ ... });
-} else {
-  // 👉 走标准原生小程序能力
-  // wx.requestPayment({ ... });
+// ✅ 正确：分包用不同路径
+pages: ['pages/leads/index'],
+subPackages: [{ root: 'pages/leads-sub', ... }]
+```
+
+---
+
+## 五、Taro 性能优化规范
+
+### 5.1 初始渲染缓存 ✅ 已启用
+
+```typescript
+// app.config.ts window 配置
+window: {
+  initialRenderingCache: 'static',
 }
 ```
+
+### 5.2 分包预下载 ✅ 已配置
+
+```typescript
+preloadRule: {
+  'pages/workbench/index': {
+    network: 'all',
+    packages: ['orders', 'manager'],
+  },
+  'pages/tasks/index': {
+    network: 'all',
+    packages: ['tasks'],
+  },
+}
+```
+
+### 5.3 长列表优化
+
+```tsx
+// ✅ 使用 ScrollView + 分页加载代替一次性渲染全部数据
+const [list, setList] = useState<Item[]>([]);
+const pageRef = useRef(1);
+
+useReachBottom(() => {
+  if (hasMore && !loading) fetchNextPage();
+});
+```
+
+### 5.4 避免启动阶段同步 API
+
+```tsx
+// ❌ 错误：启动时同步调用阻塞线程
+const token = Taro.getStorageSync('token')
+
+// ✅ 正确：尽量使用异步 API
+Taro.getStorage({ key: 'token' }).then((res) => { ... })
+```
+
+> **例外**：auth store 的 `restore()` 方法中可以使用 Sync API（在 App 入口只调用一次，影响可控）。
+
+### 5.5 样式变量复用（Design Tokens）
+
+所有颜色、间距、字号使用 `app.scss` 中定义的 CSS 变量，不要硬编码：
+
+```scss
+// ✅ 正确
+color: var(--color-primary);
+padding: var(--spacing-md);
+
+// ❌ 错误
+color: #e6b450;
+padding: 24px;
+```
+
+---
+
+## 六、Taro 特有陷阱与解决方案
+
+### 6.1 SCSS import 路径嵌套错误
+
+**症状**：`Module not found: Can't resolve './create/index.scss'`
+
+**原因**：文件已在 `pages/quotes/create/` 目录内，import 路径应为 `./index.scss` 而非 `./create/index.scss`。
+
+**规则**：所有 `.tsx` 文件的 SCSS import 统一使用 `import './index.scss'`。
+
+### 6.2 React + Taro 版本兼容
+
+**Taro 4.x 要求 React 18**。安装依赖时如遇 peer dependency 冲突，使用：
+
+```bash
+npm install --legacy-peer-deps
+```
+
+### 6.3 `defineAppConfig` 和 `definePageConfig` 不需要 import
+
+这两个函数是 Taro 的编译时宏，无需 import：
+
+```typescript
+// ✅ 正确：直接使用，不用 import
+export default definePageConfig({
+  navigationBarTitleText: '工作台',
+});
+```
+
+### 6.4 自定义组件传递函数属性名以 on 开头
+
+```tsx
+// ✅ 正确：事件处理函数 prop 以 on 开头
+<MyComponent onItemClick={handleClick} />
+
+// ❌ 错误（小程序端可能不触发）
+<MyComponent handleClick={handleClick} />
+```
+
+### 6.5 不要将模板中用到的数据设置为 undefined
+
+```tsx
+// ❌ 小程序端会导致渲染异常
+const [title, setTitle] = useState(undefined);
+
+// ✅ 使用空字符串或 null
+const [title, setTitle] = useState('');
+```
+
+---
+
+## 七、项目文件结构
+
+```
+miniprogram-taro/
+  ├── config/               ← Taro 构建配置
+  │   ├── index.ts          ← 通用配置
+  │   ├── dev.ts            ← 开发环境
+  │   └── prod.ts           ← 生产环境
+  ├── src/
+  │   ├── app.ts            ← 应用入口
+  │   ├── app.config.ts     ← 全局路由和 TabBar 配置
+  │   ├── app.scss           ← 全局样式 + Design Tokens
+  │   ├── components/       ← 可复用组件
+  │   │   └── TabBar/       ← 自定义 TabBar（核心）
+  │   ├── stores/           ← Zustand 状态管理
+  │   │   └── auth.ts       ← 认证 + ROLE_TABS + ROLE_HOME
+  │   ├── services/         ← API 请求层
+  │   │   └── api.ts        ← 统一请求封装
+  │   ├── pages/            ← 主包页面
+  │   │   ├── workbench/    ← 槽位 0 — 工作台
+  │   │   ├── leads/        ← 槽位 1 — 线索
+  │   │   ├── showroom/     ← 槽位 2 — 展厅
+  │   │   ├── tasks/        ← 槽位 3 — 任务
+  │   │   ├── users/profile/← 槽位 4 — 我的
+  │   │   ├── login/        ← 登录
+  │   │   ├── register/     ← 注册/入驻
+  │   │   ├── landing/      ← 引导页
+  │   │   └── ...           ← 其他主包页面
+  │   └── pages/xxx-sub/    ← 分包页面
+  └── types/                ← TypeScript 声明
+```
+
+---
+
+## 八、操作检查清单
+
+每次修改 Taro 小程序代码后，按以下顺序验证：
+
+1. ✅ SCSS import 路径使用 `./index.scss`（不附加子目录名）
+2. ✅ 事件处理使用 `onClick` 而非 `onTap`，Input 使用 `onInput` 而非 `onChange`
+3. ✅ 函数组件 prop 中事件属性以 `on` 开头
+4. ✅ 执行 `npx taro build --type weapp` 确认编译成功
+5. ✅ 在微信开发者工具中导入 `dist/` 目录测试
+
+---
+
+## 九、参考链接
+
+| 主题                | 链接                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Taro 官方文档       | https://docs.taro.zone                                                                           |
+| Taro React 开发概述 | https://docs.taro.zone/docs/react-overall                                                        |
+| Taro 最佳实践       | https://docs.taro.zone/docs/best-practice                                                        |
+| Taro 路由功能       | https://docs.taro.zone/docs/router                                                               |
+| Taro 路径别名       | https://docs.taro.zone/docs/config-detail#alias                                                  |
+| 微信自定义 tabBar   | https://developers.weixin.qq.com/miniprogram/dev/framework/ability/custom-tabbar.html            |
+| 微信分包加载        | https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages/basic.html                |
+| 微信性能优化        | https://developers.weixin.qq.com/miniprogram/dev/framework/performance/tips/start_optimizeA.html |

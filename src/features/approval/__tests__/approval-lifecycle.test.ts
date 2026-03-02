@@ -243,7 +243,10 @@ describe('Approval Lifecycle Integration Tests', () => {
 
   it('should run full approval lifecycle (Submit -> Add Approver -> Majority Approve)', async () => {
     // Step 1: Submit Approval
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const submitRes = await submissionActions.submitApproval({
       entityType: 'QUOTE',
@@ -256,24 +259,21 @@ describe('Approval Lifecycle Integration Tests', () => {
 
     // Check initial tasks
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, approvalId),
+      where: (t, { eq }) => eq(t.approvalId, approvalId),
     });
 
     // At this point, FINANCE users should have tasks.
     // We know approver1, approver2, approver3 are FINANCE.
     // Assuming the system assigns dynamically based on role.
-    const currentTask = tasks.find(
-      (t: any) => t.status === 'PENDING' && t.approverId === approver1Id
-    );
+    const currentTask = tasks.find((t) => t.status === 'PENDING' && t.approverId === approver1Id);
     expect(currentTask).toBeDefined();
 
     if (currentTask) {
       // Step 2: Add Approver
-      // @ts-ignore — mock auth
       vi.mocked(auth).mockResolvedValue({
         user: { id: approver1Id, tenantId },
         expires: '',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof auth>>);
       const addResult = await processingActions.addApprover({
         taskId: currentTask.id,
         targetUserId: newApproverId,
@@ -283,19 +283,18 @@ describe('Approval Lifecycle Integration Tests', () => {
 
       // Validate new task was created
       const updatedTasks = await db.query.approvalTasks.findMany({
-        where: (t: any, { eq }: any) => eq(t.approvalId, approvalId),
+        where: (t, { eq }) => eq(t.approvalId, approvalId),
       });
-      const newTask = updatedTasks.find((t: any) => t.approverId === newApproverId);
+      const newTask = updatedTasks.find((t) => t.approverId === newApproverId);
       expect(newTask).toBeDefined();
       expect(newTask?.status).toBe('PENDING');
 
       // Step 3: Process the newly added approver's task (TECH)
       // 此时已有 4 个任务 (3 FINANCE + 1 TECH)，TECH 通过后 1/4 = 25%，未达多数
-      // @ts-ignore — mock auth
       vi.mocked(auth).mockResolvedValue({
         user: { id: newApproverId, tenantId },
         expires: '',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof auth>>);
       await processingActions.processApproval({
         taskId: newTask!.id,
         action: 'APPROVE',
@@ -304,32 +303,34 @@ describe('Approval Lifecycle Integration Tests', () => {
 
       // 验证: TECH 通过后 (1/4)，审批实例仍应为 PENDING
       const midInstance = await db.query.approvals.findFirst({
-        where: (t: any, { eq }: any) => eq(t.id, approvalId),
+        where: (t, { eq }) => eq(t.id, approvalId),
       });
       expect(midInstance?.status).toBe('PENDING');
 
       // Step 4: Approver1 (FINANCE) 审批通过 → 2/4 = 50% → 达到 MAJORITY
-      const financeTask1 = updatedTasks.find((t: any) => t.approverId === approver1Id);
+      const financeTask1 = updatedTasks.find((t) => t.approverId === approver1Id);
 
-      // @ts-ignore — mock auth
       vi.mocked(auth).mockResolvedValue({
         user: { id: approver1Id, tenantId },
         expires: '',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof auth>>);
       await processingActions.processApproval({
         taskId: financeTask1!.id,
         action: 'APPROVE',
       });
 
       const finalInstance = await db.query.approvals.findFirst({
-        where: (t: any, { eq }: any) => eq(t.id, approvalId),
+        where: (t, { eq }) => eq(t.id, approvalId),
       });
       expect(finalInstance?.status).toBe('APPROVED'); // 2/4 = 50% → 多数通过!
     }
   });
 
   it('should run ALL mode flow (Submit -> Approve All -> Approved)', async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const submitRes = await submissionActions.submitApproval({
       entityType: 'QUOTE',
@@ -340,46 +341,58 @@ describe('Approval Lifecycle Integration Tests', () => {
     const approvalId = submitRes.approvalId!;
 
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, approvalId),
+      where: (t, { eq }) => eq(t.approvalId, approvalId),
     });
 
     // There should be tasks for all 3 FINANCE approvers
     expect(tasks.length).toBeGreaterThanOrEqual(3);
 
-    const app1Task = tasks.find((t: any) => t.approverId === approver1Id);
-    const app2Task = tasks.find((t: any) => t.approverId === approver2Id);
-    const app3Task = tasks.find((t: any) => t.approverId === _approver3Id);
+    const app1Task = tasks.find((t) => t.approverId === approver1Id);
+    const app2Task = tasks.find((t) => t.approverId === approver2Id);
+    const app3Task = tasks.find((t) => t.approverId === _approver3Id);
 
     // App 1 approves
-    vi.mocked(auth).mockResolvedValue({ user: { id: approver1Id, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: approver1Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await processingActions.processApproval({ taskId: app1Task!.id, action: 'APPROVE' });
 
     let instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('PENDING'); // 1/3
 
     // App 2 approves
-    vi.mocked(auth).mockResolvedValue({ user: { id: approver2Id, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: approver2Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await processingActions.processApproval({ taskId: app2Task!.id, action: 'APPROVE' });
 
     instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('PENDING'); // 2/3
 
     // App 3 approves
-    vi.mocked(auth).mockResolvedValue({ user: { id: _approver3Id, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: _approver3Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await processingActions.processApproval({ taskId: app3Task!.id, action: 'APPROVE' });
 
     instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('APPROVED'); // 3/3 = 100%
   });
 
   it('should run reject flow (Submit -> Reject -> Rejected)', async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const submitRes = await submissionActions.submitApproval({
       entityType: 'QUOTE',
@@ -389,22 +402,28 @@ describe('Approval Lifecycle Integration Tests', () => {
     const approvalId = submitRes.approvalId!;
 
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, approvalId),
+      where: (t, { eq }) => eq(t.approvalId, approvalId),
     });
-    const app1Task = tasks.find((t: any) => t.approverId === approver1Id);
+    const app1Task = tasks.find((t) => t.approverId === approver1Id);
 
     // App 1 rejects
-    vi.mocked(auth).mockResolvedValue({ user: { id: approver1Id, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: approver1Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await processingActions.processApproval({ taskId: app1Task!.id, action: 'REJECT' });
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('REJECTED'); // One rejection stops everything
   });
 
   it('should run user revoke flow (Submit -> Revoke -> Canceled)', async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const submitRes = await submissionActions.submitApproval({
       entityType: 'QUOTE',
@@ -414,17 +433,23 @@ describe('Approval Lifecycle Integration Tests', () => {
     const approvalId = submitRes.approvalId!;
 
     // User revokes
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await revokeActions.revokeApprovalAction(approvalId);
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('CANCELED');
   });
 
   it('should run ANY mode flow (Submit -> Anyone Approves -> Approved)', async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: requesterId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: requesterId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const submitRes = await submissionActions.submitApproval({
       entityType: 'QUOTE',
@@ -434,16 +459,16 @@ describe('Approval Lifecycle Integration Tests', () => {
     const approvalId = submitRes.approvalId!;
 
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, approvalId),
+      where: (t, { eq }) => eq(t.approvalId, approvalId),
     });
-    const app2Task = tasks.find((t: any) => t.approverId === approver2Id); // Random approver 2
+    const app2Task = tasks.find((t) => t.approverId === approver2Id); // Random approver 2
 
     // App 2 approves
     vi.mocked(auth).mockResolvedValue({ user: { id: approver2Id, tenantId }, expires: '' } as any);
     await processingActions.processApproval({ taskId: app2Task!.id, action: 'APPROVE' });
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, approvalId),
+      where: (t, { eq }) => eq(t.id, approvalId),
     });
     expect(instance?.status).toBe('APPROVED'); // ANY mode means 1 approval is enough
   });

@@ -9,6 +9,13 @@ import {
   pgEnum,
 } from 'drizzle-orm/pg-core';
 
+/** 套餐类型枚举（租户级别）— 定义在此处以避免与 billing.ts 的循环依赖 */
+export const tenantPlanTypeEnum = pgEnum('tenant_plan_type', [
+  'base', // 基础版 (Base)
+  'pro', // 专业版 ¥99/月
+  'enterprise', // 企业版（按需报价）
+]);
+
 // 租户状态枚举
 export const tenantStatusEnum = pgEnum('tenant_status', [
   'pending_approval', // 待审批
@@ -40,6 +47,16 @@ export const tenants = pgTable('tenants', {
   applicantEmail: varchar('applicant_email', { length: 255 }),
   region: varchar('region', { length: 100 }), // 地区
   businessDescription: text('business_description'),
+
+  // ==================== 落地页展示信息 ====================
+  /** 品牌标语，如「专业窗帘定制专家」，用于小程序租户落地页 */
+  slogan: varchar('slogan', { length: 200 }),
+  /** 门店详细地址（区别于 region 的省市级别） */
+  detailAddress: text('detail_address'),
+  /** 客服微信号，用于小程序「微信联系销售」功能 */
+  contactWechat: varchar('contact_wechat', { length: 100 }),
+  /** 落地页封面图/背景图 URL */
+  landingCoverUrl: text('landing_cover_url'),
 
   // 审批信息
   reviewedBy: uuid('reviewed_by'),
@@ -76,6 +93,27 @@ export const tenants = pgTable('tenants', {
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+
+  // ==================== 计费与套餐 ====================
+  /**
+   * 套餐类型
+   * - 'base': 基础版 (Base)（≤5人，≤200客户，≤50报价/月）
+   * - 'pro': 专业版 ¥99/月
+   * - 'enterprise': 企业版（按需报价）
+   */
+  planType: tenantPlanTypeEnum('plan_type').default('base').notNull(),
+
+  /**
+   * 套餐到期时间
+   * null = 永久生效（免费版 / 祖父条款用户）
+   */
+  planExpiresAt: timestamp('plan_expires_at', { withTimezone: true }),
+
+  /**
+   * 祖父条款标记
+   * true = 在定价体系正式上线前注册的老用户，永久保留当前权益，不受免费版限额约束
+   */
+  isGrandfathered: boolean('is_grandfathered').default(false),
 });
 
 export const users = pgTable('users', {
@@ -97,6 +135,8 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
   isPlatformAdmin: boolean('is_platform_admin').default(false), // 平台超级管理员标识
+  /** 上次活跃的租户 ID（登录时自动进入，类似 Slack "上次打开的 Workspace"） */
+  lastActiveTenantId: uuid('last_active_tenant_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

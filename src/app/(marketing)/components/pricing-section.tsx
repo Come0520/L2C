@@ -32,7 +32,7 @@ export function PricingSection() {
 
         <div
           className={cn(
-            'mx-auto grid max-w-4xl gap-8 transition-all duration-700 sm:grid-cols-2',
+            'mx-auto grid max-w-6xl gap-8 transition-all duration-700 md:grid-cols-3',
             isInView ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
           )}
         >

@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import * as React from 'react';
@@ -12,6 +11,13 @@ import { Label } from '@/shared/ui/label';
 
 import { importExpenseRecords } from '../actions/expense-actions';
 
+interface ImportRow {
+  accountCode: string;
+  amount: number;
+  expenseDate: Date;
+  description: string;
+}
+
 interface ExpenseImportProps {
   accounts: { id: string; name: string; code: string }[];
   onSuccess?: () => void;
@@ -19,7 +25,7 @@ interface ExpenseImportProps {
 
 export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
   const [file, setFile] = React.useState<File | null>(null);
-  const [previewData, setPreviewData] = React.useState<any[]>([]);
+  const [previewData, setPreviewData] = React.useState<ImportRow[]>([]);
   const [isParsing, setIsParsing] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [createVoucher, setCreateVoucher] = React.useState(false);
@@ -64,7 +70,7 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
         const ws = wb.Sheets[wsname];
 
         // 将 Excel 转换为 JSON 对象数组，跳过表头
-        const data = xlsx.utils.sheet_to_json(ws, { header: 1 });
+        const data = xlsx.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
         if (data.length <= 1) {
           toast.error('文件中没有数据');
           setFile(null);
@@ -72,20 +78,31 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
           return;
         }
 
-        // 取数据体 (跳过第一行 header)
         const rows = data
           .slice(1)
-          .map((row: any) => ({
-            accountCode: String(row[0]).trim(),
-            amount: Number(row[1]) || 0,
-            expenseDate: row[2] instanceof Date ? row[2] : new Date(String(row[2])),
-            description: String(row[3] || '').trim(),
-          }))
-          .filter((r: any) => r.accountCode && r.amount > 0);
+          .map((row) => {
+            const dateVal = row[2];
+            let expenseDate = new Date(); // fallback to current date
+            if (dateVal instanceof Date) {
+              expenseDate = dateVal;
+            } else if (dateVal) {
+              const parsedDate = new Date(String(dateVal));
+              if (!isNaN(parsedDate.getTime())) {
+                expenseDate = parsedDate;
+              }
+            }
+            return {
+              accountCode: String(row[0] || '').trim(),
+              amount: Number(row[1]) || 0,
+              expenseDate,
+              description: String(row[3] || '').trim(),
+            };
+          })
+          .filter((r) => r.accountCode && r.amount > 0);
 
         setPreviewData(rows);
         if (rows.length === 0) toast.warning('未解析到有效数据，请检查必填列');
-      } catch (_err: any) {
+      } catch (_err) {
         toast.error('文件解析失败!');
       } finally {
         setIsParsing(false);
@@ -107,7 +124,7 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
       if (res?.error || res?.data?.error) {
         const resDetails =
           res && typeof res === 'object' && 'details' in res
-            ? (res as { details: any }).details
+            ? (res as { details: string[] }).details
             : null;
         const dataDetails = res?.data?.details;
         const details = resDetails || dataDetails;
@@ -118,7 +135,14 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
         return;
       }
 
-      const data = res?.data || res;
+      const data = (res?.data || res) as
+        | {
+            success?: boolean;
+            insertCount?: number;
+            voucherSuccessCount?: number;
+            voucherErrors?: unknown[];
+          }
+        | undefined;
       if (data?.success) {
         let msg = `成功导入 ${data.insertCount} 条记录。`;
         if (createVoucher) {
@@ -136,8 +160,8 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
         setPreviewData([]);
         onSuccess?.();
       }
-    } catch (error: any) {
-      toast.error(error.message || '导入失败');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '导入失败');
     } finally {
       setIsImporting(false);
     }

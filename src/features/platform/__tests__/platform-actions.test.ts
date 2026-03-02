@@ -52,9 +52,12 @@ vi.mock('@/shared/middleware/rate-limit', () => ({
 }));
 
 // DB mock - 支持事务
+// DB mock - 支持事务
 const txChain = () => ({
   query: {
     tenants: { findFirst: mocks.dbQueryTenantsFindFirst },
+    // BUG-2 修复后，approveTenant 在事务中需要先 findMany 查出所有用户再逐一更新
+    users: { findMany: vi.fn().mockResolvedValue([]) },
   },
   update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
   insert: vi.fn(() => ({

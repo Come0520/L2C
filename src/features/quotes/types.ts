@@ -21,6 +21,14 @@ export interface QuotePdfData {
     id: string;
     name: string;
   }[];
+  /** 租户品牌信息，为空则不显示品牌区域 */
+  tenant?: {
+    name: string;
+    logoUrl: string | null;
+    phone: string;
+    address: string;
+    wechatQrcodeUrl: string | null;
+  };
 }
 
 /**

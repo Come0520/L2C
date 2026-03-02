@@ -34,6 +34,11 @@ const updateTenantInfoSchema = z.object({
   applicantEmail: z.string().email('邮箱格式不正确').optional().or(z.literal('')),
   region: z.string().max(100, '地区最长 100 字符').optional(),
   businessDescription: z.string().max(500, '描述最长 500 字符').optional(),
+  // 落地页展示信息
+  slogan: z.string().max(200, '标语最长 200 字符').optional(),
+  detailAddress: z.string().max(500, '详细地址最长 500 字符').optional(),
+  contactWechat: z.string().max(100, '微信号最长 100 字符').optional(),
+  landingCoverUrl: z.string().url('封面图必须为有效 URL').nullable().optional(),
 });
 
 /** MFA 配置（存储在 tenants.settings jsonb 中） */
@@ -57,6 +62,11 @@ export interface TenantInfoDTO {
   region: string | null;
   status: string;
   createdAt: Date | null;
+  // 落地页展示信息
+  slogan: string | null;
+  detailAddress: string | null;
+  contactWechat: string | null;
+  landingCoverUrl: string | null;
 }
 
 export interface MfaConfigDTO {
@@ -106,6 +116,10 @@ export async function getTenantInfo(session: Session): Promise<{
         region: tenant.region || null,
         status: tenant.status,
         createdAt: tenant.createdAt,
+        slogan: tenant.slogan || null,
+        detailAddress: tenant.detailAddress || null,
+        contactWechat: tenant.contactWechat || null,
+        landingCoverUrl: tenant.landingCoverUrl || null,
       },
     };
   } catch (error) {

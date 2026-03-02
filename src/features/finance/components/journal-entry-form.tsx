@@ -65,7 +65,7 @@ export function JournalEntryForm({
 
   const isBalanced = totalDebit.equals(totalCredit) && !totalDebit.isZero();
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CreateJournalEntryInput) => {
     if (!isBalanced) {
       toast.error('凭证借贷不平衡，请检查分录金额');
       return;
@@ -99,7 +99,7 @@ export function JournalEntryForm({
             <FormField
               control={form.control}
               name="periodId"
-              render={({ field }: any) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>会计账期</FormLabel>
                   <Select
@@ -128,7 +128,7 @@ export function JournalEntryForm({
             <FormField
               control={form.control}
               name="entryDate"
-              render={({ field }: any) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>记账日期</FormLabel>
                   <FormControl>
@@ -136,7 +136,7 @@ export function JournalEntryForm({
                       type="date"
                       disabled={isPending}
                       value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                      onChange={(e: any) => field.onChange(new Date(e.target.value))}
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -148,7 +148,7 @@ export function JournalEntryForm({
               <FormField
                 control={form.control}
                 name="description"
-                render={({ field }: any) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>凭证摘要</FormLabel>
                     <FormControl>
@@ -204,7 +204,7 @@ export function JournalEntryForm({
                     <FormField
                       control={form.control}
                       name={`lines.${index}.description`}
-                      render={({ field: f }: any) => (
+                      render={({ field: f }) => (
                         <FormItem>
                           <FormControl>
                             <Input {...f} placeholder="明细摘要" disabled={isPending} />
@@ -218,7 +218,7 @@ export function JournalEntryForm({
                     <FormField
                       control={form.control}
                       name={`lines.${index}.accountId`}
-                      render={({ field: f }: any) => (
+                      render={({ field: f }) => (
                         <FormItem>
                           <Select
                             onValueChange={f.onChange}
@@ -231,7 +231,7 @@ export function JournalEntryForm({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {accountOptions.map((acc: any) => (
+                              {accountOptions.map((acc) => (
                                 <SelectItem key={acc.id} value={acc.id}>
                                   {acc.code} {acc.name}
                                 </SelectItem>
@@ -247,7 +247,7 @@ export function JournalEntryForm({
                     <FormField
                       control={form.control}
                       name={`lines.${index}.debitAmount`}
-                      render={({ field: f }: any) => (
+                      render={({ field: f }) => (
                         <FormItem>
                           <FormControl>
                             <Input
@@ -257,7 +257,7 @@ export function JournalEntryForm({
                               className="text-right"
                               disabled={isPending || watchedLines[index]?.creditAmount > 0}
                               {...f}
-                              onChange={(e: any) =>
+                              onChange={(e) =>
                                 f.onChange(e.target.value === '' ? 0 : Number(e.target.value))
                               }
                             />
@@ -271,7 +271,7 @@ export function JournalEntryForm({
                     <FormField
                       control={form.control}
                       name={`lines.${index}.creditAmount`}
-                      render={({ field: f }: any) => (
+                      render={({ field: f }) => (
                         <FormItem>
                           <FormControl>
                             <Input
@@ -281,7 +281,7 @@ export function JournalEntryForm({
                               className="text-right"
                               disabled={isPending || watchedLines[index]?.debitAmount > 0}
                               {...f}
-                              onChange={(e: any) =>
+                              onChange={(e) =>
                                 f.onChange(e.target.value === '' ? 0 : Number(e.target.value))
                               }
                             />

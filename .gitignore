@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 miniprogram/node_modules
+miniprogram-taro/node_modules
 /.pnp
 .pnp.*
 .yarn/*

@@ -1,0 +1,130 @@
+/* ==============================
+ * 落地页 - 预约表单样式
+ *
+ * 遵循 Apple HIG 设计规范
+ * ============================== */
+
+.booking-page {
+    background: var(--color-bg);
+    min-height: 100vh;
+    padding: 0 var(--spacing-lg) var(--spacing-xl);
+}
+
+.booking-header {
+    padding: var(--spacing-xl) 0 var(--spacing-lg);
+
+    .header-title {
+        display: block;
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .header-desc {
+        display: block;
+        font-size: var(--font-size-base);
+        color: var(--color-text-secondary);
+    }
+}
+
+.form-card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-md);
+    padding: 0 var(--spacing-md);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+
+    .form-item {
+        padding: var(--spacing-md) 0;
+
+        &:not(:last-child) {
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin-bottom: var(--spacing-sm);
+
+            .required {
+                color: var(--color-danger);
+                margin-left: 4px;
+            }
+        }
+
+        .form-input {
+            font-size: var(--font-size-lg);
+            color: var(--color-text);
+            height: 60px;
+            min-height: 60px;
+        }
+
+        /* 原生 Picker 特殊处理 */
+        .picker-value {
+            line-height: 60px;
+
+            &.placeholder {
+                color: var(--color-text-placeholder);
+            }
+        }
+    }
+}
+
+.booking-actions {
+    margin-top: var(--spacing-xl);
+
+    .btn-primary {
+        background: var(--color-primary);
+        color: #FFFFFF;
+        font-weight: 600;
+        height: 104px;
+        line-height: 104px;
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-lg);
+        border: none;
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.25);
+
+        &[disabled] {
+            background: var(--color-primary-light);
+            opacity: 0.6;
+            box-shadow: none;
+        }
+    }
+}
+
+/* ==============================
+ * 预约成功状态
+ * ============================== */
+.success-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 200px;
+    text-align: center;
+
+    .success-icon {
+        font-size: 100px;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .success-title {
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .success-desc {
+        font-size: var(--font-size-base);
+        color: var(--color-text-secondary);
+        line-height: 1.6;
+        padding: 0 var(--spacing-xl);
+    }
+
+    .mt-xl {
+        margin-top: var(--spacing-xl);
+        width: 60%;
+    }
+}

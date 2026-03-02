@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use server';
 import { logger } from '@/shared/lib/logger';
 

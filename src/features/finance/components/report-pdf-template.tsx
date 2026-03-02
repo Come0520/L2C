@@ -71,8 +71,7 @@ interface ReportPdfTemplateProps {
   title: string;
   period: string;
   columns: PdfColumn[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[];
+  data: Record<string, unknown>[];
 }
 
 export const ReportPdfTemplate: React.FC<ReportPdfTemplateProps> = ({

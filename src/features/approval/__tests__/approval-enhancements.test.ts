@@ -135,7 +135,7 @@ describe('Approval Enhancements', () => {
     vi.mocked(auth).mockResolvedValue({
       user: { id: adminId, tenantId, role: 'ADMIN' },
       expires: '',
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     const res = await submissionActions.submitApproval({
       entityType: 'PAYMENT_BILL',
       entityId: bill.id,
@@ -146,10 +146,10 @@ describe('Approval Enhancements', () => {
 
     // 4. Check Tasks
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.entityId, bill.id),
+      where: (t, { eq }) => eq(t.entityId, bill.id),
     });
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, instance!.id),
+      where: (t, { eq }) => eq(t.approvalId, instance!.id),
     });
     expect(tasks.length).toBeGreaterThanOrEqual(1);
 
@@ -157,8 +157,8 @@ describe('Approval Enhancements', () => {
     vi.mocked(auth).mockResolvedValue({
       user: { id: user1Id, tenantId, role: 'FINANCE' },
       expires: '',
-    } as any);
-    const task1 = tasks.find((t: any) => t.approverId === user1Id);
+    } as unknown as Awaited<ReturnType<typeof auth>>);
+    const task1 = tasks.find((t) => t.approverId === user1Id);
     if (!task1) throw new Error('Task1 not found');
 
     const procRes = await processingActions.processApproval({
@@ -170,13 +170,12 @@ describe('Approval Enhancements', () => {
 
     // 6. Verify Outcome
     const updatedInstance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, instance!.id),
+      where: (t, { eq }) => eq(t.id, instance!.id),
     });
     expect(updatedInstance!.status).toBe('APPROVED');
 
     const task2 = await db.query.approvalTasks.findFirst({
-      where: (t: any, { eq, and }: any) =>
-        and(eq(t.approvalId, instance!.id), eq(t.approverId, user2Id)),
+      where: (t, { eq, and }) => and(eq(t.approvalId, instance!.id), eq(t.approverId, user2Id)),
     });
     expect(task2!.status).toBe('CANCELED');
   });
@@ -216,7 +215,6 @@ describe('Approval Enhancements', () => {
       })
       .returning()) as PaymentBill[];
 
-    // @ts-ignore — 仅 mock 必要的用户、租户和角色信息
     const res = await submissionActions.submitApproval({
       entityType: 'PAYMENT_BILL',
       entityId: bill.id,
@@ -225,27 +223,33 @@ describe('Approval Enhancements', () => {
     expect(res.success).toBe(true);
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.entityId, bill.id),
+      where: (t, { eq }) => eq(t.entityId, bill.id),
     });
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, instance!.id),
+      where: (t, { eq }) => eq(t.approvalId, instance!.id),
     });
 
-    vi.mocked(auth).mockResolvedValue({ user: { id: user1Id, tenantId }, expires: '' } as any);
-    const task1 = tasks.find((t: any) => t.approverId === user1Id);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: user1Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
+    const task1 = tasks.find((t) => t.approverId === user1Id);
     await processingActions.processApproval({ taskId: task1!.id, action: 'APPROVE' });
 
     const midInstance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, instance!.id),
+      where: (t, { eq }) => eq(t.id, instance!.id),
     });
     expect(midInstance!.status).toBe('PENDING');
 
-    vi.mocked(auth).mockResolvedValue({ user: { id: user2Id, tenantId }, expires: '' } as any);
-    const task2 = tasks.find((t: any) => t.approverId === user2Id);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: user2Id, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
+    const task2 = tasks.find((t) => t.approverId === user2Id);
     await processingActions.processApproval({ taskId: task2!.id, action: 'APPROVE' });
 
     const finalInstance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, instance!.id),
+      where: (t, { eq }) => eq(t.id, instance!.id),
     });
     expect(finalInstance!.status).toBe('APPROVED');
   });
@@ -293,8 +297,10 @@ describe('Approval Enhancements', () => {
       })
       .returning()) as PaymentBill[];
 
-    // @ts-ignore — 仅 mock 必要的用户、租户和角色信息
-    vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: adminId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await submissionActions.submitApproval({
       entityType: 'PAYMENT_BILL',
       entityId: bill.id,
@@ -302,10 +308,10 @@ describe('Approval Enhancements', () => {
     });
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.entityId, bill.id),
+      where: (t, { eq }) => eq(t.entityId, bill.id),
     });
     const tasks = await db.query.approvalTasks.findMany({
-      where: (t: any, { eq }: any) => eq(t.approvalId, instance!.id),
+      where: (t, { eq }) => eq(t.approvalId, instance!.id),
     });
 
     expect(tasks[0].approverId).toBe(user2Id);
@@ -344,8 +350,10 @@ describe('Approval Enhancements', () => {
       })
       .returning()) as PaymentBill[];
 
-    // @ts-ignore — 仅 mock 必要的用户、租户和角色信息
-    vi.mocked(auth).mockResolvedValue({ user: { id: adminId, tenantId }, expires: '' } as any);
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: adminId, tenantId },
+      expires: '',
+    } as unknown as Awaited<ReturnType<typeof auth>>);
     await submissionActions.submitApproval({
       entityType: 'PAYMENT_BILL',
       entityId: bill.id,
@@ -353,7 +361,7 @@ describe('Approval Enhancements', () => {
     });
 
     const instance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.entityId, bill.id),
+      where: (t, { eq }) => eq(t.entityId, bill.id),
     });
 
     const res = await managementActions.withdrawApproval({
@@ -363,12 +371,12 @@ describe('Approval Enhancements', () => {
     expect(res.success).toBe(true);
 
     const updatedInstance = await db.query.approvals.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, instance!.id),
+      where: (t, { eq }) => eq(t.id, instance!.id),
     });
     expect(updatedInstance!.status).toBe('CANCELED');
 
     const updatedBill = await db.query.paymentBills.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, bill.id),
+      where: (t, { eq }) => eq(t.id, bill.id),
     });
     expect(updatedBill!.status).toBe('DRAFT');
   });

@@ -90,7 +90,7 @@ describe('Dashboard Config Actions 集成测试', () => {
 
       expect(result.success).toBe(true);
       expect(WorkbenchService.updateDashboardConfig).toHaveBeenCalledWith('u1', expect.anything());
-      expect(revalidateTag).toHaveBeenCalledWith(`dashboard-config:u1`);
+      expect(revalidateTag).toHaveBeenCalledWith(`dashboard-config:u1`, {});
     });
 
     it('保存失败时应返回错误响应', async () => {
@@ -109,7 +109,7 @@ describe('Dashboard Config Actions 集成测试', () => {
       const result = await resetDashboardConfigAction({});
 
       expect(result.success).toBe(true);
-      expect(revalidateTag).toHaveBeenCalledWith(`dashboard-config:u1`);
+      expect(revalidateTag).toHaveBeenCalledWith(`dashboard-config:u1`, {});
     });
 
     it('重置失败时应返回错误响应', async () => {

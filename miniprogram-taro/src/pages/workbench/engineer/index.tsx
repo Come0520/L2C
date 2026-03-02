@@ -1,0 +1,14 @@
+/**
+ * 工程师结算 — 重定向到分包页面
+ */
+import { View, Text } from '@tarojs/components'
+import Taro, { useLoad } from '@tarojs/taro'
+
+export default function RedirectPage() {
+  useLoad((params) => {
+    const query = Object.entries(params).map(([k, v]) => k + '=' + v).join('&')
+    const url = '/pages/workbench-sub/engineer/index' + (query ? '?' + query : '')
+    Taro.redirectTo({ url })
+  })
+  return <View className='page flex-center'><Text>跳转中...</Text></View>
+}

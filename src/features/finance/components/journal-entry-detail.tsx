@@ -9,8 +9,28 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
+export interface JournalEntryData {
+  id: string;
+  voucherNo: string;
+  status: string;
+  entryDate?: string | Date;
+  period?: { year: number; month: number };
+  sourceType?: string;
+  createdAt?: string | Date;
+  description?: string;
+  totalDebit?: number | string;
+  totalCredit?: number | string;
+  lines?: {
+    id: string;
+    description?: string;
+    account?: { code: string; name: string };
+    debitAmount?: number | string;
+    creditAmount?: number | string;
+  }[];
+}
+
 interface JournalEntryDetailProps {
-  entry: any; // 从服务端获取的含明细凭证详情
+  entry: JournalEntryData; // 从服务端获取的含明细凭证详情
   onStatusChange?: () => void;
   permissions?: {
     canSubmit: boolean;
@@ -66,8 +86,8 @@ export function JournalEntryDetail({
         await reverseJournal(entry.id, reason || '自动红字冲销');
         toast.success('冲销凭证生成成功');
         onStatusChange?.();
-      } catch (error: any) {
-        toast.error(error.message || '冲销失败');
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : String(error) || '冲销失败');
       }
     });
   };
@@ -125,7 +145,7 @@ export function JournalEntryDetail({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {entry.lines?.map((line: any, idx: number) => (
+                {entry.lines?.map((line, idx: number) => (
                   <TableRow key={line.id}>
                     <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                     <TableCell>{line.description || '-'}</TableCell>

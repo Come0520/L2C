@@ -31,6 +31,9 @@ const updateTenantInfoSchema = z.object({
   address: z.string().max(200).optional().default(''),
   phone: z.string().max(20).optional().default(''),
   email: z.string().email('邮箱格式不正确').optional().or(z.literal('')).default(''),
+  slogan: z.string().max(200).optional().nullable(),
+  detailAddress: z.string().max(500).optional().nullable(),
+  contactWechat: z.string().max(100).optional().nullable(),
 });
 
 // ============ Server Actions ============
@@ -54,6 +57,10 @@ export async function getTenantInfo(): Promise<
         name: true,
         code: true,
         logoUrl: true,
+        slogan: true,
+        detailAddress: true,
+        contactWechat: true,
+        landingCoverUrl: true,
         settings: true,
       },
     });
@@ -68,6 +75,8 @@ export async function getTenantInfo(): Promise<
       phone: '',
       email: '',
     };
+    const wechatQrcodeUrl = (settings.wechatQrcodeUrl as string) || null;
+    const creditCode = (settings.creditCode as string) || null;
 
     return {
       success: true,
@@ -75,8 +84,14 @@ export async function getTenantInfo(): Promise<
         id: tenant.id,
         name: tenant.name,
         code: tenant.code,
+        creditCode,
         logoUrl: tenant.logoUrl,
+        slogan: tenant.slogan,
+        detailAddress: tenant.detailAddress,
+        contactWechat: tenant.contactWechat,
+        landingCoverUrl: tenant.landingCoverUrl,
         contact,
+        wechatQrcodeUrl,
         settings,
       },
     };
@@ -107,6 +122,9 @@ export async function updateTenantInfo(data: {
   address?: string;
   phone?: string;
   email?: string;
+  slogan?: string | null;
+  detailAddress?: string | null;
+  contactWechat?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await auth();
@@ -148,6 +166,9 @@ export async function updateTenantInfo(data: {
         .update(tenants)
         .set({
           name: validated.data.name,
+          slogan: validated.data.slogan || null,
+          detailAddress: validated.data.detailAddress || null,
+          contactWechat: validated.data.contactWechat || null,
           settings: {
             ...currentSettings,
             contact: {
@@ -168,6 +189,9 @@ export async function updateTenantInfo(data: {
         userId,
         newValues: {
           name: validated.data.name,
+          slogan: validated.data.slogan || null,
+          detailAddress: validated.data.detailAddress || null,
+          contactWechat: validated.data.contactWechat || null,
           contact: {
             address: validated.data.address,
             phone: validated.data.phone,
@@ -277,6 +301,76 @@ export async function uploadTenantLogo(
   }
 }
 
+export async function uploadLandingCover(
+  formData: FormData
+): Promise<{ success: true; coverUrl: string } | { success: false; error: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+      return { success: false, error: '未登录' };
+    }
+
+    // 权限校验
+    try {
+      await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch (_e) {
+      return { success: false, error: '无权限执行此操作' };
+    }
+
+    const file = formData.get('cover') as File | null;
+    if (!file) {
+      return { success: false, error: '请选择图片文件' };
+    }
+
+    // 验证文件类型和大小 (最大 5MB)
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      return { success: false, error: '只支持 JPG, PNG, WEBP 格式图片' };
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: '封面图文件大小不能超过 5MB' };
+    }
+
+    const tenantId = session.user.tenantId;
+    const extension = file.name.split('.').pop() || 'png';
+    const fileName = `landing-cover-${tenantId}-${Date.now()}.${extension}`;
+
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'covers');
+    await mkdir(uploadDir, { recursive: true });
+
+    // 保存文件
+    const filePath = join(uploadDir, fileName);
+    const bytes = await file.arrayBuffer();
+    await writeFile(filePath, Buffer.from(bytes));
+
+    // 生成可访问的 URL
+    const landingCoverUrl = `/uploads/covers/${fileName}`;
+
+    // 更新数据库
+    await db
+      .update(tenants)
+      .set({
+        landingCoverUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenants.id, session.user.tenantId));
+
+    // 记录审计日志
+    await AuditService.log(db, {
+      tableName: 'tenants',
+      recordId: tenantId,
+      action: 'UPDATE_INFO',
+      userId: session.user.id,
+      newValues: { landingCoverUrl },
+    });
+
+    revalidatePath('/settings/general');
+    return { success: true, coverUrl: landingCoverUrl };
+  } catch (error) {
+    logger.error('上传封面图失败:', error);
+    return { success: false, error: '上传失败，请稍后重试' };
+  }
+}
+
 // ============ 企业认证相关 Actions ============
 
 /**
@@ -312,10 +406,19 @@ export async function getVerificationStatus(): Promise<
       return { success: false, error: '租户不存在' };
     }
 
+    // 从 settings 中提取 creditCode
+    const tenantFull = await db.query.tenants.findFirst({
+      where: eq(tenants.id, session.user.tenantId),
+      columns: { settings: true },
+    });
+    const tenantSettings = (tenantFull?.settings as Record<string, unknown>) || {};
+    const creditCode = (tenantSettings.creditCode as string) || null;
+
     return {
       success: true,
       data: {
         status: (tenant.verificationStatus || 'unverified') as VerificationStatus,
+        creditCode,
         businessLicenseUrl: tenant.businessLicenseUrl,
         legalRepName: tenant.legalRepName,
         registeredCapital: tenant.registeredCapital,
@@ -332,6 +435,7 @@ export async function getVerificationStatus(): Promise<
 
 /** 提交认证申请的输入 */
 const submitVerificationSchema = z.object({
+  creditCode: z.string().min(1, '请输入统一社会信用代码').max(50),
   legalRepName: z.string().min(1, '法定代表人不能为空').max(50),
   registeredCapital: z.string().max(50).optional().default(''),
   businessScope: z.string().max(500).optional().default(''),
@@ -342,6 +446,7 @@ const submitVerificationSchema = z.object({
  * 提交企业认证申请
  */
 export async function submitVerification(data: {
+  creditCode: string;
   legalRepName: string;
   registeredCapital?: string;
   businessScope?: string;
@@ -372,7 +477,7 @@ export async function submitVerification(data: {
     await db.transaction(async (tx) => {
       // 再次检查状态（事务内）
       const tenant = await tx
-        .select({ verificationStatus: tenants.verificationStatus })
+        .select({ verificationStatus: tenants.verificationStatus, settings: tenants.settings })
         .from(tenants)
         .where(eq(tenants.id, tenantId))
         .for('update')
@@ -381,6 +486,9 @@ export async function submitVerification(data: {
       if (tenant?.verificationStatus === 'verified') {
         throw new Error('企业已完成认证，无需重复提交');
       }
+
+      // 将 creditCode 写入 settings JSON
+      const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
 
       // 更新数据库
       await tx
@@ -392,6 +500,10 @@ export async function submitVerification(data: {
           businessScope: validated.data.businessScope || null,
           businessLicenseUrl: validated.data.businessLicenseUrl,
           verificationRejectReason: null, // 清除之前的拒绝原因
+          settings: {
+            ...currentSettings,
+            creditCode: validated.data.creditCode,
+          },
           updatedAt: new Date(),
         })
         .where(eq(tenants.id, tenantId));
@@ -400,7 +512,7 @@ export async function submitVerification(data: {
       await AuditService.log(db, {
         tableName: 'tenants',
         recordId: tenantId,
-        action: 'UPDATE_LOGISTIC_CONFIG', // Assuming this is the correct action for verification submission
+        action: 'SUBMIT_VERIFICATION',
         userId: session.user.id,
         newValues: data,
       });
@@ -482,6 +594,94 @@ export async function uploadBusinessLicense(formData: FormData): Promise<
     return { success: true, licenseUrl };
   } catch (error) {
     logger.error('上传营业执照失败:', error);
+    return { success: false, error: '上传失败，请稍后重试' };
+  }
+}
+
+/**
+ * 上传微信二维码图片
+ * 存入 tenants.settings.wechatQrcodeUrl，无需 DB 迁移
+ */
+export async function uploadWechatQrcode(
+  formData: FormData
+): Promise<{ success: true; qrcodeUrl: string } | { success: false; error: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+      return { success: false, error: '未登录' };
+    }
+
+    // 权限校验
+    try {
+      await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);
+    } catch (_e) {
+      return { success: false, error: '无权限执行此操作' };
+    }
+
+    const file = formData.get('qrcode') as File | null;
+    if (!file) {
+      return { success: false, error: '请选择图片文件' };
+    }
+
+    // 验证文件大小 (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return { success: false, error: '图片文件不能超过 2MB' };
+    }
+
+    // 验证文件类型
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      return { success: false, error: '只支持 JPG, PNG, WEBP 格式图片' };
+    }
+
+    const tenantId = session.user.tenantId;
+    const extension = file.name.split('.').pop() || 'png';
+    const fileName = `wechat-qr-${tenantId}-${Date.now()}.${extension}`;
+
+    // 存储到 public/uploads/qrcodes 目录
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'qrcodes');
+    await mkdir(uploadDir, { recursive: true });
+
+    const filePath = join(uploadDir, fileName);
+    const bytes = await file.arrayBuffer();
+    await writeFile(filePath, Buffer.from(bytes));
+
+    const qrcodeUrl = `/uploads/qrcodes/${fileName}`;
+
+    // 将 URL 存入 settings.wechatQrcodeUrl
+    await db.transaction(async (tx) => {
+      const tenant = await tx
+        .select({ settings: tenants.settings })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .for('update')
+        .then((res) => res[0]);
+
+      const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+
+      await tx
+        .update(tenants)
+        .set({
+          settings: {
+            ...currentSettings,
+            wechatQrcodeUrl: qrcodeUrl,
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, tenantId));
+
+      await AuditService.log(tx, {
+        tableName: 'tenants',
+        recordId: tenantId,
+        action: 'UPDATE_INFO',
+        userId: session.user.id,
+        newValues: { wechatQrcodeUrl: qrcodeUrl },
+      });
+    });
+
+    revalidatePath('/settings/general');
+    return { success: true, qrcodeUrl };
+  } catch (error) {
+    logger.error('上传微信二维码失败:', error);
     return { success: false, error: '上传失败，请稍后重试' };
   }
 }

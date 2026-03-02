@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
 
 import { tenants, users } from './infrastructure';
+import { tenantMembers } from './tenant-members';
 
 import { customers, phoneViewLogs, customerMergeLogs } from './customers';
 
@@ -113,12 +114,26 @@ import {
 } from './finance';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
-  users: many(users),
+  users: many(users), // 向后兼容（过渡期保留）
+  members: many(tenantMembers), // 新的成员关系
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
+    // 向后兼容（过渡期保留，users.tenantId 尚未删除）
     fields: [users.tenantId],
+    references: [tenants.id],
+  }),
+  memberships: many(tenantMembers), // 新的成员关系
+}));
+
+export const tenantMembersRelations = relations(tenantMembers, ({ one }) => ({
+  user: one(users, {
+    fields: [tenantMembers.userId],
+    references: [users.id],
+  }),
+  tenant: one(tenants, {
+    fields: [tenantMembers.tenantId],
     references: [tenants.id],
   }),
 }));
@@ -1302,7 +1317,11 @@ export const systemSettingsHistoryRelations = relations(systemSettingsHistory, (
 // 会计科目关系
 export const chartOfAccountsRelations = relations(chartOfAccounts, ({ one, many }) => ({
   tenant: one(tenants, { fields: [chartOfAccounts.tenantId], references: [tenants.id] }),
-  parent: one(chartOfAccounts, { fields: [chartOfAccounts.parentId], references: [chartOfAccounts.id], relationName: 'parentChild' }),
+  parent: one(chartOfAccounts, {
+    fields: [chartOfAccounts.parentId],
+    references: [chartOfAccounts.id],
+    relationName: 'parentChild',
+  }),
   children: many(chartOfAccounts, { relationName: 'parentChild' }),
   journalLines: many(journalEntryLines),
 }));
@@ -1317,32 +1336,67 @@ export const accountingPeriodsRelations = relations(accountingPeriods, ({ one, m
 // 凭证主表关系
 export const journalEntriesRelations = relations(journalEntries, ({ one, many }) => ({
   tenant: one(tenants, { fields: [journalEntries.tenantId], references: [tenants.id] }),
-  period: one(accountingPeriods, { fields: [journalEntries.periodId], references: [accountingPeriods.id] }),
-  createdByUser: one(users, { fields: [journalEntries.createdBy], references: [users.id], relationName: 'journalCreator' }),
-  reviewedByUser: one(users, { fields: [journalEntries.reviewedBy], references: [users.id], relationName: 'journalReviewer' }),
-  reversedEntry: one(journalEntries, { fields: [journalEntries.reversedEntryId], references: [journalEntries.id], relationName: 'reversalPair' }),
+  period: one(accountingPeriods, {
+    fields: [journalEntries.periodId],
+    references: [accountingPeriods.id],
+  }),
+  createdByUser: one(users, {
+    fields: [journalEntries.createdBy],
+    references: [users.id],
+    relationName: 'journalCreator',
+  }),
+  reviewedByUser: one(users, {
+    fields: [journalEntries.reviewedBy],
+    references: [users.id],
+    relationName: 'journalReviewer',
+  }),
+  reversedEntry: one(journalEntries, {
+    fields: [journalEntries.reversedEntryId],
+    references: [journalEntries.id],
+    relationName: 'reversalPair',
+  }),
   lines: many(journalEntryLines),
 }));
 
 // 凭证明细关系
 export const journalEntryLinesRelations = relations(journalEntryLines, ({ one }) => ({
-  entry: one(journalEntries, { fields: [journalEntryLines.entryId], references: [journalEntries.id] }),
-  account: one(chartOfAccounts, { fields: [journalEntryLines.accountId], references: [chartOfAccounts.id] }),
+  entry: one(journalEntries, {
+    fields: [journalEntryLines.entryId],
+    references: [journalEntries.id],
+  }),
+  account: one(chartOfAccounts, {
+    fields: [journalEntryLines.accountId],
+    references: [chartOfAccounts.id],
+  }),
 }));
 
 // 费用录入关系
 export const expenseRecordsRelations = relations(expenseRecords, ({ one }) => ({
   tenant: one(tenants, { fields: [expenseRecords.tenantId], references: [tenants.id] }),
-  period: one(accountingPeriods, { fields: [expenseRecords.periodId], references: [accountingPeriods.id] }),
-  account: one(chartOfAccounts, { fields: [expenseRecords.accountId], references: [chartOfAccounts.id] }),
+  period: one(accountingPeriods, {
+    fields: [expenseRecords.periodId],
+    references: [accountingPeriods.id],
+  }),
+  account: one(chartOfAccounts, {
+    fields: [expenseRecords.accountId],
+    references: [chartOfAccounts.id],
+  }),
   createdByUser: one(users, { fields: [expenseRecords.createdBy], references: [users.id] }),
 }));
 
 // 凭证模板关系
 export const voucherTemplatesRelations = relations(voucherTemplates, ({ one }) => ({
   tenant: one(tenants, { fields: [voucherTemplates.tenantId], references: [tenants.id] }),
-  debitAccount: one(chartOfAccounts, { fields: [voucherTemplates.debitAccountId], references: [chartOfAccounts.id], relationName: 'debitAccount' }),
-  creditAccount: one(chartOfAccounts, { fields: [voucherTemplates.creditAccountId], references: [chartOfAccounts.id], relationName: 'creditAccount' }),
+  debitAccount: one(chartOfAccounts, {
+    fields: [voucherTemplates.debitAccountId],
+    references: [chartOfAccounts.id],
+    relationName: 'debitAccount',
+  }),
+  creditAccount: one(chartOfAccounts, {
+    fields: [voucherTemplates.creditAccountId],
+    references: [chartOfAccounts.id],
+    relationName: 'creditAccount',
+  }),
 }));
 
 // 财务审计日志关系

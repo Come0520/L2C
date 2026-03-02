@@ -143,7 +143,7 @@ describe('Approval Integration Tests', () => {
     vi.mocked(auth).mockResolvedValue({
       user: { id: userId, tenantId, name: 'Test Requester' },
       expires: '',
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const res = await processingActions.addApprover({
       taskId: taskId,
@@ -159,7 +159,7 @@ describe('Approval Integration Tests', () => {
     vi.mocked(auth).mockResolvedValue({
       user: { id: userId, tenantId, name: 'Test Requester' },
       expires: '',
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof auth>>);
 
     const res = await processingActions.processApproval({
       taskId: taskId,
@@ -170,7 +170,7 @@ describe('Approval Integration Tests', () => {
     expect(res.success).toBe(true);
 
     const task = await db.query.approvalTasks.findFirst({
-      where: (t: any, { eq }: any) => eq(t.id, taskId),
+      where: (t, { eq }) => eq(t.id, taskId),
     });
     expect(task?.status).toBe('APPROVED');
   });

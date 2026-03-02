@@ -23,7 +23,7 @@ describe('AuthStore', () => {
         (wx.getStorageSync as any).mockReturnValueOnce(mockToken);
 
         // 我们需要重新加载因为 authStore 是单例
-        vi.resetModules();
+        jest.resetModules();
         const { authStore: newStore } = await import('../stores/auth-store');
         expect(newStore.isLoggedIn).toBe(true);
         expect(newStore.token).toBe(mockToken);

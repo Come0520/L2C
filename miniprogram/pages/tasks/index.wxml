@@ -15,20 +15,9 @@
 
   <!-- Tabs -->
   <view class="tabs">
-    <view 
-      class="tab-item {{activeTab === 'pending' ? 'active' : ''}}"
-      bindtap="onTabChange"
-      data-tab="pending"
-    >
-      待处理
-    </view>
-    <view 
-      class="tab-item {{activeTab === 'completed' ? 'active' : ''}}"
-      bindtap="onTabChange"
-      data-tab="completed"
-    >
-      已完成
-    </view>
+    <view class="tab-item {{activeTab === 'new' ? 'active' : ''}}" bindtap="onTabChange" data-tab="new">待接单</view>
+    <view class="tab-item {{activeTab === 'inprogress' ? 'active' : ''}}" bindtap="onTabChange" data-tab="inprogress">进行中</view>
+    <view class="tab-item {{activeTab === 'completed' ? 'active' : ''}}" bindtap="onTabChange" data-tab="completed">已完成</view>
   </view>
 
   <!-- Task List -->
@@ -89,6 +78,6 @@
     <view class="footer-spacer"></view>
   </scroll-view>
 
-  <!-- installer 角色作为分包页面无法自动注入 custom-tab-bar，需手动添加以保持导航栏可见 -->
+  <!-- worker 角色如果在 tabBar 中，可以交由原有的 custom-tab-bar 控制 -->
   <custom-tab-bar />
 </view>

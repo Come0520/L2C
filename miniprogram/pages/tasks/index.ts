@@ -17,7 +17,7 @@ interface Task {
 
 Page({
     data: {
-        activeTab: 'pending', // 'pending' | 'completed'
+        activeTab: 'new', // 'new' | 'inprogress' | 'completed'
         taskList: [] as Task[],
         loading: false,
         refreshing: false,
@@ -47,9 +47,15 @@ Page({
 
         try {
             const app = getApp<IAppOption>();
-            const statusParam = this.data.activeTab === 'pending'
-                ? 'PENDING_VISIT,PENDING_CONFIRM'
-                : 'COMPLETED';
+            const tab = this.data.activeTab;
+
+            // 按 tab 映射后端 status 参数
+            const statusMap: Record<string, string> = {
+                'new': 'PENDING_ACCEPT',          // 待接单
+                'inprogress': 'PENDING_VISIT,IN_PROGRESS,PENDING_CONFIRM', // 进行中
+                'completed': 'COMPLETED',         // 已完成
+            };
+            const statusParam = statusMap[tab] || 'PENDING_ACCEPT';
 
             const res = await app.request(`/tasks?type=measure&status=${statusParam}`);
 

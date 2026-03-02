@@ -56,48 +56,33 @@ Component({
             // 注意：所有 pagePath 必须在 app.json 的 tabBar.list 中注册
             // =====================================================
 
-            // 1. 老板 / 管理员：工作台（报表+KPI）+ 我的
-            const bossAdminTabs = [
-                { pagePath: "/pages/index/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
-                { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
-            ];
-
-            // 2. 经理：工作台（团队概览+待审批）+ 线索 + 我的
+            // 1. 理 / 管理员（Manager/Admin/Boss）：工作台（报表+KPI）+ 我的
             const managerTabs = [
                 { pagePath: "/pages/index/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
-                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];
 
-            // 3. 销售：线索（核心）+ 工作台（报价/订单快捷入口）+ 我的
+            // 2. 销售（Sales）：工作台 + 线索 + 展厅 + 我的
             const salesTabs = [
-                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
                 { pagePath: "/pages/index/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
+                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
+                { pagePath: "/pages/showroom/index", text: "展厅", iconPath: "/assets/tabbar/showroom.svg", selectedIconPath: "/assets/tabbar/showroom-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];
 
-            // 4. 工人（原 installer）：任务（接单+打卡）+ 工作台（收益概览）+ 我的
+            // 3. 工人（Worker）：任务 + 我的
             const workerTabs = [
                 { pagePath: "/pages/tasks/index", text: "任务", iconPath: "/assets/tabbar/task.svg", selectedIconPath: "/assets/tabbar/task-active.svg" },
-                { pagePath: "/pages/index/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];
 
-            // 6. 客户：主页（顾问+待签字+展厅入口）+ 我的（保修/评价）
+            // 4. 客户（Customer）：展厅 + 我的
             const customerTabs = [
-                { pagePath: "/pages/index/index", text: "主页", iconPath: "/assets/tabbar/home.svg", selectedIconPath: "/assets/tabbar/home-active.svg" },
+                { pagePath: "/pages/showroom/index", text: "展厅", iconPath: "/assets/tabbar/showroom.svg", selectedIconPath: "/assets/tabbar/showroom-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
             ];
 
-            // 7. 测试员：拥有全量核心菜单（用于免登查看）
-            const testerTabs = [
-                { pagePath: "/pages/index/index", text: "工作台", iconPath: "/assets/tabbar/work.svg", selectedIconPath: "/assets/tabbar/work-active.svg" },
-                { pagePath: "/pages/leads/index", text: "线索", iconPath: "/assets/tabbar/leads.svg", selectedIconPath: "/assets/tabbar/leads-active.svg" },
-                { pagePath: "/pages/tasks/index", text: "任务", iconPath: "/assets/tabbar/task.svg", selectedIconPath: "/assets/tabbar/task-active.svg" },
-                { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
-            ];
-
-            // 8. 游客/未登录：仅主页 + 我的
+            // 5. 游客/未登录（Guest）：仅工作台/主页 + 我的 (兜底)
             const guestTabs = [
                 { pagePath: "/pages/index/index", text: "主页", iconPath: "/assets/tabbar/home.svg", selectedIconPath: "/assets/tabbar/home-active.svg" },
                 { pagePath: "/pages/users/profile", text: "我的", iconPath: "/assets/tabbar/profile.svg", selectedIconPath: "/assets/tabbar/profile-active.svg" }
@@ -107,9 +92,7 @@ Component({
             const normalizedRole = role ? role.toLowerCase() : 'guest';
 
             let list: any[];
-            if (normalizedRole === 'boss' || normalizedRole === 'admin') {
-                list = bossAdminTabs;
-            } else if (normalizedRole === 'manager') {
+            if (normalizedRole === 'boss' || normalizedRole === 'admin' || normalizedRole === 'manager') {
                 list = managerTabs;
             } else if (normalizedRole === 'sales') {
                 list = salesTabs;
@@ -118,8 +101,6 @@ Component({
                 list = workerTabs;
             } else if (normalizedRole === 'customer') {
                 list = customerTabs;
-            } else if (normalizedRole === 'tester') {
-                list = testerTabs;
             } else {
                 list = guestTabs;
             }

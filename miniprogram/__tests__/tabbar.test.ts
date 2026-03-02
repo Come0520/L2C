@@ -7,7 +7,7 @@ describe('custom-tab-bar', () => {
 
     beforeEach(async () => {
         (global as any).resetWX();
-        vi.clearAllMocks();
+        jest.clearAllMocks();
         authStore.logout();
 
         if (!container) {
@@ -37,7 +37,7 @@ describe('custom-tab-bar', () => {
         expect(list[1].text).toBe('我的');
     });
 
-    test('管理员 (Admin) 应看到管理 Tabs', () => {
+    test('Manager/Admin 应看到管理 Tabs', () => {
         authStore.setLogin('token', { id: '1', name: 'Boss', role: 'admin' });
         container.instance.updateTabs();
 
@@ -47,15 +47,36 @@ describe('custom-tab-bar', () => {
         expect(list[1].text).toBe('我的');
     });
 
-    test('安装工 (Installer) 应看到任务 Tabs', () => {
-        authStore.setLogin('token', { id: '2', name: 'Worker', role: 'installer' });
+    test('销售 (Sales) 应看到 4 个 Tabs', () => {
+        authStore.setLogin('token', { id: '2', name: 'Sales', role: 'sales' });
         container.instance.updateTabs();
 
         const list = container.data.list;
-        expect(list).toHaveLength(3);
+        expect(list).toHaveLength(4);
+        expect(list[0].text).toBe('工作台');
+        expect(list[1].text).toBe('线索');
+        expect(list[2].text).toBe('展厅');
+        expect(list[3].text).toBe('我的');
+    });
+
+    test('工人 (Worker) 应看到任务 Tabs', () => {
+        authStore.setLogin('token', { id: '3', name: 'Worker', role: 'worker' });
+        container.instance.updateTabs();
+
+        const list = container.data.list;
+        expect(list).toHaveLength(2);
         expect(list[0].text).toBe('任务');
-        expect(list[1].text).toBe('工作台');
-        expect(list[2].text).toBe('我的');
+        expect(list[1].text).toBe('我的');
+    });
+
+    test('客户 (Customer) 应看到展厅 Tabs', () => {
+        authStore.setLogin('token', { id: '4', name: 'Customer', role: 'customer' });
+        container.instance.updateTabs();
+
+        const list = container.data.list;
+        expect(list).toHaveLength(2);
+        expect(list[0].text).toBe('展厅');
+        expect(list[1].text).toBe('我的');
     });
 
     test('点击 switchTab 应调用 wx.switchTab', () => {
@@ -65,14 +86,14 @@ describe('custom-tab-bar', () => {
         container.instance.switchTab({
             currentTarget: {
                 dataset: {
-                    path: '/pages/workbench/index',
+                    path: '/pages/index/index',
                     index: 0
                 }
             }
         });
 
         expect(wx.switchTab).toHaveBeenCalledWith({
-            url: '/pages/workbench/index'
+            url: '/pages/index/index'
         });
         expect(container.data.selected).toBe(0);
     });

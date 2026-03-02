@@ -1,4 +1,4 @@
-﻿import { vi } from 'vitest';
+﻿// import { vi } from 'vitest'; // Use global jest instead
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -57,6 +57,7 @@ const mockStorage: Record<string, any> = {};
     showToast: vi.fn(),
     showLoading: vi.fn(),
     hideLoading: vi.fn(),
+    request: vi.fn(),
     getStorageSync: vi.fn((key: string) => mockStorage[key]),
     setStorageSync: vi.fn((key: string, value: any) => {
         mockStorage[key] = value;

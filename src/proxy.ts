@@ -187,10 +187,40 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
     return createUnauthorizedResponse('请先登录');
   }
 
-  // 3. 验证租户绑定
-  const { tenantId } = token;
+  // 3. 验证租户绑定与超管隔离
+  const { tenantId, isPlatformAdmin } = token;
+
+  // 超管防串入业务路由
+  if (tenantId === '__PLATFORM__' || isPlatformAdmin) {
+    if (
+      pathname.startsWith('/api') &&
+      !pathname.startsWith('/api/admin') &&
+      !pathname.startsWith('/api/user')
+    ) {
+      // 超管不能访问非 admin/user 的常规后台 API，给出禁止
+      return createForbiddenResponse('超级管理员无法调用业务 API');
+    }
+    if (
+      !pathname.startsWith('/api') &&
+      !pathname.startsWith('/admin') &&
+      !pathname.startsWith('/profile')
+    ) {
+      // 访问普通业务页面跳转到 admin
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+    // 放行超管对 /admin 路由和 /api/admin 路由的访问
+    const enrichedHeaders = createEnrichedHeaders(request, token);
+    return NextResponse.next({ request: { headers: enrichedHeaders } });
+  }
+
+  // 常规用户验证租户绑定
   if (!tenantId || tenantId === UNBOUND_TENANT_ID) {
-    return createForbiddenResponse('用户未绑定租户');
+    return createForbiddenResponse('用户未绑定企业');
+  }
+
+  // 常规用户防串入超管路由
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    return createForbiddenResponse('非超级管理员无法访问平台管理中心');
   }
 
   // 4. 注入用户上下文并放行请求
@@ -223,6 +253,7 @@ export const config = {
     // 匹配所有 /api 路由（排除公开端点）
     '/api/((?!auth|webhooks|health|public|miniprogram).*)',
     // 匹配受保护的页面路由（未登录用户将被重定向到 Landing Page）
+    '/admin/:path*',
     '/dashboard/:path*',
     '/after-sales/:path*',
     '/analytics/:path*',

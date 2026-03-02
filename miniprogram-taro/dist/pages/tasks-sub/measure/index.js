@@ -1,1 +1,298 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[687],{8223:function(e,s,n){var a=n(8870),t=n(1212),c=n(467),r=n(4467),i=n(9379),o=n(436),l=n(5544),u=n(118),m=n(758),h=n.n(m),d=n(6540),p=n(4746),f=n(4848);function x(){var e=(0,d.useState)(""),s=(0,l.A)(e,2),n=s[0],a=s[1],x=(0,d.useState)([{name:"",width:"",height:"",note:""}]),j=(0,l.A)(x,2),N=j[0],g=j[1],v=(0,d.useState)([]),b=(0,l.A)(v,2),w=b[0],S=b[1],A=(0,d.useState)(!1),k=(0,l.A)(A,2),E=k[0],Y=k[1];(0,m.useLoad)(function(e){a(e.taskId||"")});var T=function(){return g(function(e){return[].concat((0,o.A)(e),[{name:"",width:"",height:"",note:""}])})},I=function(e,s){return function(n){var a=n.detail.value;g(function(n){return n.map(function(n,t){return t===e?(0,i.A)((0,i.A)({},n),{},(0,r.A)({},s,a)):n})})}},y=function(){h().chooseImage({count:9-w.length,sizeType:["compressed"],sourceType:["camera","album"],success:function(e){return S(function(s){return[].concat((0,o.A)(s),(0,o.A)(e.tempFilePaths)).slice(0,9)})}})},C=function(){var e=(0,c.A)((0,t.A)().m(function e(){var s;return(0,t.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(!N.some(function(e){return!e.name||!e.width||!e.height})){e.n=1;break}return h().showToast({title:"\u8bf7\u586b\u5199\u5b8c\u6574\u91cf\u5c3a\u6570\u636e",icon:"none"}),e.a(2);case 1:return Y(!0),e.p=2,e.n=3,p.F.post("/tasks/".concat(n,"/measure"),{data:{rooms:N,images:w}});case 3:s=e.v,s.success?(h().showToast({title:"\u63d0\u4ea4\u6210\u529f",icon:"success"}),setTimeout(function(){return h().navigateBack()},1500)):h().showToast({title:s.error||"\u63d0\u4ea4\u5931\u8d25",icon:"none"});case 4:return e.p=4,Y(!1),e.f(4);case 5:return e.a(2)}},e,null,[[2,,4,5]])}));return function(){return e.apply(this,arguments)}}();return(0,f.jsxs)(u.Ss,{className:"measure-page",children:[(0,f.jsx)(u.EY,{className:"page-hint",children:"\u8bf7\u9010\u4e2a\u623f\u95f4\u5f55\u5165\u7a97\u5e18\u5c3a\u5bf8\u6570\u636e"}),N.map(function(e,s){return(0,f.jsxs)(u.Ss,{className:"room-card card",children:[(0,f.jsxs)(u.EY,{className:"room-index",children:["\u623f\u95f4 ",s+1]}),(0,f.jsxs)(u.Ss,{className:"form-section",children:[(0,f.jsx)(u.EY,{className:"form-label",children:"\u623f\u95f4\u540d\u79f0"}),(0,f.jsx)(u.pd,{className:"form-input",placeholder:"\u5982\uff1a\u4e3b\u5367\u3001\u5ba2\u5385",value:e.name,onInput:I(s,"name")})]}),(0,f.jsxs)(u.Ss,{className:"measure-row",children:[(0,f.jsxs)(u.Ss,{className:"measure-field",children:[(0,f.jsx)(u.EY,{className:"form-label",children:"\u5bbd\u5ea6(m)"}),(0,f.jsx)(u.pd,{className:"form-input",type:"digit",placeholder:"0.00",value:e.width,onInput:I(s,"width")})]}),(0,f.jsx)(u.EY,{className:"measure-x",children:"\xd7"}),(0,f.jsxs)(u.Ss,{className:"measure-field",children:[(0,f.jsx)(u.EY,{className:"form-label",children:"\u9ad8\u5ea6(m)"}),(0,f.jsx)(u.pd,{className:"form-input",type:"digit",placeholder:"0.00",value:e.height,onInput:I(s,"height")})]})]}),(0,f.jsxs)(u.Ss,{className:"form-section",children:[(0,f.jsx)(u.EY,{className:"form-label",children:"\u5907\u6ce8"}),(0,f.jsx)(u.pd,{className:"form-input",placeholder:"\u7279\u6b8a\u60c5\u51b5\u8bf4\u660e",value:e.note,onInput:I(s,"note")})]})]},s)}),(0,f.jsx)(u.Ss,{className:"btn-add-room",onClick:T,children:(0,f.jsx)(u.EY,{children:"+ \u6dfb\u52a0\u623f\u95f4"})}),(0,f.jsxs)(u.Ss,{className:"photo-section",children:[(0,f.jsx)(u.EY,{className:"section-title",children:"\u73b0\u573a\u7167\u7247"}),(0,f.jsxs)(u.Ss,{className:"images-grid",children:[w.map(function(e,s){return(0,f.jsx)(u._V,{className:"photo-thumb",src:e,mode:"aspectFill"},s)}),w.length<9&&(0,f.jsx)(u.Ss,{className:"photo-add",onClick:y,children:(0,f.jsx)(u.EY,{className:"photo-add-icon",children:"\ud83d\udcf7"})})]})]}),(0,f.jsx)(u.Ss,{className:"form-footer",children:(0,f.jsx)(u.$n,{className:"btn-submit",loading:E,disabled:E,onClick:C,children:"\u63d0\u4ea4\u91cf\u5c3a\u6570\u636e"})})]})}var j={navigationBarTitleText:"measure"},N=(0,a.eU)(x,"pages/tasks-sub/measure/index",{root:{cn:[]}},j||{});x&&x.behaviors&&(N.behaviors=(N.behaviors||[]).concat(x.behaviors));Page(N)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(8223)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/tasks-sub/measure/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks-sub/measure/index!./src/pages/tasks-sub/measure/index.tsx":
+/*!****************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks-sub/measure/index!./src/pages/tasks-sub/measure/index.tsx ***!
+  \****************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ MeasurePage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/defineProperty.js */ "./node_modules/@babel/runtime/helpers/esm/defineProperty.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_8__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__);
+
+
+
+
+
+
+/**
+ * 量尺记录页（Worker 专属）
+ */
+
+
+
+
+
+
+function MeasurePage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_8__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_5__["default"])(_useState, 2),
+    taskId = _useState2[0],
+    setTaskId = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_8__.useState)([{
+      name: '',
+      width: '',
+      height: '',
+      note: ''
+    }]),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_5__["default"])(_useState3, 2),
+    rooms = _useState4[0],
+    setRooms = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_8__.useState)([]),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_5__["default"])(_useState5, 2),
+    images = _useState6[0],
+    setImages = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_8__.useState)(false),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_5__["default"])(_useState7, 2),
+    loading = _useState8[0],
+    setLoading = _useState8[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__.useLoad)(function (params) {
+    setTaskId(params.taskId || '');
+  });
+  var addRoom = function addRoom() {
+    return setRooms(function (prev) {
+      return [].concat((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(prev), [{
+        name: '',
+        width: '',
+        height: '',
+        note: ''
+      }]);
+    });
+  };
+  var updateRoom = function updateRoom(index, field) {
+    return function (e) {
+      var val = e.detail.value;
+      setRooms(function (prev) {
+        return prev.map(function (r, i) {
+          return i === index ? (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, r), {}, (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, field, val)) : r;
+        });
+      });
+    };
+  };
+  var takePhoto = function takePhoto() {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().chooseImage({
+      count: 9 - images.length,
+      sizeType: ['compressed'],
+      sourceType: ['camera', 'album'],
+      success: function success(res) {
+        return setImages(function (prev) {
+          return [].concat((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(prev), (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(res.tempFilePaths)).slice(0, 9);
+        });
+      }
+    });
+  };
+  var handleSubmit = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var res;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            if (!rooms.some(function (r) {
+              return !r.name || !r.width || !r.height;
+            })) {
+              _context.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+              title: '请填写完整量尺数据',
+              icon: 'none'
+            });
+            return _context.a(2);
+          case 1:
+            setLoading(true);
+            _context.p = 2;
+            _context.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_9__.api.post("/tasks/".concat(taskId, "/measure"), {
+              data: {
+                rooms: rooms,
+                images: images
+              }
+            });
+          case 3:
+            res = _context.v;
+            if (res.success) {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+                title: '提交成功',
+                icon: 'success'
+              });
+              setTimeout(function () {
+                return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateBack();
+              }, 1500);
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+                title: res.error || '提交失败',
+                icon: 'none'
+              });
+            }
+          case 4:
+            _context.p = 4;
+            setLoading(false);
+            return _context.f(4);
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2,, 4, 5]]);
+    }));
+    return function handleSubmit() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+    className: "measure-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+      className: "page-hint",
+      children: "\u8BF7\u9010\u4E2A\u623F\u95F4\u5F55\u5165\u7A97\u5E18\u5C3A\u5BF8\u6570\u636E"
+    }), rooms.map(function (room, i) {
+      return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "room-card card",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "room-index",
+          children: ["\u623F\u95F4 ", i + 1]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "form-section",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "form-label",
+            children: "\u623F\u95F4\u540D\u79F0"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Input, {
+            className: "form-input",
+            placeholder: "\u5982\uFF1A\u4E3B\u5367\u3001\u5BA2\u5385",
+            value: room.name,
+            onInput: updateRoom(i, 'name')
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "measure-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "measure-field",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              className: "form-label",
+              children: "\u5BBD\u5EA6(m)"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Input, {
+              className: "form-input",
+              type: "digit",
+              placeholder: "0.00",
+              value: room.width,
+              onInput: updateRoom(i, 'width')
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "measure-x",
+            children: "\xD7"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "measure-field",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              className: "form-label",
+              children: "\u9AD8\u5EA6(m)"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Input, {
+              className: "form-input",
+              type: "digit",
+              placeholder: "0.00",
+              value: room.height,
+              onInput: updateRoom(i, 'height')
+            })]
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "form-section",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "form-label",
+            children: "\u5907\u6CE8"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Input, {
+            className: "form-input",
+            placeholder: "\u7279\u6B8A\u60C5\u51B5\u8BF4\u660E",
+            value: room.note,
+            onInput: updateRoom(i, 'note')
+          })]
+        })]
+      }, i);
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "btn-add-room",
+      onClick: addRoom,
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        children: "+ \u6DFB\u52A0\u623F\u95F4"
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "photo-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        className: "section-title",
+        children: "\u73B0\u573A\u7167\u7247"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "images-grid",
+        children: [images.map(function (img, i) {
+          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Image, {
+            className: "photo-thumb",
+            src: img,
+            mode: "aspectFill"
+          }, i);
+        }), images.length < 9 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "photo-add",
+          onClick: takePhoto,
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "photo-add-icon",
+            children: "\uD83D\uDCF7"
+          })
+        })]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "form-footer",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Button, {
+        className: "btn-submit",
+        loading: loading,
+        disabled: loading,
+        onClick: handleSubmit,
+        children: "\u63D0\u4EA4\u91CF\u5C3A\u6570\u636E"
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/tasks-sub/measure/index.tsx":
+/*!***********************************************!*\
+  !*** ./src/pages/tasks-sub/measure/index.tsx ***!
+  \***********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks-sub/measure/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks-sub/measure/index!./src/pages/tasks-sub/measure/index.tsx");
+
+
+var config = {"navigationBarTitleText":"measure"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/tasks-sub/measure/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_sub_measure_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/tasks-sub/measure/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

@@ -12,7 +12,18 @@ export default async function ShowroomDetailPage({
   params: Promise<{ showroomId: string }>;
 }) {
   const { showroomId } = await params;
-  const item = await getShowroomItemDetail(showroomId);
+  let item;
+  try {
+    item = await getShowroomItemDetail(showroomId);
+  } catch (e) {
+    console.error('[SHOWROOM_DEBUG] 详情页加载异常:', {
+      message: e instanceof Error ? e.message : String(e),
+      name: e instanceof Error ? e.name : undefined,
+      stack: e instanceof Error ? e.stack : undefined,
+      showroomId,
+    });
+    throw e; // 重新抛出让 error.tsx 处理
+  }
 
   if (!item) {
     notFound();

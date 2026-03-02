@@ -154,3 +154,42 @@ export async function verifyRegisterToken(
     return null; // 过期或签名无效
   }
 }
+
+/**
+ * 签发供多租户用户选择租户时使用的临时登录凭证
+ * 有效期很短，仅用于换取最终的正式 Token
+ *
+ * @param userId 用户 ID
+ */
+export async function generateTempLoginToken(userId: string): Promise<string> {
+  const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+
+  return new SignJWT({
+    userId,
+    type: 'TEMP_LOGIN',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m') // 10分钟后过期
+    .sign(secret);
+}
+
+/**
+ * 解析并验证临时登录 Token，安全提取 userId
+ *
+ * @param token 前端传入的寄存态 Temp Login Token
+ */
+export async function verifyTempLoginToken(token: string): Promise<string | null> {
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+
+    if (payload.type !== 'TEMP_LOGIN' || !payload.userId) {
+      return null;
+    }
+
+    return payload.userId as string;
+  } catch {
+    return null; // 过期或签名无效
+  }
+}

@@ -1,1 +1,182 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[1931],{7799:function(e,a,s){var t=s(8870),r=s(1212),n=s(467),c=s(5544),i=s(118),l=s(758),o=s(6540),h=s(4746),u=s(4848);function d(){var e=(0,o.useState)([]),a=(0,c.A)(e,2),s=a[0],t=a[1],d=(0,o.useState)(!0),m=(0,c.A)(d,2),g=m[0],p=m[1],x=(0,o.useState)("month"),f=(0,c.A)(x,2),v=f[0],j=f[1],N=function(){var e=(0,n.A)((0,r.A)().m(function e(){var a,s,n=arguments;return(0,r.A)().w(function(e){while(1)switch(e.p=e.n){case 0:return a=n.length>0&&void 0!==n[0]?n[0]:v,p(!0),e.p=1,e.n=2,h.F.get("/manager/targets",{data:{period:a}});case 2:s=e.v,s.success&&t(s.data.items||[]);case 3:return e.p=3,p(!1),e.f(3);case 4:return e.a(2)}},e,null,[[1,,3,4]])}));return function(){return e.apply(this,arguments)}}();return(0,l.useDidShow)(function(){N()}),(0,u.jsxs)(i.Ss,{className:"targets-page",children:[(0,u.jsx)(i.Ss,{className:"period-tabs",children:["month","quarter"].map(function(e){return(0,u.jsx)(i.Ss,{className:"period-tab ".concat(v===e?"period-tab--active":""),onClick:function(){j(e),N(e)},children:(0,u.jsx)(i.EY,{children:"month"===e?"\u672c\u6708":"\u672c\u5b63\u5ea6"})},e)})}),(0,u.jsxs)(i.BM,{className:"targets-list",scrollY:!0,enhanced:!0,showScrollbar:!1,children:[s.map(function(e){return(0,u.jsxs)(i.Ss,{className:"target-card card",children:[(0,u.jsx)(i.EY,{className:"sales-name",children:e.salesName}),(0,u.jsx)(i.Ss,{className:"progress-bar",children:(0,u.jsx)(i.Ss,{className:"progress-fill",style:{width:"".concat(Math.min(e.rate,100),"%")}})}),(0,u.jsxs)(i.Ss,{className:"flex-between",children:[(0,u.jsxs)(i.EY,{className:"target-achieved",children:["\u5df2\u5b8c\u6210 \xa5",e.achieved.toLocaleString()]}),(0,u.jsxs)(i.EY,{className:"target-goal",children:["\u76ee\u6807 \xa5",e.target.toLocaleString()]})]}),(0,u.jsxs)(i.EY,{className:"target-rate",children:[e.rate,"%"]})]},e.id)}),0===s.length&&!g&&(0,u.jsx)(i.Ss,{className:"empty flex-center",children:(0,u.jsx)(i.EY,{className:"empty-text",children:"\u6682\u65e0\u76ee\u6807\u6570\u636e"})})]})]})}var m={navigationBarTitleText:"targets"},g=(0,t.eU)(d,"pages/manager/targets/index",{root:{cn:[]}},m||{});d&&d.behaviors&&(g.behaviors=(g.behaviors||[]).concat(d.behaviors));Page(g)}},function(e){var a=function(a){return e(e.s=a)};e.O(0,[6907,8096,2076],function(){return a(7799)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/manager/targets/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/manager/targets/index!./src/pages/manager/targets/index.tsx":
+/*!************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/manager/targets/index!./src/pages/manager/targets/index.tsx ***!
+  \************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ TargetsPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+
+
+
+/**
+ * 销售目标管理页（Manager 专属）
+ */
+
+
+
+
+
+
+function TargetsPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)([]),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    targets = _useState2[0],
+    setTargets = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(true),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    loading = _useState4[0],
+    setLoading = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)('month'),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    period = _useState6[0],
+    setPeriod = _useState6[1];
+  var fetchData = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var p,
+        res,
+        _args = arguments;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            p = _args.length > 0 && _args[0] !== undefined ? _args[0] : period;
+            setLoading(true);
+            _context.p = 1;
+            _context.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_6__.api.get('/manager/targets', {
+              data: {
+                period: p
+              }
+            });
+          case 2:
+            res = _context.v;
+            if (res.success) setTargets(res.data.items || []);
+          case 3:
+            _context.p = 3;
+            setLoading(false);
+            return _context.f(3);
+          case 4:
+            return _context.a(2);
+        }
+      }, _callee, null, [[1,, 3, 4]]);
+    }));
+    return function fetchData() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useDidShow)(function () {
+    fetchData();
+  });
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "targets-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "period-tabs",
+      children: ['month', 'quarter'].map(function (p) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "period-tab ".concat(period === p ? 'period-tab--active' : ''),
+          onClick: function onClick() {
+            setPeriod(p);
+            fetchData(p);
+          },
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            children: p === 'month' ? '本月' : '本季度'
+          })
+        }, p);
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.ScrollView, {
+      className: "targets-list",
+      scrollY: true,
+      enhanced: true,
+      showScrollbar: false,
+      children: [targets.map(function (t) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "target-card card",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "sales-name",
+            children: t.salesName
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "progress-bar",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+              className: "progress-fill",
+              style: {
+                width: "".concat(Math.min(t.rate, 100), "%")
+              }
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "flex-between",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "target-achieved",
+              children: ["\u5DF2\u5B8C\u6210 \xA5", t.achieved.toLocaleString()]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "target-goal",
+              children: ["\u76EE\u6807 \xA5", t.target.toLocaleString()]
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "target-rate",
+            children: [t.rate, "%"]
+          })]
+        }, t.id);
+      }), targets.length === 0 && !loading && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "empty flex-center",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "empty-text",
+          children: "\u6682\u65E0\u76EE\u6807\u6570\u636E"
+        })
+      })]
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/manager/targets/index.tsx":
+/*!*********************************************!*\
+  !*** ./src/pages/manager/targets/index.tsx ***!
+  \*********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/manager/targets/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/manager/targets/index!./src/pages/manager/targets/index.tsx");
+
+
+var config = {"navigationBarTitleText":"targets"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/manager/targets/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_manager_targets_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/manager/targets/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

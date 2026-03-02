@@ -216,7 +216,7 @@ const getCachedQuote = unstable_cache(
           orderBy: (rooms, { asc }) => [asc(rooms.sortOrder)],
           with: {
             items: {
-              orderBy: (items, { asc }) => [asc(items.sortOrder)],
+              orderBy: (items, { asc }) => [asc(items.sortOrder), asc(items.createdAt)],
               columns: {
                 id: true,
                 quoteId: true,
@@ -239,13 +239,14 @@ const getCachedQuote = unstable_cache(
                 calculationParams: true,
                 remark: true,
                 sortOrder: true,
+                createdAt: true,
               },
             },
           },
         },
         items: {
           where: (items, { isNull }) => isNull(items.roomId), // Items without room
-          orderBy: (items, { asc }) => [asc(items.sortOrder)],
+          orderBy: (items, { asc }) => [asc(items.sortOrder), asc(items.createdAt)],
           columns: {
             id: true,
             quoteId: true,
@@ -268,6 +269,7 @@ const getCachedQuote = unstable_cache(
             calculationParams: true,
             remark: true,
             sortOrder: true,
+            createdAt: true,
           },
         },
       },

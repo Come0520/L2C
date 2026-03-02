@@ -1,124 +1,134 @@
+/* ====================================================
+ * 注册/入驻申请页面样式 — iOS Grouped List 风格
+ * 硬编码值确保微信小程序环境兼容
+ * ==================================================== */
+
 .register-page {
-    background-color: var(--color-bg-base);
+    background-color: #F2F2F7;
     min-height: 100vh;
     box-sizing: border-box;
-    padding: var(--spacing-md) var(--spacing-sm);
+    padding: 16px 0 80px;
     padding-bottom: constant(safe-area-inset-bottom);
     padding-bottom: env(safe-area-inset-bottom);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 
+    /* ── 页面标题区 ── */
     .page-header {
-        padding: var(--spacing-lg) var(--spacing-md);
-        padding-top: var(--spacing-sm);
+        padding: 32px 32px 16px;
 
         .page-title {
             display: block;
             font-size: 64px;
             font-weight: 700;
-            color: var(--color-text-title);
-            margin-bottom: var(--spacing-xs);
+            color: #1D1D1F;
+            margin-bottom: 8px;
             letter-spacing: -0.5px;
         }
 
         .page-desc {
             display: block;
-            font-size: var(--font-size-sm);
-            color: var(--color-text-secondary);
-            line-height: 1.4;
+            font-size: 24px;
+            color: #6E6E73;
+            line-height: 1.5;
         }
     }
 
+    /* ── 分组标题 ── */
     .form-group-title {
-        padding: var(--spacing-sm) var(--spacing-md) 8px;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-secondary);
-        text-transform: uppercase;
+        padding: 16px 32px 8px;
+        font-size: 22px;
+        color: #6E6E73;
         letter-spacing: 0.5px;
+
+        text {
+            font-size: 22px;
+            color: #6E6E73;
+        }
     }
 
+    /* ── 输入组（白色圆角卡片） ── */
     .form-group {
-        background-color: var(--color-bg-card);
-        border-radius: var(--radius-sm);
-        margin: 0 var(--spacing-md) var(--spacing-lg);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
-        /* 极其轻薄的阴影 */
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        margin: 0 24px 24px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
 
+        /* 单行 */
         .form-row {
             display: flex;
             align-items: center;
             min-height: 88px;
-            /* 44pt iOS target */
-            padding: 0 var(--spacing-sm) 0 var(--spacing-md);
+            padding: 0 24px 0 28px;
             position: relative;
         }
 
+        /* 分割线 */
         .form-divider {
             height: 1px;
-            background-color: var(--color-border-separator);
-            margin-left: var(--spacing-md);
-            /* 留白对齐 */
+            background-color: rgba(60, 60, 67, 0.1);
+            margin-left: 28px;
         }
 
+        /* 标签 */
         .form-label {
             width: 160px;
-            font-size: var(--font-size-lg);
+            font-size: 28px;
             font-weight: 500;
-            color: var(--color-text-body);
+            color: #1D1D1F;
             flex-shrink: 0;
         }
 
+        /* 输入框 */
         .form-input {
             flex: 1;
             height: 88px;
-            font-size: var(--font-size-lg);
-            color: var(--color-text-body);
+            font-size: 28px;
+            color: #1D1D1F;
             text-align: right;
-            /* Apple 偏好右对齐输入 */
-            padding-right: var(--spacing-xs);
+            padding-right: 4px;
+            background: transparent;
+            border: none;
         }
 
-        .ph-color {
-            color: var(--color-text-placeholder);
-        }
-    }
-
-    .role-group {
-        .role-row {
+        /* Picker（地区选择） */
+        .picker-input {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            min-height: 88px;
-            padding: 0 var(--spacing-md);
-            position: relative;
-            cursor: pointer;
+            justify-content: flex-end;
 
-            .role-label {
-                font-size: var(--font-size-lg);
-                color: var(--color-text-body);
+            view {
+                font-size: 28px;
+                color: #1D1D1F;
+                text-align: right;
             }
+        }
 
-            .role-check {
-                font-size: 36px;
-                color: var(--color-primary);
-                font-weight: 600;
-            }
+        /* 占位符颜色 */
+        .ph-color {
+            color: #AEAEB2;
         }
     }
 
+    /* ── 底部按钮区 ── */
     .form-footer {
-        padding: var(--spacing-lg) var(--spacing-md);
+        padding: 32px 24px 16px;
 
         .btn-submit {
-            background: var(--color-primary);
+            width: 100%;
+            height: 96px;
+            line-height: 96px;
+            background-color: #0071E3;
             color: #FFFFFF;
-            height: 100px;
-            line-height: 100px;
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-lg);
+            border-radius: 50px;
+            font-size: 30px;
             font-weight: 600;
-            box-shadow: var(--glass-shadow-primary);
+            text-align: center;
+            border: none;
+            letter-spacing: 0.5px;
 
-            &[disabled] {
-                opacity: 0.5;
+            &::after {
+                border: none;
             }
 
             &:active {

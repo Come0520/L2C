@@ -1,1 +1,141 @@
-.tasks-page{background:var(--color-bg);min-height:100vh;padding-bottom:120rpx}.tasks-page .tasks-tabs{background:var(--color-bg);border-bottom:1rpx solid var(--color-border);display:-webkit-flex;display:-ms-flexbox;display:flex;position:-webkit-sticky;position:sticky;top:0;z-index:10}.tasks-page .tasks-tabs .tasks-tab{color:var(--color-text-secondary);-webkit-flex:1;-ms-flex:1;flex:1;font-size:var(--font-size-base);padding:var(--spacing-sm) 0;position:relative;text-align:center;-webkit-transition:color .2s;transition:color .2s}.tasks-page .tasks-tabs .tasks-tab--active{color:var(--color-primary);font-weight:600}.tasks-page .tasks-tabs .tasks-tab--active::after{background:var(--color-primary);border-radius:3rpx;bottom:-1rpx;content:"";height:3rpx;left:25%;position:absolute;right:25%}.tasks-page .tasks-list{height:calc(100vh - 90rpx - 120rpx);padding:var(--spacing-sm) var(--spacing-md)}.tasks-page .empty-state{-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;padding:120rpx 0}.tasks-page .empty-state .empty-icon{font-size:80rpx;margin-bottom:var(--spacing-md)}.tasks-page .empty-state .empty-text{color:var(--color-text-secondary);font-size:var(--font-size-base)}.tasks-page .task-card__header{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center;margin-bottom:var(--spacing-sm)}.tasks-page .task-card .task-type-badge{border-radius:var(--radius-full);font-size:var(--font-size-xs);font-weight:600;padding:4rpx 16rpx}.tasks-page .task-card .task-type-badge--measure{background:rgba(103,194,58,.15);color:var(--color-success)}.tasks-page .task-card .task-type-badge--install{background:rgba(230,162,60,.15);color:var(--color-warning)}.tasks-page .task-card .task-date{color:var(--color-text-secondary);font-size:var(--font-size-xs)}.tasks-page .task-card .task-customer{display:block;font-size:var(--font-size-lg);font-weight:600;margin-bottom:4rpx}.tasks-page .task-card .task-address{color:var(--color-text-secondary);display:block;font-size:var(--font-size-sm);margin-bottom:var(--spacing-xs)}.tasks-page .task-card .task-rooms{color:var(--color-text-placeholder);font-size:var(--font-size-xs)}.tasks-page .task-card .task-actions{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:flex-end;margin-top:var(--spacing-sm);-ms-flex-pack:end;justify-content:flex-end}.tasks-page .task-card .task-actions .btn-accept{background:var(--color-primary);border-radius:var(--radius-md);color:#fff;font-size:var(--font-size-sm);font-weight:700;padding:8rpx 32rpx}.tasks-page .loading{color:var(--color-text-secondary);padding:var(--spacing-xl)}
+/*!*************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/pages/tasks/index.scss ***!
+  \*************************************************************************************************************************************************************************************************************************************************************************************************************************/
+@charset "UTF-8";
+.tasks-page {
+  background: var(--color-bg);
+  min-height: 100vh;
+  padding-bottom: 120rpx;
+  /* 顶部 Tab 切换 */
+}
+.tasks-page .tasks-tabs {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  background: var(--color-bg);
+  border-bottom: 1rpx solid var(--color-border);
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.tasks-page .tasks-tabs .tasks-tab {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  text-align: center;
+  padding: var(--spacing-sm) 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  position: relative;
+  -webkit-transition: color 0.2s;
+  transition: color 0.2s;
+}
+.tasks-page .tasks-tabs .tasks-tab--active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.tasks-page .tasks-tabs .tasks-tab--active::after {
+  content: "";
+  position: absolute;
+  bottom: -1rpx;
+  left: 25%;
+  right: 25%;
+  height: 3rpx;
+  background: var(--color-primary);
+  border-radius: 3rpx;
+}
+.tasks-page {
+  /* 任务列表 */
+}
+.tasks-page .tasks-list {
+  height: calc(100vh - 90rpx - 120rpx);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+.tasks-page {
+  /* 空状态 */
+}
+.tasks-page .empty-state {
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  padding: 120rpx 0;
+}
+.tasks-page .empty-state .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: var(--spacing-md);
+}
+.tasks-page .empty-state .empty-text {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+.tasks-page {
+  /* 任务卡片 */
+}
+.tasks-page .task-card__header {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+.tasks-page .task-card .task-type-badge {
+  font-size: var(--font-size-xs);
+  padding: 4rpx 16rpx;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+.tasks-page .task-card .task-type-badge--measure {
+  background: rgba(103, 194, 58, 0.15);
+  color: var(--color-success);
+}
+.tasks-page .task-card .task-type-badge--install {
+  background: rgba(230, 162, 60, 0.15);
+  color: var(--color-warning);
+}
+.tasks-page .task-card .task-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.tasks-page .task-card .task-customer {
+  display: block;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+.tasks-page .task-card .task-address {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+.tasks-page .task-card .task-rooms {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-placeholder);
+}
+.tasks-page .task-card .task-actions {
+  margin-top: var(--spacing-sm);
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: flex-end;
+      -ms-flex-pack: end;
+          justify-content: flex-end;
+}
+.tasks-page .task-card .task-actions .btn-accept {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  padding: 8rpx 32rpx;
+  border-radius: var(--radius-md);
+}
+.tasks-page .loading {
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+}

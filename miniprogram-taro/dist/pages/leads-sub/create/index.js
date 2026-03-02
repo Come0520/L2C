@@ -1,1 +1,222 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[4778],{4219:function(e,s,a){var n=a(8870),r=a(4467),c=a(9379),o=a(1212),t=a(467),l=a(5544),i=a(118),u=a(758),m=a.n(u),d=a(6540),p=a(4746),h=a(4848);function f(){var e=(0,d.useState)({customerName:"",phone:"",source:"",address:"",remark:""}),s=(0,l.A)(e,2),a=s[0],n=s[1],u=(0,d.useState)(!1),f=(0,l.A)(u,2),x=f[0],N=f[1],v=function(){var e=(0,t.A)((0,o.A)().m(function e(){var s;return(0,o.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(a.customerName&&a.phone){e.n=1;break}return m().showToast({title:"\u8bf7\u586b\u5199\u5ba2\u6237\u59d3\u540d\u548c\u624b\u673a\u53f7",icon:"none"}),e.a(2);case 1:return N(!0),e.p=2,e.n=3,p.F.post("/leads",{data:a});case 3:s=e.v,s.success?(m().showToast({title:"\u521b\u5efa\u6210\u529f",icon:"success"}),setTimeout(function(){return m().navigateBack()},1500)):m().showToast({title:s.error||"\u521b\u5efa\u5931\u8d25",icon:"none"});case 4:return e.p=4,N(!1),e.f(4);case 5:return e.a(2)}},e,null,[[2,,4,5]])}));return function(){return e.apply(this,arguments)}}(),j=function(e){return function(s){return n(function(a){return(0,c.A)((0,c.A)({},a),{},(0,r.A)({},e,s.detail.value))})}};return(0,h.jsxs)(i.Ss,{className:"create-page",children:[(0,h.jsxs)(i.Ss,{className:"form-section",children:[(0,h.jsx)(i.EY,{className:"form-label",children:"\u5ba2\u6237\u59d3\u540d *"}),(0,h.jsx)(i.pd,{className:"form-input",placeholder:"\u8bf7\u8f93\u5165",value:a.customerName,onInput:j("customerName")})]}),(0,h.jsxs)(i.Ss,{className:"form-section",children:[(0,h.jsx)(i.EY,{className:"form-label",children:"\u624b\u673a\u53f7 *"}),(0,h.jsx)(i.pd,{className:"form-input",type:"number",maxlength:11,placeholder:"\u8bf7\u8f93\u5165",value:a.phone,onInput:j("phone")})]}),(0,h.jsxs)(i.Ss,{className:"form-section",children:[(0,h.jsx)(i.EY,{className:"form-label",children:"\u6765\u6e90\u6e20\u9053"}),(0,h.jsx)(i.pd,{className:"form-input",placeholder:"\u5982\uff1a\u95e8\u5e97\u5230\u8bbf\u3001\u670b\u53cb\u4ecb\u7ecd",value:a.source,onInput:j("source")})]}),(0,h.jsxs)(i.Ss,{className:"form-section",children:[(0,h.jsx)(i.EY,{className:"form-label",children:"\u5730\u5740"}),(0,h.jsx)(i.pd,{className:"form-input",placeholder:"\u5ba2\u6237\u5730\u5740",value:a.address,onInput:j("address")})]}),(0,h.jsxs)(i.Ss,{className:"form-section",children:[(0,h.jsx)(i.EY,{className:"form-label",children:"\u5907\u6ce8"}),(0,h.jsx)(i.TM,{className:"form-textarea",placeholder:"\u5907\u6ce8\u4fe1\u606f",value:a.remark,onInput:j("remark")})]}),(0,h.jsx)(i.Ss,{className:"form-footer",children:(0,h.jsx)(i.$n,{className:"btn-submit",loading:x,disabled:x,onClick:v,children:"\u63d0\u4ea4\u7ebf\u7d22"})})]})}var x={navigationBarTitleText:"create"},N=(0,n.eU)(f,"pages/leads-sub/create/index",{root:{cn:[]}},x||{});f&&f.behaviors&&(N.behaviors=(N.behaviors||[]).concat(f.behaviors));Page(N)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(4219)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/leads-sub/create/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/leads-sub/create/index!./src/pages/leads-sub/create/index.tsx":
+/*!**************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/leads-sub/create/index!./src/pages/leads-sub/create/index.tsx ***!
+  \**************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ LeadsCreatePage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/defineProperty.js */ "./node_modules/@babel/runtime/helpers/esm/defineProperty.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+
+
+
+
+
+/**
+ * 线索创建页
+ */
+
+
+
+
+
+
+function LeadsCreatePage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)({
+      customerName: '',
+      phone: '',
+      source: '',
+      address: '',
+      remark: ''
+    }),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState, 2),
+    form = _useState2[0],
+    setForm = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)(false),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState3, 2),
+    loading = _useState4[0],
+    setLoading = _useState4[1];
+  var handleSubmit = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])().m(function _callee() {
+      var res;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            if (!(!form.customerName || !form.phone)) {
+              _context.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请填写客户姓名和手机号',
+              icon: 'none'
+            });
+            return _context.a(2);
+          case 1:
+            setLoading(true);
+            _context.p = 2;
+            _context.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_8__.api.post('/leads', {
+              data: form
+            });
+          case 3:
+            res = _context.v;
+            if (res.success) {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: '创建成功',
+                icon: 'success'
+              });
+              setTimeout(function () {
+                return _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().navigateBack();
+              }, 1500);
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: res.error || '创建失败',
+                icon: 'none'
+              });
+            }
+          case 4:
+            _context.p = 4;
+            setLoading(false);
+            return _context.f(4);
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2,, 4, 5]]);
+    }));
+    return function handleSubmit() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  var update = function update(field) {
+    return function (e) {
+      return setForm(function (prev) {
+        return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_1__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_1__["default"])({}, prev), {}, (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, field, e.detail.value));
+      });
+    };
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+    className: "create-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        className: "form-label",
+        children: "\u5BA2\u6237\u59D3\u540D *"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+        className: "form-input",
+        placeholder: "\u8BF7\u8F93\u5165",
+        value: form.customerName,
+        onInput: update('customerName')
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        className: "form-label",
+        children: "\u624B\u673A\u53F7 *"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+        className: "form-input",
+        type: "number",
+        maxlength: 11,
+        placeholder: "\u8BF7\u8F93\u5165",
+        value: form.phone,
+        onInput: update('phone')
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        className: "form-label",
+        children: "\u6765\u6E90\u6E20\u9053"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+        className: "form-input",
+        placeholder: "\u5982\uFF1A\u95E8\u5E97\u5230\u8BBF\u3001\u670B\u53CB\u4ECB\u7ECD",
+        value: form.source,
+        onInput: update('source')
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        className: "form-label",
+        children: "\u5730\u5740"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+        className: "form-input",
+        placeholder: "\u5BA2\u6237\u5730\u5740",
+        value: form.address,
+        onInput: update('address')
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        className: "form-label",
+        children: "\u5907\u6CE8"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Textarea, {
+        className: "form-textarea",
+        placeholder: "\u5907\u6CE8\u4FE1\u606F",
+        value: form.remark,
+        onInput: update('remark')
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "form-footer",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+        className: "btn-submit",
+        loading: loading,
+        disabled: loading,
+        onClick: handleSubmit,
+        children: "\u63D0\u4EA4\u7EBF\u7D22"
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/leads-sub/create/index.tsx":
+/*!**********************************************!*\
+  !*** ./src/pages/leads-sub/create/index.tsx ***!
+  \**********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/leads-sub/create/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/leads-sub/create/index!./src/pages/leads-sub/create/index.tsx");
+
+
+var config = {"navigationBarTitleText":"create"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/leads-sub/create/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_leads_sub_create_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/leads-sub/create/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

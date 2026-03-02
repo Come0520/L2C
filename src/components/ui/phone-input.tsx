@@ -65,6 +65,15 @@ const PhoneInput = React.forwardRef<React.ElementRef<typeof RPNInput.default>, P
         };
       }
 
+      // 情况 2.5：尝试作为国际格式解析（用户可能输入了国家码前缀如 8613917385139）
+      const parsedInternational = parsePhoneNumberFromString('+' + digits);
+      if (parsedInternational && parsedInternational.isValid()) {
+        return {
+          normalizedValue: parsedInternational.number,
+          detectedCountry: parsedInternational.country || undefined,
+        };
+      }
+
       // 情况 3：无效号码，手动拼接但带上正确国家码
       const callingCode = getCountryCallingCode(defaultCountry);
       return {

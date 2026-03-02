@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -41,7 +42,10 @@ const formSchema = z
     customChannelType: z.string().max(50, '自定义类型不能超过50字').optional(),
     level: z.enum(['S', 'A', 'B', 'C']).default('C'),
     contactName: z.string().min(1, '请输入联系人'),
-    phone: z.string().min(1, '请输入联系电话'),
+    phone: z
+      .string()
+      .min(1, '请输入联系电话')
+      .refine((val) => !val || isValidPhoneNumber(val, 'CN'), { message: '请输入有效的电话号码' }),
 
     // 财务配置
     commissionRate: z.coerce.number().min(0).max(100).default(10),
@@ -175,8 +179,9 @@ export function ChannelFormDialog({
           toast.success('渠道创建成功');
         }
         onSuccess();
-      } catch (_error) {
-        toast.error('操作失败，请重试');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '操作失败，请重试';
+        toast.error(message);
       }
     });
   };

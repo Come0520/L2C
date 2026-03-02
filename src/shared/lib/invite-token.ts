@@ -9,7 +9,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/shared/config/env';
 import { db } from '@/shared/api/db';
-import { users, customers, invitations } from '@/shared/api/schema';
+import { users, customers, invitations, tenantMembers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
@@ -276,29 +276,53 @@ export async function registerEmployeeByInvite(
       }
     }
 
-    // 4. 创建用户
-    const passwordHash = await hash(userData.password, 12);
-
+    // 4. 获取或创建用户角色（基于手机号的全局身份）
     // 兼容旧 payload (defaultRole)
     const roles =
       validation.payload.defaultRoles ||
       (validation.payload.defaultRole ? [validation.payload.defaultRole] : ['SALES']);
 
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        tenantId,
-        name: userData.name,
-        phone: userData.phone,
-        email: userData.email || null, // 移除临时邮箱，改为 null
-        passwordHash,
-        role: roles[0] || 'SALES', // Backup compatibility
-        roles: roles, // Multi-role
-        permissions: [], // 空权限，需管理员分配
-        wechatOpenId: userData.wechatOpenId,
-        isActive: true,
-      })
-      .returning({ id: users.id });
+    let user = await db.query.users.findFirst({
+      where: and(eq(users.phone, userData.phone), eq(users.isActive, true)),
+    });
+
+    if (!user) {
+      const passwordHash = await hash(userData.password, 12);
+      [user] = await db
+        .insert(users)
+        .values({
+          name: userData.name,
+          phone: userData.phone,
+          email: userData.email || null, // 移除临时邮箱，改为 null
+          passwordHash,
+          wechatOpenId: userData.wechatOpenId,
+          isActive: true,
+          // Backup compatibility lines
+          tenantId,
+          role: roles[0] || 'SALES',
+          roles: roles,
+          permissions: [],
+        })
+        .returning();
+    }
+
+    // 5. 创建 tenant_members 记录（将该用户加入指定租户）
+    const existingMembership = await db.query.tenantMembers.findFirst({
+      where: and(eq(tenantMembers.userId, user.id), eq(tenantMembers.tenantId, tenantId)),
+    });
+
+    if (existingMembership) {
+      return { success: false, error: '您已加入该企业' };
+    }
+
+    await db.insert(tenantMembers).values({
+      userId: user.id,
+      tenantId,
+      role: roles[0] || 'SALES',
+      roles,
+      permissions: [],
+      isActive: true,
+    });
 
     // 5. 更新 invitations 表，标记为已使用
     if (invitationId) {
@@ -312,7 +336,7 @@ export async function registerEmployeeByInvite(
         .where(eq(invitations.id, invitationId));
     }
 
-    return { success: true, userId: newUser.id };
+    return { success: true, userId: user.id };
   } catch (error) {
     console.error('员工注册失败:', error);
     // 处理常见的数据库错误

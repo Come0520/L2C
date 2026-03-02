@@ -107,6 +107,15 @@ const createQuoteItemActionInternal = createSafeAction(
         }
         if (!data.productName) currentProductName = product.name;
 
+        // 存储产品基准价快照，供前端低价警告使用
+        // 优先使用底价 (floorPrice)，其次零售价，再次批发价
+        const basePrice = Number(
+          product.floorPrice || product.retailPrice || product.unitPrice || 0
+        );
+        if (basePrice > 0) {
+          (attributes as Record<string, unknown>)._basePrice = basePrice;
+        }
+
         // 从产品规格中填充属性
         const specs = (product.specs as Record<string, unknown>) || {};
         const mutableAttrs = attributes as Record<string, unknown>;
@@ -139,9 +148,10 @@ const createQuoteItemActionInternal = createSafeAction(
       const strategy = StrategyFactory.getStrategy(data.category);
       const fabricWidthCm = (attributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
+      // 数据库中 width/height 以米(m)存储，CurtainStrategy 需要厘米(cm)
       const calcParams: Record<string, unknown> = {
-        measuredWidth: Number(data.width),
-        measuredHeight: Number(data.height),
+        measuredWidth: Number(data.width) * 100,
+        measuredHeight: Number(data.height) * 100,
         unitPrice: currentUnitPrice,
         fabricWidth: fabricWidthCm / 100, // Convert cm to m for Strategy
         // Curtain specifics
@@ -187,6 +197,17 @@ const createQuoteItemActionInternal = createSafeAction(
     const finalAttributes =
       warnings.length > 0 ? { ...attributes, _warnings: warnings } : attributes;
 
+    // 自动计算 sortOrder：查询当前空间（或报价单）下已有行项目的最大排序值，新行 = max + 1
+    const sortOrderConditions = [eq(quoteItems.quoteId, data.quoteId)];
+    if (data.roomId) {
+      sortOrderConditions.push(eq(quoteItems.roomId, data.roomId));
+    }
+    const existingItems = await db.query.quoteItems.findMany({
+      where: and(...sortOrderConditions),
+      columns: { sortOrder: true },
+    });
+    const maxSortOrder = existingItems.reduce((max, item) => Math.max(max, item.sortOrder ?? 0), 0);
+
     const [newItem] = await db
       .insert(quoteItems)
       .values({
@@ -200,6 +221,7 @@ const createQuoteItemActionInternal = createSafeAction(
         foldRatio: data.foldRatio?.toString(),
         processFee: data.processFee?.toString(),
         attributes: finalAttributes,
+        sortOrder: maxSortOrder + 1,
         tenantId,
       })
       .returning();
@@ -338,7 +360,9 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
 
     if (product) {
       // 价格填充：优先使用零售价 (retailPrice)，其次使用批发价 (unitPrice)
-      if (updateData.unitPrice === undefined) {
+      // 当用户已手动修改过单价（有 _manualPrice 标记）时，跳过产品价格自动同步，避免覆盖手动调整
+      const existingManualPrice = (existing.attributes as Record<string, unknown>)?._manualPrice;
+      if (updateData.unitPrice === undefined && !existingManualPrice) {
         if (product.retailPrice) {
           unitPrice = Number(product.retailPrice);
         } else if (product.unitPrice) {
@@ -384,6 +408,12 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     ...((updateData.attributes as Record<string, unknown>) || {}),
   };
 
+  // 当用户明确传入了新单价时，在 attributes 中标记 _manualPrice = true
+  // 后续更新其他字段（如尺寸、数量）时，产品自动同步逻辑会跳过单价覆盖
+  if (updateData.unitPrice !== undefined) {
+    (mergedAttributes as Record<string, unknown>)._manualPrice = true;
+  }
+
   // 获取损耗配置
   const quote = await db.query.quotes.findFirst({
     where: eq(quotes.id, existing.quoteId),
@@ -407,9 +437,10 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
     const strategy = StrategyFactory.getStrategy(category);
     const fabricWidthCm = (mergedAttributes.fabricWidth as number) || (isCurtain ? 280 : 53);
 
+    // 数据库中 width/height 以米(m)存储，CurtainStrategy 需要厘米(cm)
     const calcParams: Record<string, unknown> = {
-      measuredWidth: Number(width),
-      measuredHeight: Number(height),
+      measuredWidth: Number(width) * 100,
+      measuredHeight: Number(height) * 100,
       unitPrice: Number(finalUnitPrice),
       fabricWidth: fabricWidthCm / 100, // Convert cm to m
       // Curtain specifics

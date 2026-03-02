@@ -5,11 +5,11 @@
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { users, tenants } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { users, tenantMembers } from '@/shared/api/schema';
+import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
-import { generateMiniprogramToken } from '../../auth-utils';
+import { generateMiniprogramToken, generateTempLoginToken } from '../../auth-utils';
 import { DecryptPhoneSchema } from '../../miniprogram-schemas';
 
 /**
@@ -92,40 +92,72 @@ export async function POST(request: NextRequest) {
         await db.update(users).set({ wechatOpenId: openId }).where(eq(users.id, user.id));
       }
 
-      const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, user.tenantId),
+      // 查找该用户的所有有效 memberships
+      const memberships = await db.query.tenantMembers.findMany({
+        where: and(eq(tenantMembers.userId, user.id), eq(tenantMembers.isActive, true)),
+        with: { tenant: true },
       });
 
-      const token = await generateMiniprogramToken(user.id, user.tenantId);
+      if (memberships.length === 0) {
+        return apiError('您尚未加入任何企业', 403);
+      }
 
-      // 3. 审计日志
       const { AuditService } = await import('@/shared/services/audit-service');
-      await AuditService.log(db, {
-        tableName: 'users',
-        recordId: user.id,
-        action: 'LOGIN',
-        userId: user.id,
-        tenantId: user.tenantId,
-        details: { method: 'PHONE_DECRYPT', phoneNumber },
-      });
 
-      logger.info('[DecryptPhone] 用户通过手机号登录成功', {
+      // 如果只有一个成员资格，自动进入
+      if (memberships.length === 1) {
+        const m = memberships[0];
+        const token = await generateMiniprogramToken(user.id, m.tenantId);
+
+        // 3. 审计日志
+        await AuditService.log(db, {
+          tableName: 'users',
+          recordId: user.id,
+          action: 'LOGIN',
+          userId: user.id,
+          tenantId: m.tenantId,
+          details: { method: 'PHONE_DECRYPT', phoneNumber },
+        });
+
+        logger.info('[DecryptPhone] 单租户用户通过手机号登录成功', {
+          route: 'decrypt-phone',
+          userId: user.id,
+        });
+
+        return apiSuccess({
+          token,
+          tenantStatus: m.tenant.status,
+          user: {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            role: m.role,
+            tenantId: m.tenantId,
+            tenantName: m.tenant.name,
+            avatarUrl: user.avatarUrl,
+          },
+        });
+      }
+
+      // 多租户情况，需要用户选择要进入的企业
+      // 返回一个临时 token 供后续 /select-tenant 接口使用
+      const tempToken = await generateTempLoginToken(user.id);
+
+      logger.info('[DecryptPhone] 多租户用户需选择企业', {
         route: 'decrypt-phone',
         userId: user.id,
+        membershipCount: memberships.length,
       });
 
       return apiSuccess({
-        token,
-        tenantStatus: tenant?.status,
-        user: {
-          id: user.id,
-          name: user.name,
-          phone: user.phone,
-          role: user.role,
-          tenantId: user.tenantId,
-          tenantName: tenant?.name,
-          avatarUrl: user.avatarUrl,
-        },
+        needTenantSelection: true,
+        tempToken,
+        userId: user.id,
+        tenants: memberships.map((m) => ({
+          id: m.tenantId,
+          name: m.tenant.name,
+          role: m.role,
+        })),
       });
     } else {
       // 用户不存在 -> 返回 USER_NOT_FOUND，前端引导注册

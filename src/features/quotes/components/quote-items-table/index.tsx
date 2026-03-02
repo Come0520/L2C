@@ -50,6 +50,22 @@ const buildTree = (items: QuoteItem[]): QuoteItem[] => {
     }
   });
 
+  // 稳定排序：先按 sortOrder，相同时按 createdAt 兜底，保证行顺序不跳动
+  const stableSort = (a: QuoteItem, b: QuoteItem) => {
+    const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return aTime - bTime;
+  };
+
+  rootItems.sort(stableSort);
+  itemMap.forEach((item) => {
+    if (item.children && item.children.length > 1) {
+      item.children.sort(stableSort);
+    }
+  });
+
   return rootItems;
 };
 
@@ -398,10 +414,16 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle id="warning-dialog-title" className="text-destructive flex items-center gap-2">
+            <DialogTitle
+              id="warning-dialog-title"
+              className="text-destructive flex items-center gap-2"
+            >
               {warningDialog.title}
             </DialogTitle>
-            <DialogDescription id="warning-dialog-description" className="text-foreground pt-4 text-base font-medium">
+            <DialogDescription
+              id="warning-dialog-description"
+              className="text-foreground pt-4 text-base font-medium"
+            >
               {warningDialog.message}
             </DialogDescription>
           </DialogHeader>

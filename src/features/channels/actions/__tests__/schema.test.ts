@@ -79,6 +79,23 @@ describe('Channel Schema 校验 (渠道表单验证)', () => {
       const result = channelSchema.safeParse({ ...validChannel, phone: '23800138000' });
       expect(result.success).toBe(false);
     });
+
+    it('E.164 格式的中国号码应通过', () => {
+      const result = channelSchema.safeParse({ ...validChannel, phone: '+8613917385139' });
+      expect(result.success).toBe(true);
+    });
+
+    it('带国家码纯数字（8613917385139）由 isValidPhoneNumber 容错解析，应通过', () => {
+      // 注意：libphonenumber-js 的 isValidPhoneNumber 能容错解析此格式
+      // 真正的 bug 在于 PhoneInput 组件的兜底逻辑错误拼接为 +868613917385139
+      const result = channelSchema.safeParse({ ...validChannel, phone: '8613917385139' });
+      expect(result.success).toBe(true);
+    });
+
+    it('双重国家码（+868613917385139）应失败', () => {
+      const result = channelSchema.safeParse({ ...validChannel, phone: '+868613917385139' });
+      expect(result.success).toBe(false);
+    });
   });
 
   // ── 佣金配置 ──

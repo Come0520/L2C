@@ -174,7 +174,13 @@ export async function getShowroomItemDetail(id: string) {
     return item;
   } catch (error) {
     if (error instanceof ShowroomError) throw error;
-    logger.error('获取展厅素材详情失败', { error, id });
+    logger.error('获取展厅素材详情失败 [DEBUG]', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined,
+      id,
+      tenantId: session?.user?.tenantId,
+    });
     throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
   }
 }

@@ -1,1 +1,166 @@
-:root,page{--color-primary:#0071e3;--color-primary-light:#47a1ff;--color-primary-active:#0071e3cc;--color-bg-base:#f5f5f7;--color-bg-card:#fff;--color-bg-elevated:#fff;--color-bg-tint:rgba(0,113,227,.08);--color-text-title:#1d1d1f;--color-text-body:#1d1d1f;--color-text-secondary:#86868b;--color-text-placeholder:#c7c7cc;--color-border-separator:rgba(60,60,67,.1);--glass-blur:blur(24rpx) saturate(180%);--glass-shadow-soft:0 4rpx 24rpx rgba(0,0,0,.04);--glass-shadow-primary:0 6rpx 16rpx rgba(0,113,227,.25);--color-success:#34c759;--color-warning:#ff9500;--color-danger:#ff3b30;--font-size-xs:24rpx;--font-size-sm:26rpx;--font-size-base:30rpx;--font-size-lg:34rpx;--font-size-xl:44rpx;--font-size-xxl:56rpx;--font-size-hero:130rpx;--radius-sm:16rpx;--radius-md:20rpx;--radius-lg:32rpx;--radius-full:9999rpx;--spacing-xs:8rpx;--spacing-sm:16rpx;--spacing-md:24rpx;--spacing-lg:32rpx;--spacing-xl:40rpx}page{background-color:var(--color-bg-base);color:var(--color-text-body);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,Hiragino Sans GB,Microsoft YaHei,Helvetica Neue,Helvetica,Arial,sans-serif;font-size:var(--font-size-base);line-height:1.6}button{background:none;margin:0;padding:0}button::after{border:none}.flex{display:-webkit-flex;display:-ms-flexbox;display:flex}.flex-col{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.flex-center{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.flex-between{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between}.text-center{text-align:center}.text-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.card{background-color:var(--color-bg-card);border:none;border-radius:var(--radius-lg);-webkit-box-shadow:var(--glass-shadow-soft);box-shadow:var(--glass-shadow-soft);margin-bottom:var(--spacing-md);padding:var(--spacing-md)}.card-title{color:var(--color-text-title);font-size:var(--font-size-lg);font-weight:600;margin-bottom:var(--spacing-sm)}.safe-area-bottom{padding-bottom:env(safe-area-inset-bottom)}
+/*!***********************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/app.scss ***!
+  \***********************************************************************************************************************************************************************************************************************************************************************************************************/
+@charset "UTF-8";
+/**
+ * 全局样式
+ *
+ * @description 从原生 app.wxss 迁移的全局基础样式。
+ * 使用 SCSS 语法，支持变量、嵌套、mixin 等。
+ */
+/* ==============================
+ * 设计令牌 (Design Tokens) - Apple HIG & Glassmorphism
+ * ============================== */
+page,
+:root {
+  /* Apple 品牌专属色系规则 (Design Tokens) */
+  --color-primary: #0071E3;
+  /* 正宗 Apple Blue */
+  --color-primary-light: #47A1FF;
+  --color-primary-active: #0071E3cc;
+  /* 80% 透明度交互态 */
+  /* 层级背景树 (Grouped Appearance) */
+  --color-bg-base: #F5F5F7;
+  /* 最底层的全局底灰 System Gray 6 */
+  --color-bg-card: #FFFFFF;
+  /* 悬浮卡片及表单行底色 */
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-tint: rgba(0, 113, 227, 0.08);
+  /* 极淡的主题色背景叠底 */
+  /* 文字色阶 */
+  --color-text-title: #1D1D1F;
+  /* 极致高级的偏灰深黑 */
+  --color-text-body: #1D1D1F;
+  --color-text-secondary: #86868B;
+  /* 次级灰，非常标准 */
+  --color-text-placeholder: #C7C7CC;
+  /* 边框与分割线 */
+  --color-border-separator: rgba(60, 60, 67, 0.1);
+  /* 极致玻璃与阴影 */
+  --glass-blur: blur(24rpx) saturate(180%);
+  --glass-shadow-soft: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
+  /* 类原生弥散阴影 */
+  --glass-shadow-primary: 0 6rpx 16rpx rgba(0, 113, 227, 0.25);
+  /* 主按钮高光阴影 */
+  /* 功能告警色 */
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-danger: #FF3B30;
+  /* Typography (SF Pro 比例) */
+  --font-size-xs: 24rpx;
+  /* 12pt */
+  --font-size-sm: 26rpx;
+  /* 13pt */
+  --font-size-base: 30rpx;
+  /* 15pt */
+  --font-size-lg: 34rpx;
+  /* 17pt, iOS 正文、列表项与按钮 */
+  --font-size-xl: 44rpx;
+  /* 22pt, Title 2 */
+  --font-size-xxl: 56rpx;
+  /* 28pt, Title 1 */
+  --font-size-hero: 130rpx;
+  /* 超大展示 */
+  /* 圆角半径 (Squircle 连续曲线替身) */
+  --radius-sm: 16rpx;
+  --radius-md: 20rpx;
+  /* 标准按钮与小卡片 */
+  --radius-lg: 32rpx;
+  /* 大容器卡片 */
+  --radius-full: 9999rpx;
+  /* 呼吸间距 */
+  --spacing-xs: 8rpx;
+  --spacing-sm: 16rpx;
+  --spacing-md: 24rpx;
+  --spacing-lg: 32rpx;
+  --spacing-xl: 40rpx;
+}
+/* ==============================
+ * 全局重置
+ * ============================== */
+page {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-body);
+  font-size: var(--font-size-base);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+button {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+button::after {
+  border: none;
+}
+/* ==============================
+ * 通用工具类
+ * ============================== */
+.flex {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+}
+.flex-col {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.flex-center {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+}
+.flex-between {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+}
+.text-center {
+  text-align: center;
+}
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ==============================
+ * 卡片通用样式
+ * ============================== */
+.card {
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  -webkit-box-shadow: var(--glass-shadow-soft);
+          box-shadow: var(--glass-shadow-soft);
+  border: none;
+}
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-title);
+}
+/* ==============================
+ * 安全区适配
+ * ============================== */
+.safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}

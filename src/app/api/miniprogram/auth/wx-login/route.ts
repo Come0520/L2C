@@ -6,11 +6,15 @@
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { users, tenants } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { users, tenantMembers } from '@/shared/api/schema';
+import { eq, and } from 'drizzle-orm';
 import { apiSuccess, apiError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
-import { generateMiniprogramToken, generateRegisterToken } from '../../auth-utils';
+import {
+  generateMiniprogramToken,
+  generateRegisterToken,
+  generateTempLoginToken,
+} from '../../auth-utils';
 import { WxLoginSchema } from '../../miniprogram-schemas';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -68,44 +72,75 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      // 用户已存在，获取租户状态
-      const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, existingUser.tenantId),
+      // 查找该用户的所有有效 memberships
+      const memberships = await db.query.tenantMembers.findMany({
+        where: and(eq(tenantMembers.userId, existingUser.id), eq(tenantMembers.isActive, true)),
+        with: { tenant: true },
       });
 
-      const token = await generateMiniprogramToken(existingUser.id, existingUser.tenantId);
+      if (memberships.length === 0) {
+        return apiError('您尚未加入任何企业', 403);
+      }
 
-      // 3. 审计日志
-      await AuditService.log(db, {
-        tableName: 'users',
-        recordId: existingUser.id,
-        action: 'LOGIN',
-        userId: existingUser.id,
-        tenantId: existingUser.tenantId,
-        details: { method: 'WECHAT', openId },
-      });
+      // 如果只有一个成员资格，自动进入
+      if (memberships.length === 1) {
+        const m = memberships[0];
+        const token = await generateMiniprogramToken(existingUser.id, m.tenantId);
 
-      logger.info('[WxLogin] 已有用户微信登录成功', {
+        // 审计日志
+        await AuditService.log(db, {
+          tableName: 'users',
+          recordId: existingUser.id,
+          action: 'LOGIN',
+          userId: existingUser.id,
+          tenantId: m.tenantId,
+          details: { method: 'WECHAT', openId },
+        });
+
+        logger.info('[WxLogin] 单租户用户微信登录成功', {
+          route: 'wx-login',
+          userId: existingUser.id,
+          tenantId: m.tenantId,
+        });
+
+        return apiSuccess({
+          openId,
+          unionId,
+          user: {
+            id: existingUser.id,
+            name: existingUser.name,
+            phone: existingUser.phone,
+            email: existingUser.email,
+            role: m.role,
+            tenantId: m.tenantId,
+            tenantName: m.tenant.name,
+            avatarUrl: existingUser.avatarUrl,
+          },
+          tenantStatus: m.tenant.status,
+          token,
+        });
+      }
+
+      // 多租户情况，需要用户选择要进入的企业
+      // 返回一个临时 token 供后续 /select-tenant 接口使用
+      const tempToken = await generateTempLoginToken(existingUser.id);
+
+      logger.info('[WxLogin] 多租户用户需选择企业', {
         route: 'wx-login',
         userId: existingUser.id,
-        tenantId: existingUser.tenantId,
+        membershipCount: memberships.length,
       });
 
       return apiSuccess({
+        needTenantSelection: true,
         openId,
-        unionId,
-        user: {
-          id: existingUser.id,
-          name: existingUser.name,
-          phone: existingUser.phone,
-          email: existingUser.email,
-          role: existingUser.role,
-          tenantId: existingUser.tenantId,
-          tenantName: tenant?.name,
-          avatarUrl: existingUser.avatarUrl,
-        },
-        tenantStatus: tenant?.status,
-        token,
+        tempToken,
+        userId: existingUser.id,
+        tenants: memberships.map((m) => ({
+          id: m.tenantId,
+          name: m.tenant.name,
+          role: m.role,
+        })),
       });
     }
 

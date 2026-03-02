@@ -1,1 +1,268 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[4518],{6482:function(e,s,n){var t=n(8870),a=n(1212),r=n(436),c=n(467),o=n(5544),l=n(118),i=n(758),u=n.n(i),d=n(6540),h=n(4746),m=n(4848),x={draft:"#909399",sent:"#409EFF",confirmed:"#67C23A",expired:"#F56C6C"};function p(){var e=(0,d.useState)(""),s=(0,o.A)(e,2),n=s[0],t=s[1],p=(0,d.useState)([]),f=(0,o.A)(p,2),j=f[0],N=f[1],g=(0,d.useState)(!0),S=(0,o.A)(g,2),v=S[0],w=S[1],q=(0,d.useState)(!1),E=(0,o.A)(q,2),Y=E[0],b=E[1],A=(0,d.useRef)(1),y=function(){var e=(0,c.A)((0,a.A)().m(function e(){var s,t,c,o,l,i,u,d,m=arguments;return(0,a.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(s=m.length>0&&void 0!==m[0]&&m[0],t=m.length>1&&void 0!==m[1]?m[1]:n,!Y){e.n=1;break}return e.a(2);case 1:return c=s?1:A.current,b(!0),e.p=2,e.n=3,h.F.get("/quotes",{data:{page:c,pageSize:20,keyword:t}});case 3:o=e.v,o.success&&(l=o.data,i=l.items,u=l.pagination,d=s?i:[].concat((0,r.A)(j),(0,r.A)(i)),N(d),A.current=c+1,w(d.length<u.total));case 4:return e.p=4,b(!1),e.f(4);case 5:return e.a(2)}},e,null,[[2,,4,5]])}));return function(){return e.apply(this,arguments)}}();return(0,i.useDidShow)(function(){y(!0)}),(0,i.usePullDownRefresh)(function(){y(!0).then(function(){return u().stopPullDownRefresh()})}),(0,i.useReachBottom)(function(){v&&!Y&&y()}),(0,m.jsxs)(l.Ss,{className:"quotes-page",children:[(0,m.jsxs)(l.Ss,{className:"page-header",children:[(0,m.jsx)(l.EY,{className:"page-title",children:"\u62a5\u4ef7\u5355"}),(0,m.jsx)(l.Ss,{className:"header-actions",children:(0,m.jsx)(l.Ss,{className:"btn-create",onClick:function(){return u().navigateTo({url:"/pages/quotes/create/index"})},children:(0,m.jsx)(l.EY,{children:"+ \u65b0\u5efa"})})})]}),(0,m.jsx)(l.Ss,{className:"search-bar",children:(0,m.jsx)(l.pd,{className:"search-input",placeholder:"\u641c\u7d22\u5ba2\u6237\u540d/\u62a5\u4ef7\u5355\u53f7",value:n,onInput:function(e){return t(e.detail.value)},onConfirm:function(){return y(!0)}})}),(0,m.jsxs)(l.BM,{className:"list-scroll",scrollY:!0,enhanced:!0,showScrollbar:!1,children:[0===j.length&&!Y&&(0,m.jsxs)(l.Ss,{className:"empty flex-center",children:[(0,m.jsx)(l.EY,{className:"empty-icon",children:"\ud83d\udcc4"}),(0,m.jsx)(l.EY,{className:"empty-text",children:"\u6682\u65e0\u62a5\u4ef7\u5355"})]}),j.map(function(e){return(0,m.jsxs)(l.Ss,{className:"quote-card card",onClick:function(){return u().navigateTo({url:"/pages/quotes/detail/index?id=".concat(e.id)})},children:[(0,m.jsxs)(l.Ss,{className:"card-row card-row--between",children:[(0,m.jsx)(l.EY,{className:"quote-no",children:e.quoteNo}),(0,m.jsx)(l.EY,{style:{color:x[e.status]||"#909399",fontSize:"24px"},children:e.statusText})]}),(0,m.jsx)(l.EY,{className:"quote-customer",children:e.customerName}),(0,m.jsxs)(l.Ss,{className:"card-row card-row--between",style:{marginTop:"8px"},children:[(0,m.jsxs)(l.EY,{className:"quote-rooms",children:[e.roomCount," \u4e2a\u623f\u95f4"]}),(0,m.jsxs)(l.EY,{className:"quote-amount",children:["\xa5",e.totalAmount.toLocaleString()]})]}),(0,m.jsx)(l.EY,{className:"quote-date",children:e.createdAt})]},e.id)}),Y&&(0,m.jsx)(l.Ss,{className:"loading flex-center",children:(0,m.jsx)(l.EY,{children:"\u52a0\u8f7d\u4e2d..."})}),!v&&j.length>0&&(0,m.jsx)(l.Ss,{className:"no-more flex-center",children:(0,m.jsx)(l.EY,{children:"\u2014 \u5df2\u663e\u793a\u5168\u90e8 \u2014"})})]})]})}var f={navigationBarTitleText:"quotes"},j=(0,t.eU)(p,"pages/quotes/index",{root:{cn:[]}},f||{});p&&p.behaviors&&(j.behaviors=(j.behaviors||[]).concat(p.behaviors));Page(j)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(6482)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/quotes/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/quotes/index!./src/pages/quotes/index.tsx":
+/*!******************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/quotes/index!./src/pages/quotes/index.tsx ***!
+  \******************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ QuotesPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
+
+
+
+/**
+ * 报价单列表页
+ */
+
+
+
+
+
+
+var STATUS_COLOR = {
+  draft: '#909399',
+  sent: '#409EFF',
+  confirmed: '#67C23A',
+  expired: '#F56C6C'
+};
+function QuotesPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState, 2),
+    keyword = _useState2[0],
+    setKeyword = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)([]),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState3, 2),
+    list = _useState4[0],
+    setList = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)(true),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState5, 2),
+    hasMore = _useState6[0],
+    setHasMore = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)(false),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState7, 2),
+    loading = _useState8[0],
+    setLoading = _useState8[1];
+  var pageRef = (0,react__WEBPACK_IMPORTED_MODULE_6__.useRef)(1);
+  var fetchList = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var reset,
+        kw,
+        currentPage,
+        res,
+        _res$data,
+        items,
+        pagination,
+        newList,
+        _args = arguments;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            reset = _args.length > 0 && _args[0] !== undefined ? _args[0] : false;
+            kw = _args.length > 1 && _args[1] !== undefined ? _args[1] : keyword;
+            if (!loading) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2);
+          case 1:
+            currentPage = reset ? 1 : pageRef.current;
+            setLoading(true);
+            _context.p = 2;
+            _context.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.api.get('/quotes', {
+              data: {
+                page: currentPage,
+                pageSize: 20,
+                keyword: kw
+              }
+            });
+          case 3:
+            res = _context.v;
+            if (res.success) {
+              _res$data = res.data, items = _res$data.items, pagination = _res$data.pagination;
+              newList = reset ? items : [].concat((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_1__["default"])(list), (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_1__["default"])(items));
+              setList(newList);
+              pageRef.current = currentPage + 1;
+              setHasMore(newList.length < pagination.total);
+            }
+          case 4:
+            _context.p = 4;
+            setLoading(false);
+            return _context.f(4);
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2,, 4, 5]]);
+    }));
+    return function fetchList() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.useDidShow)(function () {
+    fetchList(true);
+  });
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.usePullDownRefresh)(function () {
+    fetchList(true).then(function () {
+      return _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().stopPullDownRefresh();
+    });
+  });
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.useReachBottom)(function () {
+    if (hasMore && !loading) fetchList();
+  });
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+    className: "quotes-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      className: "page-header",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+        className: "page-title",
+        children: "\u62A5\u4EF7\u5355"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "header-actions",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "btn-create",
+          onClick: function onClick() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
+              url: '/pages/quotes/create/index'
+            });
+          },
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            children: "+ \u65B0\u5EFA"
+          })
+        })
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      className: "search-bar",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Input, {
+        className: "search-input",
+        placeholder: "\u641C\u7D22\u5BA2\u6237\u540D/\u62A5\u4EF7\u5355\u53F7",
+        value: keyword,
+        onInput: function onInput(e) {
+          return setKeyword(e.detail.value);
+        },
+        onConfirm: function onConfirm() {
+          return fetchList(true);
+        }
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.ScrollView, {
+      className: "list-scroll",
+      scrollY: true,
+      enhanced: true,
+      showScrollbar: false,
+      children: [list.length === 0 && !loading && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "empty flex-center",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          className: "empty-icon",
+          children: "\uD83D\uDCC4"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          className: "empty-text",
+          children: "\u6682\u65E0\u62A5\u4EF7\u5355"
+        })]
+      }), list.map(function (q) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "quote-card card",
+          onClick: function onClick() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
+              url: "/pages/quotes/detail/index?id=".concat(q.id)
+            });
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "card-row card-row--between",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "quote-no",
+              children: q.quoteNo
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              style: {
+                color: STATUS_COLOR[q.status] || '#909399',
+                fontSize: '24px'
+              },
+              children: q.statusText
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "quote-customer",
+            children: q.customerName
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "card-row card-row--between",
+            style: {
+              marginTop: '8px'
+            },
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "quote-rooms",
+              children: [q.roomCount, " \u4E2A\u623F\u95F4"]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "quote-amount",
+              children: ["\xA5", q.totalAmount.toLocaleString()]
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "quote-date",
+            children: q.createdAt
+          })]
+        }, q.id);
+      }), loading && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "loading flex-center",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: "\u52A0\u8F7D\u4E2D..."
+        })
+      }), !hasMore && list.length > 0 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "no-more flex-center",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: "\u2014 \u5DF2\u663E\u793A\u5168\u90E8 \u2014"
+        })
+      })]
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/quotes/index.tsx":
+/*!************************************!*\
+  !*** ./src/pages/quotes/index.tsx ***!
+  \************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/quotes/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/quotes/index!./src/pages/quotes/index.tsx");
+
+
+var config = {"navigationBarTitleText":"quotes"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/quotes/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_quotes_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/quotes/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

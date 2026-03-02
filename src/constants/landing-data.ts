@@ -18,7 +18,7 @@ export const heroCarouselItems: CarouselItem[] = [
     title: '让窗帘生意，回归简单',
     subtitle:
       '我们是一群来自家居行业的从业者。见过太多门店老板被 Excel、微信群和手写单据困住。所以我们做了 L2C —— 从线索到收款，一站式管理。',
-    cta: { text: '免费开始', href: '/register' },
+    cta: { text: '免费开始', href: '/register/tenant' },
     bgGradient: 'from-blue-50 to-indigo-50',
   },
   {
@@ -32,7 +32,7 @@ export const heroCarouselItems: CarouselItem[] = [
     id: 'free-forever',
     title: '基础版永久免费',
     subtitle: '不限用户数、核心功能全开放、无隐藏费用。让改变从今天开始。',
-    cta: { text: '立即注册', href: '/register' },
+    cta: { text: '立即注册', href: '/register/tenant' },
     bgGradient: 'from-emerald-50 to-teal-50',
   },
 ];
@@ -329,7 +329,7 @@ export const pricingPlans: PricingPlan[] = [
       { text: '200个商品云展厅', included: true },
       { text: '基础订单与财务流', included: true },
     ],
-    cta: { text: '免费注册', href: '/register' },
+    cta: { text: '免费注册', href: '/register/tenant' },
     highlighted: false,
   },
   {

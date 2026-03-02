@@ -776,16 +776,25 @@ export async function generateMagicLink(tenantId: string): Promise<{
     }
 
     // 2. 撤销该用户之前的所有未使用 MAGIC_LOGIN token（防止重复使用旧链接）
-    await db
-      .update(verificationCodes)
-      .set({ used: true })
-      .where(
-        and(
-          eq(verificationCodes.userId, bossUser.id),
-          eq(verificationCodes.type, 'MAGIC_LOGIN'),
-          eq(verificationCodes.used, false)
-        )
-      );
+    // 使用 try-catch 包裹，即使撤销失败也不阻塞新链接生成
+    try {
+      await db
+        .update(verificationCodes)
+        .set({ used: true })
+        .where(
+          and(
+            eq(verificationCodes.userId, bossUser.id),
+            eq(verificationCodes.type, 'MAGIC_LOGIN'),
+            eq(verificationCodes.used, false)
+          )
+        );
+    } catch (revokeError) {
+      // 撤销旧 token 失败不影响生成新 token，仅记录日志
+      logger.warn('[Admin:MagicLink] 撤销旧 token 失败，继续生成新链接', {
+        userId: bossUser.id,
+        error: revokeError,
+      });
+    }
 
     // 3. 生成新的 Magic Link token（有效期 24 小时）
     const magicToken = uuidv4();
@@ -830,9 +839,14 @@ export async function generateMagicLink(tenantId: string): Promise<{
   } catch (error) {
     logger.error('[Admin:MagicLink] 生成一次性登录链接失败:', error);
     if (error instanceof z.ZodError) return { success: false, error: '无效请求参数' };
+    // 不向前端暴露底层 SQL/数据库错误，统一输出友好提示
+    const friendlyMessage =
+      error instanceof Error && !error.message.includes('query')
+        ? error.message
+        : '生成登录链接失败，请稍后重试或联系技术支持';
     return {
       success: false,
-      error: error instanceof Error ? error.message : '操作失败',
+      error: friendlyMessage,
     };
   }
 }

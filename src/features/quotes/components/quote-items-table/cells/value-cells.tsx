@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import { TableCell } from '@/shared/ui/table';
 import { Input } from '@/shared/ui/input';
@@ -123,9 +124,21 @@ export const UnitPriceCell = memo(function UnitPriceCell({
   readOnly,
   onUpdate,
 }: UnitPriceCellProps) {
+  // 从行项目属性中获取产品基准价快照，用于低价警告判断
+  const basePrice = Number((item.attributes as Record<string, unknown> | null)?._basePrice || 0);
+
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     if (isNaN(val)) return;
+
+    // 低价警告：当手动输入的单价低于产品基准价时，弹出警告提示（向上调价则无需警告）
+    if (basePrice > 0 && val < basePrice) {
+      toast.warning(`单价 ¥${val} 低于产品基准价 ¥${basePrice}，市场评估价格偏低，请确认是否继续`, {
+        duration: 6000,
+        id: `low-price-${item.id}`,
+      });
+    }
+
     onUpdate(item.id, { unitPrice: val });
   };
 

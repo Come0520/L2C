@@ -8,6 +8,7 @@ import { Bell, Search, User } from 'lucide-react';
 
 import { Button } from '@/shared/ui/button';
 import { UserMenu } from './user-menu';
+import { TenantSwitcher } from './tenant-switcher';
 
 /**
  * 顶部导航栏组件
@@ -68,8 +69,10 @@ export function Header({ session }: HeaderProps) {
 
   return (
     <header className="glass-liquid flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-6 dark:border-white/5">
-      {/* 左侧：页面标题 */}
+      {/* 左侧：租户切换 与 页面标题 */}
       <div className="flex items-center gap-4">
+        {session && session.user && <TenantSwitcher session={session} />}
+        <div className="mx-2 hidden h-6 w-px bg-white/10 sm:block"></div>
         <h1 className="text-foreground text-xl font-semibold">{getPageTitle()}</h1>
       </div>
 

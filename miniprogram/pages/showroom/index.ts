@@ -136,7 +136,7 @@ Page({
         if (this.data.isSelectionMode) {
             this.toggleResourceSelection(id);
         } else {
-            wx.navigateTo({ url: `/pages/showroom/detail/index?id=${id}` });
+            wx.navigateTo({ url: `/pages/showroom-sub/detail/index?id=${id}` });
         }
     },
 
@@ -172,9 +172,9 @@ Page({
         const title = '为您精选的窗帘搭配方案';
 
         return {
-            title,
-            path: `/pages/showroom/capsule/index?ids=${ids}`,
-            imageUrl: '/assets/share-cover.png' // Or dynamic canvas
+            title: '精选案例',
+            path: `/pages/showroom-sub/capsule/index?ids=${ids}`,
+            imageUrl: '' // Or dynamic canvas
         };
     }
 });

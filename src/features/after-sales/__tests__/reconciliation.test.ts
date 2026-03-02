@@ -3,7 +3,7 @@ import { confirmLiabilityNotice } from '../actions/liability';
 import { checkTicketFinancialClosure } from '../actions/ticket';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock Modules
 vi.mock('@/shared/api/db', () => ({
@@ -48,7 +48,7 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue({}),
   },

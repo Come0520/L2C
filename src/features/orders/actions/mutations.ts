@@ -8,7 +8,7 @@ import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
 import { updateTag } from 'next/cache';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { OrderStateMachine } from '../logic/order-state-machine';
 import { logger } from '@/shared/lib/logger';
 

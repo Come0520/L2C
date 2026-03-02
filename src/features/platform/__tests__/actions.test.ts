@@ -45,7 +45,7 @@ vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { record: vi.fn().mockResolvedValue(undefined) },
 }));
 

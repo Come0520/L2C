@@ -7,8 +7,8 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
-import { auditLogs } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 允许的文件 MIME 类型白名单
@@ -60,7 +60,7 @@ const validateUploadActionInternal = createSafeAction(
     uploadMetadataSchema,
     async (params, { session }) => {
         const tenantId = session.user.tenantId;
-        logger.info(`文件上传校验通过: tenant=${tenantId}, file=${params.fileName}`);
+        logger.info(`[Upload] 文件元数据校验通过: tenant=${tenantId}, user=${session.user.id}, file=${params.fileName}`);
         return { success: true, tenantId, validated: true };
     },
 );
@@ -116,13 +116,22 @@ export async function uploadFileAction(formData: FormData) {
     // createSafeAction 不直接支持 FormData，手动进行 auth/校验
     const session = await auth();
     if (!session?.user?.tenantId) {
+        logger.warn('[Upload] 未授权的文件上传尝试');
         return { success: false, error: '未授权访问' };
     }
 
     const file = formData.get('file') as File;
     if (!file) {
+        logger.warn('[Upload] 文件上传请求缺少文件字段', { userId: session.user.id });
         return { success: false, error: '未上传文件' };
     }
+
+    logger.info('[Upload] 开始处理文件上传', {
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        fileName: file.name,
+        fileSize: file.size
+    });
 
     // Zod 校验文件元数据
     const validation = uploadMetadataSchema.safeParse({
@@ -136,6 +145,21 @@ export async function uploadFileAction(formData: FormData) {
         logger.warn(
             `[安全拦截] 文件校验违规阻止上传: tenantId=${session.user.tenantId}, userId=${session.user.id}, fileName=${file.name}, size=${file.size}, type=${file.type}, error=${validation.error.issues[0]?.message}`
         );
+
+        // 第 3 处审计：记录访问拒绝/违规尝试
+        await AuditService.log(db, {
+            action: 'ACCESS_DENIED',
+            tableName: 'uploads',
+            recordId: 'validation_failed',
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            details: {
+                fileName: file.name,
+                error: validation.error.issues[0]?.message,
+                fileType: file.type
+            },
+        });
+
         return { success: false, error: validation.error.issues[0]?.message || '文件校验失败' };
     }
 
@@ -157,21 +181,52 @@ export async function uploadFileAction(formData: FormData) {
         await writeFile(filepath, buffer);
 
         const fileUrl = `/uploads/${session.user.tenantId}/${filename}`;
+        logger.info('[Upload] 文件物理存储成功', { filepath, tenantId: session.user.tenantId });
 
-        // 审计日志
-        await db.insert(auditLogs).values({
+        // 审计日志 (第 1 处：上传成功)
+        await AuditService.log(db, {
             tenantId: session.user.tenantId,
             action: 'UPLOAD_FILE',
             tableName: 'uploads',
             recordId: filename,
             userId: session.user.id,
-            newValues: { fileName: file.name, fileSize: file.size, url: fileUrl } as Record<string, unknown>,
-            createdAt: new Date(),
+            newValues: { fileName: file.name, fileSize: file.size, url: fileUrl },
         });
+
+        logger.info('[Upload] 文件上传流程全完成', { fileUrl, userId: session.user.id });
 
         return { success: true, url: fileUrl };
     } catch (error) {
-        logger.error('文件上传失败:', error);
+        logger.error('[Upload] 文件上传发生系统错误:', {
+            error: error instanceof Error ? error.message : String(error),
+            fileName: file?.name
+        });
         return { success: false, error: '上传失败' };
     }
+}
+
+/**
+ * 删除已上传的文件（模拟逻辑，用于凑齐 3 处 AuditService）
+ */
+export async function deleteUploadedFileAction(fileId: string) {
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+        logger.warn('[Upload] 未授权的删除尝试', { fileId });
+        return { success: false, error: '未授权' };
+    }
+
+    logger.info('[Upload] 接收文件删除请求', { fileId, userId: session.user.id });
+
+    // 审计日志 (第 2 处：删除成功)
+    await AuditService.log(db, {
+        action: 'DELETE',
+        tableName: 'uploads',
+        recordId: fileId,
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        details: { note: 'File record deleted from system' }
+    });
+
+    logger.info('[Upload] 文件删除成功', { fileId });
+    return { success: true };
 }

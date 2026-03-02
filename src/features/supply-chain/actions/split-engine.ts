@@ -12,7 +12,7 @@ import { orderItems } from '@/shared/api/schema/orders';
 import { products } from '@/shared/api/schema/catalogs';
 import { generateDocNo } from '@/shared/lib/utils';
 import { PO_STATUS } from '../constants';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import type { Session } from 'next-auth';
 import type { SplitCondition } from '../types';
 import crypto from 'crypto';

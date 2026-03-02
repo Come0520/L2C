@@ -6,7 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { updateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import Decimal from 'decimal.js';
 import { logger } from '@/shared/lib/logger';
 

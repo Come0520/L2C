@@ -17,7 +17,7 @@ import { updateQuoteTotal } from './shared-helpers';
  * 报价单房间 CRUD 操作 Actions
  * 处理空间信息的增删改，并同步触发报价单总额重新计算与缓存失效。
  */
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 // ─── 创建房间 ───────────────────────────────────

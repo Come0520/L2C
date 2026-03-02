@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { splitRouteRules, suppliers } from '@/shared/api/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 import { requireAuth, requireManagePermission, requireViewPermission } from '../helpers';

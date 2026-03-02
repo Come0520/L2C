@@ -12,7 +12,7 @@ import { afterSalesStatusEnum } from '@/shared/api/schema/enums';
 import { auth } from '@/shared/lib/auth';
 import { generateTicketNo, escapeLikePattern, maskPhoneNumber } from '../utils';
 import { isValidTransition } from '../logic/state-machine';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { createTicketSchema, updateStatusSchema, _placeholderSchema } from './schemas';
 import { logger } from '@/shared/lib/logger';
 

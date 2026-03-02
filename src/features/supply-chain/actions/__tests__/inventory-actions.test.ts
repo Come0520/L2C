@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '@/shared/api/db';
 import { inventory, inventoryLogs, products, warehouses } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -39,7 +39,7 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },
@@ -247,7 +247,7 @@ describe('Inventory Actions', () => {
       mockDb.query.inventory.findFirst.mockResolvedValue({ id: 'inv-1' });
 
       const { setminStock } = await import('../inventory-actions');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await setminStock({
         productId: VALID_UUID_2,

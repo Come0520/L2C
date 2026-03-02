@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 产品套件 (Product Bundles) 单元测试
  *
  * 覆盖场景：
@@ -29,7 +29,7 @@ vi.mock('next/cache', () => ({
   updateTag: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

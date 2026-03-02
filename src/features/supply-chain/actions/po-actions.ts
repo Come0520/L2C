@@ -22,7 +22,7 @@ import { type POStatus } from "../constants";
 import { generateDocNo } from "@/shared/lib/utils";
 import { createSafeAction } from "@/shared/lib/server-action";
 import { z } from "zod";
-import { AuditService } from "@/shared/lib/audit-service";
+import { AuditService } from "@/shared/services/audit-service";
 import type { ProcurementMetrics } from "../types";
 
 

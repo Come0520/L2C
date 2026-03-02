@@ -22,7 +22,7 @@ import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { PO_STATUS } from '../constants';
 import { generateDocNo } from '@/shared/lib/utils';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import type { Session } from 'next-auth';
 import { logger } from '@/shared/lib/logger';
 

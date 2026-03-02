@@ -4,7 +4,8 @@ import { users } from './infrastructure';
 export const verificationCodeTypeEnum = pgEnum('verification_code_type', [
     'LOGIN_MFA',
     'PASSWORD_RESET',
-    'BIND_PHONE'
+    'BIND_PHONE',
+    'MAGIC_LOGIN'
 ]);
 
 export const verificationCodes = pgTable('verification_codes', {

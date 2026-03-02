@@ -23,7 +23,7 @@ import {
 import { updateQuoteTotal } from './shared-helpers';
 import { StrategyFactory } from '../calc-strategies/strategy-factory';
 import { AccessoryLinkageService } from '../services/accessory-linkage.service';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { SizeValidator } from '@/shared/lib/validators';
 import { logger } from '@/shared/lib/logger';
 import Decimal from 'decimal.js';

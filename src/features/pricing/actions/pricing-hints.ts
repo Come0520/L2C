@@ -10,6 +10,16 @@ import { cache } from 'react';
 import { logger } from '@/shared/lib/logger';
 import { unstable_cache } from 'next/cache';
 
+/**
+ * 定价建议请求参数的 Zod 校验 Schema
+ *
+ * @description 用于验证前端传入的定价建议查询参数，
+ * 确保产品 ID 或 SKU 至少提供其一，并设置默认的数据回溯期。
+ *
+ * @property {string} [productId] - 产品唯一识别 ID
+ * @property {string} [sku] - 产品的 SKU 编码
+ * @property {number} [periodDays=90] - 提取历史订单及报价数据的时间范围（天数），默认 90 天
+ */
 const pricingHintsSchema = z.object({
   productId: z.string().optional(),
   sku: z.string().optional(),
@@ -17,14 +27,27 @@ const pricingHintsSchema = z.object({
 });
 
 /**
- * 缓存的定价数据查询函数
- * 提升至顶层以确保 Next.js 能够正确识别并复用缓存
+ * 缓存的聚合定价数据查询函数
  *
- * @param pId 产品ID
- * @param tId 租户ID
- * @param category 产品分类
- * @param startISO 统计开始时间(ISO)
- * @param trendStartISO 趋势开始时间(ISO)
+ * @description 核心数据查询引擎，并行执行 4 个复杂的聚合查询：
+ * 1. 销售统计：近 N 天的历史成交极值、均价、总销量及最近一次成交价
+ * 2. 报价统计：近 N 天的历史报价均价及次数
+ * 3. 价格趋势：近半年按月分组的均价走势
+ * 4. 品类统计：同类目下所有活跃产品的指导价极值与均价
+ *
+ * 提升至顶层定义以确保 Next.js unstable_cache 能够正确识别并复用缓存，
+ * 有效降低复杂聚合查询对数据库的压力。缓存有效期为 5 分钟 (300 秒)。
+ *
+ * @param {string} pId - 目标产品 ID
+ * @param {string} tId - 当前登录用户的租户 ID（用于数据隔离）
+ * @param {string|null} category - 目标产品的分类（用于同类对比），可为空
+ * @param {string} startISO - 统计回溯的开始时间（ISO 8601 格式字符串）
+ * @param {string} trendStartISO - 趋势图表的开始时间（通常更早，如半年前）
+ *
+ * @returns {Promise<[any[], any[], any[], any[]]>} 返回包含 4 个查询结果数组的 Promise
+ *
+ * @security 使用 Drizzle ORM 构建查询，内置 SQL 注入防护
+ * @security 强制在所有查询中附加 eq(tenantId, tId) 条件实现租户数据隔离
  */
 const getCachedPricingData = unstable_cache(
   async (
@@ -34,9 +57,15 @@ const getCachedPricingData = unstable_cache(
     startISO: string,
     trendStartISO: string
   ) => {
+    /** 转换 ISO 字符串为 Date 对象供应 ORM 查询使用 */
     const start = new Date(startISO);
     const trendStart = new Date(trendStartISO);
 
+    /**
+     * 销售统计聚合查询
+     * @description 查询已成交订单（排除取消和草稿状态）中的目标产品记录。
+     * 使用 CAST(... AS DECIMAL) 确保金额计算的精度，避免浮点误差。
+     */
     const salesStatsPromise = db
       .select({
         minPrice: sql<string>`MIN(CAST(${orderItems.unitPrice} AS DECIMAL))`,
@@ -57,6 +86,11 @@ const getCachedPricingData = unstable_cache(
         )
       );
 
+    /**
+     * 报价统计聚合查询
+     * @description 查询历史报价单中的目标产品记录。
+     * 使用 CAST(... AS DECIMAL) 确保金额计算的精度。
+     */
     const quoteStatsPromise = db
       .select({
         avgQuotePrice: sql<string>`AVG(CAST(${quoteItems.unitPrice} AS DECIMAL))`,
@@ -68,6 +102,10 @@ const getCachedPricingData = unstable_cache(
         and(eq(quoteItems.productId, pId), eq(quotes.tenantId, tId), gte(quotes.createdAt, start))
       );
 
+    /**
+     * 月度价格趋势查询
+     * @description 按月分组（YYYY-MM）统计目标产品的成交均价，用于生成趋势图。
+     */
     const priceTrendsPromise = db
       .select({
         month: sql<string>`TO_CHAR(${orders.createdAt}, 'YYYY-MM')`,
@@ -86,6 +124,10 @@ const getCachedPricingData = unstable_cache(
       .groupBy(sql`TO_CHAR(${orders.createdAt}, 'YYYY-MM')`)
       .orderBy(sql`TO_CHAR(${orders.createdAt}, 'YYYY-MM')`);
 
+    /**
+     * 同品类统计算法
+     * @description 查询同分类下所有活跃产品的指导价。如果产品无分类，则查询全量活跃产品。
+     */
     const categoryStatsPromise = db
       .select({
         minRetailPrice: sql<string>`MIN(CAST(${products.retailPrice} AS DECIMAL))`,
@@ -118,7 +160,8 @@ const getCachedPricingData = unstable_cache(
 /**
  * 获取产品定价参考建议的内部 Server Action
  *
- * 聚合指定产品或 SKU 的历史成交价、近期报价记录及成本等多维度信息，为销售端提供定价预估和毛利参考。
+ * @description 聚合指定产品或 SKU 的历史成交价、近期报价记录及成本等多维度信息，
+ * 为销售端提供定价预估和毛利参考。
  * 返回包括成本底价、指导价、近期均价、价格趋势图数据以及同类产品的市场价格参考。
  *
  * @param {Object} params - 请求参数对象
@@ -129,21 +172,38 @@ const getCachedPricingData = unstable_cache(
  * @param {Object} param1.session - 用户会话信息，包含用于校验权限及数据视图范围的 user 和 tenantId
  *
  * @returns {Promise<Object>} 返回具有 success 与 data 字段的状态结果
+ *
+ * @security 必须拥有 'quotes:create' 权限才能查看定价建议。
  */
 export const getPricingHintsAction = cache(
   createSafeAction(pricingHintsSchema, async (params, { session }) => {
+    /** 记录开始时间以统计执行耗时 */
     const startTime = performance.now();
     const tenantId = session.user.tenantId;
 
     try {
-      // 允许销售查看定价建议
+      /**
+       * 权限校验：仅允许具备案源/报价创建权限的角色访问
+       * 销售人员通常具备此权限。
+       */
       await checkPermission(session, 'quotes:create');
 
+      logger.info('开始获取定价建议', {
+        productId: params.productId,
+        sku: params.sku,
+        periodDays: params.periodDays,
+        tenantId,
+      });
+
       if (!params.productId && !params.sku) {
+        logger.warn('获取定价建议失败：缺失 productId 和 sku');
         return { success: false, error: 'Product ID or SKU is required' };
       }
 
-      // 1. 获取基础产品信息 (成本/底价)
+      /**
+       * 第一阶段：获取基础产品信息 (成本/底价)
+       * 用于作为毛利计算的基准。
+       */
       const productInfo = await db.query.products.findFirst({
         where: (products, { eq, and }) =>
           and(
@@ -154,17 +214,24 @@ export const getPricingHintsAction = cache(
       });
 
       if (!productInfo) {
+        logger.warn('未找到指定商品的定价信息', { productId: params.productId, sku: params.sku, tenantId });
         return { success: false, error: 'Product not found' };
       }
 
       const targetProductId = productInfo.id;
+
+      /** 设定统计的时间窗口：常规统计近1个月，趋势图近6个月 */
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - 1); // 最近一个月
 
       const trendStartDate = new Date();
       trendStartDate.setMonth(trendStartDate.getMonth() - 6); // 最近半年
 
-      // 2. 调用缓存的聚合查询
+      logger.info('准备执行内部定价统计聚合计算', { targetProductId, startDate, trendStartDate });
+
+      /**
+       * 第二阶段：并行执行缓存的复杂关联及聚合查询
+       */
       const [salesStats, quoteStats, priceTrends, categoryStats] = await getCachedPricingData(
         targetProductId,
         tenantId,
@@ -176,7 +243,10 @@ export const getPricingHintsAction = cache(
       const dbEndTime = performance.now();
       const dbDuration = (dbEndTime - startTime).toFixed(2);
 
-      // 3. 计算建议与分析
+      /**
+       * 第三阶段：计算衍生指标与智能建议
+       * 将数据库返回的字符串统一转换为 Number 以便进行数学运算。
+       */
       const cost = Number(productInfo.purchasePrice || 0);
       const floorPrice = Number(productInfo.floorPrice || 0);
       const retailPrice = Number(productInfo.retailPrice || productInfo.unitPrice || 0);
@@ -190,14 +260,22 @@ export const getPricingHintsAction = cache(
       const maxSoldPrice = Number(sales.maxPrice || 0);
       const lastSoldPrice = Number(sales.lastPrice || 0);
 
-      // PR-02 修复：建议价安全防线 —— 不得低于 floor_price（底价红线）
+      /**
+       * 智能建议价计算逻辑
+       * @description PR-02 修复：建议价安全防线 —— 不得低于 floor_price（底价红线）。
+       * 优先参考历史均价，若无记录则退化为指导价。
+       */
       const rawSuggestedPrice = avgSoldPrice > 0 ? avgSoldPrice : retailPrice;
       const suggestedPriceNum =
         floorPrice > 0 && rawSuggestedPrice < floorPrice
           ? floorPrice // 若计算结果低于底价，自动托底为 floor_price
           : rawSuggestedPrice;
 
-      // PR-06 已有保护：毛利率计算使用条件表达式，避免除零产生 NaN/Infinity
+      /**
+       * 毛利率计算
+       * @description PR-06 保护：使用条件表达式，避免除以零产生 NaN/Infinity。
+       * 计算公式：(售价 - 成本) / 售价 * 100
+       */
       const currentMargin =
         retailPrice > 0 ? (((retailPrice - cost) / retailPrice) * 100).toFixed(1) : '0';
       const historicMargin =
@@ -207,13 +285,25 @@ export const getPricingHintsAction = cache(
           ? (((suggestedPriceNum - cost) / suggestedPriceNum) * 100).toFixed(1)
           : '0';
 
-      // PR-01 修复：预计算低毛利告警标志（任一毛利率低于 20% 则告警）
+      /**
+       * 第四阶段：风控规则引擎
+       * @description PR-01 修复：预计算低毛利告警标志（任一毛利率低于 20% 则告警）。
+       */
       const LOW_MARGIN_THRESHOLD = 20;
       const isLowMargin = [
         parseFloat(currentMargin),
         parseFloat(historicMargin),
         parseFloat(estimatedMargin),
       ].some((m) => m < LOW_MARGIN_THRESHOLD);
+
+      if (isLowMargin) {
+        logger.info('毛利率分析：检测到较低毛利率', { targetProductId, currentMargin, historicMargin, estimatedMargin });
+      }
+
+      /** 低于成本价的最高级别告警 */
+      if (suggestedPriceNum < cost) {
+        logger.warn('即将触发定价底线告警：建议价格低于采购成本', { targetProductId, suggestedPriceNum, cost });
+      }
 
       const totalEndTime = performance.now();
       const totalDuration = (totalEndTime - startTime).toFixed(2);
@@ -232,6 +322,7 @@ export const getPricingHintsAction = cache(
       return {
         success: true,
         data: {
+          /** 产品基础约束数据 */
           product: {
             name: productInfo.name,
             sku: productInfo.sku,
@@ -239,6 +330,7 @@ export const getPricingHintsAction = cache(
             floorPrice: floorPrice,
             guidancePrice: retailPrice,
           },
+          /** 历史成交及报价摘要 */
           stats: {
             periodDays: params.periodDays,
             soldCount: Number(sales.count || 0),
@@ -250,6 +342,7 @@ export const getPricingHintsAction = cache(
             quoteCount: Number(quotesData.quoteCount || 0),
             avgQuotePrice: Number(quotesData.avgQuotePrice || 0).toFixed(2),
           },
+          /** 智能分析与风控预测结果 */
           analysis: {
             suggestedPrice: suggestedPriceNum.toFixed(2),
             // PR-02: 标识建议价是否被 floor_price 托底
@@ -263,10 +356,12 @@ export const getPricingHintsAction = cache(
             isLowMargin,
             competitiveness: avgSoldPrice < retailPrice ? 'BELOW_GUIDE' : 'ABOVE_GUIDE',
           },
+          /** 月度价格趋势线数据 */
           trends: priceTrends.map((t: { month: string; avgPrice: string }) => ({
             month: t.month,
             avgPrice: Number(t.avgPrice).toFixed(2),
           })),
+          /** 行业/品类基准对比数据 */
           categoryAnalysis: {
             category: productInfo.category,
             minPrice: Number(cat.minRetailPrice || 0).toFixed(2),
@@ -291,7 +386,8 @@ export const getPricingHintsAction = cache(
 /**
  * 服务端调用的定价建议获取接口
  *
- * 封装了包含权限与日志审计机制的 getPricingHintsAction，并确保入参满足 pricingHintsSchema。
+ * @description 封装了包含权限与日志审计机制的 getPricingHintsAction，
+ * 并确保入参满足 pricingHintsSchema。
  * 用于组件或前端请求中获取经过合法性与安全过滤的定价数据。
  *
  * @param {z.input<typeof pricingHintsSchema>} params - 包含产品识别与追溯日期的入参对象

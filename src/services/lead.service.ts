@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { calculateLeadScore } from '@/features/leads/logic/scoring';
 import { getSettingInternal } from '@/features/settings/actions/system-settings-actions';
 import { distributeToNextSales } from '@/features/leads/logic/distribution-engine';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { escapeSqlLike } from '@/shared/lib/utils';
 
 export class LeadService {

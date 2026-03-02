@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 import { requestOrderCancellationSchema, CANCELABLE_STATUSES } from '../action-schemas';

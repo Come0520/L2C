@@ -11,7 +11,7 @@ import { getDefaultDashboardConfig } from '../utils';
 import { UserDashboardConfig } from '../types';
 import { createLogger } from '@/shared/lib/logger';
 
-import { updateTag } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { WorkbenchService } from '@/services/workbench.service';
 
 const logger = createLogger('DashboardConfigAction');
@@ -93,7 +93,7 @@ export const saveDashboardConfigAction = createSafeAction(
       });
 
       // 4. 失效缓存
-      updateTag(`dashboard-config:${userId}`);
+      revalidateTag(`dashboard-config:${userId}`, {});
       logger.info('成功保存仪表盘配置', { userId, tenantId });
       return { success: true };
     } catch (error) {
@@ -129,7 +129,7 @@ export const resetDashboardConfigAction = createSafeAction(z.object({}), async (
     });
 
     // 失效缓存
-    updateTag(`dashboard-config:${userId}`);
+    revalidateTag(`dashboard-config:${userId}`, {});
     logger.info('成功重置仪表盘配置', { userId, tenantId });
     return { success: true };
   } catch (error) {

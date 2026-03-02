@@ -24,6 +24,7 @@ description: Use when you are ready to release a new version, update the honor w
 ## Red Flags - STOP and Start Over
 
 - **跳过测试：** "改动很小，直接部署吧" → 不行。测试必须全部通过。
+- **忽略构建报错：** "只有几个类型警告，可以强行打包" → 绝对不行。必须在本地完整运行 `pnpm run build` 且做到 0 报错，否则绝对禁止部署。
 - **在 ECS 上构建：** "我在服务器上跑 `pnpm build`" → 绝对不行。ECS 只有 4GB 内存，会 OOM 崩溃。
 - **跳过贡献墙更新：** "贡献墙回头再改" → 不行。UI 必须在 commit 之前更新。
 - **忽略 .env 变更：** "环境变量没问题" → 不行。必须主动询问用户是否已同步 ECS 的 `.env` 文件。
@@ -90,10 +91,10 @@ git push codeup main
 
 ### Step 5: 本地构建与打包
 
-ECS 只有 4GB 内存，必须在本地构建。
+ECS 只有 4GB 内存，必须在本地构建。并且必须保证本地构建 0 报错。
 
 ```bash
-# 1. 构建生产产物
+# 1. 构建生产产物（如果有任何 TypeScript/Turbopack 报错，必须停下来修复，严禁带错发布）
 pnpm run build
 
 # 2. 打包 standalone 产物

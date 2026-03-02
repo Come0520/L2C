@@ -43,7 +43,7 @@ vi.mock('@/shared/api/schema/orders', () => ({
 }));
 
 // Mock AuditService
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: mockAuditRecord,
   },

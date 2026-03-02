@@ -393,13 +393,15 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
       <Dialog
         open={warningDialog.open}
         onOpenChange={(open) => setWarningDialog((prev: WarningDialogState) => ({ ...prev, open }))}
+        aria-labelledby="warning-dialog-title"
+        aria-describedby="warning-dialog-description"
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive flex items-center gap-2">
+            <DialogTitle id="warning-dialog-title" className="text-destructive flex items-center gap-2">
               {warningDialog.title}
             </DialogTitle>
-            <DialogDescription className="text-foreground pt-4 text-base font-medium">
+            <DialogDescription id="warning-dialog-description" className="text-foreground pt-4 text-base font-medium">
               {warningDialog.message}
             </DialogDescription>
           </DialogHeader>
@@ -409,6 +411,7 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
           </div>
           <DialogFooter>
             <Button
+              aria-label="关闭警告"
               onClick={() =>
                 setWarningDialog((prev: WarningDialogState) => ({ ...prev, open: false }))
               }

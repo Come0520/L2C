@@ -6,7 +6,7 @@ import { orders } from '@/shared/api/schema/orders';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { requestDeliverySchema, updateLogisticsSchema } from '../action-schemas';
 import { LogisticsService } from '@/services/logistics.service';
 

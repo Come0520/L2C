@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // ─── Mock Setup ─────────────────────────────────
 // 简化版可链式调用的 mock 函数，返回值可以是任意类型
@@ -68,7 +68,7 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

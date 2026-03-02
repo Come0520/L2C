@@ -23,7 +23,7 @@ vi.mock('@/shared/lib/logger', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

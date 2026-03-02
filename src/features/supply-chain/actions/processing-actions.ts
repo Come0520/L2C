@@ -16,7 +16,7 @@ import { auth, checkPermission } from "@/shared/lib/auth";
 import { revalidatePath } from "next/cache";
 import { PERMISSIONS } from "@/shared/config/permissions";
 import { SUPPLY_CHAIN_PATHS } from "../constants";
-import { AuditService } from "@/shared/lib/audit-service";
+import { AuditService } from "@/shared/services/audit-service";
 import { ProcessingOrderListItem, ProcessingOrderDetail } from "../types";
 
 

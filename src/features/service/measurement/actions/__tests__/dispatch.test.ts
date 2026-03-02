@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispatchMeasureTask } from '../mutations';
 import { MeasurementService } from '@/services/measurement.service';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 const VALID_TASK_ID = '550e8400-e29b-41d4-a716-446655440000';
 const VALID_WORKER_ID = '660e8400-e29b-41d4-a716-446655440000';
@@ -19,7 +19,7 @@ vi.mock('@/services/measurement.service', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

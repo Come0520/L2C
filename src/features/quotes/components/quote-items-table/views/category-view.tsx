@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo } from 'react';
+import React, { Fragment, useMemo } from 'react';
 import { Table, TableBody, TableRow, TableCell } from '@/shared/ui/table';
 import { QuoteTableHeader } from '../table-header';
 import { QuoteItemRow } from '../quote-item-row';
@@ -37,7 +37,7 @@ interface CategoryViewProps extends ColumnVisibility {
   onRowClick?: (item: QuoteItem) => void;
 }
 
-export function CategoryView({
+export const CategoryView = React.memo(function CategoryView({
   quoteId,
   rooms = [],
   items,
@@ -290,4 +290,4 @@ export function CategoryView({
       )}
     </div>
   );
-}
+});

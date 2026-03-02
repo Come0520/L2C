@@ -1,13 +1,14 @@
-﻿import { NavigationGuard } from '../../utils/navigation-guard';
+// jest 全局注入，无需导入
+import { NavigationGuard } from '../../utils/navigation-guard';
 import { authStore } from '../../stores/auth-store';
 
 describe('NavigationGuard', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        jest.clearAllMocks();
         (global as any).wx = {
-            navigateTo: vi.fn(),
-            reLaunch: vi.fn(),
-            navigateBack: vi.fn()
+            navigateTo: jest.fn(),
+            reLaunch: jest.fn(),
+            navigateBack: jest.fn()
         } as any;
     });
 

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import crypto from 'crypto';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { quotes } from '@/shared/api/schema/quotes';
 import { eq, and, sql } from 'drizzle-orm';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
@@ -33,7 +33,7 @@ import { logger } from '@/shared/lib/logger';
 export const createQuoteBundleActionInternal = createSafeAction(
   createQuoteBundleSchema,
   async (data, context) => {
-    const traceId = crypto.randomUUID().slice(0, 8);
+    const traceId = crypto.randomUUID();
     const tenantId = context.session.user.tenantId;
     if (!tenantId) {
       logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
@@ -44,6 +44,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
       customerId: data.customerId,
       leadId: data.leadId,
       traceId,
+      tenantId,
     });
 
     const quoteNo = `QT${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -72,9 +73,11 @@ export const createQuoteBundleActionInternal = createSafeAction(
 
     revalidatePath('/quotes');
     updateTag('quotes');
-    logger.info('[quotes] 报价套餐创建成功', {
+    logger.info(`[${traceId}] [quotes] 报价套餐创建成功`, {
       bundleId: newBundle.id,
       quoteNo: newBundle.quoteNo,
+      traceId,
+      tenantId,
     });
     return newBundle;
   }
@@ -98,7 +101,7 @@ export const createQuoteBundleActionInternal = createSafeAction(
 export const createQuoteActionInternal = createSafeAction(
   createQuoteSchema,
   async (data, context) => {
-    const traceId = crypto.randomUUID().slice(0, 8);
+    const traceId = crypto.randomUUID();
     const tenantId = context.session.user.tenantId;
     if (!tenantId) {
       logger.error(`[${traceId}] [quotes] 未授权访问：缺少租户信息`, { traceId });
@@ -111,6 +114,7 @@ export const createQuoteActionInternal = createSafeAction(
       bundleId: data.bundleId,
       title: data.title,
       traceId,
+      tenantId,
     });
 
     const [newQuote] = await db
@@ -150,6 +154,7 @@ export const createQuoteActionInternal = createSafeAction(
       quoteId: newQuote.id,
       quoteNo: newQuote.quoteNo,
       traceId,
+      tenantId,
     });
     return newQuote;
   }
@@ -203,7 +208,7 @@ export async function updateQuoteAction(params: z.infer<typeof updateQuoteSchema
  * @throws {AppError} 如果发生乐观锁冲突（`ERROR_CODES.CONCURRENCY_CONFLICT`）。
  */
 export const updateQuote = createSafeAction(updateQuoteSchema, async (data, context) => {
-  const traceId = crypto.randomUUID().slice(0, 8);
+  const traceId = crypto.randomUUID();
   const { id, version, ...updateData } = data;
   const userTenantId = context.session.user.tenantId;
   logger.info(`[${traceId}] [quotes] 开始更新报价单`, {
@@ -211,6 +216,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
     version,
     updateKeys: Object.keys(updateData),
     traceId,
+    tenantId: userTenantId,
   });
 
   // 安全检查：验证报价单属于当前租户
@@ -290,7 +296,7 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
   updateTag('quotes');
-  logger.info('[quotes] 报价单更新成功', { quoteId: id });
+  logger.info(`[${traceId}] [quotes] 报价单更新成功`, { quoteId: id, traceId, tenantId: userTenantId });
   return { success: true };
 });
 
@@ -308,12 +314,13 @@ export const copyQuote = createSafeAction(
     targetCustomerId: z.string().optional(),
   }),
   async (data, context) => {
-    const traceId = crypto.randomUUID().slice(0, 8);
+    const traceId = crypto.randomUUID();
     const userTenantId = context.session.user.tenantId;
     logger.info(`[${traceId}] [quotes] 开始复制报价单`, {
       quoteId: data.quoteId,
       targetCustomerId: data.targetCustomerId,
       traceId,
+      tenantId: userTenantId,
     });
 
     // 安全检查：验证源报价单归属
@@ -349,6 +356,7 @@ export const copyQuote = createSafeAction(
       sourceQuoteId: data.quoteId,
       newQuoteId: newQuote.id,
       traceId,
+      tenantId: userTenantId,
     });
     return newQuote;
   }

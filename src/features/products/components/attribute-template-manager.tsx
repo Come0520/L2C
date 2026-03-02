@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { logger } from '@/shared/lib/logger';
 import { useState, useEffect } from 'react';
@@ -52,7 +52,7 @@ const attributeFieldSchema = z.object({
   rows: z.number().optional(), // For TEXTAREA
   // [Product-01] 新增说明文本
   description: z.string().optional(), // Help text
-  defaultValue: z.any().optional(), // Default value
+  defaultValue: z.unknown().optional(), // Default value
 });
 
 // Overall schema for the form

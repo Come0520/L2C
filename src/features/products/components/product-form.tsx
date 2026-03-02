@@ -106,34 +106,34 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
     ) as Resolver<ProductFormValues>,
     defaultValues: initialData
       ? {
-          ...initialData,
-          images: initialData.images || [],
-          attributes: initialData.specs || {},
-          purchasePrice: Number(initialData.purchasePrice),
-          logisticsCost: Number(initialData.logisticsCost),
-          processingCost: Number(initialData.processingCost),
-          lossRate: Number(initialData.lossRate),
-          retailPrice: Number(initialData.retailPrice),
-          floorPrice: Number(initialData.floorPrice),
-        }
+        ...initialData,
+        images: initialData.images || [],
+        attributes: initialData.specs || {},
+        purchasePrice: Number(initialData.purchasePrice),
+        logisticsCost: Number(initialData.logisticsCost),
+        processingCost: Number(initialData.processingCost),
+        lossRate: Number(initialData.lossRate),
+        retailPrice: Number(initialData.retailPrice),
+        floorPrice: Number(initialData.floorPrice),
+      }
       : {
-          sku: '',
-          name: '',
-          category: 'CURTAIN',
-          productType: 'FINISHED',
-          unit: '米',
-          purchasePrice: 0,
-          logisticsCost: 0,
-          processingCost: 0,
-          lossRate: 0.05,
-          retailPrice: 0,
-          floorPrice: 0,
-          isToBEnabled: true,
-          isToCEnabled: true,
-          isStockable: false,
-          images: [],
-          attributes: {},
-        },
+        sku: '',
+        name: '',
+        category: 'CURTAIN',
+        productType: 'FINISHED',
+        unit: '米',
+        purchasePrice: 0,
+        logisticsCost: 0,
+        processingCost: 0,
+        lossRate: 0.05,
+        retailPrice: 0,
+        floorPrice: 0,
+        isToBEnabled: true,
+        isToCEnabled: true,
+        isStockable: false,
+        images: [],
+        attributes: {},
+      },
   });
 
   const category = form.watch('category');
@@ -256,7 +256,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 </FormLabel>
                 <FormControl>
                   {field.type === 'SELECT' ? (
-                    <Select onValueChange={formField.onChange} defaultValue={formField.value}>
+                    <Select onValueChange={formField.onChange} defaultValue={formField.value as string | undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={field.placeholder || '请选择'} />
@@ -285,6 +285,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                       type={field.type === 'NUMBER' ? 'number' : 'text'}
                       placeholder={field.placeholder}
                       {...formField}
+                      value={(formField.value as string | number) ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
                         formField.onChange(
@@ -331,7 +332,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               control={form.control}
               name="attributes.fabricWidthType"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value || 'WIDTH'}>
+                <Select onValueChange={field.onChange} value={(field.value as string) || 'WIDTH'}>
                   <SelectTrigger className="w-28">
                     <SelectValue placeholder="类型" />
                   </SelectTrigger>
@@ -362,7 +363,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
             />
             <span className="text-muted-foreground text-sm">
               {form.watch('attributes.fabricWidthType') === 'HEIGHT' ? 'H' : 'W'}
-              {form.watch('attributes.fabricWidthValue') || '—'}
+              {(form.watch('attributes.fabricWidthValue') as string | number) || '—'}
             </span>
           </div>
           <FormDescription>如 W280 表示定宽面料，宽幅 280cm</FormDescription>
@@ -434,7 +435,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
             <FormItem>
               <FormLabel>材质</FormLabel>
               <FormControl>
-                <Input placeholder="如：涤纶、棉麻、雪尼尔" {...field} />
+                <Input placeholder="如：涤纶、棉麻、雪尼尔" {...field} value={(field.value as string) || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -669,7 +670,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   control={form.control}
                   name="attributes.fabricWidthType"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || 'WIDTH'}>
+                    <Select onValueChange={field.onChange} value={(field.value as string) || 'WIDTH'}>
                       <SelectTrigger className="w-28">
                         <SelectValue placeholder="类型" />
                       </SelectTrigger>
@@ -700,7 +701,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 />
                 <span className="text-muted-foreground text-sm">
                   {form.watch('attributes.fabricWidthType') === 'HEIGHT' ? 'H' : 'W'}
-                  {form.watch('attributes.fabricWidthValue') || '—'}
+                  {(form.watch('attributes.fabricWidthValue') as string | number) || '—'}
                 </span>
               </div>
               <FormDescription>如 W280 表示定宽面料，宽幅 280cm</FormDescription>
@@ -1007,7 +1008,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 <FormItem>
                   <FormLabel>材质细节图</FormLabel>
                   <FormControl>
-                    <PhotoUpload value={field.value || []} onChange={field.onChange} maxFiles={5} />
+                    <PhotoUpload value={(field.value as string[]) || []} onChange={field.onChange} maxFiles={5} />
                   </FormControl>
                   <FormDescription>纹理及触感展示，最多 5 张</FormDescription>
                   <FormMessage />
@@ -1021,7 +1022,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 <FormItem>
                   <FormLabel>场景搭配图</FormLabel>
                   <FormControl>
-                    <PhotoUpload value={field.value || []} onChange={field.onChange} maxFiles={5} />
+                    <PhotoUpload value={(field.value as string[]) || []} onChange={field.onChange} maxFiles={5} />
                   </FormControl>
                   <FormDescription>搭配效果展示，最多 5 张</FormDescription>
                   <FormMessage />

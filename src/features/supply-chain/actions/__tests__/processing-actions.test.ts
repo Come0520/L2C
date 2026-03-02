@@ -1,8 +1,8 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '@/shared/api/db';
 import { workOrders, workOrderItems, suppliers, orders, orderItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -27,7 +27,7 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

@@ -1,6 +1,8 @@
-﻿// miniprogram-simulate 依赖真实的微信小程序运行时环境（wxss 解析、canvas 等）
+// jest 全局注入，无需导入
+
+// miniprogram-simulate 依赖真实的微信小程序运行时环境（wxss 解析、canvas 等）
 // 在 JSDOM 环境中无法完整运行，因此这里直接 mock 掉，并测试组件状态逻辑
-vi.mock('miniprogram-simulate', () => {
+jest.mock('miniprogram-simulate', () => {
     const mockComp = {
         data: {
             isEmpty: true,
@@ -10,7 +12,7 @@ vi.mock('miniprogram-simulate', () => {
             lineWidth: 4,
         },
         instance: {} as any,
-        attach: vi.fn(),
+        attach: jest.fn(),
     };
 
     // 模拟 methods
@@ -38,9 +40,10 @@ vi.mock('miniprogram-simulate', () => {
     };
 
     return {
+        __esModule: true,
         default: {
-            load: vi.fn().mockReturnValue('mock-component-id'),
-            render: vi.fn().mockReturnValue(mockComp),
+            load: jest.fn().mockReturnValue('mock-component-id'),
+            render: jest.fn().mockReturnValue(mockComp),
         },
     };
 });
@@ -76,11 +79,11 @@ describe('Signature Component', () => {
 
         const signatureComp = comp.instance;
         signatureComp.ctx = {
-            beginPath: vi.fn(),
-            moveTo: vi.fn(),
-            lineTo: vi.fn(),
-            stroke: vi.fn(),
-            clearRect: vi.fn(),
+            beginPath: jest.fn(),
+            moveTo: jest.fn(),
+            lineTo: jest.fn(),
+            stroke: jest.fn(),
+            clearRect: jest.fn(),
         } as any;
 
         signatureComp.onTouchStart(mockTouch);
@@ -96,7 +99,7 @@ describe('Signature Component', () => {
 
         const signatureComp = comp.instance;
         signatureComp.ctx = {
-            clearRect: vi.fn(),
+            clearRect: jest.fn(),
         } as any;
 
         signatureComp.setData({ isEmpty: false });

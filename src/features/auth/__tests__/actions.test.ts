@@ -24,6 +24,11 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 
+vi.mock('@/shared/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue({ user: { id: 'test-user', tenantId: 'test-tenant' } }),
+  checkPermission: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('@/shared/lib/logger', () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
@@ -53,6 +58,7 @@ describe('password-reset actions', () => {
     vi.mock('@/shared/api/db', () => ({
       db: {
         query: {
+          users: { findFirst: vi.fn().mockResolvedValue(null) },
           verificationCodes: { findFirst: vi.fn().mockResolvedValue(null) },
         },
       },
@@ -66,6 +72,6 @@ describe('password-reset actions', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe('重置链接无效或已使用');
+    expect(result.error).toBe('重置链接无效或已过期，请重新申请');
   });
 });

@@ -1,4 +1,5 @@
-﻿import { errorReporter } from '../../utils/error-reporter';
+// jest 全局注入，无需导入
+import { errorReporter } from '../../utils/error-reporter';
 
 describe('ErrorReporter', () => {
     let mockApp: any;
@@ -6,25 +7,25 @@ describe('ErrorReporter', () => {
     beforeEach(() => {
         // 重置单例状态
         (errorReporter as any).queue = [];
-        vi.clearAllMocks();
+        jest.clearAllMocks();
 
         // 模拟 wx 接口
         (global as any).wx = {
-            onError: vi.fn(),
-            onUnhandledRejection: vi.fn(),
-            request: vi.fn(),
-            getStorageSync: vi.fn(),
-            setStorageSync: vi.fn()
+            onError: jest.fn(),
+            onUnhandledRejection: jest.fn(),
+            request: jest.fn(),
+            getStorageSync: jest.fn(),
+            setStorageSync: jest.fn()
         } as any;
 
         // 模拟 getApp
         mockApp = {
             globalData: { apiBase: 'http://localhost:3000/api/miniprogram' }
         };
-        (global as any).getApp = vi.fn().mockReturnValue(mockApp);
+        (global as any).getApp = jest.fn().mockReturnValue(mockApp);
 
         // 模拟 getCurrentPages
-        (global as any).getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/index/index' }]);
+        (global as any).getCurrentPages = jest.fn().mockReturnValue([{ route: 'pages/index/index' }]);
 
         vi.useFakeTimers();
     });
@@ -35,7 +36,7 @@ describe('ErrorReporter', () => {
 
     test('should capture JS errors', () => {
         errorReporter.init();
-        const errorCallback = (wx.onError as ReturnType<typeof vi.fn>).mock.calls[0][0];
+        const errorCallback = (wx.onError as ReturnType<typeof jest.fn>).mock.calls[0][0];
 
         errorCallback('Test JS Error');
 
@@ -45,7 +46,7 @@ describe('ErrorReporter', () => {
 
     test('should capture Promise rejections', () => {
         errorReporter.init();
-        const rejectionCallback = (wx.onUnhandledRejection as ReturnType<typeof vi.fn>).mock.calls[0][0];
+        const rejectionCallback = (wx.onUnhandledRejection as ReturnType<typeof jest.fn>).mock.calls[0][0];
 
         rejectionCallback({ reason: 'Promise Failed', promise: {} });
 

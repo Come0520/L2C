@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { isValidTransition } from '@/features/after-sales/logic/state-machine';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Types for filters
 export interface TicketFilters {

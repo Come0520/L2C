@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { validateGpsCheckIn, calculateLateMinutes } from '@/shared/lib/gps-utils';
 import { auth } from '@/shared/lib/auth';
 
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 输入校验 Schema
 const CheckInMeasureTaskSchema = z.object({

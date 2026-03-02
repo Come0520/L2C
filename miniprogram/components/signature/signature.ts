@@ -28,7 +28,9 @@ Component({
                     }
                     const canvas = res[0].node;
                     const ctx = canvas.getContext('2d');
-                    const dpr = wx.getSystemInfoSync().pixelRatio;
+                    // 使用全局缓存的系统信息（铁律 4.3：避免同步阻塞）
+                    const { getCachedSystemInfo } = require('../../utils/env');
+                    const dpr = getCachedSystemInfo().pixelRatio;
 
                     // Handle resizing for high DPI
                     canvas.width = res[0].width * dpr;

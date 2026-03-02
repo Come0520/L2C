@@ -181,6 +181,7 @@ export function QuoteInlineAddRow({
                     value={selectedRoomId || undefined}
                     onValueChange={setSelectedRoomId}
                     disabled={isSubmitting}
+                    aria-label="选择空间"
                   >
                     <SelectTrigger className="h-8 border-dashed bg-white/50 text-xs">
                       <SelectValue placeholder="空间" />
@@ -203,6 +204,7 @@ export function QuoteInlineAddRow({
                   placeholder="搜索商品名称或编码..."
                   disabled={isSubmitting}
                   onDoubleClick={() => setPickerOpen(true)}
+                  aria-label="搜索商品名称或编码"
                 />
               </div>
               {isSubmitting && <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />}
@@ -223,6 +225,7 @@ export function QuoteInlineAddRow({
                     className="h-8 w-16 bg-white/50 px-1 text-right"
                     placeholder="宽"
                     disabled
+                    aria-label="宽度"
                   />
                 )}
                 {showWidth && showHeight && (
@@ -234,6 +237,7 @@ export function QuoteInlineAddRow({
                     className="h-8 w-16 bg-white/50 px-1 text-right"
                     placeholder="高"
                     disabled
+                    aria-label="高度"
                   />
                 )}
               </div>
@@ -248,6 +252,7 @@ export function QuoteInlineAddRow({
                 className="h-8 w-14 bg-white/50 px-1 text-right"
                 placeholder="倍数"
                 disabled
+                aria-label="褶皱倍数"
               />
             </TableCell>
           )}
@@ -271,13 +276,14 @@ export function QuoteInlineAddRow({
               className="h-8 w-16 bg-white/50 px-1 text-right"
               placeholder="1"
               disabled
+              aria-label="数量"
             />
           </TableCell>
 
           {/* 单位 */}
           {showUnit && (
             <TableCell className="p-2">
-              <Input className="h-8 w-12 bg-white/50 px-1 text-center" placeholder="-" disabled />
+              <Input className="h-8 w-12 bg-white/50 px-1 text-center" placeholder="-" disabled aria-label="单位" />
             </TableCell>
           )}
 
@@ -288,6 +294,7 @@ export function QuoteInlineAddRow({
               className="h-8 w-20 bg-white/50 px-1 text-right"
               placeholder="0.00"
               disabled
+              aria-label="单价"
             />
           </TableCell>
 
@@ -299,7 +306,7 @@ export function QuoteInlineAddRow({
           {/* 备注 */}
           {showRemark && (
             <TableCell className="p-2">
-              <Input className="h-8 w-24 bg-white/50 px-2 text-xs" placeholder="备注" disabled />
+              <Input className="h-8 w-24 bg-white/50 px-2 text-xs" placeholder="备注" disabled aria-label="备注" />
             </TableCell>
           )}
 
@@ -310,6 +317,7 @@ export function QuoteInlineAddRow({
               size="sm"
               className="text-muted-foreground h-7 text-xs"
               onClick={handleCancel}
+              aria-label="取消添加"
             >
               取消
             </Button>
@@ -326,8 +334,9 @@ export function QuoteInlineAddRow({
             className="text-muted-foreground hover:text-primary h-8 gap-1.5"
             onClick={() => setIsEditing(true)}
             disabled={isEditing}
+            aria-label="添加新商品行"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
             添加商品
           </Button>
         </TableCell>

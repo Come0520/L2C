@@ -1,4 +1,5 @@
-﻿import '../setup';
+// jest 全局注入，无需导入
+import '../setup';
 import { authStore } from '../../stores/auth-store';
 
 describe('Workbench Page', () => {
@@ -6,11 +7,11 @@ describe('Workbench Page', () => {
 
     beforeEach(async () => {
         (global as any).resetWX();
-        vi.clearAllMocks();
+        jest.clearAllMocks();
         authStore.logout();
 
         if (!container) {
-            await import('../../pages/workbench/index');
+            require('../../pages/workbench/index');
             container = (global as any).lastPageContainer;
         }
 
@@ -39,7 +40,7 @@ describe('Workbench Page', () => {
         };
         // 修正：在 require 之前注入 wx mock 是安全的，
         // 或者直接通过 getApp().request 注入
-        (global as any).getApp().request = vi.fn().mockResolvedValue(mockData);
+        (global as any).getApp().request = jest.fn().mockResolvedValue(mockData);
 
         await container.instance.onShow();
 
@@ -48,7 +49,7 @@ describe('Workbench Page', () => {
     });
 
     test('加载状态控制', async () => {
-        (global as any).wx.request = vi.fn().mockReturnValue(new Promise(() => { })); // Stuck
+        (global as any).wx.request = jest.fn().mockReturnValue(new Promise(() => { })); // Stuck
 
         container.instance.fetchDashboard();
         expect(container.data.loading).toBe(true);

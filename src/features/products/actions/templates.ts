@@ -43,7 +43,7 @@ const attributeFieldSchema = z.object({
   maxLength: z.number().optional(),
   rows: z.number().optional(),
   description: z.string().optional(),
-  defaultValue: z.any().optional(),
+  defaultValue: z.unknown().optional(),
 });
 
 const templateSchemaZod = z.object({

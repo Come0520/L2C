@@ -10,7 +10,7 @@ import {
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { OrderService } from '@/services/order.service';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock Modules
 vi.mock('@/shared/api/db', () => ({
@@ -51,7 +51,7 @@ vi.mock('@/services/logistics.service', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
   },

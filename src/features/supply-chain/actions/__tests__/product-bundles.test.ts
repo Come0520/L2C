@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Supply Chain 模块 Server Actions 集成测试 - 套件管理 (Product Bundles)
  *
  * 覆盖范围：
@@ -29,7 +29,7 @@ vi.mock('next/cache', () => ({
   updateTag: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue(true),
   },
@@ -88,7 +88,7 @@ describe('Product Bundle Actions (L5)', () => {
       } as any);
 
       const { createProductBundle } = await import('../product-bundles');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await createProductBundle({
         bundleSku: 'BUN-001',
@@ -162,7 +162,7 @@ describe('Product Bundle Actions (L5)', () => {
   describe('deleteProductBundle', () => {
     it('应级联删除子表与主表并记录审计', async () => {
       const { deleteProductBundle } = await import('../product-bundles');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await deleteProductBundle({ id: 'bun-1' });
 

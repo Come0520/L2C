@@ -9,7 +9,7 @@ import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import {
     createSupplierSchema,
     getSuppliersSchema,

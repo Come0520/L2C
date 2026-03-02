@@ -11,7 +11,7 @@ import { MeasurementService } from '@/services/measurement.service';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions'; // Fix: Import PERMISSIONS
 import { z } from 'zod';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // ----------------------------------------------------------------------
 // Dispatch & Assign

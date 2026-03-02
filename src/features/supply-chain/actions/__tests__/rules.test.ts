@@ -47,7 +47,7 @@ vi.mock('drizzle-orm', () => ({
     and: vi.fn((...a: unknown[]) => a),
     desc: vi.fn((a: unknown) => a),
 }));
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { recordFromSession: vi.fn() },
 }));
 vi.mock('next/cache', () => ({
@@ -118,7 +118,7 @@ describe('Split Route Rules Actions', () => {
 
         it('应成功创建规则并记录审计日志', async () => {
             const { createSplitRule } = await import('../rules');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await createSplitRule(validInput);
 
@@ -161,7 +161,7 @@ describe('Split Route Rules Actions', () => {
             mockDb.where.mockResolvedValueOnce(undefined);
 
             const { updateSplitRule } = await import('../rules');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await updateSplitRule('rule-1', validInput);
 
@@ -186,7 +186,7 @@ describe('Split Route Rules Actions', () => {
             mockDb.where.mockResolvedValueOnce(undefined);
 
             const { deleteSplitRule } = await import('../rules');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await deleteSplitRule('rule-1');
 

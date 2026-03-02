@@ -82,7 +82,7 @@ vi.mock('next/cache', () => ({
   unstable_cache: vi.fn((cb) => cb),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { recordFromSession: vi.fn().mockResolvedValue(true) },
 }));
 

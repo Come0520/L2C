@@ -1,6 +1,7 @@
 
 const app = getApp<IAppOption>();
 import { formatTime } from '../../../utils/util';
+import { getCachedSystemInfo } from '../../../utils/env';
 
 Page({
     data: {
@@ -22,7 +23,8 @@ Page({
 
     onLoad(options: any) {
         if (options.id && options.type) {
-            const sys = wx.getSystemInfoSync();
+            // 使用全局缓存的系统信息（铁律 4.3：避免同步阻塞）
+            const sys = getCachedSystemInfo();
             this.setData({
                 id: options.id,
                 type: options.type,

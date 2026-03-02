@@ -54,7 +54,7 @@ export class VerificationCodeService {
                 eq(verificationCodes.userId, userId),
                 eq(verificationCodes.code, code),
                 eq(verificationCodes.type, type),
-                eq(verificationCodes.used, false),
+                eq(verificationCodes.used, false as any),
                 gt(verificationCodes.expiresAt, new Date())
             ),
             orderBy: [desc(verificationCodes.createdAt)]

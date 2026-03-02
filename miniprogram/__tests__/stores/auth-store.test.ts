@@ -1,4 +1,5 @@
-﻿import { authStore, UserRole } from '../../stores/auth-store';
+// jest 全局注入，无需导入
+import { authStore, UserRole } from '../../stores/auth-store';
 
 describe('AuthStore', () => {
     beforeEach(() => {
@@ -21,7 +22,7 @@ describe('AuthStore', () => {
     test('should save login data and notify listeners', () => {
         const token = 'test-token';
         const userInfo = { id: '1', name: 'Test User', role: 'admin' as UserRole };
-        const listener = vi.fn();
+        const listener = jest.fn();
 
         authStore.subscribe(listener);
         authStore.setLogin(token, userInfo);
@@ -61,7 +62,7 @@ describe('AuthStore', () => {
     });
 
     test('should allow unsubscribing from updates', () => {
-        const listener = vi.fn();
+        const listener = jest.fn();
         const unsubscribe = authStore.subscribe(listener);
 
         unsubscribe();

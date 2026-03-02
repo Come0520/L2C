@@ -26,15 +26,23 @@ export async function getQuoteVersions(rootId: string) {
   }
   const tenantId = session.user.tenantId;
 
-  return await db.query.quotes.findMany({
-    columns: { id: true, version: true, status: true, createdAt: true, quoteNo: true },
-    where: and(
-      or(eq(quotes.rootQuoteId, rootId), eq(quotes.id, rootId)),
-      eq(quotes.tenantId, tenantId) // 租户隔离
-    ),
-    orderBy: desc(quotes.version),
-  });
+  return getCachedQuoteVersions(rootId, tenantId);
 }
+
+const getCachedQuoteVersions = unstable_cache(
+  async (rootId: string, tenantId: string) => {
+    return await db.query.quotes.findMany({
+      columns: { id: true, version: true, status: true, createdAt: true, quoteNo: true },
+      where: and(
+        or(eq(quotes.rootQuoteId, rootId), eq(quotes.id, rootId)),
+        eq(quotes.tenantId, tenantId) // 租户隔离
+      ),
+      orderBy: desc(quotes.version),
+    });
+  },
+  ['quote-versions'],
+  { tags: ['quotes'] }
+);
 
 /**
  * 获取报价单列表（支持分页、状态筛选、关键词搜索及日期范围过滤）
@@ -283,52 +291,60 @@ export async function getQuoteBundleById({ id }: { id: string }) {
   // 安全检查：获取当前用户并验证租户
   const session = await auth();
   if (!session?.user?.tenantId) {
-    return { success: false, message: '未授权访问' };
+    return { success: false as const, message: '未授权访问' };
   }
   const tenantId = session.user.tenantId;
 
-  const data = await db.query.quotes.findFirst({
-    where: and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)),
-    with: {
-      customer: true,
-      subQuotes: {
-        orderBy: (subQuotes, { asc }) => [asc(subQuotes.createdAt)],
-        with: {
-          items: {
-            columns: {
-              id: true,
-              quoteId: true,
-              parentId: true,
-              roomId: true,
-              category: true,
-              productId: true,
-              productName: true,
-              productSku: true,
-              roomName: true,
-              unit: true,
-              unitPrice: true,
-              quantity: true,
-              width: true,
-              height: true,
-              foldRatio: true,
-              processFee: true,
-              subtotal: true,
-              attributes: true,
-              calculationParams: true,
-              remark: true,
-              sortOrder: true,
-            },
-          }, // 加载子报价的明细，用于计算或其他展示
+  return getCachedQuoteBundleById(id, tenantId);
+}
+
+const getCachedQuoteBundleById = unstable_cache(
+  async (id: string, tenantId: string) => {
+    const data = await db.query.quotes.findFirst({
+      where: and(eq(quotes.id, id), eq(quotes.tenantId, tenantId)),
+      with: {
+        customer: true,
+        subQuotes: {
+          orderBy: (subQuotes, { asc }) => [asc(subQuotes.createdAt)],
+          with: {
+            items: {
+              columns: {
+                id: true,
+                quoteId: true,
+                parentId: true,
+                roomId: true,
+                category: true,
+                productId: true,
+                productName: true,
+                productSku: true,
+                roomName: true,
+                unit: true,
+                unitPrice: true,
+                quantity: true,
+                width: true,
+                height: true,
+                foldRatio: true,
+                processFee: true,
+                subtotal: true,
+                attributes: true,
+                calculationParams: true,
+                remark: true,
+                sortOrder: true,
+              },
+            }, // 加载子报价的明细，用于计算或其他展示
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!data) return { success: false, message: 'Quote not found' };
+    if (!data) return { success: false as const, message: 'Quote not found' };
 
-  // 映射 subQuotes 到 quotes 以匹配前端/测试预期
-  return { success: true, data: { ...data, quotes: data.subQuotes } };
-}
+    // 映射 subQuotes 到 quotes 以匹配前端/测试预期
+    return { success: true as const, data: { ...data, quotes: data.subQuotes } };
+  },
+  ['quote-bundle'],
+  { tags: ['quotes'] }
+);
 
 /**
  * 获取报价单审计日志

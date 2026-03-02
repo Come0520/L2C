@@ -9,7 +9,7 @@ import { ActionState, createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Input Schema - tenantId 已移除，从 session 获取
 const GenerateInstallTasksSchema = z.object({

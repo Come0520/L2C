@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Supply Chain 模块 Server Actions 集成测试 - 发货管理 (Shipment)
  *
  * 覆盖范围：
@@ -46,7 +46,7 @@ vi.mock('next/cache', () => ({
     revalidateTag: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: { recordFromSession: vi.fn().mockResolvedValue(true) }
 }));
 
@@ -140,7 +140,7 @@ describe('Shipment Actions (L5)', () => {
             });
 
             const { updateShipment } = await import('../shipment-actions');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
             const result = await updateShipment('ship-1', {
                 logisticsCompany: '中通快递',
                 logisticsNo: 'ZT999'

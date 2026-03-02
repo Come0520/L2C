@@ -44,8 +44,9 @@ export const ItemActionsCell = memo(function ItemActionsCell({
               className="text-muted-foreground hover:text-primary h-7 w-7"
               onClick={onAddAccessory}
               title="添加附件"
+              aria-label="添加附件"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               size="icon"
@@ -58,8 +59,10 @@ export const ItemActionsCell = memo(function ItemActionsCell({
               )}
               onClick={onToggleExpand}
               title={isExpanded ? '收起高级配置' : '展开高级配置'}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? '收起' : '展开'}
             >
-              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </>
         )}
@@ -68,8 +71,9 @@ export const ItemActionsCell = memo(function ItemActionsCell({
           variant="ghost"
           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7"
           onClick={onDelete}
+          aria-label="删除此项"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </TableCell>

@@ -9,7 +9,7 @@ import { randomBytes } from "crypto";
 import { POSplitService } from "./po-split.service";
 import { submitApproval } from "@/features/approval/actions/submission";
 import Decimal from "decimal.js";
-import { AuditService } from "@/shared/lib/audit-service";
+import { AuditService } from "@/shared/services/audit-service";
 
 export interface CreateOrderOptions {
     paymentProofImg?: string;

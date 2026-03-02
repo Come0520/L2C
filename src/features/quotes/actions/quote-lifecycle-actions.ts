@@ -16,7 +16,7 @@ import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
 import { QuoteVersionService } from '@/features/quotes/services/quote-version.service';
 import { rejectQuoteDiscountSchema } from './schema';
 import { checkPermission } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 import { logger } from '@/shared/lib/logger';

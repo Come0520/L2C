@@ -25,7 +25,7 @@ export const curtainAttributesSchema = z
   .describe('提取自产品公共属性的基础窗帘特有配置');
 
 export const productAttributesSchema = z
-  .union([wallpaperAttributesSchema, curtainAttributesSchema, z.record(z.string(), z.any())])
+  .union([wallpaperAttributesSchema, curtainAttributesSchema, z.record(z.string(), z.unknown())])
   .describe('用于应对多品类不同的动态 JSONB 属性挂载支持聚合 Schema');
 
 /**
@@ -75,7 +75,7 @@ export const createProductSchema = z
     isStockable: z.boolean().default(false),
 
     description: z.string().optional(),
-    attributes: z.record(z.string(), z.any()).default({}),
+    attributes: z.record(z.string(), z.unknown()).default({}),
     images: z.array(z.string()).optional().default([]),
   })
   .describe('提供给产品新建使用的完备业务属性聚合结构');

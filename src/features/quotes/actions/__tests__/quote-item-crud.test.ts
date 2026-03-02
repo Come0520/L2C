@@ -61,7 +61,7 @@ vi.mock('@/shared/lib/server-action', () => ({
 }));
 
 // Mock Audit
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { recordFromSession: vi.fn() },
 }));
 
@@ -232,7 +232,7 @@ describe('Quote Items CRUD Actions (L5)', () => {
 
   it('deleteQuoteItem 应当记录审计日志并删除', async () => {
     const { deleteQuoteItem } = await import('../quote-item-crud');
-    const { AuditService } = await import('@/shared/lib/audit-service');
+    const { AuditService } = await import('@/shared/services/audit-service');
 
     const result = await deleteQuoteItem({ id: MOCK_ITEM_ID });
 
@@ -298,7 +298,7 @@ describe('Quote Items CRUD Actions (L5)', () => {
     });
 
     const { createQuoteItem } = await import('../quote-item-crud');
-    const result = await (createQuoteItem as any)(payload, context);
+    const result = await createQuoteItem(payload);
     console.log('--- REPRODUCE RESULT ---', result);
 
     expect(result).toHaveProperty('id');

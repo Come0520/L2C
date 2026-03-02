@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { ProductSupplierListItem } from '../types';
 
 

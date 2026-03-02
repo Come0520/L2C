@@ -2,7 +2,7 @@
 
 import { unstable_cache } from 'next/cache';
 
-// import { logger } from '@/shared/lib/logger'; // OSS 功能禁用时，logger 暂不使用
+import { logger } from '@/shared/lib/logger';
 // import { env } from '@/shared/config/env'; // OSS 功能暂时禁用
 
 
@@ -30,6 +30,7 @@ interface OSSTokenData {
  * 【内部】获取阿里云 OSS STS 临时授权 Token（未缓存版本）
  */
 async function getOSSTokenBase(): Promise<{ success: true; data: OSSTokenData } | { success: false; error: string }> {
+    logger.info('[Upload:OSS] 请求 STS Token (当前功能维护中已禁用)');
     return { success: false, error: 'OSS Upload temporarily disabled for update' };
     /*
     try {

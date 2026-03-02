@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo } from 'react';
+import React, { Fragment, useMemo } from 'react';
 import { Table, TableBody, TableRow, TableCell } from '@/shared/ui/table';
 import { QuoteInlineAddRow } from '../../quote-inline-add-row';
 import { RoomSelectorWithConfig } from '../../room-selector-popover';
@@ -41,7 +41,7 @@ interface RoomViewProps extends ColumnVisibility {
   onRowClick?: (item: QuoteItem) => void;
 }
 
-export function RoomView({
+export const RoomView = React.memo(function RoomView({
   quoteId,
   rooms,
   itemsByRoom,
@@ -282,4 +282,4 @@ export function RoomView({
       )}
     </>
   );
-}
+});

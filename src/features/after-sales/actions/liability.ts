@@ -7,7 +7,7 @@ import { db } from '@/shared/api/db';
 import { eq, and, sql, sum } from 'drizzle-orm';
 import { afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
 import { generateNoticeNo } from '../utils';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { Decimal } from 'decimal.js';
 import {
   createLiabilitySchema,

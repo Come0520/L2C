@@ -38,7 +38,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const activeCode = await db.query.verificationCodes.findFirst({
       where: and(
         eq(verificationCodes.token, token),
-        eq(verificationCodes.type, 'MAGIC_LOGIN'),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eq(verificationCodes.type, 'MAGIC_LOGIN' as any),
         eq(verificationCodes.used, false)
       ),
     });
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       userId: user.id,
       code: Math.floor(100000 + Math.random() * 900000).toString(), // code 为必填占位
       token: resetToken,
-      type: 'PASSWORD_RESET',
+      type: 'PASSWORD_RESET' as any,
       expiresAt: resetExpiresAt,
     });
 

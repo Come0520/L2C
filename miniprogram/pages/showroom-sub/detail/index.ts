@@ -51,10 +51,10 @@ Page({
         if (!this.data.product) return {};
         return {
             title: `[藏品] ${this.data.product.title}`,
-            path: `/pages/showroom/detail/index?id=${this.data.id}`,
+            path: `/pages/showroom-sub/detail/index?id=${this.data.id}`,
             imageUrl: this.data.product.image
         };
     }
 });
 
-export {};
+export { };

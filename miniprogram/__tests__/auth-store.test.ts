@@ -1,4 +1,5 @@
-﻿import './setup';
+// jest 全局注入，无需导入
+import './setup';
 import { authStore, UserInfo } from '../stores/auth-store';
 
 describe('AuthStore', () => {
@@ -13,7 +14,7 @@ describe('AuthStore', () => {
     beforeEach(() => {
         (global as any).resetWX();
         authStore.logout();
-        vi.clearAllMocks();
+        jest.clearAllMocks();
     });
 
     test('初始化时应从存储中加载数据', async () => {
@@ -61,7 +62,7 @@ describe('AuthStore', () => {
     });
 
     test('subscribe 应在状态变更时通知', () => {
-        const listener = vi.fn();
+        const listener = jest.fn();
         const unsubscribe = authStore.subscribe(listener);
 
         authStore.setLogin(mockToken, mockUser);
@@ -75,4 +76,4 @@ describe('AuthStore', () => {
     });
 });
 
-export {};
+export { };

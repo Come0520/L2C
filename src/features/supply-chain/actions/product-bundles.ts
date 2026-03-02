@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
 import { createProductBundleSchema, updateProductBundleSchema } from '../schemas';
 import { z } from 'zod';
 import { SUPPLY_CHAIN_PATHS } from "../constants";
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 /**

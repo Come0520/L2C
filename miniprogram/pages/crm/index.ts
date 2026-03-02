@@ -18,9 +18,8 @@ Page({
     },
 
     onShow() {
-        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 2 });
-        }
+        // 注意：CRM 不在 tabBar.list 中，框架不会自动注入 getTabBar
+        // 因此移除此处写死的 selected 硬编码（铁律 2.5）
         this.setData({ userInfo: authStore.userInfo });
         this.resetAndFetch();
     },
@@ -110,4 +109,4 @@ Page({
     }
 });
 
-export {};
+export { };

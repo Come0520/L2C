@@ -2,14 +2,14 @@ import 'dotenv/config';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { submitMeasureData, reviewMeasureTask, createNewMeasureVersion } from '../workflows';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
   checkPermission: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn().mockResolvedValue(true),
     recordFromSession: vi.fn().mockResolvedValue(true),

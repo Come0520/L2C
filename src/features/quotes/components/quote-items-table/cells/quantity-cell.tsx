@@ -37,6 +37,8 @@ export const QuantityCell = memo(function QuantityCell({
           className="text-primary h-8 w-16 bg-transparent/50 px-1 text-center font-medium"
           defaultValue={Number(item.quantity)}
           onBlur={handleBlur}
+          aria-label="数量"
+          aria-invalid={!item.quantity}
         />
         {calcDetails && (
           <Popover>
@@ -45,8 +47,10 @@ export const QuantityCell = memo(function QuantityCell({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-primary h-6 w-6 shrink-0"
+                aria-label="查看计算详情"
+                aria-haspopup="dialog"
               >
-                <Info className="h-3.5 w-3.5" />
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="glass-popover w-64 overflow-hidden p-0" side="right">

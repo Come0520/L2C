@@ -3,13 +3,13 @@ import Credentials from 'next-auth/providers/credentials';
 import { unstable_cache } from 'next/cache';
 import { db } from '@/shared/api/db';
 import { users, roles } from '@/shared/api/schema';
-import { auditLogs } from '@/shared/api/schema/audit';
 import { eq, or, and } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
 import { z } from 'zod';
 import { logger } from './logger';
 import { checkLoginRateLimit, resetLoginRateLimit } from './auth-rate-limit';
 import { AuditService } from '@/shared/services/audit-service';
+import { maskEmail } from '@/shared/utils/mask-utils';
 
 /**
  * NextAuth 核心配置与导出
@@ -44,10 +44,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         const { username, password } = parsed.data;
 
+        logger.info('[Auth] 收到登录请求', { username: maskEmail(username), method: 'credentials' });
+
         // PC端登录速率限制
         const rateCheck = checkLoginRateLimit(username);
         if (!rateCheck.allowed) {
-          logger.warn('PC 端登录速率限制触发', { username });
+          logger.warn('[Auth] PC 端登录速率限制触发', { username: maskEmail(username) });
           return null;
         }
 
@@ -60,13 +62,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user || !user.passwordHash) {
+          logger.warn('[Auth] 登录失败：用户不存在或未激活', { username: maskEmail(username) });
           return null;
         }
 
         const passwordsMatch = await compare(password, user.passwordHash);
 
         if (!passwordsMatch) {
-          logger.warn('PC 端登录密码错误', { username });
+          logger.warn('[Auth] PC 端登录密码错误', { username: maskEmail(username) });
           await AuditService.log(db, {
             tableName: 'auth_login',
             recordId: user.id || 'unknown',
@@ -82,7 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const roles =
           (user.roles as string[])?.length > 0 ? (user.roles as string[]) : [user.role || 'USER'];
 
-        logger.info('PC 端登录成功', { userId: user.id, tenantId: user.tenantId });
+        logger.info('[Auth] PC 端登录成功', { userId: user.id, tenantId: user.tenantId });
         await AuditService.log(db, {
           tableName: 'auth_login',
           recordId: user.id,
@@ -262,23 +265,18 @@ export const checkPermission = async (
 
   // 如果需要审计日志记录
   if (options?.audit && session.user.tenantId) {
-    try {
-      await db.insert(auditLogs).values({
-        tenantId: session.user.tenantId,
-        tableName: options.resourceType || 'PERMISSION_CHECK',
-        recordId: options.resourceId || permissionName,
-        action: options.action || 'ACCESS',
-        userId: session.user.id,
-        changedFields: {
-          permission: permissionName,
-          roles: session.user.roles,
-          granted: hasPermission,
-          timestamp: new Date().toISOString(),
-        },
-      });
-    } catch (e) {
-      logger.error('Audit log for permission check failed:', e);
-    }
+    await AuditService.log(db, {
+      tenantId: session.user.tenantId,
+      tableName: options.resourceType || 'PERMISSION_CHECK',
+      recordId: options.resourceId || permissionName,
+      action: options.action || 'ACCESS',
+      userId: session.user.id,
+      details: {
+        permission: permissionName,
+        roles: session.user.roles,
+        granted: hasPermission,
+      },
+    });
   }
 
   return hasPermission;

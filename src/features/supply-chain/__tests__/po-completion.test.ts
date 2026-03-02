@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { confirmPoReceipt } from '../actions/po-actions';
 import { db } from '@/shared/api/db';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock Dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -22,7 +22,7 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

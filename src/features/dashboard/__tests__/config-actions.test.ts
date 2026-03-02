@@ -24,7 +24,6 @@ vi.mock('@/services/workbench.service', () => ({
 // Mock next/cache
 vi.mock('next/cache', () => ({
   revalidateTag: vi.fn(),
-  updateTag: vi.fn(),
 }));
 
 // Mock AuditService

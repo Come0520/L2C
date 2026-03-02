@@ -46,7 +46,7 @@ vi.mock('@/services/quote-lifecycle.service', () => ({
 
 // AuditService.recordFromSession 内部会尝试访问 DB
 // 需要 mock 避免真实 DB 操作
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   logAuditEvent: vi.fn().mockResolvedValue(undefined),
   AuditService: {
     record: vi.fn().mockResolvedValue(undefined),

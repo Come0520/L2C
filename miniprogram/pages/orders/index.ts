@@ -20,10 +20,8 @@ Page({
     },
 
     onShow() {
-        // 订单页在 admin tab 中的索引是 2，高亮对应 tab
-        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 2 });
-        }
+        // 注意：订单页在分包内，不在 tabBar.list 中
+        // 框架不会自动注入 getTabBar，移除硬编码（铁律 2.5）
         // 返回详情页后自动刷新
         this.fetchList();
     },

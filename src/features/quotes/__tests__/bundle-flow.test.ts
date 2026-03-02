@@ -70,7 +70,7 @@ describe.skip('Quote Bundle Flow', () => {
       if (customer) {
         customerId = customer.id;
       } else {
-        // Try any customer if tenant match fails (for loose testing)
+        // Try fallback customer if tenant match fails (for loose testing)
         const anyCustomer = await db.query.customers.findFirst();
         customerId = anyCustomer?.id;
       }

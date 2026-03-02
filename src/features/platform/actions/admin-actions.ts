@@ -768,8 +768,8 @@ export async function generateMagicLink(tenantId: string): Promise<{
       .where(
         and(
           eq(verificationCodes.userId, bossUser.id),
-          eq(verificationCodes.type, 'MAGIC_LOGIN'),
-          eq(verificationCodes.used, false)
+          eq(verificationCodes.type, 'MAGIC_LOGIN' as any),
+          eq(verificationCodes.used, false as any)
         )
       );
 
@@ -781,7 +781,7 @@ export async function generateMagicLink(tenantId: string): Promise<{
       userId: bossUser.id,
       code: Math.floor(100000 + Math.random() * 900000).toString(), // 占位，必填字段
       token: magicToken,
-      type: 'MAGIC_LOGIN',
+      type: 'MAGIC_LOGIN' as any,
       expiresAt,
     });
 

@@ -49,7 +49,7 @@ vi.mock('next/cache', () => ({
     unstable_cache: vi.fn((cb) => cb), // 穿透 cache
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: {
         recordFromSession: vi.fn().mockResolvedValue(true)
     }
@@ -91,7 +91,7 @@ describe('Supplier Actions (L5)', () => {
             } as any);
 
             const { createSupplier } = await import('../supplier-actions');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await createSupplier({
                 name: 'Vendor A',
@@ -171,7 +171,7 @@ describe('Supplier Actions (L5)', () => {
             } as any);
 
             const { updateSupplier } = await import('../supplier-actions');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await updateSupplier({ id: 'sup-1', name: 'Vendor B' });
 
@@ -202,7 +202,7 @@ describe('Supplier Actions (L5)', () => {
             mockDb.query.purchaseOrders.findFirst.mockResolvedValue(null);
 
             const { deleteSupplier } = await import('../supplier-actions');
-            const { AuditService } = await import('@/shared/lib/audit-service');
+            const { AuditService } = await import('@/shared/services/audit-service');
 
             const result = await deleteSupplier({ id: 'sup-1' });
 

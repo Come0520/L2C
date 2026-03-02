@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeSplitRouting } from '../split-engine';
 import { db } from '@/shared/api/db';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock Dependencies
 vi.mock('@/shared/api/db', () => {
@@ -31,7 +31,7 @@ vi.mock('@/shared/api/db', () => {
     };
 });
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
     AuditService: {
         record: vi.fn(),
         recordFromSession: vi.fn(),

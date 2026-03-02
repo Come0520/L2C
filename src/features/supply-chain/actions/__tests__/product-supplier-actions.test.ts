@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Supply Chain 模块 Server Actions 集成测试 - 商品关联供应商 (Product Supplier)
  *
  * 覆盖范围：
@@ -62,7 +62,7 @@ vi.mock('next/cache', () => ({
   updateTag: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue(true),
   },
@@ -166,7 +166,7 @@ describe('Product Supplier Actions (L5)', () => {
       } as any);
 
       const { removeProductSupplier } = await import('../product-supplier-actions');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await removeProductSupplier('ps-1');
 

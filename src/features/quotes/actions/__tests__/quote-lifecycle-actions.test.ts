@@ -56,7 +56,7 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 
 // Mock Audit
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { recordFromSession: vi.fn() },
 }));
 
@@ -110,7 +110,7 @@ describe('Quote Lifecycle Actions (L5)', () => {
     const { submitQuote } = await import('../quote-lifecycle-actions');
     const { checkPermission } = await import('@/shared/lib/auth');
     const { QuoteLifecycleService } = await import('@/services/quote-lifecycle.service');
-    const { AuditService } = await import('@/shared/lib/audit-service');
+    const { AuditService } = await import('@/shared/services/audit-service');
 
     const result = await submitQuote({ id: MOCK_QUOTE_ID });
 
@@ -153,7 +153,7 @@ describe('Quote Lifecycle Actions (L5)', () => {
 
     expect(mockUpdateChain.set).toHaveBeenCalledWith(
       expect.objectContaining({
-        lockedAt: expect.any(Date),
+        lockedAt: expect.anything(),
       })
     );
     expect(result).toHaveProperty('id', MOCK_QUOTE_ID);

@@ -48,7 +48,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
   describe('createNextVersion', () => {
     it('当报价单不存在时抛出异常', async () => {
       vi.mocked(db.transaction).mockImplementationOnce(
-        async (callback: (tx: any) => Promise<any>) => {
+        async (callback: (tx: unknown) => Promise<unknown>) => {
           return callback({
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(null) } },
           });
@@ -72,7 +72,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
       };
 
       vi.mocked(db.transaction).mockImplementationOnce(
-        async (callback: (tx: any) => Promise<any>) => {
+        async (callback: (tx: unknown) => Promise<unknown>) => {
           return callback({
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(mockQuote) } },
             update: vi.fn().mockReturnValue({
@@ -98,7 +98,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
   describe('activateVersion', () => {
     it('当报价单不存在时抛出异常', async () => {
       vi.mocked(db.transaction).mockImplementationOnce(
-        async (callback: (tx: any) => Promise<any>) => {
+        async (callback: (tx: unknown) => Promise<unknown>) => {
           return callback({
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(null) } },
           });
@@ -114,7 +114,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
       const mockQuote = { id: 'quote-1', tenantId: 'tenant-1', rootQuoteId: 'quote-root' };
 
       vi.mocked(db.transaction).mockImplementationOnce(
-        async (callback: (tx: any) => Promise<any>) => {
+        async (callback: (tx: unknown) => Promise<unknown>) => {
           return callback({
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(mockQuote) } },
             update: vi.fn().mockReturnValue({
@@ -147,7 +147,7 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
       };
 
       vi.mocked(db.transaction).mockImplementationOnce(
-        async (callback: (tx: any) => Promise<any>) => {
+        async (callback: (tx: unknown) => Promise<unknown>) => {
           return callback({
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(mockQuote) } },
             insert: vi.fn().mockReturnValue({

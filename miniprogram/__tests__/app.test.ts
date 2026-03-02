@@ -1,11 +1,11 @@
-﻿/**
+/**
  * app.ts request 方法单元测试
  * 
  * 由于 Vitest ESM 环境中 require() 的模块缓存与 global.App 的执行顺序不确定，
  * 我们直接测试 app.ts 中 request 方法的核心逻辑，而非通过 App 全局实例。
  * 这种方式更稳定，且测试质量等价。
  */
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+// jest 全局注入，无需导入
 import './setup';
 import { authStore } from '../stores/auth-store';
 
@@ -52,7 +52,7 @@ describe('app.ts request', () => {
     beforeEach(() => {
         (global as any).resetWX();
         authStore.logout();
-        vi.clearAllMocks();
+        jest.clearAllMocks();
     });
 
     test('request 应在 Header 中包含 Authorization Token', async () => {
@@ -79,7 +79,7 @@ describe('app.ts request', () => {
             success({ statusCode: 401, data: { error: 'Unauthorized' } });
         });
 
-        (global as any).getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/index/index' }]);
+        (global as any).getCurrentPages = jest.fn().mockReturnValue([{ route: 'pages/index/index' }]);
 
         try {
             await appRequest('/test');

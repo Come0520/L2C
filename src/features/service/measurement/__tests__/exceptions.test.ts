@@ -24,7 +24,7 @@ const { mockDb, mockAuth } = vi.hoisted(() => ({
 
 vi.mock('@/shared/api/db', () => ({ db: mockDb }));
 vi.mock('@/shared/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/shared/lib/audit-service', () => ({ AuditService: { recordFromSession: vi.fn() } }));
+vi.mock('@/shared/services/audit-service', () => ({ AuditService: { recordFromSession: vi.fn() } }));
 vi.mock('../utils', () => ({ generateMeasureNo: vi.fn().mockResolvedValue('MNT-123') }));
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),

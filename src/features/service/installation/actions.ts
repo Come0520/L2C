@@ -13,7 +13,7 @@ import { checkSchedulingConflict } from './logic/conflict-detection';
 import { checkLogisticsReady } from './logic/logistics-check';
 import { notifyTaskAssigned } from '@/services/wechat-subscribe-message.service';
 import { logger } from '@/shared/lib/logger';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // --- Schemas ---
 

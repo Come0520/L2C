@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { updateMeasureTaskStatus, updateInstallTaskStatus } from '../actions/dispatch-actions';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 const MOCK_TENANT_A = 'tenant-A';
 const MOCK_USER_A = 'user-A';
@@ -24,7 +24,7 @@ vi.mock('@/shared/api/db', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
     record: vi.fn(),
@@ -64,7 +64,7 @@ describe('Dispatch Status Flow Logic', () => {
 
     const result = await updateMeasureTaskStatus('task-1', 'COMPLETED');
     expect(result.success).toBe(true);
-    expect(AuditService.recordFromSession).toHaveBeenCalled();
+    expect(AuditService.record).toHaveBeenCalled();
   });
 
   it('2. 越权尝试更新测量状态应触发 ILLEGAL_ACCESS_ATTEMPT 审计', async () => {
@@ -144,6 +144,6 @@ describe('Dispatch Status Flow Logic', () => {
     });
 
     await updateInstallTaskStatus('task-2', 'DISPATCHING');
-    expect(AuditService.recordFromSession).toHaveBeenCalled();
+    expect(AuditService.record).toHaveBeenCalled();
   });
 });

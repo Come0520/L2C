@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { requestDelivery, updateLogistics } from '../logistics';
 import { db } from '@/shared/api/db';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { LogisticsService } from '@/services/logistics.service';
 
 vi.mock('@/shared/api/db', () => ({
@@ -27,7 +27,7 @@ vi.mock('@/shared/lib/auth', () => ({
   checkPermission: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
   },

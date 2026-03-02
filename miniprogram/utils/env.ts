@@ -47,3 +47,16 @@ export function getEnvInfo(): EnvInfo {
 export function isAppEnv(): boolean {
     return getEnvInfo().isApp;
 }
+
+/**
+ * 全局缓存的系统信息（铁律 4.3：避免页面生命周期中重复调用同步 API）
+ * 首次调用时同步获取并缓存，后续调用直接返回缓存值。
+ */
+let cachedSystemInfo: WechatMiniprogram.SystemInfo | null = null;
+
+export function getCachedSystemInfo(): WechatMiniprogram.SystemInfo {
+    if (!cachedSystemInfo) {
+        cachedSystemInfo = wx.getSystemInfoSync();
+    }
+    return cachedSystemInfo;
+}

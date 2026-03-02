@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import type { Session } from 'next-auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { OrderService } from '@/services/order.service';
 import { logger } from '@/shared/lib/logger';
 

@@ -13,7 +13,7 @@ import { submitApproval } from '@/features/approval/actions/submission';
 import { format } from 'date-fns';
 import { randomBytes } from 'crypto';
 
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // 🔒 安全修复：移除客户端可控的 tenantId，从 Session 获取
 const CreateMeasureTaskSchema = z.object({

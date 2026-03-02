@@ -7,8 +7,11 @@ Page({
         today: ''
     },
     onShow() {
+        // 动态查找当前页面在角色 TabBar 列表中的索引（铁律 2.5）
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 0 }); // 工作台是 adminTabs[0]，角色 tab 列表索引为 0
+            const tabBar = this.getTabBar();
+            const index = tabBar.data.list.findIndex((item) => item.pagePath === '/pages/index/index');
+            if (index !== -1) tabBar.setData({ selected: index });
         }
         // Update user info
         this.setData({
@@ -18,19 +21,14 @@ Page({
         this.fetchDashboard();
     },
     navigateToCreateQuote() {
-        // Navigate to Create Quote Page
-        // Ideally pass a customerId if flow is from Customer Detail.
-        // If from Workbench, we might need to select customer first.
-        // For MVP, just go to page, page will show input (readonly though).
-        // Let's assume for Demo we pass a hardcoded customer ID or handle it.
-        // To allow testing, navigate regardless.
         wx.navigateTo({ url: '/pages/quotes/create/index' });
     },
     navigateToCreateCustomer() {
         wx.navigateTo({ url: '/pages/crm/create/create' });
     },
     navigateToShowroom() {
-        wx.navigateTo({ url: '/pages/showroom/index' });
+        // 展厅已加入 TabBar，必须用 switchTab（铁律 2.1）
+        wx.switchTab({ url: '/pages/showroom/index' });
     },
     navigateToReports() {
         wx.navigateTo({ url: '/pages/reports/index' });

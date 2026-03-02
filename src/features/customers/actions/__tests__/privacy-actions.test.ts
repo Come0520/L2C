@@ -73,7 +73,7 @@ vi.mock('@/shared/config/permissions', () => ({
 
 import { logPhoneView, getPhoneViewLogs } from '../privacy-actions';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 
 describe('Privacy Actions (Phone View Logs)', () => {
   beforeEach(() => {
@@ -102,7 +102,7 @@ describe('Privacy Actions (Phone View Logs)', () => {
 
     it('创建成功后应精确刷新客户详情缓存 (revalidateTag)', async () => {
       await logPhoneView(validInput);
-      expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`);
+      expect(vi.mocked(updateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`);
     });
   });
 

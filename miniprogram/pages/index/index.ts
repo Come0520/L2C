@@ -222,7 +222,8 @@ Page({
     },
 
     navigateToShowroom() {
-        wx.navigateTo({ url: '/pages/showroom/index' });
+        // 展厅已加入 TabBar，必须用 switchTab（铁律 2.1）
+        wx.switchTab({ url: '/pages/showroom/index' });
     },
 
     navigateToReports() {
@@ -248,7 +249,8 @@ Page({
     },
 
     goToShowroom() {
-        wx.navigateTo({ url: '/pages/showroom/index' });
+        // 展厅已加入 TabBar，必须用 switchTab（铁律 2.1）
+        wx.switchTab({ url: '/pages/showroom/index' });
     },
 
     goToWarranty() {
@@ -264,7 +266,8 @@ Page({
     },
 
     goToEarnings() {
-        wx.navigateTo({ url: '/pages/users/profile' });
+        // "我的"已加入 TabBar，必须用 switchTab（铁律 2.1）
+        wx.switchTab({ url: '/pages/users/profile' });
     }
 });
 

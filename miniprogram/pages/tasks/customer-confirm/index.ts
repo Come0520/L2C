@@ -4,6 +4,7 @@
  * 由销售/师傅分享链接，客户通过链接进入本页面。
  */
 const app = getApp<IAppOption>();
+import { getCachedSystemInfo } from '../../../utils/env';
 
 Page({
     data: {
@@ -22,7 +23,8 @@ Page({
             wx.showToast({ title: '链接参数错误', icon: 'none' });
             return;
         }
-        const sys = wx.getSystemInfoSync();
+        // 使用全局缓存的系统信息（铁律 4.3：避免同步阻塞）
+        const sys = getCachedSystemInfo();
         this.setData({
             taskId,
             signatureWidth: sys.windowWidth - 64,

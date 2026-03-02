@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getServiceTickets, updateTicketStatus } from '../actions/ticket-actions';
 
 // --- 1. 统一声明 Mock 变量 ---
@@ -38,7 +38,7 @@ vi.mock('@/features/after-sales/logic/state-machine', () => ({
   isValidTransition: mockIsValidTransition, // 使用 hoisted mock°
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   logAuditEvent: mockLogAuditEvent, // 使用 hoisted mock
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue(undefined),

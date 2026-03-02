@@ -6,7 +6,7 @@ import { orders } from '@/shared/api/schema/orders';
 import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { confirmProductionSchema, splitOrderSchema } from '../action-schemas';
 import { executeSplitRouting } from '@/features/supply-chain/actions/split-engine';
 import { logger } from '@/shared/lib/logger';

@@ -89,7 +89,7 @@ vi.mock('@/shared/config/permissions', () => ({
 import { getActivities, createActivity } from '../activities';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 
 describe('Customer Activities Actions', () => {
   beforeEach(() => {
@@ -182,7 +182,7 @@ describe('Customer Activities Actions', () => {
 
       await createActivity(validActivityInput);
 
-      expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`);
+      expect(vi.mocked(updateTag)).toHaveBeenCalledWith(`customer-detail-${MOCK_CUSTOMER_ID}`);
     });
 
     it('审计日志应包含详细变更信息', async () => {

@@ -7,7 +7,7 @@ import {
 } from '../actions/ticket';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
 // Mock Modules
@@ -53,7 +53,7 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue({}),
   },
@@ -215,7 +215,8 @@ describe('After-Sales Ticket Actions', () => {
       expect(result.success).toBe(true);
       expect(result.data?.success).toBe(true);
       expect(db.update).toHaveBeenCalled();
-      expect(revalidateTag).toHaveBeenCalledWith(`after-sales-ticket-${VALID_TICKET_ID}`);
+      const { updateTag } = await import('next/cache');
+      expect(updateTag).toHaveBeenCalledWith(`after-sales-ticket-${VALID_TICKET_ID}`);
     });
 
     it('should fail if ticket not found', async () => {

@@ -8,7 +8,7 @@ import {
 } from '../actions/liability';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
 // Mock Modules
@@ -63,7 +63,7 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn().mockResolvedValue({}),
   },

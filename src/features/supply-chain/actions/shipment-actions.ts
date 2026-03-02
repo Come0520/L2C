@@ -9,7 +9,7 @@ import { db } from '@/shared/api/db';
 import { purchaseOrders, poShipments } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 发货管理 Actions

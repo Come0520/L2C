@@ -2,10 +2,10 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { updateOrderStatus, requestOrderCancellation, pauseOrder, resumeOrder } from '../mutations';
 import { db } from '@/shared/api/db';
 import { auth, checkPermission } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { OrderService } from '@/services/order.service';
 import { OrderStateMachine } from '../../logic/order-state-machine';
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -30,7 +30,7 @@ vi.mock('@/shared/lib/auth', () => ({
   checkPermission: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
   },

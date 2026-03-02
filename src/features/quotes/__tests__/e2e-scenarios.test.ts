@@ -47,7 +47,7 @@ vi.mock('@/shared/lib/server-action', () => ({
   },
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
     log: vi.fn(),
@@ -73,7 +73,7 @@ vi.mock('@/features/approval/actions/submission', () => ({
 }));
 
 vi.mock('@/shared/api/schema/quotes', async (importOriginal) => {
-  const actual = await importOriginal<any>();
+  const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
     quotes: { id: 'quotes.id', tenantId: 'quotes.tenantId', version: 'quotes.version' },
@@ -92,9 +92,10 @@ describe('Quotes E2E Scenarios (L5)', () => {
     // 1. 重置 transaction mock，确保 tx 对象就是 mockDb
     mockDb.transaction = vi.fn().mockImplementation(async (callback) => callback(mockDb));
     // 2. 重置所有 query 的默认返回值（防止 undefined 导致的 TypeError）
-    Object.values(mockDb.query).forEach((tableQuery: any) => {
-      tableQuery.findFirst.mockResolvedValue(null);
-      tableQuery.findMany.mockResolvedValue([]);
+    Object.values(mockDb.query).forEach((tableQuery: unknown) => {
+      const q = tableQuery as { findFirst: any; findMany: any };
+      if (q.findFirst) q.findFirst.mockResolvedValue(null);
+      if (q.findMany) q.findMany.mockResolvedValue([]);
     });
   });
 
@@ -102,7 +103,7 @@ describe('Quotes E2E Scenarios (L5)', () => {
     const { createQuote } = await import('../actions/quote-crud');
     const { saveQuoteAsTemplate, createQuoteFromTemplate, deleteQuoteTemplate } =
       await import('../actions/template-actions');
-    const { AuditService } = await import('@/shared/lib/audit-service');
+    const { AuditService } = await import('@/shared/services/audit-service');
 
     // 1. 创建报价单
     mockDb.insert.mockReturnValueOnce({
@@ -138,7 +139,7 @@ describe('Quotes E2E Scenarios (L5)', () => {
       name: 'My Awesome Template',
       description: 'A good template',
     });
-    expect((tplResult as any).templateId).toBe('tpl-1');
+    expect((tplResult as { templateId: string }).templateId).toBe('tpl-1');
 
     // 3. 新建自模板
     mockDb.query.quoteTemplates.findFirst.mockResolvedValueOnce({
@@ -165,7 +166,7 @@ describe('Quotes E2E Scenarios (L5)', () => {
       isTemplate: true,
     });
     const deleteResult = await deleteQuoteTemplate({ templateId: 'tpl-1' });
-    expect((deleteResult as any).success).toBe(true);
+    expect((deleteResult as { success: boolean }).success).toBe(true);
     expect(AuditService.recordFromSession).toHaveBeenCalled();
   });
 
@@ -178,15 +179,15 @@ describe('Quotes E2E Scenarios (L5)', () => {
       id: 'quote-1-v2',
       version: 2,
       quoteNo: 'Q-001-V2',
-    } as any);
+    } as never);
     vi.spyOn(QuoteVersionService, 'activateVersion').mockResolvedValue({
       id: 'quote-1',
       version: 2,
-    } as any);
+    } as never);
     vi.spyOn(QuoteVersionService, 'getQuoteHistory').mockResolvedValue([
       { id: 'v1', version: 1 },
       { id: 'v2', version: 2 },
-    ] as any);
+    ] as never);
 
     // 1. 创建 v2
     // preflightVersionCheck 需要一次 db.update mock
@@ -212,7 +213,7 @@ describe('Quotes E2E Scenarios (L5)', () => {
     const { submitQuote, approveQuote, convertQuoteToOrder } =
       await import('../actions/quote-lifecycle-actions');
     const { updateQuote } = await import('../actions/quote-crud');
-    const { AuditService } = await import('@/shared/lib/audit-service');
+    const { AuditService } = await import('@/shared/services/audit-service');
     const { QuoteLifecycleService } = await import('@/services/quote-lifecycle.service');
 
     // Mock QuoteLifecycleService 方法避免复杂的 DB mock 链路
@@ -220,12 +221,12 @@ describe('Quotes E2E Scenarios (L5)', () => {
       success: true,
       status: 'PENDING_APPROVAL',
       riskReasons: ['折扣超标'],
-    } as any);
-    vi.spyOn(QuoteLifecycleService, 'approve').mockResolvedValue({ count: 1 } as any);
+    } as never);
+    vi.spyOn(QuoteLifecycleService, 'approve').mockResolvedValue({ count: 1 } as never);
     vi.spyOn(QuoteLifecycleService, 'convertToOrder').mockResolvedValue({
       id: 'order-1',
       orderNo: 'ORD-12345678',
-    } as any);
+    } as never);
 
     // 1. 设置折扣 (Triggering risk control)
     mockDb.query.quotes.findFirst.mockResolvedValueOnce({

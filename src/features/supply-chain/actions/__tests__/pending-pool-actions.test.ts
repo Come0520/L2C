@@ -107,7 +107,7 @@ vi.mock('@/shared/lib/auth', () => ({
 vi.mock('@/shared/config/permissions', () => ({
   PERMISSIONS: { ORDER: { VIEW: 'order.view', EDIT: 'order.own.edit' } },
 }));
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { recordFromSession: vi.fn() },
 }));
 vi.mock('@/shared/lib/utils', () => ({
@@ -206,7 +206,7 @@ describe('Pending Pool Actions', () => {
         .mockResolvedValueOnce(undefined); // update...set...where
 
       const { submitForApproval } = await import('../pending-pool-actions');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await submitForApproval({
         poIds: ['a1b2c3d4-e5f6-1a2b-8c3d-4e5f6a7b8c9d'],
@@ -266,7 +266,7 @@ describe('Pending Pool Actions', () => {
       mockDb.returning.mockResolvedValueOnce([{ id: 'po-new-1' }]);
 
       const { assignToSupplier } = await import('../pending-pool-actions');
-      const { AuditService } = await import('@/shared/lib/audit-service');
+      const { AuditService } = await import('@/shared/services/audit-service');
 
       const result = await assignToSupplier(validInput);
 

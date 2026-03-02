@@ -1,4 +1,5 @@
-﻿import './setup';
+// jest 全局注入，无需导入
+import './setup';
 // remove path
 import { authStore } from '../stores/auth-store';
 

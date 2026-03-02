@@ -1,4 +1,4 @@
-﻿// import { vi } from 'vitest'; // Use global jest instead
+﻿// 项目已迁移至 Jest，不再使用 vitest
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -53,26 +53,25 @@ class MockPageContainer {
 const mockStorage: Record<string, any> = {};
 
 (global as any).wx = {
-    login: vi.fn(),
-    showToast: vi.fn(),
-    showLoading: vi.fn(),
-    hideLoading: vi.fn(),
-    request: vi.fn(),
-    getStorageSync: vi.fn((key: string) => mockStorage[key]),
-    setStorageSync: vi.fn((key: string, value: any) => {
+    login: jest.fn(),
+    showToast: jest.fn(),
+    showLoading: jest.fn(),
+    hideLoading: jest.fn(),
+    request: jest.fn(),
+    getStorageSync: jest.fn((key: string) => mockStorage[key]),
+    setStorageSync: jest.fn((key: string, value: any) => {
         mockStorage[key] = value;
     }),
-    removeStorageSync: vi.fn((key: string) => {
+    removeStorageSync: jest.fn((key: string) => {
         delete mockStorage[key];
     }),
-    clearStorageSync: vi.fn(() => {
+    clearStorageSync: jest.fn(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
     }),
-    request: vi.fn(),
-    switchTab: vi.fn(),
-    navigateTo: vi.fn(),
-    reLaunch: vi.fn(),
-    getSystemInfoSync: vi.fn(() => ({})),
+    switchTab: jest.fn(),
+    navigateTo: jest.fn(),
+    reLaunch: jest.fn(),
+    getSystemInfoSync: jest.fn(() => ({})),
 };
 
 // 暴露清理存储的方法
@@ -89,7 +88,7 @@ const appInstance: any = {
 };
 (global as any).getApp = () => appInstance;
 
-(global as any).getCurrentPages = vi.fn(() => []) as any;
+(global as any).getCurrentPages = jest.fn(() => []) as any;
 
 (global as any).resetWX = () => {
     Object.keys((global as any).wx).forEach(key => {

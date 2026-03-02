@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { QuoteTemplateService } from '@/services/quote-template.service';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 报价模板 Server Actions

@@ -63,7 +63,7 @@ export const baseProductImportSchema = z.object({
   description: z.string().optional(),
 
   // 动态属性承载区
-  attributes: z.record(z.string(), z.any()).default({}),
+  attributes: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type BaseProductImportItem = z.infer<typeof baseProductImportSchema>;

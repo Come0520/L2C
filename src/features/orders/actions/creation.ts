@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { auth } from '@/shared/lib/auth';
 import { OrderService } from '@/services/order.service';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { createOrderSchema } from '../action-schemas';
 import { checkAndGenerateCommission } from '@/features/channels/logic/commission.service';
 import { logger } from '@/shared/lib/logger';

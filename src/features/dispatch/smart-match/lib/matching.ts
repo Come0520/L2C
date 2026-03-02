@@ -1,6 +1,10 @@
 /**
- * 智能派单 - 高级匹配算法
- * 扩展功能：距离因子、可用时间因子、批量匹配排序
+ * 智能派单 - 高级匹配算法模块
+ *
+ * 在基础评分算法之上，扩展距离因子、可用时间因子和批量匹配排序功能。
+ * 提供完整的多维度工人匹配推荐能力。
+ *
+ * @module matching
  */
 import { calculateWorkerScore } from './scoring';
 import { logger } from '@/shared/lib/logger';
@@ -9,45 +13,93 @@ import { logger } from '@/shared/lib/logger';
 // 类型定义
 // ============================================================
 
-/** 地理坐标 */
+/**
+ * 地理坐标接口
+ *
+ * 用于描述工人或任务的地理位置，在距离因子计算中使用。
+ *
+ * @property lat - 纬度（WGS84 坐标系）
+ * @property lng - 经度（WGS84 坐标系）
+ */
 interface GeoLocation {
+  /** 纬度值（WGS84 坐标系，范围 -90 ~ 90） */
   lat: number;
+  /** 经度值（WGS84 坐标系，范围 -180 ~ 180） */
   lng: number;
 }
 
-/** 工人档案（扩展版） */
+/**
+ * 工人档案接口（扩展版）
+ *
+ * 在基础 scoring 模块的 WorkerProfile 基础上，扩展了位置和排班信息，
+ * 用于多维度匹配算法的综合评分计算。
+ *
+ * @property id - 工人的唯一标识 ID
+ * @property skills - 工人具备的技能标签列表
+ * @property activeTaskCount - 当前正在进行的任务数量
+ * @property avgRating - 历史平均服务评分（0-5 分制），可选
+ * @property location - 工人当前地理位置坐标（可选，用于距离因子计算）
+ * @property scheduledSlots - 工人当日已排班的时间段列表（ISO 8601 字符串对，用于可用时间因子计算）
+ */
 interface WorkerProfile {
   id: string;
+  /** 工人具备的技能标签列表 */
   skills: string[];
+  /** 当前正在进行的任务数量 */
   activeTaskCount: number;
+  /** 历史平均服务评分（0-5 分制） */
   avgRating?: number;
-  /** 工人当前位置（可选） */
+  /** 工人当前地理位置坐标（用于距离因子计算） */
   location?: GeoLocation;
-  /** 工人当日已排班时间段（ISO 8601 字符串对）*/
+  /** 工人当日已排班的时间段列表（ISO 8601 字符串对） */
   scheduledSlots?: Array<{ start: string; end: string }>;
 }
 
-/** 任务需求（扩展版） */
+/**
+ * 任务需求接口（扩展版）
+ *
+ * 在基础 scoring 模块的 TaskRequirement 基础上，扩展了位置和时间信息，
+ * 用于距离因子和可用时间因子的综合匹配计算。
+ *
+ * @property category - 任务品类标识（如 'CURTAIN_FABRIC'、'WALLCLOTH' 等）
+ * @property location - 任务目的地地理坐标（可选，用于距离因子计算）
+ * @property scheduledAt - 任务计划开始时间（可选，ISO 8601 格式字符串）
+ * @property durationMinutes - 任务预计耗时，单位为分钟（默认 120 分钟）
+ */
 interface TaskRequirement {
+  /** 任务品类标识 */
   category: string;
-  /** 任务地点（可选） */
+  /** 任务目的地地理坐标（用于距离因子计算） */
   location?: GeoLocation;
-  /** 任务计划开始时间（可选，ISO 8601 字符串） */
+  /** 任务计划开始时间（ISO 8601 格式字符串） */
   scheduledAt?: string;
-  /** 预计耗时（分钟，默认 120） */
+  /** 任务预计耗时（分钟，默认 120） */
   durationMinutes?: number;
 }
 
-/** 匹配结果 */
+/**
+ * 匹配结果接口
+ *
+ * 描述单个工人与任务匹配计算后的完整结果，包含工人信息、综合评分和评分明细。
+ * 由 matchWorkersForTask 函数生成，按分数降序排列。
+ *
+ * @property worker - 匹配到的工人档案信息
+ * @property score - 综合评分（0-100，越高越优）
+ * @property scoreBreakdown - 评分明细拆分（基础分 + 距离加分 + 可用时间加分）
+ */
 export interface MatchResult {
+  /** 匹配到的工人档案 */
   worker: WorkerProfile;
-  /** 综合评分（0-100，越高越优） */
+  /** 综合评分（0-100，越高表示匹配度越好） */
   score: number;
-  /** 评分明细 */
+  /** 评分明细拆分 */
   scoreBreakdown: {
-    base: number; // 基础算法分（技能+负载+评价）
-    distance: number; // 距离加权（0-10）
-    availability: number; // 可用时间加权（0 或 10）
+    /** 基础算法分（技能匹配 + 负载均衡 + 服务评价，0-100） */
+    base: number;
+    /** 距离加权分（0-10，近距离得分更高） */
+    distance: number;
+    /** 可用时间加权分（0 = 时间冲突，5 = 中性，10 = 时间可用） */
+    availability: number;
   };
 }
 

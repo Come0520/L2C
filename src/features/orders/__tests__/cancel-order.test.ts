@@ -3,7 +3,7 @@ import { requestCancelOrder } from '../actions/cancel';
 import { db } from '@/shared/api/db';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { submitApproval } from '@/features/approval/actions/submission';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 
 // Mock dependencies
 vi.mock('@/shared/api/db', () => ({
@@ -40,7 +40,7 @@ vi.mock('@/features/approval/actions/submission', () => ({
   submitApproval: vi.fn(),
 }));
 
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
   },

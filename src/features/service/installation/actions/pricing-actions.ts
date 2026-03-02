@@ -6,7 +6,7 @@ import { auth } from '@/shared/lib/auth';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import {} from 'next/cache';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 // ============================================================

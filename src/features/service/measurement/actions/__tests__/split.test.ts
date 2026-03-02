@@ -54,7 +54,7 @@ vi.mock('@/shared/lib/auth', () => ({
 }));
 
 // --- Mock 审计服务 ---
-vi.mock('@/shared/lib/audit-service', () => ({
+vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     recordFromSession: vi.fn(),
   },

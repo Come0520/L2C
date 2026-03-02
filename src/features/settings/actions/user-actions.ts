@@ -9,6 +9,8 @@ import { eq, and, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { updateUserManagementSchema } from '../schema';
+import { verificationCodes } from '@/shared/api/schema';
+import { v4 as uuidv4 } from 'uuid';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -362,5 +364,109 @@ export async function deleteUser(userId: string) {
   } catch (error) {
     logger.error('删除用户失败:', error);
     return { success: false, error: '删除失败' };
+  }
+}
+
+/**
+ * 为同一租户内的目标用户生成一次性登录链接（Magic Link）
+ *
+ * 使用场景：租户内普通用户忘记密码，租户管理员（拥有 USER_MANAGE 权限）在后台为其生成登录链接。
+ * 用户点击链接后将自动登录并可以修改密码。
+ *
+ * 安全机制：
+ * - 只有同租户的管理员可调用
+ * - 只能给本租户内的活跃账号生成
+ * - 撤销旧的 MAGIC_LOGIN token（防止滥用）
+ * - 链接有效期 24 小时，同一链接仅可使用一次
+ * - 详细记录操作审计日志
+ *
+ * @param targetUserId - 目标用户 UUID
+ * @returns Promise<{success: boolean; magicLink?: string; error?: string;}> 包含完整 URL 的结果
+ */
+export async function generateUserMagicLink(targetUserId: string): Promise<{
+  success: boolean;
+  magicLink?: string;
+  error?: string;
+}> {
+  const session = await auth();
+  const { isAdmin, tenantId, currentUserId } = await checkAdmin(session);
+
+  if (!isAdmin || !tenantId) {
+    return { success: false, error: '无权限操作' };
+  }
+
+  try {
+    // 1. 查找目标用户并验证其属于同一租户且状态合法
+    const targetUser = await db.query.users.findFirst({
+      where: and(eq(users.id, targetUserId), eq(users.tenantId, tenantId)),
+      columns: { id: true, name: true, isActive: true },
+    });
+
+    if (!targetUser) {
+      return { success: false, error: '该用户不存在或不属于当前租户' };
+    }
+
+    if (!targetUser.isActive) {
+      return { success: false, error: '该用户账号已停用，无法生成登录链接' };
+    }
+
+    // 可选限制：不建议给自己生成，但技术上不强制拦截，只需记录清楚即可。如果是自己，也允许生成。
+
+    // 2. 撤销目标用户之前所有的未使用 MAGIC_LOGIN token
+    await db
+      .update(verificationCodes)
+      .set({ used: true })
+      .where(
+        and(
+          eq(verificationCodes.userId, targetUser.id),
+          eq(verificationCodes.type, 'MAGIC_LOGIN'),
+          eq(verificationCodes.used, false)
+        )
+      );
+
+    // 3. 生成新的 Magic Link token（有效期 24 小时）
+    const magicToken = uuidv4();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await db.insert(verificationCodes).values({
+      userId: targetUser.id,
+      code: Math.floor(100000 + Math.random() * 900000).toString(), // 验证码字段占位
+      token: magicToken,
+      type: 'MAGIC_LOGIN',
+      expiresAt,
+    });
+
+    // 4. 记录明确的审计日志
+    await AuditService.log(db, {
+      tenantId,
+      userId: currentUserId!,
+      tableName: 'users',
+      recordId: targetUser.id,
+      action: 'MAGIC_LINK_GENERATED',
+      details: {
+        targetUserId: targetUser.id,
+        targetUserName: targetUser.name,
+        expiresAt: expiresAt.toISOString(),
+        generatedBy: currentUserId,
+      },
+    });
+
+    // 5. 构造 URL 并返回
+    const baseUrl =
+      process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const magicLink = `${baseUrl}/api/auth/magic-login?token=${magicToken}`;
+
+    logger.info(`[Tenant Admin:MagicLink] 用户 ${currentUserId} 成功为下属用户生成了登录链接`, {
+      tenantId,
+      targetUserId: targetUser.id,
+    });
+
+    return { success: true, magicLink };
+  } catch (error) {
+    logger.error('[Tenant Admin:MagicLink] 生成一次性登录链接失败:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '操作失败',
+    };
   }
 }

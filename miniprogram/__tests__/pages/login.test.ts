@@ -1,4 +1,5 @@
-﻿import '../setup';
+// jest 全局注入，无需导入
+import '../setup';
 import { authStore } from '../../stores/auth-store';
 
 describe('Login Page', () => {
@@ -6,7 +7,7 @@ describe('Login Page', () => {
 
     beforeEach(async () => {
         (global as any).resetWX();
-        vi.clearAllMocks();
+        jest.clearAllMocks();
         authStore.logout();
 
         if (!container) {
@@ -53,7 +54,7 @@ describe('Login Page', () => {
                 tenantStatus: 'active'
             }
         };
-        (global as any).getApp().request = vi.fn().mockResolvedValue(mockData);
+        (global as any).getApp().request = jest.fn().mockResolvedValue(mockData);
 
         container.setData({
             account: 'admin',
@@ -68,7 +69,7 @@ describe('Login Page', () => {
     });
 
     test('登录失败后的错误显示', async () => {
-        (global as any).getApp().request = vi.fn().mockResolvedValue({
+        (global as any).getApp().request = jest.fn().mockResolvedValue({
             success: false,
             error: '账号或密码错误'
         });
@@ -85,4 +86,4 @@ describe('Login Page', () => {
     });
 });
 
-export {};
+export { };

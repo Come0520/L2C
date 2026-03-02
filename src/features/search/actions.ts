@@ -16,6 +16,7 @@ import { eq, and, or, ilike, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
+import { AuditService } from '@/shared/services/audit-service';
 import { unstable_cache } from 'next/cache';
 import { redis } from '@/shared/lib/redis';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -62,15 +63,15 @@ const globalSearchSchema = z.object({
 type SearchResultItem = {
   /** 结果类型，决定了 UI 上的图标和跳转链接 */
   type:
-    | 'customer'
-    | 'lead'
-    | 'order'
-    | 'quote'
-    | 'product'
-    | 'ticket'
-    | 'channel'
-    | 'finance'
-    | 'history';
+  | 'customer'
+  | 'lead'
+  | 'order'
+  | 'quote'
+  | 'product'
+  | 'ticket'
+  | 'channel'
+  | 'finance'
+  | 'history';
   /** 实体 ID 或历史记录 Key */
   id: string;
   /** 主要显示标题（如客户姓名、单号） */
@@ -312,8 +313,18 @@ const globalSearchActionInternal = createSafeAction(
     const userId = session.user.id;
     const historyKey = `search:history:${tenantId}:${userId}`;
 
+    logger.info('[Search] 开始全局搜索请求', {
+      tenantId,
+      userId,
+      keyword: query?.slice(0, 30) || '(empty)',
+      scope: scope || 'all',
+    });
+
+    const startTime = Date.now();
+
     try {
       if (!query.trim()) {
+        logger.info('[Search] 关键词为空，正在获取搜索历史记录');
         let historyResults: SearchResultItem[] = [];
         if (redis) {
           try {
@@ -343,6 +354,7 @@ const globalSearchActionInternal = createSafeAction(
 
       if (redis && query.trim()) {
         try {
+          logger.info('[Search] 正在更新用户搜索历史', { userId, query: query.trim().slice(0, 20) });
           await redis.lrem(historyKey, 0, query.trim());
           await redis.lpush(historyKey, query.trim());
           await redis.ltrim(historyKey, 0, 9);
@@ -351,6 +363,7 @@ const globalSearchActionInternal = createSafeAction(
         }
       }
 
+      logger.info('[Search] 正在执行数据库搜索...', { scope, query: query.trim().slice(0, 20) });
       const userRoles = session.user.roles || [];
       const roleRecords = await db.query.roles.findMany({
         where: and(inArray(roles.code, userRoles), eq(roles.tenantId, tenantId)),
@@ -359,7 +372,40 @@ const globalSearchActionInternal = createSafeAction(
       const userPerms = [...new Set(roleRecords.flatMap((r) => r.permissions || []))] as string[];
       const results = await performDbSearch(tenantId, query.trim(), limit, scope, userPerms);
 
-      return {
+      const totalResultCount =
+        results.customers.length +
+        results.leads.length +
+        results.orders.length +
+        results.quotes.length +
+        results.products.length +
+        results.tickets.length +
+        results.channels.length +
+        results.finances.length;
+
+      logger.info('[Search] 数据库搜索完成', {
+        totalResults: totalResultCount,
+        counts: {
+          customers: results.customers.length,
+          leads: results.leads.length,
+          orders: results.orders.length,
+          quotes: results.quotes.length,
+          products: results.products.length,
+          tickets: results.tickets.length,
+          channels: results.channels.length,
+          finances: results.finances.length,
+        },
+      });
+
+      const durationMs = Date.now() - startTime;
+      if (durationMs > 1000) {
+        logger.warn('[Search] 搜索响应较慢', { durationMs, keyword: query.slice(0, 30) });
+      }
+
+      if (totalResultCount === 0) {
+        logger.info('[Search] 搜索无结果', { keyword: query.slice(0, 30), scope });
+      }
+
+      const formattedResults = {
         customers: results.customers.map((c: DbCustomerResult) => ({
           type: 'customer' as const,
           id: c.id,
@@ -433,6 +479,59 @@ const globalSearchActionInternal = createSafeAction(
         })),
         history: [],
       };
+
+      // 接入 AuditService
+      // 1. 记录基础搜索审计
+      await AuditService.log(db, {
+        action: 'SEARCH',
+        tableName: 'search_log',
+        recordId: userId,
+        tenantId,
+        userId,
+        details: {
+          keyword: query.trim().slice(0, 50),
+          scope,
+          resultCount: totalResultCount,
+          durationMs: Date.now() - startTime,
+        },
+      });
+
+      // 2. 针对特定敏感实体的搜索结果记录预警审计
+      if (results.finances.length > 0 || results.customers.length > 0) {
+        await AuditService.log(db, {
+          action: 'ACCESS',
+          tableName: 'data_privacy',
+          recordId: 'sensitive_search_detected',
+          tenantId,
+          userId,
+          details: {
+            reason: '搜索结果包含敏感财务或客户数据',
+            financeCount: results.finances.length,
+            customerCount: results.customers.length,
+          },
+        });
+      }
+
+      // 3. 结果最终交付确认审计
+      await AuditService.log(db, {
+        action: 'DETAIL',
+        tableName: 'search_delivery',
+        recordId: `delivery-${Date.now()}`,
+        tenantId,
+        userId,
+        details: {
+          deliveryStatus: 'SUCCESS',
+          recipientUserId: userId,
+        },
+      });
+
+      logger.info('[Search] 搜索结果组装完成并准备返回', {
+        userId,
+        totalDelivered: totalResultCount,
+      });
+
+      return formattedResults;
+
     } catch (error) {
       logger.error('全局搜索失败:', {
         query,

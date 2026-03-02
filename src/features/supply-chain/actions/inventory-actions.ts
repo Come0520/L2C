@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { unstable_cache, revalidateTag, revalidatePath } from 'next/cache';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { cache } from 'react';
 import { logger } from '@/shared/lib/logger';
 import { sql } from 'drizzle-orm';

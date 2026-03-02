@@ -380,6 +380,41 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.2.5',
+    version: 'v1.2.5',
+    date: '2026-03-02',
+    title: '小程序多角色架构重构与全模块成熟度升级',
+    description:
+      '完成小程序四角色（管理/销售/工人/客户）TabBar 架构重构，展厅提升为主包 Tab 页，任务页扩展为三段式交互。同步批量升级各业务模块成熟度至 L4，增强报价性能缓存、调度监控安全隔离与测试基础设施。',
+    contributors: ['Antigravity'],
+    updates: [
+      {
+        type: 'feature',
+        content: '小程序 custom-tab-bar 按四角色（管理/销售/工人/客户）全面重构，展厅提升为主包 Tab 入口',
+      },
+      {
+        type: 'feature',
+        content: '任务页扩展为三段 Tab（待接单/进行中/已完成），优化工人端操作体验',
+      },
+      {
+        type: 'optimize',
+        content: '调度 (Dispatch) 与监控 (Monitoring) 模块升级至 L4：新增骨架屏、ErrorBoundary、tenantId 安全隔离',
+      },
+      {
+        type: 'optimize',
+        content: '报价 (Quotes) 模块性能增强：unstable_cache 高频查询缓存、React.memo 组件渲染优化、边界测试补全',
+      },
+      {
+        type: 'fix',
+        content: '修复全站 Vitest 测试环境 jest→vi 迁移遗留问题，恢复 2200+ 测试用例全量通过',
+      },
+      {
+        type: 'optimize',
+        content: '仪表盘产品模块清理：统一 AuditService 实现、消除重复代码、强化 TypeScript 类型安全',
+      },
+    ],
+  },
+  {
     id: 'v1.2.4',
     version: 'v1.2.4',
     date: '2026-03-01',

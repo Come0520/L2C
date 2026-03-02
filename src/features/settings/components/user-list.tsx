@@ -7,6 +7,7 @@ import Edit from 'lucide-react/dist/esm/icons/edit';
 import UserX from 'lucide-react/dist/esm/icons/user-x';
 import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import Trash2 from 'lucide-react/dist/esm/icons/trash';
+import Link2 from 'lucide-react/dist/esm/icons/link-2';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 import { useState } from 'react';
@@ -27,6 +28,7 @@ import { toast } from 'sonner';
 interface UserListProps {
   data: UserInfo[];
   onEdit?: (user: UserInfo) => void;
+  onGenerateMagicLink?: (user: UserInfo) => void;
   onToggleActive?: (userId: string) => Promise<void>;
   onDelete?: (userId: string) => Promise<void>;
 }
@@ -35,7 +37,7 @@ interface UserListProps {
  * 用户列表组件
  * 展示用户信息，支持编辑、禁用/启用、删除操作
  */
-export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListProps) {
+export function UserList({ data, onEdit, onGenerateMagicLink, onToggleActive, onDelete }: UserListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'toggle' | 'delete';
@@ -126,6 +128,16 @@ export function UserList({ data, onEdit, onToggleActive, onDelete }: UserListPro
                       ) : (
                         <UserCheck className="h-4 w-4" />
                       )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                      title="生成登录链接"
+                      onClick={() => onGenerateMagicLink?.(item)}
+                      disabled={!item.isActive}
+                    >
+                      <Link2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"

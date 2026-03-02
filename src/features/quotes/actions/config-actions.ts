@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { QuoteConfigService, type QuoteConfig } from '@/services/quote-config.service';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
-import { AuditService } from '@/shared/lib/audit-service';
+import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 const updateModeSchema = z.object({

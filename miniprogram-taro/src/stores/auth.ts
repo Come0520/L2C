@@ -7,6 +7,7 @@
  */
 import { create } from 'zustand'
 import Taro from '@tarojs/taro'
+import { api } from '@/services/api'
 
 /**
  * 用户角色类型
@@ -75,8 +76,16 @@ interface AuthState {
     logout: () => void
     /** 更新角色 */
     updateRole: (role: UserRole) => void
-    /** 从 Storage 恢复登录态（App 启动时调用） */
+    /** 从 Storage 同步恢复登录态（保留，供单元测试使用） */
     restore: () => void
+    /**
+     * 异步恢复并校验登录态（App 冷启动时调用）
+     *
+     * @description 流程：读 Storage → 调 /auth/me 校验 Token
+     * - 成功：用接口返回的最新 userInfo 更新 store
+     * - 失败/过期：清除 Storage，保持 guest 状态
+     */
+    restoreAndVerify: () => Promise<void>
 }
 
 /**
@@ -96,13 +105,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     currentRole: 'guest',
 
     setLogin: (token: string, userInfo: UserInfo) => {
+        /**
+         * 角色规范化：后端存储大写（ADMIN / BOSS / SALES），前端统一小写。
+         * BOSS 在数据库中是管理员，映射到 manager 角色。
+         */
+        const rawRole = (userInfo.role as string)?.toLowerCase() || 'guest'
+        const normalizedRole: UserRole = rawRole === 'boss' ? 'manager' : rawRole as UserRole
+        const normalizedUser: UserInfo = { ...userInfo, role: normalizedRole }
+
         Taro.setStorageSync('token', token)
-        Taro.setStorageSync('userInfo', userInfo)
+        Taro.setStorageSync('userInfo', normalizedUser)
         set({
             token,
-            userInfo,
+            userInfo: normalizedUser,
             isLoggedIn: true,
-            currentRole: userInfo.role || 'guest',
+            currentRole: normalizedRole,
         })
     },
 
@@ -133,15 +150,72 @@ export const useAuthStore = create<AuthState>((set) => ({
             const token = Taro.getStorageSync('token')
             const userInfo = Taro.getStorageSync('userInfo')
             if (token && userInfo) {
+                // 兼容旧 Storage 中可能存在的大写角色
+                const rawRole = (userInfo.role as string)?.toLowerCase() || 'guest'
+                const role: UserRole = rawRole === 'boss' ? 'manager' : rawRole as UserRole
                 set({
                     token,
-                    userInfo,
+                    userInfo: { ...userInfo, role },
                     isLoggedIn: true,
-                    currentRole: userInfo.role || 'guest',
+                    currentRole: role,
                 })
             }
         } catch (e) {
             console.error('恢复登录态失败', e)
+        }
+    },
+
+    restoreAndVerify: async () => {
+        try {
+            const token = Taro.getStorageSync('token')
+            const userInfo = Taro.getStorageSync('userInfo')
+
+            // Storage 为空，保持 guest 状态，无需网络请求
+            if (!token || !userInfo) return
+
+            // 先用 Storage 数据临时恢复，使后续 api 请求能携带 token
+            set({
+                token,
+                userInfo,
+                isLoggedIn: true,
+                currentRole: userInfo.role || 'guest',
+            })
+
+            // 调用 /auth/me 验证 token 有效性，并获取最新用户信息
+            const res = await api.get<UserInfo>('/auth/me')
+
+            if (res.success && res.data) {
+                // Token 有效，角色规范化后更新 store
+                const rawRole = (res.data.role as string)?.toLowerCase() || 'guest'
+                const role: UserRole = rawRole === 'boss' ? 'manager' : rawRole as UserRole
+                const normalizedUser: UserInfo = { ...res.data, role }
+                Taro.setStorageSync('userInfo', normalizedUser)
+                set({
+                    userInfo: normalizedUser,
+                    currentRole: role,
+                })
+            } else {
+                // Token 无效或过期，清除所有登录态
+                Taro.removeStorageSync('token')
+                Taro.removeStorageSync('userInfo')
+                set({
+                    token: '',
+                    userInfo: null,
+                    isLoggedIn: false,
+                    currentRole: 'guest',
+                })
+            }
+        } catch (e) {
+            console.error('[Auth] restoreAndVerify 失败', e)
+            // 网络异常时保守处理：清除登录态，要求重新登录
+            Taro.removeStorageSync('token')
+            Taro.removeStorageSync('userInfo')
+            set({
+                token: '',
+                userInfo: null,
+                isLoggedIn: false,
+                currentRole: 'guest',
+            })
         }
     },
 }))

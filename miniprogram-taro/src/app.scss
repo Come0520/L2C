@@ -5,7 +5,7 @@
  * 提供全站通用组件级 Class 和布局工具类。
  */
 
-@import './styles/utilities';
+@use './styles' as *;
 
 /* ==============================
  * 全局重置 (Global Resets)

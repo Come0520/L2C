@@ -1,5 +1,6 @@
 {
   "setting": {
+    "autoAudits": false,
     "urlCheck": false
   }
 }

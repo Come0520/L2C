@@ -99,8 +99,11 @@ const eslintConfig = defineConfig([
     // Project specific ignores:
     "e2e/**",
     "miniprogram/**",
+    "miniprogram-taro/dist/**",
     ".agent/**",
     "alibabacloud-rds-openapi-mcp-server/**",
+    "tmp/**",
+    "dms-mcp/**",
   ]),
 ]);
 

@@ -43,9 +43,12 @@ require("./runtime");
  */
 function App(_ref) {
   var children = _ref.children;
-  // 冷启动时恢复登录态：从 Storage 中读取 Token 和用户信息写入内存
+  // 冷启动时异步恢复并校验登录态：
+  // 1. 读取 Storage 中的 Token
+  // 2. 调用 /auth/me 验证有效性
+  // 3. 有效则恢复登录态，无效则清除（用户将在落地页看到未登录状态）
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
-    _stores_auth__WEBPACK_IMPORTED_MODULE_1__.useAuthStore.getState().restore();
+    _stores_auth__WEBPACK_IMPORTED_MODULE_1__.useAuthStore.getState().restoreAndVerify();
   }, []);
   return children;
 }

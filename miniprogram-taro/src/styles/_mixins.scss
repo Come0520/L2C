@@ -5,7 +5,7 @@
  * 所有尺寸已适配微信小程序 750rpx 基准（px = rpx）。
  * ==================================================== */
 
-@import './variables';
+@use './variables' as *;
 
 // ---------- 文字层次 (Typography Hierarchy) ----------
 @mixin apple-title1 {

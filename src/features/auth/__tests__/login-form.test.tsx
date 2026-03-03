@@ -10,6 +10,7 @@ vi.mock('next-auth/react', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 // 关键：使用同步工厂（非 async），确保 vi.fn() 实例在模块解析时就就绪

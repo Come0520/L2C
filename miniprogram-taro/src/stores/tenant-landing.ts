@@ -17,6 +17,8 @@ export interface TenantPublicProfile {
     phone: string | null
     contactWechat: string | null
     landingCoverUrl: string | null
+    /** 后端实时计算的有效套餐类型，过期则强制为 'base' */
+    planType: 'base' | 'pro' | 'enterprise'
 }
 
 /** 落地页状态接口 */

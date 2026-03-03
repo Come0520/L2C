@@ -3,6 +3,12 @@
   \*************************************************************************************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
+ * ==================================================== */
+/* ====================================================
  * Apple Design System - 变量与常量定义
  *
  * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
@@ -12,6 +18,12 @@
  * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
  *        1rpx ≈ 0.5pt
  *
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
  * ==================================================== */
 /* ====================================================
  * Apple Design System - 核心 Mixin 库
@@ -20,16 +32,247 @@
  * 所有尺寸已适配微信小程序 750rpx 基准（px = rpx）。
  * ==================================================== */
 /* ====================================================
- * Apple Design System - 变量与常量定义
+ * Apple Design System - 桶文件 (Barrel)
  *
- * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
- * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
- * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
- *
- * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
- *        1rpx ≈ 0.5pt
- *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
  * ==================================================== */
+/* ====================================================
+ * Apple Design System - 公共类 (Utilities)
+ *
+ * @description 根据 Mixins 导出的全局原子级或组件级 Class。
+ * 供全项目在 .tsx 中直接加 className 使用，彻底避免硬编码。
+ * ==================================================== */
+/* ── Typography (文字排版) ── */
+.apple-hero {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.5rpx;
+  line-height: 1.2;
+  font-size: 56rpx;
+  letter-spacing: -1rpx;
+}
+.apple-page-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.5rpx;
+  line-height: 1.2;
+}
+.apple-title-2 {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  letter-spacing: -0.3rpx;
+  line-height: 1.3;
+}
+.apple-title-3 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  line-height: 1.3;
+}
+.apple-body {
+  font-size: 28rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+}
+.apple-desc {
+  font-size: 28rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+  color: #6E6E73;
+}
+.apple-caption {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+}
+/* ── Shapes & Cards (卡片容器) ── */
+.apple-card {
+  background-color: #FFFFFF;
+  border-radius: 28rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  padding: 32rpx 24rpx;
+}
+/* ── Grouped List Forms (iOS 设置/表单列表) ── */
+.apple-grouped-list {
+  background-color: #FFFFFF;
+  border-radius: 20rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  margin: 0 24rpx 16rpx;
+}
+.apple-list-row {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  min-height: 88rpx;
+  padding: 0 24rpx 0 24rpx;
+  position: relative;
+  background-color: transparent;
+}
+.apple-list-row:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 24rpx;
+  right: 0;
+  height: 1rpx;
+  background-color: rgba(60, 60, 67, 0.1);
+  -webkit-transform: scaleY(0.5);
+      -ms-transform: scaleY(0.5);
+          transform: scaleY(0.5);
+}
+.apple-list-label {
+  width: 160rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1D1D1F;
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+}
+.apple-list-input {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: #1D1D1F;
+  text-align: right;
+  background: transparent;
+  border: none;
+}
+/* 占位符颜色类 */
+.ph-color {
+  color: #AEAEB2;
+}
+/* ── Buttons (按钮系统) ── */
+.apple-btn-primary {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-primary::after {
+  border: none;
+}
+.apple-btn-primary:active {
+  opacity: 0.7;
+}
+.apple-btn-primary[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-primary {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #0071E3;
+  color: #FFFFFF;
+  border-radius: 100rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+}
+.apple-btn-secondary {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-secondary::after {
+  border: none;
+}
+.apple-btn-secondary:active {
+  opacity: 0.7;
+}
+.apple-btn-secondary[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-secondary {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #e0f0ff;
+  color: #0071E3;
+  border-radius: 100rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+/* 幽灵/文字按钮 */
+.apple-btn-ghost {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-ghost::after {
+  border: none;
+}
+.apple-btn-ghost:active {
+  opacity: 0.7;
+}
+.apple-btn-ghost[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-ghost {
+  color: #6E6E73;
+  font-size: 28rpx;
+  padding: 16rpx;
+}
+.apple-btn-ghost.primary-color {
+  color: #0071E3;
+}
+/* ── Section Header (分组标题) ── */
+.apple-section-header {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  display: block;
+  padding: 24rpx 24rpx 8rpx;
+  text-transform: uppercase;
+}
+/* ── Common Layout Utilities ── */
+.apple-header-padding {
+  padding: 32rpx 24rpx 16rpx;
+}
+.apple-safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* ── 状态颜色 ── */
+.text-success {
+  color: #34C759;
+}
+.text-warning {
+  color: #FF9500;
+}
+.text-danger {
+  color: #FF3B30;
+}
+.text-primary {
+  color: #0071E3;
+}
 .login-page {
   min-height: 100vh;
   display: -webkit-flex;

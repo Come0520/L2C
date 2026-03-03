@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Label } from '@/shared/ui/label';
 import { Input } from '@/shared/ui/input';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
@@ -79,6 +80,8 @@ type LoginCredentials = z.infer<typeof loginSchema>;
  * ```
  */
 export function LoginForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   /**
    * 表单提交期间的加载状态控制器
    *
@@ -146,8 +149,8 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    /** 
-     * 客户端侧边界数据拦截 
+    /**
+     * 客户端侧边界数据拦截
      * @description 若失败则抛出 Toast 吐司阻止请求出栈
      */
     const validation = loginSchema.safeParse({ username, password });
@@ -206,7 +209,7 @@ export function LoginForm() {
          * @description 使用 window.location.href 直接拉取新页面，
          * 而非 next/router，以防有些边缘情况 Next.js Navigation 未能触发 Auth Cookie 的重新载入。
          */
-        window.location.href = '/dashboard';
+        window.location.href = callbackUrl;
       }
     } catch (_err: unknown) {
       /**
@@ -247,7 +250,6 @@ export function LoginForm() {
       {/* 表格容器区 */}
       {/* ======================================================= */}
       <form className="mt-8" onSubmit={handleSubmit}>
-
         {/* 用户名或邮箱入参结构组 */}
         <LabelInputContainer className="mb-4">
           <Label htmlFor="username" className="text-neutral-700 dark:text-neutral-300">

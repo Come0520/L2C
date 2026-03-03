@@ -68,7 +68,8 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy # 等待 app 健康检查通过再启动，防止 upstream 解析失败回退默认配置
     networks:
       - l2c-network
 

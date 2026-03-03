@@ -453,8 +453,14 @@ function usePaginatedList(_ref) {
 
 
 
-/** API 基础地址 — 根据环境自动切换 */
-var BASE_URL = 'http://localhost:3000/api/miniprogram';
+/**
+ * API 基础地址
+ *
+ * 注意：微信小程序无法访问 localhost，因此始终使用生产域名。
+ * 如需本地调试，可在微信开发者工具「详情 → 本地设置」中勾选「不校验合法域名」，
+ * 并将此处临时改为 http://localhost:3000/api/miniprogram。
+ */
+var BASE_URL = 'https://l2c.asia/api/miniprogram';
 
 /** 通用响应结构 */
 
@@ -645,11 +651,16 @@ var api = {
 /* harmony export */   ROLE_TABS: function() { return /* binding */ ROLE_TABS; },
 /* harmony export */   useAuthStore: function() { return /* binding */ useAuthStore; }
 /* harmony export */ });
-/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
-/* harmony import */ var zustand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! zustand */ "webpack/container/remote/zustand");
-/* harmony import */ var zustand__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(zustand__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var zustand__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! zustand */ "webpack/container/remote/zustand");
+/* harmony import */ var zustand__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(zustand__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+
+
 
 /**
  * 认证状态管理 (Zustand)
@@ -658,6 +669,7 @@ var api = {
  * 四大角色：Manager / Sales / Worker / Customer
  * 注意：`installer` 已废弃，统一使用 `worker`，与数据库枚举 `userRoleEnum` 一致。
  */
+
 
 
 
@@ -717,25 +729,35 @@ var ROLE_HOME = {
  * const home = ROLE_HOME[currentRole]   // 该角色的默认落地页
  * ```
  */
-var useAuthStore = (0,zustand__WEBPACK_IMPORTED_MODULE_1__.create)(function (set) {
+var useAuthStore = (0,zustand__WEBPACK_IMPORTED_MODULE_3__.create)(function (set) {
   return {
     userInfo: null,
     token: '',
     isLoggedIn: false,
     currentRole: 'guest',
     setLogin: function setLogin(token, userInfo) {
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('token', token);
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('userInfo', userInfo);
+      var _userInfo$role;
+      /**
+       * 角色规范化：后端存储大写（ADMIN / BOSS / SALES），前端统一小写。
+       * BOSS 在数据库中是管理员，映射到 manager 角色。
+       */
+      var rawRole = ((_userInfo$role = userInfo.role) === null || _userInfo$role === void 0 ? void 0 : _userInfo$role.toLowerCase()) || 'guest';
+      var normalizedRole = rawRole === 'boss' ? 'manager' : rawRole;
+      var normalizedUser = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, userInfo), {}, {
+        role: normalizedRole
+      });
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('token', token);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('userInfo', normalizedUser);
       set({
         token: token,
-        userInfo: userInfo,
+        userInfo: normalizedUser,
         isLoggedIn: true,
-        currentRole: userInfo.role || 'guest'
+        currentRole: normalizedRole
       });
     },
     logout: function logout() {
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().removeStorageSync('token');
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().removeStorageSync('userInfo');
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('token');
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('userInfo');
       set({
         token: '',
         userInfo: null,
@@ -746,10 +768,10 @@ var useAuthStore = (0,zustand__WEBPACK_IMPORTED_MODULE_1__.create)(function (set
     updateRole: function updateRole(role) {
       set(function (state) {
         if (state.userInfo) {
-          var updated = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, state.userInfo), {}, {
+          var updated = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, state.userInfo), {}, {
             role: role
           });
-          _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('userInfo', updated);
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('userInfo', updated);
           return {
             userInfo: updated,
             currentRole: role
@@ -760,20 +782,102 @@ var useAuthStore = (0,zustand__WEBPACK_IMPORTED_MODULE_1__.create)(function (set
     },
     restore: function restore() {
       try {
-        var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getStorageSync('token');
-        var userInfo = _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getStorageSync('userInfo');
+        var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('token');
+        var userInfo = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('userInfo');
         if (token && userInfo) {
+          var _userInfo$role2;
+          // 兼容旧 Storage 中可能存在的大写角色
+          var rawRole = ((_userInfo$role2 = userInfo.role) === null || _userInfo$role2 === void 0 ? void 0 : _userInfo$role2.toLowerCase()) || 'guest';
+          var role = rawRole === 'boss' ? 'manager' : rawRole;
           set({
             token: token,
-            userInfo: userInfo,
+            userInfo: (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, userInfo), {}, {
+              role: role
+            }),
             isLoggedIn: true,
-            currentRole: userInfo.role || 'guest'
+            currentRole: role
           });
         }
       } catch (e) {
         console.error('恢复登录态失败', e);
       }
-    }
+    },
+    restoreAndVerify: function () {
+      var _restoreAndVerify = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+        var token, userInfo, res, _res$data$role, rawRole, role, normalizedUser, _t;
+        return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+          while (1) switch (_context.p = _context.n) {
+            case 0:
+              _context.p = 0;
+              token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('token');
+              userInfo = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('userInfo'); // Storage 为空，保持 guest 状态，无需网络请求
+              if (!(!token || !userInfo)) {
+                _context.n = 1;
+                break;
+              }
+              return _context.a(2);
+            case 1:
+              // 先用 Storage 数据临时恢复，使后续 api 请求能携带 token
+              set({
+                token: token,
+                userInfo: userInfo,
+                isLoggedIn: true,
+                currentRole: userInfo.role || 'guest'
+              });
+
+              // 调用 /auth/me 验证 token 有效性，并获取最新用户信息
+              _context.n = 2;
+              return _services_api__WEBPACK_IMPORTED_MODULE_5__.api.get('/auth/me');
+            case 2:
+              res = _context.v;
+              if (res.success && res.data) {
+                // Token 有效，角色规范化后更新 store
+                rawRole = ((_res$data$role = res.data.role) === null || _res$data$role === void 0 ? void 0 : _res$data$role.toLowerCase()) || 'guest';
+                role = rawRole === 'boss' ? 'manager' : rawRole;
+                normalizedUser = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, res.data), {}, {
+                  role: role
+                });
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('userInfo', normalizedUser);
+                set({
+                  userInfo: normalizedUser,
+                  currentRole: role
+                });
+              } else {
+                // Token 无效或过期，清除所有登录态
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('token');
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('userInfo');
+                set({
+                  token: '',
+                  userInfo: null,
+                  isLoggedIn: false,
+                  currentRole: 'guest'
+                });
+              }
+              _context.n = 4;
+              break;
+            case 3:
+              _context.p = 3;
+              _t = _context.v;
+              console.error('[Auth] restoreAndVerify 失败', _t);
+              // 网络异常时保守处理：清除登录态，要求重新登录
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('token');
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('userInfo');
+              set({
+                token: '',
+                userInfo: null,
+                isLoggedIn: false,
+                currentRole: 'guest'
+              });
+            case 4:
+              return _context.a(2);
+          }
+        }, _callee, null, [[0, 3]]);
+      }));
+      function restoreAndVerify() {
+        return _restoreAndVerify.apply(this, arguments);
+      }
+      return restoreAndVerify;
+    }()
   };
 });
 

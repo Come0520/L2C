@@ -1,9 +1,19 @@
 /**
  * 引导/落地页 — 「两张脸」动态模式
  *
- * @description 根据启动参数自动切换：
- * - 无 tenantCode → L2C 官方推广页（吸引行业内注册）
- * - 有 tenantCode → 租户品牌专属落地页（商家获客工具，L2C 隐形）
+ * @description 根据启动参数和登录状态自动切换：
+ *
+ * 情况 1：有 tc 参数 + 租户为 Pro/Enterprise
+ *   → 租户品牌专属落地页（商家获客工具，L2C 隐形）
+ *
+ * 情况 2：有 tc 参数 + 租户为 Base（或已过期/查不到）
+ *   → 降级为 L2C 官方推广页
+ *
+ * 情况 3：无 tc 参数 + 用户已登录（Token 有效）
+ *   → 自动静默跳转到角色对应首页，用户无感知
+ *
+ * 情况 4：无 tc 参数 + 用户未登录
+ *   → L2C 官方推广页（含登录、申请入驻入口）
  *
  * 参数传递：
  * - 分享卡片：path 携带 ?tc=CODE
@@ -16,18 +26,34 @@ import { useAuthStore, ROLE_HOME, UserRole } from '@/stores/auth'
 import { useTenantLandingStore } from '@/stores/tenant-landing'
 import './index.scss'
 
+/**
+ * ⚠️ 开发调试开关 — 上线前改为 false 即可隐藏角色切换面板
+ */
+const __DEV_ROLE_SWITCHER__ = true
+
+/** 调试用：四大角色快速入口配置 */
+const DEV_ROLES: { role: UserRole; label: string; icon: string; desc: string; color: string }[] = [
+  { role: 'manager', label: '管理员', icon: '👔', desc: '审批 · 报表 · 全局管控', color: '#007AFF' },
+  { role: 'sales', label: '销售顾问', icon: '💼', desc: '线索 · 报价 · 展厅 · 客户', color: '#34C759' },
+  { role: 'worker', label: '安装工人', icon: '🔧', desc: '任务 · 量尺 · 进度反馈', color: '#FF9500' },
+  { role: 'customer', label: '终端客户', icon: '🏠', desc: '展厅浏览 · 方案确认', color: '#AF52DE' },
+]
+
 export default function LandingPage() {
-  const { isLoggedIn, currentRole } = useAuthStore()
   const { profile, loading, fetchProfile, tenantCode } = useTenantLandingStore()
-  /** 是否为租户模式（有有效的租户公开信息） */
-  const isTenantMode = !!profile && !!tenantCode
+
+  /**
+   * 是否显示租户品牌页：
+   * 必须同时满足：有 tc 参数 + 有租户数据 + 套餐为 pro 或 enterprise
+   */
+  const isBrandMode =
+    !!profile && !!tenantCode && (profile.planType === 'pro' || profile.planType === 'enterprise')
 
   /**
    * 解析启动参数，提取 tenantCode
-   * - 分享卡片：options.tc
-   * - 小程序码扫码：options.scene（需 decodeURIComponent 解析）
+   * 同时处理已登录用户的自动跳转
    */
-  useLoad((options) => {
+  useLoad(async (options) => {
     let code = options?.tc || ''
 
     // 小程序码的 scene 参数解析（格式：tc=CODE）
@@ -40,13 +66,33 @@ export default function LandingPage() {
     }
 
     if (code) {
+      // 有租户码：拉取租户信息，根据 planType 决定显示模式
       fetchProfile(code)
+      return
     }
+
+    // 无租户码：检查登录状态，已登录则自动跳转到角色首页
+    // 注意：restoreAndVerify() 在 app.ts 中已发起，此处等待 store 状态完成
+    // ⚠️ 开启角色切换面板时不自动跳转，方便调试
+    if (__DEV_ROLE_SWITCHER__) return
+
+    const authState = useAuthStore.getState()
+    if (authState.isLoggedIn && authState.currentRole !== 'guest') {
+      const roleKey = (authState.currentRole?.toLowerCase() as UserRole) || 'guest'
+      const home = ROLE_HOME[roleKey] || '/pages/workbench/index'
+      try {
+        await Taro.switchTab({ url: home })
+      } catch {
+        // switchTab 失败时（如目标页不在 tabBar）改用 reLaunch
+        await Taro.reLaunch({ url: home })
+      }
+    }
+    // 未登录：正常渲染 L2C 推广页
   })
 
-  // 配置分享功能（仅租户模式下生效）
+  // 配置分享功能（仅租户品牌模式下生效）
   useShareAppMessage(() => {
-    if (isTenantMode && profile) {
+    if (isBrandMode && profile) {
       return {
         title: `${profile.name}${profile.slogan ? ' — ' + profile.slogan : ''}`,
         path: `/pages/landing/index?tc=${tenantCode}`,
@@ -61,21 +107,10 @@ export default function LandingPage() {
 
   // ========== 导航方法 ==========
   const goLogin = () => {
-    console.log('[Landing] 点击登录')
     Taro.navigateTo({ url: '/pages/login/index' })
   }
   const goRegister = () => {
-    console.log('[Landing] 点击申请入驻')
     Taro.navigateTo({ url: '/pages/register/index' })
-  }
-
-  /** 复制 Web 管理端链接 */
-  const openWebAdmin = () => {
-    // 修复 Taro 编译环境中 process 未定义的问题，使用固定的管理端 URL
-    const ADMIN_URL = 'https://l2c.asia/admin'
-    Taro.setClipboardData({ data: ADMIN_URL }).then(() => {
-      Taro.showToast({ title: 'Web 端链接已复制', icon: 'success' })
-    })
   }
 
   /** 一键拨打电话 */
@@ -83,7 +118,7 @@ export default function LandingPage() {
     if (profile?.phone) {
       Taro.makePhoneCall({ phoneNumber: profile.phone })
     }
-  }, [profile?.phone])
+  }, [profile])
 
   /** 预约上门 — 跳转到预约表单页 */
   const goBooking = useCallback(() => {
@@ -91,6 +126,29 @@ export default function LandingPage() {
       url: `/pages/landing/booking/index?tc=${tenantCode}`
     })
   }, [tenantCode])
+
+  /**
+   * 调试用：切换角色并跳转到该角色首页
+   * 已登录时保留真实 token，只切换角色，API 调用不会 401
+   * 未登录时提示先登录
+   */
+  const switchToRole = useCallback((role: UserRole) => {
+    const store = useAuthStore.getState()
+    if (!store.isLoggedIn) {
+      Taro.showToast({ title: '请先登录再切换角色', icon: 'none', duration: 2000 })
+      return
+    }
+
+    // 保留真实 token，只切换角色
+    store.updateRole(role)
+
+    const home = ROLE_HOME[role] || '/pages/workbench/index'
+    try {
+      Taro.switchTab({ url: home })
+    } catch {
+      Taro.reLaunch({ url: home })
+    }
+  }, [])
 
   // ========== 加载中骨架屏 ==========
   if (loading) {
@@ -103,8 +161,8 @@ export default function LandingPage() {
     )
   }
 
-  // ========== 租户品牌落地页 ==========
-  if (isTenantMode && profile) {
+  // ========== 租户品牌落地页（Pro/Enterprise 专属） ==========
+  if (isBrandMode && profile) {
     return (
       <View className='landing-page tenant-landing'>
         {/* Hero 区域 */}
@@ -168,7 +226,10 @@ export default function LandingPage() {
     )
   }
 
-  // ========== L2C 官方推广页（默认） ==========
+  // 获取当前登录状态（用于调试面板提示）
+  const authState = useAuthStore.getState()
+
+  // ========== L2C 官方推广页（默认/降级） ==========
   return (
     <View className='landing-page'>
       <View className='landing-hero'>
@@ -178,28 +239,9 @@ export default function LandingPage() {
       </View>
 
       <View className='landing-actions'>
-        {!isLoggedIn ? (
-          <View>
-            <Button className='apple-btn-primary' onClick={goLogin}>立即登录</Button>
-            <View style={{ height: 16 }} />
-            <Button className='apple-btn-secondary' onClick={goRegister}>申请入驻</Button>
-          </View>
-        ) : (
-          <View>
-            <Text className='already-login'>已登录为 {currentRole}</Text>
-            <Button className='apple-btn-primary' onClick={() => {
-              const roleKey = (currentRole?.toLowerCase() as UserRole) || 'guest'
-              const home = ROLE_HOME[roleKey] || '/pages/workbench/index'
-              Taro.switchTab({ url: home })
-            }}>
-              🚀 进入系统
-            </Button>
-            <View style={{ height: 16 }} />
-            <Button className='apple-btn-secondary' onClick={openWebAdmin}>
-              💻 复制 Web 管理端链接
-            </Button>
-          </View>
-        )}
+        <Button className='apple-btn-primary' onClick={goLogin}>立即登录</Button>
+        <View style={{ height: 16 }} />
+        <Button className='apple-btn-secondary' onClick={goRegister}>申请入驻</Button>
       </View>
 
       <View className='features'>
@@ -218,6 +260,42 @@ export default function LandingPage() {
           </View>
         ))}
       </View>
+
+      {/* ========== 🔧 调试面板：角色快速切换 ========== */}
+      {__DEV_ROLE_SWITCHER__ && (
+        <View className='dev-role-switcher'>
+          <View className='dev-header'>
+            <Text className='dev-badge'>🔧 DEV</Text>
+            <Text className='dev-title'>角色体验入口</Text>
+            {authState.isLoggedIn ? (
+              <Text className='dev-hint dev-hint--ok'>
+                ✅ 已登录：{authState.userInfo?.name} — 点击切换角色
+              </Text>
+            ) : (
+              <Text className='dev-hint dev-hint--warn'>
+                ⚠️ 请先点击上方「立即登录」，再回来切换角色
+              </Text>
+            )}
+          </View>
+          <View className='dev-roles'>
+            {DEV_ROLES.map((item) => (
+              <View
+                key={item.role}
+                className={`dev-role-card ${!authState.isLoggedIn ? 'dev-role-card--disabled' : ''}`}
+                style={{ borderLeftColor: item.color }}
+                onClick={() => switchToRole(item.role)}
+              >
+                <Text className='dev-role-icon'>{item.icon}</Text>
+                <View className='dev-role-info'>
+                  <Text className='dev-role-label'>{item.label}</Text>
+                  <Text className='dev-role-desc'>{item.desc}</Text>
+                </View>
+                <Text className='dev-role-arrow'>›</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   )
 }

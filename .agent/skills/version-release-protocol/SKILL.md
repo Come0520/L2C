@@ -134,10 +134,14 @@ rm -f next-build.tar.gz
 ## 部署完成
 
 1. 等待约 2 分钟（健康检查 `start_period=120s`）。
-2. 验证：`ssh ecs "docker ps --format 'table {{.Names}}\t{{.Status}}' && curl -s -o /dev/null -w 'HTTP %{http_code}' https://l2c.asia/"`
-3. 预期结果：`l2c-app Up (healthy)` + `HTTP 200`。
-4. 向用户汇报：版本号、更新模块、部署状态。
-5. 如果部署过程中出现了短暂停机，温馨提示用户未来可探索 Blue-Green 零停机部署方案。
+2. **强制重载 nginx**（防止 upstream 解析失败静默回退默认配置）：
+   ```bash
+   ssh ecs "docker exec l2c-nginx nginx -s reload"
+   ```
+3. 验证：`ssh ecs "docker ps --format 'table {{.Names}}\t{{.Status}}' && curl -s -o /dev/null -w 'HTTP %{http_code}' https://l2c.asia/"`
+4. 预期结果：`l2c-app Up (healthy)` + `HTTP 200`。
+5. 向用户汇报：版本号、更新模块、部署状态。
+6. 如果部署过程中出现了短暂停机，温馨提示用户未来可探索 Blue-Green 零停机部署方案。
 
 ---
 

@@ -69,7 +69,7 @@ function LoginPage() {
   /** 账号密码登录 */
   var handlePasswordLogin = /*#__PURE__*/function () {
     var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
-      var res, home;
+      var res, home, _t;
       return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -116,23 +116,41 @@ function LoginPage() {
             });
           case 5:
             res = _context.v;
-            if (res.success) {
-              setLogin(res.data.token, res.data.user);
-              home = _stores_auth__WEBPACK_IMPORTED_MODULE_6__.ROLE_HOME[res.data.user.role] || '/pages/workbench/index';
-              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().switchTab({
-                url: home
-              });
-            } else {
-              setError(res.error || '登录失败，请检查账号密码');
+            if (!res.success) {
+              _context.n = 10;
+              break;
             }
-          case 6:
+            setLogin(res.data.token, res.data.user);
+            home = _stores_auth__WEBPACK_IMPORTED_MODULE_6__.ROLE_HOME[res.data.user.role] || '/pages/workbench/index';
             _context.p = 6;
-            setLoading(false);
-            return _context.f(6);
+            _context.n = 7;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().switchTab({
+              url: home
+            });
           case 7:
+            _context.n = 9;
+            break;
+          case 8:
+            _context.p = 8;
+            _t = _context.v;
+            console.warn('[Login] switchTab 失败，尝试 reLaunch', _t);
+            _context.n = 9;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().reLaunch({
+              url: home
+            });
+          case 9:
+            _context.n = 11;
+            break;
+          case 10:
+            setError(res.error || '登录失败，请检查账号密码');
+          case 11:
+            _context.p = 11;
+            setLoading(false);
+            return _context.f(11);
+          case 12:
             return _context.a(2);
         }
-      }, _callee, null, [[4,, 6, 7]]);
+      }, _callee, null, [[6, 8], [4,, 11, 12]]);
     }));
     return function handlePasswordLogin() {
       return _ref.apply(this, arguments);
@@ -142,7 +160,7 @@ function LoginPage() {
   /** 微信授权登录 */
   var handleWechatLogin = /*#__PURE__*/function () {
     var _ref2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee2() {
-      var loginRes, res, home, _t;
+      var loginRes, res, home, _t2, _t3;
       return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
@@ -161,29 +179,48 @@ function LoginPage() {
             });
           case 3:
             res = _context2.v;
-            if (res.success) {
-              setLogin(res.data.token, res.data.user);
-              home = _stores_auth__WEBPACK_IMPORTED_MODULE_6__.ROLE_HOME[res.data.user.role] || '/pages/workbench/index';
-              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().switchTab({
-                url: home
-              });
-            } else {
-              setError(res.error || '微信登录失败');
+            if (!res.success) {
+              _context2.n = 8;
+              break;
             }
-            _context2.n = 5;
-            break;
-          case 4:
+            setLogin(res.data.token, res.data.user);
+            home = _stores_auth__WEBPACK_IMPORTED_MODULE_6__.ROLE_HOME[res.data.user.role] || '/pages/workbench/index';
             _context2.p = 4;
-            _t = _context2.v;
-            setError('微信授权失败，请重试');
+            _context2.n = 5;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().switchTab({
+              url: home
+            });
           case 5:
-            _context2.p = 5;
-            setLoading(false);
-            return _context2.f(5);
+            _context2.n = 7;
+            break;
           case 6:
+            _context2.p = 6;
+            _t2 = _context2.v;
+            console.warn('[Wechat] switchTab 失败，尝试 reLaunch', _t2);
+            _context2.n = 7;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().reLaunch({
+              url: home
+            });
+          case 7:
+            _context2.n = 9;
+            break;
+          case 8:
+            setError(res.error || '微信登录失败');
+          case 9:
+            _context2.n = 11;
+            break;
+          case 10:
+            _context2.p = 10;
+            _t3 = _context2.v;
+            setError('微信授权失败，请重试');
+          case 11:
+            _context2.p = 11;
+            setLoading(false);
+            return _context2.f(11);
+          case 12:
             return _context2.a(2);
         }
-      }, _callee2, null, [[1, 4, 5, 6]]);
+      }, _callee2, null, [[4, 6], [1, 10, 11, 12]]);
     }));
     return function handleWechatLogin() {
       return _ref2.apply(this, arguments);

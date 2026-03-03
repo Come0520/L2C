@@ -393,6 +393,39 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.2',
+    version: 'v1.3.2',
+    date: '2026-03-03',
+    title: 'Docker 环境隔离修复与工程规范建设',
+    description:
+      '修复 .env 开发配置意外打包进生产 Docker 镜像导致的数据库连接错误（proxy 问题根因），全面重写 .dockerignore 防止敏感文件泄露，建立 workspace-hygiene AI 规范与 /cleanup 自动化工作流，确保项目根目录长期保持工程级整洁。',
+    contributors: ['聂老师', '长城（开发者）'],
+    updates: [
+      {
+        type: 'fix',
+        content: '修复 Docker 构建将 .env 开发配置打包进生产镜像导致数据库连接指向本地的严重问题',
+      },
+      {
+        type: 'optimize',
+        content:
+          '全面重写 .dockerignore：排除所有环境变量、SSL 私钥、测试日志、临时脚本，极大减小构建上下文体积',
+      },
+      {
+        type: 'optimize',
+        content:
+          '深度清理项目根目录：移除上百个遗留的调试日志、临时脚本和打包产物，SSL 证书安全归档',
+      },
+      {
+        type: 'feature',
+        content: '新增 workspace-hygiene AI 技能规范，从源头杜绝根目录文件污染',
+      },
+      {
+        type: 'feature',
+        content: '新增 /cleanup 一键清理工作流，支持随时快速恢复工程级整洁',
+      },
+    ],
+  },
+  {
     id: 'v1.3.1',
     version: 'v1.3.1',
     date: '2026-03-03',
@@ -403,7 +436,8 @@ export const versionHistory: VersionRecord[] = [
     updates: [
       {
         type: 'fix',
-        content: '修复部署流程根因缺陷：docker build 从只重建 app 改为全部服务，杜绝 db-migrate 使用旧 schema 反向操作',
+        content:
+          '修复部署流程根因缺陷：docker build 从只重建 app 改为全部服务，杜绝 db-migrate 使用旧 schema 反向操作',
       },
       {
         type: 'fix',

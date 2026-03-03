@@ -8,8 +8,14 @@ import Taro from '@tarojs/taro'
 import { useAuthStore } from '@/stores/auth'
 import { Logger } from '@/utils/logger'
 
-/** API 基础地址 — 根据环境自动切换 */
-const BASE_URL = 'http://localhost:3000/api/miniprogram'
+/**
+ * API 基础地址
+ *
+ * 注意：微信小程序无法访问 localhost，因此始终使用生产域名。
+ * 如需本地调试，可在微信开发者工具「详情 → 本地设置」中勾选「不校验合法域名」，
+ * 并将此处临时改为 http://localhost:3000/api/miniprogram。
+ */
+const BASE_URL = 'https://l2c.asia/api/miniprogram'
 
 /** 通用响应结构 */
 interface ApiResponse<T = any> {

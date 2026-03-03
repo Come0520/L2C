@@ -5,8 +5,8 @@
  * 供全项目在 .tsx 中直接加 className 使用，彻底避免硬编码。
  * ==================================================== */
 
-@import './variables';
-@import './mixins';
+@use './variables' as *;
+@use './mixins' as *;
 
 /* ── Typography (文字排版) ── */
 .apple-hero {

@@ -10,21 +10,35 @@
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": function() { return /* binding */ LandingPage; }
 /* harmony export */ });
-/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _stores_auth__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/stores/auth */ "./src/stores/auth.ts");
-/* harmony import */ var _stores_tenant_landing__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/stores/tenant-landing */ "./src/stores/tenant-landing.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _stores_auth__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/stores/auth */ "./src/stores/auth.ts");
+/* harmony import */ var _stores_tenant_landing__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/stores/tenant-landing */ "./src/stores/tenant-landing.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+
+
 /**
  * 引导/落地页 — 「两张脸」动态模式
  *
- * @description 根据启动参数自动切换：
- * - 无 tenantCode → L2C 官方推广页（吸引行业内注册）
- * - 有 tenantCode → 租户品牌专属落地页（商家获客工具，L2C 隐形）
+ * @description 根据启动参数和登录状态自动切换：
+ *
+ * 情况 1：有 tc 参数 + 租户为 Pro/Enterprise
+ *   → 租户品牌专属落地页（商家获客工具，L2C 隐形）
+ *
+ * 情况 2：有 tc 参数 + 租户为 Base（或已过期/查不到）
+ *   → 降级为 L2C 官方推广页
+ *
+ * 情况 3：无 tc 参数 + 用户已登录（Token 有效）
+ *   → 自动静默跳转到角色对应首页，用户无感知
+ *
+ * 情况 4：无 tc 参数 + 用户未登录
+ *   → L2C 官方推广页（含登录、申请入驻入口）
  *
  * 参数传递：
  * - 分享卡片：path 携带 ?tc=CODE
@@ -38,41 +52,84 @@
 
 
 function LandingPage() {
-  var _useAuthStore = (0,_stores_auth__WEBPACK_IMPORTED_MODULE_3__.useAuthStore)(),
+  var _useAuthStore = (0,_stores_auth__WEBPACK_IMPORTED_MODULE_5__.useAuthStore)(),
     isLoggedIn = _useAuthStore.isLoggedIn,
     currentRole = _useAuthStore.currentRole;
-  var _useTenantLandingStor = (0,_stores_tenant_landing__WEBPACK_IMPORTED_MODULE_4__.useTenantLandingStore)(),
+  var _useTenantLandingStor = (0,_stores_tenant_landing__WEBPACK_IMPORTED_MODULE_6__.useTenantLandingStore)(),
     profile = _useTenantLandingStor.profile,
     loading = _useTenantLandingStor.loading,
     fetchProfile = _useTenantLandingStor.fetchProfile,
     tenantCode = _useTenantLandingStor.tenantCode;
-  /** 是否为租户模式（有有效的租户公开信息） */
-  var isTenantMode = !!profile && !!tenantCode;
+
+  /**
+   * 是否显示租户品牌页：
+   * 必须同时满足：有 tc 参数 + 有租户数据 + 套餐为 pro 或 enterprise
+   */
+  var isBrandMode = !!profile && !!tenantCode && (profile.planType === 'pro' || profile.planType === 'enterprise');
 
   /**
    * 解析启动参数，提取 tenantCode
-   * - 分享卡片：options.tc
-   * - 小程序码扫码：options.scene（需 decodeURIComponent 解析）
+   * 同时处理已登录用户的自动跳转
    */
-  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_1__.useLoad)(function (options) {
-    var code = (options === null || options === void 0 ? void 0 : options.tc) || '';
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_3__.useLoad)(/*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(options) {
+      var code, decoded, match, authState, _authState$currentRol, roleKey, home, _t;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            code = (options === null || options === void 0 ? void 0 : options.tc) || ''; // 小程序码的 scene 参数解析（格式：tc=CODE）
+            if (!code && options !== null && options !== void 0 && options.scene) {
+              decoded = decodeURIComponent(options.scene);
+              match = decoded.match(/tc=([^&]+)/);
+              if (match) {
+                code = match[1];
+              }
+            }
+            if (!code) {
+              _context.n = 1;
+              break;
+            }
+            // 有租户码：拉取租户信息，根据 planType 决定显示模式
+            fetchProfile(code);
+            return _context.a(2);
+          case 1:
+            // 无租户码：检查登录状态，已登录则自动跳转到角色首页
+            // 注意：restoreAndVerify() 在 app.ts 中已发起，此处等待 store 状态完成
+            authState = _stores_auth__WEBPACK_IMPORTED_MODULE_5__.useAuthStore.getState();
+            if (!(authState.isLoggedIn && authState.currentRole !== 'guest')) {
+              _context.n = 5;
+              break;
+            }
+            roleKey = ((_authState$currentRol = authState.currentRole) === null || _authState$currentRol === void 0 ? void 0 : _authState$currentRol.toLowerCase()) || 'guest';
+            home = _stores_auth__WEBPACK_IMPORTED_MODULE_5__.ROLE_HOME[roleKey] || '/pages/workbench/index';
+            _context.p = 2;
+            _context.n = 3;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().switchTab({
+              url: home
+            });
+          case 3:
+            _context.n = 5;
+            break;
+          case 4:
+            _context.p = 4;
+            _t = _context.v;
+            _context.n = 5;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().reLaunch({
+              url: home
+            });
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2, 4]]);
+    }));
+    return function (_x) {
+      return _ref.apply(this, arguments);
+    };
+  }());
 
-    // 小程序码的 scene 参数解析（格式：tc=CODE）
-    if (!code && options !== null && options !== void 0 && options.scene) {
-      var decoded = decodeURIComponent(options.scene);
-      var match = decoded.match(/tc=([^&]+)/);
-      if (match) {
-        code = match[1];
-      }
-    }
-    if (code) {
-      fetchProfile(code);
-    }
-  });
-
-  // 配置分享功能（仅租户模式下生效）
-  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_1__.useShareAppMessage)(function () {
-    if (isTenantMode && profile) {
+  // 配置分享功能（仅租户品牌模式下生效）
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_3__.useShareAppMessage)(function () {
+    if (isBrandMode && profile) {
       return {
         title: "".concat(profile.name).concat(profile.slogan ? ' — ' + profile.slogan : ''),
         path: "/pages/landing/index?tc=".concat(tenantCode),
@@ -87,115 +144,99 @@ function LandingPage() {
 
   // ========== 导航方法 ==========
   var goLogin = function goLogin() {
-    console.log('[Landing] 点击登录');
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().navigateTo({
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().navigateTo({
       url: '/pages/login/index'
     });
   };
   var goRegister = function goRegister() {
-    console.log('[Landing] 点击申请入驻');
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().navigateTo({
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().navigateTo({
       url: '/pages/register/index'
     });
   };
 
-  /** 复制 Web 管理端链接 */
-  var openWebAdmin = function openWebAdmin() {
-    // 修复 Taro 编译环境中 process 未定义的问题，使用固定的管理端 URL
-    var ADMIN_URL = 'https://l2c.asia/admin';
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().setClipboardData({
-      data: ADMIN_URL
-    }).then(function () {
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().showToast({
-        title: 'Web 端链接已复制',
-        icon: 'success'
-      });
-    });
-  };
-
   /** 一键拨打电话 */
-  var callPhone = (0,react__WEBPACK_IMPORTED_MODULE_2__.useCallback)(function () {
+  var callPhone = (0,react__WEBPACK_IMPORTED_MODULE_4__.useCallback)(function () {
     if (profile !== null && profile !== void 0 && profile.phone) {
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().makePhoneCall({
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().makePhoneCall({
         phoneNumber: profile.phone
       });
     }
   }, [profile === null || profile === void 0 ? void 0 : profile.phone]);
 
   /** 预约上门 — 跳转到预约表单页 */
-  var goBooking = (0,react__WEBPACK_IMPORTED_MODULE_2__.useCallback)(function () {
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().navigateTo({
+  var goBooking = (0,react__WEBPACK_IMPORTED_MODULE_4__.useCallback)(function () {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().navigateTo({
       url: "/pages/landing/booking/index?tc=".concat(tenantCode)
     });
   }, [tenantCode]);
 
   // ========== 加载中骨架屏 ==========
   if (loading) {
-    return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+    return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
       className: "landing-page landing-loading",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "skeleton-circle"
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "skeleton-line skeleton-title"
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "skeleton-line skeleton-subtitle"
       })]
     });
   }
 
-  // ========== 租户品牌落地页 ==========
-  if (isTenantMode && profile) {
-    return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+  // ========== 租户品牌落地页（Pro/Enterprise 专属） ==========
+  if (isBrandMode && profile) {
+    return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
       className: "landing-page tenant-landing",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "tenant-hero",
         style: profile.landingCoverUrl ? {
           backgroundImage: "url(".concat(profile.landingCoverUrl, ")")
         } : undefined,
-        children: [profile.logoUrl && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Image, {
+        children: [profile.logoUrl && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Image, {
           className: "tenant-logo",
           src: profile.logoUrl,
           mode: "aspectFit"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
           className: "tenant-name",
           children: profile.name
-        }), profile.slogan && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+        }), profile.slogan && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
           className: "tenant-slogan",
           children: profile.slogan
         })]
-      }), (profile.detailAddress || profile.region || profile.phone) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      }), (profile.detailAddress || profile.region || profile.phone) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "tenant-info card",
-        children: [(profile.detailAddress || profile.region) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+        children: [(profile.detailAddress || profile.region) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
           className: "info-row",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "info-icon",
             children: "\uD83D\uDCCD"
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "info-text",
             children: [profile.region, profile.detailAddress ? " ".concat(profile.detailAddress) : '']
           })]
-        }), profile.phone && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+        }), profile.phone && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
           className: "info-row",
           onClick: callPhone,
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "info-icon",
             children: "\uD83D\uDCDE"
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "info-text info-phone",
             children: profile.phone
           })]
         })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "tenant-actions",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
           className: "btn-primary",
           onClick: goBooking,
           children: "\uD83D\uDCD0 \u9884\u7EA6\u4E0A\u95E8\u91CF\u7A97"
-        }), profile.phone && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
+        }), profile.phone && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
           className: "btn-call",
           onClick: callPhone,
           children: "\uD83D\uDCDE \u7ACB\u5373\u62E8\u6253"
-        }), profile.contactWechat && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
+        }), profile.contactWechat && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
           className: "btn-wechat",
           openType: "contact",
           children: "\uD83D\uDCAC \u5FAE\u4FE1\u8054\u7CFB\u9500\u552E"
@@ -204,62 +245,41 @@ function LandingPage() {
     });
   }
 
-  // ========== L2C 官方推广页（默认） ==========
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+  // ========== L2C 官方推广页（默认/降级） ==========
+  // 适用情况：
+  // 1. 无 tc 参数且未登录（新用户首次访问）
+  // 2. 有 tc 参数但租户为 Base 版或过期
+  // 3. 查无此租户码
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
     className: "landing-page",
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
       className: "landing-hero",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
         className: "hero-logo",
         children: "L2C"
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
         className: "hero-title",
         children: "\u7A97\u5E18\u5168\u6D41\u7A0B\u7BA1\u7406\u5927\u5E08"
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
         className: "hero-desc",
         children: "\u4ECE\u7EBF\u7D22\u5230\u5B89\u88C5\uFF0C\u5168\u94FE\u8DEF\u6570\u5B57\u5316\u7BA1\u7406"
       })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
       className: "landing-actions",
-      children: !isLoggedIn ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
-          className: "apple-btn-primary",
-          onClick: goLogin,
-          children: "\u7ACB\u5373\u767B\u5F55"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
-          style: {
-            height: 16
-          }
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
-          className: "apple-btn-secondary",
-          onClick: goRegister,
-          children: "\u7533\u8BF7\u5165\u9A7B"
-        })]
-      }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
-          className: "already-login",
-          children: ["\u5DF2\u767B\u5F55\u4E3A ", currentRole]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
-          className: "apple-btn-primary",
-          onClick: function onClick() {
-            var roleKey = (currentRole === null || currentRole === void 0 ? void 0 : currentRole.toLowerCase()) || 'guest';
-            var home = _stores_auth__WEBPACK_IMPORTED_MODULE_3__.ROLE_HOME[roleKey] || '/pages/workbench/index';
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().switchTab({
-              url: home
-            });
-          },
-          children: "\uD83D\uDE80 \u8FDB\u5165\u7CFB\u7EDF"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
-          style: {
-            height: 16
-          }
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
-          className: "apple-btn-secondary",
-          onClick: openWebAdmin,
-          children: "\uD83D\uDCBB \u590D\u5236 Web \u7BA1\u7406\u7AEF\u94FE\u63A5"
-        })]
-      })
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+        className: "apple-btn-primary",
+        onClick: goLogin,
+        children: "\u7ACB\u5373\u767B\u5F55"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        style: {
+          height: 16
+        }
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+        className: "apple-btn-secondary",
+        onClick: goRegister,
+        children: "\u7533\u8BF7\u5165\u9A7B"
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
       className: "features",
       children: [{
         icon: '📋',
@@ -278,18 +298,18 @@ function LandingPage() {
         title: '云展厅',
         desc: '一键分享产品给客户浏览'
       }].map(function (f) {
-        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
           className: "feature-item",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
             className: "feature-icon-wrap",
-            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
               className: "feature-icon",
               children: f.icon
             })
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "feature-title",
             children: f.title
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
             className: "feature-desc",
             children: f.desc
           })]

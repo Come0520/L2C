@@ -12,9 +12,12 @@ import './app.scss'
  * 在此处可添加全局 Provider（如 Zustand、主题等）
  */
 function App({ children }: PropsWithChildren) {
-    // 冷启动时恢复登录态：从 Storage 中读取 Token 和用户信息写入内存
+    // 冷启动时异步恢复并校验登录态：
+    // 1. 读取 Storage 中的 Token
+    // 2. 调用 /auth/me 验证有效性
+    // 3. 有效则恢复登录态，无效则清除（用户将在落地页看到未登录状态）
     useEffect(() => {
-        useAuthStore.getState().restore()
+        useAuthStore.getState().restoreAndVerify()
     }, [])
 
     return children

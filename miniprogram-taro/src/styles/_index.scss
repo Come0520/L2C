@@ -1,0 +1,10 @@
+/* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
+ * ==================================================== */
+
+@forward './variables';
+@forward './mixins';
+@forward './utilities';

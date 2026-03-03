@@ -10,10 +10,24 @@ import { GlobalSearchCommand } from '@/features/search/components/global-search-
  * 包含认证守卫，未登录用户自动跳转到登录页
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch {
+    // auth() 异常（cookie 损坏/secret 不匹配等）→ 清除残留 cookie 防循环
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.delete('authjs.session-token');
+    cookieStore.delete('__Secure-authjs.session-token');
+    redirect('/login');
+  }
 
-  // 未登录，跳转到登录页
-  if (!session) {
+  // 未登录或 session 无效 → 清除可能的残留 cookie 后跳转
+  if (!session?.user?.id) {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.delete('authjs.session-token');
+    cookieStore.delete('__Secure-authjs.session-token');
     redirect('/login');
   }
 

@@ -1,11 +1,100 @@
-node_modules
-.next
+# ========================================
+# L2C 项目生产级 .dockerignore
+# ========================================
+
+# 1. 版本控制与编辑器
 .git
+.github
+.gitignore
+.gitattributes
 .vscode
-.env.local
-npm-debug.log
-.DS_Store
-coverage
-build
-dist
+.trae
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 2. 依赖目录
+node_modules
+miniprogram-taro/node_modules
+.npm
+.yarn
+.pnp.*
+
+# 3. Next.js 临时/输出文件
+.next/
+!/.next/standalone/
+!/.next/static/
+out/
+build/
+dist/
+
+# 4. 环境变量与机密文件（绝对禁止入镜像）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+.antigravity/
+
+# 5. 测试、覆盖率与相关日志
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+.playwright/
+e2e-results.json
+vitest-report.json
+
+# 6. 项目级日志与巨型临时文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 7. 脚本构建过程产生的海量临时输出文件
+*.txt
+*.scratchpad.txt
+.test-output*.txt
+.type_check*.log
+.type_errors*.txt
+*.json.txt
+
+# 8. 临时打包产物与数据库目录
+*.tar.gz
+*.zip
+latest-deployment/
+local-db/
+backups/
+
+# 9. TypeScript 构建缓存
+*.tsbuildinfo
+
+# 10. AI 助手与系统文件
 .gemini
+_agents/
+.agent/
+.DS_Store
+Thumbs.db
+
+# 11. 根目录一次性调试/测试脚本
+test-*.ts
+test-*.js
+check-*.ts
+check-*.js
+tmp-*.ts
+tmp-*.js
+tmp_*.js
+tmp_*.ps1
+tmp_*.py
+fix-*.js
+fix_*.py

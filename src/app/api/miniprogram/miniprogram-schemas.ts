@@ -96,6 +96,8 @@ export const CreateCustomerSchema = z.object({
   phone: z.string().max(20).optional().default('').describe('主联络手机号'),
   wechat: z.string().max(100).nullable().optional().describe('微信联系人'),
   address: z.string().max(500).optional().describe('客户建档时的初始跟进地址'),
+  source: z.string().max(100).optional().describe('来源渠道'),
+  remark: z.string().max(1000).optional().describe('备注 (系统可能会转存为 notes)'),
 });
 
 /**

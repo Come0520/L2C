@@ -2,6 +2,7 @@ import { View, Text, Input, Button, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { api } from '@/services/api'
+import { isValidPhone, isNotEmpty, isValidLength, isValidEmail } from '@/utils/validate'
 import './index.scss'
 
 /** 完全与 Web 端 REGIONS 保持一致 */
@@ -65,20 +66,38 @@ export default function RegisterPage() {
 
   /** 提交逻辑：与 Web 端相同的验证规则 */
   const handleSubmit = async () => {
-    if (!formData.companyName) { setError('请填写企业名称'); return }
-    if (!formData.applicantName) { setError('请填写联系人姓名'); return }
-    if (!/^1[3-9]\d{9}$/.test(formData.phone)) { setError('手机号格式不正确'); return }
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('请填写正确的邮箱地址'); return
+    if (!isNotEmpty(formData.companyName)) {
+      Taro.showToast({ title: '请填写企业名称', icon: 'none' })
+      return
     }
-    if (formData.password.length < 8) { setError('密码至少8位'); return }
+    if (!isNotEmpty(formData.applicantName)) {
+      Taro.showToast({ title: '请填写联系人姓名', icon: 'none' })
+      return
+    }
+    if (!isValidPhone(formData.phone)) {
+      Taro.showToast({ title: '请输入正确的手机号码', icon: 'none' })
+      return
+    }
+    if (!isValidEmail(formData.email)) {
+      Taro.showToast({ title: '请填写正确的邮箱地址', icon: 'none' })
+      return
+    }
+    if (!isValidLength(formData.password, 8, 128)) {
+      Taro.showToast({ title: '密码至少8位', icon: 'none' })
+      return
+    }
     if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
-      setError('密码需包含字母和数字'); return
+      Taro.showToast({ title: '密码需包含字母和数字', icon: 'none' })
+      return
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('两次输入的密码不一致'); return
+      Taro.showToast({ title: '两次输入的密码不一致', icon: 'none' })
+      return
     }
-    if (!formData.region) { setError('请选择地区'); return }
+    if (!isNotEmpty(formData.region)) {
+      Taro.showToast({ title: '请选择地区', icon: 'none' })
+      return
+    }
 
     setLoading(true)
     setError('')
@@ -97,10 +116,10 @@ export default function RegisterPage() {
       if (res.success) {
         Taro.navigateTo({ url: '/pages/status/index' })
       } else {
-        setError(res.error || '提交失败，请稍后重试')
+        Taro.showToast({ title: res.error || '提交失败，请稍后重试', icon: 'none' })
       }
     } catch {
-      setError('网络异常，请稍后重试')
+      Taro.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
     } finally {
       setLoading(false)
     }

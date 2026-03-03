@@ -6,10 +6,11 @@
  * 涵盖量尺和安装两种任务类型。
  */
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh, useLoad } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
 import './index.scss'
 
@@ -35,6 +36,10 @@ const TAB_CONFIG: { key: TaskTab; label: string }[] = [
 ]
 
 export default function TasksPage() {
+  useLoad(() => {
+    requireRole(['worker'])
+  })
+
   const { currentRole } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TaskTab>('pending')
   const [tasks, setTasks] = useState<TaskItem[]>([])

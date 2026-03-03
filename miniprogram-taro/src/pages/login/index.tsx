@@ -9,6 +9,7 @@ import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { useAuthStore, ROLE_HOME } from '@/stores/auth'
 import { api } from '@/services/api'
+import { isValidPhone, isNotEmpty, isValidLength } from '@/utils/validate'
 import './index.scss'
 
 /** 当前选中的登录 Tab */
@@ -24,10 +25,19 @@ export default function LoginPage() {
 
   /** 账号密码登录 */
   const handlePasswordLogin = async () => {
-    if (!phone || !password) {
-      setError('请输入手机号和密码')
+    if (!isNotEmpty(phone)) {
+      Taro.showToast({ title: '请输入账号（手机号码）', icon: 'none' })
       return
     }
+    if (!isValidPhone(phone)) {
+      Taro.showToast({ title: '请输入正确的手机号码', icon: 'none' })
+      return
+    }
+    if (!isValidLength(password, 6, 128)) { // 假设密码最长不受限太多，最小为 6
+      Taro.showToast({ title: '密码长度至少为 6 位', icon: 'none' })
+      return
+    }
+
     setLoading(true)
     setError('')
     try {

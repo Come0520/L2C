@@ -6,11 +6,12 @@
  */
 import Taro from '@tarojs/taro'
 import { useAuthStore } from '@/stores/auth'
+import { Logger } from '@/utils/logger'
 
 /** API 基础地址 — 根据环境自动切换 */
 const BASE_URL = process.env.NODE_ENV === 'development'
     ? 'http://localhost:3000/api'
-    : 'https://l2c.come0520.com/api'
+    : 'https://l2c.asia/api'
 
 /** 通用响应结构 */
 interface ApiResponse<T = any> {
@@ -29,6 +30,8 @@ interface RequestOptions {
     showLoading?: boolean
     /** 加载提示文字 */
     loadingText?: string
+    /** 是否已重试过，内部使用 */
+    _retried?: boolean
 }
 
 /**
@@ -48,6 +51,7 @@ async function request<T = any>(
         header = {},
         showLoading = false,
         loadingText = '加载中...',
+        _retried = false,
     } = options
 
     // 获取 Token
@@ -56,6 +60,9 @@ async function request<T = any>(
     if (showLoading) {
         Taro.showLoading({ title: loadingText, mask: true })
     }
+
+    const startTime = Date.now()
+    Logger.info('API', '发起请求', { method, url })
 
     try {
         const res = await Taro.request({
@@ -72,6 +79,8 @@ async function request<T = any>(
         if (showLoading) {
             Taro.hideLoading()
         }
+
+        Logger.info('API', '请求成功', { method, url, statusCode: res.statusCode, duration: Date.now() - startTime })
 
         // HTTP 401 → 自动登出
         if (res.statusCode === 401) {
@@ -97,7 +106,16 @@ async function request<T = any>(
         if (showLoading) {
             Taro.hideLoading()
         }
-        console.error(`API 请求失败: ${method} ${url}`, err)
+
+        Logger.error('API', '请求失败', err instanceof Error ? err : new Error(String(err.errMsg || err)), { method, url })
+
+        const isNetworkError = err?.errMsg?.includes('request:fail') || err?.errMsg === 'Failed to fetch' || err?.message === 'Network Error'
+
+        if (method === 'GET' && isNetworkError && !_retried) {
+            Logger.warn('API', '网络错误，重试一次', { method, url })
+            return request(url, { ...options, _retried: true })
+        }
+
         return {
             success: false,
             data: null as any,

@@ -59,4 +59,4 @@ COPY src/shared/api/schema.ts ./src/shared/api/schema.ts
 COPY src/shared/api/schema/ ./src/shared/api/schema/
 COPY tsconfig.json ./
 
-CMD ["sh", "-c", "yes '' | npx drizzle-kit push --force 2>&1"]
+CMD ["sh", "-c", "echo '=== Schema Fingerprint ===' && md5sum src/shared/api/schema/*.ts && echo '=========================' && yes '' | npx drizzle-kit push --force 2>&1"]

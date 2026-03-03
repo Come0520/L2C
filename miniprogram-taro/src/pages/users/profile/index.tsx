@@ -8,8 +8,9 @@
  * - Customer：我的订单（含报修入口）、积分 & VIP、收货地址
  */
 import { View, Text, Image } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useAuthStore, ROLE_HOME } from '@/stores/auth'
+import Taro, { useLoad } from '@tarojs/taro'
+import { useAuthStore } from '@/stores/auth'
+import { requireAuth } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
 import './index.scss'
 
@@ -41,6 +42,10 @@ const MENU_ITEMS: MenuItem[] = [
 ]
 
 export default function ProfilePage() {
+  useLoad(() => {
+    requireAuth()
+  })
+
   const { userInfo, currentRole, logout } = useAuthStore()
 
   /** 过滤出当前角色可见的菜单 */

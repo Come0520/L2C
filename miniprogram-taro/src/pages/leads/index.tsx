@@ -5,10 +5,12 @@
  * 两个 Tab：我的线索 / 公共线索池
  */
 import { View, Text, Input, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh, useReachBottom } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh, useReachBottom, useLoad } from '@tarojs/taro'
 import { useState, useCallback, useRef } from 'react'
 import { api } from '@/services/api'
+import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
+import Skeleton from '@/components/Skeleton/index'
 import './index.scss'
 
 type LeadTab = 'mine' | 'pool'
@@ -32,10 +34,13 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 export default function LeadsPage() {
+  useLoad(() => {
+    requireRole(['sales', 'manager', 'admin'])
+  })
+
   const [activeTab, setActiveTab] = useState<LeadTab>('mine')
   const [keyword, setKeyword] = useState('')
   const [list, setList] = useState<Lead[]>([])
-  const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
   const pageRef = useRef(1)
@@ -55,7 +60,6 @@ export default function LeadsPage() {
         const newList = reset ? items : [...list, ...items]
         setList(newList)
         pageRef.current = currentPage + 1
-        setPage(currentPage + 1)
         setHasMore(newList.length < pagination.total)
       }
     } catch {
@@ -121,32 +125,34 @@ export default function LeadsPage() {
             <Text className='empty-text'>暂无线索</Text>
           </View>
         )}
-        {list.map((lead) => (
-          <View
-            key={lead.id}
-            className='lead-card card'
-            onClick={() => Taro.navigateTo({ url: `/pages/leads-sub/detail/index?id=${lead.id}` })}
-          >
-            <View className='card-row card-row--between'>
-              <Text className='lead-name'>{lead.customerName}</Text>
-              <Text
-                className='lead-status'
-                style={{ color: STATUS_COLOR[lead.status] || '#909399' }}
-              >
-                {lead.statusText}
-              </Text>
+        <Skeleton loading={loading && list.length === 0} type="list" rows={5} avatar>
+          {list.map((lead) => (
+            <View
+              key={lead.id}
+              className='lead-card card'
+              onClick={() => Taro.navigateTo({ url: `/pages/leads-sub/detail/index?id=${lead.id}` })}
+            >
+              <View className='card-row card-row--between'>
+                <Text className='lead-name'>{lead.customerName}</Text>
+                <Text
+                  className='lead-status'
+                  style={{ color: STATUS_COLOR[lead.status] || '#909399' }}
+                >
+                  {lead.statusText}
+                </Text>
+              </View>
+              <Text className='lead-phone'>{lead.phone}</Text>
+              <View className='card-row card-row--between' style={{ marginTop: '8px' }}>
+                <Text className='lead-source'>{lead.source}</Text>
+                <Text className='lead-time'>{lead.createdAt}</Text>
+              </View>
+              {lead.lastFollowUp && (
+                <Text className='lead-followup'>最近跟进：{lead.lastFollowUp}</Text>
+              )}
             </View>
-            <Text className='lead-phone'>{lead.phone}</Text>
-            <View className='card-row card-row--between' style={{ marginTop: '8px' }}>
-              <Text className='lead-source'>{lead.source}</Text>
-              <Text className='lead-time'>{lead.createdAt}</Text>
-            </View>
-            {lead.lastFollowUp && (
-              <Text className='lead-followup'>最近跟进：{lead.lastFollowUp}</Text>
-            )}
-          </View>
-        ))}
-        {loading && <View className='loading flex-center'><Text>加载中...</Text></View>}
+          ))}
+        </Skeleton>
+        {loading && list.length > 0 && <View className='loading flex-center'><Text>加载中...</Text></View>}
         {!hasMore && list.length > 0 && (
           <View className='no-more flex-center'><Text>— 已显示全部 —</Text></View>
         )}

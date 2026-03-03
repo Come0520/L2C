@@ -1,19 +1,29 @@
-/**
- * 报修申请页
- */
-import { View, Text, Input, Textarea, Button, Image } from '@tarojs/components'
+import { View, Text, Input, Textarea, Button, Image, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { api } from '@/services/api'
+import { isNotEmpty, isValidPhone } from '@/utils/validate'
 import './index.scss'
 
+const SERVICE_TYPES = [
+  { label: '维修', value: 'REPAIR' },
+  { label: '退货', value: 'RETURN' },
+  { label: '换货', value: 'EXCHANGE' },
+  { label: '投诉', value: 'COMPLAINT' },
+  { label: '咨询', value: 'CONSULTATION' }
+]
+
 export default function ServiceApplyPage() {
-  const [form, setForm] = useState({ orderNo: '', description: '', phone: '' })
+  const [form, setForm] = useState({ orderId: '', description: '', phone: '', type: '' })
   const [images, setImages] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
   const update = (field: keyof typeof form) => (e: any) =>
     setForm((prev) => ({ ...prev, [field]: e.detail.value }))
+
+  const handleTypeChange = (e: any) => {
+    setForm((prev) => ({ ...prev, type: SERVICE_TYPES[e.detail.value].value }))
+  }
 
   const addImage = () => {
     Taro.chooseImage({
@@ -23,9 +33,15 @@ export default function ServiceApplyPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.description) { Taro.showToast({ title: '请描述问题', icon: 'none' }); return }
+    if (!form.type) { Taro.showToast({ title: '请选择售后类型', icon: 'none' }); return }
+    if (!isNotEmpty(form.description)) { Taro.showToast({ title: '请填写完善的问题描述', icon: 'none' }); return }
+    if (form.phone && !isValidPhone(form.phone)) {
+      Taro.showToast({ title: '电话格式不正确', icon: 'none' }); return
+    }
+    // TODO: 目前 orderId 为手动输入，后续版本应提供关联订单选择器
     setLoading(true)
     try {
+      // 修复 S-01 (orderNo -> orderId) 和 S-02 (补充 type)
       const res = await api.post('/service/apply', { data: { ...form, images } })
       if (res.success) {
         Taro.showToast({ title: '提交成功', icon: 'success' })
@@ -34,10 +50,20 @@ export default function ServiceApplyPage() {
     } finally { setLoading(false) }
   }
 
+  const currentTypeLabel = SERVICE_TYPES.find(t => t.value === form.type)?.label || '请选择'
+
   return (
     <View className='create-page'>
-      <View className='form-section'><Text className='form-label'>订单编号（可选）</Text>
-        <Input className='form-input' placeholder='关联的订单编号' value={form.orderNo} onInput={update('orderNo')} /></View>
+      <View className='form-section'>
+        <Text className='form-label'>售后类型 *</Text>
+        <Picker mode='selector' range={SERVICE_TYPES} rangeKey='label' onChange={handleTypeChange}>
+          <View className={`picker-value ${!form.type ? 'placeholder' : ''}`}>
+            {currentTypeLabel}
+          </View>
+        </Picker>
+      </View>
+      <View className='form-section'><Text className='form-label'>关联原单 ID（内部关联）</Text>
+        <Input className='form-input' placeholder='订单号UUID(测试期手填)' value={form.orderId} onInput={update('orderId')} /></View>
       <View className='form-section'><Text className='form-label'>联系电话</Text>
         <Input className='form-input' type='number' maxlength={11} placeholder='请输入' value={form.phone} onInput={update('phone')} /></View>
       <View className='form-section'><Text className='form-label'>问题描述 *</Text>

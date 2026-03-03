@@ -1,0 +1,49 @@
+@import "../../styles/variables.scss";
+
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    height: 100%;
+    min-height: 400rpx;
+
+    &__icon {
+        font-size: 100rpx;
+        margin-bottom: $spacing-md;
+    }
+
+    &__title {
+        font-size: 36rpx;
+        color: $text-title;
+        margin-bottom: $spacing-xs;
+        font-weight: 500;
+    }
+
+    &__message {
+        font-size: 28rpx;
+        color: $text-secondary;
+        margin-bottom: $spacing-lg;
+        text-align: center;
+    }
+
+    &__retry {
+        background-color: $apple-blue;
+        padding: 16rpx 48rpx;
+        border-radius: $radius-md;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        &-text {
+            color: #FFFFFF;
+            font-size: 30rpx;
+            font-weight: 500;
+        }
+
+        &:active {
+            background-color: $apple-blue-active;
+        }
+    }
+}

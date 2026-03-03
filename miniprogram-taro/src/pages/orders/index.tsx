@@ -2,9 +2,10 @@
  * 订单列表页
  */
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh, useReachBottom } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh, useReachBottom, useLoad } from '@tarojs/taro'
 import { useState, useRef } from 'react'
 import { api } from '@/services/api'
+import { requireRole } from '@/utils/route-guard'
 import './index.scss'
 
 type OrderStatus = 'all' | 'pending' | 'in_production' | 'installing' | 'completed'
@@ -28,6 +29,10 @@ const STATUS_TABS: { key: OrderStatus; label: string }[] = [
 ]
 
 export default function OrdersPage() {
+  useLoad(() => {
+    requireRole(['manager', 'admin', 'sales'])
+  })
+
   const [activeStatus, setActiveStatus] = useState<OrderStatus>('all')
   const [list, setList] = useState<Order[]>([])
   const [hasMore, setHasMore] = useState(true)

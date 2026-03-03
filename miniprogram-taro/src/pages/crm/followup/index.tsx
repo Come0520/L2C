@@ -5,6 +5,7 @@ import { View, Text, Textarea, Button } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
 import { api } from '@/services/api'
+import { isNotEmpty } from '@/utils/validate'
 import './index.scss'
 
 const FOLLOW_TYPES = ['电话', '拜访', '微信', '其他']
@@ -17,11 +18,22 @@ export default function FollowupPage() {
 
   useLoad((params) => { setCustomerId(params.id) })
 
+  const TYPE_MAPPING: Record<string, string> = {
+    '电话': 'PHONE',
+    '拜访': 'VISIT',
+    '微信': 'WECHAT',
+    '其他': 'OTHER'
+  }
+
   const handleSubmit = async () => {
-    if (!content.trim()) { Taro.showToast({ title: '请填写跟进内容', icon: 'none' }); return }
+    if (!isNotEmpty(content)) { Taro.showToast({ title: '请填写跟进内容', icon: 'none' }); return }
     setLoading(true)
     try {
-      const res = await api.post('/crm/activities', { data: { customerId, type, content } })
+      // 核心修复 F-01 (content -> description) & F-02 (类型映射)
+      const mappedType = TYPE_MAPPING[type] || 'OTHER'
+      const res = await api.post('/crm/activities', {
+        data: { customerId, type: mappedType, description: content }
+      })
       if (res.success) { Taro.showToast({ title: '提交成功', icon: 'success' }); setTimeout(() => Taro.navigateBack(), 1500) }
       else { Taro.showToast({ title: res.error || '提交失败', icon: 'none' }) }
     } finally { setLoading(false) }

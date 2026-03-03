@@ -5,18 +5,25 @@ import { View, Text, Input, Textarea, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState } from 'react'
 import { api } from '@/services/api'
+import { isNotEmpty, isValidPhone } from '@/utils/validate'
 import './index.scss'
 
 export default function CrmCreatePage() {
-  const [form, setForm] = useState({ name: '', phone: '', source: '', address: '', remark: '' })
+  const [form, setForm] = useState({ name: '', phone: '', wechat: '', source: '', address: '', remark: '' })
   const [loading, setLoading] = useState(false)
 
   const update = (field: keyof typeof form) => (e: any) =>
     setForm((prev) => ({ ...prev, [field]: e.detail.value }))
 
   const handleSubmit = async () => {
-    if (!form.name || !form.phone) {
-      Taro.showToast({ title: '请填写客户姓名和手机号', icon: 'none' }); return
+    if (!isNotEmpty(form.name)) {
+      Taro.showToast({ title: '请填写客户姓名', icon: 'none' }); return
+    }
+    if (!isNotEmpty(form.phone)) {
+      Taro.showToast({ title: '请填写手机号', icon: 'none' }); return
+    }
+    if (!isValidPhone(form.phone)) {
+      Taro.showToast({ title: '请输入正确的手机号码', icon: 'none' }); return
     }
     setLoading(true)
     try {
@@ -36,6 +43,8 @@ export default function CrmCreatePage() {
         <Input className='form-input' placeholder='请输入' value={form.name} onInput={update('name')} /></View>
       <View className='form-section'><Text className='form-label'>手机号 *</Text>
         <Input className='form-input' type='number' maxlength={11} placeholder='请输入' value={form.phone} onInput={update('phone')} /></View>
+      <View className='form-section'><Text className='form-label'>微信号</Text>
+        <Input className='form-input' placeholder='微信号/同手机' value={form.wechat} onInput={update('wechat')} /></View>
       <View className='form-section'><Text className='form-label'>来源渠道</Text>
         <Input className='form-input' placeholder='如：门店到访、朋友介绍' value={form.source} onInput={update('source')} /></View>
       <View className='form-section'><Text className='form-label'>地址</Text>

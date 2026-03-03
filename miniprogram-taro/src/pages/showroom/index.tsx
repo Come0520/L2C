@@ -6,10 +6,11 @@
  * - Customer：浏览 Sales 分享的内容或全部展厅（依授权范围）
  */
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh, useLoad } from '@tarojs/taro'
 import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
 import './index.scss'
 
@@ -34,13 +35,16 @@ const CATEGORY_TABS: { key: ShowroomTab; label: string }[] = [
 ]
 
 export default function ShowroomPage() {
+  useLoad(() => {
+    requireRole(['sales', 'customer'])
+  })
+
   const { currentRole } = useAuthStore()
   const [activeTab, setActiveTab] = useState<ShowroomTab>('all')
   const [items, setItems] = useState<ShowroomItem[]>([])
   const [loading, setLoading] = useState(false)
 
   const isSales = currentRole === 'sales'
-  const isCustomer = currentRole === 'customer'
 
   /** 获取展厅内容 */
   const fetchItems = async (category: ShowroomTab) => {

@@ -48,7 +48,7 @@ ssh ecs "cd /root/L2C && \
   rm -rf .next/standalone .next/static && \
   tar -xzf next-build.tar.gz && \
   sed -i '/^\.next$/d' .dockerignore && \
-  docker-compose -f docker-compose.prod.yml build --no-cache app && \
+  docker-compose -f docker-compose.prod.yml build --no-cache && \
   echo '.next' >> .dockerignore && \
   docker rm -f l2c-app l2c-db-migrate l2c-nginx 2>/dev/null; \
   docker-compose -f docker-compose.prod.yml up -d"

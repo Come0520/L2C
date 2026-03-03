@@ -27,6 +27,8 @@ pnpm run build
 
 ### 3. 打包构建产物
 
+> ❗ **如果此次发布修改了 `src/shared/api/schema/` 下的文件，必须在此步之前执行 `pnpm db:generate` 生成迁移文件，并将生成的 .sql 文件提交到 Git。否则 db-migrate 容器将无法感知 schema 变更。**
+
 // turbo
 
 ```bash
@@ -48,11 +50,13 @@ ssh ecs "cd /root/L2C && \
   rm -rf .next/standalone .next/static && \
   tar -xzf next-build.tar.gz && \
   sed -i '/^\.next$/d' .dockerignore && \
-  docker-compose -f docker-compose.prod.yml build --no-cache && \
+  docker compose -f docker-compose.prod.yml build --no-cache && \
   echo '.next' >> .dockerignore && \
-  docker rm -f l2c-app l2c-db-migrate l2c-nginx 2>/dev/null; \
-  docker-compose -f docker-compose.prod.yml up -d"
+  docker rm -f l2c-app l2c-db-migrate l2c-nginx 2>/dev/null || true; \
+  docker compose -f docker-compose.prod.yml up -d"
 ```
+
+> 注意：`drizzle/` 目录从 Git 同步是关键。db-migrate 容器执行 `migrate` 时需要读取 `drizzle/*.sql` 文件，必须确保最新的迁移文件已在 ECS 上。
 
 ### 6. 验证部署
 

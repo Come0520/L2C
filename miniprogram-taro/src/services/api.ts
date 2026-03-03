@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Logger } from '@/utils/logger'
 
 /** API 基础地址 — 根据环境自动切换 */
-const BASE_URL = 'https://l2c.asia/api'
+const BASE_URL = 'http://localhost:3000/api/miniprogram'
 
 /** 通用响应结构 */
 interface ApiResponse<T = any> {
@@ -92,7 +92,7 @@ async function request<T = any>(
             return {
                 success: false,
                 data: null as any,
-                error: res.data?.message || `请求失败 (${res.statusCode})`,
+                error: (res.data && res.data.error) || (res.data && res.data.message) || `请求失败 (${res.statusCode})`,
             }
         }
 

@@ -454,7 +454,7 @@ function usePaginatedList(_ref) {
 
 
 /** API 基础地址 — 根据环境自动切换 */
-var BASE_URL = 'https://l2c.asia/api';
+var BASE_URL = 'http://localhost:3000/api/miniprogram';
 
 /** 通用响应结构 */
 
@@ -495,9 +495,8 @@ function _request() {
       token,
       startTime,
       _res$data$data,
-      _res$data2,
-      res,
       _res$data,
+      res,
       _err$errMsg,
       isNetworkError,
       _args = arguments,
@@ -565,12 +564,12 @@ function _request() {
           return _context.a(2, {
             success: false,
             data: null,
-            error: ((_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.message) || "\u8BF7\u6C42\u5931\u8D25 (".concat(res.statusCode, ")")
+            error: res.data && res.data.error || res.data && res.data.message || "\u8BF7\u6C42\u5931\u8D25 (".concat(res.statusCode, ")")
           });
         case 4:
           return _context.a(2, {
             success: true,
-            data: (_res$data$data = (_res$data2 = res.data) === null || _res$data2 === void 0 ? void 0 : _res$data2.data) !== null && _res$data$data !== void 0 ? _res$data$data : res.data
+            data: (_res$data$data = (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.data) !== null && _res$data$data !== void 0 ? _res$data$data : res.data
           });
         case 5:
           _context.p = 5;

@@ -12,7 +12,7 @@
 import { View, Text, Image, Button } from '@tarojs/components'
 import Taro, { useLoad, useShareAppMessage } from '@tarojs/taro'
 import { useCallback } from 'react'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, ROLE_HOME, UserRole } from '@/stores/auth'
 import { useTenantLandingStore } from '@/stores/tenant-landing'
 import './index.scss'
 
@@ -71,7 +71,8 @@ export default function LandingPage() {
 
   /** 复制 Web 管理端链接 */
   const openWebAdmin = () => {
-    const ADMIN_URL = process.env.TARO_APP_WEB_URL || 'https://l2c.example.com'
+    // 修复 Taro 编译环境中 process 未定义的问题，使用固定的管理端 URL
+    const ADMIN_URL = 'https://l2c.asia/admin'
     Taro.setClipboardData({ data: ADMIN_URL }).then(() => {
       Taro.showToast({ title: 'Web 端链接已复制', icon: 'success' })
     })
@@ -186,6 +187,14 @@ export default function LandingPage() {
         ) : (
           <View>
             <Text className='already-login'>已登录为 {currentRole}</Text>
+            <Button className='apple-btn-primary' onClick={() => {
+              const roleKey = (currentRole?.toLowerCase() as UserRole) || 'guest'
+              const home = ROLE_HOME[roleKey] || '/pages/workbench/index'
+              Taro.switchTab({ url: home })
+            }}>
+              🚀 进入系统
+            </Button>
+            <View style={{ height: 16 }} />
             <Button className='apple-btn-secondary' onClick={openWebAdmin}>
               💻 复制 Web 管理端链接
             </Button>

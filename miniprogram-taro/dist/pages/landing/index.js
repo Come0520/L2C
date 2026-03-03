@@ -101,7 +101,8 @@ function LandingPage() {
 
   /** 复制 Web 管理端链接 */
   var openWebAdmin = function openWebAdmin() {
-    var ADMIN_URL = process.env.TARO_APP_WEB_URL || 'https://l2c.example.com';
+    // 修复 Taro 编译环境中 process 未定义的问题，使用固定的管理端 URL
+    var ADMIN_URL = 'https://l2c.asia/admin';
     _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().setClipboardData({
       data: ADMIN_URL
     }).then(function () {
@@ -238,6 +239,20 @@ function LandingPage() {
         children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Text, {
           className: "already-login",
           children: ["\u5DF2\u767B\u5F55\u4E3A ", currentRole]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
+          className: "apple-btn-primary",
+          onClick: function onClick() {
+            var roleKey = (currentRole === null || currentRole === void 0 ? void 0 : currentRole.toLowerCase()) || 'guest';
+            var home = _stores_auth__WEBPACK_IMPORTED_MODULE_3__.ROLE_HOME[roleKey] || '/pages/workbench/index';
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_1___default().switchTab({
+              url: home
+            });
+          },
+          children: "\uD83D\uDE80 \u8FDB\u5165\u7CFB\u7EDF"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.View, {
+          style: {
+            height: 16
+          }
         }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_5__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_0__.Button, {
           className: "apple-btn-secondary",
           onClick: openWebAdmin,

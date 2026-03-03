@@ -47,7 +47,12 @@ export default function LoginPage() {
       if (res.success) {
         setLogin(res.data.token, res.data.user)
         const home = ROLE_HOME[res.data.user.role] || '/pages/workbench/index'
-        Taro.switchTab({ url: home })
+        try {
+          await Taro.switchTab({ url: home })
+        } catch (err) {
+          console.warn('[Login] switchTab 失败，尝试 reLaunch', err)
+          await Taro.reLaunch({ url: home })
+        }
       } else {
         setError(res.error || '登录失败，请检查账号密码')
       }
@@ -68,7 +73,12 @@ export default function LoginPage() {
       if (res.success) {
         setLogin(res.data.token, res.data.user)
         const home = ROLE_HOME[res.data.user.role] || '/pages/workbench/index'
-        Taro.switchTab({ url: home })
+        try {
+          await Taro.switchTab({ url: home })
+        } catch (err) {
+          console.warn('[Wechat] switchTab 失败，尝试 reLaunch', err)
+          await Taro.reLaunch({ url: home })
+        }
       } else {
         setError(res.error || '微信登录失败')
       }

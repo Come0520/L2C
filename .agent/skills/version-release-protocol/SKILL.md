@@ -30,6 +30,7 @@ description: Use when you are ready to release a new version, update the honor w
 - **忽略 .env 变更：** "环境变量没问题" → 不行。必须主动询问用户是否已同步 ECS 的 `.env` 文件。
 - **不备份旧产物：** "直接覆盖 tar 包" → 不行。必须先重命名旧备份以支持秒级回滚。
 - **跳过 Docker build：** "直接 `docker-compose up -d`" → 不行。必须先 `build --no-cache` 重建镜像，否则新代码不生效。
+- **schema 改动未 generate：** "虽然改了 schema.ts，但没有执行 `pnpm db:generate`" → 绝对不行。每次修改 `src/shared/api/schema/` 下的任何文件，必须立即运行 `pnpm db:generate` 生成迁移 SQL 文件，并将生成的文件一并提交到 Git，否则 ECS 上的 db-migrate 容器将无法感知变更。
 
 ## The 6-Step Protocol
 
@@ -49,8 +50,14 @@ pnpm run test:run
 
 **数据库 Schema 检查**：检查 `drizzle/` 目录或 `src/shared/api/schema/` 是否有变更。
 
-- 如果有变更，提醒用户：`docker-compose.prod.yml` 中的 `db-migrate` 容器会自动执行 `drizzle-kit push --force`，`app` 服务在其 `service_completed_successfully` 后才启动。
-- 对于**破坏性变更**（删列、改类型），必须向用户确认后才能继续。
+- 如果 `src/shared/api/schema/` 有变更，必须先执行迁移文件生成：
+  ```bash
+  pnpm db:generate
+  ```
+  确认生成了新的 `.sql` 文件后，将其一并纳入 Step 4 的 commit 中。
+- `docker-compose.prod.yml` 中的 `db-migrate` 容器会在部署时自动执行 `drizzle-kit migrate`（生产级模式），按序应用所有未执行的迁移文件。
+- `app` 服务在 `db-migrate` 的 `service_completed_successfully` 后才启动，顺序有保障。
+- 对于**破坏性变更**（删列、改类型），必须向用户确认后才能继续，并在迁移文件中特别标注。
 
 ### Step 2: 版本号递增
 

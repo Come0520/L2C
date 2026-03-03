@@ -1,6 +1,0 @@
-{
-    "navigationBarTitleText": "完工确认",
-    "usingComponents": {
-        "signature": "../../../components/signature/signature"
-    }
-}

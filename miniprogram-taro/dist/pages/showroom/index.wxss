@@ -1,1 +1,158 @@
-.showroom-page{background:#f2f2f7;min-height:100vh;padding-bottom:120rpx}.showroom-page .showroom-header{padding:32rpx 24rpx 16rpx}.showroom-page .showroom-header .header-title{display:block;font-size:40rpx;font-weight:700}.showroom-page .showroom-header .header-subtitle{color:#6e6e73;display:block;font-size:22rpx;margin-top:4rpx}.showroom-page .category-tabs{display:-webkit-flex;display:-ms-flexbox;display:flex;gap:16rpx;margin-bottom:24rpx;padding:0 24rpx}.showroom-page .category-tabs .category-tab{background:#fff;border-radius:100rpx;color:#6e6e73;font-size:24rpx;padding:8rpx 24rpx;-webkit-transition:all .2s;transition:all .2s}.showroom-page .category-tabs .category-tab--active{background:#0071e3;color:#fff;font-weight:600}.showroom-page .content-list{height:calc(100vh - 200rpx - 120rpx);padding:0 24rpx}.showroom-page .empty-state{-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;padding:120rpx 0}.showroom-page .empty-state .empty-icon{font-size:80rpx;margin-bottom:24rpx}.showroom-page .empty-state .empty-text{color:#6e6e73}.showroom-page .showroom-card{margin-bottom:24rpx;overflow:hidden;padding:0}.showroom-page .showroom-card .card-cover{height:320rpx;width:100%}.showroom-page .showroom-card .card-body{padding:24rpx}.showroom-page .showroom-card .card-meta{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center;gap:16rpx;margin-bottom:8rpx}.showroom-page .showroom-card .type-badge{border-radius:16rpx;font-size:22rpx;padding:2rpx 12rpx}.showroom-page .showroom-card .type-badge--article{background:rgba(64,158,255,.15);color:#409eff}.showroom-page .showroom-card .type-badge--case{background:rgba(103,194,58,.15);color:#34c759}.showroom-page .showroom-card .type-badge--product{background:rgba(230,180,80,.15);color:#0071e3}.showroom-page .showroom-card .view-count{color:#aeaeb2;font-size:22rpx}.showroom-page .showroom-card .card-title{display:block;font-size:32rpx;font-weight:600;margin-bottom:4rpx}.showroom-page .showroom-card .card-desc{color:#6e6e73;display:block;font-size:24rpx}.showroom-page .showroom-card .btn-share{-webkit-align-items:center;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;margin-top:16rpx;-ms-flex-align:center;align-items:center;background:rgba(230,180,80,.1);border:1rpx solid rgba(230,180,80,.3);border-radius:20rpx;color:#0071e3;font-size:24rpx;padding:8rpx 24rpx}.showroom-page .loading{color:#6e6e73;padding:48rpx}
+/*!****************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/pages/showroom/index.scss ***!
+  \****************************************************************************************************************************************************************************************************************************************************************************************************************************/
+@charset "UTF-8";
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.showroom-page {
+  background: #F2F2F7;
+  min-height: 100vh;
+  padding-bottom: 120rpx;
+}
+.showroom-page .showroom-header {
+  padding: 32rpx 24rpx 16rpx;
+}
+.showroom-page .showroom-header .header-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+.showroom-page .showroom-header .header-subtitle {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  margin-top: 4rpx;
+}
+.showroom-page {
+  /* 分类 Tab */
+}
+.showroom-page .category-tabs {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  padding: 0 24rpx;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+.showroom-page .category-tabs .category-tab {
+  padding: 8rpx 24rpx;
+  border-radius: 100rpx;
+  font-size: 24rpx;
+  color: #6E6E73;
+  background: #FFFFFF;
+  -webkit-transition: all 0.2s;
+  transition: all 0.2s;
+}
+.showroom-page .category-tabs .category-tab--active {
+  background: #0071E3;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.showroom-page {
+  /* 内容列表 */
+}
+.showroom-page .content-list {
+  height: calc(100vh - 200rpx - 120rpx);
+  padding: 0 24rpx;
+}
+.showroom-page {
+  /* 空状态 */
+}
+.showroom-page .empty-state {
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  padding: 120rpx 0;
+}
+.showroom-page .empty-state .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+.showroom-page .empty-state .empty-text {
+  color: #6E6E73;
+}
+.showroom-page {
+  /* 展厅卡片 */
+}
+.showroom-page .showroom-card {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+.showroom-page .showroom-card .card-cover {
+  width: 100%;
+  height: 320rpx;
+}
+.showroom-page .showroom-card .card-body {
+  padding: 24rpx;
+}
+.showroom-page .showroom-card .card-meta {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+.showroom-page .showroom-card .type-badge {
+  font-size: 22rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+}
+.showroom-page .showroom-card .type-badge--article {
+  background: rgba(64, 158, 255, 0.15);
+  color: #409eff;
+}
+.showroom-page .showroom-card .type-badge--case {
+  background: rgba(103, 194, 58, 0.15);
+  color: #34C759;
+}
+.showroom-page .showroom-card .type-badge--product {
+  background: rgba(230, 180, 80, 0.15);
+  color: #0071E3;
+}
+.showroom-page .showroom-card .view-count {
+  font-size: 22rpx;
+  color: #AEAEB2;
+}
+.showroom-page .showroom-card .card-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+.showroom-page .showroom-card .card-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #6E6E73;
+}
+.showroom-page .showroom-card .btn-share {
+  margin-top: 16rpx;
+  display: -webkit-inline-flex;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  background: rgba(230, 180, 80, 0.1);
+  border: 1rpx solid rgba(230, 180, 80, 0.3);
+  color: #0071E3;
+  font-size: 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 20rpx;
+}
+.showroom-page .loading {
+  padding: 48rpx;
+  color: #6E6E73;
+}

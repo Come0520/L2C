@@ -14,8 +14,8 @@ import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
 import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
-import Skeleton from '@/components/Skeleton/index'
-import ErrorState from '@/components/ErrorState/index'
+import { Skeleton } from '@/components/Skeleton/index'
+import { ErrorState } from '@/components/ErrorState/index'
 import './index.scss'
 
 /** Manager 视图所需数据 */

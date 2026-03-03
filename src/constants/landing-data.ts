@@ -393,6 +393,37 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.1',
+    version: 'v1.3.1',
+    date: '2026-03-03',
+    title: '部署体系加固与测试工程化治理',
+    description:
+      '修复数据库迁移体系根因缺陷（db-migrate 镜像未随部署重建导致枚举丢失），新增 ECS 数据库查询标准化工具，完成旧版小程序代码清理与测试分层治理。',
+    contributors: ['聂老师', '长城（开发者）'],
+    updates: [
+      {
+        type: 'fix',
+        content: '修复部署流程根因缺陷：docker build 从只重建 app 改为全部服务，杜绝 db-migrate 使用旧 schema 反向操作',
+      },
+      {
+        type: 'fix',
+        content: '修复 MAGIC_LOGIN 枚举丢失：生产数据库枚举值已恢复（感谢聂老师反馈）',
+      },
+      {
+        type: 'feature',
+        content: '新增 ECS 数据库查询标准化工具 (scripts/ecs-db-query.sh)，一行命令即可远程查询',
+      },
+      {
+        type: 'optimize',
+        content: '清理旧版小程序代码（miniprogram/），测试分层治理：单元测试与集成测试分离',
+      },
+      {
+        type: 'optimize',
+        content: 'Dockerfile.prebuilt 添加 Schema 指纹校验日志，迁移过程可追溯',
+      },
+    ],
+  },
+  {
     id: 'v1.3.0',
     version: 'v1.3.0',
     date: '2026-03-03',

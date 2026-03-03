@@ -28,7 +28,7 @@
         text-align: center;
     }
 
-    &__retry {
+    &__retry-btn {
         background-color: $apple-blue;
         padding: 16rpx 48rpx;
         border-radius: $radius-md;
@@ -36,7 +36,7 @@
         align-items: center;
         justify-content: center;
 
-        &-text {
+        .error-state__retry-text {
             color: #FFFFFF;
             font-size: 30rpx;
             font-weight: 500;

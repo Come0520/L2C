@@ -8,7 +8,7 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
-        exclude: [...configDefaults.exclude, 'e2e/**'],
+        exclude: [...configDefaults.exclude, 'e2e/**', 'miniprogram-taro/**', 'miniprogram/**', '**/*.integration.test.*'],
         testTimeout: 15000,
         pool: 'forks',
     },

@@ -10,7 +10,7 @@ import { useState, useCallback, useRef } from 'react'
 import { api } from '@/services/api'
 import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
-import Skeleton from '@/components/Skeleton/index'
+import { Skeleton } from '@/components/Skeleton/index'
 import './index.scss'
 
 type LeadTab = 'mine' | 'pool'

@@ -14,6 +14,7 @@ vi.mock('@/shared/api/db', () => ({
     query: {
       users: { findFirst: vi.fn() },
       tenants: { findFirst: vi.fn() },
+      tenantMembers: { findMany: vi.fn() },
     },
     update: vi.fn(() => ({
       set: vi.fn(() => ({
@@ -145,10 +146,11 @@ describe('小程序认证模块', () => {
         tenantId: 't1',
       } as never);
 
-      vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
-        id: 't1',
-        name: '测试租户',
-      } as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([{
+        tenantId: 't1',
+        role: 'WORKER',
+        tenant: { id: 't1', name: '测试租户', status: 'active' }
+      }] as never);
 
       const res = await wxLoginHandler(req);
       const data = await res.json();
@@ -203,10 +205,11 @@ describe('小程序认证模块', () => {
         tenantId: 't1',
       } as never);
 
-      vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
-        id: 't1',
-        name: '测试租户',
-      } as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([{
+        tenantId: 't1',
+        role: 'WORKER',
+        tenant: { id: 't1', name: '测试租户', status: 'active' }
+      }] as never);
 
       const res = await decryptPhoneHandler(req);
       const data = await res.json();

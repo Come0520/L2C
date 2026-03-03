@@ -5,7 +5,7 @@ import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { requireRole } from '@/utils/route-guard'
 import { usePaginatedList } from '@/hooks/usePaginatedList'
-import Skeleton from '@/components/Skeleton/index'
+import { Skeleton } from '@/components/Skeleton/index'
 import './index.scss'
 
 interface Quote {

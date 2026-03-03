@@ -1,18 +1,18 @@
-import React from 'react'
-import { View } from '@tarojs/components'
-import './index.scss'
+import React from 'react';
+import { View } from '@tarojs/components';
+import './index.scss';
 
-interface SkeletonProps {
+export interface SkeletonProps {
     /** 是否显示骨架屏（true=显示骨架，false=显示 children） */
-    loading: boolean
+    loading: boolean;
     /** 骨架行数（列表模式下使用） */
-    rows?: number
+    rows?: number;
     /** 是否显示头像占位 */
-    avatar?: boolean
+    avatar?: boolean;
     /** 布局类型 */
-    type?: 'list' | 'card' | 'detail'
+    type?: 'list' | 'card' | 'detail';
     /** 子内容 */
-    children?: React.ReactNode
+    children?: React.ReactNode;
 }
 
 /**
@@ -21,74 +21,75 @@ interface SkeletonProps {
  * @description 数据加载时的占位动画，提升用户感知性能。
  * 支持列表、卡片、详情三种布局模式。
  */
-export default function Skeleton({
+export const Skeleton: React.FC<SkeletonProps> = ({
     loading,
     rows = 3,
     avatar = false,
     type = 'list',
-    children
-}: SkeletonProps) {
+    children,
+}) => {
     if (!loading) {
-        return <>{children}</>
+        return <>{children}</>;
     }
 
-    const renderListSkeleton = () => {
-        return (
-            <View className="skeleton skeleton--list">
-                {Array.from({ length: rows }).map((_, index) => (
-                    <View key={index} className="skeleton__list-item">
-                        {avatar && <View className="skeleton__avatar" />}
-                        <View className="skeleton__list-item-content">
-                            <View className="skeleton__row skeleton__row--40" />
-                            <View className="skeleton__row skeleton__row--80" />
-                            <View className="skeleton__row skeleton__row--60" />
+    const renderRows = (count: number, widths: string[] = []) => {
+        return Array.from({ length: count }).map((_, index) => {
+            const width = widths[index] || (index === count - 1 ? '60%' : '100%');
+            return (
+                <View
+                    key={index}
+                    className="skeleton__row"
+                    style={{ width }}
+                />
+            );
+        });
+    };
+
+    const renderContent = () => {
+        switch (type) {
+            case 'card':
+                return (
+                    <View className="skeleton__card">
+                        <View className="skeleton__header">
+                            <View className="skeleton__avatar skeleton__avatar--square" />
+                            <View className="skeleton__header-text">
+                                <View className="skeleton__row" style={{ width: '40%' }} />
+                                <View className="skeleton__row" style={{ width: '30%' }} />
+                            </View>
+                        </View>
+                        <View className="skeleton__content">
+                            {renderRows(rows, ['100%', '80%', '60%'])}
                         </View>
                     </View>
-                ))}
-            </View>
-        )
-    }
+                );
 
-    // 针对卡片的骨架屏，模拟带标题和头像的内容卡片
-    const renderCardSkeleton = () => {
-        return (
-            <View className="skeleton skeleton--card">
-                <View className="skeleton__header">
-                    <View className="skeleton__avatar" />
-                    <View className="skeleton__header-content">
-                        <View className="skeleton__row skeleton__row--40" />
-                        <View className="skeleton__row skeleton__row--60" />
+            case 'detail':
+                return (
+                    <View className="skeleton__detail">
+                        <View className="skeleton__row skeleton__row--title" style={{ width: '80%' }} />
+                        <View className="skeleton__spacing" />
+                        <View className="skeleton__content">
+                            {renderRows(4, ['100%', '100%', '80%', '40%'])}
+                        </View>
+                        <View className="skeleton__spacing" />
+                        <View className="skeleton__content">
+                            {renderRows(3, ['100%', '100%', '70%'])}
+                        </View>
                     </View>
-                </View>
-                <View className="skeleton__body">
-                    {Array.from({ length: rows }).map((_, index) => (
-                        <View key={index} className={`skeleton__row ${index % 2 === 0 ? 'skeleton__row--100' : 'skeleton__row--60'}`} />
-                    ))}
-                </View>
-            </View>
-        )
-    }
+                );
 
-    // 针对详情页的骨架屏
-    const renderDetailSkeleton = () => {
-        return (
-            <View className="skeleton skeleton--detail">
-                <View className="skeleton__row skeleton__title-large" />
-                <View className="skeleton__paragraph">
-                    <View className="skeleton__row" />
-                    <View className="skeleton__row" />
-                    <View className="skeleton__row skeleton__row--60" />
-                </View>
-                <View className="skeleton__paragraph">
-                    <View className="skeleton__row" />
-                    <View className="skeleton__row" />
-                    <View className="skeleton__row skeleton__row--60" />
-                </View>
-            </View>
-        )
-    }
+            case 'list':
+            default:
+                return (
+                    <View className="skeleton__list">
+                        {avatar && <View className="skeleton__avatar" />}
+                        <View className="skeleton__content">
+                            {renderRows(rows, ['40%', '80%', '60%'])}
+                        </View>
+                    </View>
+                );
+        }
+    };
 
-    if (type === 'card') return renderCardSkeleton()
-    if (type === 'detail') return renderDetailSkeleton()
-    return renderListSkeleton()
-}
+    return <View className={`skeleton skeleton--${type}`}>{renderContent()}</View>;
+};

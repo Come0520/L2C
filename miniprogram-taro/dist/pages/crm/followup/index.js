@@ -1,1 +1,210 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[1498],{5744:function(e,n,s){var t=s(8870),a=s(1212),c=s(467),o=s(5544),r=s(118),i=s(758),l=s.n(i),u=s(6540),h=s(2635),p=s(2357),f=s(4848),m=["\u7535\u8bdd","\u62dc\u8bbf","\u5fae\u4fe1","\u5176\u4ed6"];function d(){var e=(0,u.useState)(""),n=(0,o.A)(e,2),s=n[0],t=n[1],d=(0,u.useState)("\u7535\u8bdd"),v=(0,o.A)(d,2),x=v[0],j=v[1],w=(0,u.useState)(""),b=(0,o.A)(w,2),N=b[0],S=b[1],g=(0,u.useState)(!1),A=(0,o.A)(g,2),T=A[0],k=A[1];(0,i.useLoad)(function(e){t(e.id)});var y=function(){var e=(0,c.A)((0,a.A)().m(function e(){var n;return(0,a.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if((0,p.hj)(N)){e.n=1;break}return l().showToast({title:"\u8bf7\u586b\u5199\u8ddf\u8fdb\u5185\u5bb9",icon:"none"}),e.a(2);case 1:return k(!0),e.p=2,e.n=3,h.F.post("/crm/activities",{data:{customerId:s,type:x,content:N}});case 3:n=e.v,n.success?(l().showToast({title:"\u63d0\u4ea4\u6210\u529f",icon:"success"}),setTimeout(function(){return l().navigateBack()},1500)):l().showToast({title:n.error||"\u63d0\u4ea4\u5931\u8d25",icon:"none"});case 4:return e.p=4,k(!1),e.f(4);case 5:return e.a(2)}},e,null,[[2,,4,5]])}));return function(){return e.apply(this,arguments)}}();return(0,f.jsxs)(r.Ss,{className:"followup-page",children:[(0,f.jsxs)(r.Ss,{className:"type-section",children:[(0,f.jsx)(r.EY,{className:"form-label",children:"\u8ddf\u8fdb\u65b9\u5f0f"}),(0,f.jsx)(r.Ss,{className:"type-options",children:m.map(function(e){return(0,f.jsx)(r.Ss,{className:"type-option ".concat(x===e?"type-option--active":""),onClick:function(){return j(e)},children:(0,f.jsx)(r.EY,{children:e})},e)})})]}),(0,f.jsxs)(r.Ss,{className:"content-section",children:[(0,f.jsx)(r.EY,{className:"form-label",children:"\u8ddf\u8fdb\u5185\u5bb9 *"}),(0,f.jsx)(r.TM,{className:"form-textarea",placeholder:"\u8bf7\u63cf\u8ff0\u672c\u6b21\u8ddf\u8fdb\u60c5\u51b5...",value:N,onInput:function(e){return S(e.detail.value)},maxlength:500}),(0,f.jsxs)(r.EY,{className:"char-count",children:[N.length,"/500"]})]}),(0,f.jsx)(r.Ss,{className:"form-footer",children:(0,f.jsx)(r.$n,{className:"btn-submit",loading:T,disabled:T,onClick:y,children:"\u63d0\u4ea4\u8ddf\u8fdb"})})]})}var v={navigationBarTitleText:"followup"},x=(0,t.eU)(d,"pages/crm/followup/index",{root:{cn:[]}},v||{});d&&d.behaviors&&(x.behaviors=(x.behaviors||[]).concat(d.behaviors));Page(x)}},function(e){var n=function(n){return e(e.s=n)};e.O(0,[6907,8096,2076],function(){return n(5744)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/crm/followup/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/crm/followup/index!./src/pages/crm/followup/index.tsx":
+/*!******************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/crm/followup/index!./src/pages/crm/followup/index.tsx ***!
+  \******************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ FollowupPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var _utils_validate__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/utils/validate */ "./src/utils/validate.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
+
+
+/**
+ * 跟进记录 — 添加页
+ */
+
+
+
+
+
+
+
+var FOLLOW_TYPES = ['电话', '拜访', '微信', '其他'];
+function FollowupPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    customerId = _useState2[0],
+    setCustomerId = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)('电话'),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    type = _useState4[0],
+    setType = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    content = _useState6[0],
+    setContent = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState7, 2),
+    loading = _useState8[0],
+    setLoading = _useState8[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(function (params) {
+    setCustomerId(params.id);
+  });
+  var TYPE_MAPPING = {
+    '电话': 'PHONE',
+    '拜访': 'VISIT',
+    '微信': 'WECHAT',
+    '其他': 'OTHER'
+  };
+  var handleSubmit = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var mappedType, res;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            if ((0,_utils_validate__WEBPACK_IMPORTED_MODULE_7__.isNotEmpty)(content)) {
+              _context.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+              title: '请填写跟进内容',
+              icon: 'none'
+            });
+            return _context.a(2);
+          case 1:
+            setLoading(true);
+            _context.p = 2;
+            // 核心修复 F-01 (content -> description) & F-02 (类型映射)
+            mappedType = TYPE_MAPPING[type] || 'OTHER';
+            _context.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_6__.api.post('/crm/activities', {
+              data: {
+                customerId: customerId,
+                type: mappedType,
+                description: content
+              }
+            });
+          case 3:
+            res = _context.v;
+            if (res.success) {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                title: '提交成功',
+                icon: 'success'
+              });
+              setTimeout(function () {
+                return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateBack();
+              }, 1500);
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                title: res.error || '提交失败',
+                icon: 'none'
+              });
+            }
+          case 4:
+            _context.p = 4;
+            setLoading(false);
+            return _context.f(4);
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[2,, 4, 5]]);
+    }));
+    return function handleSubmit() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "followup-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "type-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "form-label",
+        children: "\u8DDF\u8FDB\u65B9\u5F0F"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "type-options",
+        children: FOLLOW_TYPES.map(function (t) {
+          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "type-option ".concat(type === t ? 'type-option--active' : ''),
+            onClick: function onClick() {
+              return setType(t);
+            },
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              children: t
+            })
+          }, t);
+        })
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "content-section",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "form-label",
+        children: "\u8DDF\u8FDB\u5185\u5BB9 *"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Textarea, {
+        className: "form-textarea",
+        placeholder: "\u8BF7\u63CF\u8FF0\u672C\u6B21\u8DDF\u8FDB\u60C5\u51B5...",
+        value: content,
+        onInput: function onInput(e) {
+          return setContent(e.detail.value);
+        },
+        maxlength: 500
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "char-count",
+        children: [content.length, "/500"]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "form-footer",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Button, {
+        className: "btn-submit",
+        loading: loading,
+        disabled: loading,
+        onClick: handleSubmit,
+        children: "\u63D0\u4EA4\u8DDF\u8FDB"
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/crm/followup/index.tsx":
+/*!******************************************!*\
+  !*** ./src/pages/crm/followup/index.tsx ***!
+  \******************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/crm/followup/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/crm/followup/index!./src/pages/crm/followup/index.tsx");
+
+
+var config = {"navigationBarTitleText":"followup"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/crm/followup/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_crm_followup_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/crm/followup/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

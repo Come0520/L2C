@@ -1,1 +1,285 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[5047],{9820:function(e,s,n){var a=n(8870),t=n(1212),c=n(467),r=n(5544),i=n(118),l=n(758),o=n.n(l),u=n(6540),d=n(3544),h=n(2635),p=n(930),m=n(4205),k=n(4848),x=[{key:"pending",label:"\u5f85\u63a5\u5355"},{key:"active",label:"\u8fdb\u884c\u4e2d"},{key:"completed",label:"\u5df2\u5b8c\u6210"}];function f(){(0,l.useLoad)(function(){(0,p.cl)(["worker"])});var e=(0,d.nc)(),s=e.currentRole,n=(0,u.useState)("pending"),a=(0,r.A)(n,2),f=a[0],v=a[1],j=(0,u.useState)([]),g=(0,r.A)(j,2),b=g[0],w=g[1],N=(0,u.useState)(!1),y=(0,r.A)(N,2),S=y[0],Y=y[1],A=(0,u.useCallback)(function(){var e=(0,c.A)((0,t.A)().m(function e(n){var a,c,r,i;return(0,t.A)().w(function(e){while(1)switch(e.p=e.n){case 0:return Y(!0),e.p=1,a={pending:"pending",active:"in_progress",completed:"completed"},c="worker"===s?"/engineer/tasks":"/tasks",e.n=2,h.F.get(c,{data:{status:a[n]}});case 2:r=e.v,r.success&&w((null===(i=r.data)||void 0===i?void 0:i.items)||r.data||[]);case 3:return e.p=3,Y(!1),e.f(3);case 4:return e.a(2)}},e,null,[[1,,3,4]])}));return function(s){return e.apply(this,arguments)}}(),[s]);(0,l.useDidShow)(function(){A(f)}),(0,l.usePullDownRefresh)(function(){A(f).then(function(){return o().stopPullDownRefresh()})});var E=function(e){v(e),A(e)},C=function(e){o().navigateTo({url:"/pages/tasks-sub/detail/index?id=".concat(e.id)})},D=function(){var e=(0,c.A)((0,t.A)().m(function e(s){var n;return(0,t.A)().w(function(e){while(1)switch(e.n){case 0:return e.n=1,h.F.post("/tasks/".concat(s,"/accept"));case 1:n=e.v,n.success&&(o().showToast({title:"\u5df2\u63a5\u5355",icon:"success"}),A(f));case 2:return e.a(2)}},e)}));return function(s){return e.apply(this,arguments)}}();return(0,k.jsxs)(i.Ss,{className:"tasks-page",children:[(0,k.jsx)(i.Ss,{className:"tasks-tabs",children:x.map(function(e){return(0,k.jsx)(i.Ss,{className:"tasks-tab ".concat(f===e.key?"tasks-tab--active":""),onClick:function(){return E(e.key)},children:(0,k.jsx)(i.EY,{children:e.label})},e.key)})}),(0,k.jsxs)(i.BM,{className:"tasks-list",scrollY:!0,enhanced:!0,showScrollbar:!1,children:[0===b.length&&!S&&(0,k.jsxs)(i.Ss,{className:"empty-state flex-center",children:[(0,k.jsx)(i.EY,{className:"empty-icon",children:"\ud83d\udccb"}),(0,k.jsx)(i.EY,{className:"empty-text",children:"pending"===f?"\u6682\u65e0\u5f85\u63a5\u5355\u4efb\u52a1":"active"===f?"\u6682\u65e0\u8fdb\u884c\u4e2d\u4efb\u52a1":"\u6682\u65e0\u5df2\u5b8c\u6210\u4efb\u52a1"})]}),b.map(function(e){return(0,k.jsxs)(i.Ss,{className:"task-card card",onClick:function(){return C(e)},children:[(0,k.jsxs)(i.Ss,{className:"task-card__header",children:[(0,k.jsx)(i.Ss,{className:"task-type-badge task-type-badge--".concat(e.type),children:(0,k.jsx)(i.EY,{children:"measure"===e.type?"\u91cf\u5c3a":"\u5b89\u88c5"})}),(0,k.jsxs)(i.EY,{className:"task-date",children:[e.scheduledDate," ",e.scheduledTime]})]}),(0,k.jsx)(i.EY,{className:"task-customer",children:e.customerName}),(0,k.jsx)(i.EY,{className:"task-address text-ellipsis",children:e.address}),e.roomCount&&(0,k.jsxs)(i.EY,{className:"task-rooms",children:[e.roomCount," \u4e2a\u623f\u95f4"]}),"pending"===f&&(0,k.jsx)(i.Ss,{className:"task-actions",children:(0,k.jsx)(i.Ss,{className:"btn-accept",onClick:function(s){s.stopPropagation(),D(e.id)},children:(0,k.jsx)(i.EY,{children:"\u63a5 \u5355"})})})]},e.id)}),S&&(0,k.jsx)(i.Ss,{className:"loading flex-center",children:(0,k.jsx)(i.EY,{children:"\u52a0\u8f7d\u4e2d..."})})]}),(0,k.jsx)(m.A,{selected:"/pages/tasks/index"})]})}var v={navigationBarTitleText:"\u6211\u7684\u4efb\u52a1",enablePullDownRefresh:!0},j=(0,a.eU)(f,"pages/tasks/index",{root:{cn:[]}},v||{});f&&f.behaviors&&(j.behaviors=(j.behaviors||[]).concat(f.behaviors));Page(j)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(9820)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/tasks/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks/index!./src/pages/tasks/index.tsx":
+/*!****************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks/index!./src/pages/tasks/index.tsx ***!
+  \****************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ TasksPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _stores_auth__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/stores/auth */ "./src/stores/auth.ts");
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var _utils_route_guard__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/utils/route-guard */ "./src/utils/route-guard.ts");
+/* harmony import */ var _components_TabBar_index__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @/components/TabBar/index */ "./src/components/TabBar/index.tsx");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__);
+
+
+
+/**
+ * 任务页（Worker 专属 TabBar 页）
+ *
+ * @description Worker 角色的核心页面。
+ * 顶部 Tab 切换：待接单 / 进行中 / 已完成
+ * 涵盖量尺和安装两种任务类型。
+ */
+
+
+
+
+
+
+
+
+
+/** 任务状态 Tab */
+
+/** 任务项 */
+
+var TAB_CONFIG = [{
+  key: 'pending',
+  label: '待接单'
+}, {
+  key: 'active',
+  label: '进行中'
+}, {
+  key: 'completed',
+  label: '已完成'
+}];
+function TasksPage() {
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(function () {
+    (0,_utils_route_guard__WEBPACK_IMPORTED_MODULE_8__.requireRole)(['worker']);
+  });
+  var _useAuthStore = (0,_stores_auth__WEBPACK_IMPORTED_MODULE_6__.useAuthStore)(),
+    currentRole = _useAuthStore.currentRole;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)('pending'),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    activeTab = _useState2[0],
+    setActiveTab = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)([]),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    tasks = _useState4[0],
+    setTasks = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    loading = _useState6[0],
+    setLoading = _useState6[1];
+
+  /** 获取任务列表 */
+  var fetchTasks = (0,react__WEBPACK_IMPORTED_MODULE_5__.useCallback)(/*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(tab) {
+      var statusMap, endpoint, res, _res$data;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            setLoading(true);
+            _context.p = 1;
+            statusMap = {
+              pending: 'pending',
+              active: 'in_progress',
+              completed: 'completed'
+            };
+            endpoint = currentRole === 'worker' ? '/engineer/tasks' : '/tasks';
+            _context.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.api.get(endpoint, {
+              data: {
+                status: statusMap[tab]
+              }
+            });
+          case 2:
+            res = _context.v;
+            if (res.success) {
+              setTasks(((_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.items) || res.data || []);
+            }
+          case 3:
+            _context.p = 3;
+            setLoading(false);
+            return _context.f(3);
+          case 4:
+            return _context.a(2);
+        }
+      }, _callee, null, [[1,, 3, 4]]);
+    }));
+    return function (_x) {
+      return _ref.apply(this, arguments);
+    };
+  }(), [currentRole]);
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useDidShow)(function () {
+    fetchTasks(activeTab);
+  });
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.usePullDownRefresh)(function () {
+    fetchTasks(activeTab).then(function () {
+      return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().stopPullDownRefresh();
+    });
+  });
+
+  /** 切换顶部 Tab */
+  var handleTabChange = function handleTabChange(tab) {
+    setActiveTab(tab);
+    fetchTasks(tab);
+  };
+
+  /** 跳转任务详情 */
+  var goDetail = function goDetail(task) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateTo({
+      url: "/pages/tasks-sub/detail/index?id=".concat(task.id)
+    });
+  };
+
+  /** 接受任务（滑动/点击） */
+  var acceptTask = /*#__PURE__*/function () {
+    var _ref2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee2(taskId) {
+      var res;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            _context2.n = 1;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.api.post("/tasks/".concat(taskId, "/accept"));
+          case 1:
+            res = _context2.v;
+            if (res.success) {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                title: '已接单',
+                icon: 'success'
+              });
+              fetchTasks(activeTab);
+            }
+          case 2:
+            return _context2.a(2);
+        }
+      }, _callee2);
+    }));
+    return function acceptTask(_x2) {
+      return _ref2.apply(this, arguments);
+    };
+  }();
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "tasks-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "tasks-tabs",
+      children: TAB_CONFIG.map(function (tab) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "tasks-tab ".concat(activeTab === tab.key ? 'tasks-tab--active' : ''),
+          onClick: function onClick() {
+            return handleTabChange(tab.key);
+          },
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            children: tab.label
+          })
+        }, tab.key);
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.ScrollView, {
+      className: "tasks-list",
+      scrollY: true,
+      enhanced: true,
+      showScrollbar: false,
+      children: [tasks.length === 0 && !loading && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "empty-state flex-center",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "empty-icon",
+          children: "\uD83D\uDCCB"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "empty-text",
+          children: activeTab === 'pending' ? '暂无待接单任务' : activeTab === 'active' ? '暂无进行中任务' : '暂无已完成任务'
+        })]
+      }), tasks.map(function (task) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "task-card card",
+          onClick: function onClick() {
+            return goDetail(task);
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "task-card__header",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+              className: "task-type-badge task-type-badge--".concat(task.type),
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+                children: task.type === 'measure' ? '量尺' : '安装'
+              })
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "task-date",
+              children: [task.scheduledDate, " ", task.scheduledTime]
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "task-customer",
+            children: task.customerName
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "task-address text-ellipsis",
+            children: task.address
+          }), task.roomCount && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "task-rooms",
+            children: [task.roomCount, " \u4E2A\u623F\u95F4"]
+          }), activeTab === 'pending' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "task-actions",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+              className: "btn-accept",
+              onClick: function onClick(e) {
+                e.stopPropagation();
+                acceptTask(task.id);
+              },
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+                children: "\u63A5 \u5355"
+              })
+            })
+          })]
+        }, task.id);
+      }), loading && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "loading flex-center",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          children: "\u52A0\u8F7D\u4E2D..."
+        })
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_components_TabBar_index__WEBPACK_IMPORTED_MODULE_9__["default"], {
+      selected: "/pages/tasks/index"
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/tasks/index.tsx":
+/*!***********************************!*\
+  !*** ./src/pages/tasks/index.tsx ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/tasks/index!./src/pages/tasks/index.tsx");
+
+
+var config = {"navigationBarTitleText":"我的任务","enablePullDownRefresh":true};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/tasks/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_tasks_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/tasks/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

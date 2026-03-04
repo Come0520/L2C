@@ -1,748 +1,835 @@
-import { db } from "@/shared/api/db";
-import { orders, orderItems, tenants, receiptBills, receiptBillItems, arStatements } from "@/shared/api/schema";
-import { quotes } from "@/shared/api/schema/quotes";
+import { db } from '@/shared/api/db';
+import {
+  orders,
+  orderItems,
+  tenants,
+  receiptBills,
+  receiptBillItems,
+  arStatements,
+} from '@/shared/api/schema';
+import { quotes } from '@/shared/api/schema/quotes';
 import { OrderStateMachine } from '@/features/orders/logic/order-state-machine';
 import type { OrderStatus } from '@/shared/lib/status-maps';
-import { eq, and, inArray } from "drizzle-orm";
-import { format } from "date-fns";
-import { randomBytes } from "crypto";
-import { POSplitService } from "./po-split.service";
-import { submitApproval } from "@/features/approval/actions/submission";
-import Decimal from "decimal.js";
-import { AuditService } from "@/shared/services/audit-service";
+import { eq, and, inArray } from 'drizzle-orm';
+import { format } from 'date-fns';
+import { randomBytes } from 'crypto';
+import { POSplitService } from './po-split.service';
+import { submitApproval } from '@/features/approval/actions/submission';
+import Decimal from 'decimal.js';
+import { AuditService } from '@/shared/services/audit-service';
 
 export interface CreateOrderOptions {
-    paymentProofImg?: string;
-    confirmationImg?: string;
-    paymentAmount?: string;
-    paymentMethod?: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
-    remark?: string;
-    usedPrepayments?: string[];
-    newPayment?: {
-        amount: number;
-        proofUrl?: string;
-        paymentMethod: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
-        accountId?: string;
-    };
+  paymentProofImg?: string;
+  confirmationImg?: string;
+  paymentAmount?: string;
+  paymentMethod?: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
+  remark?: string;
+  usedPrepayments?: string[];
+  newPayment?: {
+    amount: number;
+    proofUrl?: string;
+    paymentMethod: 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK';
+    accountId?: string;
+  };
 }
 
 export class OrderService {
+  private static async generateOrderNo() {
+    const prefix = `ORD${format(new Date(), 'yyyyMMdd')}`;
+    const random = randomBytes(3).toString('hex').toUpperCase();
+    return `${prefix}${random}`;
+  }
 
-    private static async generateOrderNo() {
-        const prefix = `ORD${format(new Date(), 'yyyyMMdd')}`;
-        const random = randomBytes(3).toString('hex').toUpperCase();
-        return `${prefix}${random}`;
-    }
+  /**
+   * Convert a WON Quote to a Draft Order.
+   * Strict validation: Quote must be in WON status (or acceptable status).
+   */
+  static async convertFromQuote(
+    quoteId: string,
+    tenantId: string,
+    userId: string,
+    options?: CreateOrderOptions
+  ) {
+    return await db.transaction(async (tx) => {
+      // 1. Fetch Quote & Items & Customer
+      const quote = await tx.query.quotes.findFirst({
+        where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
+        with: {
+          items: {
+            with: {
+              product: true,
+            },
+          },
 
-    /**
-     * Convert a WON Quote to a Draft Order.
-     * Strict validation: Quote must be in WON status (or acceptable status).
-     */
-    static async convertFromQuote(quoteId: string, tenantId: string, userId: string, options?: CreateOrderOptions) {
-        return await db.transaction(async (tx) => {
-            // 1. Fetch Quote & Items & Customer
-            const quote = await tx.query.quotes.findFirst({
-                where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId)),
-                with: {
-                    items: {
-                        with: {
-                            product: true
-                        }
-                    },
+          customer: true,
+          lead: true, // Fetch Lead info
+        },
+      });
 
-                    customer: true,
-                    lead: true // Fetch Lead info
-                }
-            });
+      if (!quote) throw new Error('Quote not found');
 
-            if (!quote) throw new Error("Quote not found");
+      // 规则 1: 待客户确认状态禁止转化
+      if (quote.status === 'PENDING_CUSTOMER') {
+        throw new Error('无法转订单：待客户确认的报价单不能直接转订单，请等待客户确认后再操作。');
+      }
 
-            // 规则 1: 待客户确认状态禁止转化
-            if (quote.status === 'PENDING_CUSTOMER') {
-                throw new Error('无法转订单：待客户确认的报价单不能直接转订单，请等待客户确认后再操作。');
-            }
+      // 规则 2: 只有已批准/已接受状态可以转化
+      const allowedStatuses = ['APPROVED', 'ACCEPTED'];
+      if (!allowedStatuses.includes(quote.status || '')) {
+        throw new Error(
+          `无法转订单：报价单状态为 ${quote.status}。只有“已批准”、“已接受”或“待客户确认”状态的报价单可以转订单。`
+        );
+      }
 
-            // 规则 2: 只有已批准/已接受状态可以转化
-            const allowedStatuses = ['APPROVED', 'ACCEPTED'];
-            if (!allowedStatuses.includes(quote.status || '')) {
-                throw new Error(`无法转订单：报价单状态为 ${quote.status}。只有“已批准”、“已接受”或“待客户确认”状态的报价单可以转订单。`);
-            }
+      // Check availability
+      const existingOrder = await tx.query.orders.findFirst({
+        where: eq(orders.quoteId, quoteId),
+      });
+      if (existingOrder) {
+        throw new Error(`Order already exists for this quote: ${existingOrder.orderNo}`);
+      }
 
-            // Check availability
-            const existingOrder = await tx.query.orders.findFirst({
-                where: eq(orders.quoteId, quoteId)
-            });
-            if (existingOrder) {
-                throw new Error(`Order already exists for this quote: ${existingOrder.orderNo}`);
-            }
+      // 2. Fetch Tenant Settings for dynamic routing
+      const tenant = await tx.query.tenants.findFirst({
+        where: eq(tenants.id, tenantId),
+        columns: { settings: true },
+      });
+      const settings = (tenant?.settings as unknown as { orderFlowConfig?: any }) || {};
+      const orderFlowConfig = settings.orderFlowConfig || {
+        financeConfirmationRequired: false,
+        managerApprovalRequired: false,
+      };
 
-            // 2. Fetch Tenant Settings for dynamic routing
-            const tenant = await tx.query.tenants.findFirst({
-                where: eq(tenants.id, tenantId),
-                columns: { settings: true }
-            });
-            const settings = (tenant?.settings as unknown as { orderFlowConfig?: any }) || {};
-            const orderFlowConfig = settings.orderFlowConfig || {
-                financeConfirmationRequired: false,
-                managerApprovalRequired: false
-            };
+      // 3. Process Existing Prepayments
+      let verifiedPrepaymentTotal = new Decimal(0);
+      const appliedPrepayments = [];
 
-            // 3. Process Existing Prepayments
-            let verifiedPrepaymentTotal = new Decimal(0);
-            const appliedPrepayments = [];
-
-            if (options?.usedPrepayments && options.usedPrepayments.length > 0) {
-                const prepayments = await tx.query.receiptBills.findMany({
-                    where: and(
-                        inArray(receiptBills.id, options.usedPrepayments),
-                        eq(receiptBills.tenantId, tenantId),
-                        eq(receiptBills.status, 'VERIFIED')
-                    )
-                });
-
-                for (const p of prepayments) {
-                    const remaining = new Decimal(p.remainingAmount || 0);
-                    verifiedPrepaymentTotal = verifiedPrepaymentTotal.plus(remaining);
-                    appliedPrepayments.push({ id: p.id, amount: remaining.toString() });
-                }
-            }
-
-            // 4. Calculate Shortfall and Deficit
-            const total = new Decimal(quote.totalAmount || 0);
-            const newPaymentAmount = new Decimal(options?.newPayment?.amount || 0);
-            const shortfall = total.minus(verifiedPrepaymentTotal);
-            const deficit = shortfall.minus(newPaymentAmount);
-
-            // 5. Determine Order Status based on Dynamic Routing
-            let targetStatus: OrderStatus = 'PENDING_PO';
-            let newPaymentVerified = false;
-
-            if (deficit.gt(0)) {
-                // Scenario C: Insufficient funds
-                if (orderFlowConfig.managerApprovalRequired) {
-                    targetStatus = 'PENDING_APPROVAL';
-                } else {
-                    targetStatus = 'PENDING_PO';
-                }
-            } else {
-                // Scenario A & B: Fully paid (or overpaid)
-                if (newPaymentAmount.gt(0)) {
-                    if (orderFlowConfig.financeConfirmationRequired) {
-                        targetStatus = 'SIGNED'; // Wait for finance confirmation
-                    } else {
-                        targetStatus = 'PENDING_PO'; // Auto verified new payment
-                        newPaymentVerified = true;
-                    }
-                } else {
-                    targetStatus = 'PENDING_PO'; // Everything covered by existing verified prepayments
-                }
-            }
-
-            // 6. Create Order Header
-            const orderNo = await this.generateOrderNo();
-            const totalPaid = verifiedPrepaymentTotal.plus(newPaymentVerified ? newPaymentAmount : new Decimal(0));
-
-            // Prepare Snapshot
-            const quoteSnapshot = {
-                quote: {
-                    ...quote,
-                    items: quote.items
-                },
-                customer: quote.customer,
-                generatedAt: new Date().toISOString()
-            };
-
-            const [newOrder] = await tx.insert(orders).values({
-                tenantId,
-                orderNo,
-                quoteId: quote.id,
-                quoteVersionId: quote.id,
-                customerId: quote.customerId,
-                customerName: quote.customer.name,
-                customerPhone: quote.customer.phone,
-
-                // Populate Channel Info from Lead
-                channelId: quote.lead?.channelId,
-                channelContactId: quote.lead?.channelContactId,
-
-                totalAmount: quote.totalAmount,
-                paidAmount: totalPaid.toString(),
-                balanceAmount: total.minus(totalPaid).toString(),
-                settlementType: 'PREPAID',
-                status: targetStatus,
-
-                paymentMethod: options?.newPayment?.paymentMethod || 'CASH',
-                remark: options?.remark,
-
-                quoteSnapshot,
-                snapshotData: {},
-                isLocked: false,
-                salesId: quote.createdBy,
-                createdBy: userId,
-            }).returning();
-
-            // 7. Create Order Items
-            if (quote.items && quote.items.length > 0) {
-                const itemsToInsert = quote.items.map(item => ({
-                    tenantId,
-                    orderId: newOrder.id,
-                    quoteItemId: item.id,
-                    productId: item.productId!,
-                    productName: item.productName,
-                    category: item.category as typeof orderItems.$inferSelect.category,
-                    quantity: item.quantity,
-                    width: item.width,
-                    height: item.height,
-                    unitPrice: item.unitPrice,
-                    subtotal: item.subtotal,
-                    roomName: item.roomName || 'Default',
-                    remark: item.remark,
-                    status: 'PENDING' as const,
-                }));
-                await tx.insert(orderItems).values(itemsToInsert);
-            }
-
-            // 8. Create or Update ReceiptBills & AR Statements
-            // Create AR Statement for the order
-            const statementNo = `AR${format(new Date(), 'yyyyMMdd')}${randomBytes(2).toString('hex').toUpperCase()}`;
-            const [arStatement] = await tx.insert(arStatements).values({
-                tenantId,
-                statementNo,
-                orderId: newOrder.id,
-                customerId: newOrder.customerId,
-                customerName: newOrder.customerName ?? 'No Name',
-                totalAmount: newOrder.totalAmount ?? '0',
-                receivedAmount: totalPaid.toString(),
-                pendingAmount: newOrder.balanceAmount ?? '0',
-                settlementType: 'PREPAID',
-                status: totalPaid.gte(total) ? 'PAID' : (totalPaid.gt(0) ? 'PARTIAL' : 'INVOICED'),
-                salesId: newOrder.salesId ?? userId,
-                channelId: newOrder.channelId ?? undefined,
-            }).returning();
-
-            // Deduct from existing prepayments
-            for (const p of appliedPrepayments) {
-                await tx.update(receiptBills)
-                    .set({
-                        usedAmount: p.amount,
-                        remainingAmount: '0',
-                        updatedAt: new Date()
-                    })
-                    .where(and(eq(receiptBills.id, p.id), eq(receiptBills.tenantId, tenantId)));
-
-                // Link the prepayments to this order via receiptBillItems (for history tracking)
-                await tx.insert(receiptBillItems).values({
-                    tenantId,
-                    receiptBillId: p.id,
-                    orderId: newOrder.id,
-                    orderNo: newOrder.orderNo,
-                    amount: p.amount,
-                    statementId: arStatement.id,
-                });
-            }
-
-            // Create New Payment Receipt Bill if provided
-            if (newPaymentAmount.gt(0) && options?.newPayment) {
-                const receiptNo = `REC${format(new Date(), 'yyyyMMdd')}${randomBytes(3).toString('hex').toUpperCase()}`;
-                const newReceiptStatus = newPaymentVerified ? 'VERIFIED' : 'PENDING_APPROVAL';
-
-                const [bill] = await tx.insert(receiptBills).values({
-                    tenantId,
-                    receiptNo,
-                    customerId: newOrder.customerId,
-                    customerName: newOrder.customerName ?? 'No Name',
-                    customerPhone: newOrder.customerPhone ?? '',
-                    type: 'PREPAID',
-                    totalAmount: options.newPayment.amount.toString(),
-                    usedAmount: newPaymentVerified ? options.newPayment.amount.toString() : '0',
-                    remainingAmount: newPaymentVerified ? '0' : options.newPayment.amount.toString(),
-                    status: newReceiptStatus,
-                    paymentMethod: options.newPayment.paymentMethod,
-                    accountId: options.newPayment.accountId ?? undefined,
-                    proofUrl: options.newPayment.proofUrl ?? '',
-                    receivedAt: new Date(),
-                    remark: options.remark ?? '支付尾款/新下款',
-                    createdBy: userId,
-                    verifiedBy: newPaymentVerified ? userId : undefined,
-                    verifiedAt: newPaymentVerified ? new Date() : undefined,
-                }).returning();
-
-                await tx.insert(receiptBillItems).values({
-                    tenantId,
-                    receiptBillId: bill.id,
-                    orderId: newOrder.id,
-                    orderNo: newOrder.orderNo,
-                    amount: options.newPayment.amount.toString(),
-                    statementId: arStatement.id,
-                });
-            }
-
-            // 9. Auto trigger manager approval if needed
-            if (targetStatus === 'PENDING_APPROVAL') {
-                await submitApproval({
-                    entityType: 'ORDER',
-                    entityId: newOrder.id,
-                    flowCode: 'ORDER_LOW_DEPOSIT',
-                    comment: `客户仅预付：${totalPaid.toString()}元，申请低定金发单`,
-                    amount: newOrder.totalAmount || '0',
-                });
-            }
-
-            return newOrder;
+      if (options?.usedPrepayments && options.usedPrepayments.length > 0) {
+        const prepayments = await tx.query.receiptBills.findMany({
+          where: and(
+            inArray(receiptBills.id, options.usedPrepayments),
+            eq(receiptBills.tenantId, tenantId),
+            eq(receiptBills.status, 'VERIFIED')
+          ),
         });
-    }
 
-    /**
-     * 锁定订单
-     * 阻止对订单明细的进一步编辑。
-     */
-    static async lockOrder(orderId: string, tenantId: string, version: number, _userId: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
+        for (const p of prepayments) {
+          const remaining = new Decimal(p.remainingAmount || 0);
+          verifiedPrepaymentTotal = verifiedPrepaymentTotal.plus(remaining);
+          appliedPrepayments.push({ id: p.id, amount: remaining.toString() });
+        }
+      }
 
-            if (!order) throw new Error("Order not found");
-            if (order.isLocked) throw new Error("Order is already locked");
+      // 4. Calculate Shortfall and Deficit
+      const total = new Decimal(quote.totalAmount || 0);
+      const newPaymentAmount = new Decimal(options?.newPayment?.amount || 0);
+      const shortfall = total.minus(verifiedPrepaymentTotal);
+      const deficit = shortfall.minus(newPaymentAmount);
 
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    isLocked: true,
-                    lockedAt: new Date(),
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+      // 5. Determine Order Status based on Dynamic Routing
+      let targetStatus: OrderStatus = 'PENDING_PO';
+      let newPaymentVerified = false;
 
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
+      if (deficit.gt(0)) {
+        // Scenario C: Insufficient funds
+        if (orderFlowConfig.managerApprovalRequired) {
+          targetStatus = 'PENDING_APPROVAL';
+        } else {
+          targetStatus = 'PENDING_PO';
+        }
+      } else {
+        // Scenario A & B: Fully paid (or overpaid)
+        if (newPaymentAmount.gt(0)) {
+          if (orderFlowConfig.financeConfirmationRequired) {
+            targetStatus = 'SIGNED'; // Wait for finance confirmation
+          } else {
+            targetStatus = 'PENDING_PO'; // Auto verified new payment
+            newPaymentVerified = true;
+          }
+        } else {
+          targetStatus = 'PENDING_PO'; // Everything covered by existing verified prepayments
+        }
+      }
 
-            return updatedOrder;
+      // 6. Create Order Header
+      const orderNo = await this.generateOrderNo();
+      const totalPaid = verifiedPrepaymentTotal.plus(
+        newPaymentVerified ? newPaymentAmount : new Decimal(0)
+      );
+
+      // Prepare Snapshot
+      const quoteSnapshot = {
+        quote: {
+          ...quote,
+          items: quote.items,
+        },
+        customer: quote.customer,
+        generatedAt: new Date().toISOString(),
+      };
+
+      const [newOrder] = await tx
+        .insert(orders)
+        .values({
+          tenantId,
+          orderNo,
+          quoteId: quote.id,
+          quoteVersionId: quote.id,
+          customerId: quote.customerId,
+          customerName: quote.customer.name,
+          customerPhone: quote.customer.phone,
+
+          // Populate Channel Info from Lead
+          channelId: quote.lead?.channelId,
+          channelContactId: quote.lead?.channelContactId,
+
+          totalAmount: quote.totalAmount,
+          paidAmount: totalPaid.toString(),
+          balanceAmount: total.minus(totalPaid).toString(),
+          settlementType: 'PREPAID',
+          status: targetStatus,
+
+          paymentMethod: options?.newPayment?.paymentMethod || 'CASH',
+          remark: options?.remark,
+
+          quoteSnapshot,
+          snapshotData: {},
+          isLocked: false,
+          salesId: quote.createdBy,
+          createdBy: userId,
+        })
+        .returning();
+
+      // 7. Create Order Items
+      if (quote.items && quote.items.length > 0) {
+        const itemsToInsert = quote.items.map((item) => ({
+          tenantId,
+          orderId: newOrder.id,
+          quoteItemId: item.id,
+          productId: item.productId!,
+          productName: item.productName,
+          category: item.category as typeof orderItems.$inferSelect.category,
+          quantity: item.quantity,
+          width: item.width,
+          height: item.height,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          roomName: item.roomName || 'Default',
+          remark: item.remark,
+          status: 'PENDING' as const,
+          createdBy: userId,
+        }));
+        await tx.insert(orderItems).values(itemsToInsert);
+      }
+
+      // 8. Create or Update ReceiptBills & AR Statements
+      // Create AR Statement for the order
+      const statementNo = `AR${format(new Date(), 'yyyyMMdd')}${randomBytes(2).toString('hex').toUpperCase()}`;
+      const [arStatement] = await tx
+        .insert(arStatements)
+        .values({
+          tenantId,
+          statementNo,
+          orderId: newOrder.id,
+          customerId: newOrder.customerId,
+          customerName: newOrder.customerName ?? 'No Name',
+          totalAmount: newOrder.totalAmount ?? '0',
+          receivedAmount: totalPaid.toString(),
+          pendingAmount: newOrder.balanceAmount ?? '0',
+          settlementType: 'PREPAID',
+          status: totalPaid.gte(total) ? 'PAID' : totalPaid.gt(0) ? 'PARTIAL' : 'INVOICED',
+          salesId: newOrder.salesId ?? userId,
+          channelId: newOrder.channelId ?? undefined,
+        })
+        .returning();
+
+      // Deduct from existing prepayments
+      for (const p of appliedPrepayments) {
+        await tx
+          .update(receiptBills)
+          .set({
+            usedAmount: p.amount,
+            remainingAmount: '0',
+            updatedAt: new Date(),
+          })
+          .where(and(eq(receiptBills.id, p.id), eq(receiptBills.tenantId, tenantId)));
+
+        // Link the prepayments to this order via receiptBillItems (for history tracking)
+        await tx.insert(receiptBillItems).values({
+          tenantId,
+          receiptBillId: p.id,
+          orderId: newOrder.id,
+          orderNo: newOrder.orderNo,
+          amount: p.amount,
+          statementId: arStatement.id,
         });
-    }
+      }
 
-    /**
-     * 更新订单状态
-     * 订单确认时触发采购拆单。
-     */
-    static async updateOrderStatus(orderId: string, newStatus: string, tenantId: string, version: number, userId: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
+      // Create New Payment Receipt Bill if provided
+      if (newPaymentAmount.gt(0) && options?.newPayment) {
+        const receiptNo = `REC${format(new Date(), 'yyyyMMdd')}${randomBytes(3).toString('hex').toUpperCase()}`;
+        const newReceiptStatus = newPaymentVerified ? 'VERIFIED' : 'PENDING_APPROVAL';
 
-            if (!order) throw new Error("订单不存在");
+        const [bill] = await tx
+          .insert(receiptBills)
+          .values({
+            tenantId,
+            receiptNo,
+            customerId: newOrder.customerId,
+            customerName: newOrder.customerName ?? 'No Name',
+            customerPhone: newOrder.customerPhone ?? '',
+            type: 'PREPAID',
+            totalAmount: options.newPayment.amount.toString(),
+            usedAmount: newPaymentVerified ? options.newPayment.amount.toString() : '0',
+            remainingAmount: newPaymentVerified ? '0' : options.newPayment.amount.toString(),
+            status: newReceiptStatus,
+            paymentMethod: options.newPayment.paymentMethod,
+            accountId: options.newPayment.accountId ?? undefined,
+            proofUrl: options.newPayment.proofUrl ?? '',
+            receivedAt: new Date(),
+            remark: options.remark ?? '支付尾款/新下款',
+            createdBy: userId,
+            verifiedBy: newPaymentVerified ? userId : undefined,
+            verifiedAt: newPaymentVerified ? new Date() : undefined,
+          })
+          .returning();
 
-            // 状态机验证
-            if (order.status) {
-                const isValid = OrderStateMachine.validateTransition(order.status as OrderStatus, newStatus as OrderStatus);
-                if (!isValid) {
-                    throw new Error(`Invalid status transition from ${order.status} to ${newStatus}`);
-                }
-            }
-
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    status: newStatus as typeof orders.$inferSelect.status,
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
-
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
-
-            // 审计日志
-            await AuditService.record({
-                tenantId,
-                userId,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: newStatus },
-                changedFields: { status: newStatus }
-            }, tx);
-
-            // PENDING_PO logic (replaced CONFIRMED which seems invalid)
-            if (newStatus === 'PENDING_PO') {
-                await POSplitService.splitOrderToPOs(orderId, tenantId, userId);
-            }
-
-            return updatedOrder;
+        await tx.insert(receiptBillItems).values({
+          tenantId,
+          receiptBillId: bill.id,
+          orderId: newOrder.id,
+          orderNo: newOrder.orderNo,
+          amount: options.newPayment.amount.toString(),
+          statementId: arStatement.id,
         });
-    }
+      }
 
-    /**
-     * 申请撤单
-     * 仅 PENDING_PRODUCTION 或 IN_PRODUCTION 状态的订单可发起撤单申请。
-     */
-    static async requestCancellation(orderId: string, tenantId: string, version: number, userId: string, reason: string) {
-
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
-
-            if (!order) throw new Error("订单不存在");
-            if (order.status !== 'PENDING_PRODUCTION' && order.status !== 'IN_PRODUCTION') {
-                throw new Error("只有待生产或生产中的订单可以申请撤单");
-            }
-
-            // 触发撤单审批流程
-            const result = await submitApproval({
-                entityType: 'ORDER',
-                entityId: orderId,
-                flowCode: 'ORDER_CANCELLATION_APPROVAL',
-                comment: `申请撤单原因: ${reason}`,
-            }, tx);
-
-            if (!result.success) {
-                const errorMsg = (result as { error?: string }).error || '未知错误';
-                throw new Error(`无法发起撤单审批: ${errorMsg}`);
-            }
-
-            // 锁定订单防止操作
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    isLocked: true,
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning({ id: orders.id });
-
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
-
-            // 审计日志
-            await AuditService.record({
-                tenantId,
-                userId,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { isLocked: false },
-                newValues: { isLocked: true, cancellationReason: reason },
-                changedFields: { isLocked: true }
-            }, tx);
-
-            return { success: true, approvalId: (result as { approvalId?: string }).approvalId };
+      // 9. Auto trigger manager approval if needed
+      if (targetStatus === 'PENDING_APPROVAL') {
+        await submitApproval({
+          entityType: 'ORDER',
+          entityId: newOrder.id,
+          flowCode: 'ORDER_LOW_DEPOSIT',
+          comment: `客户仅预付：${totalPaid.toString()}元，申请低定金发单`,
+          amount: newOrder.totalAmount || '0',
         });
-    }
+      }
 
-    /**
-     * 叫停订单（原 Pause）
-     * 仅流转中的订单可被叫停。
-     */
-    static async haltOrder(orderId: string, tenantId: string, version: number, userId: string, reason: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
+      return newOrder;
+    });
+  }
 
-            if (!order) throw new Error("订单不存在");
+  /**
+   * 锁定订单
+   * 阻止对订单明细的进一步编辑。
+   */
+  static async lockOrder(orderId: string, tenantId: string, version: number, _userId: string) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
 
-            // 允许叫停的状态列表（与状态机 transitions 保持一致）
-            const allowedStatuses = [
-                'SIGNED', 'PAID', 'PENDING_PO',
-                'PENDING_PRODUCTION', 'IN_PRODUCTION',
-                'PENDING_DELIVERY', 'PENDING_INSTALL'
-            ];
+      if (!order) throw new Error('Order not found');
+      if (order.isLocked) throw new Error('Order is already locked');
 
-            if (!order.status || !allowedStatuses.includes(order.status)) {
-                throw new Error(`当前状态 (${order.status}) 不允许叫停。允许的状态: ${allowedStatuses.join(', ')}`);
-            }
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          isLocked: true,
+          lockedAt: new Date(),
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
 
-            const previousStatus = order.status;
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
 
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    status: 'HALTED',
-                    pausedAt: new Date(),
-                    pauseReason: reason,
-                    snapshotData: {
-                        ...(order.snapshotData as Record<string, unknown> || {}),
-                        previousStatus
-                    },
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+      return updatedOrder;
+    });
+  }
 
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
+  /**
+   * 更新订单状态
+   * 订单确认时触发采购拆单。
+   */
+  static async updateOrderStatus(
+    orderId: string,
+    newStatus: string,
+    tenantId: string,
+    version: number,
+    userId: string
+  ) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
 
-            // 审计日志
-            await AuditService.record({
-                tenantId,
-                userId,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: previousStatus },
-                newValues: { status: 'HALTED', pauseReason: reason },
-                changedFields: { status: 'HALTED', pauseReason: reason }
-            }, tx); // 传入事务上下文
+      if (!order) throw new Error('订单不存在');
 
-            return updatedOrder;
-        });
-    }
+      // 状态机验证
+      if (order.status) {
+        const isValid = OrderStateMachine.validateTransition(
+          order.status as OrderStatus,
+          newStatus as OrderStatus
+        );
+        if (!isValid) {
+          throw new Error(`Invalid status transition from ${order.status} to ${newStatus}`);
+        }
+      }
 
-    /**
-     * 已废弃 — 请使用 haltOrder
-     */
-    static async pauseOrder(_orderId: string, _tenantId: string, _reason: string) {
-        throw new Error("已废弃。请使用 haltOrder 方法并传入 userId。");
-    }
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: newStatus as typeof orders.$inferSelect.status,
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
 
-    /**
-     * Resume Order
-     * Restore original status and update cumulative pause days.
-     */
-    static async resumeOrder(orderId: string, tenantId: string, version: number, userId: string, remark?: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
 
-            if (!order || (order.status !== 'PAUSED' && order.status !== 'HALTED')) {
-                throw new Error("Order is not PAUSED or HALTED");
-            }
+      // 审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: newStatus },
+          changedFields: { status: newStatus },
+        },
+        tx
+      );
 
-            let previousStatus = (order.snapshotData as { previousStatus?: string } | null)?.previousStatus;
+      // PENDING_PO logic (replaced CONFIRMED which seems invalid)
+      if (newStatus === 'PENDING_PO') {
+        await POSplitService.splitOrderToPOs(orderId, tenantId, userId);
+      }
 
-            // Backward compatibility: Try parsing pauseReason if snapshotData missing
-            if (!previousStatus && order.pauseReason) {
-                try {
-                    const parsed = JSON.parse(order.pauseReason);
-                    if (parsed.previousStatus) {
-                        previousStatus = parsed.previousStatus;
-                    }
-                } catch (_e) {
-                    // Ignore JSON parse error, it might be a plain string reason
-                }
-            }
+      return updatedOrder;
+    });
+  }
 
-            // Fallback default
-            if (!previousStatus) {
-                previousStatus = 'IN_PRODUCTION';
-            }
+  /**
+   * 申请撤单
+   * 仅 PENDING_PRODUCTION 或 IN_PRODUCTION 状态的订单可发起撤单申请。
+   */
+  static async requestCancellation(
+    orderId: string,
+    tenantId: string,
+    version: number,
+    userId: string,
+    reason: string
+  ) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
 
-            const pauseStart = order.pausedAt;
-            let addedDays = 0;
-            if (pauseStart) {
-                const diffTime = Math.abs(new Date().getTime() - pauseStart.getTime());
-                addedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            }
+      if (!order) throw new Error('订单不存在');
+      if (order.status !== 'PENDING_PRODUCTION' && order.status !== 'IN_PRODUCTION') {
+        throw new Error('只有待生产或生产中的订单可以申请撤单');
+      }
 
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    status: previousStatus as typeof orders.$inferSelect.status,
-                    pausedAt: null,
-                    pauseReason: null,
-                    pauseCumulativeDays: (order.pauseCumulativeDays || 0) + addedDays,
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+      // 触发撤单审批流程
+      const result = await submitApproval(
+        {
+          entityType: 'ORDER',
+          entityId: orderId,
+          flowCode: 'ORDER_CANCELLATION_APPROVAL',
+          comment: `申请撤单原因: ${reason}`,
+        },
+        tx
+      );
 
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
+      if (!result.success) {
+        const errorMsg = (result as { error?: string }).error || '未知错误';
+        throw new Error(`无法发起撤单审批: ${errorMsg}`);
+      }
 
-            // Audit Log
-            await AuditService.record({
-                tenantId,
-                userId,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: previousStatus, pauseReason: null, remark },
-                changedFields: { status: previousStatus, pauseReason: null, remark }
-            }, tx);
+      // 锁定订单防止操作
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          isLocked: true,
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning({ id: orders.id });
 
-            return updatedOrder;
-        });
-    }
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
 
-    /**
-     * Confirm Installation Completed
-     * Moves order to INSTALLATION_COMPLETED (or PENDING_CONFIRMATION if configured)
-     */
-    static async confirmInstallation(orderId: string, tenantId: string, version: number, updatedBy: string) {
-        return await db.transaction(async (tx) => {
-            // 先查询订单当前状态，进行状态验证
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
+      // 审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { isLocked: false },
+          newValues: { isLocked: true, cancellationReason: reason },
+          changedFields: { isLocked: true },
+        },
+        tx
+      );
 
-            if (!order) throw new Error('订单不存在');
-            if (order.status !== 'PENDING_INSTALL') {
-                throw new Error(`当前状态 ${order.status} 不允许确认安装`);
-            }
+      return { success: true, approvalId: (result as { approvalId?: string }).approvalId };
+    });
+  }
 
-            const [updatedOrder] = await tx.update(orders)
-                .set({
-                    status: 'INSTALLATION_COMPLETED',
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+  /**
+   * 叫停订单（原 Pause）
+   * 仅流转中的订单可被叫停。
+   */
+  static async haltOrder(
+    orderId: string,
+    tenantId: string,
+    version: number,
+    userId: string,
+    reason: string
+  ) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
 
-            if (!updatedOrder) throw new Error("订单已被其他用户修改，请刷新后重试");
+      if (!order) throw new Error('订单不存在');
 
-            // 审计日志
-            await AuditService.record({
-                tenantId,
-                userId: updatedBy,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: 'INSTALLATION_COMPLETED' },
-                changedFields: { status: 'INSTALLATION_COMPLETED' }
-            }, tx);
+      // 允许叫停的状态列表（与状态机 transitions 保持一致）
+      const allowedStatuses = [
+        'SIGNED',
+        'PAID',
+        'PENDING_PO',
+        'PENDING_PRODUCTION',
+        'IN_PRODUCTION',
+        'PENDING_DELIVERY',
+        'PENDING_INSTALL',
+      ];
 
-            return updatedOrder;
-        });
-    }
+      if (!order.status || !allowedStatuses.includes(order.status)) {
+        throw new Error(
+          `当前状态 (${order.status}) 不允许叫停。允许的状态: ${allowedStatuses.join(', ')}`
+        );
+      }
 
-    static async requestCustomerConfirmation(orderId: string, tenantId: string, version: number, userId: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
-            if (!order) throw new Error('订单不存在');
+      const previousStatus = order.status;
 
-            const [result] = await tx.update(orders)
-                .set({
-                    status: 'PENDING_CONFIRMATION',
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: 'HALTED',
+          pausedAt: new Date(),
+          pauseReason: reason,
+          snapshotData: {
+            ...((order.snapshotData as Record<string, unknown>) || {}),
+            previousStatus,
+          },
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
 
-            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
 
-            // 审计日志
-            await AuditService.record({
-                tenantId,
-                userId,
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: 'PENDING_CONFIRMATION' },
-                changedFields: { status: 'PENDING_CONFIRMATION' }
-            }, tx);
+      // 审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: previousStatus },
+          newValues: { status: 'HALTED', pauseReason: reason },
+          changedFields: { status: 'HALTED', pauseReason: reason },
+        },
+        tx
+      ); // 传入事务上下文
 
-            return result;
-        });
-    }
+      return updatedOrder;
+    });
+  }
 
-    static async customerAccept(orderId: string, tenantId: string, version: number) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
-            if (!order) throw new Error('订单不存在');
+  /**
+   * 已废弃 — 请使用 haltOrder
+   */
+  static async pauseOrder(_orderId: string, _tenantId: string, _reason: string) {
+    throw new Error('已废弃。请使用 haltOrder 方法并传入 userId。');
+  }
 
-            const [result] = await tx.update(orders)
-                .set({
-                    status: 'COMPLETED',
-                    version: order.version + 1,
-                    completedAt: new Date(),
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+  /**
+   * Resume Order
+   * Restore original status and update cumulative pause days.
+   */
+  static async resumeOrder(
+    orderId: string,
+    tenantId: string,
+    version: number,
+    userId: string,
+    remark?: string
+  ) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
 
-            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
+      if (!order || (order.status !== 'PAUSED' && order.status !== 'HALTED')) {
+        throw new Error('Order is not PAUSED or HALTED');
+      }
 
-            await AuditService.record({
-                tenantId,
-                userId: 'system',
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: 'COMPLETED' },
-                changedFields: { status: 'COMPLETED' }
-            }, tx);
+      let previousStatus = (order.snapshotData as { previousStatus?: string } | null)
+        ?.previousStatus;
 
-            return result;
-        });
-    }
+      // Backward compatibility: Try parsing pauseReason if snapshotData missing
+      if (!previousStatus && order.pauseReason) {
+        try {
+          const parsed = JSON.parse(order.pauseReason);
+          if (parsed.previousStatus) {
+            previousStatus = parsed.previousStatus;
+          }
+        } catch (_e) {
+          // Ignore JSON parse error, it might be a plain string reason
+        }
+      }
 
-    static async customerReject(orderId: string, tenantId: string, version: number, reason: string) {
-        return await db.transaction(async (tx) => {
-            const order = await tx.query.orders.findFirst({
-                where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId))
-            });
-            if (!order) throw new Error('订单不存在');
+      // Fallback default
+      if (!previousStatus) {
+        previousStatus = 'IN_PRODUCTION';
+      }
 
-            const [result] = await tx.update(orders)
-                .set({
-                    status: 'INSTALLATION_REJECTED',
-                    remark: reason,
-                    version: order.version + 1,
-                    updatedAt: new Date()
-                })
-                .where(and(
-                    eq(orders.id, orderId),
-                    eq(orders.tenantId, tenantId),
-                    eq(orders.version, version)
-                ))
-                .returning();
+      const pauseStart = order.pausedAt;
+      let addedDays = 0;
+      if (pauseStart) {
+        const diffTime = Math.abs(new Date().getTime() - pauseStart.getTime());
+        addedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
 
-            if (!result) throw new Error("订单已被其他用户修改，请刷新后重试");
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: previousStatus as typeof orders.$inferSelect.status,
+          pausedAt: null,
+          pauseReason: null,
+          pauseCumulativeDays: (order.pauseCumulativeDays || 0) + addedDays,
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
 
-            await AuditService.record({
-                tenantId,
-                userId: 'system',
-                tableName: 'orders',
-                recordId: orderId,
-                action: 'UPDATE',
-                oldValues: { status: order.status },
-                newValues: { status: 'INSTALLATION_REJECTED', remark: reason },
-                changedFields: { status: 'INSTALLATION_REJECTED', remark: reason }
-            }, tx);
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
 
-            return result;
-        });
-    }
+      // Audit Log
+      await AuditService.record(
+        {
+          tenantId,
+          userId,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: previousStatus, pauseReason: null, remark },
+          changedFields: { status: previousStatus, pauseReason: null, remark },
+        },
+        tx
+      );
+
+      return updatedOrder;
+    });
+  }
+
+  /**
+   * Confirm Installation Completed
+   * Moves order to INSTALLATION_COMPLETED (or PENDING_CONFIRMATION if configured)
+   */
+  static async confirmInstallation(
+    orderId: string,
+    tenantId: string,
+    version: number,
+    updatedBy: string
+  ) {
+    return await db.transaction(async (tx) => {
+      // 先查询订单当前状态，进行状态验证
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
+
+      if (!order) throw new Error('订单不存在');
+      if (order.status !== 'PENDING_INSTALL') {
+        throw new Error(`当前状态 ${order.status} 不允许确认安装`);
+      }
+
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: 'INSTALLATION_COMPLETED',
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
+
+      if (!updatedOrder) throw new Error('订单已被其他用户修改，请刷新后重试');
+
+      // 审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId: updatedBy,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: 'INSTALLATION_COMPLETED' },
+          changedFields: { status: 'INSTALLATION_COMPLETED' },
+        },
+        tx
+      );
+
+      return updatedOrder;
+    });
+  }
+
+  static async requestCustomerConfirmation(
+    orderId: string,
+    tenantId: string,
+    version: number,
+    userId: string
+  ) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
+      if (!order) throw new Error('订单不存在');
+
+      const [result] = await tx
+        .update(orders)
+        .set({
+          status: 'PENDING_CONFIRMATION',
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
+
+      if (!result) throw new Error('订单已被其他用户修改，请刷新后重试');
+
+      // 审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId,
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: 'PENDING_CONFIRMATION' },
+          changedFields: { status: 'PENDING_CONFIRMATION' },
+        },
+        tx
+      );
+
+      return result;
+    });
+  }
+
+  static async customerAccept(orderId: string, tenantId: string, version: number) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
+      if (!order) throw new Error('订单不存在');
+
+      const [result] = await tx
+        .update(orders)
+        .set({
+          status: 'COMPLETED',
+          version: order.version + 1,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
+
+      if (!result) throw new Error('订单已被其他用户修改，请刷新后重试');
+
+      await AuditService.record(
+        {
+          tenantId,
+          userId: 'system',
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: 'COMPLETED' },
+          changedFields: { status: 'COMPLETED' },
+        },
+        tx
+      );
+
+      return result;
+    });
+  }
+
+  static async customerReject(orderId: string, tenantId: string, version: number, reason: string) {
+    return await db.transaction(async (tx) => {
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
+      if (!order) throw new Error('订单不存在');
+
+      const [result] = await tx
+        .update(orders)
+        .set({
+          status: 'INSTALLATION_REJECTED',
+          remark: reason,
+          version: order.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.tenantId, tenantId), eq(orders.version, version))
+        )
+        .returning();
+
+      if (!result) throw new Error('订单已被其他用户修改，请刷新后重试');
+
+      await AuditService.record(
+        {
+          tenantId,
+          userId: 'system',
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: 'INSTALLATION_REJECTED', remark: reason },
+          changedFields: { status: 'INSTALLATION_REJECTED', remark: reason },
+        },
+        tx
+      );
+
+      return result;
+    });
+  }
 }

@@ -20,7 +20,7 @@ export default async function FinanceLayout({ children }: { children: React.Reac
   const userRoles = session.user.roles || [session.user.role || 'SALES'];
   const hasFinanceAccess = userRoles.some((roleCode: string) => {
     // ADMIN / TENANT_ADMIN 拥有全部权限
-    if (roleCode === 'ADMIN' || roleCode === 'TENANT_ADMIN') return true;
+    if (roleCode === 'ADMIN' || roleCode === 'ADMIN') return true;
 
     const roleDef = ROLES[roleCode];
     if (!roleDef) return false;

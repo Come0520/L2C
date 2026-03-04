@@ -10,7 +10,7 @@ import Building2 from 'lucide-react/dist/esm/icons/building';
 import User from 'lucide-react/dist/esm/icons/user';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ChannelStats } from '../actions/channel-stats';
 
@@ -49,7 +49,6 @@ const levelColors: Record<string, string> = {
 export function ChannelRanking({ data, loading, currentPeriod = 'month' }: ChannelRankingProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -64,7 +63,7 @@ export function ChannelRanking({ data, loading, currentPeriod = 'month' }: Chann
   };
 
   const handlePeriodChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     params.set('period', value);
     router.push(`?${params.toString()}`);
   };

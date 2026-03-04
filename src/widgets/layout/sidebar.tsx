@@ -147,7 +147,7 @@ const navLinks = [
  */
 function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
   // ADMIN / TENANT_ADMIN 拥有全部模块访问权限
-  if (roles.includes('ADMIN') || roles.includes('TENANT_ADMIN')) return true;
+  if (roles.includes('ADMIN')) return true;
 
   // 从 ROLES 配置中检查用户的任一角色是否拥有该模块的某个权限
   for (const roleCode of roles) {
@@ -198,10 +198,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar open={open} setOpen={setOpen}>
-      <SidebarBody className="glass-liquid justify-between gap-6 border-r border-white/10 dark:border-white/5">
+      <SidebarBody className="glass-liquid border-border/50 justify-between gap-6 border-r shadow-sm dark:border-white/10">
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Logo 带主题切换 */}
-          <div className="border-b border-white/10 px-2 pb-4 dark:border-white/5">
+          <div className="border-border/50 border-b px-2 pb-4 dark:border-white/5">
             <LogoWrapper />
           </div>
 
@@ -230,7 +230,7 @@ export function AppSidebar() {
         </div>
 
         {/* 底部用户信息 - 指向独立的用户设置页面 */}
-        <div className="mt-auto border-t border-white/10 pt-4 dark:border-white/5">
+        <div className="border-border/50 mt-auto border-t pt-4 dark:border-white/5">
           <NavLink
             href="/profile/settings"
             label="个人设置"
@@ -303,11 +303,11 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        'group/sidebar flex items-center rounded-xl px-3 py-2.5 transition-all duration-300',
+        'group/sidebar flex items-center rounded-xl px-3 py-2.5 transition-all duration-300 active:scale-95',
         animate && !open ? 'justify-center' : 'justify-start gap-3',
         isActive
-          ? 'bg-primary-500/20 text-primary-600 dark:text-primary-400'
-          : 'text-neutral-700 hover:bg-white/10 dark:text-neutral-200 dark:hover:bg-white/5'
+          ? 'bg-primary/10 text-primary ring-primary/20 dark:bg-primary-500/20 dark:text-primary-400 font-semibold shadow-sm ring-1'
+          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground dark:text-neutral-200 dark:hover:bg-white/5'
       )}
     >
       <Icon

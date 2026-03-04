@@ -26,19 +26,15 @@ interface MenuItem {
 /** 全部菜单项 */
 const MENU_ITEMS: MenuItem[] = [
   // Worker 专属
-  { icon: '💰', label: '收益结算', path: '/pages/workbench-sub/engineer/index', roles: ['worker'] },
+  { icon: '💰', label: '收益结算', path: '/packageWorker/settlement/index', roles: ['worker'] },
   // Customer 专属
-  { icon: '📦', label: '我的订单', path: '/pages/orders/index', roles: ['customer'] },
-  { icon: '🔧', label: '报修服务', path: '/pages/service/list/index', roles: ['customer'] },
-  // Sales 专属
-  { icon: '🏆', label: '个人业绩', path: '/pages/reports/index', roles: ['sales'] },
+  { icon: '📦', label: '我的订单', path: '/packageCustomer/order-track/index', roles: ['customer'] },
+  { icon: '🔧', label: '报修服务', path: '/packageCustomer/after-sales/index', roles: ['customer'] },
   // Manager 专属
   { icon: '💻', label: '前往 Web 管理端', path: '/pages/landing/index', roles: ['manager', 'admin'] },
-  { icon: '🎯', label: '销售目标', path: '/pages/manager/targets/index', roles: ['manager', 'admin'] },
   // 全角色
   { icon: '✏️', label: '编辑资料', path: '/pages/users/edit/index' },
-  { icon: '👥', label: '邀请同事', path: '/pages/invite/index', roles: ['manager', 'admin', 'sales'] },
-  { icon: '⚙️', label: '租户设置', path: '/pages/tenant/payment-settings/index', roles: ['manager', 'admin'] },
+  { icon: '👥', label: '邀请同事', path: '/packageSales/invite/index', roles: ['manager', 'admin', 'sales'] },
 ]
 
 export default function ProfilePage() {

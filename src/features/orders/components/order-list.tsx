@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData } from '@tanstack/react-query';
+import { useServerActionQuery } from '@/shared/hooks/use-server-action-query';
 import { Button } from '@/shared/ui/button';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
@@ -49,9 +50,9 @@ export function OrderList() {
   const pageSize = 20;
 
   // 使用 React Query 进行数据获取和缓存
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['orders', page, pageSize, search, statusTab, filters],
-    queryFn: async () => {
+  const { data, isLoading, isFetching, refetch } = useServerActionQuery(
+    ['orders', page, pageSize, search, statusTab, filters],
+    async () => {
       // Pass filters to getOrders
       const result = await getOrders({
         page,
@@ -67,9 +68,11 @@ export function OrderList() {
       }
       return result.data;
     },
-    placeholderData: keepPreviousData,
-    staleTime: 30 * 1000,
-  });
+    {
+      placeholderData: keepPreviousData,
+      staleTime: 30 * 1000,
+    }
+  );
 
   const orders = data?.data || [];
   const totalPages = data?.totalPages || 1;

@@ -112,13 +112,7 @@ const publishApprovalFlowActionInternal = createSafeAction(
         .where(and(eq(approvalNodes.flowId, flowId), eq(approvalNodes.tenantId, tenantId)));
 
       if (flatNodes.length > 0) {
-        const approverRoles = [
-          'STORE_MANAGER',
-          'ADMIN',
-          'FINANCE',
-          'PURCHASING',
-          'DISPATCHER',
-        ] as const;
+        const approverRoles = ['MANAGER', 'ADMIN', 'FINANCE', 'PURCHASING', 'DISPATCHER'] as const;
 
         await tx.insert(approvalNodes).values(
           flatNodes.map((node) => {

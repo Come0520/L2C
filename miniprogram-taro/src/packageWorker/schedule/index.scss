@@ -1,0 +1,265 @@
+@use '../../styles/variables' as *;
+
+.worker-schedule-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .calendar-bar {
+        background-color: #fff;
+        padding: $spacing-md 0 0;
+        box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.03);
+        z-index: 10;
+        position: relative;
+
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 $spacing-lg $spacing-md;
+
+            .month-text {
+                font-size: $font-title2;
+                font-weight: 700;
+                color: $text-title;
+            }
+
+            .btn-today {
+                font-size: $font-sm;
+                color: $apple-blue;
+                background-color: rgba(0, 113, 227, 0.1);
+                padding: 8rpx 24rpx;
+                border-radius: $radius-full;
+                font-weight: 500;
+            }
+        }
+
+        .date-scroll {
+            width: 100%;
+            white-space: nowrap;
+
+            .date-list {
+                display: flex;
+                padding: 0 $spacing-md $spacing-sm;
+
+                .date-item {
+                    display: inline-flex;
+                    flex-direction: column;
+                    align-items: center;
+                    width: 90rpx;
+                    flex-shrink: 0;
+                    margin: 0 8rpx;
+                    padding: 16rpx 0;
+                    border-radius: $radius-full;
+                    transition: all 0.3s;
+
+                    .day {
+                        font-size: $font-sm;
+                        color: $text-secondary;
+                        margin-bottom: 8rpx;
+                    }
+
+                    .date {
+                        font-size: $font-lg;
+                        font-weight: 600;
+                        color: $text-title;
+                        width: 64rpx;
+                        height: 64rpx;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 50%;
+                    }
+
+                    .dot {
+                        width: 8rpx;
+                        height: 8rpx;
+                        background-color: transparent;
+                        border-radius: 50%;
+                        margin-top: 8rpx;
+                    }
+
+                    &.active {
+                        background-color: $apple-blue;
+                        box-shadow: 0 4rpx 12rpx rgba(0, 113, 227, 0.3);
+
+                        .day {
+                            color: rgba(255, 255, 255, 0.9);
+                        }
+
+                        .date {
+                            color: #fff;
+                        }
+
+                        .dot {
+                            background-color: #fff;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .task-list {
+        flex: 1;
+        padding: $spacing-lg;
+
+        .timeline-item {
+            display: flex;
+            margin-bottom: $spacing-xl;
+
+            .time-col {
+                width: 100rpx;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-right: $spacing-md;
+
+                .time-text {
+                    font-size: $font-md;
+                    font-weight: 700;
+                    color: $text-title;
+                    margin-bottom: 8rpx;
+                    font-family: 'SF Pro Display', sans-serif;
+                }
+
+                .status-line {
+                    flex: 1;
+                    width: 4rpx;
+                    background-color: $apple-blue;
+                    border-radius: 4rpx;
+                    margin-top: 8rpx;
+                    min-height: 100rpx;
+
+                    &.gray {
+                        background-color: $border-separator;
+                    }
+                }
+            }
+
+            .content-col {
+                flex: 1;
+
+                .change-alert {
+                    background-color: rgba(255, 149, 0, 0.1);
+                    border: 2rpx solid rgba(255, 149, 0, 0.2);
+                    border-radius: $radius-md;
+                    padding: $spacing-md;
+                    margin-bottom: $spacing-md;
+
+                    .alert-header {
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 8rpx;
+
+                        .icon {
+                            font-size: $font-md;
+                            margin-right: 8rpx;
+                        }
+
+                        .title {
+                            font-size: $font-md;
+                            font-weight: 600;
+                            color: $apple-orange;
+                        }
+                    }
+
+                    .note {
+                        font-size: $font-sm;
+                        color: $text-title;
+                        display: block;
+                        margin-bottom: $spacing-md;
+                        line-height: 1.5;
+                    }
+
+                    .confirm-btn {
+                        background-color: $apple-orange;
+                        color: #fff;
+                        font-size: $font-sm;
+                        font-weight: 600;
+                        height: 64rpx;
+                        border-radius: $radius-full;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+
+                        &::after {
+                            border: none;
+                        }
+
+                        &:active {
+                            opacity: 0.8;
+                        }
+                    }
+                }
+
+                .task-card {
+                    background-color: #fff;
+                    border-radius: $radius-lg;
+                    padding: $spacing-lg;
+                    box-shadow: $shadow-soft;
+
+                    &:active {
+                        background-color: #FAFAFA;
+                    }
+
+                    .card-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: $spacing-sm;
+
+                        .tag {
+                            font-size: 20rpx;
+                            padding: 4rpx 12rpx;
+                            border-radius: $radius-sm;
+                            color: #fff;
+                            font-weight: 600;
+
+                            &.measure {
+                                background-color: $apple-orange;
+                            }
+
+                            &.install {
+                                background-color: $apple-blue;
+                            }
+                        }
+
+                        .status {
+                            font-size: $font-sm;
+                            color: $apple-blue;
+                            font-weight: 500;
+
+                            &.completed {
+                                color: $text-placeholder;
+                            }
+                        }
+                    }
+
+                    .address {
+                        font-size: $font-lg;
+                        font-weight: 600;
+                        color: $text-title;
+                        display: block;
+                        margin-bottom: 12rpx;
+                    }
+
+                    .time-range {
+                        font-size: $font-sm;
+                        color: $text-secondary;
+                        display: block;
+                    }
+                }
+            }
+        }
+
+        .end-tips {
+            text-align: center;
+            font-size: $font-sm;
+            color: $text-placeholder;
+            padding: 40rpx 0;
+            padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+        }
+    }
+}

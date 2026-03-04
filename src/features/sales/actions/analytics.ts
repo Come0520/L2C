@@ -232,7 +232,7 @@ export async function getSalesRanking(
         const salesUsers = await db.query.users.findMany({
           where: and(
             eq(users.tenantId, session.user.tenantId),
-            eq(users.role, 'sales'),
+            eq(users.role, 'SALES'),
             eq(users.isActive, true)
           ),
           columns: { id: true, name: true, avatarUrl: true },
@@ -341,7 +341,7 @@ export async function getSalesTargetWarnings(): Promise<{
         const salesUsers = await db.query.users.findMany({
           where: and(
             eq(users.tenantId, session.user.tenantId),
-            eq(users.role, 'sales'),
+            eq(users.role, 'SALES'),
             eq(users.isActive, true)
           ),
           columns: { id: true, name: true },

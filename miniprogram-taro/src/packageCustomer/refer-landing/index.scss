@@ -1,0 +1,171 @@
+@use '../../styles/variables' as *;
+
+.refer-landing-page {
+    background-color: #F8F8F8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        height: 100vh;
+    }
+
+    .hero-section {
+        background: #fff;
+        padding: 80rpx 40rpx 60rpx;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-bottom-left-radius: 40rpx;
+        border-bottom-right-radius: 40rpx;
+        box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.03);
+
+        .brand-logo {
+            width: 140rpx;
+            height: 140rpx;
+            border-radius: $radius-lg;
+            margin-bottom: $spacing-md;
+            border: 1px solid $border-separator;
+        }
+
+        .brand-name {
+            font-size: $font-title2;
+            font-weight: 800;
+            color: $text-title;
+            margin-bottom: 8rpx;
+        }
+
+        .brand-slogan {
+            font-size: $font-md;
+            color: $text-secondary;
+            letter-spacing: 2rpx;
+        }
+    }
+
+    .form-card {
+        background-color: #fff;
+        margin: $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-xl $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .card-title {
+            font-size: $font-lg;
+            font-weight: 700;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-lg;
+            text-align: center;
+        }
+
+        .form-item {
+            background-color: #F8F8F8;
+            border-radius: $radius-md;
+            padding: 20rpx $spacing-md;
+            margin-bottom: $spacing-md;
+            display: flex;
+            align-items: center;
+
+            .label {
+                width: 140rpx;
+                font-size: $font-md;
+                color: $text-title;
+            }
+
+            .input-field {
+                flex: 1;
+                font-size: $font-md;
+                color: $text-title;
+            }
+        }
+
+        .submit-btn {
+            background-color: $apple-blue;
+            color: #fff;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+            margin-top: $spacing-xl;
+            margin-bottom: $spacing-md;
+
+            &::after {
+                border: none;
+            }
+
+            &:active {
+                opacity: 0.8;
+            }
+        }
+
+        .privacy-text {
+            font-size: 20rpx;
+            color: $text-placeholder;
+            text-align: center;
+            display: block;
+            line-height: 1.5;
+            padding: 0 $spacing-md;
+        }
+    }
+
+    .cases-section {
+        padding: $spacing-md;
+
+        .section-title {
+            font-size: $font-lg;
+            font-weight: 700;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            padding-left: 8rpx;
+        }
+
+        .case-list {
+            display: flex;
+            flex-direction: column;
+            gap: $spacing-md;
+
+            .case-card {
+                background-color: #fff;
+                border-radius: $radius-lg;
+                overflow: hidden;
+                box-shadow: $shadow-soft;
+
+                .case-img {
+                    width: 100%;
+                    height: 360rpx;
+                }
+
+                .case-title {
+                    padding: $spacing-md;
+                    font-size: $font-md;
+                    font-weight: 600;
+                    color: $text-title;
+                    display: block;
+                }
+            }
+        }
+    }
+
+    .float-home-btn {
+        position: fixed;
+        right: 40rpx;
+        bottom: calc(100rpx + env(safe-area-inset-bottom));
+        background-color: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+        border-radius: $radius-full;
+        padding: 16rpx 32rpx;
+        z-index: 100;
+
+        Text {
+            font-size: $font-sm;
+            color: $apple-blue;
+            font-weight: 600;
+        }
+    }
+}

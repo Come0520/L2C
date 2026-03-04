@@ -55,7 +55,7 @@ async function loginHandler(request: NextRequest) {
     switch (dbRole) {
       case 'ADMIN':
       case 'MANAGER':
-        mobileRole = 'BOSS';
+        mobileRole = 'ADMIN';
         break;
       case 'SALES':
         mobileRole = 'SALES';

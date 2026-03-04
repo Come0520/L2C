@@ -1,0 +1,440 @@
+@use '../../styles/variables' as *;
+
+.onboarding-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .step-header {
+        background-color: #fff;
+        padding: 40rpx 40rpx 30rpx;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        z-index: 10;
+        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+
+        .progress-line {
+            position: absolute;
+            top: 60rpx;
+            left: 10%;
+            height: 4rpx;
+            background-color: $apple-blue;
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 60rpx;
+            left: 10%;
+            right: 10%;
+            height: 4rpx;
+            background-color: $border-separator;
+            z-index: 0;
+        }
+
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            width: 33.33%;
+
+            .circle {
+                width: 44rpx;
+                height: 44rpx;
+                border-radius: 50%;
+                background-color: #fff;
+                border: 4rpx solid $border-separator;
+                color: $text-secondary;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: $font-sm;
+                font-weight: 700;
+                margin-bottom: 12rpx;
+                transition: all 0.3s;
+            }
+
+            .label {
+                font-size: $font-xs;
+                color: $text-secondary;
+            }
+
+            &.active {
+                .circle {
+                    border-color: $apple-blue;
+                    color: $apple-blue;
+                }
+
+                .label {
+                    color: $text-title;
+                    font-weight: 600;
+                }
+            }
+
+            &.completed {
+                .circle {
+                    background-color: $apple-blue;
+                    border-color: $apple-blue;
+                    color: #fff;
+                }
+
+                .label {
+                    color: $text-title;
+                }
+            }
+        }
+    }
+
+    .content-scroll {
+        flex: 1;
+        height: 100%;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .step-content {
+        padding: $spacing-md;
+
+        .card {
+            background-color: #fff;
+            border-radius: $radius-lg;
+            padding: $spacing-lg;
+            margin-bottom: $spacing-xl;
+            box-shadow: $shadow-soft;
+
+            .title {
+                font-size: $font-lg;
+                font-weight: 700;
+                color: $text-title;
+                display: block;
+                margin-bottom: $spacing-lg;
+                text-align: center;
+                border-bottom: 1px solid $border-separator;
+                padding-bottom: $spacing-md;
+            }
+
+            .rich-text {
+                .para {
+                    font-size: $font-md;
+                    color: $text-secondary;
+                    line-height: 1.6;
+                    display: block;
+                    margin-bottom: $spacing-sm;
+                    text-indent: 2em;
+                }
+            }
+        }
+
+        .exam-card {
+            background-color: #fff;
+            border-radius: $radius-lg;
+            padding: $spacing-lg;
+            margin-bottom: $spacing-xl;
+            box-shadow: $shadow-soft;
+
+            .title {
+                font-size: $font-lg;
+                font-weight: 700;
+                color: $text-title;
+                display: block;
+                text-align: center;
+                margin-bottom: 8rpx;
+            }
+
+            .subtitle {
+                font-size: $font-sm;
+                color: $text-secondary;
+                display: block;
+                text-align: center;
+                margin-bottom: $spacing-xl;
+            }
+
+            .question-item {
+                margin-bottom: $spacing-xl;
+
+                .question-title {
+                    font-size: $font-md;
+                    font-weight: 600;
+                    color: $text-title;
+                    display: block;
+                    margin-bottom: $spacing-md;
+                }
+
+                .options {
+                    .option {
+                        background-color: $bg-base;
+                        border-radius: $radius-md;
+                        padding: 24rpx;
+                        margin-bottom: $spacing-sm;
+                        display: flex;
+                        align-items: center;
+                        border: 2rpx solid transparent;
+                        transition: all 0.2s;
+
+                        .radio-circle {
+                            width: 36rpx;
+                            height: 36rpx;
+                            border-radius: 50%;
+                            border: 2rpx solid $border-separator;
+                            margin-right: $spacing-sm;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background-color: #fff;
+
+                            .inner {
+                                width: 20rpx;
+                                height: 20rpx;
+                                border-radius: 50%;
+                                background-color: $apple-blue;
+                            }
+                        }
+
+                        .opt-text {
+                            font-size: $font-md;
+                            color: $text-title;
+                            flex: 1;
+                        }
+
+                        &.selected {
+                            background-color: rgba(0, 122, 255, 0.05);
+                            border-color: rgba(0, 122, 255, 0.3);
+
+                            .radio-circle {
+                                border-color: $apple-blue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        .signature-area {
+            background-color: #fff;
+            border-radius: $radius-lg;
+            padding: $spacing-lg;
+            margin-bottom: $spacing-xl;
+            box-shadow: $shadow-soft;
+
+            .label {
+                font-size: $font-md;
+                font-weight: 600;
+                color: $text-title;
+                display: block;
+                margin-bottom: $spacing-md;
+            }
+
+            .unsign-box {
+                height: 200rpx;
+                background-color: #F8F8F8;
+                border: 2rpx dashed $border-separator;
+                border-radius: $radius-md;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                Text {
+                    color: $apple-blue;
+                    font-size: $font-md;
+                    font-weight: 500;
+                }
+
+                &:active {
+                    background-color: #ECECEC;
+                }
+            }
+
+            .signed-preview {
+                height: 200rpx;
+                background-color: #fff;
+                border: 2rpx solid $border-separator;
+                border-radius: $radius-md;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                .sign-img {
+                    max-width: 90%;
+                    max-height: 90%;
+                }
+
+                .re-sign {
+                    position: absolute;
+                    bottom: 16rpx;
+                    right: 16rpx;
+                    font-size: $font-sm;
+                    color: $apple-blue;
+                    background-color: rgba(0, 122, 255, 0.1);
+                    padding: 8rpx 16rpx;
+                    border-radius: $radius-full;
+                }
+            }
+        }
+
+        .action-area {
+            padding: $spacing-md;
+            padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+
+            .checkbox-label {
+                font-size: $font-sm;
+                color: $text-title;
+                margin-left: 8rpx;
+            }
+
+            .next-btn {
+                background-color: $border-separator;
+                color: #fff;
+                border-radius: $radius-full;
+                height: 88rpx;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: $font-lg;
+                font-weight: 600;
+                margin-top: $spacing-lg;
+                transition: all 0.3s;
+
+                &::after {
+                    border: none;
+                }
+
+                &.active {
+                    background-color: $apple-blue;
+                }
+            }
+
+            &.double {
+                display: flex;
+                gap: $spacing-md;
+                padding-top: 0;
+
+                .prev-btn {
+                    flex: 1;
+                    background-color: #fff;
+                    color: $text-title;
+                    border: 1px solid $border-separator;
+                    border-radius: $radius-full;
+                    height: 88rpx;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: $font-lg;
+
+                    &::after {
+                        border: none;
+                    }
+                }
+
+                .next-btn {
+                    flex: 2;
+                    margin-top: 0;
+                }
+            }
+        }
+    }
+
+    // Modal
+    .sign-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        display: flex;
+        align-items: flex-end;
+
+        .modal-content {
+            background-color: #fff;
+            width: 100%;
+            height: 70vh;
+            border-top-left-radius: 40rpx;
+            border-top-right-radius: 40rpx;
+            display: flex;
+            flex-direction: column;
+
+            .modal-header {
+                padding: $spacing-md $spacing-xl;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid $border-separator;
+
+                .modal-title {
+                    font-size: $font-md;
+                    font-weight: 600;
+                    color: $text-title;
+                }
+
+                .close-btn {
+                    font-size: 48rpx;
+                    color: $text-secondary;
+                    padding: 0 20rpx;
+                }
+            }
+
+            .canvas-container {
+                flex: 1;
+                background-color: #FAFAFA;
+                padding: 40rpx;
+
+                .sign-canvas {
+                    width: 100%;
+                    height: 100%;
+                    background-color: #fff;
+                    border-radius: $radius-md;
+                    border: 2rpx dashed $border-separator;
+                    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+                }
+            }
+
+            .modal-footer {
+                padding: $spacing-md $spacing-xl;
+                padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
+                display: flex;
+                gap: $spacing-md;
+
+                .clear-btn {
+                    flex: 1;
+                    height: 88rpx;
+                    border-radius: $radius-full;
+                    background-color: $bg-base;
+                    color: $text-title;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 500;
+
+                    &::after {
+                        border: none;
+                    }
+                }
+
+                .confirm-btn {
+                    flex: 2;
+                    height: 88rpx;
+                    border-radius: $radius-full;
+                    background-color: $apple-blue;
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 600;
+
+                    &::after {
+                        border: none;
+                    }
+                }
+            }
+        }
+    }
+}

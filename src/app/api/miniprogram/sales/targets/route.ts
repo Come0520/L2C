@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // 权限控制：销售角色只能查看自己的目标
     let _filterUserId = targetUserId;
-    if (user.role === 'sales' && (!targetUserId || targetUserId !== user.id)) {
+    if (user.role === 'SALES' && (!targetUserId || targetUserId !== user.id)) {
       _filterUserId = user.id;
     }
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
           .where(
             and(
               eq(users.tenantId, user.tenantId),
-              eq(users.role, 'sales'),
+              eq(users.role, 'SALES'),
               eq(users.isActive, true)
             )
           );

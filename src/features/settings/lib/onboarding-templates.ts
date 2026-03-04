@@ -95,7 +95,7 @@ const TEMPLATES_2: TemplateDefinition[] = [
     tagline: '两人平等，数据共享，各管各的单。',
     description: '两位合伙人各自独立谈单，互相之间数据透明共享。',
     roles: [
-      { name: 'BOSS', description: '管理权限 + 独立接单', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '管理权限 + 独立接单', count: 1, isBoss: true },
       { name: '合伙人/销售', description: '独立接单，可查看全部数据', count: 1 },
     ],
     features: [
@@ -155,7 +155,7 @@ const TEMPLATES_3: TemplateDefinition[] = [
     tagline: '三人各自跑单，数据共享互不干扰。',
     description: '三位合伙人各自独立谈单、各做各的生意，系统数据完全透明。',
     roles: [
-      { name: 'BOSS', description: '管理权限 + 独立接单', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '管理权限 + 独立接单', count: 1, isBoss: true },
       { name: '合伙人/销售', description: '独立接单，可查看全部数据', count: 2 },
     ],
     features: [
@@ -190,7 +190,7 @@ const TEMPLATES_3: TemplateDefinition[] = [
     tagline: 'BOSS 管全局，主管带销售。',
     description: '有初步管理层级：BOSS 负责决策和审批，主管带一名销售。',
     roles: [
-      { name: 'BOSS', description: '全局管理、审批决策', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、审批决策', count: 1, isBoss: true },
       { name: '主管/店长', description: '带队管理、报价审核', count: 1 },
       { name: '销售', description: '独立接单、量尺报价', count: 1 },
     ],
@@ -212,7 +212,7 @@ const TEMPLATES_4: TemplateDefinition[] = [
     tagline: '四人平行，各管各的单。',
     description: '四位合伙人各自独立跑业务，数据完全透明共享。',
     roles: [
-      { name: 'BOSS', description: '管理权限 + 独立接单', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '管理权限 + 独立接单', count: 1, isBoss: true },
       { name: '合伙人/销售', description: '独立接单，可查看全部数据', count: 3 },
     ],
     features: [
@@ -248,7 +248,7 @@ const TEMPLATES_4: TemplateDefinition[] = [
     tagline: 'BOSS→店长→销售→内勤，四岗分明。',
     description: '有明确层级：BOSS 决策，店长管理日常，销售接单，内勤支持。',
     roles: [
-      { name: 'BOSS', description: '全局管理、最终审批', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、最终审批', count: 1, isBoss: true },
       { name: '店长/经理', description: '日常管理、报价审批', count: 1 },
       { name: '销售', description: '独立接单、量尺报价', count: 1 },
       { name: '内勤 (兼财务)', description: '采购、交付、确收记账', count: 1 },
@@ -271,7 +271,7 @@ const TEMPLATES_5: TemplateDefinition[] = [
     tagline: '五人平行合伙，各管各的单。',
     description: '五位合伙人各自跑业务，数据完全透明。适合人人都是业务能手的团队。',
     roles: [
-      { name: 'BOSS', description: '管理权限 + 独立接单', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '管理权限 + 独立接单', count: 1, isBoss: true },
       { name: '合伙人/销售', description: '独立接单，可查看全部数据', count: 4 },
     ],
     features: [
@@ -288,7 +288,7 @@ const TEMPLATES_5: TemplateDefinition[] = [
     tagline: '多名销售+后勤支持，扁平管理。',
     description: '销售负责前端拓客，内勤和派单负责后端支持，管理扁平高效。',
     roles: [
-      { name: 'BOSS', description: '全局管理、数据总览', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、数据总览', count: 1, isBoss: true },
       { name: '销售', description: '独立接单、量尺报价', count: 2 },
       { name: '内勤 (兼采购)', description: '采购下单、跟单交付', count: 1 },
       { name: '财务/派单', description: '确收记账、安排安装', count: 1 },
@@ -307,7 +307,7 @@ const TEMPLATES_5: TemplateDefinition[] = [
     tagline: '有店长审批，销售和内勤分岗明确。',
     description: '店长负责审核和管理，销售和内勤各司其职，流程规范。',
     roles: [
-      { name: 'BOSS', description: '全局管理、最终审批', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、最终审批', count: 1, isBoss: true },
       { name: '店长/经理', description: '日常管理、报价审批', count: 1 },
       { name: '销售', description: '独立接单、量尺报价', count: 2 },
       { name: '内勤 (兼财务)', description: '采购、交付、确收记账', count: 1 },
@@ -330,7 +330,7 @@ const TEMPLATES_6_10: TemplateDefinition[] = [
     tagline: '扁平管理，销售各自独立，后勤统一支持。',
     description: '适合有初步分工但管理扁平的团队。销售各自跑单，内勤统一支持采购、派单和财务。',
     roles: [
-      { name: 'BOSS', description: '全局管理、数据总览', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、数据总览', count: 1, isBoss: true },
       { name: '销售', description: '独立接单、量尺报价', count: -1 },
       { name: '内勤', description: '采购下单、跟单交付', count: -1 },
       { name: '财务', description: '确收记账、对账', count: -1 },
@@ -349,7 +349,7 @@ const TEMPLATES_6_10: TemplateDefinition[] = [
     tagline: '有店长/经理审批，分岗明确。',
     description: '适合有明确层级管理的团队。店长负责审核关键节点，销售、内勤、派单各司其职。',
     roles: [
-      { name: 'BOSS', description: '全局管理、最终审批', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、最终审批', count: 1, isBoss: true },
       { name: '店长/经理', description: '团队管理、报价审批、业绩总览', count: -1 },
       { name: '销售', description: '独立接单、量尺报价', count: -1 },
       { name: '内勤', description: '采购下单、跟单交付', count: -1 },
@@ -373,7 +373,7 @@ const TEMPLATES_11_PLUS: TemplateDefinition[] = [
     tagline: '完整层级管理，分岗细致。',
     description: '适合大型团队：管理层、销售、内勤、派单、采购、财务各有专人，流程规范。',
     roles: [
-      { name: 'BOSS', description: '全局管理、最终审批', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '全局管理、最终审批', count: 1, isBoss: true },
       { name: '店长/经理', description: '团队管理、报价审批', count: -1 },
       { name: '销售', description: '独立接单、量尺报价', count: -1 },
       { name: '采购', description: '对接厂家、下单跟货', count: -1 },
@@ -395,7 +395,7 @@ const TEMPLATES_11_PLUS: TemplateDefinition[] = [
     tagline: '多门店管理，统分结合。',
     description: '适合拥有多个门店或网点的团队，BOSS 总览全局，每个店独立运营。',
     roles: [
-      { name: 'BOSS', description: '总部管理、全局数据', count: 1, isBoss: true },
+      { name: 'ADMIN', description: '总部管理、全局数据', count: 1, isBoss: true },
       { name: '区域经理', description: '管理多个门店、业绩汇总', count: -1 },
       { name: '店长', description: '单店管理、日常审批', count: -1 },
       { name: '销售', description: '独立接单、量尺报价', count: -1 },

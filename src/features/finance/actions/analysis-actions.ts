@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import {
@@ -207,6 +208,6 @@ const getOrderProfitabilityInternal = createSafeAction(
  * @param params `{ orderId: string }`
  * @returns Object 包含总计营收、详细成本清单、以及总毛利额和当前利润比。
  */
-export async function getOrderProfitability(params: z.infer<typeof getOrderProfitSchema>) {
+export const getOrderProfitability = cache(async (params: z.infer<typeof getOrderProfitSchema>) => {
   return getOrderProfitabilityInternal(params);
-}
+});

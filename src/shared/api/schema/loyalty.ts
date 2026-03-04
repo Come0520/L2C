@@ -3,10 +3,16 @@ import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 // orders 导入已移除（未使用）
 
-export const loyaltyTransactions = pgTable('loyalty_transactions', {
+export const loyaltyTransactions = pgTable(
+  'loyalty_transactions',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    customerId: uuid('customer_id')
+      .references(() => customers.id)
+      .notNull(),
 
     type: varchar('type', { length: 20 }).notNull(), // EARN, REDEEM, ADJUST, EXPIRE
     source: varchar('source', { length: 50 }).notNull(), // REFERRAL, ORDER, ADMIN, SYSTEM
@@ -17,9 +23,13 @@ export const loyaltyTransactions = pgTable('loyalty_transactions', {
     referenceId: uuid('reference_id'),
 
     description: text('description'),
+    // 审计字段 (H4 统一追加)
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     createdBy: uuid('created_by').references(() => users.id),
-}, (table) => ({
+  },
+  (table) => ({
     loyaltyCustomerIdx: index('idx_loyalty_customer').on(table.customerId),
     loyaltyRefIdx: index('idx_loyalty_ref').on(table.referenceId),
-}));
+  })
+);

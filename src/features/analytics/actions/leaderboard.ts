@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 /**
  * 业绩排名 — getLeaderboard
@@ -94,6 +95,6 @@ const getLeaderboardAction = createSafeAction(leaderboardSchema, async (params, 
   )();
 });
 
-export async function getLeaderboard(params: z.infer<typeof leaderboardSchema>) {
+export const getLeaderboard = cache(async (params: z.infer<typeof leaderboardSchema>) => {
   return getLeaderboardAction(params);
-}
+});

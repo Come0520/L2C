@@ -323,7 +323,7 @@ export async function updateTicketStatus(data: z.infer<typeof updateStatusSchema
  * @param ticketId - 需要查询日志历史轨迹的目标工单 ID
  * @returns 单据所有带有时间戳的历史状态快照集
  */
-export async function getTicketLogs(ticketId: string) {
+export const getTicketLogs = cache(async (ticketId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, message: '未授权' };
 
@@ -340,7 +340,7 @@ export async function getTicketLogs(ticketId: string) {
   });
 
   return { success: true, data: logs };
-}
+});
 
 /**
  * 进行单据层面的退款及衍生赔付成本全额结案操作
@@ -409,7 +409,7 @@ export async function closeResolutionCostClosure(ticketId: string) {
  * @param ticketId - 触发财务终结判断的工单凭证
  * @returns 描述是否已经没有遗漏而畅通的校验状态集
  */
-export async function checkTicketFinancialClosure(ticketId: string) {
+export const checkTicketFinancialClosure = cache(async (ticketId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -435,7 +435,7 @@ export async function checkTicketFinancialClosure(ticketId: string) {
   }
 
   return { success: true, isClosed: true, message: '所有财务流程已闭环' };
-}
+});
 
 /**
  * [演示占位] 快捷派生创建关联的换货类型采购工单

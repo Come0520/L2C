@@ -82,7 +82,7 @@ export async function getSalesDashboardStats(): Promise<{
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
 
-    const isTeamView = user.role === 'admin' || user.role === 'BOSS' || user.role === 'manager';
+    const isTeamView = user.role === 'ADMIN' || user.role === 'MANAGER';
 
     // Define cache wrapper function
     const getCachedStats = unstable_cache(

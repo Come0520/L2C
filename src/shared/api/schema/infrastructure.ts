@@ -7,7 +7,9 @@ import {
   timestamp,
   jsonb,
   pgEnum,
+  unique,
 } from 'drizzle-orm/pg-core';
+import { userRoleEnum } from './enums';
 
 /** 套餐类型枚举（租户级别）— 定义在此处以避免与 billing.ts 的循环依赖 */
 export const tenantPlanTypeEnum = pgEnum('tenant_plan_type', [
@@ -77,7 +79,7 @@ export const tenants = pgTable('tenants', {
   // interface TenantSettings {
   //     mfa?: {
   //         enabled: boolean;
-  //         roles: string[]; // e.g. ['BOSS', 'ADMIN']
+  //         roles: string[]; // e.g. ['ADMIN', 'ADMIN']
   //     };
   // }
   settings: jsonb('settings').default({}),
@@ -91,8 +93,13 @@ export const tenants = pgTable('tenants', {
   onboardingStatus: varchar('onboarding_status', { length: 20 }).default('pending'),
 
   isActive: boolean('is_active').default(true),
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date()),
 
   // ==================== 计费与套餐 ====================
   /**
@@ -116,30 +123,44 @@ export const tenants = pgTable('tenants', {
   isGrandfathered: boolean('is_grandfathered').default(false),
 });
 
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .references(() => tenants.id)
-    .notNull(),
-  email: varchar('email', { length: 255 }), // 可空，通过迁移脚本添加条件唯一索引 (tenantId, email)
-  name: varchar('name', { length: 100 }),
-  phone: varchar('phone', { length: 20 }).notNull(), // 必填，通过迁移脚本添加复合唯一索引 (tenantId, phone)
-  passwordHash: text('password_hash'),
-  role: varchar('role', { length: 50 }).default('SALES'),
-  roles: jsonb('roles').$type<string[]>().default([]),
-  permissions: jsonb('permissions').default([]), // For granular permissions
-  wechatOpenId: varchar('wechat_openid', { length: 100 }).unique(), // For WeChat Login
-  preferences: jsonb('preferences').default({}),
-  dashboardConfig: jsonb('dashboard_config').default({}),
-  isActive: boolean('is_active').default(true),
-  avatarUrl: text('avatar_url'),
-  notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
-  isPlatformAdmin: boolean('is_platform_admin').default(false), // 平台超级管理员标识
-  /** 上次活跃的租户 ID（登录时自动进入，类似 Slack "上次打开的 Workspace"） */
-  lastActiveTenantId: uuid('last_active_tenant_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    email: varchar('email', { length: 255 }), // 可空，通过迁移脚本添加条件唯一索引 (tenantId, email)
+    name: varchar('name', { length: 100 }),
+    phone: varchar('phone', { length: 20 }).notNull(), // 必填，通过迁移脚本添加复合唯一索引 (tenantId, phone)
+    passwordHash: text('password_hash'),
+    /** @deprecated 过渡期保留，权威数据源已迁移到 tenantMembers.role */
+    role: userRoleEnum('role').default('SALES'),
+    /** @deprecated 过渡期保留，权威数据源已迁移到 tenantMembers.roles */
+    roles: jsonb('roles').$type<string[]>().default([]),
+    permissions: jsonb('permissions').default([]), // For granular permissions
+    wechatOpenId: varchar('wechat_openid', { length: 100 }), // 微信登录，租户内唯一（见下方表级约束）
+    preferences: jsonb('preferences').default({}),
+    dashboardConfig: jsonb('dashboard_config').default({}),
+    isActive: boolean('is_active').default(true),
+    avatarUrl: text('avatar_url'),
+    notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
+    isPlatformAdmin: boolean('is_platform_admin').default(false), // 平台超级管理员标识
+    /** 上次活跃的租户 ID（登录时自动进入，类似 Slack "上次打开的 Workspace"） */
+    lastActiveTenantId: uuid('last_active_tenant_id'),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
+    /** M2 修复：微信 OpenID 在租户内唯一（同一微信用户可同时是不同租户的成员） */
+    usersTenantWechatUnq: unique('uq_users_tenant_wechat').on(table.tenantId, table.wechatOpenId),
+  })
+);
 
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -151,8 +172,13 @@ export const roles = pgTable('roles', {
   description: text('description'),
   permissions: jsonb('permissions').$type<string[]>().default([]),
   isSystem: boolean('is_system').default(false),
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date()),
 });
 
 export const sysDictionaries = pgTable('sys_dictionaries', {
@@ -166,6 +192,11 @@ export const sysDictionaries = pgTable('sys_dictionaries', {
   label: varchar('label', { length: 100 }),
   description: text('description'),
   isActive: boolean('is_active').default(true),
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date()),
 });

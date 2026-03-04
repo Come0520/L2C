@@ -1,0 +1,288 @@
+@use '../../styles/variables' as *;
+
+.order-bid-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .page-header {
+        background-color: $apple-blue;
+        color: #fff;
+        padding: 40rpx 40rpx 60rpx;
+        border-bottom-left-radius: 40rpx;
+        border-bottom-right-radius: 40rpx;
+
+        .title {
+            font-size: $font-title2;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 8rpx;
+        }
+
+        .subtitle {
+            font-size: $font-md;
+            opacity: 0.9;
+        }
+    }
+
+    .order-list {
+        flex: 1;
+        margin-top: -40rpx;
+        padding: 0 $spacing-md;
+        height: calc(100vh - 200rpx);
+
+        .order-card {
+            background-color: #fff;
+            border-radius: $radius-lg;
+            padding: $spacing-md $spacing-lg;
+            margin-bottom: $spacing-md;
+            box-shadow: $shadow-soft;
+
+            .card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px dashed $border-separator;
+                padding-bottom: $spacing-sm;
+                margin-bottom: $spacing-sm;
+
+                .left {
+                    display: flex;
+                    align-items: center;
+
+                    .tag {
+                        font-size: 20rpx;
+                        padding: 4rpx 12rpx;
+                        border-radius: $radius-sm;
+                        color: #fff;
+                        margin-right: $spacing-sm;
+                        font-weight: 600;
+
+                        &.measure {
+                            background-color: $apple-orange;
+                        }
+
+                        &.install {
+                            background-color: $apple-blue;
+                        }
+                    }
+
+                    .order-id {
+                        font-size: $font-sm;
+                        color: $text-secondary;
+                    }
+                }
+
+                .distance {
+                    font-size: $font-sm;
+                    color: $apple-blue;
+                    font-weight: 600;
+                    background-color: rgba(0, 113, 227, 0.1);
+                    padding: 4rpx 12rpx;
+                    border-radius: $radius-full;
+                }
+            }
+
+            .card-body {
+                padding: $spacing-sm 0;
+
+                .info-row {
+                    display: flex;
+                    margin-bottom: 12rpx;
+                    font-size: $font-md;
+                    line-height: 1.5;
+
+                    .label {
+                        color: $text-secondary;
+                        width: 140rpx;
+                        flex-shrink: 0;
+                    }
+
+                    .value {
+                        color: $text-title;
+                        flex: 1;
+
+                        &.highlight {
+                            color: $apple-red;
+                            font-weight: 500;
+                        }
+                    }
+                }
+            }
+
+            .card-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: $spacing-sm;
+                padding-top: $spacing-sm;
+                border-top: 1px solid $border-separator;
+
+                .price-area {
+                    display: flex;
+                    flex-direction: column;
+
+                    .label {
+                        font-size: $font-sm;
+                        color: $text-secondary;
+                    }
+
+                    .price {
+                        font-size: $font-title2;
+                        font-weight: 700;
+                        color: $apple-orange;
+                        font-family: 'SF Pro Display', sans-serif;
+                    }
+                }
+
+                .action-area {
+                    display: flex;
+                    gap: 16rpx;
+
+                    .btn {
+                        height: 64rpx;
+                        border-radius: $radius-full;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: $font-sm;
+                        font-weight: 600;
+                        padding: 0 32rpx;
+                        margin: 0;
+
+                        &::after {
+                            border: none;
+                        }
+
+                        &.reject {
+                            background-color: $bg-base;
+                            color: $text-secondary;
+                        }
+
+                        &.counter {
+                            background-color: rgba(255, 149, 0, 0.1);
+                            color: $apple-orange;
+                        }
+
+                        &.accept {
+                            background-color: $apple-blue;
+                            color: #fff;
+                        }
+
+                        &:active {
+                            opacity: 0.8;
+                        }
+                    }
+                }
+            }
+        }
+
+        .empty-state {
+            padding: 100rpx 0;
+            text-align: center;
+
+            .empty-text {
+                font-size: $font-md;
+                color: $text-placeholder;
+            }
+        }
+    }
+
+    // Modal
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .modal-content {
+            background-color: #fff;
+            width: 85%;
+            border-radius: $radius-lg;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+
+            .modal-header {
+                padding: $spacing-md $spacing-lg;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid $border-separator;
+
+                .modal-title {
+                    font-size: $font-lg;
+                    font-weight: 600;
+                    color: $text-title;
+                }
+
+                .close-btn {
+                    font-size: 48rpx;
+                    color: $text-secondary;
+                    padding: 0 10rpx;
+                }
+            }
+
+            .modal-body {
+                padding: $spacing-xl $spacing-lg;
+
+                .form-item {
+                    margin-bottom: $spacing-lg;
+
+                    .label {
+                        font-size: $font-md;
+                        color: $text-title;
+                        display: block;
+                        margin-bottom: $spacing-sm;
+                    }
+
+                    .input {
+                        background-color: $bg-base;
+                        height: 88rpx;
+                        border-radius: $radius-md;
+                        padding: 0 $spacing-md;
+                        font-size: $font-md;
+
+                        &.price-input {
+                            font-size: $font-lg;
+                            font-weight: 600;
+                            color: $apple-orange;
+                        }
+                    }
+                }
+            }
+
+            .modal-footer {
+                padding: $spacing-md $spacing-lg;
+                padding-bottom: $spacing-xl;
+
+                .submit-btn {
+                    background-color: $apple-blue;
+                    color: #fff;
+                    height: 88rpx;
+                    border-radius: $radius-full;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: $font-lg;
+                    font-weight: 600;
+
+                    &::after {
+                        border: none;
+                    }
+
+                    &:active {
+                        opacity: 0.8;
+                    }
+                }
+            }
+        }
+    }
+}

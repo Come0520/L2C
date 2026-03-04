@@ -1,0 +1,161 @@
+@use '../../styles/variables' as *;
+
+.lead-detail-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .detail-scroll {
+        flex: 1;
+        padding-bottom: 200rpx;
+    }
+
+    .card {
+        background-color: #fff;
+        border-radius: $radius-lg;
+        padding: $spacing-lg;
+        margin: $spacing-md;
+        box-shadow: $shadow-soft;
+    }
+
+    .info-card {
+        .lead-name {
+            font-size: $font-title3;
+            font-weight: 700;
+            color: $text-title;
+            display: block;
+            margin-bottom: 8rpx;
+        }
+
+        .lead-phone {
+            font-size: $font-lg;
+            color: $apple-blue;
+            font-weight: 500;
+            display: block;
+            margin-bottom: $spacing-md;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: $spacing-sm;
+
+            .info-label {
+                color: $text-secondary;
+                font-size: $font-md;
+            }
+
+            .info-value {
+                color: $text-title;
+                font-size: $font-md;
+                font-weight: 500;
+
+                &.status {
+                    color: $apple-orange;
+                }
+            }
+        }
+    }
+
+    .activities-section {
+        .section-header {
+            padding: 0 $spacing-md;
+            margin-top: $spacing-lg;
+            margin-bottom: $spacing-sm;
+            align-items: center;
+
+            .section-title {
+                font-size: $font-lg;
+                font-weight: 600;
+                color: $text-title;
+            }
+
+            .btn-add-activity {
+                color: $apple-blue;
+                font-size: $font-sm;
+                font-weight: 500;
+            }
+        }
+
+        .activity-item {
+            .activity-type {
+                font-size: $font-sm;
+                color: #fff;
+                background-color: $text-secondary;
+                padding: 4rpx 12rpx;
+                border-radius: $radius-sm;
+            }
+
+            .activity-date {
+                font-size: $font-xs;
+                color: $text-placeholder;
+            }
+
+            .activity-content {
+                display: block;
+                margin-top: $spacing-sm;
+                font-size: $font-md;
+                color: $text-title;
+                line-height: 1.5;
+            }
+        }
+
+        .empty {
+            padding: $spacing-xl 0;
+
+            .empty-text {
+                color: $text-placeholder;
+                font-size: $font-sm;
+            }
+        }
+    }
+
+    .bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        padding: $spacing-md;
+        box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+        z-index: 100;
+        display: flex;
+        gap: $spacing-md;
+
+        .btn {
+            flex: 1;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-md;
+            font-weight: 500;
+
+            &:active {
+                opacity: 0.8;
+            }
+
+            &.btn-outline {
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                color: $text-title;
+            }
+
+            &.btn-primary {
+                background-color: $apple-blue;
+                color: #fff;
+                flex: 2;
+                /* 写跟进按钮更宽一点 */
+            }
+        }
+
+        .safe-bottom-space {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-bottom);
+        }
+    }
+}

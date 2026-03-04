@@ -21,38 +21,38 @@ import { useRouter } from 'next/navigation';
  * 移动端用户信息
  */
 export interface MobileUser {
-    id: string;
-    name: string | null;
-    phone: string | null;
-    role: 'WORKER' | 'SALES' | 'BOSS' | 'PURCHASER' | 'CUSTOMER';
-    tenantId?: string;
-    avatar?: string | null;
+  id: string;
+  name: string | null;
+  phone: string | null;
+  role: 'WORKER' | 'SALES' | 'ADMIN' | 'PURCHASER' | 'CUSTOMER';
+  tenantId?: string;
+  avatar?: string | null;
 }
 
 /**
  * 登录响应
  */
 interface LoginResponse {
-    success: boolean;
-    data?: {
-        accessToken: string;
-        refreshToken: string;
-        expiresIn: number;
-        user: MobileUser;
-    };
-    message?: string;
+  success: boolean;
+  data?: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    user: MobileUser;
+  };
+  message?: string;
 }
 
 /**
  * Auth Context 值
  */
 interface MobileAuthContextValue {
-    user: MobileUser | null;
-    isLoading: boolean;
-    isAuthenticated: boolean;
-    login: (phone: string, password: string) => Promise<{ success: boolean; message?: string }>;
-    logout: () => void;
-    getToken: () => string | null;
+  user: MobileUser | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (phone: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  logout: () => void;
+  getToken: () => string | null;
 }
 
 // ============================================================
@@ -74,93 +74,89 @@ const MobileAuthContext = createContext<MobileAuthContextValue | undefined>(unde
 // ============================================================
 
 interface MobileAuthProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 export function MobileAuthProvider({ children }: MobileAuthProviderProps) {
-    const router = useRouter();
+  const router = useRouter();
 
-    // 使用惰性初始化从 localStorage 恢复用户会话
-    const [user, setUser] = useState<MobileUser | null>(() => {
-        // 仅在客户端执行
-        if (typeof window === 'undefined') return null;
+  // 使用惰性初始化从 localStorage 恢复用户会话
+  const [user, setUser] = useState<MobileUser | null>(() => {
+    // 仅在客户端执行
+    if (typeof window === 'undefined') return null;
 
-        const storedUser = localStorage.getItem(USER_KEY);
-        const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const storedUser = localStorage.getItem(USER_KEY);
+    const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
 
-        if (storedUser && storedToken) {
-            try {
-                return JSON.parse(storedUser) as MobileUser;
-            } catch {
-                // JSON 解析失败，清理存储
-                localStorage.removeItem(USER_KEY);
-                localStorage.removeItem(ACCESS_TOKEN_KEY);
-                return null;
-            }
-        }
-        return null;
-    });
-
-    // 由于用户状态通过惰性初始化同步恢复，加载状态直接为 false
-    const [isLoading] = useState(false);
-
-    // 登录
-    const login = useCallback(async (phone: string, password: string) => {
-        try {
-            const response = await fetch('/api/mobile/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, password }),
-            });
-
-            const data: LoginResponse = await response.json();
-
-            if (data.success && data.data) {
-                // 存储 Token 和用户信息
-                localStorage.setItem(ACCESS_TOKEN_KEY, data.data.accessToken);
-                localStorage.setItem(REFRESH_TOKEN_KEY, data.data.refreshToken);
-                localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
-
-                setUser(data.data.user);
-                return { success: true };
-            } else {
-                return { success: false, message: data.message || '登录失败' };
-            }
-        } catch (error) {
-            // 方案：客户端使用 console.error 是合理的（无法使用服务端 logger）
-            console.error('Login error:', error);
-            return { success: false, message: '网络错误，请稍后重试' };
-        }
-    }, []);
-
-    // 登出
-    const logout = useCallback(() => {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
+    if (storedUser && storedToken) {
+      try {
+        return JSON.parse(storedUser) as MobileUser;
+      } catch {
+        // JSON 解析失败，清理存储
         localStorage.removeItem(USER_KEY);
-        setUser(null);
-        router.push('/mobile/login');
-    }, [router]);
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        return null;
+      }
+    }
+    return null;
+  });
 
-    // 获取 Token
-    const getToken = useCallback(() => {
-        return localStorage.getItem(ACCESS_TOKEN_KEY);
-    }, []);
+  // 由于用户状态通过惰性初始化同步恢复，加载状态直接为 false
+  const [isLoading] = useState(false);
 
-    const value: MobileAuthContextValue = {
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        getToken,
-    };
+  // 登录
+  const login = useCallback(async (phone: string, password: string) => {
+    try {
+      const response = await fetch('/api/mobile/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password }),
+      });
 
-    return (
-        <MobileAuthContext.Provider value={value}>
-            {children}
-        </MobileAuthContext.Provider>
-    );
+      const data: LoginResponse = await response.json();
+
+      if (data.success && data.data) {
+        // 存储 Token 和用户信息
+        localStorage.setItem(ACCESS_TOKEN_KEY, data.data.accessToken);
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.data.refreshToken);
+        localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+
+        setUser(data.data.user);
+        return { success: true };
+      } else {
+        return { success: false, message: data.message || '登录失败' };
+      }
+    } catch (error) {
+      // 方案：客户端使用 console.error 是合理的（无法使用服务端 logger）
+      console.error('Login error:', error);
+      return { success: false, message: '网络错误，请稍后重试' };
+    }
+  }, []);
+
+  // 登出
+  const logout = useCallback(() => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+    router.push('/mobile/login');
+  }, [router]);
+
+  // 获取 Token
+  const getToken = useCallback(() => {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  }, []);
+
+  const value: MobileAuthContextValue = {
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+    login,
+    logout,
+    getToken,
+  };
+
+  return <MobileAuthContext.Provider value={value}>{children}</MobileAuthContext.Provider>;
 }
 
 // ============================================================
@@ -171,9 +167,9 @@ export function MobileAuthProvider({ children }: MobileAuthProviderProps) {
  * 使用移动端认证上下文
  */
 export function useMobileAuth() {
-    const context = useContext(MobileAuthContext);
-    if (context === undefined) {
-        throw new Error('useMobileAuth must be used within a MobileAuthProvider');
-    }
-    return context;
+  const context = useContext(MobileAuthContext);
+  if (context === undefined) {
+    throw new Error('useMobileAuth must be used within a MobileAuthProvider');
+  }
+  return context;
 }

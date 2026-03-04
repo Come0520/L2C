@@ -52,26 +52,6 @@ vi.mock('@/shared/api/schema', () => ({
   },
 }));
 
-vi.mock('@/shared/api/schema/enums', () => ({
-  productCategoryEnum: {
-    enumValues: [
-      'CURTAIN',
-      'WALLPAPER',
-      'WALLCLOTH',
-      'MATTRESS',
-      'OTHER',
-      'CURTAIN_FABRIC',
-      'CURTAIN_SHEER',
-      'CURTAIN_TRACK',
-      'MOTOR',
-      'CURTAIN_ACCESSORY',
-    ],
-  },
-  productTypeEnum: {
-    enumValues: ['FINISHED', 'RAW_MATERIAL'],
-  },
-}));
-
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
   checkPermission: vi.fn(),

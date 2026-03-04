@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           todos: [],
         };
 
-        if (user.role === 'admin' || user.role === 'BOSS') {
+        if (user.role === 'ADMIN' || user.role === 'ADMIN') {
           // --- ADMIN VIEW ---
 
           // 0. Get Team Target (Sum of all sales targets for this month)
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
             avgOrderValue:
               ordersCount[0].count > 0 ? (totalCash / ordersCount[0].count).toFixed(0) : '0',
           };
-        } else if (user.role === 'sales') {
+        } else if (user.role === 'SALES') {
           // --- SALES VIEW ---
 
           // 0. Get My Target
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
     Object.assign(data, cachedData);
 
     // 对于近期跟进表单及待办列表，需要实时体现业务办理变化，因此在缓存外查询
-    if (user.role === 'admin' || user.role === 'BOSS') {
+    if (user.role === 'ADMIN' || user.role === 'ADMIN') {
       const recentQuotes = await db.query.quotes.findMany({
         where: eq(quotes.tenantId, user.tenantId),
         orderBy: (quotes, { desc }) => [desc(quotes.createdAt)],
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
         desc: `客户: ${q.customer?.name || '未知'} | 销售: ${q.creator?.name || '未知'}`,
         time: q.createdAt ? new Date(q.createdAt).toLocaleDateString() : '',
       }));
-    } else if (user.role === 'sales') {
+    } else if (user.role === 'SALES') {
       const myRecentQuotes = await db.query.quotes.findMany({
         where: and(eq(quotes.tenantId, user.tenantId), eq(quotes.createdBy, user.id)),
         orderBy: (quotes, { desc }) => [desc(quotes.createdAt)],

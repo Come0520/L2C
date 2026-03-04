@@ -120,7 +120,7 @@ export async function getRoles(session: Session): Promise<{
     const rolesWithCount: RoleDTO[] = await Promise.all(
       roleList.map(async (role) => {
         const userList = await db.query.users.findMany({
-          where: and(eq(users.tenantId, session.user.tenantId), eq(users.role, role.name)),
+          where: and(eq(users.tenantId, session.user.tenantId), eq(users.role, role.name as any)),
           columns: { id: true },
         });
 
@@ -338,7 +338,7 @@ const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { ses
   const activeUsers = await db.query.users.findMany({
     where: and(
       eq(users.tenantId, session.user.tenantId),
-      eq(users.role, targetRole.name),
+      eq(users.role, targetRole.name as any),
       eq(users.isActive, true)
     ),
     columns: { id: true },

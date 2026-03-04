@@ -6,24 +6,24 @@ import { env } from '@/shared/config/env';
 /**
  * JWT Token 有效期配置
  */
-const ACCESS_TOKEN_EXPIRY = '24h';  // 访问令牌：24小时
-const REFRESH_TOKEN_EXPIRY = '7d';  // 刷新令牌：7天
+const ACCESS_TOKEN_EXPIRY = '24h'; // 访问令牌：24小时
+const REFRESH_TOKEN_EXPIRY = '7d'; // 刷新令牌：7天
 
 /**
  * 移动端用户角色
  * 统一管理角色定义，避免循环依赖
  */
-export type MobileRole = 'WORKER' | 'SALES' | 'BOSS' | 'PURCHASER' | 'CUSTOMER';
+export type MobileRole = 'WORKER' | 'SALES' | 'ADMIN' | 'PURCHASER' | 'CUSTOMER';
 
 /**
  * 移动端 Token 载荷接口
  */
 export interface MobileTokenPayload extends JWTPayload {
-    userId: string;
-    tenantId: string;
-    phone: string;
-    role: MobileRole;
-    type: 'access' | 'refresh' | 'pre-auth';
+  userId: string;
+  tenantId: string;
+  phone: string;
+  role: MobileRole;
+  type: 'access' | 'refresh' | 'pre-auth';
 }
 
 // ... (existing getSecretKey)
@@ -33,41 +33,41 @@ export interface MobileTokenPayload extends JWTPayload {
  * 有效期：5分钟
  */
 export async function generatePreAuthToken(
-    userId: string,
-    tenantId: string,
-    phone: string,
-    role: string
+  userId: string,
+  tenantId: string,
+  phone: string,
+  role: string
 ): Promise<string> {
-    const token = await new SignJWT({
-        userId,
-        tenantId,
-        phone,
-        role: role as MobileRole,
-        type: 'pre-auth',
-    })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('5m')
-        .setIssuer('l2c-mobile')
-        .sign(getSecretKey());
+  const token = await new SignJWT({
+    userId,
+    tenantId,
+    phone,
+    role: role as MobileRole,
+    type: 'pre-auth',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .setIssuer('l2c-mobile')
+    .sign(getSecretKey());
 
-    return token;
+  return token;
 }
 
 /**
  * 获取 JWT 密钥
- * 
+ *
  * @throws 如果 AUTH_SECRET 未设置或长度不足 32 字符
  */
 function getSecretKey(): Uint8Array {
-    const secret = env.AUTH_SECRET;
-    if (!secret || secret.length < 32) {
-        throw new Error(
-            '安全配置错误: AUTH_SECRET 环境变量未设置或长度不足 32 字符。' +
-            '请在 .env 文件中设置有效的 AUTH_SECRET。'
-        );
-    }
-    return new TextEncoder().encode(secret);
+  const secret = env.AUTH_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      '安全配置错误: AUTH_SECRET 环境变量未设置或长度不足 32 字符。' +
+        '请在 .env 文件中设置有效的 AUTH_SECRET。'
+    );
+  }
+  return new TextEncoder().encode(secret);
 }
 
 /**
@@ -78,27 +78,27 @@ function getSecretKey(): Uint8Array {
  * @param role 用户角色
  */
 export async function generateAccessToken(
-    userId: string,
-    tenantId: string,
-    phone: string,
-    role: string
+  userId: string,
+  tenantId: string,
+  phone: string,
+  role: string
 ): Promise<string> {
-    // 简单验证 role 是否合法，或者做转换
-    // 这里为了兼容性，暂时接受 string，但 Payload 需断言
-    const token = await new SignJWT({
-        userId,
-        tenantId,
-        phone,
-        role: role as MobileRole,
-        type: 'access',
-    })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime(ACCESS_TOKEN_EXPIRY)
-        .setIssuer('l2c-mobile')
-        .sign(getSecretKey());
+  // 简单验证 role 是否合法，或者做转换
+  // 这里为了兼容性，暂时接受 string，但 Payload 需断言
+  const token = await new SignJWT({
+    userId,
+    tenantId,
+    phone,
+    role: role as MobileRole,
+    type: 'access',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(ACCESS_TOKEN_EXPIRY)
+    .setIssuer('l2c-mobile')
+    .sign(getSecretKey());
 
-    return token;
+  return token;
 }
 
 /**
@@ -109,25 +109,25 @@ export async function generateAccessToken(
  * @param role 用户角色 (刷新 Token 也包含 role 以便恢复)
  */
 export async function generateRefreshToken(
-    userId: string,
-    tenantId: string,
-    phone: string,
-    role: string
+  userId: string,
+  tenantId: string,
+  phone: string,
+  role: string
 ): Promise<string> {
-    const token = await new SignJWT({
-        userId,
-        tenantId,
-        phone,
-        role: role as MobileRole,
-        type: 'refresh',
-    })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime(REFRESH_TOKEN_EXPIRY)
-        .setIssuer('l2c-mobile')
-        .sign(getSecretKey());
+  const token = await new SignJWT({
+    userId,
+    tenantId,
+    phone,
+    role: role as MobileRole,
+    type: 'refresh',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(REFRESH_TOKEN_EXPIRY)
+    .setIssuer('l2c-mobile')
+    .sign(getSecretKey());
 
-    return token;
+  return token;
 }
 
 /**
@@ -136,15 +136,15 @@ export async function generateRefreshToken(
  * @returns 解析后的载荷，失败返回 null
  */
 export async function verifyToken(token: string): Promise<MobileTokenPayload | null> {
-    try {
-        const { payload } = await jwtVerify(token, getSecretKey(), {
-            issuer: 'l2c-mobile',
-        });
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey(), {
+      issuer: 'l2c-mobile',
+    });
 
-        return payload as MobileTokenPayload;
-    } catch {
-        return null;
-    }
+    return payload as MobileTokenPayload;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -153,12 +153,12 @@ export async function verifyToken(token: string): Promise<MobileTokenPayload | n
  * @returns 解析后的载荷，失败返回 null
  */
 export async function extractAndVerifyToken(
-    authHeader: string | null
+  authHeader: string | null
 ): Promise<MobileTokenPayload | null> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
 
-    const token = authHeader.slice(7); // 移除 "Bearer " 前缀
-    return verifyToken(token);
+  const token = authHeader.slice(7); // 移除 "Bearer " 前缀
+  return verifyToken(token);
 }

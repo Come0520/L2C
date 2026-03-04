@@ -54,7 +54,7 @@ export default function MobileProfilePage() {
                 ? '工人'
                 : user.role === 'SALES'
                   ? '销售'
-                  : user.role === 'BOSS'
+                  : user.role === 'ADMIN'
                     ? '老板'
                     : user.role === 'PURCHASER'
                       ? '采购'

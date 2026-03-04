@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
@@ -150,6 +151,6 @@ const getAfterSalesHealthAction = createSafeAction(
  * 导出：获取售后健康度指标分析
  * @param params - 查询参数
  */
-export async function getAfterSalesHealth(params: z.infer<typeof afterSalesHealthSchema>) {
+export const getAfterSalesHealth = cache(async (params: z.infer<typeof afterSalesHealthSchema>) => {
   return getAfterSalesHealthAction(params);
-}
+});

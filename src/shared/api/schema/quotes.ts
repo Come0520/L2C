@@ -84,7 +84,10 @@ export const quotes = pgTable(
       .where(sql`is_active = true`),
     // Performance Optimization (R3)
     quoteTenantStatusIdx: index('idx_quotes_tenant_status').on(table.tenantId, table.status),
-    quoteTenantCustomerIdx: index('idx_quotes_tenant_customer').on(table.tenantId, table.customerId),
+    quoteTenantCustomerIdx: index('idx_quotes_tenant_customer').on(
+      table.tenantId,
+      table.customerId
+    ),
     quoteTenantCreatedIdx: index('idx_quotes_tenant_created').on(table.tenantId, table.createdAt),
   })
 );
@@ -104,6 +107,9 @@ export const quoteRooms = pgTable(
     measureRoomId: uuid('measure_room_id'), // Link to measurement room if applicable
 
     sortOrder: integer('sort_order').default(0),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -154,6 +160,9 @@ export const quoteItems = pgTable(
     remark: text('remark'),
     sortOrder: integer('sort_order').default(0),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -178,6 +187,9 @@ export const quotePlans = pgTable(
     name: varchar('name', { length: 100 }).notNull(),
     description: text('description'),
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
@@ -199,6 +211,9 @@ export const quotePlanItems = pgTable('quote_plan_items', {
     .notNull(), // 模板关联
   overridePrice: decimal('override_price', { precision: 10, scale: 2 }),
   role: varchar('role', { length: 50 }).notNull(),
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -256,6 +271,9 @@ export const quoteTemplateRooms = pgTable(
 
     name: varchar('name', { length: 100 }).notNull(),
     sortOrder: integer('sort_order').default(0),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
@@ -292,6 +310,9 @@ export const quoteTemplateItems = pgTable(
 
     attributes: jsonb('attributes').$type<QuoteItemAttributes>().default({}),
     sortOrder: integer('sort_order').default(0),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({

@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         .update(users)
         .set({
           tenantId: invite.tenantId,
-          role: invite.role,
+          role: invite.role as any,
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
@@ -85,10 +85,9 @@ export async function POST(request: NextRequest) {
       const [newUser] = await db
         .insert(users)
         .values({
-          email: null,
           phone: `WX_${openId.slice(0, 15)}`,
           tenantId: invite.tenantId,
-          role: invite.role,
+          role: invite.role as any,
           wechatOpenId: openId,
           name: '微信用户',
           isActive: true,

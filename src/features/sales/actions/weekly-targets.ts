@@ -56,7 +56,7 @@ export async function getWeeklyTargets(
           eq(salesWeeklyTargets.week, week)
         )
       )
-      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
+      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'SALES'), eq(users.isActive, true)));
 
     // 计算该周的日期范围
     const weekDate = new Date(year, 0, 1 + (week - 1) * 7);

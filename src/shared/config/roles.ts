@@ -19,40 +19,31 @@ export interface RoleDefinition {
  * 系统预设角色配置
  */
 export const ROLES: Record<string, RoleDefinition> = {
-  // ==================== 老板（全知全能） ====================
+  // ==================== 平台超级管理员（L2C 运营人员，跨所有租户） ====================
+  SUPER_ADMIN: {
+    code: 'SUPER_ADMIN',
+    name: '平台超级管理员',
+    description: 'L2C 平台运营人员，可跨租户查看和管理所有数据。内部使用，不对外开放',
+    isSystem: true,
+    permissions: [PERMISSIONS.GLOBAL.ADMIN],
+  },
+
+  // ==================== 老板（企业创始人，全业务视野） ====================
   BOSS: {
     code: 'BOSS',
     name: '老板',
-    description: '企业老板，全知全能，拥有系统全部权限，不受任何限制',
+    description: '企业创始人，拥有全部业务数据访问权，不厯被降级或删除，是租户的最高权限持有者',
     isSystem: true,
-    permissions: [
-      // 全局超级权限，覆盖所有模块所有操作
-      PERMISSIONS.GLOBAL.ADMIN,
-    ],
+    permissions: [PERMISSIONS.GLOBAL.ADMIN],
   },
 
-  // ==================== 租户超级管理员 ====================
-  TENANT_ADMIN: {
-    code: 'TENANT_ADMIN',
-    name: '超级管理员',
-    description: '租户超级管理员，拥有全部模块的全部权限',
-    isSystem: true,
-    permissions: [
-      // 全局权限 - 等同于 ADMIN
-      PERMISSIONS.GLOBAL.ADMIN,
-    ],
-  },
-
-  // ==================== 管理员 ====================
+  // ==================== 管理员（被老板授权的系统管理员） ====================
   ADMIN: {
     code: 'ADMIN',
     name: '管理员',
-    description: '租户老板/超级管理员，拥有全部权限',
+    description: '被老板授权的租户管理员，负责系统、用户、角色的日常维护',
     isSystem: true,
-    permissions: [
-      // 全局权限
-      PERMISSIONS.GLOBAL.ADMIN,
-    ],
+    permissions: [PERMISSIONS.GLOBAL.ADMIN],
   },
 
   // ==================== 经理 ====================
@@ -301,18 +292,19 @@ export function getRoleDefinition(code: string): RoleDefinition | undefined {
 }
 
 /**
- * 角色代码到中文名称的映射
+ * 角色代码到中文名称的映射（10 个核心角色）
  */
 export const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: '平台超级管理员',
   BOSS: '老板',
-  TENANT_ADMIN: '超级管理员',
   ADMIN: '管理员',
   MANAGER: '经理',
-  SALES: '销售',
   DISPATCHER: '派单员',
-  SUPPLY: '采购',
+  SALES: '销售',
   FINANCE: '财务',
   WORKER: '工人',
+  CUSTOMER: '客户',
+  SUPPLY: '采购',
 };
 
 /**

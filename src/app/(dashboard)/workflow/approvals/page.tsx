@@ -1,5 +1,6 @@
 import { ApprovalTaskList } from '@/features/approval/components/approval-task-list';
 import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { Suspense } from 'react';
 import { getPendingApprovals, getProcessedApprovals } from '@/features/approval/actions/queries';
 import { type ApprovalTask } from '@/features/approval/schema';
@@ -39,7 +40,7 @@ export default async function ApprovalsPage({
 
       <div className="glass-liquid-ultra flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/20 p-4">
         <div className="min-h-0 flex-1 overflow-auto">
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense fallback={<TableSkeleton />}>
             <ApprovalTaskList tasks={tasks} isPending={tab === 'pending'} pagination={pagination} />
           </Suspense>
         </div>

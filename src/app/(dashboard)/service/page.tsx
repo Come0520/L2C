@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { getServiceTickets } from '@/features/service/actions/ticket-actions';
 import { TicketList } from '@/features/service/components/ticket-list';
 
@@ -30,7 +31,7 @@ export default async function ServiceTicketsPage({
       {/* Title moved to Layout/Header, so we can remove it here or keep it if strictly needed, 
                 but based on task list "移除页面内部标题", we should remove it. 
                 However, to stay safe, I'll remove the header div. */}
-      <Suspense fallback={<div>Loading tickets...</div>}>
+      <Suspense fallback={<TableSkeleton />}>
         <TicketList
           tickets={tickets || []}
           total={total || 0}

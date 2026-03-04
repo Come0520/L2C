@@ -165,7 +165,7 @@ export function QuickQuoteFieldConfig() {
           </CardHeader>
           <CardContent className="space-y-6">
             {Object.entries(FIELD_GROUPS)
-              .sort((a, b) => a[1].order - b[1].order)
+              .toSorted((a, b) => a[1].order - b[1].order)
               .map(([groupKey, groupInfo]) => (
                 <div key={groupKey} className="space-y-3">
                   <h4 className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
@@ -217,7 +217,7 @@ export function QuickQuoteFieldConfig() {
           <CardContent>
             <div className="space-y-4">
               {Object.entries(FIELD_GROUPS)
-                .sort((a, b) => a[1].order - b[1].order)
+                .toSorted((a, b) => a[1].order - b[1].order)
                 .map(([groupKey, groupInfo]) => {
                   const groupFields = selectedFields.filter((f) => f.group === groupKey);
                   if (groupFields.length === 0) return null;

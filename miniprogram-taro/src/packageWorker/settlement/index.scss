@@ -1,0 +1,199 @@
+@use '../../styles/variables' as *;
+
+.worker-settlement-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .dashboard {
+        background: linear-gradient(135deg, $apple-blue, #1A56DB);
+        color: #fff;
+        padding: 60rpx $spacing-lg 80rpx;
+        border-bottom-left-radius: 40rpx;
+        border-bottom-right-radius: 40rpx;
+        box-shadow: 0 10rpx 30rpx rgba(0, 113, 227, 0.2);
+        z-index: 10;
+        position: relative;
+
+        .main-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: $spacing-xl;
+
+            .label {
+                font-size: $font-sm;
+                opacity: 0.8;
+                margin-bottom: 8rpx;
+            }
+
+            .value {
+                font-size: 80rpx;
+                font-weight: 800;
+                font-family: 'SF Pro Display', sans-serif;
+            }
+        }
+
+        .sub-stats {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: $radius-lg;
+            padding: $spacing-md 0;
+            backdrop-filter: blur(10px);
+
+            .stat-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                flex: 1;
+
+                .val {
+                    font-size: $font-title3;
+                    font-weight: 700;
+                    margin-bottom: 4rpx;
+                    font-family: 'SF Pro Display', sans-serif;
+                }
+
+                .lbl {
+                    font-size: $font-xs;
+                    opacity: 0.8;
+                }
+            }
+
+            .divider {
+                width: 2rpx;
+                height: 48rpx;
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        }
+    }
+
+    .tabs {
+        display: flex;
+        background-color: #fff;
+        padding: 0 $spacing-lg;
+        margin-top: -32rpx;
+        padding-top: 50rpx;
+        border-bottom: 1px solid $border-separator;
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: $spacing-md 0;
+            font-size: $font-md;
+            color: $text-secondary;
+            font-weight: 500;
+            position: relative;
+            transition: all 0.3s;
+
+            &.active {
+                color: $apple-blue;
+                font-weight: 600;
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 40rpx;
+                    height: 6rpx;
+                    background-color: $apple-blue;
+                    border-radius: 4rpx;
+                }
+            }
+        }
+    }
+
+    .record-list {
+        flex: 1;
+        padding: $spacing-md;
+
+        .record-card {
+            background-color: #fff;
+            border-radius: $radius-md;
+            padding: $spacing-md;
+            margin-bottom: $spacing-md;
+            box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.02);
+
+            .card-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: $spacing-sm;
+
+                .left {
+                    display: flex;
+                    align-items: center;
+
+                    .tag {
+                        font-size: 20rpx;
+                        padding: 4rpx 12rpx;
+                        border-radius: $radius-sm;
+                        color: #fff;
+                        font-weight: 600;
+                        margin-right: $spacing-sm;
+
+                        &.measure {
+                            background-color: $apple-orange;
+                        }
+
+                        &.install {
+                            background-color: $apple-blue;
+                        }
+                    }
+
+                    .task-no {
+                        font-size: $font-sm;
+                        color: $text-title;
+                        font-weight: 500;
+                    }
+                }
+
+                .status {
+                    font-size: $font-sm;
+                    font-weight: 500;
+
+                    &.pending {
+                        color: $apple-orange;
+                    }
+
+                    &.settled {
+                        color: $apple-green;
+                    }
+                }
+            }
+
+            .card-bottom {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top: 1px dashed $border-separator;
+                padding-top: $spacing-sm;
+                margin-top: $spacing-sm;
+
+                .date {
+                    font-size: $font-xs;
+                    color: $text-secondary;
+                }
+
+                .amount {
+                    font-size: $font-lg;
+                    font-weight: 700;
+                    color: $text-title;
+                    font-family: 'SF Pro Display', sans-serif;
+                }
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80rpx 0;
+            color: $text-placeholder;
+            font-size: $font-md;
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sales 模块综合测试
  * 覆盖：targets CRUD + 权限控制 + Zod 校验 + AuditService 审计 + dashboard 视图隔离
  */
@@ -83,7 +83,7 @@ const CURRENT_MONTH = new Date().getMonth() + 1;
 
 /** 构造 Session 辅助函数 */
 const makeSession = (
-  role: string = 'BOSS',
+  role: string = 'ADMIN',
   tenantId: string = TENANT_A,
   userId: string = ADMIN_ID
 ) => ({
@@ -103,7 +103,7 @@ describe('Sales 模块测试', () => {
     // 默认 DB Mock 返回值
     mockDbFindFirstUsers.mockResolvedValue({
       id: ADMIN_ID,
-      role: 'BOSS',
+      role: 'ADMIN',
       tenantId: TENANT_A,
     });
     mockDbFindFirstTargets.mockResolvedValue(null);
@@ -219,8 +219,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('BOSS 角色应成功更新目标', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbFindFirstTargets.mockResolvedValue(null);
       mockDbInsertOnConflict.mockResolvedValue([]);
       const result = await updateSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH, 100000);
@@ -228,8 +228,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('新建目标时 AuditService.log 应以 CREATE 被调用', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbFindFirstTargets.mockResolvedValue(null); // 无旧记录 → CREATE
       mockDbInsertOnConflict.mockResolvedValue([]);
       await updateSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH, 50000);
@@ -241,8 +241,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('更新已有目标时 AuditService.log 应以 UPDATE 被调用，且包含 oldValues', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       // 旧目标存在
       mockDbFindFirstTargets.mockResolvedValue({
         id: 'target-abc',
@@ -266,14 +266,14 @@ describe('Sales 模块测试', () => {
     });
 
     it('Zod 校验：负金额应返回错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
       const result = await updateSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH, -1);
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
 
     it('Zod 校验：userId 为空字符串应返回错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
       const result = await updateSalesTarget('', CURRENT_YEAR, CURRENT_MONTH, 50000);
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
@@ -298,7 +298,7 @@ describe('Sales 模块测试', () => {
     });
 
     it('Zod 校验：adjustmentAmount 为 0 应返回错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
       const result = await adjustSalesTarget(
         SALES_USER_ID,
         CURRENT_YEAR,
@@ -311,7 +311,7 @@ describe('Sales 模块测试', () => {
     });
 
     it('Zod 校验：reason 少于 5 个字符应返回错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
       const result = await adjustSalesTarget(
         SALES_USER_ID,
         CURRENT_YEAR,
@@ -343,8 +343,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('旧目标不存在应返回 Target not found 错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbFindFirstTargets.mockResolvedValue(null);
       const result = await adjustSalesTarget(
         SALES_USER_ID,
@@ -358,8 +358,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('成功调整目标并调用 AuditService.log', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbFindFirstTargets.mockResolvedValue({
         id: 'target-123',
         targetAmount: '50000',
@@ -403,7 +403,7 @@ describe('Sales 模块测试', () => {
     });
 
     it('Zod 校验：userId 为无效 uuid', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
       const result = await confirmSalesTarget('invalid-uuid', CURRENT_YEAR, CURRENT_MONTH);
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
@@ -423,8 +423,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('目标不存在应返回 Target not found 错误', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbFindFirstTargets.mockResolvedValue(null);
       const result = await confirmSalesTarget(SALES_USER_ID, CURRENT_YEAR, CURRENT_MONTH);
       expect(result.success).toBe(false);
@@ -507,8 +507,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('BOSS 角色应返回团队视图数据（包含 target/stats 字段）', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       // 团队视图多个 select 依次调用，统一返回包含 total/count 与空数组的链
       mockDbSelectFrom
         .mockReturnValueOnce({
@@ -577,8 +577,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('tenantId 隔离：租户 A 登录不应返回 Unauthorized（被允许访问本租户数据）', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS', TENANT_A) as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN', TENANT_A) as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       mockDbSelectFrom.mockReturnValue({
         where: vi.fn(() => [{ total: '0', count: 0 }]),
         groupBy: vi.fn(() => []),
@@ -590,8 +590,8 @@ describe('Sales 模块测试', () => {
 
     it('tenantId 隔离：租户 B 的会话应使用 tenantId B 过滤数据（不混入租户 A 数据）', async () => {
       // 验证 authSession.user.tenantId 被正确传入查询（而非固定 TENANT_A）
-      mockAuth.mockResolvedValue(makeSession('BOSS', TENANT_B) as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_B });
+      mockAuth.mockResolvedValue(makeSession('ADMIN', TENANT_B) as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_B });
       mockDbSelectFrom.mockReturnValue({
         where: vi.fn(() => [{ total: '0', count: 0 }]),
         groupBy: vi.fn(() => []),
@@ -602,8 +602,8 @@ describe('Sales 模块测试', () => {
     });
 
     it('完成率超过 100% 时应截断为 100', async () => {
-      mockAuth.mockResolvedValue(makeSession('BOSS') as never);
-      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'BOSS', tenantId: TENANT_A });
+      mockAuth.mockResolvedValue(makeSession('ADMIN') as never);
+      mockDbFindFirstUsers.mockResolvedValue({ id: ADMIN_ID, role: 'ADMIN', tenantId: TENANT_A });
       // 模拟 target=10000，achieved=50000（超额完成）
       mockDbSelectFrom.mockReturnValue({
         where: vi.fn(() => [{ total: '10000', count: 1 }]),

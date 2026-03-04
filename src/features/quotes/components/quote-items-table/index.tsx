@@ -59,14 +59,13 @@ const buildTree = (items: QuoteItem[]): QuoteItem[] => {
     return aTime - bTime;
   };
 
-  rootItems.sort(stableSort);
   itemMap.forEach((item) => {
     if (item.children && item.children.length > 1) {
-      item.children.sort(stableSort);
+      item.children = item.children.toSorted(stableSort);
     }
   });
 
-  return rootItems;
+  return rootItems.toSorted(stableSort);
 };
 
 interface QuoteItemsTableProps {

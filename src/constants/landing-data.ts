@@ -393,6 +393,33 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.3',
+    version: 'v1.3.3',
+    date: '2026-03-04',
+    title: '自动化质量门禁与测试环境清理',
+    description:
+      '建立自动化质量门禁规约并修复多处由于环境变量与 Mock 枚举导致的代码规范与构建错误，提升系统健壮性。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'feature',
+        content: '建立全自动化质量门禁与数据库安全操作规约',
+      },
+      {
+        type: 'optimize',
+        content: '清理与重构小程序 API 模块的部分内联 Mock 数据 (Phase 1)，增强代码可维护性',
+      },
+      {
+        type: 'fix',
+        content: '修复了由于 userRoleEnum 等枚举 Mock 构造错误导致的内部依赖系统崩溃问题',
+      },
+      {
+        type: 'optimize',
+        content: '进一步提升了对产品等模块测试用例的支持并消灭警告信息',
+      },
+    ],
+  },
+  {
     id: 'v1.3.2',
     version: 'v1.3.2',
     date: '2026-03-03',

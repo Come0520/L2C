@@ -51,7 +51,7 @@ export async function getTargetAchievementOverview(params: { year: number; month
             )
           )
           .where(
-            and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true))
+            and(eq(users.tenantId, tenantId), eq(users.role, 'SALES'), eq(users.isActive, true))
           );
 
         // 查询该月 ACCEPTED 报价
@@ -267,7 +267,7 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
             )
           )
           .where(
-            and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true))
+            and(eq(users.tenantId, tenantId), eq(users.role, 'SALES'), eq(users.isActive, true))
           );
 
         // 查询该月完成

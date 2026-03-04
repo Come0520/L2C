@@ -82,6 +82,9 @@ export const measureTasks = pgTable(
     feeCheckStatus: feeCheckStatusEnum('fee_check_status').default('NONE'),
     feeApprovalId: uuid('fee_approval_id').references(() => approvals.id), // 审批关联
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -98,29 +101,39 @@ export const measureTasks = pgTable(
   })
 );
 
-export const measureSheets = pgTable('measure_sheets', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .references(() => tenants.id)
-    .notNull(),
-  taskId: uuid('task_id')
-    .references(() => measureTasks.id, { onDelete: 'cascade' })
-    .notNull(),
+export const measureSheets = pgTable(
+  'measure_sheets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    taskId: uuid('task_id')
+      .references(() => measureTasks.id, { onDelete: 'cascade' })
+      .notNull(),
 
-  status: measureSheetStatusEnum('status').default('DRAFT'),
-  round: integer('round').notNull(),
-  variant: varchar('variant', { length: 50 }).notNull(),
+    status: measureSheetStatusEnum('status').default('DRAFT'),
+    round: integer('round').notNull(),
+    variant: varchar('variant', { length: 50 }).notNull(),
 
-  sitePhotos: jsonb('site_photos'),
-  sketchMap: text('sketch_map'),
+    sitePhotos: jsonb('site_photos'),
+    sketchMap: text('sketch_map'),
 
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .$onUpdateFn(() => new Date()),
-}, (table) => ({
-  measureSheetTenantTaskIdx: index('idx_measure_sheets_tenant_task').on(table.tenantId, table.taskId), // DB-02
-}));
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
+    measureSheetTenantTaskIdx: index('idx_measure_sheets_tenant_task').on(
+      table.tenantId,
+      table.taskId
+    ), // DB-02
+  })
+);
 
 export const measureItems = pgTable(
   'measure_items',
@@ -149,6 +162,9 @@ export const measureItems = pgTable(
 
     remark: text('remark'),
     segmentData: jsonb('segment_data'),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -224,6 +240,9 @@ export const installTasks = pgTable(
     confirmedBy: uuid('confirmed_by').references(() => users.id),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -238,7 +257,10 @@ export const installTasks = pgTable(
     installScheduledDateIdx: index('idx_install_scheduled_date').on(table.scheduledDate),
     installCustomerIdx: index('idx_install_customer').on(table.customerId),
     installTenantStatusIdx: index('idx_install_tenant_status').on(table.tenantId, table.status),
-    installTenantScheduledIdx: index('idx_install_tenant_scheduled').on(table.tenantId, table.scheduledDate),
+    installTenantScheduledIdx: index('idx_install_tenant_scheduled').on(
+      table.tenantId,
+      table.scheduledDate
+    ),
   })
 );
 
@@ -263,6 +285,9 @@ export const installItems = pgTable(
     issueCategory: installItemIssueCategoryEnum('issue_category').default('NONE'),
     isInstalled: boolean('is_installed').default(false).notNull(),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
@@ -287,6 +312,9 @@ export const installPhotos = pgTable('install_photos', {
   roomName: varchar('room_name', { length: 100 }),
   remark: text('remark'),
 
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

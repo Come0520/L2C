@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useServerActionQuery } from '@/shared/hooks/use-server-action-query';
 import { getAfterSalesTickets } from '../actions';
 import { Button } from '@/shared/ui/button';
 import Link from 'next/link';
@@ -33,9 +33,9 @@ export function AfterSalesList() {
 
   const debouncedSearch = useDebounce(search, 500);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['after-sales-tickets', page, status, debouncedSearch, type, priority, isWarranty],
-    queryFn: () =>
+  const { data, isLoading } = useServerActionQuery(
+    ['after-sales-tickets', page, status, debouncedSearch, type, priority, isWarranty],
+    () =>
       getAfterSalesTickets({
         page,
         status: status === 'all' ? undefined : status,
@@ -43,8 +43,8 @@ export function AfterSalesList() {
         type: type === 'all' ? undefined : type,
         priority: priority === 'all' ? undefined : priority,
         isWarranty: isWarranty === 'all' ? undefined : isWarranty,
-      }),
-  });
+      })
+  );
 
   const tickets = data?.data || [];
 

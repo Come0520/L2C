@@ -1,5 +1,7 @@
 'use server';
 
+import { cache } from 'react';
+
 import { db } from '@/shared/api/db';
 import { approvals, approvalTasks, approvalFlows } from '@/shared/api/schema';
 import { eq, and, desc, count, ne } from 'drizzle-orm';
@@ -297,14 +299,14 @@ export async function getApprovalHistory(params: { page?: number; pageSize?: num
  * @param id - 审批实例 ID
  * @returns 实例详情及任务列表
  */
-export async function getApprovalDetails(id: string) {
+export const getApprovalDetails = cache(async (id: string) => {
   return getApprovalDetailsInternal({ id });
-}
+});
 
 /**
  * 获取当前租户下所有的活跃审批流程定义
  * @returns 流程定义数组
  */
-export async function getApprovalFlows() {
+export const getApprovalFlows = cache(async () => {
   return getApprovalFlowsInternal({});
-}
+});

@@ -460,7 +460,7 @@ export async function recordDebtLedger(
         originalDeductionAmount: params.amount.toString(),
         actualDeductedAmount: '0', // 初始阶段实际抵扣为 0
         remainingDebt: params.amount.toString(),
-        debtStatus: 'UNPAID',
+        debtStatus: 'ACTIVE',
       })
       .returning();
 

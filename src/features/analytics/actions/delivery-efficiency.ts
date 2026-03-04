@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
@@ -161,6 +162,8 @@ const getDeliveryEfficiencyAction = createSafeAction(
  * 导出：获取交付效率数据
  * @param params - 查询参数
  */
-export async function getDeliveryEfficiency(params: z.infer<typeof deliveryEfficiencySchema>) {
-  return getDeliveryEfficiencyAction(params);
-}
+export const getDeliveryEfficiency = cache(
+  async (params: z.infer<typeof deliveryEfficiencySchema>) => {
+    return getDeliveryEfficiencyAction(params);
+  }
+);

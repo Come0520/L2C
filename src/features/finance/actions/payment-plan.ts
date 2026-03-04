@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { arStatements, paymentPlanNodes } from '@/shared/api/schema';
@@ -191,9 +192,11 @@ const getPaymentDueRemindersActionInternal = createSafeAction(
  * @returns 返回预期内的催款汇总数据和明细清单（最多20条）
  * @throws {Error} 未授权时返回错误对象
  */
-export async function getPaymentDueReminders(params: z.infer<typeof getDueRemindersSchema>) {
-  return getPaymentDueRemindersActionInternal(params);
-}
+export const getPaymentDueReminders = cache(
+  async (params: z.infer<typeof getDueRemindersSchema>) => {
+    return getPaymentDueRemindersActionInternal(params);
+  }
+);
 
 // ============================================================
 // [Finance-03] 坏账核销流程

@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { orders, purchaseOrders } from '@/shared/api/schema';
@@ -151,6 +152,6 @@ const getProfitMarginAnalysisAction = createSafeAction(
  * 导出：获取利润率分析数据
  * @param params - 查询参数
  */
-export async function getProfitMarginAnalysis(params: z.infer<typeof profitMarginSchema>) {
+export const getProfitMarginAnalysis = cache(async (params: z.infer<typeof profitMarginSchema>) => {
   return getProfitMarginAnalysisAction(params);
-}
+});

@@ -78,13 +78,13 @@ export default function ShowroomPage() {
 
   /** 跳转详情 */
   const goDetail = (item: ShowroomItem) => {
-    Taro.navigateTo({ url: `/pages/showroom-sub/detail/index?id=${item.id}` })
+    Taro.navigateTo({ url: `/packageShowroom/product-detail/index?id=${item.id}` })
   }
 
   /** Sales：分享展厅内容 */
   const handleShare = (item: ShowroomItem) => {
     Taro.navigateTo({
-      url: `/pages/showroom-sub/capsule/index?id=${item.id}&mode=share`,
+      url: `/packageShowroom/capsule/index?id=${item.id}&mode=share`,
     })
   }
 
@@ -122,49 +122,53 @@ export default function ShowroomPage() {
           </View>
         )}
 
-        {items.map((item) => (
-          <View
-            key={item.id}
-            className='showroom-card card'
-            onClick={() => goDetail(item)}
-          >
-            {item.coverUrl && (
-              <Image
-                className='card-cover'
-                src={item.coverUrl}
-                mode='aspectFill'
-                lazyLoad
-              />
-            )}
-            <View className='card-body'>
-              <View className='card-meta'>
-                <Text className={`type-badge type-badge--${item.type}`}>
-                  {item.type === 'article' ? '文章' : item.type === 'case' ? '案例' : '商品'}
-                </Text>
-                {item.viewCount !== undefined && (
-                  <Text className='view-count'>{item.viewCount} 次浏览</Text>
+        {items.length > 0 && (
+          <View className='card-grid'>
+            {items.map((item) => (
+              <View
+                key={item.id}
+                className='showroom-card card'
+                onClick={() => goDetail(item)}
+              >
+                {item.coverUrl && (
+                  <Image
+                    className='card-cover'
+                    src={item.coverUrl}
+                    mode='aspectFill'
+                    lazyLoad
+                  />
                 )}
-              </View>
-              <Text className='card-title'>{item.title}</Text>
-              {item.description && (
-                <Text className='card-desc text-ellipsis'>{item.description}</Text>
-              )}
+                <View className='card-body'>
+                  <View className='card-meta'>
+                    <Text className={`type-badge type-badge--${item.type}`}>
+                      {item.type === 'article' ? '文章' : item.type === 'case' ? '案例' : '商品'}
+                    </Text>
+                    {item.viewCount !== undefined && (
+                      <Text className='view-count'>{item.viewCount} 次浏览</Text>
+                    )}
+                  </View>
+                  <Text className='card-title text-ellipsis'>{item.title}</Text>
+                  {item.description && (
+                    <Text className='card-desc text-ellipsis'>{item.description}</Text>
+                  )}
 
-              {/* Sales 分享按钮 */}
-              {isSales && (
-                <View
-                  className='btn-share'
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleShare(item)
-                  }}
-                >
-                  <Text>分享给客户</Text>
+                  {/* Sales 分享按钮 */}
+                  {isSales && (
+                    <View
+                      className='btn-share'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleShare(item)
+                      }}
+                    >
+                      <Text>分享</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
+              </View>
+            ))}
           </View>
-        ))}
+        )}
 
         {loading && (
           <View className='loading flex-center'>

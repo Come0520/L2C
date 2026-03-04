@@ -7,6 +7,7 @@ import { eq, and, sql, sum, count, SQL } from 'drizzle-orm';
 import { afterSalesTickets, liabilityNotices } from '@/shared/api/schema';
 import { getQualityAnalyticsSchema } from './schemas';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 /**
  * 高频调用下的缓存防剧烈透传函数（获取特定租户的售后质量分析结果）
@@ -140,8 +141,8 @@ const getAfterSalesQualityAnalyticsAction = createSafeAction(
  * @param params - 提取多维报告要求的日期跨度起始端和结束端数据结构
  * @returns 并行下发的质量追溯报表
  */
-export async function getAfterSalesQualityAnalytics(
-  params: z.infer<typeof getQualityAnalyticsSchema>
-) {
-  return getAfterSalesQualityAnalyticsAction(params);
-}
+export const getAfterSalesQualityAnalytics = cache(
+  async (params: z.infer<typeof getQualityAnalyticsSchema>) => {
+    return getAfterSalesQualityAnalyticsAction(params);
+  }
+);

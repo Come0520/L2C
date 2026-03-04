@@ -1,12 +1,36 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, boolean, jsonb, unique } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  decimal,
+  index,
+  integer,
+  boolean,
+  jsonb,
+  unique,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { orders, orderItems } from './orders';
-import { poTypeEnum, packageTypeEnum, packageOverflowModeEnum, fabricInventoryLogTypeEnum, purchaseOrderStatusEnum, paymentStatusEnum, supplierTypeEnum } from './enums';
+import {
+  poTypeEnum,
+  packageTypeEnum,
+  packageOverflowModeEnum,
+  fabricInventoryLogTypeEnum,
+  purchaseOrderStatusEnum,
+  paymentStatusEnum,
+  supplierTypeEnum,
+} from './enums';
 import { afterSalesTickets } from './after-sales';
 
-export const suppliers = pgTable('suppliers', {
+export const suppliers = pgTable(
+  'suppliers',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     supplierNo: varchar('supplier_no', { length: 50 }).unique().notNull(),
     name: varchar('name', { length: 200 }).notNull(),
     // 供应商类型：供应商/加工厂/两者兼备
@@ -28,21 +52,31 @@ export const suppliers = pgTable('suppliers', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     supplierTenantIdx: index('idx_suppliers_tenant').on(table.tenantId),
     supplierTypeIdx: index('idx_suppliers_type').on(table.supplierType),
-}));
+  })
+);
 
-export const purchaseOrders = pgTable('purchase_orders', {
+export const purchaseOrders = pgTable(
+  'purchase_orders',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     poNo: varchar('po_no', { length: 50 }).unique().notNull(),
 
     orderId: uuid('order_id').references(() => orders.id),
     afterSalesId: uuid('after_sales_id').references(() => afterSalesTickets.id),
 
-    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(),
+    supplierId: uuid('supplier_id')
+      .references(() => suppliers.id)
+      .notNull(),
     supplierName: varchar('supplier_name', { length: 100 }).notNull(),
     type: poTypeEnum('type').default('FINISHED'),
 
@@ -71,19 +105,29 @@ export const purchaseOrders = pgTable('purchase_orders', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     poTenantIdx: index('idx_po_tenant').on(table.tenantId),
     poOrderIdx: index('idx_po_order').on(table.orderId),
     poAfterSalesIdx: index('idx_po_after_sales').on(table.afterSalesId),
     poSupplierIdx: index('idx_po_supplier').on(table.supplierId),
     poStatusIdx: index('idx_po_status').on(table.status),
-}));
+  })
+);
 
-export const purchaseOrderItems = pgTable('purchase_order_items', {
+export const purchaseOrderItems = pgTable(
+  'purchase_order_items',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    poId: uuid('po_id')
+      .references(() => purchaseOrders.id, { onDelete: 'cascade' })
+      .notNull(),
 
     orderItemId: uuid('order_item_id').references(() => orderItems.id), // Optional for direct PO creation
     productId: uuid('product_id'),
@@ -104,16 +148,25 @@ export const purchaseOrderItems = pgTable('purchase_order_items', {
 
     remark: text('remark'),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     poiTenantIdx: index('idx_poi_tenant').on(table.tenantId),
     poiPoIdx: index('idx_poi_po').on(table.poId),
     poiOrderItemIdx: index('idx_poi_order_item').on(table.orderItemId),
-}));
+  })
+);
 
-export const splitRouteRules = pgTable('split_route_rules', {
+export const splitRouteRules = pgTable(
+  'split_route_rules',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     priority: integer('priority').default(0),
     name: varchar('name', { length: 100 }).notNull(),
     conditions: jsonb('conditions').notNull().default([]), // 路由条件 JSON
@@ -122,19 +175,29 @@ export const splitRouteRules = pgTable('split_route_rules', {
     isActive: boolean('is_active').default(true), // 是否启用
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     // Round 5 修复：添加缺失索引
     srrTenantIdx: index('idx_split_route_rules_tenant').on(table.tenantId),
     srrPriorityIdx: index('idx_split_route_rules_priority').on(table.priority),
-}));
+  })
+);
 
 // Product Supplier Associations (N:N)
-export const productSuppliers = pgTable('product_suppliers', {
+export const productSuppliers = pgTable(
+  'product_suppliers',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     productId: uuid('product_id').notNull(), // Link to products (defined in catalogs.ts)
-    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(),
+    supplierId: uuid('supplier_id')
+      .references(() => suppliers.id)
+      .notNull(),
 
     isDefault: boolean('is_default').default(false),
     purchasePrice: decimal('purchase_price', { precision: 12, scale: 2 }),
@@ -144,37 +207,58 @@ export const productSuppliers = pgTable('product_suppliers', {
     minOrderQuantity: decimal('min_order_quantity', { precision: 10, scale: 2 }),
 
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     psTenantIdx: index('idx_product_suppliers_tenant').on(table.tenantId),
     psProductIdx: index('idx_product_suppliers_product').on(table.productId),
     psSupplierIdx: index('idx_product_suppliers_supplier').on(table.supplierId),
     // Round 5 修复：添加唯一约束，防止同一产品-供应商重复关联
-    psProductSupplierUnique: unique('uq_product_suppliers_product_supplier').on(table.productId, table.supplierId),
-}));
+    psProductSupplierUnique: unique('uq_product_suppliers_product_supplier').on(
+      table.productId,
+      table.supplierId
+    ),
+  })
+);
 
 // Channel Specific Prices (Contracts/Agreements)
-export const channelSpecificPrices = pgTable('channel_specific_prices', {
+export const channelSpecificPrices = pgTable(
+  'channel_specific_prices',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     productId: uuid('product_id').notNull(),
     channelId: uuid('channel_id').notNull(), // Link to channels (defined in channels.ts)
 
     specialPrice: decimal('special_price', { precision: 12, scale: 2 }).notNull(),
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     cspTenantIdx: index('idx_csp_tenant').on(table.tenantId),
     cspProductIdx: index('idx_csp_product').on(table.productId),
     cspChannelIdx: index('idx_csp_channel').on(table.channelId),
     // Round 5 修复：添加唯一约束，防止同一产品-渠道重复定价
     cspProductChannelUnique: unique('uq_csp_product_channel').on(table.productId, table.channelId),
-}));
+  })
+);
 
 // Product Bundles (BOM/Bundles)
-export const productBundles = pgTable('product_bundles', {
+export const productBundles = pgTable(
+  'product_bundles',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     bundleSku: varchar('bundle_sku', { length: 50 }).unique().notNull(),
     name: varchar('bundle_name', { length: 200 }).notNull(),
     category: varchar('category', { length: 50 }), // Same as product category enum
@@ -183,37 +267,61 @@ export const productBundles = pgTable('product_bundles', {
     channelPrice: decimal('channel_price', { precision: 12, scale: 2 }).default('0'),
 
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     bundleTenantIdx: index('idx_bundles_tenant').on(table.tenantId),
     bundleSkuIdx: index('idx_bundles_sku').on(table.bundleSku),
-}));
+  })
+);
 
 // Product Bundle Items (BOM Items)
-export const productBundleItems = pgTable('product_bundle_items', {
+export const productBundleItems = pgTable(
+  'product_bundle_items',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    bundleId: uuid('bundle_id').references(() => productBundles.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    bundleId: uuid('bundle_id')
+      .references(() => productBundles.id, { onDelete: 'cascade' })
+      .notNull(),
     productId: uuid('product_id').notNull(),
 
     quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(),
     unit: varchar('unit', { length: 20 }),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     pbiBundleIdx: index('idx_bundle_items_bundle').on(table.bundleId),
     // Round 5 修复：添加缺失索引
     pbiTenantIdx: index('idx_bundle_items_tenant').on(table.tenantId),
     pbiProductIdx: index('idx_bundle_items_product').on(table.productId),
-}));
+  })
+);
 
-export const productionTasks = pgTable('production_tasks', {
+export const productionTasks = pgTable(
+  'production_tasks',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     taskNo: varchar('task_no', { length: 50 }).unique().notNull(),
 
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    orderId: uuid('order_id')
+      .references(() => orders.id)
+      .notNull(),
     orderItemId: uuid('order_item_id'), // Optional link to specific item
 
     workshop: varchar('workshop', { length: 50 }).notNull(), // CUTTING, SEWING, ASSEMBLY, PACKING
@@ -221,68 +329,101 @@ export const productionTasks = pgTable('production_tasks', {
 
     assignedWorkerId: uuid('assigned_worker_id').references(() => users.id),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     ptTenantIdx: index('idx_production_tasks_tenant').on(table.tenantId),
     ptOrderIdx: index('idx_production_tasks_order').on(table.orderId),
     // Round 5 修复：添加状态索引，加速按状态筛选
     ptStatusIdx: index('idx_production_tasks_status').on(table.status),
-}));
+  })
+);
 
 // =============================================
 // 套餐模块 (Product Packages)
 // =============================================
 
 // 商品套餐表 (Product Packages)
-export const productPackages = pgTable('product_packages', {
+export const productPackages = pgTable(
+  'product_packages',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     packageNo: varchar('package_no', { length: 50 }).unique().notNull(),
     packageName: varchar('package_name', { length: 200 }).notNull(),
     packageType: packageTypeEnum('package_type').notNull(),
     packagePrice: decimal('package_price', { precision: 12, scale: 2 }).notNull(),
     originalPrice: decimal('original_price', { precision: 12, scale: 2 }),
     description: text('description'),
-    rules: jsonb('rules').default({}),  // 套餐规则 JSONB
+    rules: jsonb('rules').default({}), // 套餐规则 JSONB
     overflowMode: packageOverflowModeEnum('overflow_mode').default('DISCOUNT'),
     overflowPrice: decimal('overflow_price', { precision: 12, scale: 2 }),
     overflowDiscountRate: decimal('overflow_discount_rate', { precision: 5, scale: 4 }),
     isActive: boolean('is_active').default(true),
     startDate: timestamp('start_date', { withTimezone: true }),
     endDate: timestamp('end_date', { withTimezone: true }),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     pkgTenantIdx: index('idx_packages_tenant').on(table.tenantId),
     pkgNoIdx: index('idx_packages_no').on(table.packageNo),
-}));
+  })
+);
 
 // 套餐商品关联表 (Package Products)
-export const packageProducts = pgTable('package_products', {
+export const packageProducts = pgTable(
+  'package_products',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
     // Round 5 修复：添加缺失的 tenantId 字段，确保多租户隔离
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    packageId: uuid('package_id').references(() => productPackages.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    packageId: uuid('package_id')
+      .references(() => productPackages.id)
+      .notNull(),
     productId: uuid('product_id').notNull(),
     isRequired: boolean('is_required').default(false),
     minQuantity: decimal('min_quantity', { precision: 10, scale: 2 }),
     maxQuantity: decimal('max_quantity', { precision: 10, scale: 2 }),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     ppTenantIdx: index('idx_package_products_tenant').on(table.tenantId),
     ppPackageIdx: index('idx_package_products_package').on(table.packageId),
     ppProductIdx: index('idx_package_products_product').on(table.productId),
-}));
+  })
+);
 
 // =============================================
 // 面料库存模块 (Fabric Inventory)
 // =============================================
 
 // 面料库存表 (Fabric Inventory)
-export const fabricInventory = pgTable('fabric_inventory', {
+export const fabricInventory = pgTable(
+  'fabric_inventory',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     fabricProductId: uuid('fabric_product_id').notNull(),
     fabricSku: varchar('fabric_sku', { length: 100 }).notNull(),
     fabricName: varchar('fabric_name', { length: 200 }).notNull(),
@@ -299,18 +440,31 @@ export const fabricInventory = pgTable('fabric_inventory', {
     expiryDate: timestamp('expiry_date', { withTimezone: true }),
     warehouseLocation: varchar('warehouse_location', { length: 100 }),
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     fiTenantIdx: index('idx_fabric_inventory_tenant').on(table.tenantId),
     fiProductIdx: index('idx_fabric_inventory_product').on(table.fabricProductId),
-}));
+  })
+);
 
 // 面料库存流水表 (Fabric Inventory Logs)
-export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
+export const fabricInventoryLogs = pgTable(
+  'fabric_inventory_logs',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    fabricInventoryId: uuid('fabric_inventory_id').references(() => fabricInventory.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    fabricInventoryId: uuid('fabric_inventory_id')
+      .references(() => fabricInventory.id)
+      .notNull(),
     logType: fabricInventoryLogTypeEnum('log_type').notNull(),
     quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
     beforeQuantity: decimal('before_quantity', { precision: 12, scale: 2 }).notNull(),
@@ -320,11 +474,13 @@ export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
     remark: text('remark'),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     filInventoryIdx: index('idx_fabric_logs_inventory').on(table.fabricInventoryId),
     // Round 5 修复：添加缺失的租户索引
     filTenantIdx: index('idx_fabric_logs_tenant').on(table.tenantId),
-}));
+  })
+);
 
 // =============================================
 // 渠道等级折扣模块 (Channel Level Discounts)
@@ -332,13 +488,17 @@ export const fabricInventoryLogs = pgTable('fabric_inventory_logs', {
 
 /**
  * 渠道等级折扣覆盖表
- * 
+ *
  * 用于按品类或商品覆盖全局的渠道等级折扣配置
  * 全局默认折扣存储在 tenants.settings JSONB 中
  */
-export const channelDiscountOverrides = pgTable('channel_discount_overrides', {
+export const channelDiscountOverrides = pgTable(
+  'channel_discount_overrides',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 覆盖范围：CATEGORY=品类覆盖, PRODUCT=商品覆盖
     scope: varchar('scope', { length: 20 }).notNull(),
@@ -354,12 +514,22 @@ export const channelDiscountOverrides = pgTable('channel_discount_overrides', {
     cLevelDiscount: decimal('c_level_discount', { precision: 5, scale: 2 }),
 
     isActive: boolean('is_active').default(true),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     cdoTenantIdx: index('idx_channel_discount_overrides_tenant').on(table.tenantId),
-    cdoScopeTargetIdx: index('idx_channel_discount_overrides_scope_target').on(table.scope, table.targetId),
-}));
+    cdoScopeTargetIdx: index('idx_channel_discount_overrides_scope_target').on(
+      table.scope,
+      table.targetId
+    ),
+  })
+);
 
 // =============================================
 // 采购单付款记录表 (PO Payments)
@@ -367,14 +537,20 @@ export const channelDiscountOverrides = pgTable('channel_discount_overrides', {
 
 /**
  * 采购单付款记录
- * 
+ *
  * 独立存储每一笔付款详情，替代原先将支付信息写入 remark 字段的方式。
  * 支持多次付款（如分期、部分付款）。
  */
-export const poPayments = pgTable('po_payments', {
+export const poPayments = pgTable(
+  'po_payments',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    poId: uuid('po_id')
+      .references(() => purchaseOrders.id, { onDelete: 'cascade' })
+      .notNull(),
 
     // 付款方式：CASH / WECHAT / ALIPAY / BANK
     paymentMethod: varchar('payment_method', { length: 50 }).notNull(),
@@ -389,10 +565,12 @@ export const poPayments = pgTable('po_payments', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     ppTenantIdx: index('idx_po_payments_tenant').on(table.tenantId),
     ppPoIdx: index('idx_po_payments_po').on(table.poId),
-}));
+  })
+);
 
 // =============================================
 // 采购单物流记录表 (PO Shipments)
@@ -400,14 +578,20 @@ export const poPayments = pgTable('po_payments', {
 
 /**
  * 采购单物流/发货记录
- * 
+ *
  * 独立存储每一次物流信息，替代原先直接设置 purchaseOrders 的物流字段。
  * 支持多次发货和多次物流追踪。
  */
-export const poShipments = pgTable('po_shipments', {
+export const poShipments = pgTable(
+  'po_shipments',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    poId: uuid('po_id').references(() => purchaseOrders.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    poId: uuid('po_id')
+      .references(() => purchaseOrders.id, { onDelete: 'cascade' })
+      .notNull(),
 
     // 物流公司
     logisticsCompany: varchar('logistics_company', { length: 100 }),
@@ -422,7 +606,9 @@ export const poShipments = pgTable('po_shipments', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     psTenantIdx: index('idx_po_shipments_tenant').on(table.tenantId),
     psPoIdx: index('idx_po_shipments_po').on(table.poId),
-}));
+  })
+);

@@ -10,6 +10,7 @@ import { auditLogs } from '@/shared/api/schema/audit';
 import { quoteStatusEnum } from '@/shared/api/schema/enums';
 import { auth } from '@/shared/lib/auth';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 /**
  * 获取报价单版本列表
@@ -192,7 +193,7 @@ const getCachedQuotes = unstable_cache(
  * @param id - 报价单 ID (UUID)
  * @returns 包含报价单基础数据、客户信息、房间及行项目的嵌套对象
  */
-export async function getQuote(id: string) {
+export const getQuote = cache(async (id: string) => {
   // 安全检查：获取当前用户并验证租户
   const session = await auth();
   if (!session?.user?.tenantId) {
@@ -201,7 +202,7 @@ export async function getQuote(id: string) {
   const tenantId = session.user.tenantId;
 
   return getCachedQuote(id, tenantId);
-}
+});
 
 const getCachedQuote = unstable_cache(
   async (id: string, tenantId: string) => {
@@ -289,7 +290,7 @@ const getCachedQuote = unstable_cache(
  * @param params.id - 套餐（作为根报价单）的 ID
  * @returns 包含套餐详细数据及子报价单数组的响应对象
  */
-export async function getQuoteBundleById({ id }: { id: string }) {
+export const getQuoteBundleById = cache(async ({ id }: { id: string }) => {
   // 安全检查：获取当前用户并验证租户
   const session = await auth();
   if (!session?.user?.tenantId) {
@@ -298,7 +299,7 @@ export async function getQuoteBundleById({ id }: { id: string }) {
   const tenantId = session.user.tenantId;
 
   return getCachedQuoteBundleById(id, tenantId);
-}
+});
 
 const getCachedQuoteBundleById = unstable_cache(
   async (id: string, tenantId: string) => {
@@ -353,7 +354,7 @@ const getCachedQuoteBundleById = unstable_cache(
  * @param quoteId - 报价单 ID
  * @returns 审计日志列表
  */
-export async function getQuoteAuditLogs(quoteId: string) {
+export const getQuoteAuditLogs = cache(async (quoteId: string) => {
   // 安全检查：先验证报价单属于当前租户
   const session = await auth();
   if (!session?.user?.tenantId) {
@@ -382,4 +383,4 @@ export async function getQuoteAuditLogs(quoteId: string) {
     .leftJoin(users, eq(auditLogs.userId, users.id))
     .where(and(eq(auditLogs.tableName, 'quotes'), eq(auditLogs.recordId, quoteId)))
     .orderBy(desc(auditLogs.createdAt));
-}
+});

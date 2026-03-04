@@ -33,6 +33,10 @@
   </view>
 </template>
 
+<template name="tmpl_0_62">
+  <rich-text nodes="{{i.p1||[]}}" space="{{i.p2}}" user-select="{{xs.b(i.p3,false)}}" mode="{{i.p0||'default'}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}"></rich-text>
+</template>
+
 <template name="tmpl_0_5">
   <text selectable="{{xs.b(i.p3,!1)}}" space="{{i.p4}}" decode="{{xs.b(i.p0,!1)}}" user-select="{{xs.b(i.p5,false)}}" overflow="{{i.p2||visible}}" max-lines="{{i.p1}}" style="{{i.st}}" class="{{i.cl}}"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
     <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
@@ -49,6 +53,18 @@
   <button size="{{i.p18||'default'}}" type="{{i.p19}}" plain="{{xs.b(i.p12,!1)}}" disabled="{{i.p2}}" loading="{{xs.b(i.p9,!1)}}" form-type="{{i.p3}}" open-type="{{i.p11}}" hover-class="{{i.p4||'button-hover'}}" hover-stop-propagation="{{xs.b(i.p7,!1)}}" hover-start-time="{{xs.b(i.p5,20)}}" hover-stay-time="{{xs.b(i.p6,70)}}" name="{{i.p10}}" bindagreeprivacyauthorization="eh" bindtouchstart="eh" bindtouchmove="eh" bindtouchend="eh" bindtouchcancel="eh" bindlongpress="eh" lang="{{i.p8||en}}" session-from="{{i.p16}}" send-message-title="{{i.p15}}" send-message-path="{{i.p14}}" send-message-img="{{i.p13}}" app-parameter="{{i.p0}}" show-message-card="{{xs.b(i.p17,false)}}" business-id="{{i.p1}}" bindgetuserinfo="eh" bindcontact="eh" bindgetphonenumber="eh" bindgetrealtimephonenumber="eh" bindchooseavatar="eh" binderror="eh" bindopensetting="eh" bindlaunchapp="eh" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
     <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
   </button>
+</template>
+
+<template name="tmpl_0_19">
+  <checkbox value="{{i.p4}}" disabled="{{i.p2}}" checked="{{xs.b(i.p0,!1)}}" color="{{i.p1||'#09BB07'}}" name="{{i.p3}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
+    <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
+  </checkbox>
+</template>
+
+<template name="tmpl_0_20">
+  <checkbox-group bindchange="eh" name="{{i.p0}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
+    <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
+  </checkbox-group>
 </template>
 
 <template name="tmpl_0_33">
@@ -109,6 +125,12 @@
   <image src="{{i.p4}}" mode="{{i.p2||'scaleToFill'}}" lazy-load="{{xs.b(i.p1,!1)}}" binderror="eh" bindload="eh" bindtouchstart="eh" bindtouchmove="eh" bindtouchend="eh" bindtouchcancel="eh" bindlongpress="eh" webp="{{xs.b(i.p5,false)}}" show-menu-by-longpress="{{xs.b(i.p3,false)}}" fade-in="{{xs.b(i.p0,false)}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
     <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
   </image>
+</template>
+
+<template name="tmpl_0_16">
+  <canvas canvas-id="{{i.p0}}" disable-scroll="{{xs.b(i.p1,!1)}}" binderror="eh" bindtouchstart="eh" bindtouchmove="eh" bindtouchend="eh" bindtouchcancel="eh" bindlongtap="eh" type="{{i.p2}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}">
+    <template is="{{xs.a(c, item.nn, l)}}" data="{{i:item,c:c+1,l:xs.f(l,item.nn)}}" wx:for="{{i.cn}}" wx:key="sid" />
+  </canvas>
 </template>
 
 <template name="tmpl_0_9">

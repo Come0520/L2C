@@ -152,4 +152,47 @@ export const api = {
 
     patch: <T = any>(url: string, options?: Omit<RequestOptions, 'method'>) =>
         request<T>(url, { ...options, method: 'PATCH' }),
+
+    upload: async (url: string, filePath: string, name: string = 'file', options: { showLoading?: boolean, loadingText?: string } = {}): Promise<ApiResponse<any>> => {
+        const { showLoading = false, loadingText = '上传中...' } = options
+        const token = useAuthStore.getState().token
+
+        if (showLoading) {
+            Taro.showLoading({ title: loadingText, mask: true })
+        }
+
+        try {
+            const res = await Taro.uploadFile({
+                url: `${BASE_URL}${url}`,
+                filePath,
+                name,
+                header: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                }
+            })
+
+            if (showLoading) Taro.hideLoading()
+
+            const data = JSON.parse(res.data)
+            if (res.statusCode >= 400 || (data && data.success === false)) {
+                return {
+                    success: false,
+                    data: null as any,
+                    error: data.error || data.message || `上传失败 (${res.statusCode})`
+                }
+            }
+
+            return {
+                success: true,
+                data: data.data !== undefined ? data.data : data
+            }
+        } catch (err: any) {
+            if (showLoading) Taro.hideLoading()
+            return {
+                success: false,
+                data: null as any,
+                error: err.errMsg || '网络请求失败'
+            }
+        }
+    }
 }

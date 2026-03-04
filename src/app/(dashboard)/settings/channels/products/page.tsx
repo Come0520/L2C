@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { ListSkeleton } from '@/shared/ui/skeleton-variants';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { ChannelProductPool } from '@/features/channels/components/channel-product-pool';
 import {
@@ -34,7 +35,7 @@ export default async function ChannelProductsPage() {
         <DashboardPageHeader title="渠道选品池" subtitle="管理可供渠道分销的商品及其底价配置" />
       </div>
 
-      <Suspense fallback={<div>加载中...</div>}>
+      <Suspense fallback={<ListSkeleton />}>
         <ChannelProductPool
           channelProducts={channelProducts}
           availableProducts={availableProducts}

@@ -1,0 +1,275 @@
+@use '../../styles/variables' as *;
+
+.case-detail-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .detail-scroll {
+        flex: 1;
+        height: 0;
+    }
+
+    /* 图片轮播 */
+    .image-swiper {
+        width: 100%;
+        height: 500rpx;
+        background-color: $bg-base;
+
+        .swiper-img {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    /* 区块通用 */
+    .section-block {
+        background-color: $bg-card;
+        padding: $spacing-md;
+        margin-bottom: $spacing-md;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            margin-bottom: $spacing-md;
+            display: block;
+            position: relative;
+            padding-left: 16rpx;
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 6rpx;
+                height: 24rpx;
+                background-color: $apple-blue;
+                border-radius: 4rpx;
+            }
+        }
+    }
+
+    /* 基本信息区 */
+    .info-section {
+        .case-title {
+            font-size: $font-lg;
+            font-weight: 600;
+            color: $text-title;
+            margin-bottom: $spacing-xs;
+            display: block;
+        }
+
+        .case-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12rpx;
+            margin-bottom: $spacing-sm;
+
+            .tag {
+                font-size: 22rpx;
+                color: $apple-green;
+                background-color: rgba(103, 194, 58, 0.1);
+                padding: 4rpx 16rpx;
+                border-radius: $radius-sm;
+            }
+        }
+
+        .case-desc {
+            font-size: $font-sm;
+            color: $text-secondary;
+            line-height: 1.6;
+            margin-bottom: $spacing-md;
+            display: block;
+        }
+
+        .case-meta {
+            display: flex;
+            flex-wrap: wrap;
+            background-color: $bg-base;
+            border-radius: $radius-md;
+            padding: $spacing-sm;
+
+            .meta-item {
+                flex: 1 1 33%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 8rpx;
+
+                .meta-label {
+                    font-size: 20rpx;
+                    color: $text-placeholder;
+                    margin-bottom: 4rpx;
+                }
+
+                .meta-value {
+                    font-size: $font-sm;
+                    color: $text-title;
+                    font-weight: 500;
+                }
+            }
+        }
+    }
+
+    /* 前后对比图 */
+    .compare-list {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-lg;
+
+        .compare-item {
+            .compare-images {
+                display: flex;
+                gap: $spacing-sm;
+                margin-bottom: $spacing-xs;
+
+                .image-box {
+                    flex: 1;
+                    height: 200rpx;
+                    position: relative;
+                    border-radius: $radius-md;
+                    overflow: hidden;
+                    background-color: $bg-base;
+
+                    .img {
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                    .badge {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        padding: 4rpx 12rpx;
+                        font-size: 20rpx;
+                        color: #fff;
+                        border-bottom-right-radius: $radius-md;
+
+                        &.before-badge {
+                            background-color: rgba(0, 0, 0, 0.5);
+                        }
+
+                        &.after-badge {
+                            background-color: $apple-orange;
+                        }
+                    }
+                }
+            }
+
+            .compare-desc {
+                font-size: 24rpx;
+                color: $text-secondary;
+                line-height: 1.4;
+            }
+        }
+    }
+
+    /* 业主评价 */
+    .review-card {
+        background-color: $bg-base;
+        border-radius: $radius-md;
+        padding: $spacing-md;
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-sm;
+
+            .stars {
+                .star {
+                    font-size: 28rpx;
+                    color: $text-placeholder;
+                    margin-right: 4rpx;
+
+                    &.active {
+                        color: $apple-red; // 红色星星更显眼
+                    }
+                }
+            }
+
+            .review-date {
+                font-size: 22rpx;
+                color: $text-placeholder;
+            }
+        }
+
+        .review-text {
+            font-size: $font-sm;
+            color: $text-title;
+            line-height: 1.5;
+        }
+    }
+
+    /* 底部悬浮操作栏 */
+    .bottom-action-bar {
+        background-color: $bg-card;
+        padding: 12rpx $spacing-md calc(12rpx + env(safe-area-inset-bottom));
+        display: flex;
+        align-items: center;
+        border-top: 1px solid $border-separator;
+
+        .action-left {
+            flex: 1;
+            display: flex;
+            gap: 32rpx;
+        }
+
+        .action-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            .icon {
+                font-size: 36rpx;
+                color: $text-secondary;
+                margin-bottom: 4rpx;
+
+                &.favorite-active {
+                    color: $apple-orange;
+                }
+            }
+
+            .label {
+                font-size: 20rpx;
+                color: $text-secondary;
+            }
+        }
+
+        .action-right {
+            .btn {
+                height: 72rpx;
+                line-height: 72rpx;
+                border-radius: $radius-full;
+                font-size: $font-md;
+                padding: 0 48rpx;
+                margin: 0;
+
+                &.btn-share {
+                    background-color: rgba(230, 180, 80, 0.15);
+                    color: $apple-orange;
+                    border: 1px solid rgba(230, 180, 80, 0.3);
+                }
+            }
+        }
+    }
+}
+
+.page {
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    color: $text-placeholder;
+}

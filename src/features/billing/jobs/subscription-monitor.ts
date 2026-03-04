@@ -25,7 +25,7 @@ export async function processSubscriptionsCron() {
     .select({ id: subscriptions.id, tenantId: subscriptions.tenantId })
     .from(subscriptions)
     .where(
-      and(eq(subscriptions.status, 'active'), lte(subscriptions.currentPeriodEnd, sql`${now}`))
+      and(eq(subscriptions.status, 'ACTIVE'), lte(subscriptions.currentPeriodEnd, sql`${now}`))
     );
 
   if (expiredActiveSubscriptions.length > 0) {
@@ -37,7 +37,7 @@ export async function processSubscriptionsCron() {
       for (const id of expiredIds) {
         await tx
           .update(subscriptions)
-          .set({ status: 'past_due', updatedAt: now })
+          .set({ status: 'PAST_DUE', updatedAt: now })
           .where(eq(subscriptions.id, id));
       }
     });
@@ -56,7 +56,7 @@ export async function processSubscriptionsCron() {
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.status, 'past_due'),
+        eq(subscriptions.status, 'PAST_DUE'),
         lte(subscriptions.currentPeriodEnd, sql`${gracePeriodEndTime}`)
       )
     );
@@ -68,7 +68,7 @@ export async function processSubscriptionsCron() {
         // 更新订阅状态为 expired
         await tx
           .update(subscriptions)
-          .set({ status: 'expired', updatedAt: now })
+          .set({ status: 'EXPIRED', updatedAt: now })
           .where(eq(subscriptions.id, sub.id));
 
         // 租户降级到免费版
@@ -102,7 +102,7 @@ export async function processSubscriptionsCron() {
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.status, 'active'),
+        eq(subscriptions.status, 'ACTIVE'),
         eq(subscriptions.autoRenew, true),
         lte(subscriptions.currentPeriodEnd, sql`${reminderTimeEnd}`),
         gte(subscriptions.currentPeriodEnd, sql`${reminderTimeStart}`)

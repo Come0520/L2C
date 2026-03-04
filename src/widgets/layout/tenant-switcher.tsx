@@ -143,7 +143,7 @@ export function TenantSwitcher({ session }: TenantSwitcherProps) {
                   <div className="flex flex-1 flex-col overflow-hidden">
                     <span className="truncate text-sm font-medium">{tenant.name}</span>
                     <span className="text-muted-foreground text-xs">
-                      身份: {tenant.role === 'BOSS' ? '拥有者' : '员工'}
+                      身份: {tenant.role === 'ADMIN' ? '拥有者' : '员工'}
                     </span>
                   </div>
                 </CommandItem>

@@ -79,7 +79,7 @@ const getCachedSalesTargets = unstable_cache(
           eq(salesTargets.month, month)
         )
       )
-      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
+      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'SALES'), eq(users.isActive, true)));
   },
   ['sales-targets-list'],
   { revalidate: 60, tags: ['sales-targets'] }

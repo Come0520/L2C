@@ -41,6 +41,13 @@ const nextConfig: NextConfig = {
       'react-hook-form',
       '@/shared/ui',
       '@/features',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      'sonner',
+      'recharts',
+      '@tanstack/react-query',
     ],
   },
 

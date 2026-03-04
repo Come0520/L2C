@@ -1,11 +1,22 @@
-import { pgTable, uuid, varchar, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  jsonb,
+  index,
+  decimal,
+  integer,
+  boolean,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { orders } from './orders';
-import { purchaseOrders } from './supply-chain';
+import { orders, orderItems } from './orders';
+import { purchaseOrders, suppliers } from './supply-chain';
 
 /**
  * 全链路溯源 Schema
- * 
+ *
  * 功能：
  * 1. 面料缸号/批次追踪
  * 2. 风险控制闭环
@@ -13,9 +24,13 @@ import { purchaseOrders } from './supply-chain';
  */
 
 // ==================== 批次追踪表 ====================
-export const batchTraces = pgTable('batch_traces', {
+export const batchTraces = pgTable(
+  'batch_traces',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 批次信息
     batchNo: varchar('batch_no', { length: 50 }).notNull(), // 批次号
@@ -23,7 +38,7 @@ export const batchTraces = pgTable('batch_traces', {
     productName: varchar('product_name', { length: 200 }), // 产品名称
 
     // 供应商信息
-    supplierId: uuid('supplier_id'),
+    supplierId: uuid('supplier_id').references(() => suppliers.id),
     supplierName: varchar('supplier_name', { length: 200 }),
     supplierBatchNo: varchar('supplier_batch_no', { length: 50 }), // 供应商批次号
 
@@ -41,48 +56,73 @@ export const batchTraces = pgTable('batch_traces', {
     inspectionPhotos: text('inspection_photos').array(),
 
     // 数量信息
-    totalQuantity: varchar('total_quantity', { length: 20 }), // 总数量
-    usedQuantity: varchar('used_quantity', { length: 20 }), // 已使用数量
-    remainingQuantity: varchar('remaining_quantity', { length: 20 }), // 剩余数量
+    totalQuantity: decimal('total_quantity', { precision: 12, scale: 2 }), // 总数量
+    usedQuantity: decimal('used_quantity', { precision: 12, scale: 2 }), // 已使用数量
+    remainingQuantity: decimal('remaining_quantity', { precision: 12, scale: 2 }), // 剩余数量
     unit: varchar('unit', { length: 20 }).default('米'), // 单位
 
     // 扩展属性
     attributes: jsonb('attributes'), // 自定义属性（颜色、材质等）
 
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     batchTenantIdx: index('idx_batch_tenant').on(table.tenantId),
     batchNoIdx: index('idx_batch_no').on(table.batchNo),
     batchVatIdx: index('idx_batch_vat').on(table.vatNo),
     batchSupplierIdx: index('idx_batch_supplier').on(table.supplierId),
-}));
+  })
+);
 
 // ==================== 订单批次关联表 ====================
-export const orderBatchLinks = pgTable('order_batch_links', {
+export const orderBatchLinks = pgTable(
+  'order_batch_links',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    orderId: uuid('order_id')
+      .references(() => orders.id)
+      .notNull(),
     orderNo: varchar('order_no', { length: 50 }),
-    orderItemId: uuid('order_item_id'), // 具体订单项
+    orderItemId: uuid('order_item_id').references(() => orderItems.id), // 具体订单项
 
-    batchId: uuid('batch_id').references(() => batchTraces.id).notNull(),
+    batchId: uuid('batch_id')
+      .references(() => batchTraces.id)
+      .notNull(),
     batchNo: varchar('batch_no', { length: 50 }),
 
-    quantity: varchar('quantity', { length: 20 }), // 使用数量
+    quantity: decimal('quantity', { precision: 12, scale: 2 }), // 使用数量
     unit: varchar('unit', { length: 20 }),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     linkOrderIdx: index('idx_link_order').on(table.orderId),
     linkBatchIdx: index('idx_link_batch').on(table.batchId),
-}));
+  })
+);
 
 // ==================== 证据链表 ====================
-export const evidenceChains = pgTable('evidence_chains', {
+export const evidenceChains = pgTable(
+  'evidence_chains',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 关联实体
     entityType: varchar('entity_type', { length: 50 }).notNull(), // ORDER, AFTER_SALES, LIABILITY, INSTALL_TASK
@@ -106,32 +146,38 @@ export const evidenceChains = pgTable('evidence_chains', {
 
     // 元数据
     metadata: jsonb('metadata').$type<{
-        deviceInfo?: string;
-        captureTime?: string;
-        fileSize?: number;
-        fileType?: string;
-        duration?: number; // 视频/音频时长
-        dimensions?: { width: number; height: number };
+      deviceInfo?: string;
+      captureTime?: string;
+      fileSize?: number;
+      fileType?: string;
+      duration?: number; // 视频/音频时长
+      dimensions?: { width: number; height: number };
     }>(),
 
     // 验证状态
-    isVerified: varchar('is_verified', { length: 10 }).default('false'),
+    isVerified: boolean('is_verified').default(false),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
     verifiedBy: uuid('verified_by').references(() => users.id),
 
     // 创建信息
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     evidenceEntityIdx: index('idx_evidence_entity').on(table.entityType, table.entityId),
     evidenceTenantIdx: index('idx_evidence_tenant').on(table.tenantId),
     evidenceTypeIdx: index('idx_evidence_type').on(table.evidenceType),
-}));
+  })
+);
 
 // ==================== 风险预警表 ====================
-export const riskAlerts = pgTable('risk_alerts', {
+export const riskAlerts = pgTable(
+  'risk_alerts',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 风险类型
     riskType: varchar('risk_type', { length: 50 }).notNull(), // BATCH_QUALITY, SUPPLIER_ISSUE, INSTALL_DELAY, PAYMENT_OVERDUE
@@ -149,8 +195,8 @@ export const riskAlerts = pgTable('risk_alerts', {
 
     // 影响范围
     affectedOrders: jsonb('affected_orders').$type<string[]>(), // 受影响的订单ID列表
-    affectedCount: varchar('affected_count', { length: 10 }), // 受影响数量
-    potentialLoss: varchar('potential_loss', { length: 20 }), // 潜在损失金额
+    affectedCount: integer('affected_count'), // 受影响数量
+    potentialLoss: decimal('potential_loss', { precision: 12, scale: 2 }), // 潜在损失金额
 
     // 状态
     status: varchar('status', { length: 20 }).default('OPEN'), // OPEN, ACKNOWLEDGED, RESOLVED, IGNORED
@@ -158,10 +204,17 @@ export const riskAlerts = pgTable('risk_alerts', {
     resolvedBy: uuid('resolved_by').references(() => users.id),
     resolution: text('resolution'),
 
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     riskTenantIdx: index('idx_risk_tenant').on(table.tenantId),
     riskTypeIdx: index('idx_risk_type').on(table.riskType),
     riskStatusIdx: index('idx_risk_status').on(table.status),
-}));
+  })
+);

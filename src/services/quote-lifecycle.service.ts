@@ -331,6 +331,7 @@ export class QuoteLifecycleService {
         sortOrder: qItem.sortOrder,
         attributes: qItem.attributes,
         calculationParams: qItem.calculationParams,
+        createdBy: userId,
       }));
 
       if (orderItemsData.length > 0) {

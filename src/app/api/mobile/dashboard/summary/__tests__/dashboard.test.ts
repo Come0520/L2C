@@ -34,7 +34,7 @@ import { db } from '@/shared/api/db';
 import { dashboardCache } from '@/shared/lib/cache-utils';
 
 describe('移动端仪表盘 API (Dashboard API)', () => {
-  const mockSession = { userId: 'b1', tenantId: 't1', role: 'BOSS' };
+  const mockSession = { userId: 'b1', tenantId: 't1', role: 'ADMIN' };
 
   beforeEach(() => {
     vi.clearAllMocks();

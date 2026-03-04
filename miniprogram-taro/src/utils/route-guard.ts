@@ -13,7 +13,7 @@ const PUBLIC_PAGES = [
     '/pages/login/index',
     '/pages/register/index',
     '/pages/status/index',
-    '/pages/invite/index',
+    '/packageSales/invite/index',
 ]
 
 /**

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           .where(
             and(
               eq(users.tenantId, user.tenantId),
-              eq(users.role, 'sales'),
+              eq(users.role, 'SALES'),
               eq(users.isActive, true)
             )
           );

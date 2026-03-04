@@ -10,6 +10,7 @@ import Taro, { useDidShow, usePullDownRefresh, useLoad } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
+import { taskService } from '@/services/task-service'
 import { requireRole } from '@/utils/route-guard'
 import TabBar from '@/components/TabBar/index'
 import './index.scss'
@@ -54,15 +55,38 @@ export default function TasksPage() {
         active: 'in_progress',
         completed: 'completed',
       }
-      const endpoint = currentRole === 'worker'
-        ? '/engineer/tasks'
-        : '/tasks'
-      const res = await api.get(endpoint, {
-        data: { status: statusMap[tab] },
+      // 此处统一弃用只返回安装任务的 `/engineer/tasks`，改用全量 `/tasks`
+      const data = await taskService.getTaskList({ status: statusMap[tab] })
+
+      let measureTasks = (data.measureTasks || []).map((t: any) => ({
+        id: t.id,
+        type: 'measure' as const,
+        customerName: t.customerName || t.customer?.name || '未知客户',
+        address: t.customer?.address || t.customer?.community || '无地址信息',
+        scheduledDate: t.scheduledAt ? t.scheduledAt.split(' ')[0] : '待定',
+        scheduledTime: t.scheduledAt ? t.scheduledAt.split(' ')[1] || '' : '',
+        status: t.status
+      }))
+
+      let installTasks = (data.installTasks || []).map((t: any) => ({
+        id: t.id,
+        type: 'install' as const,
+        customerName: t.customerName || '未知客户',
+        address: t.address || '无地址信息',
+        scheduledDate: t.scheduledDate || '待定',
+        scheduledTime: t.scheduledTimeSlot || '',
+        status: t.status
+      }))
+
+      const merged = [...measureTasks, ...installTasks].sort((a, b) => {
+        const timeA = new Date(`${a.scheduledDate} ${a.scheduledTime}`).getTime() || 0
+        const timeB = new Date(`${b.scheduledDate} ${b.scheduledTime}`).getTime() || 0
+        return timeB - timeA // 倒序
       })
-      if (res.success) {
-        setTasks(res.data?.items || res.data || [])
-      }
+
+      setTasks(merged)
+    } catch (err) {
+      console.error('Fetch tasks failed:', err)
     } finally {
       setLoading(false)
     }
@@ -82,14 +106,14 @@ export default function TasksPage() {
     fetchTasks(tab)
   }
 
-  /** 跳转任务详情 */
+  /** 跳转任务详情 (附带 type 参数) */
   const goDetail = (task: TaskItem) => {
-    Taro.navigateTo({ url: `/pages/tasks-sub/detail/index?id=${task.id}` })
+    Taro.navigateTo({ url: `/packageWorker/task-detail/index?id=${task.id}&type=${task.type}` })
   }
 
   /** 接受任务（滑动/点击） */
-  const acceptTask = async (taskId: string) => {
-    const res = await api.post(`/tasks/${taskId}/accept`)
+  const acceptTask = async (taskId: string, type: 'measure' | 'install') => {
+    const res = await api.post(`/tasks/${taskId}`, { data: { type, action: 'update_status', data: { status: type === 'measure' ? 'PENDING_VISIT' : 'PENDING_VISIT' } } })
     if (res.success) {
       Taro.showToast({ title: '已接单', icon: 'success' })
       fetchTasks(activeTab)
@@ -157,7 +181,7 @@ export default function TasksPage() {
                   className='btn-accept'
                   onClick={(e) => {
                     e.stopPropagation()
-                    acceptTask(task.id)
+                    acceptTask(task.id, task.type)
                   }}
                 >
                   <Text>接 单</Text>

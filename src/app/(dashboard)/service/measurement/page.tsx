@@ -58,7 +58,7 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
     db.query.users.findMany({
       where: and(
         eq(users.tenantId, tenantId),
-        or(eq(users.role, 'SALES'), eq(users.role, 'STORE_MANAGER'))
+        or(eq(users.role, 'SALES'), eq(users.role, 'MANAGER'))
       ),
       columns: { id: true, name: true },
     }),

@@ -5,6 +5,8 @@ import { users } from '@/shared/api/schema';
 import { ilike, and, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 
+import { cache } from 'react';
+
 /**
  * 搜索租户内的可用审批人
  *
@@ -14,7 +16,7 @@ import { auth } from '@/shared/lib/auth';
  * @param query - 搜索关键字（模糊匹配用户名称）
  * @returns 匹配的活跃用户列表，包含 id, name, role
  */
-export async function searchApprovers(query: string) {
+export const searchApprovers = cache(async (query: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return [];
 
@@ -34,4 +36,4 @@ export async function searchApprovers(query: string) {
     },
     limit: 10,
   });
-}
+});

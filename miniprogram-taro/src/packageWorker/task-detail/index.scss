@@ -1,0 +1,331 @@
+@use '../../styles/variables' as *;
+
+.worker-task-detail {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .detail-scroll {
+        flex: 1;
+        height: 100%;
+    }
+
+    .status-header {
+        background-color: $apple-blue;
+        color: #fff;
+        padding: 40rpx $spacing-lg 80rpx;
+        border-bottom-left-radius: 40rpx;
+        border-bottom-right-radius: 40rpx;
+
+        .title {
+            font-size: $font-title1;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 8rpx;
+        }
+
+        .subtitle {
+            font-size: $font-sm;
+            opacity: 0.9;
+        }
+    }
+
+    .info-card {
+        background-color: #fff;
+        margin: -40rpx $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-lg;
+        box-shadow: $shadow-soft;
+        position: relative;
+        z-index: 10;
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-md;
+            border-bottom: 1px dashed $border-separator;
+            padding-bottom: $spacing-sm;
+
+            .tag {
+                font-size: 20rpx;
+                padding: 4rpx 12rpx;
+                border-radius: $radius-sm;
+                color: #fff;
+                font-weight: 600;
+
+                &.measure {
+                    background-color: $apple-orange;
+                }
+
+                &.install {
+                    background-color: $apple-blue;
+                }
+            }
+
+            .date {
+                font-size: $font-sm;
+                color: $apple-red;
+                font-weight: 500;
+            }
+        }
+
+        .customer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-md;
+
+            .left {
+                display: flex;
+                align-items: center;
+
+                .name {
+                    font-size: $font-lg;
+                    font-weight: 600;
+                    color: $text-title;
+                    margin-right: $spacing-sm;
+                }
+
+                .phone {
+                    font-size: $font-md;
+                    color: $text-secondary;
+                }
+            }
+
+            .call-btn {
+                background-color: rgba(52, 199, 89, 0.1);
+                color: $apple-green;
+                padding: 12rpx 24rpx;
+                border-radius: $radius-full;
+                font-size: $font-sm;
+                font-weight: 600;
+
+                &:active {
+                    opacity: 0.8;
+                }
+            }
+        }
+
+        .address-row,
+        .remark-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: $spacing-sm;
+            background-color: #F8F8F8;
+            padding: $spacing-sm;
+            border-radius: $radius-md;
+
+            .icon {
+                font-size: $font-md;
+                margin-right: 12rpx;
+            }
+
+            .text {
+                font-size: $font-md;
+                color: $text-title;
+                flex: 1;
+                line-height: 1.4;
+            }
+        }
+    }
+
+    .section-title {
+        font-size: $font-md;
+        font-weight: 600;
+        color: $text-title;
+        margin: $spacing-lg $spacing-md $spacing-md;
+        display: block;
+    }
+
+    .log-section {
+        background-color: #fff;
+        margin: 0 $spacing-md $spacing-lg;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+
+        .section-title {
+            margin: 0 0 $spacing-md 0;
+        }
+
+        .log-list {
+            .log-item {
+                display: flex;
+                margin-bottom: $spacing-md;
+
+                .dot {
+                    width: 16rpx;
+                    height: 16rpx;
+                    border-radius: 50%;
+                    background-color: $border-separator;
+                    margin-top: 10rpx;
+                    margin-right: $spacing-sm;
+                }
+
+                .content {
+                    flex: 1;
+                    background-color: #F8F8F8;
+                    padding: $spacing-sm;
+                    border-radius: $radius-sm;
+
+                    .time {
+                        font-size: 20rpx;
+                        color: $text-secondary;
+                        display: block;
+                        margin-bottom: 4rpx;
+                    }
+
+                    .text {
+                        font-size: $font-sm;
+                        color: $text-title;
+                    }
+                }
+
+                &.system .dot {
+                    background-color: $apple-orange;
+                }
+
+                &.worker .dot {
+                    background-color: $apple-blue;
+                }
+            }
+
+            .add-log {
+                display: flex;
+                align-items: center;
+                gap: $spacing-sm;
+                margin-top: $spacing-md;
+
+                .log-input {
+                    flex: 1;
+                    height: 72rpx;
+                    background-color: #F8F8F8;
+                    border-radius: $radius-md;
+                    padding: 0 $spacing-sm;
+                    font-size: $font-sm;
+                }
+
+                .send-btn {
+                    height: 72rpx;
+                    background-color: $apple-blue;
+                    color: #fff;
+                    font-size: $font-sm;
+                    border-radius: $radius-md;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0;
+
+                    &::after {
+                        border: none;
+                    }
+                }
+            }
+        }
+    }
+
+    .quote-section {
+        background-color: #fff;
+        margin: 0 $spacing-md $spacing-lg;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+
+        .section-title {
+            margin: 0 0 $spacing-md 0;
+        }
+
+        .quote-card {
+            background-color: #FAFAFA;
+            border-radius: $radius-sm;
+            padding: $spacing-md;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid $border-separator;
+
+            .left {
+                display: flex;
+                flex-direction: column;
+
+                .q-id {
+                    font-size: $font-sm;
+                    color: $text-title;
+                    font-weight: 500;
+                }
+
+                .q-status {
+                    font-size: 20rpx;
+                    color: $apple-green;
+                }
+            }
+
+            .q-amount {
+                font-size: $font-lg;
+                font-weight: 700;
+                color: $apple-orange;
+            }
+        }
+    }
+
+    .images-section {
+        margin: 0 $spacing-md $spacing-lg;
+
+        .images-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: $spacing-sm;
+
+            .task-img {
+                width: calc(33.33% - 12rpx);
+                aspect-ratio: 1;
+                border-radius: $radius-md;
+            }
+        }
+    }
+
+    .safe-bottom-space {
+        height: calc(120rpx + env(safe-area-inset-bottom));
+    }
+
+    .bottom-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        padding: $spacing-md $spacing-md calc($spacing-md + env(safe-area-inset-bottom));
+        box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+        z-index: 100;
+        display: flex;
+        gap: $spacing-md;
+
+        .btn-main {
+            flex: 1;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+            color: #fff;
+
+            &::after {
+                border: none;
+            }
+
+            &.measure {
+                background-color: $apple-orange;
+            }
+
+            &.sign {
+                background-color: $apple-blue;
+            }
+
+            &:active {
+                opacity: 0.8;
+            }
+        }
+    }
+}

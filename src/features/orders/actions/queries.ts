@@ -8,6 +8,7 @@ import { checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { auth } from '@/shared/lib/auth';
 import { orderItems, paymentSchedules } from '@/shared/api/schema/orders';
 
@@ -169,7 +170,7 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
  * @param orderId 待查询详情的订单 ID
  * @returns 包含订单项列表的返回对象 `{ success: true, data: items }`
  */
-export async function getOrderItems(orderId: string) {
+export const getOrderItems = cache(async (orderId: string) => {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
 
@@ -190,7 +191,7 @@ export async function getOrderItems(orderId: string) {
 
   const items = await getCachedItems();
   return { success: true, data: items };
-}
+});
 
 /**
  * 获取订单收款计划 Action。
@@ -203,7 +204,7 @@ export async function getOrderItems(orderId: string) {
  * @param orderId 待查询收款计划的订单 ID
  * @returns 包含收款计划列表的返回对象 `{ success: true, data: schedules }`
  */
-export async function getOrderPaymentSchedules(orderId: string) {
+export const getOrderPaymentSchedules = cache(async (orderId: string) => {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
 
@@ -223,7 +224,7 @@ export async function getOrderPaymentSchedules(orderId: string) {
 
   const schedules = await getCachedSchedules();
   return { success: true, data: schedules };
-}
+});
 
 /**
  * 安全导出获取订单列表请求，主要用于分页和条件查询
@@ -241,6 +242,6 @@ export async function getOrders(params: z.infer<typeof getOrdersSchema>) {
  * @param id 订单 ID
  * @returns 包含顾客及销售关联信息的完整订单对象
  */
-export async function getOrderById(id: string) {
+export const getOrderById = cache(async (id: string) => {
   return getOrderByIdInternal({ id });
-}
+});

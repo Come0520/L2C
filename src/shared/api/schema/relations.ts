@@ -113,6 +113,8 @@ import {
   financeAuditLogs,
 } from './finance';
 
+import { batchTraces, orderBatchLinks, evidenceChains, riskAlerts } from './traceability';
+
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users), // 向后兼容（过渡期保留）
   members: many(tenantMembers), // 新的成员关系
@@ -1403,4 +1405,45 @@ export const voucherTemplatesRelations = relations(voucherTemplates, ({ one }) =
 export const financeAuditLogsRelations = relations(financeAuditLogs, ({ one }) => ({
   tenant: one(tenants, { fields: [financeAuditLogs.tenantId], references: [tenants.id] }),
   user: one(users, { fields: [financeAuditLogs.userId], references: [users.id] }),
+}));
+
+// ==================== 全链路溯源模块关系 (Traceability Module Relations) ====================
+
+export const batchTracesRelations = relations(batchTraces, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [batchTraces.tenantId], references: [tenants.id] }),
+  purchaseOrder: one(purchaseOrders, {
+    fields: [batchTraces.purchaseOrderId],
+    references: [purchaseOrders.id],
+  }),
+  supplier: one(suppliers, { fields: [batchTraces.supplierId], references: [suppliers.id] }),
+  orderLinks: many(orderBatchLinks),
+}));
+
+export const orderBatchLinksRelations = relations(orderBatchLinks, ({ one }) => ({
+  tenant: one(tenants, { fields: [orderBatchLinks.tenantId], references: [tenants.id] }),
+  order: one(orders, { fields: [orderBatchLinks.orderId], references: [orders.id] }),
+  orderItem: one(orderItems, {
+    fields: [orderBatchLinks.orderItemId],
+    references: [orderItems.id],
+  }),
+  batch: one(batchTraces, { fields: [orderBatchLinks.batchId], references: [batchTraces.id] }),
+}));
+
+export const evidenceChainsRelations = relations(evidenceChains, ({ one }) => ({
+  tenant: one(tenants, { fields: [evidenceChains.tenantId], references: [tenants.id] }),
+  verifiedByUser: one(users, {
+    fields: [evidenceChains.verifiedBy],
+    references: [users.id],
+    relationName: 'evidenceVerifier',
+  }),
+  creator: one(users, {
+    fields: [evidenceChains.createdBy],
+    references: [users.id],
+    relationName: 'evidenceCreator',
+  }),
+}));
+
+export const riskAlertsRelations = relations(riskAlerts, ({ one }) => ({
+  tenant: one(tenants, { fields: [riskAlerts.tenantId], references: [tenants.id] }),
+  resolvedByUser: one(users, { fields: [riskAlerts.resolvedBy], references: [users.id] }),
 }));

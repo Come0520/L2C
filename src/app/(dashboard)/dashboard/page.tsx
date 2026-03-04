@@ -1,7 +1,6 @@
-'use client';
-
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Tabs } from '@/components/ui/tabs';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { DashboardTab } from '@/features/dashboard/components/dashboard-tab';
 import { TodoTab } from '@/features/dashboard/components/todo-tab';
 import { AlertsTab } from '@/features/dashboard/components/alerts-tab';
@@ -17,7 +16,9 @@ export default function DashboardPage() {
       value: 'dashboard',
       content: (
         <div className="glass-liquid relative h-full w-full overflow-hidden rounded-2xl border border-white/10 p-6">
-          <DashboardTab />
+          <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+            <DashboardTab />
+          </Suspense>
         </div>
       ),
     },
@@ -26,7 +27,9 @@ export default function DashboardPage() {
       value: 'todos',
       content: (
         <div className="glass-liquid relative h-full w-full overflow-hidden rounded-2xl border border-white/10 p-6">
-          <TodoTab />
+          <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+            <TodoTab />
+          </Suspense>
         </div>
       ),
     },
@@ -35,7 +38,9 @@ export default function DashboardPage() {
       value: 'alerts',
       content: (
         <div className="glass-liquid relative h-full w-full overflow-hidden rounded-2xl border border-white/10 p-6">
-          <AlertsTab />
+          <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+            <AlertsTab />
+          </Suspense>
         </div>
       ),
     },

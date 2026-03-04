@@ -6,11 +6,15 @@ import StyleProvider from '@/shared/providers/style-provider';
 import { ProgressBarProvider } from '@/shared/providers/progress-bar-provider';
 import { QueryProvider } from '@/shared/providers/query-provider';
 import { TenantProvider } from '@/shared/providers/tenant-provider';
-import { Toaster } from '@/shared/ui/sonner';
+import dynamic from 'next/dynamic';
 import './globals.css';
 import '@/lib/zod-i18n';
-import { VersionLogger } from '@/shared/components/version-logger';
-import { WebVitals } from '@/shared/components/web-vitals';
+
+const Toaster = dynamic(() => import('@/shared/ui/sonner').then((m) => m.Toaster));
+const VersionLogger = dynamic(() =>
+  import('@/shared/components/version-logger').then((m) => m.VersionLogger)
+);
+const WebVitals = dynamic(() => import('@/shared/components/web-vitals').then((m) => m.WebVitals));
 
 export const metadata: Metadata = {
   title: 'L2C - 销售管理系统',

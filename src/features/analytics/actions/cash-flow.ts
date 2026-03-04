@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { orders, paymentSchedules } from '@/shared/api/schema';
@@ -178,6 +179,6 @@ const getCashFlowForecastAction = createSafeAction(
  * 导出：获取现金流预测分析数据
  * @param params - 查询参数
  */
-export async function getCashFlowForecast(params: z.infer<typeof cashFlowForecastSchema>) {
+export const getCashFlowForecast = cache(async (params: z.infer<typeof cashFlowForecastSchema>) => {
   return getCashFlowForecastAction(params);
-}
+});

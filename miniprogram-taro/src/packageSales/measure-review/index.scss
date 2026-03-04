@@ -1,0 +1,156 @@
+@use '../../styles/variables' as *;
+
+.measure-review-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        padding-bottom: 200rpx;
+    }
+
+    .warning-banner {
+        background-color: rgba($apple-blue, 0.1);
+        padding: $spacing-md $spacing-lg;
+        display: flex;
+        align-items: center;
+
+        .icon {
+            font-size: $font-lg;
+            margin-right: 12rpx;
+        }
+
+        .text {
+            flex: 1;
+            font-size: $font-sm;
+            color: $apple-blue;
+            font-weight: 500;
+        }
+    }
+
+    .card {
+        background-color: #fff;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        margin: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-sm;
+
+            .label {
+                font-size: $font-sm;
+                color: $text-secondary;
+            }
+
+            .val {
+                font-size: $font-md;
+                color: $text-title;
+                font-weight: 500;
+
+                &.txt-primary {
+                    color: $apple-blue;
+                }
+            }
+        }
+    }
+
+    .data-card {
+        .note-box {
+            margin-top: $spacing-md;
+            background-color: #f9f9f9;
+            padding: $spacing-md;
+            border-radius: $radius-md;
+
+            .lbl {
+                font-size: $font-sm;
+                color: $text-secondary;
+                display: block;
+                margin-bottom: 8rpx;
+            }
+
+            .txt {
+                font-size: $font-md;
+                color: $text-title;
+                line-height: 1.5;
+            }
+        }
+    }
+
+    .media-card {
+        .img-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: $spacing-sm;
+
+            .img {
+                width: 160rpx;
+                height: 160rpx;
+                border-radius: $radius-md;
+                background-color: #f0f0f0;
+            }
+        }
+    }
+
+    .bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        padding: $spacing-md;
+        box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+        z-index: 100;
+        display: flex;
+        gap: $spacing-md;
+
+        .btn {
+            flex: 1;
+            height: 96rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-md;
+            font-weight: 600;
+
+            &:active {
+                opacity: 0.8;
+            }
+
+            &.btn-outline {
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                color: $text-title;
+            }
+
+            &.btn-primary {
+                background-color: $apple-blue;
+                color: #fff;
+                flex: 1.5;
+            }
+        }
+
+        .safe-bottom-space {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-bottom);
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sales 模块安全测试
  * 覆盖 Auth 保护、TenantId 隔离
  */
@@ -17,13 +17,11 @@ vi.mock('@/shared/api/db', () => ({
   db: {
     query: {
       users: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'user-1',
-            role: 'BOSS',
-            tenantId: '11111111-1111-1111-1111-111111111111',
-          }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'user-1',
+          role: 'ADMIN',
+          tenantId: '11111111-1111-1111-1111-111111111111',
+        }),
       },
       salesTargets: { findFirst: vi.fn().mockResolvedValue({ targetAmount: '100000' }) },
       quotes: { findMany: vi.fn().mockResolvedValue([]) },
@@ -62,7 +60,7 @@ const TENANT_A = '11111111-1111-1111-1111-111111111111';
 const USER_ID = '33333333-3333-3333-3333-333333333333';
 
 const makeSession = (tenantId = TENANT_A) => ({
-  user: { id: USER_ID, role: 'BOSS', tenantId, name: '老板' },
+  user: { id: USER_ID, role: 'ADMIN', tenantId, name: '老板' },
 });
 
 const mockAuth = vi.mocked(auth);

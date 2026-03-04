@@ -1,0 +1,1 @@
+"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[3777],{653:function(n,t,s){var c=s(8870),o=s(118),r=s(4848);function u(){return(0,r.jsx)(o.Ss,{className:"custom-tab-bar-placeholder"})}Component((0,c.sq)(u,"custom-tab-bar/index"))}},function(n){var t=function(t){return n(n.s=t)};n.O(0,[6907,8096],function(){return t(653)});n.O()}]);

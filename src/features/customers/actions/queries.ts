@@ -4,6 +4,7 @@ import { db } from '../../../shared/api/db';
 import { customers, orders } from '../../../shared/api/schema';
 import { eq, and, desc, sql, isNull, sum, max, count } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { z } from 'zod';
 import {
   getCustomersSchema,
@@ -151,7 +152,7 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>): 
  *
  * 安全检查：自动从 session 获取 tenantId 实现租户隔离
  */
-export async function getCustomerDetail(id: string): Promise<CustomerDetail | undefined> {
+export const getCustomerDetail = cache(async (id: string): Promise<CustomerDetail | undefined> => {
   const session = await auth();
   if (!session?.user?.tenantId)
     throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
@@ -189,7 +190,7 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetail | un
     [`customer-detail-${tenantId}-${id}`],
     { revalidate: 300, tags: [`customer-detail-${id}`] }
   )();
-}
+});
 
 // ============================================================
 // [Customer-01] 客户画像增强

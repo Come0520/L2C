@@ -4,14 +4,24 @@ import { orders, orderItems } from './orders';
 import { purchaseOrders, suppliers } from './supply-chain';
 import { workOrderStatusEnum, workOrderItemStatusEnum } from './enums';
 
-export const workOrders = pgTable('work_orders', {
+export const workOrders = pgTable(
+  'work_orders',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     woNo: varchar('wo_no', { length: 50 }).unique().notNull(),
 
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
-    poId: uuid('po_id').references(() => purchaseOrders.id).notNull(), // Link to Fabric PO
-    supplierId: uuid('supplier_id').references(() => suppliers.id).notNull(), // Processing Factory
+    orderId: uuid('order_id')
+      .references(() => orders.id)
+      .notNull(),
+    poId: uuid('po_id')
+      .references(() => purchaseOrders.id)
+      .notNull(), // Link to Fabric PO
+    supplierId: uuid('supplier_id')
+      .references(() => suppliers.id)
+      .notNull(), // Processing Factory
 
     status: workOrderStatusEnum('status').default('PENDING'),
 
@@ -20,24 +30,41 @@ export const workOrders = pgTable('work_orders', {
 
     remark: text('remark'),
 
-    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-}, (table) => ({
+  },
+  (table) => ({
     woTenantIdx: index('idx_work_orders_tenant').on(table.tenantId),
     woOrderIdx: index('idx_work_orders_order').on(table.orderId),
     woPoIdx: index('idx_work_orders_po').on(table.poId),
-}));
+  })
+);
 
-export const workOrderItems = pgTable('work_order_items', {
+export const workOrderItems = pgTable(
+  'work_order_items',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    woId: uuid('wo_id').references(() => workOrders.id).notNull(),
-    orderItemId: uuid('order_item_id').references(() => orderItems.id).notNull(), // Finished Product
+    woId: uuid('wo_id')
+      .references(() => workOrders.id)
+      .notNull(),
+    orderItemId: uuid('order_item_id')
+      .references(() => orderItems.id)
+      .notNull(), // Finished Product
 
     status: workOrderItemStatusEnum('status').default('PENDING'),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     woItemWoIdx: index('idx_work_order_items_wo').on(table.woId),
-}));
+  })
+);

@@ -10,6 +10,7 @@ import { eq, and } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath, unstable_cache, updateTag } from 'next/cache';
+import { cache } from 'react';
 import { z } from 'zod';
 import { logger } from '@/shared/lib/logger';
 import { parseSettingValue, validateValueType } from './setting-utils';
@@ -50,7 +51,7 @@ const batchSettingsSchema = z
  * @returns Promise<Record<string, unknown>> 返回键值对形式的设置对象
  * @throws Error 未授权访问时抛出
  */
-export async function getSettingsByCategory(category: string) {
+export const getSettingsByCategory = cache(async (category: string) => {
   const parsed = categorySchema.safeParse(category);
   if (!parsed.success) throw new Error(`参数校验失败: ${parsed.error.issues[0].message}`);
 
@@ -76,7 +77,7 @@ export async function getSettingsByCategory(category: string) {
     logger.error(`获取分类 ${category} 的配置失败:`, error);
     return {};
   }
-}
+});
 
 /**
  * 内部获取单个配置值
@@ -88,7 +89,7 @@ export async function getSettingsByCategory(category: string) {
  * @param tenantId - 租户 ID
  * @returns Promise<unknown> 解析后的配置值
  */
-export async function getSettingInternal(key: string, tenantId: string): Promise<unknown> {
+export const getSettingInternal = cache(async (key: string, tenantId: string): Promise<unknown> => {
   try {
     const setting = await db.query.systemSettings.findFirst({
       where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, key)),
@@ -113,7 +114,7 @@ export async function getSettingInternal(key: string, tenantId: string): Promise
     }
     return null;
   }
-}
+});
 
 /**
  * 获取当前租户的配置值
@@ -123,14 +124,14 @@ export async function getSettingInternal(key: string, tenantId: string): Promise
  * @param key - 配置键名
  * @returns Promise<unknown> 解析后的配置值
  */
-export async function getSetting(key: string): Promise<unknown> {
+export const getSetting = cache(async (key: string): Promise<unknown> => {
   const session = await auth();
   if (!session?.user?.tenantId) {
     throw new Error('未授权访问');
   }
 
   return getSettingInternal(key, session.user.tenantId);
-}
+});
 
 /**
  * 内部更新单个配置

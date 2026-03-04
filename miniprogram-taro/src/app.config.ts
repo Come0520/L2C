@@ -1,92 +1,97 @@
 /**
  * L2C 小程序全局配置
  *
- * @description 基于最新四大角色架构设计文档（2026-03-02 已审批）配置。
+ * @description 基于最新四大角色架构设计文档（2026-03-04 已审批）配置。
  * TabBar 5 个槽位：工作台(0) / 线索(1) / 展厅(2) / 任务(3) / 我的(4)
  * 各角色按 ROLE_TABS 常量动态控制可见槽位。
+ *
+ * 分包架构：
+ *   packageCustomer — 客户全生命周期
+ *   packageWorker   — 工人现场作业
+ *   packageSales    — 销售轻量移动端
+ *   packageShowroom — 云展厅（共享）
  */
 export default defineAppConfig({
-    /** 主包页面 */
+    /** 主包页面（严格 < 2MB） */
     pages: [
         // 认证流程
         'pages/landing/index',
-        'pages/landing/booking/index', // [NEW] 租户公开预约表单
+        'pages/landing/booking/index',
         'pages/login/index',
         'pages/register/index',
         'pages/status/index',
 
         // TabBar 页面（必须在主包）
-        'pages/workbench/index',     // 槽位 0 — Manager / Sales 工作台
-        'pages/leads/index',          // 槽位 1 — Sales 线索
-        'pages/showroom/index',       // 槽位 2 — Sales / Customer 展厅
-        'pages/tasks/index',          // 槽位 3 — Worker 任务
-        'pages/users/profile/index',  // 槽位 4 — 全部角色 我的
+        'pages/workbench/index',      // 槽位 0 — Manager / Sales 工作台
+        'pages/leads/index',           // 槽位 1 — Sales 线索列表
+        'pages/showroom/index',        // 槽位 2 — Sales / Customer 展厅首页
+        'pages/tasks/index',           // 槽位 3 — Worker 任务列表
+        'pages/users/profile/index',   // 槽位 4 — 全部角色 我的
 
-        // 主包高频页（快速访问，不需要等待分包下载）
-        'pages/leads/detail/index',
-        'pages/quotes/index',
-        'pages/quotes/create/index',
-        'pages/quotes/detail/index',
-        'pages/quotes/product-selector/index',
-        'pages/crm/index',
-        'pages/crm/create/index',
-        'pages/crm/detail/index',
-        'pages/crm/followup/index',
+        // 主包轻量页
         'pages/users/edit/index',
-        'pages/reports/index',
     ],
 
-    /** 分包配置 */
+    /** 分包配置 — 按角色划分 */
     subPackages: [
         {
-            root: 'pages/leads-sub',
-            name: 'leads',
-            pages: ['create/index', 'detail/index'],
+            root: 'packageCustomer',
+            name: 'customer',
+            pages: [
+                'quote-view/index',     // 报价查看（客户视角）
+                'quote-sign/index',     // 电子签字
+                'order-track/index',    // 订单进度跟踪 - P2 待建
+                'acceptance/index',     // 安装验收 - P2 待建
+                'review/index',         // 评价 - P2 待建
+                'after-sales/index',    // 报修 - MIGRATED
+                'service-list/index',   // 服务记录 - MIGRATED
+                'refer-share/index',    // 转介绍分享 - P1 高优
+                'refer-landing/index',  // 品牌落地页 - P1 高优
+            ],
         },
         {
-            root: 'pages/showroom-sub',
-            name: 'showroom-sub',
-            pages: ['detail/index', 'capsule/index'],
+            root: 'packageWorker',
+            name: 'worker',
+            pages: [
+                'onboarding/index',       // 入驻培训 - P3 待建
+                'order-bid/index',        // 接单/议价 - P3 待建
+                'schedule/index',         // 日历视图 - P3 待建
+                'task-detail/index',      // 任务详情 - MIGRATED
+                'measure/index',          // 量尺 - MIGRATED
+                'measure-dispute/index',  // 量尺异议 - P3 待建
+                'install-upload/index',   // 安装回传 - P3 待建
+                'settlement/index',       // 结算面板 - P3 待建
+                'liability/index',        // 售后判责 - P3 待建
+                'customer-confirm/index', // 客户现场确认 - MIGRATED
+                'engineer/index',         // 工程师工作台 - MIGRATED
+                // 'check-in/index',         // 打卡 - 已有骨架
+                // 'photo-upload/index',     // 拍照上传 - 已有骨架
+            ],
         },
         {
-            root: 'pages/service',
-            name: 'service',
-            pages: ['apply/index', 'list/index'],
+            root: 'packageSales',
+            name: 'sales',
+            pages: [
+                'lead-detail/index',      // 线索详情 - MIGRATED
+                'lead-actions/index',     // 线索操作 - P4 待建
+                'quick-follow-up/index',  // 快速跟进 - P4 待建
+                'share-hub/index',        // 分享中心 - P4 待建
+                'measure-review/index',   // 量尺审查 - P4 待建
+                'orders/index',           // 订单列表 - MIGRATED
+                'orders/detail/index',    // 订单详情 - MIGRATED
+                'invite/index',           // 邀请 - MIGRATED
+            ],
         },
         {
-            root: 'pages/projects',
-            name: 'projects',
-            pages: ['task-detail/index'],
-        },
-        {
-            root: 'pages/invite',
-            name: 'invite',
-            pages: ['index'],
-        },
-        {
-            root: 'pages/manager',
-            name: 'manager',
-            pages: ['targets/index'],
-        },
-        {
-            root: 'pages/tenant',
-            name: 'tenant',
-            pages: ['payment-settings/index'],
-        },
-        {
-            root: 'pages/orders',
-            name: 'orders',
-            pages: ['index', 'detail/index'],
-        },
-        {
-            root: 'pages/tasks-sub',
-            name: 'tasks',
-            pages: ['detail/index', 'measure/index', 'customer-confirm/index'],
-        },
-        {
-            root: 'pages/workbench-sub',
-            name: 'workbench',
-            pages: ['engineer/index'],
+            root: 'packageShowroom',
+            name: 'showroom',
+            pages: [
+                'product-detail/index',   // 商品详情 - MIGRATED
+                'case-detail/index',      // 案例详情 - P1 待建
+                'article-detail/index',   // 知识文章 - P1 待建
+                'favorites/index',        // 我的收藏 - P1 待建
+                'capsule/index',          // 分享胶囊 - MIGRATED
+            ],
         },
     ],
 
@@ -94,22 +99,26 @@ export default defineAppConfig({
     preloadRule: {
         'pages/workbench/index': {
             network: 'all',
-            packages: ['orders', 'manager'],
+            packages: ['sales', 'worker'],
         },
         'pages/leads/index': {
             network: 'wifi',
-            packages: ['leads'],
+            packages: ['sales'],
         },
         'pages/tasks/index': {
             network: 'all',
-            packages: ['tasks'],
+            packages: ['worker'],
+        },
+        'pages/showroom/index': {
+            network: 'all',
+            packages: ['showroom', 'customer'],
         },
     },
 
     /** 全局窗口配置 */
     window: {
         navigationBarTitleText: 'L2C 窗帘全流程管理大师',
-        navigationBarBackgroundColor: '#F2F2F7', /* Apple Light Gray */
+        navigationBarBackgroundColor: '#F2F2F7',
         navigationBarTextStyle: 'black',
         backgroundColor: '#F2F2F7',
         backgroundTextStyle: 'dark',
@@ -126,7 +135,7 @@ export default defineAppConfig({
     tabBar: {
         custom: true,
         color: '#8E8E93',
-        selectedColor: '#007AFF', /* Apple Blue */
+        selectedColor: '#007AFF',
         borderStyle: 'white',
         backgroundColor: '#F2F2F7',
         list: [

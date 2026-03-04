@@ -12,6 +12,7 @@ import { eq, and, desc, ilike, or, gte, lte, sql, inArray, count, SQL } from 'dr
 import { z } from 'zod';
 import { leadFilterSchema, getLeadTimelineLogsSchema, analyticsDateRangeSchema } from '../schemas';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 import { auth } from '@/shared/lib/auth';
 import { escapeSqlLike } from '@/shared/lib/utils';
@@ -179,7 +180,7 @@ async function getLeadDetailInternal(id: string, tenantId: string) {
  * @throws {Error} 未登录或缺少租户信息时抛出
  * @audit 依赖 tenantId 进行租户数据严格隔离校验
  */
-export async function getLeadById({ id }: { id: string }) {
+export const getLeadById = cache(async ({ id }: { id: string }) => {
   const session = await auth();
   if (!session?.user?.tenantId) {
     throw new Error('Unauthorized');
@@ -207,7 +208,7 @@ export async function getLeadById({ id }: { id: string }) {
 
   if (!lead) return null;
   return lead;
-}
+});
 
 /**
  * 获取指定线索的操作时间线（活动记录）

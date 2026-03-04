@@ -1,10 +1,27 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb, index, integer, unique } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  boolean,
+  timestamp,
+  jsonb,
+  index,
+  integer,
+  unique,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 
-export const notifications = pgTable('notifications', {
+export const notifications = pgTable(
+  'notifications',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    userId: uuid('user_id').references(() => users.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id)
+      .notNull(),
 
     title: varchar('title', { length: 200 }).notNull(),
     content: text('content'),
@@ -17,32 +34,57 @@ export const notifications = pgTable('notifications', {
     linkUrl: text('link_url'),
     metadata: jsonb('metadata'),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     notifUserIdx: index('idx_notifications_user').on(table.userId),
     notifTenantIdx: index('idx_notifications_tenant').on(table.tenantId),
     notifCreatedIdx: index('idx_notifications_created').on(table.createdAt),
     // P1 优化: 常用查询复合索引
-    notifCompositeIdx: index('idx_notifications_tenant_user_read').on(table.tenantId, table.userId, table.isRead),
-}));
+    notifCompositeIdx: index('idx_notifications_tenant_user_read').on(
+      table.tenantId,
+      table.userId,
+      table.isRead
+    ),
+  })
+);
 
-export const notificationPreferences = pgTable('notification_preferences', {
+export const notificationPreferences = pgTable(
+  'notification_preferences',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    userId: uuid('user_id').references(() => users.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id)
+      .notNull(),
 
     notificationType: varchar('notification_type', { length: 50 }).notNull(), // SYSTEM, ORDER_STATUS, etc.
     channels: jsonb('channels').$type<string[]>().default([]), // ['IN_APP', 'EMAIL']
 
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     prefUserIdx: index('idx_notif_prefs_user').on(table.userId),
     // P1 修复: 唯一约束防止重复配置，增加 tenantId 以确保多租户隔离鲁棒性
-    prefUnique: unique('unq_notif_prefs_user_type').on(table.tenantId, table.userId, table.notificationType),
-}));
+    prefUnique: unique('unq_notif_prefs_user_type').on(
+      table.tenantId,
+      table.userId,
+      table.notificationType
+    ),
+  })
+);
 
 // ==================== 通知模板配置表 ====================
-export const notificationTemplates = pgTable('notification_templates', {
+export const notificationTemplates = pgTable(
+  'notification_templates',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id), // null = 系统模板
 
@@ -61,28 +103,41 @@ export const notificationTemplates = pgTable('notification_templates', {
     wechatTemplateId: varchar('wechat_template_id', { length: 100 }), // 微信模板ID
 
     // 变量映射
-    paramMapping: jsonb('param_mapping').$type<{
+    paramMapping: jsonb('param_mapping').$type<
+      {
         key: string;
         label: string;
         source: string;
         defaultValue?: string;
-    }[]>(),
+      }[]
+    >(),
 
     // 配置
     isActive: boolean('is_active').default(true),
     priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     templateCodeIdx: index('idx_notif_template_code').on(table.code),
     templateTenantIdx: index('idx_notif_template_tenant').on(table.tenantId),
-}));
+  })
+);
 
 // ==================== 通知异步队列表 ====================
-export const notificationQueue = pgTable('notification_queue', {
+export const notificationQueue = pgTable(
+  'notification_queue',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 关联模板
     templateId: uuid('template_id').references(() => notificationTemplates.id),
@@ -113,17 +168,27 @@ export const notificationQueue = pgTable('notification_queue', {
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }), // 延迟发送
     processedAt: timestamp('processed_at', { withTimezone: true }),
     idempotencyToken: varchar('idempotency_token', { length: 200 }),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     queueStatusIdx: index('idx_notif_queue_status').on(table.status),
     queueScheduledIdx: index('idx_notif_queue_scheduled').on(table.scheduledAt),
     queueUserIdx: index('idx_notif_queue_user').on(table.userId),
     // 幂等性唯一索引：同一租户下相同 token 不能重复
-    queueIdempotencyIdx: unique('unq_notif_queue_idempotency').on(table.tenantId, table.idempotencyToken),
-}));
+    queueIdempotencyIdx: unique('unq_notif_queue_idempotency').on(
+      table.tenantId,
+      table.idempotencyToken
+    ),
+  })
+);
 
 // ==================== 系统公告表 ====================
-export const systemAnnouncements = pgTable('system_announcements', {
+export const systemAnnouncements = pgTable(
+  'system_announcements',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
     tenantId: uuid('tenant_id').references(() => tenants.id), // null = 全平台公告
 
@@ -144,9 +209,12 @@ export const systemAnnouncements = pgTable('system_announcements', {
     // 创建信息
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     announceTenantIdx: index('idx_announce_tenant').on(table.tenantId),
     announceTimeIdx: index('idx_announce_time').on(table.startAt, table.endAt),
-}));
-
+  })
+);

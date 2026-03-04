@@ -1,0 +1,111 @@
+@use '../../styles/variables' as *;
+
+.article-detail-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .detail-scroll {
+        flex: 1;
+        height: 0;
+        background-color: #FFFFFF;
+    }
+
+    .article-header {
+        padding: $spacing-xl $spacing-md $spacing-md;
+
+        .article-title {
+            font-size: $font-title2;
+            font-weight: 700;
+            color: $text-title;
+            line-height: 1.4;
+            margin-bottom: $spacing-md;
+            display: block;
+        }
+
+        .article-meta {
+            display: flex;
+            gap: $spacing-md;
+            align-items: center;
+
+            .meta-item {
+                font-size: 24rpx;
+                color: $text-secondary;
+            }
+        }
+    }
+
+    .article-body {
+        padding: 0 $spacing-md $spacing-xl;
+    }
+
+    /* 底部悬浮操作栏 */
+    .bottom-action-bar {
+        background-color: $bg-card;
+        padding: 12rpx $spacing-md calc(12rpx + env(safe-area-inset-bottom));
+        display: flex;
+        align-items: center;
+        border-top: 1px solid $border-separator;
+
+        .action-left {
+            flex: 1;
+            display: flex;
+            gap: 32rpx;
+        }
+
+        .action-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            .icon {
+                font-size: 36rpx;
+                color: $text-secondary;
+                margin-bottom: 4rpx;
+
+                &.favorite-active {
+                    color: $apple-orange;
+                }
+            }
+
+            .label {
+                font-size: 20rpx;
+                color: $text-secondary;
+            }
+        }
+
+        .action-right {
+            .btn {
+                height: 72rpx;
+                line-height: 72rpx;
+                border-radius: $radius-full;
+                font-size: $font-md;
+                padding: 0 48rpx;
+                margin: 0;
+
+                &.btn-share {
+                    background-color: rgba(230, 180, 80, 0.15);
+                    color: $apple-orange;
+                    border: 1px solid rgba(230, 180, 80, 0.3);
+                }
+            }
+        }
+    }
+}
+
+.page {
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    color: $text-placeholder;
+}

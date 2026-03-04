@@ -1,0 +1,208 @@
+@use '../../styles/variables' as *;
+
+.refer-share-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        height: 100vh;
+    }
+
+    .share-banner {
+        background: linear-gradient(135deg, $apple-blue 0%, #00C6FF 100%);
+        padding: 80rpx 40rpx;
+        color: #fff;
+        text-align: center;
+        border-bottom-left-radius: 40rpx;
+        border-bottom-right-radius: 40rpx;
+        margin-bottom: $spacing-xl;
+
+        .banner-title {
+            font-size: 56rpx;
+            font-weight: 800;
+            display: block;
+            margin-bottom: $spacing-sm;
+            text-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+        }
+
+        .banner-subtitle {
+            font-size: $font-md;
+            opacity: 0.9;
+            display: block;
+        }
+    }
+
+    .stats-card {
+        background-color: $bg-card;
+        margin: -60rpx $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-lg;
+        box-shadow: $shadow-soft;
+        position: relative;
+        z-index: 10;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            .num {
+                font-size: $font-title1;
+                font-weight: 700;
+                color: $apple-blue;
+                font-family: 'SF Pro Display', sans-serif;
+                margin-bottom: 8rpx;
+            }
+
+            .label {
+                font-size: $font-sm;
+                color: $text-secondary;
+            }
+        }
+
+        .divider {
+            width: 1px;
+            height: 60rpx;
+            background-color: $border-separator;
+        }
+    }
+
+    .action-card {
+        background-color: $bg-card;
+        margin: 0 $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-xl $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .btn-wechat {
+            background-color: #07C160;
+            color: #fff;
+            border-radius: $radius-full;
+            height: 88rpx;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+            margin-bottom: $spacing-md;
+
+            &::after {
+                border: none;
+            }
+
+            &:active {
+                opacity: 0.8;
+            }
+        }
+
+        .btn-poster {
+            background-color: #fff;
+            color: $apple-blue;
+            border: 2rpx solid $apple-blue;
+            border-radius: $radius-full;
+            height: 88rpx;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+
+            &::after {
+                border: none;
+            }
+
+            &:active {
+                background-color: rgba(0, 113, 227, 0.05);
+            }
+        }
+    }
+
+    .records-card {
+        background-color: $bg-card;
+        margin: 0 $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px solid $border-separator;
+        }
+
+        .record-list {
+            .record-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: $spacing-sm 0;
+
+                .left {
+                    display: flex;
+                    align-items: center;
+
+                    .avatar {
+                        width: 72rpx;
+                        height: 72rpx;
+                        border-radius: 50%;
+                        background-color: rgba(0, 113, 227, 0.1);
+                        color: $apple-blue;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: $font-md;
+                        font-weight: 600;
+                        margin-right: $spacing-sm;
+                    }
+
+                    .info {
+                        display: flex;
+                        flex-direction: column;
+
+                        .name {
+                            font-size: $font-md;
+                            color: $text-title;
+                            font-weight: 500;
+                            margin-bottom: 4rpx;
+                        }
+
+                        .time {
+                            font-size: 20rpx;
+                            color: $text-secondary;
+                        }
+                    }
+                }
+
+                .status {
+                    font-size: $font-sm;
+                    font-weight: 500;
+
+                    &.success {
+                        color: $apple-green;
+                    }
+
+                    &.pending {
+                        color: $apple-orange;
+                    }
+                }
+            }
+        }
+
+        .empty {
+            padding: 40rpx 0;
+            text-align: center;
+            color: $text-placeholder;
+            font-size: $font-sm;
+        }
+    }
+}

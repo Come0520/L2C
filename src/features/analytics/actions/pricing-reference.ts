@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { quotes, quoteItems } from '@/shared/api/schema';
@@ -96,6 +97,6 @@ const getPricingReferenceAction = createSafeAction(
  * 导出：获取报价参考价格
  * @param params - 查询参数
  */
-export async function getPricingReference(params: z.infer<typeof pricingReferenceSchema>) {
+export const getPricingReference = cache(async (params: z.infer<typeof pricingReferenceSchema>) => {
   return getPricingReferenceAction(params);
-}
+});

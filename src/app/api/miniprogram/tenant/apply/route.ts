@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           phone,
           email,
           passwordHash,
-          role: 'BOSS',
+          role: 'ADMIN',
           isActive: false,
           wechatOpenId: openId || null,
           permissions: [],

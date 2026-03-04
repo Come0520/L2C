@@ -1,4 +1,5 @@
-import { pgTable, uuid, varchar, jsonb, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, jsonb, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
+import { userRoleEnum } from './enums';
 import { users, tenants } from './infrastructure';
 
 /**
@@ -25,7 +26,7 @@ export const tenantMembers = pgTable(
       .notNull(),
 
     /** 主角色（向后兼容） */
-    role: varchar('role', { length: 50 }).default('SALES'),
+    role: userRoleEnum('role').default('SALES'),
 
     /** 多角色列表 */
     roles: jsonb('roles').$type<string[]>().default([]),
@@ -39,8 +40,13 @@ export const tenantMembers = pgTable(
     /** 加入时间 */
     joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow(),
 
+    /** 创建人 */
+    createdBy: uuid('created_by').references(() => users.id),
+
     /** 更新时间 */
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
   },
   (table) => [unique('uq_user_tenant').on(table.userId, table.tenantId)]
 );

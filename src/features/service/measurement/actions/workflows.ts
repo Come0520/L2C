@@ -135,7 +135,7 @@ export async function reviewMeasureTask(input: z.infer<typeof reviewMeasureTaskS
   }
 
   // 角色校验：仅允许销售/管理员审核
-  const allowedRoles = ['admin', 'sales', 'store_manager'];
+  const allowedRoles = ['admin', 'sales', 'MANAGER'];
   if (!session.user.roles?.some((r) => allowedRoles.includes(r))) {
     throw new Error('无权限执行审核操作');
   }
@@ -229,9 +229,7 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
   const userId = session.user.id;
   const userRoles = session.user.roles || [];
   const isAssignedWorker = task.assignedWorkerId === userId;
-  const hasManagePermission = userRoles.some((r) =>
-    ['admin', 'sales', 'store_manager'].includes(r)
-  );
+  const hasManagePermission = userRoles.some((r) => ['admin', 'sales', 'MANAGER'].includes(r));
 
   if (!isAssignedWorker && !hasManagePermission) {
     throw new Error('无权限创建新版本');

@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { leads, channels } from '@/shared/api/schema';
@@ -105,6 +106,8 @@ const getCustomerSourceDistributionAction = createSafeAction(
  * 导出：获取客户来源分布统计
  * @param params - 查询参数
  */
-export async function getCustomerSourceDistribution(params: z.infer<typeof customerSourceSchema>) {
-  return getCustomerSourceDistributionAction(params);
-}
+export const getCustomerSourceDistribution = cache(
+  async (params: z.infer<typeof customerSourceSchema>) => {
+    return getCustomerSourceDistributionAction(params);
+  }
+);

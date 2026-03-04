@@ -8,6 +8,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { unstable_cache } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
+import { cache } from 'react';
 
 /**
  * 渠道查询参数
@@ -222,7 +223,7 @@ export async function getChannelTree() {
  *
  * 安全检查：自动从 session 获取 tenantId
  */
-export async function getChannelById(id: string) {
+export const getChannelById = cache(async (id: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -246,14 +247,14 @@ export async function getChannelById(id: string) {
       },
     },
   });
-}
+});
 
 /**
  * 根据编号获取渠道
  *
  * 安全检查：自动从 session 获取 tenantId
  */
-export async function getChannelByCode(channelNo: string) {
+export const getChannelByCode = cache(async (channelNo: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -265,14 +266,14 @@ export async function getChannelByCode(channelNo: string) {
   return await db.query.channels.findFirst({
     where: and(eq(channels.channelNo, channelNo), eq(channels.tenantId, tenantId)),
   });
-}
+});
 
 /**
  * 获取渠道联系人列表
  *
  * 安全检查：自动从 session 获取 tenantId
  */
-export async function getChannelContacts(channelId: string) {
+export const getChannelContacts = cache(async (channelId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -285,4 +286,4 @@ export async function getChannelContacts(channelId: string) {
     where: and(eq(channelContacts.channelId, channelId), eq(channelContacts.tenantId, tenantId)),
     orderBy: [desc(channelContacts.isMain), desc(channelContacts.createdAt)],
   });
-}
+});

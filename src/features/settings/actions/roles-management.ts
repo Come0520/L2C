@@ -5,7 +5,7 @@ import { roles, users } from '@/shared/api/schema';
 import { ROLES } from '@/shared/config/roles';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS, getAllPermissions } from '@/shared/config/permissions';
-import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, asc } from 'drizzle-orm';
 
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
@@ -380,12 +380,9 @@ export async function deleteRole(id: string) {
         throw new Error('无法删除系统预设角色');
       }
 
-      // 检查是否有用户正在使用该角色 (R4-01)
+      // 检查是否有用户正在使用该角色（基于 users.role enum 字段）
       const userInRole = await tx.query.users.findFirst({
-        where: and(
-          eq(users.tenantId, tenantId),
-          sql`${users.roles} @> ${JSON.stringify([role.code])}::jsonb`
-        ),
+        where: and(eq(users.tenantId, tenantId), eq(users.role, role.code as any)),
       });
 
       if (userInRole) {

@@ -36,7 +36,7 @@ interface PaymentSettingsFormData {
 }
 
 const APPROVER_ROLES = [
-  { value: 'STORE_MANAGER', label: '店长' },
+  { value: 'MANAGER', label: '店长' },
   { value: 'FINANCE', label: '财务' },
   { value: 'ADMIN', label: '管理员' },
 ];
@@ -49,7 +49,7 @@ export function PaymentSettingsConfig() {
   const form = useForm<PaymentSettingsFormData>({
     defaultValues: {
       ENABLE_PAYMENT_APPROVAL: true,
-      PAYMENT_APPROVER_ROLE: 'STORE_MANAGER',
+      PAYMENT_APPROVER_ROLE: 'MANAGER',
       EARNEST_MONEY_MAX_RATIO: 0.5,
       ENABLE_FREE_MEASURE_APPROVAL: true,
       FREE_MEASURE_APPROVAL_TIMEOUT: 24,

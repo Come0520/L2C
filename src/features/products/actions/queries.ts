@@ -8,6 +8,7 @@ import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { getProductsSchema, getProductSchema } from '../schema';
+import { cache } from 'react';
 
 /**
  * 获取产品列表（分页、搜索、品类筛选）
@@ -144,6 +145,6 @@ const getProductByIdActionInternal = createSafeAction(
   }
 );
 
-export async function getProductById(params: z.infer<typeof getProductSchema>) {
+export const getProductById = cache(async (params: z.infer<typeof getProductSchema>) => {
   return getProductByIdActionInternal(params);
-}
+});

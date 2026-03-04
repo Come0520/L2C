@@ -1,0 +1,186 @@
+@use '../../styles/variables' as *;
+
+.liability-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        padding-bottom: 200rpx;
+    }
+
+    .warning-banner {
+        background-color: rgba(255, 59, 48, 0.1);
+        padding: $spacing-md $spacing-lg;
+        display: flex;
+        align-items: flex-start;
+
+        .icon {
+            font-size: $font-lg;
+            margin-right: 12rpx;
+            margin-top: 4rpx;
+        }
+
+        .text {
+            flex: 1;
+            font-size: $font-sm;
+            color: $apple-red;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+    }
+
+    .card {
+        background-color: #fff;
+        border-radius: $radius-lg;
+        padding: $spacing-lg;
+        margin: $spacing-md;
+        box-shadow: $shadow-soft;
+    }
+
+    .liability-card {
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-md;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px dashed $border-separator;
+
+            .title {
+                font-size: $font-lg;
+                font-weight: 700;
+                color: $text-title;
+            }
+
+            .date {
+                font-size: $font-sm;
+                color: $text-placeholder;
+            }
+        }
+
+        .info-list {
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: $spacing-sm;
+
+                .label {
+                    font-size: $font-md;
+                    color: $text-secondary;
+                }
+
+                .value {
+                    font-size: $font-md;
+                    color: $text-title;
+                    font-weight: 500;
+                }
+
+                &.penalty {
+                    margin-top: $spacing-md;
+                    padding-top: $spacing-md;
+                    border-top: 1px solid rgba(0, 0, 0, 0.03);
+
+                    .amount {
+                        font-size: $font-title3;
+                        font-weight: 700;
+                        color: $apple-red;
+                        font-family: 'SF Pro Display', sans-serif;
+                    }
+                }
+            }
+        }
+
+        .reason-section {
+            margin-top: $spacing-lg;
+            background-color: #F8F8F8;
+            padding: $spacing-md;
+            border-radius: $radius-md;
+
+            .reason-label {
+                font-size: $font-sm;
+                color: $text-secondary;
+                display: block;
+                margin-bottom: 8rpx;
+            }
+
+            .reason-text {
+                font-size: $font-md;
+                color: $text-title;
+                line-height: 1.5;
+            }
+        }
+    }
+
+    .tips-card {
+        .title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-sm;
+        }
+
+        .desc {
+            font-size: $font-sm;
+            color: $text-secondary;
+            display: block;
+            line-height: 1.6;
+            margin-bottom: 8rpx;
+        }
+    }
+
+    .bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        padding: $spacing-md;
+        box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+        z-index: 100;
+        display: flex;
+        gap: $spacing-md;
+
+        .btn {
+            flex: 1;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-md;
+            font-weight: 600;
+            margin: 0;
+
+            &::after {
+                border: none;
+            }
+
+            &:active {
+                opacity: 0.8;
+            }
+
+            &.btn-appeal {
+                background-color: rgba(255, 59, 48, 0.1);
+                color: $apple-red;
+            }
+
+            &.btn-accept {
+                background-color: $apple-red;
+                color: #fff;
+            }
+        }
+
+        .safe-bottom-space {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-bottom);
+        }
+    }
+}

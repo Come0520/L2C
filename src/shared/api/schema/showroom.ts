@@ -1,26 +1,40 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  integer,
+  jsonb,
+  pgEnum,
+  index,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { products } from './catalogs';
 import { customers } from './customers';
 
 // 枚举定义
 export const showroomItemTypeEnum = pgEnum('showroom_item_type', [
-    'PRODUCT',
-    'CASE',
-    'KNOWLEDGE',
-    'TRAINING',
+  'PRODUCT',
+  'CASE',
+  'KNOWLEDGE',
+  'TRAINING',
 ]);
 
 export const showroomItemStatusEnum = pgEnum('showroom_item_status', [
-    'DRAFT',
-    'PUBLISHED',
-    'ARCHIVED',
+  'DRAFT',
+  'PUBLISHED',
+  'ARCHIVED',
 ]);
 
 // 展厅内容表
-export const showroomItems = pgTable('showroom_items', {
+export const showroomItems = pgTable(
+  'showroom_items',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     type: showroomItemTypeEnum('type').notNull(),
     productId: uuid('product_id').references(() => products.id), // 可选，仅 type=PRODUCT 时有值
     title: varchar('title', { length: 200 }).notNull(),
@@ -36,18 +50,28 @@ export const showroomItems = pgTable('showroom_items', {
     createdBy: uuid('created_by').references(() => users.id),
     updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     showroomTenantIdx: index('idx_showroom_items_tenant').on(table.tenantId),
     showroomProductIdx: index('idx_showroom_items_product').on(table.productId),
     showroomTypeIdx: index('idx_showroom_items_type').on(table.type),
-}));
+  })
+);
 
 // 分享记录表
-export const showroomShares = pgTable('showroom_shares', {
+export const showroomShares = pgTable(
+  'showroom_shares',
+  {
     id: uuid('id').primaryKey().defaultRandom(), // 分享码
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    salesId: uuid('sales_id').references(() => users.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    salesId: uuid('sales_id')
+      .references(() => users.id)
+      .notNull(),
     customerId: uuid('customer_id').references(() => customers.id), // 可选关联客户
 
     // 分享内容快照 (Array of items with override prices)
@@ -63,33 +87,38 @@ export const showroomShares = pgTable('showroom_shares', {
     views: integer('views').default(0),
     lastViewedAt: timestamp('last_viewed_at', { withTimezone: true }),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     shareTenantIdx: index('idx_showroom_shares_tenant').on(table.tenantId),
     shareSalesIdx: index('idx_showroom_shares_sales').on(table.salesId),
     shareCustomerIdx: index('idx_showroom_shares_customer').on(table.customerId),
-}));
+  })
+);
 
 import { relations } from 'drizzle-orm';
 
 export const showroomItemsRelations = relations(showroomItems, ({ one }) => ({
-    product: one(products, {
-        fields: [showroomItems.productId],
-        references: [products.id],
-    }),
-    creator: one(users, {
-        fields: [showroomItems.createdBy],
-        references: [users.id],
-    }),
+  product: one(products, {
+    fields: [showroomItems.productId],
+    references: [products.id],
+  }),
+  creator: one(users, {
+    fields: [showroomItems.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const showroomSharesRelations = relations(showroomShares, ({ one }) => ({
-    sales: one(users, {
-        fields: [showroomShares.salesId],
-        references: [users.id],
-    }),
-    customer: one(customers, {
-        fields: [showroomShares.customerId],
-        references: [customers.id],
-    }),
+  sales: one(users, {
+    fields: [showroomShares.salesId],
+    references: [users.id],
+  }),
+  customer: one(customers, {
+    fields: [showroomShares.customerId],
+    references: [customers.id],
+  }),
 }));

@@ -202,7 +202,7 @@ export default function OnboardingWizard() {
                   <p className="template-desc">{tpl.description}</p>
                   <div className="template-roles">
                     {tpl.roles.map((r, i) => (
-                      <span key={i} className={`role-tag ${r.isBoss ? 'boss' : ''}`}>
+                      <span key={i} className={`role-tag ${r.isBoss ? 'ADMIN' : ''}`}>
                         {r.name}
                       </span>
                     ))}
@@ -242,7 +242,7 @@ export default function OnboardingWizard() {
               <div className="role-tags">
                 {selectedTemplate.roles.map((r, i) => (
                   <div key={i} className="role-detail">
-                    <span className={`role-tag ${r.isBoss ? 'boss' : ''}`}>{r.name}</span>
+                    <span className={`role-tag ${r.isBoss ? 'ADMIN' : ''}`}>{r.name}</span>
                     <span className="role-desc">{r.description}</span>
                   </div>
                 ))}

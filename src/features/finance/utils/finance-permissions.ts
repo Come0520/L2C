@@ -1,13 +1,6 @@
-export type FinanceRole =
-  | 'ADMIN'
-  | 'FINANCE'
-  | 'FINANCE_BOOKKEEPER'
-  | 'FINANCE_REVIEWER'
-  | 'FINANCE_SUPERVISOR'
-  | 'FINANCE_READONLY'
-  | string;
+export type FinanceRole = 'ADMIN' | 'FINANCE' | string;
 
-const FULL_ACCESS_ROLES = ['ADMIN', 'FINANCE', 'FINANCE_SUPERVISOR'];
+const FULL_ACCESS_ROLES = ['ADMIN', 'FINANCE'];
 
 function checkRoles(roles: FinanceRole[], allowedRoles: string[]): boolean {
   return roles.some((role) => allowedRoles.includes(role));
@@ -18,7 +11,7 @@ function checkRoles(roles: FinanceRole[], allowedRoles: string[]): boolean {
  */
 export function canCreateJournal(roles: FinanceRole[], isSimpleMode: boolean = false): boolean {
   if (isSimpleMode) return true; // 单体户简易模式：默认全员/所有者可记账
-  return checkRoles(roles, [...FULL_ACCESS_ROLES, 'FINANCE_BOOKKEEPER']);
+  return checkRoles(roles, FULL_ACCESS_ROLES);
 }
 
 /**
@@ -26,7 +19,7 @@ export function canCreateJournal(roles: FinanceRole[], isSimpleMode: boolean = f
  */
 export function canReviewJournal(roles: FinanceRole[], isSimpleMode: boolean = false): boolean {
   if (isSimpleMode) return true;
-  return checkRoles(roles, [...FULL_ACCESS_ROLES, 'FINANCE_REVIEWER']);
+  return checkRoles(roles, FULL_ACCESS_ROLES);
 }
 
 /**
@@ -50,10 +43,5 @@ export function canClosePeriod(roles: FinanceRole[], isSimpleMode: boolean = fal
  */
 export function canViewReports(roles: FinanceRole[], isSimpleMode: boolean = false): boolean {
   if (isSimpleMode) return true;
-  return checkRoles(roles, [
-    ...FULL_ACCESS_ROLES,
-    'FINANCE_BOOKKEEPER',
-    'FINANCE_REVIEWER',
-    'FINANCE_READONLY',
-  ]);
+  return checkRoles(roles, FULL_ACCESS_ROLES);
 }

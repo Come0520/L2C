@@ -10,7 +10,7 @@ describe('canManageShowroomItem 权限逻辑单元测试', () => {
   });
 
   it('超级管理员 (SUPER_ADMIN) 应有权管理任何素材', async () => {
-    const session = { user: { id: 'admin1', role: 'SUPER_ADMIN' } } as unknown as Session;
+    const session = { user: { id: 'admin1', role: 'ADMIN' } } as unknown as Session;
     expect(await canManageShowroomItem(session, 'u1')).toBe(true);
   });
 

@@ -93,7 +93,7 @@ export const OrderTable = React.memo(function OrderTable({ data }: OrderTablePro
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="content-visibility-auto">
           {data.length === 0 ? (
             <EmptyTableRow colSpan={8} message="暂无订单。" />
           ) : (

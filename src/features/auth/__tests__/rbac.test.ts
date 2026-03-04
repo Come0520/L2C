@@ -94,7 +94,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
       permissions: ['*'],
     });
 
-    const session = createMockSession(['SUPER_ADMIN']);
+    const session = createMockSession(['ADMIN']);
     const result = await checkPermission(session as any, 'very.complex.action');
     expect(result).toBe(true);
   });
@@ -104,7 +104,7 @@ describe('RBAC checkRolePermission Core Logic', () => {
       permissions: ['**'],
     });
 
-    const session = createMockSession(['TENANT_ADMIN']);
+    const session = createMockSession(['ADMIN']);
     const result = await checkPermission(session as any, 'system.settings.purge');
     expect(result).toBe(true);
   });

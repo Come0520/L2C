@@ -31,7 +31,7 @@ interface OrderSettingsFormData {
 }
 
 const APPROVER_ROLES = [
-  { value: 'STORE_MANAGER', label: '店长' },
+  { value: 'MANAGER', label: '店长' },
   { value: 'ADMIN', label: '管理员' },
 ];
 
@@ -43,7 +43,7 @@ export function OrderSettingsConfig() {
   const form = useForm<OrderSettingsFormData>({
     defaultValues: {
       ENABLE_ORDER_CANCEL_APPROVAL: true,
-      ORDER_CANCEL_APPROVER_ROLE: 'STORE_MANAGER',
+      ORDER_CANCEL_APPROVER_ROLE: 'MANAGER',
     },
   });
 

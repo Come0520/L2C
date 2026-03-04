@@ -8,12 +8,11 @@ import { eq, and, desc } from 'drizzle-orm';
 import { subscriptions, billingPaymentRecords, tenants } from '@/shared/api/schema';
 import { createNativePayOrder } from '../lib/wechat-pay';
 import { createAlipayFaceToFaceOrder } from '../lib/alipay';
-import { withAuditFields } from '@/shared/lib/db-helpers';
 
 // ==================== 类型定义 ====================
 
 /** 支付渠道 */
-type PaymentProvider = 'wechat' | 'alipay' | 'manual';
+type PaymentProvider = 'WECHAT' | 'ALIPAY' | 'MANUAL';
 
 /** 套餐类型 */
 type PlanType = 'pro' | 'enterprise';
@@ -94,7 +93,7 @@ function generateOutTradeNo(tenantId: string): string {
 export async function initiatePayment(
   params: InitiatePaymentParams
 ): Promise<InitiatePaymentResult> {
-  const { tenantId, planType, provider, notifyUrl, returnUrl } = params;
+  const { tenantId, planType, provider, notifyUrl } = params;
   const plan = PLAN_PRICES[planType];
   const outTradeNo = generateOutTradeNo(tenantId);
 
@@ -109,7 +108,7 @@ export async function initiatePayment(
   await db.insert(subscriptions).values({
     tenantId,
     planType,
-    status: 'active', // 先占位，Webhook 回调后确认
+    status: 'ACTIVE', // 先占位，Webhook 回调后确认
     currentPeriodStart: now,
     currentPeriodEnd: nextMonth,
     paymentProvider: provider,
@@ -119,7 +118,7 @@ export async function initiatePayment(
   } as typeof subscriptions.$inferInsert);
 
   // 根据渠道发起支付
-  if (provider === 'wechat') {
+  if (provider === 'WECHAT') {
     const result = await createNativePayOrder({
       description: plan.label,
       outTradeNo,
@@ -130,7 +129,7 @@ export async function initiatePayment(
     return { paymentData: result.codeUrl, outTradeNo };
   }
 
-  if (provider === 'alipay') {
+  if (provider === 'ALIPAY') {
     const result = await createAlipayFaceToFaceOrder({
       subject: plan.label,
       outTradeNo,
@@ -211,7 +210,7 @@ export async function activateSubscriptionByPayment(
       await tx
         .update(subscriptions)
         .set({
-          status: 'active',
+          status: 'ACTIVE',
           currentPeriodStart: now,
           currentPeriodEnd: nextMonth,
           externalSubscriptionId: externalPaymentId,
@@ -227,7 +226,7 @@ export async function activateSubscriptionByPayment(
       externalPaymentId,
       amountCents,
       currency: 'CNY',
-      status: 'succeeded',
+      status: 'SUCCEEDED',
       description: `${PLAN_PRICES[planType]?.label ?? planType} - ${now.toISOString().slice(0, 7)}`,
       paidAt: now,
       rawWebhookPayload: rawPayload as Record<string, unknown>,
@@ -304,5 +303,5 @@ export async function cancelSubscription(tenantId: string): Promise<void> {
       cancelReason: '用户主动取消',
       updatedAt: new Date(),
     } as Partial<typeof subscriptions.$inferInsert>)
-    .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.status, 'active')));
+    .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.status, 'ACTIVE')));
 }

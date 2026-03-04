@@ -231,7 +231,8 @@ const createAlertRuleInternal = createSafeAction(
         suggestedAction: `模板: ${data.notificationTemplate}, 阈值: ${data.thresholdDays}天`,
         status: data.isEnabled ? 'OPEN' : 'IGNORED',
         affectedOrders: [],
-        affectedCount: String(data.thresholdDays),
+        affectedCount: data.thresholdDays,
+        createdBy: session.user.id,
       });
 
       // 接入 AuditService 审计日志
@@ -349,8 +350,7 @@ const updateAlertRuleInternal = createSafeAction(
       if (updateData.description !== undefined) dbUpdate.description = updateData.description;
       if (updateData.isEnabled !== undefined)
         dbUpdate.status = updateData.isEnabled ? 'OPEN' : 'IGNORED';
-      if (updateData.thresholdDays !== undefined)
-        dbUpdate.affectedCount = String(updateData.thresholdDays);
+      if (updateData.thresholdDays !== undefined) dbUpdate.affectedCount = updateData.thresholdDays;
 
       // 仅当两个相关参数都提供时简单更新建议，不然维持原状
       if (updateData.notificationTemplate && updateData.thresholdDays) {

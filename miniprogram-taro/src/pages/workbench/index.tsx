@@ -114,7 +114,7 @@ export default function WorkbenchPage() {
                             <View className='metrics-row'>
                                 <View
                                     className='metric-card metric-card--highlight'
-                                    onClick={() => Taro.navigateTo({ url: '/pages/reports/index' })}
+                                    onClick={() => Taro.showToast({ title: '请前往 Web 端查看', icon: 'none' })}
                                 >
                                     <Text className='metric-value'>
                                         {managerData?.pendingApprovals ?? '-'}
@@ -165,7 +165,7 @@ export default function WorkbenchPage() {
                                 </View>
                                 <View
                                     className='quick-action card'
-                                    onClick={() => Taro.navigateTo({ url: '/pages/quotes/index' })}
+                                    onClick={() => Taro.showToast({ title: '报价功能请前往 Web 端', icon: 'none' })}
                                 >
                                     <Text className='quick-action-icon'>📄</Text>
                                     <Text className='quick-action-text'>报价</Text>
@@ -173,7 +173,7 @@ export default function WorkbenchPage() {
                                 </View>
                                 <View
                                     className='quick-action card'
-                                    onClick={() => Taro.navigateTo({ url: '/pages/crm/index' })}
+                                    onClick={() => Taro.showToast({ title: '客户管理请前往 Web 端', icon: 'none' })}
                                 >
                                     <Text className='quick-action-icon'>👥</Text>
                                     <Text className='quick-action-text'>客户</Text>

@@ -73,7 +73,7 @@ describe('Auth 权限检查边界', () => {
   it('通配符 ** 权限验证', async () => {
     const { db } = await import('@/shared/api/db');
     const session = {
-      user: { id: 'u1', tenantId: 't1', roles: ['TENANT_ADMIN'] },
+      user: { id: 'u1', tenantId: 't1', roles: ['ADMIN'] },
     };
 
     vi.mocked(db.query.roles.findFirst).mockResolvedValue({

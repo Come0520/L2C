@@ -84,6 +84,11 @@ export const tenantProfiles = pgTable('tenant_profiles', {
 
   // ─── 时间戳 ───
 
+  // 审计字段 (H4 统一追加)
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date()),
 });

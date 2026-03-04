@@ -1,9 +1,13 @@
 import { pgTable, text, timestamp, jsonb, uuid, index } from 'drizzle-orm/pg-core';
 import { users, tenants } from './infrastructure';
 
-export const auditLogs = pgTable('audit_logs', {
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
     id: uuid('id').defaultRandom().primaryKey(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     tableName: text('table_name').notNull(),
     recordId: text('record_id').notNull(),
     action: text('action').notNull(), // UPDATE, DELETE, CREATE
@@ -18,11 +22,15 @@ export const auditLogs = pgTable('audit_logs', {
     userAgent: text('user_agent'),
     ipAddress: text('ip_address'),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
+  },
+  (table) => ({
     auditTenantIdx: index('idx_audit_logs_tenant').on(table.tenantId),
     auditTableIdx: index('idx_audit_logs_table').on(table.tableName),
     auditCreatedIdx: index('idx_audit_logs_created').on(table.createdAt),
     auditRecordIdx: index('idx_audit_logs_record').on(table.tableName, table.recordId),
-}));
-
+  })
+);

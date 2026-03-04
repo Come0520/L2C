@@ -32,12 +32,12 @@ export class FinanceApprovalLogic {
   static getDefaultSteps(type: 'PAYMENT' | 'REFUND') {
     if (type === 'PAYMENT') {
       return [
-        { name: 'Store Manager', role: 'STORE_MANAGER', sortOrder: 1 },
+        { name: 'Store Manager', role: 'MANAGER', sortOrder: 1 },
         { name: 'Finance', role: 'FINANCE', sortOrder: 2 },
       ];
     } else {
       return [
-        { name: 'Store Manager', role: 'STORE_MANAGER', sortOrder: 1 },
+        { name: 'Store Manager', role: 'MANAGER', sortOrder: 1 },
         { name: 'Finance', role: 'FINANCE', sortOrder: 2 },
         // Large refunds might need Boss? Configurable.
       ];

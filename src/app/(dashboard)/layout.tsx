@@ -32,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   // ── Onboarding 守卫：检测新租户是否需要填写初始化问卷 ──
-  if (session.user?.tenantId && session.user?.role === 'BOSS') {
+  if (session.user?.tenantId && session.user?.role === 'ADMIN') {
     const { db } = await import('@/shared/api/db');
     const { tenants } = await import('@/shared/api/schema');
     const { eq } = await import('drizzle-orm');
@@ -63,9 +63,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <AppSidebar />
 
       {/* 主内容区域 */}
-      <div className="relative flex flex-1 flex-col overflow-hidden">
+      <div className="bg-background relative flex flex-1 flex-col overflow-hidden">
         <Header session={session} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:p-8">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </main>
       </div>
 
       {/* 全局搜索组件 */}

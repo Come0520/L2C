@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 /**
  * 核心仪表盘统计 — getDashboardStats
@@ -140,6 +141,6 @@ const getDashboardStatsAction = createSafeAction(
   }
 );
 
-export async function getDashboardStats(params: z.infer<typeof dashboardStatsSchema>) {
+export const getDashboardStats = cache(async (params: z.infer<typeof dashboardStatsSchema>) => {
   return getDashboardStatsAction(params);
-}
+});

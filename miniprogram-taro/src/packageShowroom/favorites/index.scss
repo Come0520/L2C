@@ -1,0 +1,123 @@
+@use '../../styles/variables' as *;
+
+.favorites-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    /* 顶部 Tabs */
+    .tabs-header {
+        background-color: $bg-card;
+        display: flex;
+        height: 88rpx;
+        border-bottom: 1px solid $border-separator;
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+
+            .tab-text {
+                font-size: $font-md;
+                color: $text-secondary;
+            }
+
+            &.active {
+                .tab-text {
+                    color: $apple-blue;
+                    font-weight: 600;
+                }
+            }
+
+            .tab-line {
+                position: absolute;
+                bottom: 0;
+                width: 48rpx;
+                height: 6rpx;
+                background-color: $apple-blue;
+                border-radius: 4rpx;
+            }
+        }
+    }
+
+    /* 列表区域 */
+    .list-scroll {
+        flex: 1;
+        height: 0;
+
+        .favorites-list {
+            padding: $spacing-md;
+            display: flex;
+            flex-direction: column;
+            gap: $spacing-md;
+
+            .favorite-item {
+                background-color: $bg-card;
+                border-radius: $radius-md;
+                padding: $spacing-md;
+                display: flex;
+                gap: $spacing-md;
+
+                .item-cover {
+                    width: 200rpx;
+                    height: 150rpx;
+                    border-radius: $radius-sm;
+                    background-color: $bg-base;
+                    flex-shrink: 0;
+                }
+
+                .item-info {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+
+                    .item-title {
+                        font-size: $font-md;
+                        color: $text-title;
+                        font-weight: 500;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        line-height: 1.4;
+                    }
+
+                    .item-bottom {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+
+                        .item-desc {
+                            font-size: 24rpx;
+                            color: $apple-blue; // 使用主题蓝作为辅助色
+                        }
+
+                        .item-date {
+                            font-size: 20rpx;
+                            color: $text-placeholder;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.loading-state,
+.empty-state {
+    color: $text-placeholder;
+    font-size: $font-sm;
+}

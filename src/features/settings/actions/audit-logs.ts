@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { auditLogs, users } from '@/shared/api/schema';
@@ -100,9 +101,9 @@ const getAuditLogsActionInternal = createSafeAction(
   }
 );
 
-export async function getAuditLogsAction(params: z.infer<typeof getAuditLogsSchema>) {
+export const getAuditLogsAction = cache(async (params: z.infer<typeof getAuditLogsSchema>) => {
   return getAuditLogsActionInternal(params);
-}
+});
 
 const getAuditTableNamesActionInternal = createSafeAction(z.object({}), async (_, { session }) => {
   await checkPermission(session, PERMISSIONS.SETTINGS.MANAGE);

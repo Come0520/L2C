@@ -14,7 +14,7 @@ export async function canManageShowroomItem(session: Session | null, createdBy: 
   if (!session?.user?.id) return false;
 
   // 超级管理员或管理员直接允许
-  if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') {
+  if (session.user.role === 'ADMIN' || session.user.role === 'ADMIN') {
     return true;
   }
 

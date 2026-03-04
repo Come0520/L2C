@@ -288,6 +288,27 @@
       "when": 1772467177690,
       "tag": "0040_silent_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1772602153769,
+      "tag": "0041_pretty_colossus",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1772603869039,
+      "tag": "0042_pale_preak",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1772607688635,
+      "tag": "0043_handy_tyrannus",
+      "breakpoints": true
     }
   ]
 }

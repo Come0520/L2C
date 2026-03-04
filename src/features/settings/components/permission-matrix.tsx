@@ -153,7 +153,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
   // 需要在 UI 中渲染的角色列表（不包含超级管理员）
   const displayRoles = useMemo(
-    () => data.roles.filter((role) => role.roleCode !== 'TENANT_ADMIN'),
+    () => data.roles.filter((role) => role.roleCode !== 'ADMIN'),
     [data.roles]
   );
 
@@ -414,7 +414,7 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                               }
                               isModified={isModified(role.roleCode, perm.code)}
                               // 超级权限角色（ADMIN / BOSS）不允许在矩阵中修改
-                              disabled={role.roleCode === 'ADMIN' || role.roleCode === 'BOSS'}
+                              disabled={role.roleCode === 'ADMIN' || role.roleCode === 'ADMIN'}
                             />
                           </div>
                         </td>

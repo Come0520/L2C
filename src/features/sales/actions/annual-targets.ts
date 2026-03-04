@@ -55,7 +55,7 @@ export async function getAnnualTargets(year: number): Promise<{
         salesAnnualTargets,
         and(eq(salesAnnualTargets.userId, users.id), eq(salesAnnualTargets.year, year))
       )
-      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'sales'), eq(users.isActive, true)));
+      .where(and(eq(users.tenantId, tenantId), eq(users.role, 'SALES'), eq(users.isActive, true)));
 
     // 查询该年12个月目标合计
     const monthlyTargets = await db

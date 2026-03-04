@@ -5,7 +5,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { formatDate } from '@/shared/lib/utils';
+import { cn, formatDate } from '@/shared/lib/utils';
 import Link from 'next/link';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import { MaskedPhone } from '@/shared/components/masked-phone';
@@ -31,11 +31,17 @@ export const CustomerTable = React.memo(function CustomerTable({
 }: CustomerTableProps) {
   if (data.length === 0) {
     return (
-      <div className="bg-muted/20 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12">
-        <EmptyUI message="暂无符合条件的客户数据，请调整筛选条件或新建客户。" />
-        <Button className="mt-4" asChild>
-          <Link href="/customers/new">新建客户</Link>
-        </Button>
+      <div className="border-border/50 from-muted/30 to-muted/10 dark:from-muted/10 relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border bg-linear-to-b p-16 shadow-sm backdrop-blur-sm dark:to-transparent">
+        <div className="from-primary/5 pointer-events-none absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] via-transparent to-transparent" />
+        <div className="relative z-10 flex flex-col items-center">
+          <EmptyUI message="暂无符合条件的客户数据，请调整筛选条件或新建客户。" />
+          <Button
+            className="mt-8 transition-all hover:scale-105 hover:shadow-md active:scale-95"
+            asChild
+          >
+            <Link href="/customers/new">新建客户</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -69,11 +75,17 @@ export const CustomerTable = React.memo(function CustomerTable({
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="content-visibility-auto">
           {data.map((customer) => (
-            <TableRow key={customer.id}>
+            <TableRow
+              key={customer.id}
+              className="group hover:bg-muted/50 cursor-pointer transition-all duration-200 active:scale-[0.995]"
+            >
               <TableCell className="font-medium">
-                <Link href={`/customers/${customer.id}`} className="text-blue-600 hover:underline">
+                <Link
+                  href={`/customers/${customer.id}`}
+                  className="text-primary group-hover:text-primary-600 transition-colors hover:underline"
+                >
                   {customer.customerNo}
                 </Link>
               </TableCell>
@@ -91,16 +103,17 @@ export const CustomerTable = React.memo(function CustomerTable({
               <TableCell>
                 <div className="flex flex-col items-start gap-1">
                   <Badge
-                    variant={
+                    variant="outline"
+                    className={cn(
+                      'border font-semibold tracking-wide',
                       customer.level === 'A'
-                        ? 'default'
+                        ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-900/30 dark:text-amber-400'
                         : customer.level === 'B'
-                          ? 'secondary'
-                          : 'outline'
-                    }
-                    className={customer.level === 'A' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+                          ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                    )}
                   >
-                    {customer.level}级
+                    {customer.level} 级
                   </Badge>
                 </div>
               </TableCell>
@@ -112,10 +125,15 @@ export const CustomerTable = React.memo(function CustomerTable({
               <TableCell>{customer.assignedSales?.name || '-'}</TableCell>
               <TableCell>{customer.lastOrderAt ? formatDate(customer.lastOrderAt) : '-'}</TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="sm" asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="group-hover:bg-primary/5 group-hover:text-primary transition-colors"
+                  asChild
+                >
                   <Link href={`/customers/${customer.id}`}>
                     详情
-                    <ArrowRight className="ml-1 h-4 w-4" />
+                    <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
               </TableCell>

@@ -1,0 +1,253 @@
+@use '../../styles/variables' as *;
+
+.quote-view-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        height: 100vh;
+        padding-bottom: 140rpx; // 为底部操作栏留空间
+    }
+
+    .loading {
+        padding: 60rpx;
+        text-align: center;
+        color: $text-secondary;
+        font-size: $font-sm;
+    }
+
+    /* 头部卡片 */
+    .header-card {
+        background-color: $bg-card;
+        margin: $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .title {
+            font-size: $font-title3;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            line-height: 1.4;
+        }
+
+        .amount-wrapper {
+            background-color: rgba(0, 113, 227, 0.05); // $apple-blue 的底色
+            padding: $spacing-md;
+            border-radius: $radius-md;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: $spacing-md;
+
+            .label {
+                font-size: $font-sm;
+                color: $text-secondary;
+                margin-bottom: 8rpx;
+            }
+
+            .amount {
+                font-size: $font-hero;
+                font-weight: 700;
+                color: $apple-blue;
+                font-family: 'SF Pro Display', -apple-system, sans-serif;
+            }
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: $spacing-md 0;
+            padding-top: $spacing-sm;
+
+            .info-item {
+                display: flex;
+                flex-direction: column;
+
+                &.full {
+                    grid-column: span 2;
+                }
+
+                .label {
+                    font-size: 22rpx;
+                    color: $text-secondary;
+                    margin-bottom: 4rpx;
+                }
+
+                .value {
+                    font-size: $font-sm;
+                    color: $text-title;
+                    line-height: 1.4;
+                }
+            }
+        }
+    }
+
+    /* 详情分块 */
+    .detail-section,
+    .notes-section {
+        background-color: $bg-card;
+        margin: 0 $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            position: relative;
+            padding-left: 16rpx;
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 6rpx;
+                height: 24rpx;
+                background-color: $apple-blue;
+                border-radius: 4rpx;
+            }
+        }
+    }
+
+    /* 列表项 */
+    .category-group {
+        margin-bottom: $spacing-md;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: $bg-base;
+            padding: 12rpx $spacing-sm;
+            border-radius: $radius-sm;
+            margin-bottom: $spacing-sm;
+
+            .category-name {
+                font-size: $font-sm;
+                font-weight: 600;
+                color: $text-title;
+            }
+
+            .category-sub {
+                font-size: 22rpx;
+                color: $text-secondary;
+            }
+        }
+
+        .item-list {
+            padding: 0 $spacing-xs;
+
+            .quote-item {
+                padding: $spacing-sm 0;
+                border-bottom: 1px solid $border-separator;
+
+                &:last-child {
+                    border-bottom: none;
+                }
+
+                .item-main {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 8rpx;
+
+                    .item-name {
+                        font-size: $font-sm;
+                        color: $text-title;
+                        flex: 1;
+                        padding-right: $spacing-sm;
+                        line-height: 1.4;
+                    }
+
+                    .item-total {
+                        font-size: $font-md;
+                        font-weight: 600;
+                        color: $text-title;
+                        font-family: 'SF Pro Display', sans-serif;
+                    }
+                }
+
+                .item-sub {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+
+                    .item-spec {
+                        font-size: 22rpx;
+                        color: $text-secondary;
+                        flex: 1;
+                        padding-right: $spacing-sm;
+                    }
+
+                    .item-calc {
+                        font-size: 22rpx;
+                        color: $text-placeholder;
+                    }
+                }
+            }
+        }
+    }
+
+    /* 备注 */
+    .notes-text {
+        font-size: $font-sm;
+        color: $text-secondary;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    /* 底部操作栏 */
+    .bottom-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: $bg-card;
+        padding: $spacing-sm $spacing-md;
+        padding-bottom: calc($spacing-sm + env(safe-area-inset-bottom));
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+
+        .btn-primary {
+            background-color: $apple-blue;
+            color: #fff;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+
+            &:active {
+                opacity: 0.8;
+            }
+        }
+
+        .btn-signed {
+            background-color: $bg-base;
+            color: $text-placeholder;
+            height: 88rpx;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-lg;
+            font-weight: 600;
+        }
+    }
+}

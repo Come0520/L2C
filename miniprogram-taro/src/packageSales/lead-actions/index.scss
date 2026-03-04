@@ -1,0 +1,118 @@
+@use '../../styles/variables' as *;
+
+.lead-actions-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .section {
+        margin-top: $spacing-lg;
+
+        .section-title {
+            font-size: $font-sm;
+            color: $text-secondary;
+            padding: 0 $spacing-md;
+            margin-bottom: $spacing-sm;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .card {
+            background-color: #fff;
+            margin: 0;
+            padding: $spacing-md;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+
+            &:active {
+                background-color: #f9f9f9;
+            }
+        }
+
+        .picker-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .label {
+                font-size: $font-md;
+                color: $text-title;
+            }
+
+            .picker-value {
+                display: flex;
+                align-items: center;
+
+                .val-text {
+                    font-size: $font-md;
+                    color: $apple-blue;
+                    margin-right: 12rpx;
+                }
+
+                .arrow {
+                    color: $text-placeholder;
+                    font-size: $font-sm;
+                }
+            }
+        }
+
+        .action-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .info {
+                .title {
+                    font-size: $font-md;
+                    color: $text-title;
+                    display: block;
+                    font-weight: 500;
+                }
+
+                .desc {
+                    font-size: $font-sm;
+                    color: $text-secondary;
+                    display: block;
+                    margin-top: 4rpx;
+                }
+            }
+
+            .arrow {
+                color: $text-placeholder;
+                font-size: $font-sm;
+            }
+
+            &.danger {
+                .title {
+                    color: $apple-red;
+                }
+            }
+        }
+
+        .btn-primary {
+            margin: $spacing-lg $spacing-md;
+            background-color: $apple-blue;
+            color: #fff;
+            border-radius: $radius-lg;
+            height: 96rpx;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $font-md;
+            font-weight: 500;
+
+            &::after {
+                border: none;
+            }
+
+            &:active {
+                opacity: 0.8;
+            }
+        }
+    }
+}

@@ -1,31 +1,11 @@
-﻿'use client';
+'use client';
 
 import { logger } from '@/shared/lib/logger';
 import React, { useCallback, useMemo } from 'react';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
-import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
-import { formatDistanceToNow } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getLeads } from '@/features/leads/actions/queries';
-import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
-import Phone from 'lucide-react/dist/esm/icons/phone';
-import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
-import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
-import Eye from 'lucide-react/dist/esm/icons/eye';
 import { z } from 'zod';
 import { followUpTypeEnum } from '../schemas';
 import { AssignLeadDialog } from './dialogs/assign-lead-dialog';
@@ -39,8 +19,8 @@ import { toast } from 'sonner';
 import { EmptyUI } from '@/shared/ui/empty-ui';
 import { cn } from '@/shared/lib/utils';
 
-// 从查询推断类型
-type LeadData = Awaited<ReturnType<typeof getLeads>>['data'][number];
+import { LeadData } from './lead-table-constants';
+import { LeadTableRow } from './lead-table-row';
 
 /**
  * 线索表格组件属性
@@ -62,258 +42,6 @@ interface LeadTableProps {
   onReload?: () => void;
 }
 
-// 状态映射
-const STATUS_MAP: Record<
-  string,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-  PENDING_ASSIGNMENT: { label: '待分配', variant: 'secondary' },
-  PENDING_FOLLOWUP: { label: '待跟进', variant: 'default' },
-  FOLLOWING_UP: { label: '跟进中', variant: 'default' },
-  WON: { label: '已成交', variant: 'outline' },
-  INVALID: { label: '无效', variant: 'destructive' },
-};
-
-// 意向等级映射
-const INTENTION_MAP: Record<string, { label: string; className: string }> = {
-  HIGH: { label: '高', className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
-  MEDIUM: {
-    label: '中',
-    className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  },
-  LOW: { label: '低', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-};
-
-// 系统标签映射
-const SYSTEM_TAGS: Record<string, { label: string; className: string }> = {
-  INVITED: { label: '已邀约', className: 'bg-blue-100 text-blue-700' },
-  QUOTED: { label: '已报价', className: 'bg-green-100 text-green-700' },
-  VISITED: { label: '已到店', className: 'bg-purple-100 text-purple-700' },
-  MEASURED: { label: '已测量', className: 'bg-orange-100 text-orange-700' },
-};
-
-/**
- * 根据状态和权限获取可用操作
- */
-function getActionsForStatus(status: string, isManager: boolean) {
-  const actions: Array<{
-    key: string;
-    label: string;
-    icon: React.ReactNode;
-    variant?: 'destructive';
-  }> = [];
-
-  switch (status) {
-    case 'PENDING_ASSIGNMENT':
-      actions.push({ key: 'claim', label: '认领', icon: <UserPlus className="mr-2 h-4 w-4" /> });
-      if (isManager) {
-        actions.push({ key: 'assign', label: '分配', icon: <UserPlus className="mr-2 h-4 w-4" /> });
-      }
-      actions.push({
-        key: 'void',
-        label: '无效',
-        icon: <XCircle className="mr-2 h-4 w-4" />,
-        variant: 'destructive',
-      });
-      break;
-    case 'PENDING_FOLLOWUP':
-      actions.push({
-        key: 'followup',
-        label: '跟进',
-        icon: <MessageSquare className="mr-2 h-4 w-4" />,
-      });
-      actions.push({
-        key: 'void',
-        label: '无效',
-        icon: <XCircle className="mr-2 h-4 w-4" />,
-        variant: 'destructive',
-      });
-      break;
-    case 'FOLLOWING_UP':
-      actions.push({ key: 'quote', label: '报价', icon: <FileText className="mr-2 h-4 w-4" /> });
-      actions.push({
-        key: 'followup',
-        label: '跟进',
-        icon: <MessageSquare className="mr-2 h-4 w-4" />,
-      });
-      actions.push({ key: 'invite', label: '邀约', icon: <Calendar className="mr-2 h-4 w-4" /> });
-      actions.push({
-        key: 'void',
-        label: '无效',
-        icon: <XCircle className="mr-2 h-4 w-4" />,
-        variant: 'destructive',
-      });
-      break;
-    case 'WON':
-      actions.push({ key: 'view', label: '查看', icon: <Eye className="mr-2 h-4 w-4" /> });
-      break;
-    case 'INVALID':
-      if (isManager) {
-        actions.push({
-          key: 'restore',
-          label: '恢复',
-          icon: <RotateCcw className="mr-2 h-4 w-4" />,
-        });
-      }
-      actions.push({ key: 'view', label: '查看', icon: <Eye className="mr-2 h-4 w-4" /> });
-      break;
-    default:
-      actions.push({ key: 'view', label: '查看', icon: <Eye className="mr-2 h-4 w-4" /> });
-  }
-
-  return actions;
-}
-
-interface LeadTableRowProps {
-  lead: LeadData;
-  isManager: boolean;
-  handleAction: (action: string, leadId: string) => void;
-  style?: React.CSSProperties;
-  className?: string;
-}
-
-/**
- * 单行渲染组件
- */
-const LeadTableRow = React.memo(function LeadTableRow({
-  lead,
-  isManager,
-  handleAction,
-  style,
-  className,
-}: LeadTableRowProps) {
-  const statusConfig = STATUS_MAP[lead.status || ''] || {
-    label: lead.status || '未知',
-    variant: 'secondary' as const,
-  };
-  const intentionConfig = lead.intentionLevel ? INTENTION_MAP[lead.intentionLevel] : null;
-  const actions = getActionsForStatus(lead.status || '', isManager);
-  const tags = lead.tags || [];
-
-  return (
-    <TableRow
-      style={style}
-      className={cn(
-        'hover:bg-muted/50 group transition-all duration-200 active:scale-[0.99]',
-        className
-      )}
-    >
-      <TableCell className="font-medium">
-        <Link href={`/leads/${lead.id}`} className="text-primary hover:underline">
-          {lead.leadNo}
-        </Link>
-      </TableCell>
-
-      <TableCell>
-        <div className="flex flex-col">
-          <span className="max-w-[120px] truncate font-medium">{lead.customerName}</span>
-          <span className="text-muted-foreground flex items-center gap-1 text-[10px] sm:text-xs">
-            <Phone className="h-3 w-3" />
-            {lead.customerPhone}
-          </span>
-        </div>
-      </TableCell>
-
-      <TableCell className="hidden items-center md:flex">
-        {intentionConfig ? (
-          <Badge variant="outline" className={cn('font-medium', intentionConfig.className)}>
-            {intentionConfig.label}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </TableCell>
-
-      <TableCell className="flex items-center">
-        <Badge variant={statusConfig.variant} className="h-6 px-1.5 font-normal sm:px-2">
-          {statusConfig.label}
-        </Badge>
-      </TableCell>
-
-      <TableCell className="hidden items-center lg:flex">
-        <div className="flex flex-wrap gap-1">
-          {tags.length > 0 ? (
-            tags.slice(0, 3).map((tag) => {
-              const systemTag = SYSTEM_TAGS[tag];
-              return (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className={cn('h-5 px-1.5 text-[10px] font-normal', systemTag?.className)}
-                >
-                  {systemTag?.label || tag}
-                </Badge>
-              );
-            })
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-          {tags.length > 3 && (
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
-              +{tags.length - 3}
-            </Badge>
-          )}
-        </div>
-      </TableCell>
-
-      <TableCell className="hidden max-w-[100px] items-center truncate xl:flex">
-        {lead.sourceChannel?.name || '-'}
-      </TableCell>
-
-      <TableCell className="hidden items-center sm:flex">
-        {lead.assignedSales?.name || (
-          <span className="text-muted-foreground text-xs italic">未分配</span>
-        )}
-      </TableCell>
-
-      <TableCell className="hidden items-center md:flex">
-        {lead.lastActivityAt ? (
-          <span
-            className="text-muted-foreground text-xs"
-            title={new Date(lead.lastActivityAt).toLocaleString()}
-          >
-            {formatDistanceToNow(new Date(lead.lastActivityAt), {
-              addSuffix: true,
-              locale: zhCN,
-            })}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </TableCell>
-
-      <TableCell className="flex items-center justify-end text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="hover:bg-muted-foreground/10 h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">操作菜单</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="animate-in fade-in zoom-in-95 w-[160px] duration-200"
-          >
-            {actions.map((action) => (
-              <DropdownMenuItem
-                key={action.key}
-                onClick={() => handleAction(action.key, lead.id)}
-                className={cn(
-                  'cursor-pointer transition-colors',
-                  action.variant === 'destructive' && 'text-destructive focus:text-destructive'
-                )}
-              >
-                {action.icon}
-                {action.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
-  );
-});
-
 /**
  * 线索管理表格组件
  * 实现了虚拟滚动和交互动作
@@ -328,7 +56,7 @@ export const LeadTable = React.memo(function LeadTable({
   onReload,
 }: LeadTableProps) {
   const router = useRouter();
-  const isManager = useMemo(() => ['ADMIN', 'MANAGER', 'BOSS'].includes(userRole), [userRole]);
+  const isManager = useMemo(() => ['ADMIN', 'MANAGER', 'ADMIN'].includes(userRole), [userRole]);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [followupDialogOpen, setFollowupDialogOpen] = useState(false);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
@@ -491,7 +219,7 @@ export const LeadTable = React.memo(function LeadTable({
             </TableRow>
           </TableHeader>
           <TableBody
-            className="grid"
+            className="content-visibility-auto grid"
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
               position: 'relative',

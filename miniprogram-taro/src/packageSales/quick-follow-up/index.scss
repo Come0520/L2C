@@ -1,0 +1,150 @@
+@use '../../styles/variables' as *;
+
+.quick-follow-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .card {
+        background-color: #fff;
+        margin: $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+    }
+
+    .form-card {
+        .content-input {
+            width: 100%;
+            height: 240rpx;
+            font-size: $font-md;
+            color: $text-title;
+            line-height: 1.5;
+            margin-bottom: $spacing-md;
+        }
+
+        .image-uploader {
+            display: flex;
+            flex-wrap: wrap;
+            gap: $spacing-sm;
+
+            .img-box {
+                position: relative;
+                width: 160rpx;
+                height: 160rpx;
+                border-radius: $radius-md;
+                overflow: hidden;
+
+                .img {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                .rm-btn {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 40rpx;
+                    height: 40rpx;
+                    background: rgba(0, 0, 0, 0.5);
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-bottom-left-radius: $radius-sm;
+
+                    .x-icon {
+                        font-size: $font-sm;
+                    }
+                }
+            }
+
+            .upload-btn {
+                width: 160rpx;
+                height: 160rpx;
+                background-color: #F8F8F8;
+                border: 1px dashed $border-separator;
+                border-radius: $radius-md;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+
+                .plus {
+                    font-size: 60rpx;
+                    color: $text-placeholder;
+                    line-height: 1;
+                    margin-bottom: 8rpx;
+                }
+
+                .lbl {
+                    font-size: 20rpx;
+                    color: $text-secondary;
+                }
+            }
+        }
+    }
+
+    .settings {
+        .set-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .label {
+                font-size: $font-md;
+                color: $text-title;
+                font-weight: 500;
+            }
+
+            .picker-val {
+                display: flex;
+                align-items: center;
+
+                .date-txt {
+                    font-size: $font-md;
+                    color: $apple-blue;
+                    margin-right: 12rpx;
+                }
+
+                .placeholder {
+                    font-size: $font-md;
+                    color: $text-placeholder;
+                    margin-right: 12rpx;
+                }
+
+                .arrow {
+                    font-size: $font-sm;
+                    color: $text-placeholder;
+                }
+            }
+        }
+    }
+
+    .btn-submit {
+        margin: $spacing-xl $spacing-md;
+        background-color: $apple-blue;
+        color: #fff;
+        height: 96rpx;
+        border-radius: $radius-full;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: $font-md;
+        font-weight: 600;
+
+        &::after {
+            border: none;
+        }
+
+        &:active {
+            opacity: 0.8;
+        }
+    }
+}

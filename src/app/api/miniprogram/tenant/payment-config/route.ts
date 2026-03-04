@@ -42,7 +42,7 @@ async function verifyAdmin(request: NextRequest) {
       columns: { id: true, role: true, tenantId: true },
     });
 
-    if (user?.role === 'admin' || user?.role === 'BOSS') {
+    if (user?.role === 'ADMIN') {
       return user;
     }
     return null;

@@ -21,8 +21,12 @@ export const salesAnnualTargets = pgTable(
     targetAmount: decimal('target_amount', { precision: 12, scale: 2 }).notNull().default('0'),
 
     // 审计字段
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
     updatedBy: uuid('updated_by'),
   },
   (t) => ({

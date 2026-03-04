@@ -12,6 +12,7 @@ import { tenants, tenantProfiles } from '@/shared/api/schema';
 import { auth } from '@/shared/lib/auth';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/shared/lib/logger';
+import { cache } from 'react';
 import {
   getTemplatesForSize as getTemplates,
   findTemplateById,
@@ -22,9 +23,9 @@ import {
 /**
  * 根据规模获取适用的模版列表
  */
-export async function getTemplatesForSize(sizeValue: TeamSizeValue) {
+export const getTemplatesForSize = cache(async (sizeValue: TeamSizeValue) => {
   return getTemplates(sizeValue);
-}
+});
 
 /**
  * 获取当前租户的 onboarding 状态
@@ -51,7 +52,7 @@ export async function getOnboardingStatus(): Promise<{
     const needsOnboarding =
       tenant.status === 'active' &&
       tenant.onboardingStatus === 'pending' &&
-      session.user.role === 'BOSS';
+      session.user.role === 'ADMIN';
 
     return {
       status: tenant.onboardingStatus || 'pending',

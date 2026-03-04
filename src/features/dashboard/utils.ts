@@ -62,9 +62,9 @@ export function getDefaultDashboardConfig(role: string): UserDashboardConfig {
   } else if (
     role === 'MANAGER' ||
     role === 'ADMIN' ||
-    role === 'TENANT_ADMIN' ||
-    role === 'SUPER_ADMIN' ||
-    role === 'OWNER'
+    role === 'ADMIN' ||
+    role === 'ADMIN' ||
+    role === 'ADMIN'
   ) {
     baseConfig.widgets = [
       { id: 'w1', type: 'team-sales', title: '团队销售额', x: 0, y: 0, w: 1, h: 1, visible: true },

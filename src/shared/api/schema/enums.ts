@@ -1,16 +1,16 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', [
-  'ADMIN',
-  'SALES',
-  'MANAGER',
-  'WORKER',
-  'FINANCE',
-  'FINANCE_BOOKKEEPER', // 记账员
-  'FINANCE_REVIEWER', // 复核员
-  'FINANCE_SUPERVISOR', // 财务主管
-  'FINANCE_READONLY', // 财务查阅
-  'SUPPLY',
+  'SUPER_ADMIN', // 平台超级管理员（L2C 运营，跨租户）
+  'BOSS', // 企业老板（租户创建人，全业务视野，不可被降级）
+  'ADMIN', // 租户管理员（系统/用户/角色维护）
+  'MANAGER', // 经理（含原 STORE_MANAGER/AREA_MANAGER）
+  'DISPATCHER', // 派单员（任务调度派发）
+  'SALES', // 销售
+  'FINANCE', // 财务（含原 FINANCE_BOOKKEEPER/REVIEWER/SUPERVISOR）
+  'WORKER', // 工人（含原 INSTALLER/MEASURER/TECH）
+  'CUSTOMER', // 客户（C端用户）
+  'SUPPLY', // 采购
 ]);
 
 export const productCategoryEnum = pgEnum('product_category', [
@@ -377,7 +377,7 @@ export const installPhotoTypeEnum = pgEnum('install_photo_type', ['BEFORE', 'AFT
 
 // Approval Enums
 export const approverRoleEnum = pgEnum('approver_role', [
-  'STORE_MANAGER',
+  'MANAGER',
   'ADMIN', // Boss/Admin
   'FINANCE',
   'PURCHASING',
@@ -566,24 +566,24 @@ export const financeAuditActionEnum = pgEnum('finance_audit_action', [
 
 /** 订阅状态 */
 export const subscriptionStatusEnum = pgEnum('subscription_status', [
-  'active', // 正常生效
-  'past_due', // 已过期但在宽限期内
-  'cancelled', // 用户主动取消
-  'expired', // 已过期（宽限期结束）
-  'trialing', // 试用中
+  'ACTIVE', // 正常生效
+  'PAST_DUE', // 已过期但在宽限期内
+  'CANCELLED', // 用户主动取消
+  'EXPIRED', // 已过期（宽限期结束）
+  'TRIALING', // 试用中
 ]);
 
 /** 支付渠道 */
 export const paymentProviderEnum = pgEnum('payment_provider', [
-  'wechat', // 微信支付
-  'alipay', // 支付宝
-  'manual', // 人工对账（银行转账等）
+  'WECHAT', // 微信支付
+  'ALIPAY', // 支付宝
+  'MANUAL', // 人工对账（银行转账等）
 ]);
 
 /** 支付记录状态 */
 export const billingPaymentStatusEnum = pgEnum('billing_payment_status', [
-  'pending', // 等待支付
-  'succeeded', // 支付成功
-  'failed', // 支付失败
-  'refunded', // 已退款
+  'PENDING', // 等待支付
+  'SUCCEEDED', // 支付成功
+  'FAILED', // 支付失败
+  'REFUNDED', // 已退款
 ]);

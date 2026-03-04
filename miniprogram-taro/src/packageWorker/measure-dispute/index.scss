@@ -1,0 +1,281 @@
+@use '../../styles/variables' as *;
+
+.measure-dispute-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        height: 100%;
+        padding-bottom: 300rpx; // Space for bottom bar
+    }
+
+    .warning-banner {
+        background-color: rgba(255, 149, 0, 0.1);
+        padding: $spacing-md $spacing-lg;
+        display: flex;
+        align-items: center;
+
+        .icon {
+            font-size: $font-lg;
+            margin-right: 12rpx;
+        }
+
+        .text {
+            font-size: $font-sm;
+            color: $apple-orange;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+    }
+
+    .card {
+        background-color: #fff;
+        margin: $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-lg;
+        box-shadow: $shadow-soft;
+    }
+
+    .dispute-card {
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-md;
+            border-bottom: 1px solid $border-separator;
+            padding-bottom: $spacing-sm;
+
+            .title {
+                font-size: $font-lg;
+                font-weight: 700;
+                color: $text-title;
+            }
+
+            .date {
+                font-size: $font-sm;
+                color: $text-placeholder;
+            }
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 12rpx;
+
+            .label {
+                width: 140rpx;
+                font-size: $font-sm;
+                color: $text-secondary;
+            }
+
+            .value {
+                flex: 1;
+                font-size: $font-sm;
+                color: $text-title;
+                font-weight: 500;
+            }
+        }
+
+        .reason-box {
+            margin-top: $spacing-md;
+            background-color: rgba(255, 59, 48, 0.05);
+            border-left: 6rpx solid $apple-red;
+            padding: $spacing-md;
+            border-radius: 0 $radius-sm $radius-sm 0;
+
+            .reason-text {
+                font-size: $font-sm;
+                color: $text-title;
+                line-height: 1.5;
+            }
+        }
+    }
+
+    .communication-box {
+        margin: 0 $spacing-md $spacing-lg;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-secondary;
+            display: block;
+            margin-bottom: $spacing-md;
+            padding: 0 12rpx;
+        }
+
+        .msg-list {
+            .msg-item {
+                display: flex;
+                margin-bottom: $spacing-lg;
+
+                .avatar {
+                    width: 72rpx;
+                    height: 72rpx;
+                    border-radius: 50%;
+                    background-color: $apple-blue;
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: $font-lg;
+                    font-weight: 600;
+                    margin-right: $spacing-md;
+                }
+
+                .msg-content {
+                    flex: 1;
+
+                    .msg-header {
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 8rpx;
+
+                        .name {
+                            font-size: $font-sm;
+                            color: $text-title;
+                            font-weight: 500;
+                            margin-right: $spacing-sm;
+                        }
+
+                        .time {
+                            font-size: 20rpx;
+                            color: $text-placeholder;
+                        }
+                    }
+
+                    .bubble {
+                        background-color: #fff;
+                        padding: $spacing-md;
+                        border-radius: 0 $radius-lg $radius-lg $radius-lg;
+                        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+                        font-size: $font-sm;
+                        color: $text-title;
+                        display: inline-block;
+                        max-width: 90%;
+                        line-height: 1.5;
+                    }
+                }
+
+                &.worker {
+                    flex-direction: row-reverse;
+
+                    .avatar {
+                        margin-right: 0;
+                        margin-left: $spacing-md;
+                        background-color: $apple-green;
+                    }
+
+                    .msg-content {
+                        .msg-header {
+                            flex-direction: row-reverse;
+
+                            .name {
+                                margin-right: 0;
+                                margin-left: $spacing-sm;
+                            }
+                        }
+
+                        .bubble {
+                            background-color: $apple-green;
+                            color: #fff;
+                            border-radius: $radius-lg 0 $radius-lg $radius-lg;
+                            display: block;
+                            margin-left: auto;
+                            max-width: fit-content;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        padding: $spacing-sm $spacing-md;
+        box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+        z-index: 100;
+
+        .reply-bar {
+            display: flex;
+            align-items: center;
+            gap: $spacing-sm;
+            margin-bottom: $spacing-md;
+
+            .reply-input {
+                flex: 1;
+                height: 72rpx;
+                background-color: #F8F8F8;
+                border-radius: $radius-full;
+                padding: 0 $spacing-lg;
+                font-size: $font-md;
+            }
+
+            .btn-send {
+                width: 120rpx;
+                height: 72rpx;
+                background-color: $apple-blue;
+                color: #fff;
+                border-radius: $radius-full;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: $font-sm;
+                font-weight: 600;
+                margin: 0;
+
+                &::after {
+                    border: none;
+                }
+
+                &:active {
+                    opacity: 0.8;
+                }
+            }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: $spacing-md;
+
+            .btn {
+                flex: 1;
+                height: 80rpx;
+                border-radius: $radius-full;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: $font-md;
+                font-weight: 600;
+                margin: 0;
+
+                &::after {
+                    border: none;
+                }
+
+                &:active {
+                    opacity: 0.8;
+                }
+
+                &.btn-revisit {
+                    background-color: rgba(255, 149, 0, 0.1);
+                    color: $apple-orange;
+                }
+
+                &.btn-resolve {
+                    background-color: rgba(52, 199, 89, 0.1);
+                    color: $apple-green;
+                }
+            }
+        }
+
+        .safe-bottom-space {
+            height: env(safe-area-inset-bottom);
+        }
+    }
+}

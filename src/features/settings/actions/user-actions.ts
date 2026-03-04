@@ -69,9 +69,7 @@ async function isLastAdmin(tenantId: string, excludeUserId: string): Promise<boo
   // 检查排除目标用户后，是否还有其他管理员
   const remainingAdmins = admins.filter((u) => {
     const roles = (u.roles as string[]) || [];
-    return (
-      u.role === 'ADMIN' || u.role === 'OWNER' || roles.includes('ADMIN') || roles.includes('OWNER')
-    );
+    return (u.role as string) === 'ADMIN' || roles.includes('ADMIN');
   });
   return remainingAdmins.length === 0;
 }
@@ -125,8 +123,8 @@ export async function updateUser(
     if (currentUserId !== id) {
       const currentRoles = (existingUser.roles as string[]) || [];
       const isRemovingAdmin =
-        (currentRoles.includes('ADMIN') || currentRoles.includes('OWNER')) &&
-        !(validated.data.roles.includes('ADMIN') || validated.data.roles.includes('OWNER'));
+        (currentRoles.includes('ADMIN') || currentRoles.includes('ADMIN')) &&
+        !(validated.data.roles.includes('ADMIN') || validated.data.roles.includes('ADMIN'));
 
       if (isRemovingAdmin) {
         const adminCount = await db
@@ -135,7 +133,7 @@ export async function updateUser(
           .where(and(eq(users.tenantId, tenantId), eq(users.isActive, true), ne(users.id, id)));
 
         const hasOtherAdmin = adminCount.some(
-          (u) => (u.roles as string[]).includes('ADMIN') || (u.roles as string[]).includes('OWNER')
+          (u) => (u.roles as string[]).includes('ADMIN') || (u.roles as string[]).includes('ADMIN')
         );
         if (!hasOtherAdmin) {
           return { success: false, error: '无法移除最后一个管理员角色' };
@@ -147,8 +145,8 @@ export async function updateUser(
     let primaryRole = validated.data.roles[0];
     if (validated.data.roles.includes('ADMIN')) {
       primaryRole = 'ADMIN';
-    } else if (validated.data.roles.includes('OWNER')) {
-      primaryRole = 'OWNER';
+    } else if (validated.data.roles.includes('ADMIN')) {
+      primaryRole = 'ADMIN';
     } else if (validated.data.roles.includes('MANAGER')) {
       primaryRole = 'MANAGER';
     }
@@ -251,10 +249,7 @@ export async function toggleUserActive(userId: string) {
     // 如果是禁用管理员，检查是否为最后一个
     if (!newActive) {
       const isCurrentlyAdmin =
-        targetUser.role === 'ADMIN' ||
-        targetUser.role === 'OWNER' ||
-        ((targetUser.roles as string[]) || []).includes('ADMIN') ||
-        ((targetUser.roles as string[]) || []).includes('OWNER');
+        targetUser.role === 'ADMIN' || ((targetUser.roles as string[]) || []).includes('ADMIN');
 
       if (isCurrentlyAdmin) {
         const lastAdmin = await isLastAdmin(tenantId, userId);
@@ -328,10 +323,8 @@ export async function deleteUser(userId: string) {
 
     // 检查是否为最后一个管理员
     const isCurrentlyAdmin =
-      targetUser.role === 'ADMIN' ||
-      targetUser.role === 'OWNER' ||
-      ((targetUser.roles as string[]) || []).includes('ADMIN') ||
-      ((targetUser.roles as string[]) || []).includes('OWNER');
+      (targetUser.role as string) === 'ADMIN' ||
+      ((targetUser.roles as string[]) || []).includes('ADMIN');
 
     if (isCurrentlyAdmin) {
       const lastAdmin = await isLastAdmin(tenantId, userId);

@@ -1,0 +1,237 @@
+@use '../../styles/variables' as *;
+
+.showroom-detail-page {
+    background-color: $bg-base;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .detail-scroll {
+        flex: 1;
+        height: 0;
+    }
+
+    /* 图片轮播 */
+    .image-swiper {
+        width: 100%;
+        height: 500rpx;
+        background-color: $bg-card;
+
+        .swiper-img {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    /* 详情基本信息 */
+    .detail-content {
+        background-color: $bg-card;
+        padding: $spacing-md;
+        margin-bottom: $spacing-md;
+
+        .price-row {
+            margin-bottom: 8rpx;
+
+            .item-price {
+                font-size: $font-title1;
+                color: $apple-red;
+                font-weight: 700;
+            }
+        }
+
+        .item-title {
+            font-size: $font-lg;
+            font-weight: 600;
+            color: $text-title;
+            margin-bottom: $spacing-xs;
+            display: block;
+        }
+
+        .item-desc {
+            font-size: $font-sm;
+            color: $text-secondary;
+            line-height: 1.5;
+            margin-bottom: $spacing-sm;
+            display: block;
+        }
+
+        .item-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12rpx;
+
+            .tag {
+                font-size: 22rpx;
+                color: $apple-blue;
+                background-color: rgba(64, 158, 255, 0.1);
+                padding: 4rpx 16rpx;
+                border-radius: $radius-sm;
+            }
+        }
+    }
+
+    /* 区块通用 */
+    .section-block {
+        background-color: $bg-card;
+        padding: $spacing-md;
+        margin-bottom: $spacing-md;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            margin-bottom: $spacing-md;
+            display: block;
+            position: relative;
+            padding-left: 16rpx;
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 6rpx;
+                height: 24rpx;
+                background-color: $apple-blue;
+                border-radius: 4rpx;
+            }
+        }
+    }
+
+    /* 规格参数 */
+    .specs-list {
+        .spec-item {
+            display: flex;
+            padding: 16rpx 0;
+            border-bottom: 1px solid $border-separator;
+
+            &:last-child {
+                border-bottom: none;
+            }
+
+            .spec-label {
+                width: 160rpx;
+                color: $text-secondary;
+                font-size: $font-sm;
+            }
+
+            .spec-value {
+                flex: 1;
+                color: $text-title;
+                font-size: $font-sm;
+            }
+        }
+    }
+
+    /* 关联案例 */
+    .related-cases-block {
+        .cases-scroll {
+            width: 100%;
+            white-space: nowrap;
+        }
+
+        .cases-list {
+            display: inline-flex;
+            gap: $spacing-md;
+        }
+
+        .case-card {
+            width: 280rpx;
+            display: inline-block;
+
+            .case-cover {
+                width: 280rpx;
+                height: 200rpx;
+                border-radius: $radius-md;
+                background-color: #f5f5f5;
+                margin-bottom: 8rpx;
+            }
+
+            .case-title {
+                font-size: 24rpx;
+                color: $text-title;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                line-clamp: 2;
+                -webkit-box-orient: vertical;
+                white-space: normal;
+                line-height: 1.4;
+            }
+        }
+    }
+
+    /* 底部悬浮操作栏 */
+    .bottom-action-bar {
+        background-color: $bg-card;
+        padding: 12rpx $spacing-md calc(12rpx + env(safe-area-inset-bottom));
+        display: flex;
+        align-items: center;
+        border-top: 1px solid $border-separator;
+
+        .action-left {
+            flex: 1;
+            display: flex;
+            gap: 32rpx;
+        }
+
+        .action-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            .icon {
+                font-size: 36rpx;
+                color: $text-secondary;
+                margin-bottom: 4rpx;
+
+                &.favorite-active {
+                    color: $apple-orange;
+                }
+            }
+
+            .label {
+                font-size: 20rpx;
+                color: $text-secondary;
+            }
+        }
+
+        .action-right {
+            .btn {
+                height: 72rpx;
+                line-height: 72rpx;
+                border-radius: $radius-full;
+                font-size: $font-md;
+                padding: 0 48rpx;
+                margin: 0;
+
+                &.btn-share {
+                    background-color: rgba(230, 180, 80, 0.15);
+                    color: $apple-orange;
+                    border: 1px solid rgba(230, 180, 80, 0.3);
+                }
+
+                &.btn-primary {
+                    background-color: $apple-blue;
+                    color: white;
+                }
+            }
+        }
+    }
+}
+
+.page {
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    color: $text-placeholder;
+}

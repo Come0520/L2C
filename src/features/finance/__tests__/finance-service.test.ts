@@ -48,7 +48,8 @@ describe('FinanceService', () => {
         'order-1',
         '1000',
         'tenant-1',
-        [0.6, 0.4]
+        [0.6, 0.4],
+        'system-user'
       );
 
       expect(db.insert).toHaveBeenCalledWith(paymentSchedules);
@@ -66,7 +67,8 @@ describe('FinanceService', () => {
         'order-1',
         '100',
         'tenant-1',
-        [0.3333, 0.3333, 0.3334]
+        [0.3333, 0.3333, 0.3334],
+        'system-user'
       );
 
       const insertCall = vi.mocked(db.insert(paymentSchedules).values).mock.calls[0][0];
@@ -162,7 +164,7 @@ describe('FinanceService', () => {
   describe('generateReceivables Edge Cases', () => {
     it('should throw error if ratios do not sum to 1', async () => {
       await expect(
-        FinanceService.generateReceivables('order-1', '1000', 'tenant-1', [0.5, 0.4])
+        FinanceService.generateReceivables('order-1', '1000', 'tenant-1', [0.5, 0.4], 'system-user')
       ).rejects.toThrow('Payment ratios must sum to 1');
     });
   });

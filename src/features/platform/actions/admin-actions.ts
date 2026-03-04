@@ -300,7 +300,7 @@ export async function approveTenant(tenantId: string): Promise<{
       for (const u of tenantUsers) {
         const currentRoles = (u.roles as string[]) || [];
         // 仅当 roles 为空时才初始化，避免覆盖已有的多角色配置
-        const rolesUpdate = currentRoles.length > 0 ? currentRoles : [u.role || 'BOSS'];
+        const rolesUpdate = currentRoles.length > 0 ? currentRoles : [u.role || 'ADMIN'];
         await tx
           .update(users)
           .set({

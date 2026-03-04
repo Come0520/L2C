@@ -95,7 +95,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // 5. 签发 NextAuth JWT，建立用户 Session（免密码直接登录）
     const userRoles =
-      (user.roles as string[])?.length > 0 ? (user.roles as string[]) : [user.role || 'BOSS'];
+      (user.roles as string[])?.length > 0 ? (user.roles as string[]) : [user.role || 'ADMIN'];
 
     const jwtPayload = {
       sub: user.id,
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       picture: user.avatarUrl,
       // 以下为系统自定义字段（对应 auth.ts jwt callback）
       tenantId: user.tenantId,
-      role: user.role || 'BOSS',
+      role: user.role || 'ADMIN',
       roles: userRoles,
       isPlatformAdmin: user.isPlatformAdmin || false,
       iat: Math.floor(Date.now() / 1000),

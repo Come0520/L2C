@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { arStatements, users } from '@/shared/api/schema';
@@ -192,6 +193,6 @@ const getARAgingAnalysisAction = createSafeAction(
  * 导出：获取 AR 账龄分析数据（含账龄分层与销售汇总）
  * @param params - 查询参数
  */
-export async function getARAgingAnalysis(params: z.infer<typeof arAgingAnalysisSchema>) {
+export const getARAgingAnalysis = cache(async (params: z.infer<typeof arAgingAnalysisSchema>) => {
   return getARAgingAnalysisAction(params);
-}
+});

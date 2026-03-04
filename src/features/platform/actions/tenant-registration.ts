@@ -180,7 +180,7 @@ export async function submitTenantApplication(
         phone: data.phone,
         email: data.email,
         passwordHash,
-        role: 'BOSS',
+        role: 'ADMIN',
         isActive: false, // 审批通过后激活
         permissions: [], // 审批后分配默认权限
       });

@@ -1,0 +1,238 @@
+@use '../../styles/variables' as *;
+
+.order-track-page {
+    background-color: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .content-scroll {
+        flex: 1;
+        height: 100vh;
+    }
+
+    .loading {
+        padding: 60rpx;
+        text-align: center;
+        color: $text-secondary;
+        font-size: $font-sm;
+    }
+
+    /* 顶部卡片 */
+    .header-card {
+        background-color: $bg-card;
+        margin: $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .order-no-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-sm;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px solid $border-separator;
+
+            .label {
+                font-size: $font-sm;
+                color: $text-secondary;
+            }
+
+            .right {
+                display: flex;
+                align-items: center;
+                gap: 12rpx;
+
+                .value {
+                    font-size: $font-md;
+                    font-weight: 500;
+                    color: $text-title;
+                    font-family: 'SF Pro Display', sans-serif;
+                }
+
+                .copy-btn {
+                    font-size: 20rpx;
+                    color: $apple-blue;
+                    background-color: rgba(0, 113, 227, 0.1);
+                    padding: 4rpx 12rpx;
+                    border-radius: $radius-full;
+                }
+            }
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .label {
+                font-size: $font-sm;
+                color: $text-secondary;
+            }
+
+            .status-text {
+                font-size: $font-md;
+                font-weight: 600;
+
+                &.active {
+                    color: $apple-green;
+                }
+            }
+        }
+    }
+
+    /* 时间线容器 */
+    .timeline-card {
+        background-color: $bg-card;
+        margin: 0 $spacing-md $spacing-md;
+        border-radius: $radius-lg;
+        padding: $spacing-md;
+        box-shadow: $shadow-soft;
+
+        .section-title {
+            font-size: $font-md;
+            font-weight: 600;
+            color: $text-title;
+            display: block;
+            margin-bottom: $spacing-md;
+            padding-left: 16rpx;
+            position: relative;
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 6rpx;
+                height: 24rpx;
+                background-color: $apple-blue;
+                border-radius: 4rpx;
+            }
+        }
+    }
+
+    .timeline-container {
+        padding-top: $spacing-sm;
+
+        .timeline-item {
+            display: flex;
+            align-items: stretch;
+            min-height: 140rpx;
+
+            /* 最新的节点高亮 */
+            &.is-first {
+                .time-col {
+
+                    .date,
+                    .time {
+                        color: $text-title;
+                        font-weight: 600;
+                    }
+                }
+
+                .track-col {
+                    .dot {
+                        background-color: $apple-blue;
+                        border: 6rpx solid rgba(0, 113, 227, 0.2);
+                        width: 24rpx;
+                        height: 24rpx;
+                        margin-left: 0;
+                        /* Adjust center based on size */
+                    }
+                }
+
+                .content-col {
+                    .title {
+                        color: $text-title;
+                        font-weight: 600;
+                    }
+
+                    .desc {
+                        color: $text-secondary;
+                    }
+                }
+            }
+        }
+
+        .time-col {
+            width: 120rpx;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding-right: $spacing-sm;
+            padding-top: 4rpx;
+
+            .date {
+                font-size: $font-sm;
+                color: $text-secondary;
+                margin-bottom: 4rpx;
+                font-family: 'SF Pro Display', sans-serif;
+            }
+
+            .time {
+                font-size: 20rpx;
+                color: $text-placeholder;
+                font-family: 'SF Pro Display', sans-serif;
+            }
+        }
+
+        .track-col {
+            position: relative;
+            width: 40rpx;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            .dot {
+                width: 16rpx;
+                height: 16rpx;
+                border-radius: 50%;
+                background-color: #d8d8d8;
+                z-index: 2;
+                margin-top: 10rpx;
+
+                &.completed {
+                    background-color: $apple-blue;
+                }
+            }
+
+            .line {
+                position: absolute;
+                top: 32rpx;
+                bottom: -10rpx;
+                width: 2px;
+                background-color: #e5e5ea;
+                z-index: 1;
+            }
+        }
+
+        .content-col {
+            flex: 1;
+            padding-left: $spacing-sm;
+            padding-bottom: $spacing-xl;
+            padding-top: 2rpx;
+
+            .title {
+                font-size: $font-md;
+                color: $text-title;
+                font-weight: 500;
+                display: block;
+                margin-bottom: 8rpx;
+            }
+
+            .desc {
+                font-size: 24rpx;
+                color: $text-secondary;
+                line-height: 1.5;
+                background-color: $bg-base;
+                padding: 16rpx;
+                border-radius: $radius-sm;
+                margin-top: 8rpx;
+            }
+        }
+    }
+}

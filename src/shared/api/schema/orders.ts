@@ -1,4 +1,17 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, index, integer, date, boolean, jsonb } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  decimal,
+  index,
+  integer,
+  date,
+  boolean,
+  jsonb,
+  unique,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customers } from './customers';
 import { quotes, quoteItems } from './quotes';
@@ -7,24 +20,32 @@ import { leads } from './leads';
 import { purchaseOrders, suppliers } from './supply-chain';
 import { channels, channelContacts } from './channels';
 import {
-    orderStatusEnum,
-    productCategoryEnum,
-    paymentMethodEnum,
-    paymentScheduleStatusEnum,
-    orderSettlementTypeEnum,
-    changeRequestTypeEnum,
-    changeRequestStatusEnum,
-    orderItemStatusEnum,
-    cooperationModeEnum
+  orderStatusEnum,
+  productCategoryEnum,
+  paymentMethodEnum,
+  paymentScheduleStatusEnum,
+  orderSettlementTypeEnum,
+  changeRequestTypeEnum,
+  changeRequestStatusEnum,
+  orderItemStatusEnum,
+  cooperationModeEnum,
 } from './enums';
 
-export const orders = pgTable('orders', {
+export const orders = pgTable(
+  'orders',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderNo: varchar('order_no', { length: 50 }).unique().notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    orderNo: varchar('order_no', { length: 50 }).notNull(),
 
-    quoteId: uuid('quote_id').references(() => quotes.id).notNull(),
-    quoteVersionId: uuid('quote_version_id').references(() => quotes.id).notNull(), // 报价版本关联
+    quoteId: uuid('quote_id')
+      .references(() => quotes.id)
+      .notNull(),
+    quoteVersionId: uuid('quote_version_id')
+      .references(() => quotes.id)
+      .notNull(), // 报价版本关联
 
     leadId: uuid('lead_id').references(() => leads.id), // 线索关联
 
@@ -33,7 +54,9 @@ export const orders = pgTable('orders', {
     channelContactId: uuid('channel_contact_id').references(() => channelContacts.id),
     channelCooperationMode: cooperationModeEnum('channel_cooperation_mode'), // BASE_PRICE / COMMISSION
 
-    customerId: uuid('customer_id').references(() => customers.id).notNull(),
+    customerId: uuid('customer_id')
+      .references(() => customers.id)
+      .notNull(),
     customerName: varchar('customer_name', { length: 100 }), // Denormalized for quick access
     customerPhone: varchar('customer_phone', { length: 20 }), // Denormalized for quick access
     deliveryAddress: text('delivery_address'),
@@ -70,10 +93,14 @@ export const orders = pgTable('orders', {
     quoteSnapshot: jsonb('quote_snapshot'), // Deep clone of original quote
     logistics: jsonb('logistics'), // Stores tracking info (carrier, trackingNo, traces)
 
-    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
     updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
 
@@ -83,7 +110,10 @@ export const orders = pgTable('orders', {
     pauseCumulativeDays: integer('pause_cumulative_days').default(0),
 
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-}, (table) => ({
+  },
+  (table) => ({
+    // 租户内唯一约束
+    orderTenantOrderNoUnq: unique('uq_orders_tenant_no').on(table.tenantId, table.orderNo),
     orderTenantIdx: index('idx_orders_tenant').on(table.tenantId),
     orderCustomerIdx: index('idx_orders_customer').on(table.customerId),
     orderTenantStatusIdx: index('idx_orders_tenant_status').on(table.tenantId, table.status),
@@ -93,14 +123,23 @@ export const orders = pgTable('orders', {
     orderSalesIdx: index('idx_orders_sales').on(table.salesId),
     orderChannelIdx: index('idx_orders_channel').on(table.channelId),
     orderTenantCreatedIdx: index('idx_orders_tenant_created').on(table.tenantId, table.createdAt),
-}));
+  })
+);
 
-export const orderItems = pgTable('order_items', {
+export const orderItems = pgTable(
+  'order_items',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    orderId: uuid('order_id')
+      .references(() => orders.id, { onDelete: 'cascade' })
+      .notNull(),
 
-    quoteItemId: uuid('quote_item_id').references(() => quoteItems.id).notNull(),
+    quoteItemId: uuid('quote_item_id')
+      .references(() => quoteItems.id)
+      .notNull(),
 
     roomName: varchar('room_name', { length: 100 }).notNull(),
 
@@ -130,15 +169,30 @@ export const orderItems = pgTable('order_items', {
 
     version: integer('version').default(1).notNull(), // Add for optimistic locking
 
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     orderItemsOrderIdx: index('idx_order_items_order').on(table.orderId),
-}));
+  })
+);
 
-export const paymentSchedules = pgTable('payment_schedules', {
+export const paymentSchedules = pgTable(
+  'payment_schedules',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    orderId: uuid('order_id')
+      .references(() => orders.id, { onDelete: 'cascade' })
+      .notNull(),
     statementId: uuid('statement_id'), // Link to AR Statement (avoid circular ref)
 
     name: varchar('name', { length: 100 }).notNull(), // Deposit, Balance, etc.
@@ -154,16 +208,30 @@ export const paymentSchedules = pgTable('payment_schedules', {
     status: paymentScheduleStatusEnum('status').default('PENDING'),
     proofImg: text('proof_img'),
 
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
+    updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     paymentSchedulesOrderIdx: index('idx_payment_schedules_order').on(table.orderId),
-}));
+  })
+);
 
-export const orderChanges = pgTable('order_changes', {
+export const orderChanges = pgTable(
+  'order_changes',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    orderId: uuid('order_id').references(() => orders.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    orderId: uuid('order_id')
+      .references(() => orders.id)
+      .notNull(),
 
     type: changeRequestTypeEnum('type').notNull(),
     reason: text('reason').notNull(),
@@ -178,9 +246,16 @@ export const orderChanges = pgTable('order_changes', {
     approvedBy: uuid('approved_by').references(() => users.id),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     orderChangesOrderIdx: index('idx_order_changes_order').on(table.orderId),
     orderChangesStatusIdx: index('idx_order_changes_status').on(table.status),
-}));
+  })
+);

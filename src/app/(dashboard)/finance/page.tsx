@@ -193,7 +193,7 @@ function getUserFinancePermissions(roles: string[]): Set<string> {
   const perms = new Set<string>();
 
   for (const roleCode of roles) {
-    if (roleCode === 'ADMIN' || roleCode === 'TENANT_ADMIN') {
+    if (roleCode === 'ADMIN' || roleCode === 'ADMIN') {
       return new Set([
         'finance.ar.view',
         'finance.ar.create',

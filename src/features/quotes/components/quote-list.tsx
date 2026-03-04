@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
@@ -48,6 +48,39 @@ interface QuoteListItem {
   createdAt?: string | Date | null;
   [key: string]: unknown;
 }
+
+const QuoteTableRow = React.memo(function QuoteTableRow({
+  quote,
+  onClick,
+}: {
+  quote: QuoteListItem;
+  onClick: (id: string) => void;
+}) {
+  return (
+    <TableRow key={quote.id} className="cursor-pointer" onClick={() => onClick(quote.id)}>
+      <TableCell className="font-medium">{quote.quoteNo}</TableCell>
+      <TableCell>{quote.customer?.name || '-'}</TableCell>
+      <TableCell>{STATUS_LABELS[quote.status] || quote.status}</TableCell>
+      <TableCell className="text-right">¥{quote.finalAmount}</TableCell>
+      <TableCell>{quote.creator?.name || '-'}</TableCell>
+      <TableCell>
+        {quote.createdAt ? format(new Date(quote.createdAt), 'yyyy-MM-dd HH:mm') : '-'}
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(quote.id);
+          }}
+        >
+          编辑
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 export function QuoteList() {
   const router = useRouter();
@@ -182,7 +215,7 @@ export function QuoteList() {
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="content-visibility-auto">
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
@@ -213,34 +246,11 @@ export function QuoteList() {
                 </TableRow>
               ) : (
                 quotes.map((quote) => (
-                  <TableRow
+                  <QuoteTableRow
                     key={quote.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/quotes/${quote.id}`)}
-                  >
-                    <TableCell className="font-medium">{quote.quoteNo}</TableCell>
-                    <TableCell>{quote.customer?.name || '-'}</TableCell>
-                    <TableCell>{STATUS_LABELS[quote.status] || quote.status}</TableCell>
-                    <TableCell className="text-right">¥{quote.finalAmount}</TableCell>
-                    <TableCell>{quote.creator?.name || '-'}</TableCell>
-                    <TableCell>
-                      {quote.createdAt
-                        ? format(new Date(quote.createdAt), 'yyyy-MM-dd HH:mm')
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/quotes/${quote.id}`);
-                        }}
-                      >
-                        编辑
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                    quote={quote}
+                    onClick={(id) => router.push(`/quotes/${id}`)}
+                  />
                 ))
               )}
             </TableBody>

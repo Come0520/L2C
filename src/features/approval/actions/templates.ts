@@ -29,7 +29,7 @@ const initializeDefaultTemplatesActionInternal = createSafeAction(
               data: {
                 label: '店长审批',
                 approverType: 'ROLE',
-                approverValue: 'STORE_MANAGER',
+                approverValue: 'MANAGER',
                 approverMode: 'ANY',
               },
               position: { x: 250, y: 200 },

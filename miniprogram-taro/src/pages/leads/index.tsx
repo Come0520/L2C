@@ -112,11 +112,6 @@ export default function LeadsPage() {
         ))}
       </View>
 
-      {/* 新增按钮 */}
-      <View className='fab' onClick={() => Taro.navigateTo({ url: '/pages/leads-sub/create/index' })}>
-        <Text>+</Text>
-      </View>
-
       {/* 列表 */}
       <ScrollView className='leads-list' scrollY enhanced showScrollbar={false}>
         {list.length === 0 && !loading && (
@@ -130,7 +125,7 @@ export default function LeadsPage() {
             <View
               key={lead.id}
               className='lead-card card'
-              onClick={() => Taro.navigateTo({ url: `/pages/leads-sub/detail/index?id=${lead.id}` })}
+              onClick={() => Taro.navigateTo({ url: `/packageSales/lead-detail/index?id=${lead.id}` })}
             >
               <View className='card-row card-row--between'>
                 <Text className='lead-name'>{lead.customerName}</Text>

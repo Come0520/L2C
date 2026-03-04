@@ -1,29 +1,33 @@
 import {
-    pgTable,
-    uuid,
-    varchar,
-    text,
-    boolean,
-    timestamp,
-    jsonb,
-    index,
-    integer,
-    decimal,
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  boolean,
+  timestamp,
+  jsonb,
+  index,
+  integer,
+  decimal,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { customerLevelEnum, customerLifecycleStageEnum, customerPipelineStatusEnum } from './enums'; // Using existing enum
 
-
-export const customers = pgTable('customers', {
+export const customers = pgTable(
+  'customers',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    customerNo: varchar('customer_no', { length: 50 }).unique().notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    customerNo: varchar('customer_no', { length: 50 }).notNull(),
     name: varchar('name', { length: 50 }).notNull(),
     type: varchar('type', { length: 20 }).default('INDIVIDUAL'),
     phone: varchar('phone', { length: 20 }).notNull(),
     phoneSecondary: varchar('phone_secondary', { length: 20 }),
     wechat: varchar('wechat', { length: 50 }),
-    wechatOpenId: varchar('wechat_openid', { length: 100 }).unique(), // 微信小程序登录绑定
+    wechatOpenId: varchar('wechat_openid', { length: 100 }), // 微信小程序登录绑定
 
     gender: varchar('gender', { length: 10 }), // MALE, FEMALE
     birthday: timestamp('birthday'),
@@ -31,7 +35,6 @@ export const customers = pgTable('customers', {
     level: customerLevelEnum('level').default('D'),
     lifecycleStage: customerLifecycleStageEnum('lifecycle_stage').default('LEAD').notNull(),
     pipelineStatus: customerPipelineStatusEnum('pipeline_status').default('UNASSIGNED').notNull(),
-
 
     // Referral
     referrerCustomerId: uuid('referrer_customer_id'), // 自引用，通过 Relations 定义关联
@@ -58,17 +61,27 @@ export const customers = pgTable('customers', {
     tags: text('tags').array().default([]),
     version: integer('version').default(0).notNull(),
 
-
     isMerged: boolean('is_merged').default(false),
     mergedFrom: uuid('merged_from').array(),
 
     assignedSalesId: uuid('assigned_sales_id').references(() => users.id),
-    createdBy: uuid('created_by').references(() => users.id).notNull(),
+    createdBy: uuid('created_by')
+      .references(() => users.id)
+      .notNull(),
     updatedBy: uuid('updated_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-}, (table) => ({
+  },
+  (table) => ({
+    // 租户内唯一约束
+    custTenantCustomerNoUnq: unique('uq_customers_tenant_no').on(table.tenantId, table.customerNo),
+    custTenantWechatUnq: unique('uq_customers_tenant_wechat').on(
+      table.tenantId,
+      table.wechatOpenId
+    ),
     custTenantIdx: index('idx_customers_tenant').on(table.tenantId),
     custPhoneIdx: index('idx_customers_phone').on(table.phone),
     custReferrerIdx: index('idx_customers_referrer').on(table.referrerCustomerId),
@@ -76,42 +89,78 @@ export const customers = pgTable('customers', {
     custIsMergedIdx: index('idx_customers_is_merged').on(table.isMerged),
     custCreatedAtIdx: index('idx_customers_created_at').on(table.createdAt),
     // Performance Optimization: Dashboard Group By Status
-    custTenantStatusIdx: index('idx_customers_tenant_status').on(table.tenantId, table.pipelineStatus),
+    custTenantStatusIdx: index('idx_customers_tenant_status').on(
+      table.tenantId,
+      table.pipelineStatus
+    ),
     // Performance Optimization: Sales Dashboard Group By Status
-    custTenantSalesStatusIdx: index('idx_customers_tenant_sales_status').on(table.tenantId, table.assignedSalesId, table.pipelineStatus),
+    custTenantSalesStatusIdx: index('idx_customers_tenant_sales_status').on(
+      table.tenantId,
+      table.assignedSalesId,
+      table.pipelineStatus
+    ),
     // Performance Optimization: Cursor Pagination
-    custTenantUpdatedIdx: index('idx_customers_tenant_updated_at').on(table.tenantId, table.updatedAt),
-}));
+    custTenantUpdatedIdx: index('idx_customers_tenant_updated_at').on(
+      table.tenantId,
+      table.updatedAt
+    ),
+  })
+);
 
 // 手机号查看日志表 (Phone View Logs)
 // 记录敏感信息的查看行为，用于安全审计
-export const phoneViewLogs = pgTable('phone_view_logs', {
+export const phoneViewLogs = pgTable(
+  'phone_view_logs',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    customerId: uuid('customer_id').references(() => customers.id).notNull(),
-    viewerId: uuid('viewer_id').references(() => users.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    customerId: uuid('customer_id')
+      .references(() => customers.id)
+      .notNull(),
+    viewerId: uuid('viewer_id')
+      .references(() => users.id)
+      .notNull(),
     viewerRole: varchar('viewer_role', { length: 50 }).notNull(),
     ipAddress: varchar('ip_address', { length: 50 }),
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     phoneLogTenantIdx: index('idx_phone_view_logs_tenant').on(table.tenantId),
     phoneLogCustomerIdx: index('idx_phone_view_logs_customer').on(table.customerId),
     phoneLogViewerIdx: index('idx_phone_view_logs_viewer').on(table.viewerId),
-}));
+  })
+);
 
 // 客户合并日志表 (Customer Merge Logs)
 // 记录客户档案合并操作的详细信息，用于审计和追溯
-export const customerMergeLogs = pgTable('customer_merge_logs', {
+export const customerMergeLogs = pgTable(
+  'customer_merge_logs',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    primaryCustomerId: uuid('primary_customer_id').references(() => customers.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    primaryCustomerId: uuid('primary_customer_id')
+      .references(() => customers.id)
+      .notNull(),
     mergedCustomerIds: uuid('merged_customer_ids').array().notNull(),
-    operatorId: uuid('operator_id').references(() => users.id).notNull(),
+    operatorId: uuid('operator_id')
+      .references(() => users.id)
+      .notNull(),
     fieldConflicts: jsonb('field_conflicts'), // 记录冲突字段的决策过程
     affectedTables: text('affected_tables').array(), // 受影响的关联表 (orders, quotes, leads...)
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     mergeLogTenantIdx: index('idx_merge_logs_tenant').on(table.tenantId),
     mergeLogPrimaryIdx: index('idx_merge_logs_primary').on(table.primaryCustomerId),
-}));
-
+  })
+);

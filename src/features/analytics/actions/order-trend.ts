@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 /**
  * 订单趋势 — getOrderTrend
@@ -97,6 +98,6 @@ const getOrderTrendAction = createSafeAction(orderTrendSchema, async (params, { 
   )();
 });
 
-export async function getOrderTrend(params: z.infer<typeof orderTrendSchema>) {
+export const getOrderTrend = cache(async (params: z.infer<typeof orderTrendSchema>) => {
   return getOrderTrendAction(params);
-}
+});

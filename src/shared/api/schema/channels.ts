@@ -1,34 +1,70 @@
-import { pgTable, uuid, varchar, text, timestamp, decimal, jsonb, boolean, index, integer, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  decimal,
+  jsonb,
+  boolean,
+  index,
+  integer,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
-import { channelTypeEnum, channelLevelEnum, commissionTypeEnum, cooperationModeEnum, channelSettlementTypeEnum, channelCategoryEnum, channelStatusEnum, commissionTriggerModeEnum } from './enums';
+import {
+  channelTypeEnum,
+  channelLevelEnum,
+  commissionTypeEnum,
+  cooperationModeEnum,
+  channelSettlementTypeEnum,
+  channelCategoryEnum,
+  channelStatusEnum,
+  commissionTriggerModeEnum,
+} from './enums';
 
 // 渠道类型表 (Channel Categories)
 // 支持租户自定义渠道分类，如：装修公司、设计师、跨界合作等
-export const channelCategories = pgTable('channel_categories', {
+export const channelCategories = pgTable(
+  'channel_categories',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    name: varchar('name', { length: 50 }).notNull(),           // 类型名称
-    code: varchar('code', { length: 50 }).notNull(),           // 类型代码
-    description: text('description'),                           // 描述
-    isActive: boolean('is_active').default(true),              // 是否启用
-    sortOrder: integer('sort_order').default(0),               // 排序
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    name: varchar('name', { length: 50 }).notNull(), // 类型名称
+    code: varchar('code', { length: 50 }).notNull(), // 类型代码
+    description: text('description'), // 描述
+    isActive: boolean('is_active').default(true), // 是否启用
+    sortOrder: integer('sort_order').default(0), // 排序
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     categoryTenantIdx: index('idx_channel_categories_tenant').on(table.tenantId),
     categoryCodeIdx: index('idx_channel_categories_code').on(table.tenantId, table.code),
     uniqueCode: uniqueIndex('uq_channel_categories_code').on(table.tenantId, table.code),
     uniqueName: uniqueIndex('uq_channel_categories_name').on(table.tenantId, table.name),
-}));
+  })
+);
 
-export const channels = pgTable('channels', {
+export const channels = pgTable(
+  'channels',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
 
     // 多层级支持 (Multi-level Hierarchy)
-    parentId: uuid('parent_id'),  // 自引用，指向父级渠道（无法直接 references，需要关系定义）
-    hierarchyLevel: integer('hierarchy_level').default(1).notNull(),  // 层级深度：1=一级，2=二级，3=三级
-    categoryId: uuid('category_id').references(() => channelCategories.id),  // 关联渠道类型表
+    parentId: uuid('parent_id'), // 自引用，指向父级渠道（无法直接 references，需要关系定义）
+    hierarchyLevel: integer('hierarchy_level').default(1).notNull(), // 层级深度：1=一级，2=二级，3=三级
+    categoryId: uuid('category_id').references(() => channelCategories.id), // 关联渠道类型表
 
     // Core Info
     category: channelCategoryEnum('category').notNull().default('OFFLINE'),
@@ -52,7 +88,8 @@ export const channels = pgTable('channels', {
 
     settlementType: channelSettlementTypeEnum('settlement_type').notNull(), // PREPAY / MONTHLY
     creditLimit: decimal('credit_limit', { precision: 15, scale: 2 }).default('0'), // 月结渠道授信额度
-    commissionTriggerMode: commissionTriggerModeEnum('commission_trigger_mode').default('PAYMENT_COMPLETED'), // 佣金触发时机
+    commissionTriggerMode:
+      commissionTriggerModeEnum('commission_trigger_mode').default('PAYMENT_COMPLETED'), // 佣金触发时机
     bankInfo: jsonb('bank_info'),
 
     // Attachments
@@ -69,21 +106,31 @@ export const channels = pgTable('channels', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     channelTenantIdx: index('idx_channels_tenant').on(table.tenantId),
     channelCodeIdx: index('idx_channels_code').on(table.channelNo),
     channelPhoneIdx: index('idx_channels_phone').on(table.phone),
-    channelParentIdx: index('idx_channels_parent').on(table.parentId),  // 层级查询优化
+    channelParentIdx: index('idx_channels_parent').on(table.parentId), // 层级查询优化
     // 业务唯一性约束
     uniqueCode: uniqueIndex('idx_channels_code_unique').on(table.tenantId, table.channelNo),
     uniqueName: uniqueIndex('idx_channels_name_unique').on(table.tenantId, table.name),
-}));
+  })
+);
 
-export const channelContacts = pgTable('channel_contacts', {
+export const channelContacts = pgTable(
+  'channel_contacts',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    channelId: uuid('channel_id').references(() => channels.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    channelId: uuid('channel_id')
+      .references(() => channels.id, { onDelete: 'cascade' })
+      .notNull(),
 
     name: varchar('name', { length: 100 }).notNull(),
     position: varchar('position', { length: 50 }),
@@ -92,18 +139,28 @@ export const channelContacts = pgTable('channel_contacts', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     contactChannelIdx: index('idx_channel_contacts_channel').on(table.channelId),
     contactPhoneIdx: index('idx_channel_contacts_phone').on(table.phone),
-}));
+  })
+);
 
 // 渠道佣金记录表 (Channel Commissions)
 // 记录每一笔订单产生的渠道佣金
-export const channelCommissions = pgTable('channel_commissions', {
+export const channelCommissions = pgTable(
+  'channel_commissions',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    channelId: uuid('channel_id').references(() => channels.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    channelId: uuid('channel_id')
+      .references(() => channels.id)
+      .notNull(),
 
     leadId: uuid('lead_id'), // 可选，关联线索
     orderId: uuid('order_id'), // 关联订单
@@ -128,23 +185,37 @@ export const channelCommissions = pgTable('channel_commissions', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
-}, (table) => ({
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
     commissionTenantIdx: index('idx_commissions_tenant').on(table.tenantId),
     commissionChannelIdx: index('idx_commissions_channel').on(table.channelId),
     commissionStatusIdx: index('idx_commissions_status').on(table.status),
     commissionOrderIdx: index('idx_commissions_order').on(table.orderId),
     // Composite index for common query pattern
-    idx_commissions_list: index('idx_commissions_list').on(table.tenantId, table.channelId, table.status),
-}));
+    idx_commissions_list: index('idx_commissions_list').on(
+      table.tenantId,
+      table.channelId,
+      table.status
+    ),
+  })
+);
 
 // 渠道结算单表 (Channel Settlements)
 // 按周期汇总佣金，对接财务模块付款
-export const channelSettlements = pgTable('channel_settlements', {
+export const channelSettlements = pgTable(
+  'channel_settlements',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
     settlementNo: varchar('settlement_no', { length: 50 }).notNull().unique(), // STL2026010001
-    channelId: uuid('channel_id').references(() => channels.id).notNull(),
+    channelId: uuid('channel_id')
+      .references(() => channels.id)
+      .notNull(),
 
     // 结算周期
     periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
@@ -166,19 +237,29 @@ export const channelSettlements = pgTable('channel_settlements', {
     approvedBy: uuid('approved_by').references(() => users.id),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     paidAt: timestamp('paid_at', { withTimezone: true }),
-}, (table) => ({
+  },
+  (table) => ({
     settlementTenantIdx: index('idx_settlements_tenant').on(table.tenantId),
     settlementChannelIdx: index('idx_settlements_channel').on(table.channelId),
     settlementStatusIdx: index('idx_settlements_status').on(table.status),
-}));
+  })
+);
 
 // 佣金调整记录表 (Commission Adjustments)
 // 记录退款导致的佣金调整
-export const commissionAdjustments = pgTable('commission_adjustments', {
+export const commissionAdjustments = pgTable(
+  'commission_adjustments',
+  {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id).notNull(),
-    channelId: uuid('channel_id').references(() => channels.id).notNull(),
-    originalCommissionId: uuid('original_commission_id').references(() => channelCommissions.id).notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    channelId: uuid('channel_id')
+      .references(() => channels.id)
+      .notNull(),
+    originalCommissionId: uuid('original_commission_id')
+      .references(() => channelCommissions.id)
+      .notNull(),
 
     // 调整类型: FULL_REFUND(全额退款) / PARTIAL_REFUND(部分退款)
     adjustmentType: varchar('adjustment_type', { length: 20 }).notNull(),
@@ -189,7 +270,9 @@ export const commissionAdjustments = pgTable('commission_adjustments', {
 
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
+  },
+  (table) => ({
     adjustmentTenantIdx: index('idx_adjustments_tenant').on(table.tenantId),
     adjustmentChannelIdx: index('idx_adjustments_channel').on(table.channelId),
-}));
+  })
+);

@@ -55,8 +55,13 @@ export const subscriptions = pgTable(
     cancelReason: text('cancel_reason'),
 
     // 审计
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
   },
   (table) => ({
     tenantIdx: index('idx_subscriptions_tenant').on(table.tenantId),
@@ -100,6 +105,9 @@ export const billingPaymentRecords = pgTable(
     /** 支付回调原始数据（JSON 全文保存，用于对账与争议处理） */
     rawWebhookPayload: jsonb('raw_webhook_payload'),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
@@ -140,6 +148,9 @@ export const usageMetrics = pgTable(
     /** 已用存储空间（字节） */
     storageUsedBytes: bigint('storage_used_bytes', { mode: 'number' }).default(0),
 
+    // 审计字段 (H4 统一追加)
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({

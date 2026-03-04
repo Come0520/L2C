@@ -124,7 +124,7 @@ describe('Measurement Action: rejectMeasureTask', () => {
 
   it('should trigger warning when reject count reaches threshold (3)', async () => {
     // Mock 店长列表（用于通知）
-    mockDbQuery.users.findMany.mockResolvedValue([{ id: 'manager-1', role: 'STORE_MANAGER' }]);
+    mockDbQuery.users.findMany.mockResolvedValue([{ id: 'manager-1', role: 'MANAGER' }]);
 
     const taskMock = {
       id: VALID_TASK_ID,

@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 
 import { db } from '@/shared/api/db';
 import { orders, leads, quotes, measureTasks } from '@/shared/api/schema';
@@ -259,6 +260,6 @@ const getSalesFunnelAction = createSafeAction(salesFunnelSchema, async (params, 
  * 导出：获取销售漏斗数据
  * @param params - 查询参数
  */
-export async function getSalesFunnel(params: z.infer<typeof salesFunnelSchema>) {
+export const getSalesFunnel = cache(async (params: z.infer<typeof salesFunnelSchema>) => {
   return getSalesFunnelAction(params);
-}
+});

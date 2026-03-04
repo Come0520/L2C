@@ -116,9 +116,9 @@ const rejectMeasureTaskActionInternal = createSafeAction(
 
       if (newRejectCount >= 3) {
         try {
-          const notifyRoles = ['STORE_MANAGER'];
+          const notifyRoles = ['MANAGER'] as any[];
           if (newRejectCount >= 4) {
-            notifyRoles.push('AREA_MANAGER');
+            notifyRoles.push('MANAGER');
           }
 
           const managers = await tx.query.users.findMany({

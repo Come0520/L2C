@@ -299,7 +299,7 @@ export async function registerEmployeeByInvite(
           isActive: true,
           // Backup compatibility lines
           tenantId,
-          role: roles[0] || 'SALES',
+          role: (roles[0] || 'SALES') as any,
           roles: roles,
           permissions: [],
         })
@@ -318,7 +318,7 @@ export async function registerEmployeeByInvite(
     await db.insert(tenantMembers).values({
       userId: user.id,
       tenantId,
-      role: roles[0] || 'SALES',
+      role: (roles[0] || 'SALES') as any,
       roles,
       permissions: [],
       isActive: true,

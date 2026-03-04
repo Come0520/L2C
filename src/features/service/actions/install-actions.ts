@@ -49,7 +49,7 @@ export async function getInstallTasks(filters?: { status?: string; search?: stri
 const getCachedInstallers = unstable_cache(
   async (tenantId: string) => {
     return await db.query.users.findMany({
-      where: and(eq(users.tenantId, tenantId), inArray(users.role, ['WORKER', 'INSTALLER'])),
+      where: and(eq(users.tenantId, tenantId), inArray(users.role, ['WORKER'] as any[])),
       columns: { id: true, name: true, role: true },
     });
   },
@@ -101,7 +101,7 @@ export async function dispatchInstallTask(data: {
       where: and(
         eq(users.id, installerId),
         eq(users.tenantId, session.user.tenantId),
-        inArray(users.role, ['WORKER', 'INSTALLER'])
+        inArray(users.role, ['WORKER'] as any[])
       ),
     });
 

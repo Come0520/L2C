@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Input, type InputProps } from './input';
+import { Input, type InputProps } from '@/shared/ui/input';
 import { cn } from '@/shared/lib/utils';
 import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
 import Hash from 'lucide-react/dist/esm/icons/hash';

@@ -1,5 +1,5 @@
 import { ApprovalTaskList } from '@/features/approval/components/approval-task-list';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { Suspense } from 'react';
 import { getPendingApprovals, getProcessedApprovals } from '@/features/approval/actions/queries';
@@ -30,10 +30,9 @@ export default async function ApprovalsPage({
         <UrlSyncedTabs
           paramName="tab"
           defaultValue="pending"
-          layoutId="approval-tabs"
           tabs={[
-            { value: 'pending', label: '待处理' },
-            { value: 'processed', label: '已处理' },
+            { value: 'pending', title: '待处理' },
+            { value: 'processed', title: '已处理' },
           ]}
         />
       </div>

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
  */
 import { getPendingTenants, getAllTenants } from '@/features/platform/actions/admin-actions';
 import { TenantApprovalList } from './tenant-approval-list';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader } from '@/shared/ui/page-header';
 
 export default async function TenantManagementPage(props: {
   searchParams?: Promise<{

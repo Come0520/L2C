@@ -22,6 +22,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
 import { requestOrderCancellationSchema, CANCELABLE_STATUSES } from '../action-schemas';
+import { OrderService } from '@/services/order.service';
 
 /**
  * 申请撤单 Action。
@@ -97,7 +98,8 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
       // 如果没有配置审批流程，直接执行撤单
       const errorMsg = 'error' in approvalResult ? approvalResult.error : '';
       if (errorMsg?.includes('未定义或已禁用')) {
-        return await executeCancelOrder(orderId, changeRecord.id, tenantId, userId);
+        await OrderService.executeCancelOrder(orderId, changeRecord.id, tenantId, userId);
+        return { success: true, message: '订单已成功取消' };
       }
       return { success: false, error: errorMsg || '审批提交失败' };
     }
@@ -130,69 +132,6 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
   } catch (error) {
     logger.error('撤单申请失败:', error);
     return { success: false, error: '撤单申请失败' };
-  }
-}
-
-/**
- * 执行撤单（审批通过后调用）
- */
-async function executeCancelOrder(
-  orderId: string,
-  changeRecordId: string,
-  tenantId: string,
-  approverId: string
-) {
-  try {
-    await db.transaction(async (tx) => {
-      // 1. 更新订单状态为CANCELLED
-      await tx
-        .update(orders)
-        .set({
-          status: 'CANCELLED',
-          closedAt: new Date(),
-          updatedBy: approverId,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
-
-      // 记录审计日志
-      await AuditService.record(
-        {
-          tenantId,
-          userId: approverId,
-          tableName: 'orders',
-          recordId: orderId,
-          action: 'UPDATE',
-          oldValues: { status: 'CANCELLED_REQUESTED' }, // 假设前序状态
-          newValues: { status: 'CANCELLED' },
-          changedFields: { status: 'CANCELLED' },
-        },
-        tx
-      );
-
-      console.log('[orders] 撤单逻辑已执行:', { orderId, tenantId, changeRecordId });
-
-      // 2. 更新变更记录状态为APPROVED
-      await tx
-        .update(orderChanges)
-        .set({
-          status: 'APPROVED',
-          approvedBy: approverId,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(orderChanges.id, changeRecordId));
-    });
-
-    updateTag(`order-${orderId}`);
-
-    return {
-      success: true,
-      message: '订单已成功取消',
-    };
-  } catch (error) {
-    logger.error('执行撤单失败:', error);
-    return { success: false, error: '执行撤单失败' };
   }
 }
 

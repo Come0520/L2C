@@ -7,9 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
 import {
   Link,
   Link2,

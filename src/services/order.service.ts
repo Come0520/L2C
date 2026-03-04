@@ -2,6 +2,7 @@ import { db } from '@/shared/api/db';
 import {
   orders,
   orderItems,
+  orderChanges,
   tenants,
   receiptBills,
   receiptBillItems,
@@ -832,5 +833,79 @@ export class OrderService {
 
       return result;
     });
+  }
+
+  /**
+   * 执行撤单（审批通过后调用或直接调用），支持租户隔离和乐观锁并发控制 (F1/F3/F4)
+   */
+  static async executeCancelOrder(
+    orderId: string,
+    changeRecordId: string,
+    tenantId: string,
+    approverId: string,
+    txClient?: any
+  ): Promise<boolean> {
+    const runInTx = async (tx: any) => {
+      // 查询当前订单及版本
+      const order = await tx.query.orders.findFirst({
+        where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+      });
+      if (!order) throw new Error('订单不存在或无权访问');
+
+      // 1. 更新订单状态为CANCELLED，同时进行并发控制校验
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: 'CANCELLED',
+          closedAt: new Date(),
+          updatedBy: approverId,
+          updatedAt: new Date(),
+          version: order.version + 1,
+        })
+        .where(
+          and(
+            eq(orders.id, orderId),
+            eq(orders.tenantId, tenantId),
+            eq(orders.version, order.version)
+          )
+        )
+        .returning();
+
+      if (!updatedOrder) throw new Error('订单已被并发修改，无法执行撤单');
+
+      // 记录审计日志
+      await AuditService.record(
+        {
+          tenantId,
+          userId: approverId, // 撤单人
+          tableName: 'orders',
+          recordId: orderId,
+          action: 'UPDATE',
+          oldValues: { status: order.status },
+          newValues: { status: 'CANCELLED' },
+          changedFields: { status: 'CANCELLED' },
+        },
+        tx
+      );
+
+      // 2. 更新变更记录状态为APPROVED（增加租户约束）
+      await tx
+        .update(orderChanges)
+        .set({
+          status: 'APPROVED',
+          approvedBy: approverId,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(orderChanges.id, changeRecordId), eq(orderChanges.tenantId, tenantId)));
+
+      return true;
+    };
+
+    if (txClient) {
+      return await runInTx(txClient);
+    } else {
+      return await db.transaction(runInTx);
+    }
   }
 }

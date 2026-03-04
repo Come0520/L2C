@@ -15,7 +15,7 @@ import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { SearchInput } from '@/shared/ui/search-input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
-import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 import {
   Dialog,
   DialogContent,
@@ -246,8 +246,8 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
   };
 
   const tabs = [
-    { value: 'pending', label: `待审批 (${pendingTenants.length})` },
-    { value: 'all', label: `所有租户 (${allTenants.length})` },
+    { value: 'pending', title: `待审批 (${pendingTenants.length})` },
+    { value: 'all', title: `所有租户 (${allTenants.length})` },
   ];
 
   const currentList = activeTab === 'pending' ? pendingTenants : allTenants;
@@ -255,10 +255,10 @@ export function TenantApprovalList({ pendingTenants, allTenants }: TenantApprova
   return (
     <div className="space-y-4">
       <div className="mb-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-        <AnimatedTabs
+        <AceternityTabs
           tabs={tabs}
           activeTab={activeTab}
-          onChange={setActiveTab}
+          onTabChange={setActiveTab}
           tabClassName="mb-0"
         />
 

@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { updateTicketStatus } from '@/features/service/actions/ticket-actions';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar'; // Correct path for shared component
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar'; // Correct path for shared component
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { Edit2 } from 'lucide-react';
 
 /** 工单数据（服务端查询返回） */
@@ -45,10 +45,10 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 const TABS = [
-  { value: 'all', label: '全部工单' },
-  { value: 'PENDING', label: '待处理' },
-  { value: 'PROCESSING', label: '处理中' },
-  { value: 'PENDING_VERIFY', label: '已解决' },
+  { value: 'all', title: '全部工单' },
+  { value: 'PENDING', title: '待处理' },
+  { value: 'PROCESSING', title: '处理中' },
+  { value: 'PENDING_VERIFY', title: '已解决' },
 ];
 
 export function TicketList({
@@ -67,7 +67,7 @@ export function TicketList({
   const searchParams = useSearchParams();
 
   // URL Params state
-  const currentStatus = searchParams.get('status') || 'all';
+  const _currentStatus = searchParams.get('status') || 'all';
   const currentSearch = searchParams.get('search') || '';
 
   // Local state
@@ -149,7 +149,6 @@ export function TicketList({
         paramName="status"
         defaultValue="all"
         containerClassName="w-full mb-4"
-        layoutId="service-tickets-tabs"
       />
 
       {/* Glass Container */}

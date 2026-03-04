@@ -19,6 +19,7 @@ import { leads } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { withMiniprogramAuth } from '../../../auth-utils';
 import { AuditService } from '@/shared/services/audit-service';
+import { LeadService } from '@/services/lead.service';
 
 export const POST = withMiniprogramAuth(
   async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
@@ -29,30 +30,22 @@ export const POST = withMiniprogramAuth(
 
       const { id: leadId } = await params;
 
-      // 查询线索（必须属于同租户且当前销售是负责人）
+      // 查询线索（获取当前版本号用于乐观锁控制）
       const lead = await db.query.leads.findFirst({
         where: and(
           eq(leads.id, leadId),
           eq(leads.tenantId, user.tenantId),
           eq(leads.assignedSalesId, user.id)
         ),
-        columns: { id: true, status: true },
+        columns: { id: true, version: true },
       });
 
       if (!lead) {
         return apiNotFound('线索不存在或无权释放');
       }
 
-      // 释放：清除负责人，状态改为待分配
-      await db
-        .update(leads)
-        .set({
-          assignedSalesId: null,
-          status: 'PENDING_ASSIGNMENT',
-          updatedAt: new Date(),
-        })
-        // 同时加 tenantId 过滤，防止 TOCTOU 跨租户修改窗口
-        .where(and(eq(leads.id, leadId), eq(leads.tenantId, user.tenantId)));
+      // 释放：复用公用底层逻辑（底层会检验 version）
+      await LeadService.releaseToPool(leadId, user.tenantId, user.id, true, lead.version);
 
       // 审计日志
       await AuditService.log(db, {

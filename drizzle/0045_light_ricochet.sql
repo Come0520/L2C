@@ -1,0 +1,1 @@
+ALTER TABLE "order_items" ADD COLUMN "cost_price" numeric(10, 2) NOT NULL;

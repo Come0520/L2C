@@ -218,10 +218,21 @@ export class FinanceService {
           const balanceBefore = new Decimal(account.balance);
           const balanceAfter = balanceBefore.plus(amountNum);
 
-          await tx
+          const [accountUpdated] = await tx
             .update(financeAccounts)
             .set({ balance: balanceAfter.toString() })
-            .where(and(eq(financeAccounts.id, account.id), eq(financeAccounts.tenantId, tenantId)));
+            .where(
+              and(
+                eq(financeAccounts.id, account.id),
+                eq(financeAccounts.tenantId, tenantId),
+                eq(financeAccounts.balance, balanceBefore.toString()) // 乐观锁
+              )
+            )
+            .returning({ id: financeAccounts.id });
+
+          if (!accountUpdated) {
+            throw new Error('账户资金状态已过期（可能已被并发修改），请重核再试');
+          }
 
           await tx.insert(accountTransactions).values({
             tenantId,
@@ -274,7 +285,7 @@ export class FinanceService {
               newStatus = 'PARTIAL';
             }
 
-            await tx
+            const [statementUpdated] = await tx
               .update(arStatements)
               .set({
                 receivedAmount: receivedAfter.toString(),
@@ -282,7 +293,18 @@ export class FinanceService {
                 status: newStatus,
                 completedAt: pending.lte(0) || allowDifference ? new Date() : null,
               })
-              .where(and(eq(arStatements.id, statement.id), eq(arStatements.tenantId, tenantId)));
+              .where(
+                and(
+                  eq(arStatements.id, statement.id),
+                  eq(arStatements.tenantId, tenantId),
+                  eq(arStatements.receivedAmount, receivedBefore.toString()) // 乐观锁
+                )
+              )
+              .returning({ id: arStatements.id });
+
+            if (!statementUpdated) {
+              throw new Error('对账单状态已过期（可能已被并发处理），请重核再试');
+            }
 
             // Calculate Commission if newly PAID
             if (newStatus === 'PAID' && statement.channelId) {

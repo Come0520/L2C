@@ -125,6 +125,20 @@ export const restoreLeadSchema = z.object({
   reason: z.string().optional(), // 恢复原因
 });
 
+export const claimFromPoolSchema = z
+  .object({
+    id: z.string().uuid(),
+    version: z.number().optional(),
+  })
+  .describe('从公海认领线索，需上报版本号防止并发争抢');
+
+export const releaseToPoolSchema = z
+  .object({
+    id: z.string().uuid(),
+    version: z.number().optional(),
+  })
+  .describe('将线索释放退回公海，需上报版本号防止并发回退');
+
 // ==================== Filter/Query Schemas ====================
 
 export const leadFilterSchema = z

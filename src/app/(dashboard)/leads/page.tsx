@@ -10,7 +10,7 @@ import { CreateLeadDialog } from '@/features/leads/components/create-lead-dialog
 import { ExcelImportDialog } from '@/features/leads/components/excel-import-dialog';
 import { auth } from '@/shared/lib/auth';
 import { redirect } from 'next/navigation';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader } from '@/shared/ui/page-header';
 import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { LeadsErrorBoundary } from '@/features/leads/components/leads-error-boundary';
 import { LeadAnalyticsDashboard } from '@/features/leads/components/lead-analytics-dashboard';

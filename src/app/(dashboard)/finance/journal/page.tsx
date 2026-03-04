@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Plus } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader } from '@/shared/ui/page-header';
 import {
   getJournalEntries,
   getJournalEntryById,

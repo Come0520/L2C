@@ -1,19 +1,19 @@
 ﻿'use client';
 
-import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 
 const LEAD_STATUS_TABS = [
-  { value: 'ALL', label: '全部线索' },
-  { value: 'PENDING_ASSIGNMENT', label: '公海池' },
-  { value: 'PENDING_FOLLOWUP', label: '待跟进' },
-  { value: 'MY_FOLLOWING', label: '我的跟进' },
-  { value: 'FOLLOWING_UP', label: '跟进中' },
-  { value: 'WON', label: '已成交' },
-  { value: 'PENDING_APPROVAL', label: '待审批' },
-  { value: 'INVALID', label: '无效' },
-  { value: 'ANALYTICS', label: '分析' },
+  { value: 'ALL', title: '全部线索' },
+  { value: 'PENDING_ASSIGNMENT', title: '公海池' },
+  { value: 'PENDING_FOLLOWUP', title: '待跟进' },
+  { value: 'MY_FOLLOWING', title: '我的跟进' },
+  { value: 'FOLLOWING_UP', title: '跟进中' },
+  { value: 'WON', title: '已成交' },
+  { value: 'PENDING_APPROVAL', title: '待审批' },
+  { value: 'INVALID', title: '无效' },
+  { value: 'ANALYTICS', title: '分析' },
 ];
 
 export function LeadsFilterBar() {
@@ -45,11 +45,10 @@ export function LeadsFilterBar() {
   };
 
   return (
-    <AnimatedTabs
+    <AceternityTabs
       tabs={LEAD_STATUS_TABS}
       activeTab={currentStatus}
-      onChange={handleTabChange}
-      layoutId="leads-status-tabs"
+      onTabChange={handleTabChange}
       containerClassName="w-full mb-4"
     />
   );

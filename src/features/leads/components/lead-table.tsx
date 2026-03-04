@@ -105,7 +105,7 @@ export const LeadTable = React.memo(function LeadTable({
           if (confirm('确定要认领该线索吗？')) {
             startTransition(async () => {
               try {
-                const res = await claimFromPool(leadId);
+                const res = await claimFromPool({ id: leadId, version: lead.version });
                 if (res.success) {
                   toast.success('认领成功');
                   onReload?.();

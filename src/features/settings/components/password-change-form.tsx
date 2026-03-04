@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import {
   Form,
   FormControl,
@@ -15,7 +15,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/shared/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/shared/ui/input';
 import { changePassword } from '../actions/profile-actions';
 
 const passwordFormSchema = z

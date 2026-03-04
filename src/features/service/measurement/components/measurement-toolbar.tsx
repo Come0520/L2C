@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { useDebounce } from '@/shared/hooks/use-debounce'; // Assuming this hook exists, created earlier

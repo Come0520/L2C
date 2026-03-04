@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import { ProductImportDialog } from './product-import-dialog';

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 

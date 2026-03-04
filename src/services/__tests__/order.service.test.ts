@@ -3,6 +3,8 @@ import { OrderService } from '@/services/order.service';
 import { db } from '@/shared/api/db';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { AuditService } from '@/shared/services/audit-service';
+import { orders, orderChanges } from '@/shared/api/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Mock Dependencies
 vi.mock('@/shared/api/db', () => {
@@ -236,6 +238,101 @@ describe('OrderService', () => {
     });
   });
 
+  describe('executeCancelOrder', () => {
+    const orderId = 'order-1';
+    const changeRecordId = 'change-1';
+    const tenantId = 'tenant-1';
+    const approverId = 'approver-1';
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should successfully cancel order and update change record', async () => {
+      // Mock db.transaction to yield our custom tx
+      const mockOrder = { id: orderId, tenantId, status: 'CANCELLED_REQUESTED', version: 1 };
+
+      const mockTx = {
+        query: {
+          orders: { findFirst: vi.fn().mockResolvedValue(mockOrder) },
+        },
+        update: vi.fn().mockImplementation((table) => {
+          return {
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            returning: vi.fn().mockResolvedValue([{ id: 'updated' }]),
+          };
+        }),
+      };
+
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      const result = await OrderService.executeCancelOrder(
+        orderId,
+        changeRecordId,
+        tenantId,
+        approverId
+      );
+
+      expect(result).toBe(true);
+
+      // Expected findFirst call
+      expect(mockTx.query.orders.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)),
+        })
+      );
+
+      // Expected update calls
+      expect(mockTx.update).toHaveBeenCalledWith(orders);
+      expect(mockTx.update).toHaveBeenCalledWith(orderChanges);
+
+      // Expected Audit log
+      expect(AuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'UPDATE',
+          changedFields: { status: 'CANCELLED' },
+        }),
+        mockTx
+      );
+    });
+
+    it('should throw if order does not exist or tenant check fails', async () => {
+      const mockTx = {
+        query: {
+          orders: { findFirst: vi.fn().mockResolvedValue(null) },
+        },
+      };
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      await expect(
+        OrderService.executeCancelOrder(orderId, changeRecordId, tenantId, approverId)
+      ).rejects.toThrow('订单不存在或无权访问');
+    });
+
+    it('should throw if optimistic lock check fails', async () => {
+      const mockOrder = { id: orderId, tenantId, status: 'CANCELLED_REQUESTED', version: 1 };
+
+      const mockTx = {
+        query: {
+          orders: { findFirst: vi.fn().mockResolvedValue(mockOrder) },
+        },
+        update: vi.fn().mockImplementation((table) => {
+          return {
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            returning: vi.fn().mockResolvedValue([]), // Returns empty => concurrent mod
+          };
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      await expect(
+        OrderService.executeCancelOrder(orderId, changeRecordId, tenantId, approverId)
+      ).rejects.toThrow('订单已被并发修改，无法执行撤单');
+    });
+  });
+
   describe('convertFromQuote', () => {
     it('should correctly map costPrice from quote items to order items', async () => {
       const mockQuoteId = 'quote-123';
@@ -299,7 +396,9 @@ describe('OrderService', () => {
         const tx = {
           query: {
             quotes: { findFirst: vi.fn().mockResolvedValue(mockQuote) },
+            orders: { findFirst: vi.fn().mockResolvedValue(null) },
             receiptBills: { findMany: vi.fn().mockResolvedValue([]) },
+            tenants: { findFirst: vi.fn().mockResolvedValue({ settings: {} }) },
           },
           insert: vi.fn((table: any) => ({
             values: (data: any) => {

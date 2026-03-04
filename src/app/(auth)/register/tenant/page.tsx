@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * 租户自助注册页面
@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
-import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar';
+import { Sidebar, SidebarBody, useSidebar } from '@/shared/ui/sidebar';
 import {
   Home,
   Users,

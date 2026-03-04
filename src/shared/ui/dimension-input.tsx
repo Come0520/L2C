@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Input } from './input';
+import { Input } from '@/shared/ui/input';
 import { cn } from '@/shared/lib/utils';
 
 export interface DimensionInputProps {
@@ -43,7 +43,7 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
             <Input
               type="number"
               value={width}
-              onChange={(e) => onWidthChange?.(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWidthChange?.(e.target.value)}
               placeholder="宽"
               className="pr-6 text-right"
               disabled={disabled}
@@ -57,7 +57,9 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
             <Input
               type="number"
               value={height}
-              onChange={(e) => onHeightChange?.(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onHeightChange?.(e.target.value)
+              }
               placeholder="高"
               className="pr-6 text-right"
               disabled={disabled}

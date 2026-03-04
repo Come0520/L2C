@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { useEffect } from 'react';
 

@@ -6,7 +6,7 @@ import {
 import { MeasureTaskTable } from '@/features/service/measurement/components/measure-task-table';
 import { MeasurementToolbar } from '@/features/service/measurement/components/measurement-toolbar';
 import { CreateMeasureTaskDialog } from '@/features/service/measurement/components/create-measure-task-dialog';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { Pagination } from '@/shared/ui/pagination';
 import { Metadata } from 'next';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -97,26 +97,21 @@ export default async function MeasurementPage({ searchParams }: PageProps) {
 
   // 定义 Tab 状态，与后端枚举对齐
   const STATUS_TABS = [
-    { label: '全部', value: 'ALL' },
-    { label: '待审批', value: 'PENDING_APPROVAL' },
-    { label: '待测量', value: 'PENDING' },
-    { label: '派单中', value: 'DISPATCHING' },
-    { label: '待上门', value: 'PENDING_VISIT' },
-    { label: '待确认', value: 'PENDING_CONFIRM' },
-    { label: '已完成', value: 'COMPLETED' },
-    { label: '已取消', value: 'CANCELLED' },
+    { title: '全部', value: 'ALL' },
+    { title: '待审批', value: 'PENDING_APPROVAL' },
+    { title: '待测量', value: 'PENDING' },
+    { title: '派单中', value: 'DISPATCHING' },
+    { title: '待上门', value: 'PENDING_VISIT' },
+    { title: '待确认', value: 'PENDING_CONFIRM' },
+    { title: '已完成', value: 'COMPLETED' },
+    { title: '已取消', value: 'CANCELLED' },
   ];
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       {/* Header Section */}
       <div className="flex items-center justify-between">
-        <UrlSyncedTabs
-          paramName="status"
-          defaultValue="ALL"
-          layoutId="measurement-status-tabs"
-          tabs={STATUS_TABS}
-        />
+        <UrlSyncedTabs paramName="status" defaultValue="ALL" tabs={STATUS_TABS} />
         <CreateMeasureTaskDialog />
       </div>
 

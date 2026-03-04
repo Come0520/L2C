@@ -6,9 +6,7 @@ const authFile = path.join(__dirname, '../.auth/user.json');
 setup('authenticate', async ({ page }) => {
     console.log('Navigating to login page...');
     page.on('console', msg => {
-        if (msg.type() === 'error' || msg.text().includes('Error') || msg.text().includes('error')) {
-            console.log('PAGE LOG:', msg.text());
-        }
+        console.log(`BROWSER [${msg.type()}]:`, msg.text());
     });
 
     await page.goto('/login', { timeout: 120000, waitUntil: 'domcontentloaded' });

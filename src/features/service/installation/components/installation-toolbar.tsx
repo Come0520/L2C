@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 
 /**

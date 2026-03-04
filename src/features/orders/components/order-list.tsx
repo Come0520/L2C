@@ -13,23 +13,23 @@ import { OrderTable } from './order-table';
 import { OrderAdvancedFilter, type OrderFilters } from './orders-advanced-filter';
 import { getOrders } from '../actions/queries';
 import { toast } from 'sonner';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 
 /**
  * 订单状态Tabs配置
  */
 const ORDER_STATUS_TABS = [
-  { key: 'ALL', label: '全部' },
-  { key: 'PENDING_PURCHASE', label: '待采购' },
-  { key: 'IN_PRODUCTION', label: '生产中' },
-  { key: 'PENDING_DELIVERY', label: '待发货' },
-  { key: 'PENDING_INSTALL', label: '待安装' },
-  { key: 'COMPLETED', label: '已完成' },
-  { key: 'CANCELLED', label: '已取消' },
+  { value: 'ALL', title: '全部' },
+  { value: 'PENDING_PURCHASE', title: '待采购' },
+  { value: 'IN_PRODUCTION', title: '生产中' },
+  { value: 'PENDING_DELIVERY', title: '待发货' },
+  { value: 'PENDING_INSTALL', title: '待安装' },
+  { value: 'COMPLETED', title: '已完成' },
+  { value: 'CANCELLED', title: '已取消' },
 ] as const;
 
-type OrderStatusTab = (typeof ORDER_STATUS_TABS)[number]['key'];
+type OrderStatusTab = (typeof ORDER_STATUS_TABS)[number]['value'];
 
 /**
  * 订单列表组件
@@ -103,11 +103,10 @@ export function OrderList() {
       <div className="flex w-full items-center justify-between">
         <div className="flex-1">
           <UrlSyncedTabs
-            tabs={ORDER_STATUS_TABS.map((t) => ({ value: t.key, label: t.label }))}
+            tabs={ORDER_STATUS_TABS as unknown as { value: string; title: string }[]}
             paramName="status"
             defaultValue="ALL"
             containerClassName="w-full mb-4"
-            layoutId="orders-status-tabs"
           />
         </div>
         <div className="mb-4 flex items-center gap-2">

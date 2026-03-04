@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { channelSchema, ChannelInput } from '../actions/schema';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';

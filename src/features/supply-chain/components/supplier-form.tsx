@@ -7,8 +7,8 @@ import { createSupplierSchema } from '../schemas';
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
-import { AddressInput } from '@/components/ui/address-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
+import { AddressInput } from '@/shared/ui/address-input';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';

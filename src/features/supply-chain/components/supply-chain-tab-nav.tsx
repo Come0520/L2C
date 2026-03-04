@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 import { cn } from '@/shared/lib/utils';
 import Package from 'lucide-react/dist/esm/icons/package';
 import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
@@ -131,15 +131,14 @@ export function SupplyChainTabNav() {
       </div>
 
       {/* Sub Tabs (Second Level) */}
-      <AnimatedTabs
+      <AceternityTabs
         tabs={currentTabs.map((tab) => ({
           value: tab.href,
-          label: tab.label,
+          title: tab.label,
           icon: <tab.icon className="h-4 w-4" />,
         }))}
         activeTab={activeTab.href}
-        onChange={handleTabChange}
-        layoutId="supply-chain-sub-nav"
+        onTabChange={handleTabChange}
         tabClassName="px-4 py-2"
       />
     </div>

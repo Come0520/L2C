@@ -225,14 +225,15 @@ describe('Lead Mutations (L5)', () => {
       mockLeadService.releaseToPool.mockResolvedValue(undefined);
       const { releaseToPool } = await import('../mutations');
 
-      const result = await releaseToPool(MOCK_LEAD_ID);
+      const result = await releaseToPool({ id: MOCK_LEAD_ID, version: 1 });
 
       expect(result.success).toBe(true);
       expect(mockLeadService.releaseToPool).toHaveBeenCalledWith(
         MOCK_LEAD_ID,
         MOCK_TENANT_ID,
         MOCK_USER_ID,
-        true // 通过 TRANSFER 权限门控后 hasManagePerm = true
+        true, // 通过 TRANSFER 权限门控后 hasManagePerm = true
+        1
       );
     });
   });
@@ -243,13 +244,14 @@ describe('Lead Mutations (L5)', () => {
       mockLeadService.claimFromPool.mockResolvedValue(undefined);
       const { claimFromPool } = await import('../mutations');
 
-      const result = await claimFromPool(MOCK_LEAD_ID);
+      const result = await claimFromPool({ id: MOCK_LEAD_ID, version: 1 });
 
       expect(result.success).toBe(true);
       expect(mockLeadService.claimFromPool).toHaveBeenCalledWith(
         MOCK_LEAD_ID,
         MOCK_TENANT_ID,
-        MOCK_USER_ID
+        MOCK_USER_ID,
+        1
       );
     });
   });

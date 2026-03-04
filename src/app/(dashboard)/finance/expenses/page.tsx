@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Metadata } from 'next';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader } from '@/shared/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Card, CardContent } from '@/shared/ui/card';
 import { db } from '@/shared/api/db';

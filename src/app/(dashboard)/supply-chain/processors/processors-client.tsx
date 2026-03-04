@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ProcessorTable } from '@/features/supply-chain/components/processor-table';
 import { ProcessorDialog } from '@/features/supply-chain/components/processor-dialog';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';

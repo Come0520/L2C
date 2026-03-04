@@ -88,11 +88,17 @@ export default defineConfig({
         },
     ],
 
-    /* 在测试前自动启动 dev server (手动启动以查看日志) */
-    // webServer: {
-    //     command: 'pnpm dev',
-    //     url: 'http://localhost:3000',
-    //     reuseExistingServer: !process.env.CI,
-    //     timeout: 300 * 1000,
-    // },
+    /* 在测试前自动启动 production server */
+    webServer: {
+        command: 'pnpm start',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        stdout: 'pipe',
+        timeout: 300 * 1000,
+        env: {
+            AUTH_TRUST_HOST: 'true',
+            AUTH_URL: 'http://localhost:3000',
+            NEXTAUTH_URL: 'http://localhost:3000',
+        }
+    },
 });

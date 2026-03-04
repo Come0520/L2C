@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Input } from '@/shared/ui/input';
 import { cn } from '@/shared/lib/utils';
 import { IconBrandGithub, IconBrandGoogle, IconBrandOnlyfans } from '@tabler/icons-react';
 

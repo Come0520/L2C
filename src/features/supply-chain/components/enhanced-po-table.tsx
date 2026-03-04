@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -66,11 +66,11 @@ export interface POFilters {
 }
 
 const STATUS_TABS = [
-  { value: 'all', label: '全部' },
-  { value: 'pending', label: '待处理' },
-  { value: 'active', label: '执行中' },
-  { value: 'inbound', label: '物流/入库' },
-  { value: 'history', label: '历史归档' },
+  { value: 'all', title: '全部' },
+  { value: 'pending', title: '待处理' },
+  { value: 'active', title: '执行中' },
+  { value: 'inbound', title: '物流/入库' },
+  { value: 'history', title: '历史归档' },
 ];
 
 export function EnhancedPOTable({ data }: POTableProps) {
@@ -154,12 +154,7 @@ export function EnhancedPOTable({ data }: POTableProps) {
 
   return (
     <div className="space-y-4">
-      <UrlSyncedTabs
-        tabs={STATUS_TABS}
-        paramName="status"
-        defaultValue="all"
-        layoutId="po-status-tabs"
-      />
+      <UrlSyncedTabs tabs={STATUS_TABS} paramName="status" defaultValue="all" />
 
       <DataTableToolbar
         searchProps={{

@@ -1,33 +1,35 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatedTabs, TabItem } from './animated-tabs';
+import { AceternityTabs, type Tab } from './aceternity-tabs';
 
 interface UrlSyncedTabsProps {
   /** Tab 配置列表 */
-  tabs: TabItem[];
+  tabs: Tab[];
   /** URL 参数名称，默认为 'status' */
   paramName?: string;
   /** 默认选中值（当 URL 无参数时） */
   defaultValue?: string;
   /** 额外的容器样式 */
   containerClassName?: string;
-  /** layoutId 用于 Framer Motion 动画区分 */
-  layoutId?: string;
+  /** 额外的标签页样式 */
+  tabClassName?: string;
+  /** 选中标签页样式 */
+  activeTabClassName?: string;
 }
 
 /**
  * 支持 URL 同步的 Tabs 组件
  *
- * 自动从 URL 读取当前选中状态，并在切换时更新 URL 参数。
+ * 基于 AceternityTabs，自动从 URL 读取当前选中状态，并在切换时更新 URL 参数。
  * 适用于需要分享链接、浏览器前进后退保持状态的场景。
  *
  * @example
  * // 基础用法 - 使用 'status' 参数
  * <UrlSyncedTabs
  *     tabs={[
- *         { value: 'ALL', label: '全部' },
- *         { value: 'PENDING', label: '待处理' },
+ *         { title: '全部', value: 'ALL' },
+ *         { title: '待处理', value: 'PENDING' },
  *     ]}
  * />
  *
@@ -37,8 +39,8 @@ interface UrlSyncedTabsProps {
  *     paramName="tab"
  *     defaultValue="pending"
  *     tabs={[
- *         { value: 'pending', label: '待处理' },
- *         { value: 'processed', label: '已处理' },
+ *         { title: '待处理', value: 'pending' },
+ *         { title: '已处理', value: 'processed' },
  *     ]}
  * />
  */
@@ -47,7 +49,8 @@ export function UrlSyncedTabs({
   paramName = 'status',
   defaultValue,
   containerClassName,
-  layoutId,
+  tabClassName,
+  activeTabClassName,
 }: UrlSyncedTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -73,12 +76,13 @@ export function UrlSyncedTabs({
   };
 
   return (
-    <AnimatedTabs
+    <AceternityTabs
       tabs={tabs}
       activeTab={currentValue}
-      onChange={handleChange}
+      onTabChange={handleChange}
       containerClassName={containerClassName}
-      layoutId={layoutId || `tabs-${paramName}`}
+      tabClassName={tabClassName}
+      activeTabClassName={activeTabClassName}
     />
   );
 }

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader } from '@/shared/ui/page-header';
 import { JournalEntryForm } from '@/features/finance/components/journal-entry-form';
 import {
   getAccountOptions,

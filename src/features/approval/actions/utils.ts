@@ -210,12 +210,24 @@ export async function completeEntityStatus(
         .set({ status: 'COMPLETED' as typeof measureTasks.$inferInsert.status })
         .where(and(eq(measureTasks.id, entityId), eq(measureTasks.tenantId, tenantId)));
       break;
-    case 'ORDER_CHANGE':
-      await tx
-        .update(orderChanges)
-        .set({ status: 'APPROVED' as typeof orderChanges.$inferInsert.status })
-        .where(and(eq(orderChanges.id, entityId), eq(orderChanges.tenantId, tenantId)));
+    case 'ORDER_CHANGE': {
+      const { approvals: approvalsTable } = await import('@/shared/api/schema');
+      const approval = await tx.query.approvals.findFirst({
+        where: and(
+          eq(approvalsTable.entityType, entityType),
+          eq(approvalsTable.entityId, entityId),
+          eq(approvalsTable.tenantId, tenantId)
+        ),
+        orderBy: (a: any, { desc }: any) => [desc(a.createdAt)],
+      });
+      const actorId = approval?.requesterId || 'system';
+
+      const { ChangeOrderService } = await import('@/services/change-order.service');
+      // 传递当前事务 txClient 防止嵌套异常
+      await ChangeOrderService.approveRequest(entityId, tenantId, actorId, tx);
+      logger.info(`[Approval] Executed order change for ${entityId}`);
       break;
+    }
     case 'LEAD_RESTORE':
       // 查找最近一次变为 INVALID 的记录，获取其前置状态
       const invalidationRecord = await tx.query.leadStatusHistory.findFirst({
@@ -250,9 +262,30 @@ export async function completeEntityStatus(
 
       logger.info(`[Approval] Restored lead ${entityId} to status ${restoreStatus}`);
       break;
-    case 'ORDER_CANCEL':
-      logger.info(`[Approval] Completing status for ${entityType}: ${entityId}`);
+    case 'ORDER_CANCEL': {
+      const { orderChanges: ucChanges, approvals: approvalsTable } =
+        await import('@/shared/api/schema');
+      const cancelReq = await tx.query.orderChanges.findFirst({
+        where: and(eq(ucChanges.id, entityId), eq(ucChanges.tenantId, tenantId)),
+      });
+      if (cancelReq && cancelReq.orderId) {
+        const approval = await tx.query.approvals.findFirst({
+          where: and(
+            eq(approvalsTable.entityType, entityType),
+            eq(approvalsTable.entityId, entityId),
+            eq(approvalsTable.tenantId, tenantId)
+          ),
+          orderBy: (a: any, { desc }: any) => [desc(a.createdAt)],
+        });
+        const actorId = approval?.requesterId || 'system';
+
+        const { OrderService } = await import('@/services/order.service');
+        // 传递当前事务 txClient 防止嵌套异常
+        await OrderService.executeCancelOrder(cancelReq.orderId, entityId, tenantId, actorId, tx);
+        logger.info(`[Approval] Executed order cancel for ${entityId}`);
+      }
       break;
+    }
     case 'CUSTOMER_MERGE': {
       // 审批通过时执行实际合并
       // entityId 是主客户 ID，合并参数存储在审批实例的 comment 中（JSON 格式）

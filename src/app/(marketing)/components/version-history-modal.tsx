@@ -3,7 +3,7 @@
 import React from 'react';
 import { versionHistory } from '@/constants/landing-data';
 import { Rocket, Sparkles, Wrench, Calendar } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;

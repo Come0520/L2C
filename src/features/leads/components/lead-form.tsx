@@ -1,12 +1,12 @@
-﻿'use client';
+'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createLeadSchema, LeadFormValues } from '../schemas';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
-import { AddressInput } from '@/components/ui/address-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
+import { AddressInput } from '@/shared/ui/address-input';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
@@ -17,8 +17,8 @@ import { useRouter } from 'next/navigation';
 import { SmartDuplicateCheck } from './SmartDuplicateCheck';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useTenant } from '@/shared/providers/tenant-provider';
-import { CurrencyInput } from '@/components/ui/currency-input';
-import { SocialInput } from '@/components/ui/social-input';
+import { CurrencyInput } from '@/shared/ui/currency-input';
+import { SocialInput } from '@/shared/ui/social-input';
 
 interface ConflictData {
   type: 'PHONE' | 'ADDRESS';

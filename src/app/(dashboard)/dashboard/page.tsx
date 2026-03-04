@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Tabs } from '@/components/ui/tabs';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { DashboardTab } from '@/features/dashboard/components/dashboard-tab';
 import { TodoTab } from '@/features/dashboard/components/todo-tab';
@@ -48,10 +48,9 @@ export default function DashboardPage() {
 
   return (
     <div className="relative flex h-[calc(100vh-8rem)] w-full flex-col items-start justify-start [perspective:1000px]">
-      <Tabs
+      <AceternityTabs
         tabs={tabs}
         containerClassName="mb-4"
-        activeTabClassName="bg-primary-500/20 dark:bg-primary-500/30"
         tabClassName="text-sm font-medium"
         contentClassName="mt-6"
       />

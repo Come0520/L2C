@@ -1,15 +1,15 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 
 // 安装任务状态 Tabs 配置
 const INSTALL_STATUS_TABS = [
-  { value: 'ALL', label: '全部' },
-  { value: 'PENDING_DISPATCH', label: '待分配' },
-  { value: 'DISPATCHING', label: '待上门' },
-  { value: 'PENDING_CONFIRM', label: '待确认' },
-  { value: 'COMPLETED', label: '已完成' },
+  { value: 'ALL', title: '全部' },
+  { value: 'PENDING_DISPATCH', title: '待分配' },
+  { value: 'DISPATCHING', title: '待上门' },
+  { value: 'PENDING_CONFIRM', title: '待确认' },
+  { value: 'COMPLETED', title: '已完成' },
 ];
 
 /**
@@ -37,11 +37,10 @@ export function InstallationStatusTabs() {
   };
 
   return (
-    <AnimatedTabs
+    <AceternityTabs
       tabs={INSTALL_STATUS_TABS}
       activeTab={currentStatus}
-      onChange={handleTabChange}
-      layoutId="install-status-tabs"
+      onTabChange={handleTabChange}
     />
   );
 }

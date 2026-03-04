@@ -6,15 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShowroomCard } from './showroom-card';
 import { AddResourceDialog } from './add-resource-dialog';
 import { ShareManagementDialog } from './share-management-dialog';
-import { AnimatedTabs } from '@/components/ui/animated-tabs';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 
 const TABS = [
-  { value: 'all', label: '全部' },
-  { value: 'PRODUCT', label: '商品' },
-  { value: 'CASE', label: '案例' },
-  { value: 'KNOWLEDGE', label: '知识' },
-  { value: 'TRAINING', label: '培训' },
+  { value: 'all', title: '全部' },
+  { value: 'PRODUCT', title: '商品' },
+  { value: 'CASE', title: '案例' },
+  { value: 'KNOWLEDGE', title: '知识' },
+  { value: 'TRAINING', title: '培训' },
 ];
 
 import { getShowroomItems } from '@/features/showroom/actions';
@@ -80,12 +80,11 @@ export function ShowroomClientPage({ initialData }: { initialData: ShowroomItem[
       {/* Top Section: Tabs */}
       <div className="flex w-full items-center justify-between">
         <div className="flex-1">
-          <AnimatedTabs
+          <AceternityTabs
             tabs={TABS}
             activeTab={activeTab}
-            onChange={handleTabChange}
+            onTabChange={handleTabChange}
             containerClassName="w-full mb-4"
-            layoutId="showroom-tabs"
           />
         </div>
         <div className="mb-4 flex items-center gap-2">

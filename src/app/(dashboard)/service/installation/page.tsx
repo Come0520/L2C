@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { getInstallTasks } from '@/features/service/installation/actions';
 import { InstallTaskTable } from '@/features/service/installation/components/install-task-table';
 import { InstallationToolbar } from '@/features/service/installation/components/installation-toolbar';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { CreateInstallTaskDialog } from '@/features/service/installation/components/create-install-task-dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 
@@ -36,13 +36,12 @@ export default async function InstallationPage({
         <UrlSyncedTabs
           paramName="status"
           defaultValue="ALL"
-          layoutId="install-status-tabs"
           tabs={[
-            { value: 'ALL', label: '全部' },
-            { value: 'PENDING_DISPATCH', label: '待分配' },
-            { value: 'DISPATCHING', label: '待上门' },
-            { value: 'PENDING_CONFIRM', label: '待确认' },
-            { value: 'COMPLETED', label: '已完成' },
+            { value: 'ALL', title: '全部' },
+            { value: 'PENDING_DISPATCH', title: '待分配' },
+            { value: 'DISPATCHING', title: '待上门' },
+            { value: 'PENDING_CONFIRM', title: '待确认' },
+            { value: 'COMPLETED', title: '已完成' },
           ]}
         />
         <CreateInstallTaskDialog />

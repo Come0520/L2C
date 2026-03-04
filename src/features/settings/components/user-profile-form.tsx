@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { isValidPhoneNumber } from 'libphonenumber-js/min';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import {
   Form,
   FormControl,
@@ -16,8 +16,8 @@ import {
   FormMessage,
   FormDescription,
 } from '@/shared/ui/form';
-import { Input } from '@/components/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { Input } from '@/shared/ui/input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { updateProfile } from '../actions/profile-actions';
 import { User } from 'next-auth';
 

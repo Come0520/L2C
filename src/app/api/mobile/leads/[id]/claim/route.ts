@@ -15,6 +15,9 @@ import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-aut
 import { LeadService } from '@/services/lead.service';
 import { z } from 'zod';
 import { createLogger } from '@/shared/lib/logger';
+import { db } from '@/shared/api/db';
+import { eq, and } from 'drizzle-orm';
+import { leads } from '@/shared/api/schema';
 
 const log = createLogger('mobile/leads/[id]/claim');
 
@@ -43,9 +46,20 @@ export async function POST(request: NextRequest, { params }: ClaimParams) {
   }
 
   try {
+    const lead = await db.query.leads.findFirst({
+      where: and(eq(leads.id, leadId), eq(leads.tenantId, session.tenantId)),
+      columns: { version: true },
+    });
+    if (!lead) return apiNotFound('客户不存在');
+
     // 3. 调用 Service 领取客户 (包含 FOR UPDATE 锁和状态检查)
     // 注意：claimFromPool 返回的是更新后的 lead 对象
-    const result = await LeadService.claimFromPool(leadId, session.tenantId, session.userId);
+    const result = await LeadService.claimFromPool(
+      leadId,
+      session.tenantId,
+      session.userId,
+      lead.version
+    );
 
     log.info(`客户领取: 销售 ${session.userId} 领取客户 (ID masked)`);
 

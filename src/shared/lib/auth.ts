@@ -61,12 +61,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
+          // 遍历 candidates 匹配密码（支持同邮箱/手机号多用户场景）
           let user: (typeof candidates)[0] | null = null;
           for (const candidate of candidates) {
-            if (!candidate.passwordHash) continue;
-            const match = await compare(password, candidate.passwordHash);
-
-            if (match) {
+            const isMatch = await compare(password, candidate.passwordHash || '');
+            if (isMatch) {
               user = candidate;
               break;
             }
@@ -78,7 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           // 超管直接进入平台管理上下文，不参与任何租户业务
           if (user.isPlatformAdmin) {
-            const ret = {
+            return {
               id: user.id,
               name: user.name ?? '',
               email: user.email ?? '',
@@ -88,16 +87,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               roles: ['PLATFORM_ADMIN'],
               isPlatformAdmin: true,
             };
-
-            return ret;
           }
 
           const memberships = await db.query.tenantMembers.findMany({
             where: and(eq(tenantMembers.userId, user.id), eq(tenantMembers.isActive, true)),
-            with: { tenant: true },
+            with: {
+              tenant: true,
+            },
           });
 
-          if (memberships.length === 0) {
+          if (!memberships || memberships.length === 0) {
             if (user.tenantId) {
               const userRoles =
                 (user.roles as string[])?.length > 0
@@ -123,6 +122,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 isPlatformAdmin: false,
               };
             }
+
             logger.warn('[Auth] 用户无任何租户成员资格', { userId: user.id });
             return null;
           }
@@ -170,6 +170,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             isPlatformAdmin: false,
           };
         } catch (error) {
+          console.error('[Auth:Debug] Exception in authorize:', error);
           logger.error('[Auth] 认证验证过程发生异常', {
             error: error instanceof Error ? error.message : String(error),
           });

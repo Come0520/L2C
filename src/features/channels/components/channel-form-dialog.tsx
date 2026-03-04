@@ -8,7 +8,7 @@ import { isValidPhoneNumber } from 'libphonenumber-js/min';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';

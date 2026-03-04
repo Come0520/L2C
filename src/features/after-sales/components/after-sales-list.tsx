@@ -8,16 +8,16 @@ import { Button } from '@/shared/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { useDebounce } from '@/shared/hooks/use-debounce';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { FiltersBar } from './filters-bar';
 import { TicketListTable } from './ticket-list-table';
 import { AdvancedFiltersDialog } from './advanced-filters-dialog';
 
 const TABS = [
-  { value: 'all', label: '全部工单' },
-  { value: 'PENDING', label: '待处理' },
-  { value: 'PROCESSING', label: '处理中' },
-  { value: 'CLOSED', label: '已关闭' },
+  { value: 'all', title: '全部工单' },
+  { value: 'PENDING', title: '待处理' },
+  { value: 'PROCESSING', title: '处理中' },
+  { value: 'CLOSED', title: '已关闭' },
 ];
 
 export function AfterSalesList() {
@@ -74,7 +74,6 @@ export function AfterSalesList() {
         paramName="status"
         defaultValue="all"
         containerClassName="w-full"
-        layoutId="after-sales-tabs"
       />
 
       <div className="glass-liquid-ultra rounded-2xl border border-white/10 p-6 shadow-xl">

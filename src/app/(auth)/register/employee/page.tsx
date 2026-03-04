@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * 员工注册页面
@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { Label } from '@/shared/ui/label';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2, UserPlus, CheckCircle2, AlertTriangle } from 'lucide-react';

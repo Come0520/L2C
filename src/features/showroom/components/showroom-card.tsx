@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/shared/ui/badge';
 import { Copy, MoreHorizontal, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/shared/ui/dropdown-menu';
 import DOMPurify from 'isomorphic-dompurify';
 import { deleteShowroomItem } from '@/features/showroom/actions';
 import { toast } from 'sonner';

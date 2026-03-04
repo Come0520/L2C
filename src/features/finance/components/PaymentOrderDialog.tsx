@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { logger } from '@/shared/lib/logger';
 import { useForm } from 'react-hook-form';
@@ -6,7 +6,7 @@ import { typedResolver } from '../utils/form-helpers';
 import { createPaymentOrderSchema } from '../actions/schema';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import {

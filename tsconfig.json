@@ -20,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/components/ui/*": ["./src/components/ui/*", "./src/shared/ui/*"]
     }
   },
   "include": [

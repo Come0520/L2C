@@ -8,6 +8,8 @@ import {
   addLeadFollowupSchema,
   voidLeadSchema,
   convertLeadSchema,
+  releaseToPoolSchema,
+  claimFromPoolSchema,
 } from '../schemas';
 import { revalidatePath, updateTag } from 'next/cache';
 import { LeadService } from '@/services/lead.service';
@@ -357,11 +359,11 @@ export async function voidLead(input: z.infer<typeof voidLeadSchema>) {
  *
  * 取消当前分配的销售人员。需具备转移线索或全局管理的权限。
  *
- * @param {string} leadId - 线索的唯一 ID 标识
+ * @param {z.infer<typeof releaseToPoolSchema>} input - 包含线索的唯一 ID 标识及版本号
  * @returns {Promise<{success: boolean, error?: string}>}
  * @throws {Error} 未登录或缺乏权限时抛出
  */
-export async function releaseToPool(leadId: string) {
+export async function releaseToPool(input: z.infer<typeof releaseToPoolSchema>) {
   // 认证和权限检查
   const session = await auth();
   if (!session?.user?.tenantId || !session?.user?.id) {
@@ -371,14 +373,23 @@ export async function releaseToPool(leadId: string) {
   await checkPermission(session, PERMISSIONS.LEAD.TRANSFER);
   const hasManagePerm = true; // 通过 TRANSFER 权限检查保证，不再需要手动判断
 
+  const { id: leadId, version } = releaseToPoolSchema.parse(input);
+
   try {
     logger.info('[leads] 释放线索至公海开始:', {
       leadId,
       tenantId: session.user.tenantId,
       userId: session.user.id,
       hasManagePerm,
+      version,
     });
-    await LeadService.releaseToPool(leadId, session.user.tenantId, session.user.id, hasManagePerm);
+    await LeadService.releaseToPool(
+      leadId,
+      session.user.tenantId,
+      session.user.id,
+      hasManagePerm,
+      version
+    );
 
     logger.info('[leads] 释放线索至公海成功:', { leadId, tenantId: session.user.tenantId });
 
@@ -412,11 +423,11 @@ export async function releaseToPool(leadId: string) {
  *
  * 将销售分配给当前请求发送者本身。
  *
- * @param {string} leadId - 线索 ID
+ * @param {z.infer<typeof claimFromPoolSchema>} input - 包含线索 ID 及版本号
  * @returns {Promise<{success: boolean, error?: string}>}
  * @throws {Error} 未登录或没有对应权限时抛出
  */
-export async function claimFromPool(leadId: string) {
+export async function claimFromPool(input: z.infer<typeof claimFromPoolSchema>) {
   // 认证和权限检查
   const session = await auth();
   if (!session?.user?.tenantId || !session?.user?.id) {
@@ -425,13 +436,16 @@ export async function claimFromPool(leadId: string) {
   // 公海认领线索需要 OWN_EDIT 权限
   await checkPermission(session, PERMISSIONS.LEAD.OWN_EDIT);
 
+  const { id: leadId, version } = claimFromPoolSchema.parse(input);
+
   try {
     logger.info('[leads] 从公海认领线索开始:', {
       leadId,
       tenantId: session.user.tenantId,
       userId: session.user.id,
+      version,
     });
-    await LeadService.claimFromPool(leadId, session.user.tenantId, session.user.id);
+    await LeadService.claimFromPool(leadId, session.user.tenantId, session.user.id, version);
 
     logger.info('[leads] 从公海认领线索成功:', {
       leadId,

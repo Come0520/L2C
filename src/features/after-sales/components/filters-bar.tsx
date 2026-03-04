@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

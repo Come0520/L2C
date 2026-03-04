@@ -13,19 +13,19 @@ import Layout from 'lucide-react/dist/esm/icons/layout';
 import { format } from 'date-fns';
 import { SelectCustomerDialog } from './select-customer-dialog';
 import Link from 'next/link';
-import { UrlSyncedTabs } from '@/components/ui/url-synced-tabs';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
+import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
+import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { logger } from '@/shared/lib/logger';
 
 // Tab 配置：定义每个 Tab 对应的状态列表
 const QUOTE_TABS = [
-  { value: 'ALL', label: '全部', statuses: [] },
-  { value: 'DRAFT', label: '草稿', statuses: ['DRAFT'] },
-  { value: 'PENDING_APPROVAL', label: '待审批', statuses: ['PENDING_APPROVAL'] },
-  { value: 'PENDING_CUSTOMER', label: '待客户确认', statuses: ['PENDING_CUSTOMER'] },
-  { value: 'ACCEPTED', label: '已成交', statuses: ['ACCEPTED'] },
-  { value: 'CLOSED', label: '已关闭', statuses: ['REJECTED', 'EXPIRED'] },
+  { value: 'ALL', title: '全部', statuses: [] },
+  { value: 'DRAFT', title: '草稿', statuses: ['DRAFT'] },
+  { value: 'PENDING_APPROVAL', title: '待审批', statuses: ['PENDING_APPROVAL'] },
+  { value: 'PENDING_CUSTOMER', title: '待客户确认', statuses: ['PENDING_CUSTOMER'] },
+  { value: 'ACCEPTED', title: '已成交', statuses: ['ACCEPTED'] },
+  { value: 'CLOSED', title: '已关闭', statuses: ['REJECTED', 'EXPIRED'] },
 ];
 
 // 状态显示名称映射
@@ -168,12 +168,7 @@ export function QuoteList() {
     <div className="flex h-full flex-col gap-4 p-4">
       {/* Header Section - Tabs 和新建按钮同一行 */}
       <div className="flex items-center justify-between">
-        <UrlSyncedTabs
-          tabs={QUOTE_TABS}
-          paramName="status"
-          defaultValue="ALL"
-          layoutId="quotes-status-tabs"
-        />
+        <UrlSyncedTabs tabs={QUOTE_TABS} paramName="status" defaultValue="ALL" />
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild className="h-9">
             <Link href="/quotes/templates">
